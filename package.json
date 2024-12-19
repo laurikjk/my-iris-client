@@ -77,7 +77,7 @@
     "localforage": "^1.10.0",
     "lodash": "^4.17.21",
     "minidenticons": "^4.2.1",
-    "nostr-double-ratchet": "^0.0.1",
+    "nostr-double-ratchet": "^0.0.2",
     "nostr-social-graph": "1.0.5",
     "nostr-tools": "^2.7.2",
     "qr-code-styling": "^1.6.0-rc.1",

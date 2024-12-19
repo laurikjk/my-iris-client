@@ -8,7 +8,6 @@ import Message, {MessageType} from "./Message"
 import {useParams} from "react-router-dom"
 import {useLocalState} from "irisdb-hooks"
 import MessageForm from "./MessageForm"
-import {PublicKey} from "irisdb-nostr"
 import {getChannel} from "./Channels"
 import {localState} from "irisdb"
 
@@ -61,7 +60,6 @@ const groupMessages = (
 
 const Chat = () => {
   const {id} = useParams()
-  const hexId = useMemo(() => id && new PublicKey(id).toString(), [id])
   const [messages, setMessages] = useState(
     new SortedMap<string, MessageType>([], comparator)
   )
@@ -76,31 +74,31 @@ const Chat = () => {
 
   const channel = useMemo(
     () =>
-      (hexId &&
+      (id &&
         ourRatchetPrivateKey &&
-        getChannel(hexId, hexId, hexToBytes(ourRatchetPrivateKey))) ||
+        getChannel(id, id.split(":").shift()!, hexToBytes(ourRatchetPrivateKey))) || // TODO get theirRatchetPublicKey from localState?
       undefined,
-    [hexId, ourRatchetPrivateKey]
+    [id, ourRatchetPrivateKey]
   )
 
   const saveState = () => {
-    hexId &&
+    id &&
       channel &&
       localState
         .get("channels")
-        .get(hexId)
+        .get(id)
         .get("state")
         .put(serializeChannelState(channel.state))
   }
 
   useEffect(() => {
-    if (!(hexId && channel)) {
+    if (!(id && channel)) {
       return
     }
     setMessages(new SortedMap<string, MessageType>([], comparator))
     const unsub1 = localState
       .get("channels")
-      .get(hexId)
+      .get(id)
       .get("messages")
       .forEach((message, path) => {
         const split = path.split("/")
@@ -126,11 +124,11 @@ const Chat = () => {
     const unsub2 = channel.onMessage((message) => {
       const msg: MessageType = {
         id: message.id,
-        sender: hexId,
+        sender: id, // TODO: theirIdentityKey
         content: message.data,
         time: message.time,
       }
-      localState.get("channels").get(hexId).get("messages").get(message.id).put(msg)
+      localState.get("channels").get(id).get("messages").get(message.id).put(msg)
       saveState()
     })
 
@@ -167,7 +165,7 @@ const Chat = () => {
 
   const messageGroups = useMemo(() => groupMessages(messages), [messages])
 
-  if (!hexId || !channel || !ourRatchetPrivateKey) {
+  if (!id || !channel || !ourRatchetPrivateKey) {
     return null
   }
 
@@ -232,7 +230,7 @@ const Chat = () => {
           </svg>
         </button>
       )}
-      <MessageForm channel={channel} id={hexId} onSubmit={saveState} />
+      <MessageForm channel={channel} id={id} onSubmit={saveState} />
     </>
   )
 }

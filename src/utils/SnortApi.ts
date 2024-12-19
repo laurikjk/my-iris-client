@@ -10,6 +10,11 @@ export interface PushNotifications {
   auth: string
 }
 
+export interface PushSubscription {
+  id?: string
+  filter: NDKFilter
+}
+
 /**
  * Can be used for web push notifications
  */
@@ -30,12 +35,28 @@ export default class SnortApi {
     return this.#getJson<{vapid_public_key: string}>("info")
   }
 
+  getSubscriptions() {
+    return this.#getJsonAuthd<{[id: string]: PushSubscription}>("subscriptions")
+  }
+
   registerPushNotifications(sub: PushNotifications, filter: NDKFilter) {
     return this.#getJsonAuthd<void>(`subscriptions`, "POST", {
       web_push_subscriptions: [sub],
       webhooks: [],
       filter,
     })
+  }
+
+  createSubscription(subscription: PushSubscription) {
+    return this.#getJsonAuthd<void>(`subscriptions`, "POST", subscription)
+  }
+
+  updateSubscription(subscription: PushSubscription) {
+    return this.#getJsonAuthd<void>(
+      `subscriptions/${subscription.id}`,
+      "POST",
+      subscription
+    )
   }
 
   async #getJsonAuthd<T>(

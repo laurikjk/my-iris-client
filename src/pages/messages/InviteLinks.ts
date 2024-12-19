@@ -4,9 +4,11 @@ import {
   NostrFilter,
   serializeChannelState,
 } from "nostr-double-ratchet"
+import SnortApi, {PushSubscription} from "@/utils/SnortApi"
 import {hexToBytes} from "@noble/hashes/utils"
 import {localState, Unsubscribe} from "irisdb"
 import {VerifiedEvent} from "nostr-tools"
+import debounce from "lodash/debounce"
 import {ndk} from "irisdb-nostr"
 
 const inviteLinks = new Map<string, InviteLink>()
@@ -65,9 +67,10 @@ function listen() {
           nostrSubscribe,
           (channel: Channel, identity?: string) => {
             console.log("channel", identity, channel)
+            const channelId = `${identity}:${channel.name}`
             localState
               .get("channels")
-              .get(identity || "asdf")
+              .get(channelId)
               .put(serializeChannelState(channel.state))
           }
         )
@@ -77,10 +80,75 @@ function listen() {
   }
 }
 
+const subscribeInviteLinkNotifications = debounce(async () => {
+  console.log("Checking for missing subscriptions", {
+    size: inviteLinks.size,
+    links: Array.from(inviteLinks.entries())
+  })
+  
+  if (inviteLinks.size === 0) return;
+
+  try {
+    const subscriptions = await new SnortApi().getSubscriptions()
+
+    const missing = Array.from(inviteLinks.values()).filter(
+      (link) =>
+        !Object.values(subscriptions).find(
+          (sub: PushSubscription) =>
+            sub.filter.kinds?.includes(4) &&
+            sub.filter["#e"]?.includes(link.inviterSessionPublicKey)
+        )
+    )
+
+    console.log("Processing subscriptions:", {
+      inviteLinks: Array.from(inviteLinks.entries()),
+      subscriptions,
+      missing,
+    })
+
+    if (missing.length) {
+      // kind has 4 and only 4
+      const dmSubscription = Object.entries(subscriptions).find(
+        ([, sub]) => sub.filter.kinds?.length === 1 && sub.filter.kinds[0] === 4
+      )
+
+      if (dmSubscription) {
+        const [id, sub] = dmSubscription
+        await new SnortApi().updateSubscription({
+          id,
+          filter: {
+            ...sub.filter,
+            "#e": [
+              ...new Set([
+                ...(sub.filter["#e"] || []),
+                ...missing.map((l) => l.inviterSessionPublicKey),
+              ]),
+            ],
+          },
+        })
+      } else {
+        await new SnortApi().createSubscription({
+          filter: {
+            kinds: [4],
+            "#e": missing.map((l) => l.inviterSessionPublicKey),
+          },
+        })
+      }
+    }
+  } catch (e) {
+    console.error("Error in subscribeInviteLinkNotifications:", e)
+  }
+}, 100)
+
 getInviteLinks((id, inviteLink) => {
   if (!inviteLinks.has(id)) {
     inviteLinks.set(id, inviteLink)
+    console.log("inviteLinks2", inviteLinks)
     listen()
+    setTimeout(() => {
+      console.log("Triggering subscription check with size:", inviteLinks.size)
+      subscribeInviteLinkNotifications()
+    }, 0)
   }
 })
 
