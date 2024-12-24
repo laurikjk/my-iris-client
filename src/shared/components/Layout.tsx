@@ -43,7 +43,8 @@ const Layout = () => {
   }, [navigate, goToNotifications])
 
   useEffect(() => {
-    if (CONFIG.features.analytics && enableAnalytics) {
+    const isMessagesRoute = location.pathname.startsWith("/messages/")
+    if (CONFIG.features.analytics && enableAnalytics && !isMessagesRoute) {
       trackEvent("pageview")
     }
   }, [location])
