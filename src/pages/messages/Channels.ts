@@ -58,23 +58,14 @@ export function getChannels() {
           content: msg.data,
           time: msg.time,
         }
-        console.log('saving message', message, id)
         localState.get("channels").get(id).get("messages").get(msg.id).put(message)
-
-        const latest = await localState.get("channels").get(id).get("latest").once()
-        if (
-          latest &&
-          typeof latest === "object" &&
-          !Array.isArray(latest) &&
-          typeof latest.time === "number" &&
-          latest.time > msg.time
-        ) {
-          return
-        }
         localState.get("channels").get(id).get("latest").put(msg)
       })
     }
   })
 }
 
-getChannels()
+localState.get("user").on((u) => {
+  if (!u) return
+  getChannels()
+})
