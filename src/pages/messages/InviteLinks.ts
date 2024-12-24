@@ -71,6 +71,7 @@ function listen() {
             localState
               .get("channels")
               .get(channelId)
+              .get("state")
               .put(serializeChannelState(channel.state))
           }
         )
@@ -83,10 +84,10 @@ function listen() {
 const subscribeInviteLinkNotifications = debounce(async () => {
   console.log("Checking for missing subscriptions", {
     size: inviteLinks.size,
-    links: Array.from(inviteLinks.entries())
+    links: Array.from(inviteLinks.entries()),
   })
-  
-  if (inviteLinks.size === 0) return;
+
+  if (inviteLinks.size === 0) return
 
   try {
     const subscriptions = await new SnortApi().getSubscriptions()

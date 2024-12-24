@@ -73,13 +73,14 @@ const NewChat = () => {
       // Publish the event
       NDKEventFromRawEvent(event).publish()
 
+      const channelId = `${inviteLink.inviter}:${channel.name}`
       // Save the channel
       localState
-        .get(`channels/${inviteLink.inviter}`)
+        .get(`channels/${channelId}/state`)
         .put(serializeChannelState(channel.state))
 
       // Navigate to the new chat
-      navigate(`/messages/${inviteLink.inviter}`)
+      navigate(`/messages/${channelId}`)
     } catch (error) {
       console.error("Invalid invite link:", error)
       // Optionally, you can show an error message to the user here

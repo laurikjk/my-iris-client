@@ -3,10 +3,8 @@ import {serializeChannelState} from "nostr-double-ratchet"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {hexToBytes} from "@noble/hashes/utils"
 import Message, {MessageType} from "./Message"
 import {useParams} from "react-router-dom"
-import {useLocalState} from "irisdb-hooks"
 import MessageForm from "./MessageForm"
 import {getChannel} from "./Channels"
 import {localState} from "irisdb"
@@ -64,7 +62,6 @@ const Chat = () => {
     new SortedMap<string, MessageType>([], comparator)
   )
   //const [myPubKey] = useLocalState("user/publicKey", "")
-  const [ourRatchetPrivateKey] = useLocalState("user/privateKey", "")
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [isAtBottom, setIsAtBottom] = useState(true)
@@ -72,14 +69,7 @@ const Chat = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
-  const channel = useMemo(
-    () =>
-      (id &&
-        ourRatchetPrivateKey &&
-        getChannel(id, id.split(":").shift()!, hexToBytes(ourRatchetPrivateKey))) || // TODO get theirRatchetPublicKey from localState?
-      undefined,
-    [id, ourRatchetPrivateKey]
-  )
+  const channel = useMemo(() => (id && getChannel(id)) || undefined, [id])
 
   const saveState = () => {
     id &&
@@ -121,20 +111,8 @@ const Chat = () => {
         }
       }, 2)
 
-    const unsub2 = channel.onMessage((message) => {
-      const msg: MessageType = {
-        id: message.id,
-        sender: id, // TODO: theirIdentityKey
-        content: message.data,
-        time: message.time,
-      }
-      localState.get("channels").get(id).get("messages").get(message.id).put(msg)
-      saveState()
-    })
-
     return () => {
       unsub1()
-      unsub2()
     }
   }, [channel])
 
@@ -165,13 +143,18 @@ const Chat = () => {
 
   const messageGroups = useMemo(() => groupMessages(messages), [messages])
 
-  if (!id || !channel || !ourRatchetPrivateKey) {
+  console.log("id", id)
+  console.log("channel", channel)
+
+  if (!id || !channel) {
     return null
   }
 
+  const user = id.split(":").shift()!
+
   return (
     <>
-      <MiddleHeader>{id && <UserRow avatarWidth={32} pubKey={id} />}</MiddleHeader>
+      <MiddleHeader>{id && <UserRow avatarWidth={32} pubKey={user} />}</MiddleHeader>
       <div
         ref={chatContainerRef}
         className="flex flex-col justify-end flex-1 overflow-y-auto space-y-4 p-4 relative"

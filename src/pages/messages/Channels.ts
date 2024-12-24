@@ -1,6 +1,7 @@
 import {Channel, deserializeChannelState, NostrFilter} from "nostr-double-ratchet"
 import {localState, Unsubscribe} from "irisdb"
 import {VerifiedEvent} from "nostr-tools"
+import {MessageType} from "./Message"
 import {ndk} from "irisdb-nostr"
 
 const channels = new Map<string, Channel>()
@@ -14,11 +15,7 @@ const subscribe = (filter: NostrFilter, onEvent: (event: VerifiedEvent) => void)
   return () => {} // no need to sub.stop(), old nostr senders might still have unseen?
 }
 
-export function getChannel(
-  id: string,
-  theirRatchetPublicKey: string,
-  ourRatchetPrivateKey: Uint8Array
-): Channel {
+export function getChannel(id: string): Channel | undefined {
   if (!channels.has(id)) {
     let unsub: Unsubscribe | undefined = undefined
     unsub = localState
@@ -27,15 +24,11 @@ export function getChannel(
       .get("state")
       .on(
         (state) => {
+          console.log("channel state", state, id)
           if (typeof state === "string" && state !== null) {
             const deserialized = deserializeChannelState(state)
             console.log("deserialized", deserialized)
             channels.set(id, new Channel(subscribe, deserialized))
-          } else {
-            channels.set(
-              id,
-              Channel.init(subscribe, theirRatchetPublicKey, ourRatchetPrivateKey)
-            )
           }
           unsub?.()
         },
@@ -43,5 +36,45 @@ export function getChannel(
         2
       )
   }
-  return channels.get(id)!
+  return channels.get(id)
 }
+
+// function that gets all our channels and subscribes to messages from them
+export function getChannels() {
+  return localState.get("channels").forEach((data, id) => {
+    if (channels.has(id)) return
+    if (data) {
+      console.log("got channel", id, data, typeof data)
+      id = id.split("/").pop()!
+      const channel = getChannel(id)
+      if (!channel) return
+      console.log("channel sub")
+      channel.onMessage(async (msg) => {
+        console.log("received message", msg)
+
+        const message: MessageType = {
+          id: msg.id,
+          sender: id.split(":").shift()!,
+          content: msg.data,
+          time: msg.time,
+        }
+        console.log('saving message', message, id)
+        localState.get("channels").get(id).get("messages").get(msg.id).put(message)
+
+        const latest = await localState.get("channels").get(id).get("latest").once()
+        if (
+          latest &&
+          typeof latest === "object" &&
+          !Array.isArray(latest) &&
+          typeof latest.time === "number" &&
+          latest.time > msg.time
+        ) {
+          return
+        }
+        localState.get("channels").get(id).get("latest").put(msg)
+      })
+    }
+  })
+}
+
+getChannels()
