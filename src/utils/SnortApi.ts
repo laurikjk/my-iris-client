@@ -2,8 +2,6 @@ import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import socialGraph from "@/utils/socialGraph"
 import {ndk} from "irisdb-nostr"
 
-export const ApiHost = "https://notifications.iris.to"
-
 export interface PushNotifications {
   endpoint: string
   p256dh: string
@@ -22,7 +20,7 @@ export default class SnortApi {
   #url: string
 
   constructor(url?: string) {
-    this.#url = new URL(url ?? ApiHost).toString()
+    this.#url = new URL(url ?? CONFIG.defaultSettings.notificationServer).toString()
   }
 
   twitterImport(username: string) {

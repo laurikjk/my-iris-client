@@ -1,6 +1,7 @@
 import {showNotification, subscribeToNotifications} from "@/utils/notifications"
+import {useEffect, useState, ChangeEvent} from "react"
 import Icon from "@/shared/components/Icons/Icon"
-import {useEffect, useState} from "react"
+import {useLocalState} from "irisdb-hooks"
 
 interface StatusIndicatorProps {
   status: boolean
@@ -37,6 +38,13 @@ const NotificationSettings = () => {
     /*!login.readonly &&*/ hasNotificationsApi &&
     notificationsAllowed &&
     serviceWorkerReady
+
+  const [notificationServer, setNotificationServer] = useLocalState(
+    "notifications/server",
+    CONFIG.defaultSettings.notificationServer,
+    String
+  )
+  const [isValidUrl, setIsValidUrl] = useState(true)
 
   const trySubscribePush = async () => {
     try {
@@ -88,6 +96,24 @@ const NotificationSettings = () => {
     }
   }
 
+  function handleServerChange(e: ChangeEvent<HTMLInputElement>) {
+    const url = e.target.value
+    const valid = validateUrl(url)
+    setIsValidUrl(valid)
+    if (valid) {
+      setNotificationServer(url)
+    }
+  }
+
+  function validateUrl(url: string): boolean {
+    try {
+      new URL(url)
+      return true
+    } catch (_) {
+      return false
+    }
+  }
+
   return (
     <div className="flex flex-col">
       <div className="flex flex-col space-y-4">
@@ -136,6 +162,18 @@ const NotificationSettings = () => {
               Subscribe
             </button>
           )}
+        </div>
+        <div>
+          <b>Notification Server</b>
+          <div className="mt-2">
+            <input
+              type="text"
+              className={`input input-primary ${isValidUrl ? "" : "input-error"}`}
+              value={notificationServer}
+              onChange={handleServerChange}
+            />
+            {!isValidUrl && <p className="text-red-500">Invalid URL</p>}
+          </div>
         </div>
       </div>
     </div>

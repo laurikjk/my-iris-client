@@ -22,5 +22,6 @@ declare const CONFIG: {
   }
   defaultSettings: {
     youtubePrivacyMode: boolean
+    notificationServer: string
   }
 }

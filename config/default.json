@@ -27,6 +27,7 @@
     "analytics": true
   },
   "defaultSettings": {
-    "youtubePrivacyMode": false
+    "youtubePrivacyMode": false,
+    "notificationServer": "https://notifications.iris.to"
   }
 }
