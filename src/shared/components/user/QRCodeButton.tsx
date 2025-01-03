@@ -1,5 +1,5 @@
 import CopyButton from "@/shared/components/button/CopyButton.tsx"
-import {useEffect, useState, lazy, Suspense} from "react"
+import {useEffect, useState, lazy, Suspense, useMemo} from "react"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import Icon from "@/shared/components/Icons/Icon"
 import {useNavigate} from "react-router-dom"
@@ -13,14 +13,13 @@ interface QRCodeModalProps {
   onClose: () => void
   data: string
   onScanSuccess?: (data: string) => void
+  npub?: string
 }
 
-function QRCodeModal({onClose, data, onScanSuccess}: QRCodeModalProps) {
+function QRCodeModal({onClose, data, onScanSuccess, npub}: QRCodeModalProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [showScanQr, setShowScanQr] = useState(false)
   const navigate = useNavigate()
-
-  // Remove the npub encoding logic
 
   useEffect(() => {
     QRCode.toDataURL(data, (error, url) => {
@@ -68,7 +67,9 @@ function QRCodeModal({onClose, data, onScanSuccess}: QRCodeModalProps) {
           </Suspense>
         ) : (
           <>
-            <UserRow linkToProfile={false} pubKey={data} textClassName="font-bold" />
+            {npub && (
+              <UserRow linkToProfile={false} pubKey={npub} textClassName="font-bold" />
+            )}
             {qrCodeUrl && (
               <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64 rounded-2xl" />
             )}
@@ -125,13 +126,24 @@ function QRCodeModal({onClose, data, onScanSuccess}: QRCodeModalProps) {
 interface QRCodeButtonProps {
   data: string
   onScanSuccess?: (data: string) => void
+  npub?: string
 }
 
-function QRCodeButton({data, onScanSuccess}: QRCodeButtonProps) {
+function QRCodeButton({data, onScanSuccess, npub}: QRCodeButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const openModal = () => setIsModalOpen(true)
   const closeModal = () => setIsModalOpen(false)
+
+  const computedNpub = useMemo(() => {
+    if (npub) {
+      return npub
+    }
+    if (data.startsWith("nostr:npub")) {
+      return data.slice(6)
+    }
+    return ""
+  }, [data, npub])
 
   return (
     <>
@@ -143,7 +155,12 @@ function QRCodeButton({data, onScanSuccess}: QRCodeButtonProps) {
         <Icon name="qr" className="w-4 h-4" />
       </button>
       {isModalOpen && (
-        <QRCodeModal onClose={closeModal} data={data} onScanSuccess={onScanSuccess} />
+        <QRCodeModal
+          onClose={closeModal}
+          data={data}
+          onScanSuccess={onScanSuccess}
+          npub={computedNpub}
+        />
       )}
     </>
   )

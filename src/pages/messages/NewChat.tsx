@@ -9,6 +9,7 @@ import {getInviteLinks} from "./InviteLinks"
 import {useLocalState} from "irisdb-hooks"
 import {localState} from "irisdb"
 import {ndk} from "irisdb-nostr"
+import { nip19 } from "nostr-tools"
 
 const NewChat = () => {
   const navigate = useNavigate()
@@ -122,7 +123,11 @@ const NewChat = () => {
               <div key={id} className="flex items-center justify-between">
                 <span>{link.label}</span>
                 <div className="space-x-2 flex items-center">
-                  <QRCodeButton data={link.getUrl()} onScanSuccess={onScanSuccess} />
+                  <QRCodeButton
+                    npub={myPubKey && nip19.npubEncode(myPubKey)}
+                    data={link.getUrl()}
+                    onScanSuccess={onScanSuccess}
+                  />
                   <button
                     onClick={() => navigator.clipboard.writeText(link.getUrl())}
                     className="btn btn-sm btn-outline"
