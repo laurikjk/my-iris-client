@@ -98,11 +98,8 @@ const NotificationSettings = () => {
 
   function handleServerChange(e: ChangeEvent<HTMLInputElement>) {
     const url = e.target.value
-    const valid = validateUrl(url)
-    setIsValidUrl(valid)
-    if (valid) {
-      setNotificationServer(url)
-    }
+    setNotificationServer(url)
+    setIsValidUrl(validateUrl(url))
   }
 
   function validateUrl(url: string): boolean {

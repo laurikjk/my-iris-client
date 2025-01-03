@@ -1,5 +1,5 @@
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
-import {serializeChannelState} from "nostr-double-ratchet"
+import {Channel, serializeChannelState} from "nostr-double-ratchet"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
@@ -61,6 +61,7 @@ const Chat = () => {
   const [messages, setMessages] = useState(
     new SortedMap<string, MessageType>([], comparator)
   )
+  const [channel, setChannel] = useState<Channel | undefined>(undefined)
   //const [myPubKey] = useLocalState("user/publicKey", "")
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
@@ -69,7 +70,16 @@ const Chat = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
-  const channel = useMemo(() => (id && getChannel(id)) || undefined, [id])
+  useEffect(() => {
+    const fetchChannel = async () => {
+      if (id) {
+        const fetchedChannel = await getChannel(id)
+        setChannel(fetchedChannel)
+      }
+    }
+
+    fetchChannel()
+  }, [id])
 
   const saveState = () => {
     id &&

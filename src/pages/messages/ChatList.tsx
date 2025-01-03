@@ -13,7 +13,7 @@ type Channel = {
 
 const ChatListItem = ({id}: {id: string}) => {
   const pubKey = id.split(":").shift() || ""
-  const [latest] = useLocalState(`channels/${id}/latest`, {} as {data?: string})
+  const [latest] = useLocalState(`channels/${id}/latest`, {} as {content?: string})
   return (
     <NavLink
       to={`/messages/${id}`}
@@ -29,7 +29,7 @@ const ChatListItem = ({id}: {id: string}) => {
         <span className="text-base font-semibold">
           <UserRow pubKey={pubKey} linkToProfile={false} />
         </span>
-        <span>{latest.data?.slice(0, 5)}</span>
+        <span>{latest.content?.slice(0, 20)}</span>
       </div>
     </NavLink>
   )
@@ -37,7 +37,6 @@ const ChatListItem = ({id}: {id: string}) => {
 
 const ChatList = ({className}: ChatListProps) => {
   const [channels] = useLocalState("channels", {} as Record<string, Channel>)
-  console.log("channelss", channels)
   return (
     <nav className={className}>
       <div className="flex flex-col">
