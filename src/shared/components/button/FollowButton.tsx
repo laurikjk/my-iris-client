@@ -35,7 +35,7 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
       followedUsers.add(pubKeyHex)
     }
     event.tags = Array.from(followedUsers).map((pubKey) => ["p", pubKey]) as NDKTag[]
-    event.publish()
+    event.publish().catch((e) => console.warn("Error publishing follow event:", e))
     setTimeout(() => {
       setUpdated((updated) => updated + 1)
     }, 1000)

@@ -98,8 +98,11 @@ const NotificationSettings = () => {
 
   function handleServerChange(e: ChangeEvent<HTMLInputElement>) {
     const url = e.target.value
-    setNotificationServer(url)
-    setIsValidUrl(validateUrl(url))
+    const valid = validateUrl(url)
+    setIsValidUrl(valid)
+    if (valid) {
+      setNotificationServer(url)
+    }
   }
 
   function validateUrl(url: string): boolean {
@@ -165,11 +168,20 @@ const NotificationSettings = () => {
           <div className="mt-2">
             <input
               type="text"
-              className={`input input-primary ${isValidUrl ? "" : "input-error"}`}
+              className={`w-96 max-w-full input input-primary ${isValidUrl ? "" : "input-error"}`}
               value={notificationServer}
               onChange={handleServerChange}
             />
             {!isValidUrl && <p className="text-red-500">Invalid URL</p>}
+          </div>
+          <div className="mt-2">
+            Self-host notification server?{" "}
+            <a
+              className="link"
+              href="https://github.com/mmalmi/nostr-notification-server"
+            >
+              Source code
+            </a>
           </div>
         </div>
       </div>
