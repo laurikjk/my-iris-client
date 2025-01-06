@@ -42,8 +42,9 @@ const ChatList = ({className}: ChatListProps) => {
   useEffect(() => {
     const unsub = localState.get("channels").forEach((channel, path) => {
       const id = path.split("/").pop()
-      // TODO the following needs to be added as a fix to useLocalState?
-      setChannels((c) => Object.assign({}, c, {[id]: channel}))
+      if (typeof id === "string") {
+        setChannels((c) => Object.assign({}, c, {[id]: channel}))
+      }
     })
     return unsub
   }, [])
