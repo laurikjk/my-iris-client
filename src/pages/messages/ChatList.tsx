@@ -1,7 +1,9 @@
 import {UserRow} from "@/shared/components/user/UserRow"
 import {useLocalState} from "irisdb-hooks"
+import {useEffect, useState} from "react"
 import {NavLink} from "react-router-dom"
 import classNames from "classnames"
+import {localState} from "irisdb"
 
 interface ChatListProps {
   className?: string
@@ -36,7 +38,16 @@ const ChatListItem = ({id}: {id: string}) => {
 }
 
 const ChatList = ({className}: ChatListProps) => {
-  const [channels] = useLocalState("channels", {} as Record<string, Channel>)
+  const [channels, setChannels] = useState({} as Record<string, Channel>)
+  useEffect(() => {
+    const unsub = localState.get("channels").forEach((channel, path) => {
+      const id = path.split("/").pop()
+      // TODO the following needs to be added as a fix to useLocalState?
+      setChannels((c) => Object.assign({}, c, {[id]: channel}))
+    })
+    return unsub
+  }, [])
+
   return (
     <nav className={className}>
       <div className="flex flex-col">
