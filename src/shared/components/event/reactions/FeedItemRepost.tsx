@@ -9,7 +9,7 @@ import Dropdown from "@/shared/components/ui/Dropdown"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {serializeEvent} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
-import {statCalc} from "@/utils/utils.ts"
+import {formatAmount} from "@/utils/utils.ts"
 import Icon from "../../Icons/Icon"
 
 import {shouldHideEvent} from "@/utils/socialGraph"
@@ -143,7 +143,7 @@ function FeedItemRepost({event}: FeedItemRepostProps) {
             </Dropdown>
           )}
         </div>
-        <span>{statCalc(repostCount)}</span>
+        <span>{formatAmount(repostCount)}</span>
       </div>
     </>
   )

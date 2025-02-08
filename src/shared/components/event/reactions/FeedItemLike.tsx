@@ -1,7 +1,7 @@
 import {shouldHideEvent} from "@/utils/socialGraph"
 import {LRUCache} from "typescript-lru-cache"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {statCalc} from "@/utils/utils.ts"
+import {formatAmount} from "@/utils/utils.ts"
 import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"
 import Icon from "../../Icons/Icon"
@@ -90,7 +90,7 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
       onClick={handleLike}
     >
       <Icon name={liked ? "heart-solid" : "heart"} size={16} />
-      <span>{statCalc(likeCount)}</span>
+      <span>{formatAmount(likeCount)}</span>
     </div>
   )
 }

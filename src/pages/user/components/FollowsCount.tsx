@@ -3,7 +3,7 @@ import {useState, useMemo} from "react"
 
 import useFollows from "@/shared/hooks/useFollows.ts"
 import FollowsList from "./FollowList.tsx"
-import {statCalc} from "@/utils/utils.ts"
+import {formatAmount} from "@/utils/utils.ts"
 
 import Icon from "@/shared/components/Icons/Icon.tsx"
 import Modal from "@/shared/components/ui/Modal"
@@ -31,7 +31,7 @@ function FollowsCount({pubKey}: FollowsCountProps) {
     <>
       <button className="btn btn-sm btn-neutral" onClick={handleFollowsClick}>
         <Icon name="stars" /> <span>Follows </span>{" "}
-        <span className="badge">{statCalc(follows.length)}</span>
+        <span className="badge">{formatAmount(follows.length)}</span>
       </button>
       {follows?.includes(myPubKey) && (
         <span className="badge badge-neutral">Follows you</span>

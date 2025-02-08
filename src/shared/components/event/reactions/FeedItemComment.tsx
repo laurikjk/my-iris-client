@@ -5,7 +5,7 @@ import debounce from "lodash/debounce"
 import {ndk} from "irisdb-nostr"
 
 import Modal from "@/shared/components/ui/Modal.tsx"
-import {statCalc} from "@/utils/utils.ts"
+import {formatAmount} from "@/utils/utils.ts"
 import Icon from "../../Icons/Icon"
 import {localState} from "irisdb"
 
@@ -75,7 +75,7 @@ function FeedItemComment({event}: FeedItemCommentProps) {
         onClick={handleCommentClick}
       >
         <Icon name="reply" size={16} />
-        {statCalc(replyCount)}
+        {formatAmount(replyCount)}
       </div>
 
       {isPopupOpen && (

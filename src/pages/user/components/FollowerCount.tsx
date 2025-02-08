@@ -1,7 +1,7 @@
 import {useMemo, useState} from "react"
 
 import socialGraph from "@/utils/socialGraph.ts"
-import {statCalc} from "@/utils/utils.ts"
+import {formatAmount} from "@/utils/utils.ts"
 
 import Modal from "@/shared/components/ui/Modal.tsx"
 
@@ -23,7 +23,7 @@ const FollowerCount = ({pubKey}: {pubKey: string}) => {
     <>
       <button className="btn btn-sm btn-neutral" onClick={handleFollowersClick}>
         <Icon name="user-v2" /> <span>Known followers</span>{" "}
-        <span className="badge">{statCalc(followers.length)}</span>
+        <span className="badge">{formatAmount(followers.length)}</span>
       </button>
       {showFollowList && (
         <Modal onClose={() => setShowFollowList(false)}>

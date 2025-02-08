@@ -5,7 +5,7 @@ import useProfile from "@/shared/hooks/useProfile.ts"
 import {getZappingUser} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
 import {useLocalState} from "irisdb-hooks"
-import {statCalc} from "@/utils/utils.ts"
+import {formatAmount} from "@/utils/utils.ts"
 import {useEffect, useState} from "react"
 import Icon from "../../Icons/Icon.tsx"
 import ZapModal from "../ZapModal.tsx"
@@ -156,7 +156,7 @@ function FeedItemZap({event}: FeedItemZapProps) {
         onClick={handleZapClick}
       >
         <Icon name={zapped ? "zap-solid" : "zap"} size={16} />
-        <span>{statCalc(zappedAmount)}</span>
+        <span>{formatAmount(zappedAmount)}</span>
       </div>
     </>
   )
