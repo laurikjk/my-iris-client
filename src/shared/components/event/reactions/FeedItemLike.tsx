@@ -1,7 +1,7 @@
 import {shouldHideEvent} from "@/utils/socialGraph"
 import {LRUCache} from "typescript-lru-cache"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {formatAmount} from "@/utils/utils.ts"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"
 import Icon from "../../Icons/Icon"

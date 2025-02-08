@@ -13,15 +13,11 @@ import {localState} from "irisdb"
 import {ndk} from "irisdb-nostr"
 
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT, eventComparator} from "./utils"
-import imageEmbed from "@/shared/components/embed/images/Image"
-import Video from "@/shared/components/embed/video/Video"
 import UnknownUserEvents from "./UnknownUserEvents.tsx"
 import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
-import PreloadImages from "../media/PreloadImages"
 import useMutes from "@/shared/hooks/useMutes.ts"
-import MediaModal from "../media/MediaModal"
-import ImageGridItem from "./ImageGridItem"
+import MediaFeed from "./MediaFeed"
 
 interface FeedProps {
   filters: NDKFilter
@@ -101,9 +97,6 @@ function Feed({
   const setDisplayAs = (value: "list" | "grid") => {
     setPersistedDisplayAs(value)
   }
-
-  const [showModal, setShowModal] = useState(false)
-  const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null)
 
   const [hidePostsByMutedMoreThanFollowed] = useLocalState(
     "settings/hidePostsByMutedMoreThanFollowed",
@@ -289,90 +282,6 @@ function Feed({
     }
   }, [forceUpdate])
 
-  const mediaEvents = useMemo(() => {
-    return filteredEvents.filter((event): event is NDKEvent => {
-      if (!("content" in event)) return false
-      const hasImageUrl = imageEmbed.regex.test(event.content)
-      const hasVideoUrl = Video.regex.test(event.content)
-      return hasImageUrl || hasVideoUrl
-    })
-  }, [filteredEvents])
-
-  const allMedia = useMemo(() => {
-    // We'll store media items in a Map keyed by the combination of (event.id + url)
-    // so we only pick each unique event+URL pair once.
-    const deduplicated = new Map<
-      string,
-      {type: "image" | "video"; url: string; event: NDKEvent}
-    >()
-
-    mediaEvents.forEach((event) => {
-      const imageMatches = event.content.match(imageEmbed.regex) || []
-      const videoMatches = event.content.match(Video.regex) || []
-
-      const imageUrls = imageMatches.flatMap((match) =>
-        match
-          .trim()
-          .split(/\s+/)
-          .map((url) => ({
-            type: "image" as const,
-            url,
-            event,
-          }))
-      )
-
-      const videoUrls = videoMatches.flatMap((match) =>
-        match
-          .trim()
-          .split(/\s+/)
-          .map((url) => ({
-            type: "video" as const,
-            url,
-            event,
-          }))
-      )
-
-      for (const item of [...imageUrls, ...videoUrls]) {
-        // event.id + item.url ensures we don't double up across the same event
-        // you could just do item.url if you want to deduplicate across *all* events
-        const uniqueId = `${event.id}_${item.url}`
-        if (!deduplicated.has(uniqueId)) {
-          deduplicated.set(uniqueId, item)
-        }
-      }
-    })
-
-    return Array.from(deduplicated.values())
-  }, [mediaEvents])
-
-  const handlePrevItem = () => {
-    if (activeItemIndex === null) return
-    setActiveItemIndex(Math.max(0, activeItemIndex - 1))
-  }
-
-  const handleNextItem = () => {
-    if (activeItemIndex === null) return
-    setActiveItemIndex(Math.min(allMedia.length - 1, activeItemIndex + 1))
-  }
-
-  useEffect(() => {
-    if (!showModal) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") {
-        handlePrevItem()
-      } else if (e.key === "ArrowRight") {
-        handleNextItem()
-      } else if (e.key === "Escape") {
-        setShowModal(false)
-        setActiveItemIndex(null)
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [showModal, activeItemIndex])
-
   return (
     <>
       {showDisplayAsSelector && (
@@ -394,53 +303,11 @@ function Feed({
         />
       )}
 
-      {showModal && activeItemIndex !== null && (
-        <>
-          <MediaModal
-            onClose={() => {
-              setShowModal(false)
-              setActiveItemIndex(null)
-            }}
-            onPrev={handlePrevItem}
-            onNext={handleNextItem}
-            mediaUrl={allMedia[activeItemIndex].url}
-            mediaType={allMedia[activeItemIndex].type}
-            showFeedItem={true}
-            event={allMedia[activeItemIndex].event}
-            currentIndex={activeItemIndex}
-            totalCount={allMedia.length}
-          />
-          <PreloadImages
-            key={activeItemIndex}
-            images={allMedia.map((m) => m.url)}
-            currentIndex={activeItemIndex}
-          />
-        </>
-      )}
-
       <div>
         {filteredEvents.length > 0 && (
           <InfiniteScroll onLoadMore={loadMoreItems}>
             {displayAs === "grid" ? (
-              <div className="grid grid-cols-3 gap-px md:gap-1">
-                {mediaEvents.map((event, index) => {
-                  return (
-                    <ImageGridItem
-                      key={event.id}
-                      event={event}
-                      index={index}
-                      setActiveItemIndex={(clickedUrl: string) => {
-                        const mediaIndex = allMedia.findIndex(
-                          (media) =>
-                            media.event.id === event.id && media.url === clickedUrl
-                        )
-                        setActiveItemIndex(mediaIndex)
-                        setShowModal(true)
-                      }}
-                    />
-                  )
-                })}
-              </div>
+              <MediaFeed events={filteredEvents} />
             ) : (
               <>
                 {filteredEvents.slice(0, displayCount).map((event, index) => (

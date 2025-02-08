@@ -2,8 +2,8 @@ import {useLocalState} from "irisdb-hooks"
 import {useState, useMemo} from "react"
 
 import useFollows from "@/shared/hooks/useFollows.ts"
-import FollowsList from "./FollowList.tsx"
 import {formatAmount} from "@/utils/utils.ts"
+import FollowsList from "./FollowList.tsx"
 
 import Icon from "@/shared/components/Icons/Icon.tsx"
 import Modal from "@/shared/components/ui/Modal"
