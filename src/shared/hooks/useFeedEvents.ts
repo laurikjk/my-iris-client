@@ -61,7 +61,7 @@ export default function useFeedEvents({
       if (
         !inAuthors &&
         hidePostsByMutedMoreThanFollowed &&
-        shouldSocialHide(event.pubkey)
+        shouldSocialHide(event.pubkey, 3)
       ) {
         return false
       }
