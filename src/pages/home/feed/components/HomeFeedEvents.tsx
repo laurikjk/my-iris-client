@@ -55,7 +55,7 @@ function HomeFeedEvents() {
         name: "Popular",
         path: "popular",
         filter: {
-          kinds: [7],
+          kinds: [6, 7],
           since: Math.floor(Date.now() / 1000 - 60 * 60 * 24),
           limit: 200,
           authors: follows,
