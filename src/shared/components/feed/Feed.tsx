@@ -39,6 +39,7 @@ interface FeedProps {
   displayAs?: "list" | "grid"
   showDisplayAsSelector?: boolean
   onDisplayAsChange?: (display: "list" | "grid") => void
+  sortLikedPosts?: boolean
 }
 
 // TODO fix useLocalState so initial state is properly set from memory, so we can use it instead of this
@@ -67,6 +68,7 @@ function Feed({
   displayAs: initialDisplayAs = "list",
   showDisplayAsSelector = true,
   onDisplayAsChange,
+  sortLikedPosts = false,
 }: FeedProps) {
   const [displayCount, setDisplayCount] = useHistoryState(
     INITIAL_DISPLAY_COUNT,
@@ -231,8 +233,32 @@ function Feed({
   )
 
   const filteredEvents = useMemo(() => {
-    return Array.from(eventsRef.current.values()).filter(filterEvents)
-  }, [eventsRef.current.size, filterEvents, feedFilter, cacheKey])
+    const events = Array.from(eventsRef.current.values()).filter(filterEvents)
+
+    if (sortLikedPosts) {
+      // Count likes per post
+      const likesByPostId = new Map<string, number>()
+      events.forEach((event) => {
+        const postId = event.tags.find((t) => t[0] === "e")?.[1]
+        if (postId) {
+          likesByPostId.set(postId, (likesByPostId.get(postId) || 0) + 1)
+        }
+      })
+
+      // Convert to array of [postId, likeCount] and sort by likes
+      const sortedIds = Array.from(likesByPostId.entries())
+        .sort(([, likesA], [, likesB]) => likesB - likesA)
+        .map(([postId]) => postId)
+
+      // Map back to full events where possible
+      return sortedIds.map((id) => {
+        const event = Array.from(eventsRef.current.values()).find((e) => e.id === id)
+        return event || {id}
+      })
+    }
+
+    return events
+  }, [eventsRef.current.size, filterEvents, feedFilter, cacheKey, sortLikedPosts])
 
   const eventsByUnknownUsers = useMemo(() => {
     if (!hideEventsByUnknownUsers) {
@@ -264,10 +290,10 @@ function Feed({
   }, [forceUpdate])
 
   const mediaEvents = useMemo(() => {
-    return filteredEvents.filter((event) => {
+    return filteredEvents.filter((event): event is NDKEvent => {
+      if (!("content" in event)) return false
       const hasImageUrl = imageEmbed.regex.test(event.content)
       const hasVideoUrl = Video.regex.test(event.content)
-
       return hasImageUrl || hasVideoUrl
     })
   }, [filteredEvents])
@@ -397,7 +423,7 @@ function Feed({
           <InfiniteScroll onLoadMore={loadMoreItems}>
             {displayAs === "grid" ? (
               <div className="grid grid-cols-3 gap-px md:gap-1">
-                {mediaEvents.slice(0, displayCount).map((event, index) => {
+                {mediaEvents.map((event, index) => {
                   return (
                     <ImageGridItem
                       key={event.id}
@@ -423,7 +449,8 @@ function Feed({
                       asReply={asReply || showRepliedTo}
                       showRepliedTo={showRepliedTo}
                       showReplies={showReplies}
-                      event={event}
+                      event={"content" in event ? event : undefined}
+                      eventId={"content" in event ? undefined : event.id}
                       onEvent={onEvent}
                       borderTop={borderTopFirst && index === 0}
                     />

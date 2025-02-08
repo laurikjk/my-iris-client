@@ -18,45 +18,6 @@ import {localState} from "irisdb"
 
 const UNSEEN_CACHE_KEY = "unseenFeed"
 
-const tabs = [
-  {
-    name: "Unseen",
-    path: "unseen",
-    cacheKey: UNSEEN_CACHE_KEY,
-    showRepliedTo: false,
-    fetchFilterFn: (e: NDKEvent) => !getEventReplyingTo(e) && !seenEventIds.has(e.id),
-  },
-  {
-    name: "Latest",
-    path: "latest",
-    showRepliedTo: false,
-    displayFilterFn: (e: NDKEvent) =>
-      !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 1,
-  },
-  {
-    name: "Replies",
-    path: "replies",
-    displayFilterFn: (e: NDKEvent) => socialGraph().getFollowDistance(e.pubkey) <= 1,
-  },
-  {
-    name: "Media",
-    path: "media",
-    showRepliedTo: false,
-    displayFilterFn: (e: NDKEvent) => hasMedia(e),
-  },
-  {
-    name: "Adventure",
-    path: "adventure",
-    showRepliedTo: false,
-    filter: {
-      kinds: [1],
-      limit: 100,
-    },
-    fetchFilterFn: (e: NDKEvent) =>
-      !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 5,
-  },
-]
-
 let myPubKey = ""
 localState.get("user/publicKey").on((v) => (myPubKey = v || ""), false, undefined, String)
 
@@ -81,9 +42,63 @@ function HomeFeedEvents() {
   const [widgetFilter] = useLocalState("user/feedFilter", defaultFeedFilter)
   const [forceUpdate, setForceUpdate] = useState(0)
 
+  const tabs = useMemo(
+    () => [
+      {
+        name: "Unseen",
+        path: "unseen",
+        cacheKey: UNSEEN_CACHE_KEY,
+        showRepliedTo: false,
+        fetchFilterFn: (e: NDKEvent) => !getEventReplyingTo(e) && !seenEventIds.has(e.id),
+      },
+      {
+        name: "Popular",
+        path: "popular",
+        filter: {
+          kinds: [7],
+          since: Math.floor(Date.now() / 1000 - 60 * 60 * 24),
+          limit: 200,
+          authors: follows,
+        },
+        cacheKey: "popularFeed",
+        sortLikedPosts: true,
+      },
+      {
+        name: "Latest",
+        path: "latest",
+        showRepliedTo: false,
+        displayFilterFn: (e: NDKEvent) =>
+          !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 1,
+      },
+      {
+        name: "Replies",
+        path: "replies",
+        displayFilterFn: (e: NDKEvent) => socialGraph().getFollowDistance(e.pubkey) <= 1,
+      },
+      {
+        name: "Media",
+        path: "media",
+        showRepliedTo: false,
+        displayFilterFn: (e: NDKEvent) => hasMedia(e),
+      },
+      {
+        name: "Adventure",
+        path: "adventure",
+        showRepliedTo: false,
+        filter: {
+          kinds: [1],
+          limit: 100,
+        },
+        fetchFilterFn: (e: NDKEvent) =>
+          !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 5,
+      },
+    ],
+    [follows]
+  )
+
   const activeTabItem = useMemo(
     () => tabs.find((t) => t.path === activeTab) || tabs[0],
-    [activeTab]
+    [activeTab, tabs]
   )
 
   const openedAt = useMemo(() => Date.now(), [])
@@ -169,7 +184,8 @@ function HomeFeedEvents() {
         cacheKey={activeTabItem.cacheKey}
         showRepliedTo={CONFIG.rightColumnFilters || activeTabItem.showRepliedTo}
         emptyPlaceholder={<EmptyPlaceholder follows={follows} myPubKey={myPubKey} />}
-        forceUpdate={forceUpdate} // Pass forceUpdate to Feed component
+        forceUpdate={forceUpdate}
+        sortLikedPosts={activeTabItem.sortLikedPosts}
       />
       {follows.length <= 1 && <Trending small={false} contentType="images" />}
     </>
