@@ -1,9 +1,7 @@
 import {
   Channel,
   InviteLink,
-  KeyType,
   NostrFilter,
-  Sender,
   serializeChannelState,
 } from "nostr-double-ratchet"
 import {showNotification, subscribeToAuthorDMNotifications} from "@/utils/notifications"
@@ -67,9 +65,7 @@ function listen() {
           nostrSubscribe,
           (channel: Channel, identity?: string) => {
             const id = identity || "asdf"
-            const current = channel.getNostrSenderKeypair(Sender.Them, KeyType.Current)
-            const next = channel.getNostrSenderKeypair(Sender.Them, KeyType.Next)
-            subscribeToAuthorDMNotifications([current.publicKey, next.publicKey])
+            subscribeToAuthorDMNotifications([channel.state.theirNostrPublicKey])
             localState.get("channels").on((c) => console.log("channels", c))
             setTimeout(() => {
               if (!channels || !Object.keys(channels).includes(id)) {

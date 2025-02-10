@@ -1,6 +1,6 @@
-import {KeyType, Sender, serializeChannelState} from "nostr-double-ratchet"
 import {subscribeToAuthorDMNotifications} from "@/utils/notifications"
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
+import {serializeChannelState} from "nostr-double-ratchet"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
@@ -133,9 +133,11 @@ const Chat = () => {
       }
       localState.get("channels").get(hexId).get("messages").get(message.id).put(msg)
       saveState()
-      const current = channel.getNostrSenderKeypair(Sender.Them, KeyType.Current)
-      const next = channel.getNostrSenderKeypair(Sender.Them, KeyType.Next)
-      subscribeToAuthorDMNotifications([current.publicKey, next.publicKey])
+      const keys = [channel.state.ourNextNostrKey.publicKey]
+      if (channel.state.ourCurrentNostrKey) {
+        keys.push(channel.state.ourCurrentNostrKey.publicKey)
+      }
+      subscribeToAuthorDMNotifications(keys)
     })
 
     return () => {
