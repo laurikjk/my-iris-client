@@ -73,6 +73,7 @@ const NewChat = () => {
       e.publish()
         .then((res) => console.log("published", res))
         .catch((e) => console.warn("Error publishing event:", e))
+      ndk().publish(e)
       console.log("published event?", event)
 
       const channelId = `${inviteLink.inviter}:${channel.name}`
