@@ -1,7 +1,7 @@
 import {useLocalState, usePublicState} from "irisdb-hooks"
 import {useEffect, useMemo, useState} from "react"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 import UploadButton from "@/shared/components/button/UploadButton"
 import useProfile from "@/shared/hooks/useProfile"

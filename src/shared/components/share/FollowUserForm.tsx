@@ -1,9 +1,10 @@
 import {FormEvent, useMemo, useState} from "react"
-import {ndk, PublicKey} from "irisdb-nostr"
 import {useLocalState} from "irisdb-hooks"
+import {PublicKey} from "irisdb-nostr"
 import classNames from "classnames"
 
 import {UserRow} from "@/shared/components/user/UserRow"
+import {ndk} from "@/utils/ndk"
 
 export const FollowUserForm = () => {
   const [myPubKey] = useLocalState("user/publicKey", "")

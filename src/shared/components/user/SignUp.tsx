@@ -4,7 +4,7 @@ import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 import {bytesToHex} from "@noble/hashes/utils"
 import {useLocalState} from "irisdb-hooks"
 import {localState} from "irisdb"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 const NSEC_NPUB_REGEX = /(nsec1|npub1)[a-zA-Z0-9]{20,65}/gi
 

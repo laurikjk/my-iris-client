@@ -6,7 +6,7 @@ import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {feedCache} from "@/utils/memcache"
 import debounce from "lodash/debounce"
 import {localState} from "irisdb"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 // TODO fix useLocalState so initial state is properly set from memory
 let myPubKey = ""

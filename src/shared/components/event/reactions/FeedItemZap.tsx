@@ -11,7 +11,7 @@ import Icon from "../../Icons/Icon.tsx"
 import ZapModal from "../ZapModal.tsx"
 import debounce from "lodash/debounce"
 import {localState} from "irisdb"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 import * as bolt11 from "bolt11"
 
 const zapsByEventCache = new LRUCache<string, Map<string, NDKEvent[]>>({

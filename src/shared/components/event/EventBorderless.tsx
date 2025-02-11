@@ -8,7 +8,7 @@ import {UserRow} from "../user/UserRow"
 import {RawEvent} from "@/utils/nostr"
 import HyperText from "../HyperText"
 import {nip19} from "nostr-tools"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 interface EventBorderlessProps {
   event?: RawEvent | NDKEvent

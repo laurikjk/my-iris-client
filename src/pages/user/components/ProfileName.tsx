@@ -2,7 +2,7 @@ import {ErrorOutline, Verified} from "@mui/icons-material"
 import {useCallback, useEffect, useState} from "react"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {useNavigate} from "react-router-dom"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 interface ProfileNameProps {
   profile: NDKUserProfile | null | undefined

@@ -23,7 +23,7 @@ import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import socialGraph from "@/utils/socialGraph"
 import {useLocalState} from "irisdb-hooks"
 import {localState} from "irisdb"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 const INITIAL_DISPLAY_COUNT = 10
 const DISPLAY_INCREMENT = 10

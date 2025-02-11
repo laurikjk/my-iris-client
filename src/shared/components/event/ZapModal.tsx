@@ -15,7 +15,7 @@ import {requestProvider} from "@getalby/bitcoin-connect-react"
 import zapAnimation from "@/assets/zap-animation.gif"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {useLocalState} from "irisdb-hooks"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 interface ZapModalProps {
   onClose: () => void

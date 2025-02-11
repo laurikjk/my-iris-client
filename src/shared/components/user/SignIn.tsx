@@ -5,7 +5,7 @@ import {getPublicKey, nip19} from "nostr-tools"
 import {useLocalState} from "irisdb-hooks"
 import classNames from "classnames"
 import {localState} from "irisdb"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 const NSEC_NPUB_REGEX = /(nsec1|npub1)[a-zA-Z0-9]{20,65}/gi
 const HEX_REGEX = /[0-9a-fA-F]{64}/gi

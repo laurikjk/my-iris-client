@@ -8,7 +8,7 @@ import {showNotification, subscribeToAuthorDMNotifications} from "@/utils/notifi
 import {JsonValue, localState, Unsubscribe} from "irisdb"
 import {hexToBytes} from "@noble/hashes/utils"
 import {VerifiedEvent} from "nostr-tools"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 const inviteLinks = new Map<string, InviteLink>()
 const subscriptions = new Map<string, Unsubscribe>()

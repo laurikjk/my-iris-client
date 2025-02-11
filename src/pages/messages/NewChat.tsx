@@ -9,7 +9,7 @@ import {useNavigate} from "react-router-dom"
 import {getInviteLinks} from "./InviteLinks"
 import {useLocalState} from "irisdb-hooks"
 import {localState} from "irisdb"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 const NewChat = () => {
   const navigate = useNavigate()

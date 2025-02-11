@@ -1,6 +1,6 @@
 import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 export async function uploadFile(
   file: File,

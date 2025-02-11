@@ -1,6 +1,6 @@
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import socialGraph from "@/utils/socialGraph"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 export interface PushNotifications {
   endpoint: string

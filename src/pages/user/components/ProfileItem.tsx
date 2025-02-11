@@ -2,7 +2,7 @@ import {Dispatch, SetStateAction, useEffect, useState} from "react"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {useNavigate} from "react-router-dom"
 import {Avatar} from "@mui/material"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 import ProfileAvatar from "./ProfileAvatar.tsx"
 import ProfileName from "./ProfileName.tsx"

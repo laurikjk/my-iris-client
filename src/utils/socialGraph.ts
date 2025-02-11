@@ -7,7 +7,7 @@ import {debounce, throttle} from "lodash"
 import {profileCache} from "./memcache"
 import localForage from "localforage"
 import {localState} from "irisdb"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 import Fuse from "fuse.js"
 
 const DEFAULT_SOCIAL_GRAPH_ROOT =

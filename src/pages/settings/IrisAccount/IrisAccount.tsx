@@ -7,7 +7,7 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ActiveAccount from "./ActiveAccount"
 import AccountName from "./AccountName"
 import {localState} from "irisdb"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 declare global {
   interface Window {

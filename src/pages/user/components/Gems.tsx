@@ -5,7 +5,7 @@ import {Diamond} from "@mui/icons-material"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {usePublicState} from "irisdb-hooks"
 import {nip19} from "nostr-tools"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 interface GemsProps {
   pubKey: string

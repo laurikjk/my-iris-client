@@ -1610,7 +1610,7 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@nostr-dev-kit/ndk-cache-dexie@2.5.9", "@nostr-dev-kit/ndk-cache-dexie@^2.5.9":
+"@nostr-dev-kit/ndk-cache-dexie@^2.5.9":
   version "2.5.9"
   resolved "https://registry.yarnpkg.com/@nostr-dev-kit/ndk-cache-dexie/-/ndk-cache-dexie-2.5.9.tgz#a7e2fb27f4ee2a2c9a4167c0750ff6afc567c9bb"
   integrity sha512-SZ5FjON0QPekiC7oW9Hy3JQxG0Oxxtud9LBa1q/A49JV/Qppv1x37nFHxi0XLxEbDgFTNYbaN27Zjfp2NPem2g==
@@ -5026,19 +5026,17 @@ internal-slot@^1.0.7:
     hasown "^2.0.0"
     side-channel "^1.0.4"
 
-irisdb-hooks@1.0.11:
-  version "1.0.11"
-  resolved "https://registry.yarnpkg.com/irisdb-hooks/-/irisdb-hooks-1.0.11.tgz#4ab1c2bc5cb79b5c25e267866864ae72c4c7d9c6"
-  integrity sha512-0W3cAuvsKXTW9og0n2h04mw0El1XtWrSGqd74ezMRoR2A3CLMF7u31KHuYwk/3ovldVza4mLkvky1eICLNlg3g==
+irisdb-hooks@1.0.14:
+  version "1.0.14"
+  resolved "https://registry.yarnpkg.com/irisdb-hooks/-/irisdb-hooks-1.0.14.tgz#10dece15f790eb3ff5b0e287d8dd66d3f6c6edf4"
+  integrity sha512-l7PILXx4DnIS3btlG+pdj+vhc80bfaGScLBCcW/jmZ/ur8xBuvii0dk9btkrjF4aoVDIHNZOEqnZ07fRTBbCAw==
 
-irisdb-nostr@1.0.22:
-  version "1.0.22"
-  resolved "https://registry.yarnpkg.com/irisdb-nostr/-/irisdb-nostr-1.0.22.tgz#93bf269d9d3dfcf3d23ea4d6201fa37873312923"
-  integrity sha512-rjEEC1HfjVEXXTjLajc0js1JxjtXRqAGfPO4UGkq0atFgwo7ne+x/D+zAjAeUssC7zCrQkOMBbyboqoFzuTL9w==
+irisdb-nostr@1.0.23:
+  version "1.0.23"
+  resolved "https://registry.yarnpkg.com/irisdb-nostr/-/irisdb-nostr-1.0.23.tgz#9f620c4b543b76baa28d55d03f97085cafe357d8"
+  integrity sha512-Y3irsZTTNtQH7YrfOpID0985SHSgq3ae2C+CIQh3FlUfKJSPrx49OarvUg3LfxwTBBBlM2Hg8uyRAWy866tnJQ==
   dependencies:
     "@noble/hashes" "^1.5.0"
-    "@nostr-dev-kit/ndk" "2.11.0"
-    "@nostr-dev-kit/ndk-cache-dexie" "2.5.9"
     debug "^4.3.7"
     nostr-tools "^2.7.2"
   optionalDependencies:

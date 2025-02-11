@@ -2,7 +2,7 @@ import {useLocation} from "react-router-dom"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import Dropdown from "@/shared/components/ui/Dropdown"

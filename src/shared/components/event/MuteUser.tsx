@@ -4,7 +4,7 @@ import {Hexpubkey, NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
 import {muteUser, unmuteUser} from "@/shared/services/Mute.tsx"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import socialGraph from "@/utils/socialGraph.ts"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 interface MuteUserProps {
   setMuting: Dispatch<SetStateAction<boolean>>

@@ -3,7 +3,7 @@ import {ErrorOutline, GitHub, Verified} from "@mui/icons-material"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {useNavigate} from "react-router-dom"
 import {nip19} from "nostr-tools"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 import HyperText from "@/shared/components/HyperText.tsx"
 import MutedBy from "@/shared/components/user/MutedBy"
