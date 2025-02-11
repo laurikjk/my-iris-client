@@ -124,6 +124,7 @@ function Carousel({images, event}: CarouselProps) {
         index={currentIndex}
         onClickImage={onClickImage}
         blur={blur}
+        key={images[currentIndex]}
       />
       {images.length > 1 && (
         <>

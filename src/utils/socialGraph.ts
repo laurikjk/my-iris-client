@@ -1,11 +1,13 @@
 import {SocialGraph, NostrEvent, SerializedSocialGraph} from "nostr-social-graph"
 import {NDKEvent, NDKSubscription, NDKUserProfile} from "@nostr-dev-kit/ndk"
 import profileJson from "nostr-social-graph/data/profileData.json"
+import {LRUCache} from "typescript-lru-cache"
+import {VerifiedEvent} from "nostr-tools"
+import {debounce, throttle} from "lodash"
 import {profileCache} from "./memcache"
 import localForage from "localforage"
 import {localState} from "irisdb"
 import {ndk} from "irisdb-nostr"
-import {throttle} from "lodash"
 import Fuse from "fuse.js"
 
 const DEFAULT_SOCIAL_GRAPH_ROOT =
@@ -28,7 +30,6 @@ async function initializeInstance(publicKey?: string) {
         publicKey ?? DEFAULT_SOCIAL_GRAPH_ROOT,
         data as SerializedSocialGraph
       )
-      console.log("Loaded social graph of size", instance.size())
     } catch (e) {
       console.error("error deserializing", e)
       await localForage.removeItem("socialGraph")
@@ -41,6 +42,7 @@ async function initializeInstance(publicKey?: string) {
       )
     }
   } else {
+    console.log("no social graph found")
     await localForage.removeItem("socialGraph")
     const {default: preCrawledGraph} = await import(
       "nostr-social-graph/data/socialGraph.json"
@@ -55,10 +57,8 @@ async function initializeInstance(publicKey?: string) {
 const MAX_SOCIAL_GRAPH_SERIALIZE_SIZE = 1000000
 const throttledSave = throttle(async () => {
   try {
-    await localForage.setItem(
-      "socialGraph",
-      instance.serialize(MAX_SOCIAL_GRAPH_SERIALIZE_SIZE)
-    )
+    const serialized = instance.serialize(MAX_SOCIAL_GRAPH_SERIALIZE_SIZE)
+    await localForage.setItem("socialGraph", serialized)
     console.log("Saved social graph of size", instance.size())
   } catch (e) {
     console.error("failed to serialize SocialGraph or UniqueIds", e)
@@ -66,7 +66,13 @@ const throttledSave = throttle(async () => {
   }
 }, 10000)
 
-export const handleFollowEvent = (evs: NostrEvent | Array<NostrEvent>) => {
+const debouncedRemoveNonFollowed = debounce(() => {
+  const removedCount = instance.removeMutedNotFollowedUsers()
+  console.log("Removing", removedCount, "muted users not followed by anyone")
+  throttledSave()
+}, 11000)
+
+export const handleSocialGraphEvent = (evs: NostrEvent | Array<NostrEvent>) => {
   instance.handleEvent(evs)
   throttledSave()
 }
@@ -153,12 +159,15 @@ export function getFollowLists(myPubKey: string, missingOnly = true, upToDistanc
   const fetchBatch = (authors: string[]) => {
     const sub = ndk().subscribe(
       {
-        kinds: [3],
+        kinds: [3, 10000],
         authors: authors,
       },
       {closeOnEose: true}
     )
-    sub.on("event", (e) => handleFollowEvent(e))
+    sub.on("event", (e) => {
+      handleSocialGraphEvent(e as unknown as VerifiedEvent)
+      debouncedRemoveNonFollowed()
+    })
   }
 
   const processBatch = () => {
@@ -204,23 +213,26 @@ const throttledRecalculate = throttle(
 
 export const socialGraphLoaded = new Promise((resolve) => {
   localState.get("user/publicKey").on(async (publicKey?: string) => {
-    console.log("publicKey", publicKey)
     await initializeInstance(publicKey)
     resolve(true)
     if (publicKey) {
       sub?.stop()
       sub = ndk().subscribe({
-        kinds: [3],
+        kinds: [3, 10000],
         authors: [publicKey],
         limit: 1,
       })
       let latestTime = 0
       sub?.on("event", (ev) => {
+        if (ev.kind === 10000) {
+          handleSocialGraphEvent(ev as NostrEvent)
+          return
+        }
         if (typeof ev.created_at !== "number" || ev.created_at < latestTime) {
           return
         }
         latestTime = ev.created_at
-        handleFollowEvent(ev as NostrEvent)
+        handleSocialGraphEvent(ev as NostrEvent)
         queueMicrotask(() => getMissingFollowLists(publicKey))
         throttledRecalculate()
       })
@@ -292,5 +304,46 @@ export const downloadLargeGraph = () => {
 }
 
 export const loadAndMerge = () => loadFromFile(true)
+
+export const shouldSocialHide = (pubKey: string, threshold = 1): boolean => {
+  const cache = new LRUCache<string, boolean>({maxSize: 100})
+
+  // Check if the result is already in the cache
+  if (cache.has(pubKey)) {
+    return cache.get(pubKey)!
+  }
+
+  const hasMuters = instance.getUserMutedBy(pubKey).size > 0
+
+  // for faster checks, if no one mutes, return false
+  if (!hasMuters) {
+    cache.set(pubKey, false)
+    return false
+  }
+
+  const userStats = instance.stats(pubKey)
+
+  // Sort numeric distances ascending
+  const distances = Object.keys(userStats)
+    .map(Number)
+    .sort((a, b) => a - b)
+
+  // Look at the smallest distance that has any followers/muters
+  for (const distance of distances) {
+    const {followers, muters} = userStats[distance]
+    if (followers + muters === 0) {
+      continue // No one at this distance has an opinion; skip
+    }
+
+    // If, at the closest distance with an opinion, muters >= followers => hide
+    const shouldHide = muters * threshold >= followers
+    cache.set(pubKey, shouldHide)
+    return shouldHide
+  }
+
+  // If no one anywhere follows or mutes, default to hide
+  cache.set(pubKey, true)
+  return true
+}
 
 export default () => instance

@@ -5,6 +5,7 @@ import {nip19} from "nostr-tools"
 
 import socialGraph, {searchIndex, SearchResult} from "@/utils/socialGraph"
 import {UserRow} from "@/shared/components/user/UserRow"
+import useMutes from "@/shared/hooks/useMutes"
 import {Check} from "@mui/icons-material"
 import Icon from "../Icons/Icon"
 import {ndk} from "irisdb-nostr"
@@ -42,6 +43,7 @@ function SearchBox({
   const [value, setValue] = useState<string>("")
   const inputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
+  const mutes = useMutes()
 
   onSelect =
     onSelect ||
@@ -87,23 +89,27 @@ function SearchBox({
       }
 
       const results = searchIndex.search(value.trim(), {limit: MAX_RESULTS * 2})
-      const resultsWithAdjustedScores = results.map((result) => {
-        const followDistance = Math.max(
-          socialGraph().getFollowDistance(result.item.pubKey),
-          1
-        )
-        const followedByFriends = socialGraph().followedByFriends(result.item.pubKey).size
-        const adjustedScore =
-          result.score! * Math.pow(followDistance, 3) * Math.pow(0.9, followedByFriends)
+      const resultsWithAdjustedScores = results
+        .filter((result) => !mutes.includes(result.item.pubKey))
+        .map((result) => {
+          const followDistance = Math.max(
+            socialGraph().getFollowDistance(result.item.pubKey),
+            1
+          )
+          const followedByFriends = socialGraph().followedByFriends(
+            result.item.pubKey
+          ).size
+          const adjustedScore =
+            result.score! * Math.pow(followDistance, 3) * Math.pow(0.9, followedByFriends)
 
-        /*
-        console.log(
-          `Result: ${result.item.name}, Score: ${result.score}, Follow Distance: ${followDistance}, Followed By Friends: ${followedByFriends}, Adjusted Score: ${adjustedScore}`
-        )
-        */
+          /*
+          console.log(
+            `Result: ${result.item.name}, Score: ${result.score}, Follow Distance: ${followDistance}, Followed By Friends: ${followedByFriends}, Adjusted Score: ${adjustedScore}`
+          )
+          */
 
-        return {...result, adjustedScore}
-      })
+          return {...result, adjustedScore}
+        })
 
       resultsWithAdjustedScores.sort((a, b) => a.adjustedScore - b.adjustedScore)
 
@@ -121,7 +127,7 @@ function SearchBox({
     } else {
       setSearchResults([])
     }
-  }, [value, navigate, searchNotes])
+  }, [value, navigate, searchNotes, mutes])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

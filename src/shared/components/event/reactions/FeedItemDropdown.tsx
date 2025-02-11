@@ -1,11 +1,9 @@
-import {useContext, useEffect, useMemo, useState} from "react"
 import {useLocalState, usePublicState} from "irisdb-hooks"
+import {useEffect, useMemo, useState} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {nip19} from "nostr-tools"
-import {ndk} from "irisdb-nostr"
 
-import {unmuteUser} from "@/shared/services/FeedServices.tsx"
-import {UserContext} from "@/context/UserContext.tsx"
+import {unmuteUser} from "@/shared/services/Mute.tsx"
 
 import Reactions from "@/shared/components/event/reactions/Reactions.tsx"
 import Dropdown from "@/shared/components/ui/Dropdown.tsx"
@@ -28,8 +26,7 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
   const [muting, setMuting] = useState(false)
   const [reporting, setReporting] = useState(false)
 
-  const {setDeleting, mutedList, setMutedList, setPublishingError} =
-    useContext(UserContext)
+  const mutedList: string[] = []
 
   const authors = useMemo(() => (myPubKey ? [myPubKey] : []), [myPubKey])
 
@@ -54,14 +51,7 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
   }
   const handleMute = async () => {
     if (muted) {
-      await unmuteUser(ndk(), mutedList, event.pubkey)
-        .then((newList) => {
-          setMutedList(newList)
-        })
-        .catch((error) => {
-          setPublishingError(true)
-          console.warn("Unable to unmute user", error)
-        })
+      await unmuteUser(event.pubkey)
     } else {
       setMuting(true)
     }
@@ -75,11 +65,8 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
     if (event.pubkey === myPubKey) {
       try {
         await event.delete()
-        // triggers refetch for feeds
-        setDeleting(event.id)
         onClose()
       } catch (error) {
-        setPublishingError(true)
         console.warn("Event could not be deleted: ", error)
       }
     }
@@ -126,7 +113,6 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
               <MuteUser
                 muteState={muted}
                 user={event.pubkey}
-                event={event}
                 setMuting={setMuting}
                 setMutedState={setMuted}
               />

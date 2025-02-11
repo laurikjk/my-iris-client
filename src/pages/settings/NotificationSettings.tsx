@@ -2,6 +2,7 @@ import {showNotification, subscribeToNotifications} from "@/utils/notifications"
 import {useEffect, useState, ChangeEvent} from "react"
 import Icon from "@/shared/components/Icons/Icon"
 import {useLocalState} from "irisdb-hooks"
+import SnortApi from "@/utils/SnortApi"
 
 interface StatusIndicatorProps {
   status: boolean
@@ -16,12 +17,12 @@ const StatusIndicator = ({
 }: StatusIndicatorProps) => {
   return status ? (
     <div className="flex items-center">
-      <Icon name="check" size={20} className="text-green-500 mr-2" />
+      <Icon name="check" size={20} className="text-success mr-2" />
       {enabledMessage}
     </div>
   ) : (
     <div className="flex items-center">
-      <Icon name="close" size={20} className="text-red-500 mr-2" />
+      <Icon name="close" size={20} className="text-error mr-2" />
       {disabledMessage}
     </div>
   )
@@ -45,6 +46,7 @@ const NotificationSettings = () => {
     String
   )
   const [isValidUrl, setIsValidUrl] = useState(true)
+  const [subscriptionsData, setSubscriptionsData] = useState<string | null>(null)
 
   const trySubscribePush = async () => {
     try {
@@ -90,7 +92,7 @@ const NotificationSettings = () => {
         image:
           "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Orange_tabby_cat_sitting_on_fallen_leaves-Hisashi-01A.jpg/1920px-Orange_tabby_cat_sitting_on_fallen_leaves-Hisashi-01A.jpg",
       }
-      showNotification(title, options)
+      showNotification(title, options, true)
     } else {
       alert("Notifications are not allowed. Please enable them first.")
     }
@@ -113,6 +115,20 @@ const NotificationSettings = () => {
       return false
     }
   }
+
+  useEffect(() => {
+    const fetchSubscriptionsData = async () => {
+      try {
+        const api = new SnortApi()
+        const data = await api.getSubscriptions()
+        setSubscriptionsData(JSON.stringify(data, null, 2)) // Pretty print with 2 spaces
+      } catch (error) {
+        console.error("Failed to fetch subscriptions:", error)
+      }
+    }
+
+    fetchSubscriptionsData()
+  }, [])
 
   return (
     <div className="flex flex-col">
@@ -172,7 +188,7 @@ const NotificationSettings = () => {
               value={notificationServer}
               onChange={handleServerChange}
             />
-            {!isValidUrl && <p className="text-red-500">Invalid URL</p>}
+            {!isValidUrl && <p className="text-error">Invalid URL</p>}
           </div>
           <div className="mt-2">
             Self-host notification server?{" "}
@@ -183,6 +199,12 @@ const NotificationSettings = () => {
               Source code
             </a>
           </div>
+        </div>
+        <div className="mt-4">
+          <b>Debug: /subscriptions Response</b>
+          <pre className="bg-base-200 p-4 rounded overflow-auto whitespace-pre-wrap break-all">
+            {subscriptionsData || "Loading..."}
+          </pre>
         </div>
       </div>
     </div>

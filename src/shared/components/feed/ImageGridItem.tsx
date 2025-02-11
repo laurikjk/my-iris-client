@@ -5,6 +5,7 @@ import {nip19} from "nostr-tools"
 import imageEmbed from "@/shared/components/embed/images/Image"
 import Video from "@/shared/components/embed/video/Video"
 import ProxyImg from "@/shared/components/ProxyImg"
+import {MutableRefObject} from "react"
 import {localState} from "irisdb"
 import Icon from "../Icons/Icon"
 
@@ -12,7 +13,7 @@ type ImageGridItemProps = {
   event: NDKEvent
   index: number
   setActiveItemIndex: (url: string) => void
-  lastElementRef?: React.MutableRefObject<HTMLDivElement>
+  lastElementRef?: MutableRefObject<HTMLDivElement>
 }
 
 let blurNSFW = true

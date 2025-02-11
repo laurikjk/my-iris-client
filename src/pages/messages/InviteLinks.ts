@@ -4,7 +4,8 @@ import {
   NostrFilter,
   serializeChannelState,
 } from "nostr-double-ratchet"
-import SnortApi, {PushSubscription} from "@/utils/SnortApi"
+import {showNotification, subscribeToAuthorDMNotifications} from "@/utils/notifications"
+import SnortApi, {Subscription} from "@/utils/SnortApi"
 import {hexToBytes} from "@noble/hashes/utils"
 import {localState, Unsubscribe} from "irisdb"
 import {VerifiedEvent} from "nostr-tools"
@@ -37,23 +38,20 @@ export function getInviteLinks(
 const nostrSubscribe = (filter: NostrFilter, onEvent: (e: VerifiedEvent) => void) => {
   const sub = ndk().subscribe(filter)
   sub.on("event", (event) => {
-    onEvent(event)
+    onEvent(event as unknown as VerifiedEvent)
   })
   return () => sub.stop()
 }
 
 function listen() {
   if (user?.publicKey && user?.privateKey) {
-    console.log("howdy", user)
     for (const id of inviteLinks.keys()) {
       if (!subscriptions.has(id)) {
         const inviteLink = inviteLinks.get(id)!
         const decrypt = user.privateKey
           ? hexToBytes(user.privateKey)
           : async (cipherText: string, pubkey: string) => {
-              // @ts-expect-error: nip44 exists at runtime but is not in the type definition
               if (window.nostr?.nip44) {
-                // @ts-expect-error: nip44 exists at runtime but is not in the type definition
                 const result = window.nostr.nip44.decrypt(cipherText, pubkey)
                 if (!result || typeof result !== "string") {
                   throw new Error("Failed to decrypt")
@@ -66,13 +64,20 @@ function listen() {
           decrypt,
           nostrSubscribe,
           (channel: Channel, identity?: string) => {
-            console.log("channel", identity, channel)
             const channelId = `${identity}:${channel.name}`
+            subscribeToAuthorDMNotifications([channel.state.theirNostrPublicKey])
+
             localState
               .get("channels")
               .get(channelId)
               .get("state")
               .put(serializeChannelState(channel.state))
+
+            showNotification("New chat via invite link", {
+              data: {
+                url: `/messages/${identity}`,
+              },
+            })
           }
         )
         subscriptions.set(id, unsubscribe)
@@ -95,9 +100,9 @@ const subscribeInviteLinkNotifications = debounce(async () => {
     const missing = Array.from(inviteLinks.values()).filter(
       (link) =>
         !Object.values(subscriptions).find(
-          (sub: PushSubscription) =>
+          (sub: Subscription) =>
             sub.filter.kinds?.includes(4) &&
-            sub.filter["#e"]?.includes(link.inviterSessionPublicKey)
+            (sub.filter as any)["#e"]?.includes(link.inviterSessionPublicKey)
         )
     )
 
@@ -108,20 +113,18 @@ const subscribeInviteLinkNotifications = debounce(async () => {
     })
 
     if (missing.length) {
-      // kind has 4 and only 4
       const dmSubscription = Object.entries(subscriptions).find(
         ([, sub]) => sub.filter.kinds?.length === 1 && sub.filter.kinds[0] === 4
       )
 
       if (dmSubscription) {
         const [id, sub] = dmSubscription
-        await new SnortApi().updateSubscription({
-          id,
+        await new SnortApi().updateSubscription(id, {
           filter: {
             ...sub.filter,
             "#e": [
               ...new Set([
-                ...(sub.filter["#e"] || []),
+                ...((sub.filter as any)["#e"] || []),
                 ...missing.map((l) => l.inviterSessionPublicKey),
               ]),
             ],
@@ -129,10 +132,8 @@ const subscribeInviteLinkNotifications = debounce(async () => {
         })
       } else {
         await new SnortApi().createSubscription({
-          filter: {
-            kinds: [4],
-            "#e": missing.map((l) => l.inviterSessionPublicKey),
-          },
+          kinds: [4],
+          "#e": missing.map((l) => l.inviterSessionPublicKey),
         })
       }
     }

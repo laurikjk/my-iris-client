@@ -8,9 +8,23 @@ export interface PushNotifications {
   auth: string
 }
 
-export interface PushSubscription {
+export interface Subscription {
   id?: string
-  filter: NDKFilter
+  webhooks: any[]
+  web_push_subscriptions: PushNotifications[]
+  filter: {
+    ids?: string[]
+    authors?: string[]
+    kinds: number[]
+    search?: string
+    "#p"?: string[]
+    "#e"?: string[]
+  }
+  subscriber: string
+}
+
+export interface SubscriptionResponse {
+  [key: string]: Subscription
 }
 
 /**
@@ -34,7 +48,7 @@ export default class SnortApi {
   }
 
   getSubscriptions() {
-    return this.#getJsonAuthd<{[id: string]: PushSubscription}>("subscriptions")
+    return this.#getJsonAuthd<SubscriptionResponse>("subscriptions")
   }
 
   registerPushNotifications(sub: PushNotifications, filter: NDKFilter) {
@@ -45,16 +59,16 @@ export default class SnortApi {
     })
   }
 
-  createSubscription(subscription: PushSubscription) {
-    return this.#getJsonAuthd<void>(`subscriptions`, "POST", subscription)
+  createSubscription(filter: Subscription["filter"]) {
+    return this.#getJsonAuthd<{id: string; status: string}>("subscriptions", "POST", {
+      webhooks: [],
+      web_push_subscriptions: [],
+      filter,
+    })
   }
 
-  updateSubscription(subscription: PushSubscription) {
-    return this.#getJsonAuthd<void>(
-      `subscriptions/${subscription.id}`,
-      "POST",
-      subscription
-    )
+  updateSubscription(id: string, subscription: Partial<Subscription>) {
+    return this.#getJsonAuthd<void>(`subscriptions/${id}`, "POST", subscription)
   }
 
   async #getJsonAuthd<T>(

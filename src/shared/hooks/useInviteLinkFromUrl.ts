@@ -3,6 +3,7 @@ import {useNavigate, useLocation} from "react-router-dom"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {hexToBytes} from "@noble/hashes/utils"
 import {useLocalState} from "irisdb-hooks"
+import {VerifiedEvent} from "nostr-tools"
 import {localState} from "irisdb"
 import {ndk} from "irisdb-nostr"
 import {useEffect} from "react"
@@ -19,9 +20,7 @@ export const acceptInviteLink = async (
     const encrypt = myPrivKey
       ? hexToBytes(myPrivKey)
       : async (plaintext: string, pubkey: string) => {
-          // @ts-expect-error: nip44 exists at runtime but is not in the type definition
           if (window.nostr?.nip44) {
-            // @ts-expect-error: nip44 exists at runtime but is not in the type definition
             return window.nostr.nip44.encrypt(plaintext, pubkey)
           }
           throw new Error("No nostr extension or private key")
@@ -30,7 +29,7 @@ export const acceptInviteLink = async (
     const {channel, event} = await inviteLink.acceptInvite(
       (filter, onEvent) => {
         const sub = ndk().subscribe(filter)
-        sub.on("event", onEvent)
+        sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
         return () => sub.stop()
       },
       myPubKey,

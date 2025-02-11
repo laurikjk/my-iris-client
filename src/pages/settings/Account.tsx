@@ -29,13 +29,19 @@ function Account() {
       localStorage.clear()
       localforage
         .clear()
-        .then(() => {
-          console.log("localforage cleared")
-        })
         .catch((err) => {
           console.error("Error clearing localforage:", err)
         })
-        .finally(() => {
+        .finally(async () => {
+          // Unsubscribe from push notifications
+          if ("serviceWorker" in navigator) {
+            const reg = await navigator.serviceWorker.ready
+            const existingSub = await reg.pushManager.getSubscription()
+            if (existingSub) {
+              await existingSub.unsubscribe()
+              console.log("Unsubscribed from push notifications")
+            }
+          }
           navigate("/")
           location.reload() // quick & dirty way to ensure everything is reset, especially localState
         })

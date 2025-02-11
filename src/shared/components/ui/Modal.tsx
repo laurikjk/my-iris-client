@@ -86,7 +86,7 @@ const Modal = ({onClose, children, hasBackground = true}: ModalProps) => {
         {children}
       </div>
       {hasBackground && (
-        <div 
+        <div
           className="modal-backdrop"
           onClick={() => {
             onClose()

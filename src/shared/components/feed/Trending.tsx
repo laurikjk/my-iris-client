@@ -4,6 +4,7 @@ import useCachedFetch from "@/shared/hooks/useCachedFetch.ts"
 import EventBorderless from "../event/EventBorderless"
 import {useCallback, useState, useMemo} from "react"
 import FeedItem from "../event/FeedItem/FeedItem"
+import useMutes from "@/shared/hooks/useMutes"
 import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {Link} from "react-router-dom"
@@ -73,6 +74,7 @@ export default function Trending({
   }, [api, lang, contentType])
   const storageKey = `nostr-band-${trendingUrl}`
   const [displayCount, setDisplayCount] = useState(10)
+  const mutes = useMutes()
 
   const {
     data: trendingData,
@@ -143,7 +145,8 @@ export default function Trending({
               .filter(
                 (e: TrendingItem): e is RawEvent =>
                   "pubkey" in e &&
-                  !!(e && socialGraph().getFollowersByUser(e.pubkey).size > 0)
+                  !!(e && socialGraph().getFollowersByUser(e.pubkey).size > 0) &&
+                  !mutes.includes(e.pubkey)
               )
               .map(
                 (ev, index) =>

@@ -14,11 +14,18 @@ interface QRCodeModalProps {
   data: string
   onScanSuccess?: (data: string) => void
   npub?: string
+  initialShowScanner?: boolean
 }
 
-function QRCodeModal({onClose, data, onScanSuccess, npub}: QRCodeModalProps) {
+function QRCodeModal({
+  onClose,
+  data,
+  onScanSuccess,
+  npub,
+  initialShowScanner = false,
+}: QRCodeModalProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
-  const [showScanQr, setShowScanQr] = useState(false)
+  const [showScanQr, setShowScanQr] = useState(initialShowScanner)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -127,9 +134,17 @@ interface QRCodeButtonProps {
   data: string
   onScanSuccess?: (data: string) => void
   npub?: string
+  showQRCode?: boolean
+  icon?: string
 }
 
-function QRCodeButton({data, onScanSuccess, npub}: QRCodeButtonProps) {
+function QRCodeButton({
+  data,
+  onScanSuccess,
+  npub,
+  showQRCode = true,
+  icon = "qr",
+}: QRCodeButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const openModal = () => setIsModalOpen(true)
@@ -150,9 +165,9 @@ function QRCodeButton({data, onScanSuccess, npub}: QRCodeButtonProps) {
       <button
         onClick={openModal}
         className="p-2 btn btn-neutral btn-circle"
-        aria-label="Show QR Code"
+        aria-label={showQRCode ? "Show QR Code" : "Scan QR Code"}
       >
-        <Icon name="qr" className="w-4 h-4" />
+        <Icon name={icon} className="w-4 h-4" />
       </button>
       {isModalOpen && (
         <QRCodeModal
@@ -160,6 +175,7 @@ function QRCodeButton({data, onScanSuccess, npub}: QRCodeButtonProps) {
           data={data}
           onScanSuccess={onScanSuccess}
           npub={computedNpub}
+          initialShowScanner={!showQRCode}
         />
       )}
     </>

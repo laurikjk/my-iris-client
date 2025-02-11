@@ -15,12 +15,12 @@ function PreloadImages({images, currentIndex, size}: PreloadImagesProps) {
   return (
     <div className="hidden">
       <ProxyImg
-        key={`${images[nextIndex]}preload`}
+        key={`preload-next-${nextIndex}-${images[nextIndex]}`}
         src={images[nextIndex]}
         width={size ?? undefined}
       />
       <ProxyImg
-        key={`${images[prevIndex]}preload`}
+        key={`preload-prev-${prevIndex}-${images[prevIndex]}`}
         src={images[prevIndex]}
         width={size ?? undefined}
       />

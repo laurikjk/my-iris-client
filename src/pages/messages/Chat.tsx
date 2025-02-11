@@ -1,5 +1,5 @@
-import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import {Channel, serializeChannelState} from "nostr-double-ratchet"
+import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"

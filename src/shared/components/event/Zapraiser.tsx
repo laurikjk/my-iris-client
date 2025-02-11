@@ -1,7 +1,6 @@
-import {useContext, useEffect, useState} from "react"
-import {UserContext} from "@/context/UserContext"
 import {fetchZappedAmount} from "@/utils/nostr"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {useEffect, useState} from "react"
 import HyperText from "../HyperText"
 
 interface ZapraiserProps {
@@ -10,8 +9,6 @@ interface ZapraiserProps {
 
 function Zapraiser({event}: ZapraiserProps) {
   const [zapProgress, setZapProgress] = useState(0)
-
-  const {zapRefresh} = useContext(UserContext)
 
   useEffect(() => {
     fetchZappedAmount(event).then((amount: number) => {
@@ -29,7 +26,7 @@ function Zapraiser({event}: ZapraiserProps) {
         }
       }
     })
-  }, [event, zapRefresh])
+  }, [event])
 
   return (
     <div className="flex flex-col gap-2">

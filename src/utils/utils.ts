@@ -61,11 +61,10 @@ export const getLanguageFromFilename = (filename: string) => {
   }
 }
 
-export const statCalc = (n: number) => {
+export const formatAmount = (n: number) => {
   if (n < 1000) return n + " "
-
-  // If the number is 1000 or greater, format it
-  return (n / 1000).toFixed(1).replace(".0", "") + "k "
+  if (n < 1000000) return (n / 1000).toFixed(2).replace(".00", "") + "K "
+  return (n / 1000000).toFixed(2).replace(".00", "") + "M "
 }
 
 export const formatFileSize = (size: number): string => {

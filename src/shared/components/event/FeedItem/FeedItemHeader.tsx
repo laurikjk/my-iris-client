@@ -12,11 +12,11 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 type FeedItemHeaderProps = {
   event: NDKEvent
-  repostedEvent?: NDKEvent
+  referredEvent?: NDKEvent
   tight?: boolean
 }
 
-function FeedItemHeader({event, repostedEvent, tight}: FeedItemHeaderProps) {
+function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
   const isRezap = event?.tags
     .filter((tag) => tag[0] === "e")
     .toString()
@@ -44,12 +44,12 @@ function FeedItemHeader({event, repostedEvent, tight}: FeedItemHeaderProps) {
       return null
     }
 
-    const publishedAt = repostedEvent
-      ? getPublishedAt(repostedEvent)
+    const publishedAt = referredEvent
+      ? getPublishedAt(referredEvent)
       : getPublishedAt(event)
 
     if (publishedAt) setPublishedAt(publishedAt)
-  }, [event, repostedEvent])
+  }, [event, referredEvent])
 
   const onClose = useCallback(() => setShowDropdown(false), [setShowDropdown])
 
@@ -82,7 +82,7 @@ function FeedItemHeader({event, repostedEvent, tight}: FeedItemHeaderProps) {
             pubKey={
               (event.kind === 9735 && event.tagValue("P")
                 ? event.tagValue("P")
-                : repostedEvent?.pubkey) || event.pubkey
+                : referredEvent?.pubkey) || event.pubkey
             }
           />
         </div>
@@ -93,7 +93,7 @@ function FeedItemHeader({event, repostedEvent, tight}: FeedItemHeaderProps) {
           className="text-sm text-base-content/50 mr-2"
         >
           <RelativeTime
-            from={(publishedAt || repostedEvent?.created_at || event.created_at!) * 1000}
+            from={(publishedAt || referredEvent?.created_at || event.created_at!) * 1000}
           />
         </Link>
         <div
@@ -110,7 +110,7 @@ function FeedItemHeader({event, repostedEvent, tight}: FeedItemHeaderProps) {
         </div>
         {showDropdown && (
           <div ref={setDropdownRef} className="z-40">
-            <FeedItemDropdown onClose={onClose} event={repostedEvent || event} />
+            <FeedItemDropdown onClose={onClose} event={referredEvent || event} />
           </div>
         )}
       </div>

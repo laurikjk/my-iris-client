@@ -10,7 +10,7 @@ const subscribe = (filter: NostrFilter, onEvent: (event: VerifiedEvent) => void)
   const sub = ndk().subscribe(filter)
   sub.on("event", (event) => {
     console.log(event)
-    onEvent(event)
+    onEvent(event as unknown as VerifiedEvent)
   })
   return () => {} // no need to sub.stop(), old nostr senders might still have unseen?
 }

@@ -4,19 +4,24 @@ import {nip19} from "nostr-tools"
 
 export const handleEventContent = async (
   event: NDKEvent,
-  setRepostedEvent: (event: NDKEvent) => void
+  setReferredEvent: (event: NDKEvent) => void
 ) => {
   try {
-    if (event.kind === 6 || event.kind === 9372) {
-      const originalEvent = event.content ? JSON.parse(event.content) : undefined
+    if (event.kind === 6 || event.kind === 9372 || event.kind === 7) {
+      let originalEvent
+      try {
+        originalEvent = event.content ? JSON.parse(event.content) : undefined
+      } catch (error) {
+        // ignore
+      }
       if (originalEvent && originalEvent?.id) {
         const ndkEvent = NDKEventFromRawEvent(originalEvent)
-        setRepostedEvent(ndkEvent)
+        setReferredEvent(ndkEvent)
       } else {
         const eTag = getTag("e", event.tags)
         if (eTag) {
           const origEvent = await fetchEvent({ids: [eTag]})
-          if (origEvent) setRepostedEvent(origEvent)
+          if (origEvent) setReferredEvent(origEvent)
         }
       }
     }
@@ -26,7 +31,7 @@ export const handleEventContent = async (
 }
 export const fetchDeletionRequest = async (
   event: NDKEvent,
-  setRepostedEventDeleted: (value: boolean) => void
+  setReferredEventDeleted: (value: boolean) => void
 ) => {
   try {
     if (event.kind === 6 || event.kind === 9372) {
@@ -41,7 +46,7 @@ export const fetchDeletionRequest = async (
         }
 
         const deletionEvent = await fetchEvent(filter)
-        if (deletionEvent) setRepostedEventDeleted(true)
+        if (deletionEvent) setReferredEventDeleted(true)
       }
     }
   } catch (error) {

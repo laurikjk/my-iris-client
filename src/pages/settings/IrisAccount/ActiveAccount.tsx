@@ -15,7 +15,7 @@ export default function ActiveAccount({
   async function saveProfile(nip05: string) {
     const user = ndk().getUser({pubkey: myPub})
     user.profile = user.profile || {nip05}
-    await user.publish()
+    user.publish()
   }
 
   const onClick = async () => {

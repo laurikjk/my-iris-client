@@ -1,4 +1,4 @@
-import socialGraph, {handleFollowEvent} from "@/utils/socialGraph.ts"
+import socialGraph, {handleSocialGraphEvent} from "@/utils/socialGraph.ts"
 import {useEffect, useState, useMemo} from "react"
 import {NostrEvent} from "nostr-social-graph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -27,7 +27,7 @@ const useFollows = (pubKey: string, includeSelf = false) => {
           socialGraph().handleEvent(event as NostrEvent)
           if (event && event.created_at && event.created_at > latestTimestamp) {
             latestTimestamp = event.created_at
-            handleFollowEvent(event as NostrEvent)
+            handleSocialGraphEvent(event as NostrEvent)
             const pubkeys = event
               .getMatchingTags("p")
               .map((pTag) => pTag[1])

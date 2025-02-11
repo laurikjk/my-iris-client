@@ -109,7 +109,7 @@ export function formatUnixTimestamp(timestamp: number): string {
   }
 }
 
-export function getRepostedEventId(event: NDKEvent) {
+export function getReferredEventId(event: NDKEvent) {
   let id = event.tags?.find((tag) => tag[0] === "e" && tag[3] === "mention")?.[1]
   if (id) {
     return id
@@ -122,7 +122,7 @@ export function getRepostedEventId(event: NDKEvent) {
   return id
 }
 export function getOriginalPostEventId(event: NDKEvent) {
-  return isRepost(event) ? getRepostedEventId(event) : event.id
+  return isRepost(event) ? getReferredEventId(event) : event.id
 }
 export function getNoteReplyingTo(event: NDKEvent) {
   if (event.kind !== 1) {

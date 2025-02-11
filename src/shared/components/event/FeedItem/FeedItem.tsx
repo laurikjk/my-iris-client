@@ -1,5 +1,5 @@
-import {useContext, useEffect, useMemo, useState, useRef} from "react"
 import {eventsByIdCache, addSeenEventId} from "@/utils/memcache.ts"
+import {useEffect, useMemo, useState, useRef} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 
@@ -11,12 +11,10 @@ import {
   getEventRoot,
 } from "@/utils/nostr.ts"
 import {getEventIdHex, handleEventContent} from "@/shared/components/event/utils.ts"
-import HiddenPostMessage from "@/shared/components/event/HiddenPostMessage.tsx"
 import RepostHeader from "@/shared/components/event/RepostHeader.tsx"
 import FeedItemActions from "../reactions/FeedItemActions.tsx"
 import FeedItemPlaceholder from "./FeedItemPlaceholder.tsx"
 import ErrorBoundary from "../../ui/ErrorBoundary.tsx"
-import {UserContext} from "@/context/UserContext.tsx"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import FeedItemContent from "./FeedItemContent.tsx"
 import {onClick, TRUNCATE_LENGTH} from "./utils.ts"
@@ -26,6 +24,7 @@ import FeedItemTitle from "./FeedItemTitle.tsx"
 import RezapHeader from "../RezapHeader.tsx"
 import {useLocalState} from "irisdb-hooks"
 import GemHeader from "../GemHeader.tsx"
+import LikeHeader from "../LikeHeader"
 import {nip19} from "nostr-tools"
 
 type FeedItemProps = {
@@ -69,18 +68,10 @@ function FeedItem({
   const [event, setEvent] = useState<NDKEvent | undefined>(
     initialEvent || eventsByIdCache.get(eventIdHex)
   )
-  const {mutedList} = useContext(UserContext)
-  const [repostedEvent, setRepostedEvent] = useState<NDKEvent>(
+  const [referredEvent, setReferredEvent] = useState<NDKEvent>(
     eventsByIdCache.get(eventIdHex)
   )
-  const [isPostHidden, setIsPostHidden] = useState<boolean>(false)
-  const isAuthorMuted = event && mutedList.includes(event.pubkey)
-
   const [notesTheme] = useLocalState("user/notesTheme", CONFIG.defaultNotesTheme)
-
-  const toggleViewPost = () => {
-    setIsPostHidden(!isPostHidden)
-  }
 
   if (!event && !eventId)
     throw new Error("FeedItem requires either an event or an eventId")
@@ -129,9 +120,9 @@ function FeedItem({
 
   useEffect(() => {
     if (event) {
-      handleEventContent(event, (reposted) => {
-        setRepostedEvent(reposted)
-        eventsByIdCache.set(eventIdHex, reposted)
+      handleEventContent(event, (referred) => {
+        setReferredEvent(referred)
+        eventsByIdCache.set(eventIdHex, referred)
       })
     } else {
       fetchEvent({
@@ -152,7 +143,7 @@ function FeedItem({
         standalone={standalone}
         asEmbed={asEmbed}
         eventIdHex={eventIdHex}
-        onClick={(e) => onClick(e, event, repostedEvent, eventId, navigate)}
+        onClick={(e) => onClick(e, event, referredEvent, eventId, navigate)}
       />
     )
   }
@@ -196,7 +187,7 @@ function FeedItem({
           }
         )}
         onClick={(e) =>
-          !standalone && onClick(e, event, repostedEvent, eventId, navigate)
+          !standalone && onClick(e, event, referredEvent, eventId, navigate)
         }
       >
         {asRepliedTo && (
@@ -209,36 +200,30 @@ function FeedItem({
             {isGem(event) && <GemHeader event={event} />}
           </div>
         )}
+        {event.kind === 7 && (
+          <div className="flex flex-row select-none mb-2">
+            <LikeHeader event={event} />
+          </div>
+        )}
         <div className="flex flex-row gap-4 flex-1">
           <div className={classNames("flex-1 w-full", {"text-lg": standalone})}>
             <FeedItemHeader
               event={event}
-              repostedEvent={repostedEvent}
+              referredEvent={referredEvent}
               tight={asReply || asRepliedTo}
             />
             <div className={classNames({"pl-12": asReply || asRepliedTo})}>
-              {isPostHidden ? (
-                <HiddenPostMessage toggleViewPost={toggleViewPost} />
-              ) : (
-                <FeedItemContent
-                  event={event}
-                  repostedEvent={repostedEvent}
-                  standalone={standalone}
-                  truncate={truncate}
-                />
-              )}
+              <FeedItemContent
+                event={event}
+                referredEvent={referredEvent}
+                standalone={standalone}
+                truncate={truncate}
+              />
             </div>
           </div>
         </div>
         <div className={classNames({"pl-10": asReply || asRepliedTo})}>
-          {showActions && <FeedItemActions event={repostedEvent || event} />}
-          {isAuthorMuted && !isPostHidden && (
-            <div className="flex justify-center mt-4">
-              <button className="btn btn-secondary" onClick={toggleViewPost}>
-                Hide Post
-              </button>
-            </div>
-          )}
+          {showActions && <FeedItemActions event={referredEvent || event} />}
         </div>
       </div>
       {showReplies > 0 && (eventId || event?.id) && (

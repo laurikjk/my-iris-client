@@ -3,6 +3,7 @@ import {ndk, PublicKey} from "irisdb-nostr"
 import {useLocalState} from "irisdb-hooks"
 import {useMemo, useState} from "react"
 
+import {unmuteUser} from "@/shared/services/Mute"
 import socialGraph from "@/utils/socialGraph.ts"
 
 export function FollowButton({pubKey, small = true}: {pubKey: string; small?: boolean}) {
@@ -20,6 +21,7 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
   }, [pubKey])
   const isFollowing =
     myPubKey && pubKeyHex && socialGraph().isFollowing(myPubKey, pubKeyHex)
+  const isMuted = pubKeyHex && socialGraph().getMutedByUser(myPubKey).has(pubKeyHex)
 
   if (!myPubKey || !pubKeyHex || pubKeyHex === myPubKey) {
     return null
@@ -33,6 +35,9 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
       followedUsers.delete(pubKeyHex)
     } else {
       followedUsers.add(pubKeyHex)
+      if (isMuted) {
+        unmuteUser(pubKeyHex)
+      }
     }
     event.tags = Array.from(followedUsers).map((pubKey) => ["p", pubKey]) as NDKTag[]
     event.publish().catch((e) => console.warn("Error publishing follow event:", e))

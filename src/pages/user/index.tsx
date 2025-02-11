@@ -6,6 +6,7 @@ import classNames from "classnames"
 import FeedFilters from "../home/feed/components/FeedFilters"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
+import Feed from "@/shared/components/feed/Feed.tsx"
 import useFollows from "@/shared/hooks/useFollows"
 import {hasMedia} from "@/shared/components/embed"
 import OrganizationsTab from "./OrganizationsTab"
@@ -17,7 +18,6 @@ import ProfileHeader from "./ProfileHeader"
 import {useLocalState} from "irisdb-hooks"
 import {PublicKey} from "irisdb-nostr"
 import Gems from "./components/Gems"
-import NotesTab from "./NotesTab"
 import CodeTab from "./CodeTab"
 
 type Tab = {
@@ -41,14 +41,43 @@ const tabs: Tab[] = [
     name: "Posts",
     path: "",
     displayFilterFn: (e: NDKEvent) => !getEventReplyingTo(e),
-    element: NotesTab,
+    element: ({pubKey, displayFilterFn}) => (
+      <Feed
+        filters={{kinds: [1, 6], authors: [pubKey]}}
+        displayFilterFn={displayFilterFn}
+        borderTopFirst={true}
+      />
+    ),
   },
-  {name: "Replies", path: "replies", element: NotesTab, showRepliedTo: true},
+  {
+    name: "Replies",
+    path: "replies",
+    element: ({pubKey}) => (
+      <Feed
+        filters={{kinds: [1, 6], authors: [pubKey]}}
+        showRepliedTo={true}
+        borderTopFirst={true}
+      />
+    ),
+  },
   {
     name: "Media",
     path: "media",
     displayFilterFn: (e: NDKEvent) => hasMedia(e),
-    element: NotesTab,
+    element: ({pubKey, displayFilterFn}) => (
+      <Feed
+        filters={{kinds: [1, 6], authors: [pubKey]}}
+        displayFilterFn={displayFilterFn}
+        borderTopFirst={true}
+      />
+    ),
+  },
+  {
+    name: "Likes",
+    path: "likes",
+    element: ({pubKey}) => (
+      <Feed filters={{kinds: [7], authors: [pubKey]}} borderTopFirst={true} />
+    ),
   },
 ]
 

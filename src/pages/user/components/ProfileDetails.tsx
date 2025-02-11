@@ -6,7 +6,10 @@ import {nip19} from "nostr-tools"
 import {ndk} from "irisdb-nostr"
 
 import HyperText from "@/shared/components/HyperText.tsx"
+import MutedBy from "@/shared/components/user/MutedBy"
 import Icon from "@/shared/components/Icons/Icon"
+import {unmuteUser} from "@/shared/services/Mute"
+import useMutes from "@/shared/hooks/useMutes"
 
 const Bolt = () => <Icon name="zap-solid" className="text-accent" />
 const Link = () => <Icon name="link-02" className="text-info" />
@@ -51,19 +54,37 @@ function ProfileDetails({
     }
     return ""
   }, [pubKey, navigate])
+  const hexPub = useMemo(() => {
+    if (pubKey) {
+      try {
+        return pubKey.startsWith("npub") ? String(nip19.decode(pubKey).data) : pubKey
+      } catch (error) {
+        console.warn(error)
+        navigate("/404")
+      }
+    }
+    return ""
+  }, [pubKey, navigate])
+
+  const mutes = useMutes()
+  useMutes(hexPub) // update their mute list
+  const isMuted = useMemo(() => mutes.includes(hexPub), [mutes, hexPub])
 
   useEffect(() => {
-    console.log("displayProfile", pubKey, displayProfile)
-    console.log("npub", npub)
     if (npub && displayProfile?.nip05) {
       ndk()
         ?.getUser({npub})
         ?.validateNip05(displayProfile.nip05)
         .then((isValid) => {
-          console.log("isValid", isValid)
           setNIP05valid(isValid ?? false)
           if (isValid && displayProfile.nip05?.endsWith("@iris.to")) {
-            navigate(`/${displayProfile.nip05.replace("@iris.to", "")}`, {replace: true})
+            const currentPath = window.location.pathname.split("/").slice(2).join("/")
+            const basePath = displayProfile.nip05.replace("@iris.to", "")
+            const newPath = currentPath ? `/${basePath}/${currentPath}` : `/${basePath}`
+
+            if (window.location.pathname !== newPath) {
+              navigate(newPath, {replace: true})
+            }
           }
         })
         .catch((error) => console.warn(error))
@@ -83,6 +104,16 @@ function ProfileDetails({
 
   return (
     <div className="flex flex-col gap-2">
+      {isMuted && (
+        <div className="flex items-center gap-2 text-warning">
+          <ErrorOutline className="text-warning" />
+          <small>User is muted</small>
+          <button className="btn btn-sm btn-neutral" onClick={() => unmuteUser(hexPub)}>
+            Unmute
+          </button>
+        </div>
+      )}
+      <MutedBy pubkey={hexPub} />
       {displayProfile?.nip05 && (
         <div className={nip05valid === null ? "invisible" : "visible"}>
           {renderProfileField(

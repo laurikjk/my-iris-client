@@ -13,7 +13,7 @@ export const isTextSelected = () => {
 export function onClick(
   e: MouseEvent<HTMLDivElement>,
   event: NDKEvent | undefined,
-  repostedEvent: NDKEvent | undefined,
+  ReferredEvent: NDKEvent | undefined,
   eventId: string | undefined,
   navigate: ReturnType<typeof useNavigate>
 ) {
@@ -29,6 +29,6 @@ export function onClick(
   ) {
     return
   }
-  navigate(`/${nip19.noteEncode(repostedEvent?.id || eventId || event!.id)}`)
+  navigate(`/${nip19.noteEncode(ReferredEvent?.id || eventId || event!.id)}`)
   e.stopPropagation()
 }

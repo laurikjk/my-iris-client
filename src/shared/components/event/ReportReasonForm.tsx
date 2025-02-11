@@ -1,16 +1,7 @@
-import {
-  ChangeEvent,
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useContext,
-  useState,
-} from "react"
+import {ChangeEvent, Dispatch, SetStateAction, useCallback, useState} from "react"
 import {Hexpubkey, NDKEvent} from "@nostr-dev-kit/ndk"
-import {ndk} from "irisdb-nostr"
 
-import {submitReport} from "@/shared/services/FeedServices.tsx"
-import {UserContext} from "@/context/UserContext.tsx"
+import {submitReport} from "@/shared/services/Mute.tsx"
 
 interface ReportReasonFormProps {
   event?: NDKEvent
@@ -23,8 +14,6 @@ function ReportReasonForm({user, event, setReported}: ReportReasonFormProps) {
   const [reason, setReason] = useState<string>("")
   const [buttonDisabled, setButtonDisabled] = useState(true)
 
-  const {setPublishingError} = useContext(UserContext)
-
   const handleTextChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => setReportContent(event.target.value),
     []
@@ -36,13 +25,11 @@ function ReportReasonForm({user, event, setReported}: ReportReasonFormProps) {
   }
 
   const handleReport = async () => {
-    if (!ndk) return
     try {
-      if (user) await submitReport(ndk(), reason, reportContent, user, event?.id)
+      if (user) await submitReport(reason, reportContent, user, event?.id)
       setReported(true)
     } catch (error) {
-      //error message printed in submitReport
-      setPublishingError(false)
+      console.error("Error submitting report: ", error)
       setReported(false)
     }
   }

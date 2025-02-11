@@ -155,18 +155,45 @@ interface PushData {
 }
 
 self.addEventListener("notificationclick", (event) => {
-  const data = event.notification.data as PushData
+  const notificationData = event.notification.data
+  event.notification.close()
+  console.debug("Notification clicked:", notificationData)
 
   event.waitUntil(
-    (async () => {
-      const windows = await self.clients.matchAll({type: "window"})
-      // Extract pathname from the url
-      const url = new URL(data.url).pathname
-
-      for (const client of windows) {
-        if (client.url === url && "focus" in client) return client.focus()
+    (async function () {
+      // Handle both direct URL and nested event data structure
+      const path = notificationData?.url || notificationData?.event?.url
+      if (!path) {
+        console.debug("No URL in notification data")
+        return
       }
-      if (self.clients.openWindow) return self.clients.openWindow(url)
+
+      // If it's already a full URL, use URL constructor, otherwise just use the path
+      const pathname = path.startsWith("http") ? new URL(path).pathname : path
+      const fullUrl = `${self.location.origin}${pathname}`
+      console.debug("Navigating to:", fullUrl)
+
+      const allClients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      })
+      console.debug("Found clients:", allClients.length)
+
+      if (allClients.length > 0) {
+        const client = allClients[0]
+        await client.focus()
+        console.debug("Sending navigation message to client")
+        await client.postMessage({
+          type: "NAVIGATE_REACT_ROUTER",
+          url: fullUrl,
+        })
+        return
+      }
+
+      console.debug("No clients found, opening new window")
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(fullUrl)
+      }
     })()
   )
 })

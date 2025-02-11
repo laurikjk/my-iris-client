@@ -2,7 +2,7 @@ import PermissionNotification from "../PermissionNotification.tsx"
 import QuotedNestrEvent from "../QuotedNestrEvent.tsx"
 import {isIssue, isPR, isGem} from "@/utils/nostr.ts"
 import IssueFeedItem from "../IssueFeedItem.tsx"
-import RepostedEvent from "../RepostedEvent.tsx"
+import ReferredEvent from "../ReferredEvent.tsx"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import PRFeedItem from "../PRFeedItem.tsx"
 import ZapReceipt from "../ZapReceipt.tsx"
@@ -15,12 +15,12 @@ import {memo} from "react"
 
 type ContentProps = {
   event: NDKEvent | undefined
-  repostedEvent: NDKEvent | undefined
+  referredEvent: NDKEvent | undefined
   standalone?: boolean
   truncate: number
 }
 
-const FeedItemContent = ({event, repostedEvent, standalone, truncate}: ContentProps) => {
+const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentProps) => {
   if (!event) {
     return ""
   }
@@ -32,8 +32,8 @@ const FeedItemContent = ({event, repostedEvent, standalone, truncate}: ContentPr
     return <Gem event={event} />
   } else if (event.kind === 16629) {
     return <PermissionNotification event={event} />
-  } else if (repostedEvent) {
-    return <RepostedEvent repostedEvent={repostedEvent} />
+  } else if (referredEvent) {
+    return <ReferredEvent referredEvent={referredEvent} />
   } else if (event.kind === 9373) {
     return <QuotedNestrEvent event={event} />
   } else if (event.kind === 9735) {
