@@ -36,23 +36,28 @@ export function getInviteLinks(
 }
 
 const nostrSubscribe = (filter: NostrFilter, onEvent: (e: VerifiedEvent) => void) => {
+  console.log('nostrSubscribe', filter)
   const sub = ndk().subscribe(filter)
   sub.on("event", (event) => {
+    console.log('nostrSubscribe got event', event)
     onEvent(event as unknown as VerifiedEvent)
   })
   return () => sub.stop()
 }
 
 function listen() {
-  if (user?.publicKey && user?.privateKey) {
+  console.log(111, user)
+  if (user?.publicKey) {
+    console.log(222)
     for (const id of inviteLinks.keys()) {
       if (!subscriptions.has(id)) {
         const inviteLink = inviteLinks.get(id)!
+        console.log("inviteLink", inviteLink)
         const decrypt = user.privateKey
           ? hexToBytes(user.privateKey)
           : async (cipherText: string, pubkey: string) => {
               if (window.nostr?.nip44) {
-                const result = window.nostr.nip44.decrypt(cipherText, pubkey)
+                const result = window.nostr.nip44.decrypt(pubkey, cipherText)
                 if (!result || typeof result !== "string") {
                   throw new Error("Failed to decrypt")
                 }
@@ -65,7 +70,11 @@ function listen() {
           nostrSubscribe,
           (channel: Channel, identity?: string) => {
             const channelId = `${identity}:${channel.name}`
-            subscribeToAuthorDMNotifications([channel.state.theirNostrPublicKey])
+            try {
+              subscribeToAuthorDMNotifications([channel.state.theirNostrPublicKey])
+            } catch (e) {
+              console.error("Error subscribing to author DM notifications", e)
+            }
 
             localState
               .get("channels")

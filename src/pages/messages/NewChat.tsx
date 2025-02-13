@@ -69,7 +69,6 @@ const NewChat = () => {
 
       // Publish the event
       const e = NDKEventFromRawEvent(event)
-      debugger;
       e.publish()
         .then((res) => console.log("published", res))
         .catch((e) => console.warn("Error publishing event:", e))
