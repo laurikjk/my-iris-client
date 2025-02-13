@@ -2,10 +2,10 @@ import InfiniteScroll from "@/shared/components/ui/InfiniteScroll.tsx"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr.ts"
 import useCachedFetch from "@/shared/hooks/useCachedFetch.ts"
 import EventBorderless from "../event/EventBorderless"
-import {useCallback, useState, useMemo} from "react"
+import {useCallback, useState, useMemo, useEffect} from "react"
 import FeedItem from "../event/FeedItem/FeedItem"
 import useMutes from "@/shared/hooks/useMutes"
-import socialGraph from "@/utils/socialGraph"
+import socialGraph, { socialGraphLoaded } from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {Link} from "react-router-dom"
 import classNames from "classnames"
@@ -58,6 +58,7 @@ export default function Trending({
   contentType?: "notes" | "videos" | "images" | "hashtags"
   randomSort?: boolean
 }) {
+  const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(false)
   const api = useMemo(() => new NostrBandApi(), [])
   const lang = useMemo(() => navigator.language.split(/[_-]+/)[0], [])
   const trendingUrl = useMemo(() => {
@@ -113,6 +114,16 @@ export default function Trending({
   const loadMore = useCallback(() => {
     setDisplayCount((prevCount) => Math.min(prevCount + 10, sortedData.length))
   }, [sortedData])
+
+  useEffect(() => {
+    socialGraphLoaded.then(() => {
+      setIsSocialGraphLoaded(true)
+    })
+  }, [])
+
+  if (!isSocialGraphLoaded) {
+    return null
+  }
 
   return (
     <InfiniteScroll onLoadMore={loadMore}>

@@ -198,21 +198,6 @@ function getMissingFollowLists(myPubKey: string) {
   getFollowLists(myPubKey, true)
 }
 
-// Get the WoT distance for a given user. Lower WoT distance means more trusted.
-export function getWoTScore(pubKey: string): number {
-  const followDistance = instance.getFollowDistance(pubKey) // lower is better
-
-  // Get the number of friends who follow the user
-  const followedByFriendsCount = instance.followedByFriendsCount(pubKey) // higher is better
-
-  if (followedByFriendsCount === 0) return followDistance
-
-  // Calculate the WoT distance
-  const woTDistance = (followDistance * followDistance) / followedByFriendsCount
-
-  return woTDistance
-}
-
 const throttledRecalculate = throttle(
   () => {
     instance.recalculateFollowDistances()

@@ -14,6 +14,7 @@ import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
 import useMutes from "@/shared/hooks/useMutes.ts"
 import MediaFeed from "./MediaFeed"
+import { socialGraphLoaded } from "@/utils/socialGraph.ts"
 
 interface FeedProps {
   filters: NDKFilter
@@ -123,11 +124,21 @@ function Feed({
 
   const [, setForceUpdateCount] = useState(0)
 
+  const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(filters?.authors?.length === 1)
+
   useEffect(() => {
     if (forceUpdate !== undefined) {
       setForceUpdateCount((prev) => prev + 1)
     }
   }, [forceUpdate])
+
+  useEffect(() => {
+    socialGraphLoaded.then(() => setIsSocialGraphLoaded(true))
+  }, [])
+
+  if (!isSocialGraphLoaded) {
+    return null
+  }
 
   return (
     <>
