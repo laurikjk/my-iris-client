@@ -45,7 +45,6 @@ export default defineConfig({
             "react", 
             "react-router-dom",
             "react-helmet",
-            "react-markdown",
             "@nostr-dev-kit/ndk",
             "nostr-tools",
             "irisdb",

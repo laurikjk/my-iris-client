@@ -2,7 +2,7 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ZapReceipt from "../ZapReceipt.tsx"
 import Zapraiser from "../Zapraiser.tsx"
 import Highlight from "../Highlight.tsx"
-import LongForm from "../LongForm.tsx"
+import {lazy, Suspense} from "react"
 import TextNote from "../TextNote.tsx"
 import {memo} from "react"
 
@@ -12,6 +12,8 @@ type ContentProps = {
   standalone?: boolean
   truncate: number
 }
+
+const LongForm = lazy(() => import("../LongForm.tsx"))
 
 const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentProps) => {
   if (!event) {
@@ -25,7 +27,11 @@ const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentPr
   } else if (event.kind === 9802) {
     return <Highlight event={event} />
   } else if (event.kind === 30023) {
-    return <LongForm event={event} standalone={standalone} />
+    return (
+      <Suspense fallback={<div>Loading...</div>}>
+        <LongForm event={event} standalone={standalone} />
+      </Suspense>
+    )
   } else {
     return <TextNote event={event} truncate={truncate} />
   }
