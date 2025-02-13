@@ -1,10 +1,11 @@
 import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
-import {ndk, PublicKey} from "irisdb-nostr"
 import {useLocalState} from "irisdb-hooks"
 import {useMemo, useState} from "react"
+import {PublicKey} from "irisdb-nostr"
 
 import {unmuteUser} from "@/shared/services/Mute"
 import socialGraph from "@/utils/socialGraph.ts"
+import {ndk} from "@/utils/ndk"
 
 export function FollowButton({pubKey, small = true}: {pubKey: string; small?: boolean}) {
   const [myPubKey] = useLocalState("user/publicKey", "", String)

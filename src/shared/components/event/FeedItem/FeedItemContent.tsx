@@ -1,8 +1,8 @@
 import PermissionNotification from "../PermissionNotification.tsx"
 import QuotedNestrEvent from "../QuotedNestrEvent.tsx"
-import {isIssue, isPR, isGem} from "@/utils/nostr.ts"
 import IssueFeedItem from "../IssueFeedItem.tsx"
 import ReferredEvent from "../ReferredEvent.tsx"
+import {isIssue, isPR} from "@/utils/nostr.ts"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import PRFeedItem from "../PRFeedItem.tsx"
 import ZapReceipt from "../ZapReceipt.tsx"
@@ -10,7 +10,6 @@ import Zapraiser from "../Zapraiser.tsx"
 import Highlight from "../Highlight.tsx"
 import LongForm from "../LongForm.tsx"
 import TextNote from "../TextNote.tsx"
-import Gem from "../Gem.tsx"
 import {memo} from "react"
 
 type ContentProps = {
@@ -28,8 +27,6 @@ const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentPr
     return <IssueFeedItem event={event} />
   } else if (isPR(event)) {
     return <PRFeedItem event={event} />
-  } else if (isGem(event)) {
-    return <Gem event={event} />
   } else if (event.kind === 16629) {
     return <PermissionNotification event={event} />
   } else if (referredEvent) {

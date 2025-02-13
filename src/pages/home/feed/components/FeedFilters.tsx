@@ -5,7 +5,6 @@ import {
   Bolt,
   ChangeCircle,
   Code,
-  Diamond,
   Gif,
   Headphones,
   People,
@@ -52,7 +51,6 @@ const socialToggles: Toggle[] = [
   {title: "Quotes", iconComponent: <img src={quotesIcon} className="w-8 h-8" />},
   {title: "Long-form", iconComponent: <img src={longFormIcon} className="w-8 h-8" />},
   {title: "Highlights", iconComponent: <img src={highlightsIcon} className="w-8 h-8" />},
-  {title: "Gems", iconComponent: <Diamond className="w-8 h-8" />},
 ]
 
 const mediaToggles: Toggle[] = [

@@ -3,13 +3,7 @@ import {useEffect, useMemo, useState, useRef} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 
-import {
-  getEventReplyingTo,
-  isGem,
-  isRezap,
-  fetchEvent,
-  getEventRoot,
-} from "@/utils/nostr.ts"
+import {getEventReplyingTo, isRezap, fetchEvent, getEventRoot} from "@/utils/nostr.ts"
 import {getEventIdHex, handleEventContent} from "@/shared/components/event/utils.ts"
 import RepostHeader from "@/shared/components/event/RepostHeader.tsx"
 import FeedItemActions from "../reactions/FeedItemActions.tsx"
@@ -23,7 +17,6 @@ import FeedItemHeader from "./FeedItemHeader.tsx"
 import FeedItemTitle from "./FeedItemTitle.tsx"
 import RezapHeader from "../RezapHeader.tsx"
 import {useLocalState} from "irisdb-hooks"
-import GemHeader from "../GemHeader.tsx"
 import LikeHeader from "../LikeHeader"
 import {nip19} from "nostr-tools"
 
@@ -193,11 +186,10 @@ function FeedItem({
         {asRepliedTo && (
           <div className="h-full w-0.5 bg-base-300 absolute top-12 left-9" />
         )}
-        {(event.kind === 6 || event.kind === 9372 || isRezap(event) || isGem(event)) && (
+        {(event.kind === 6 || event.kind === 9372 || isRezap(event)) && (
           <div className="flex flex-row select-none mb-2">
             {(event.kind === 6 || event.kind === 9372) && <RepostHeader event={event} />}
             {isRezap(event) && <RezapHeader event={event} />}
-            {isGem(event) && <GemHeader event={event} />}
           </div>
         )}
         {event.kind === 7 && (

@@ -24,7 +24,7 @@
     "git": false,
     "cashu": true,
     "pushNotifications": true,
-    "analytics": true
+    "analytics": false
   },
   "defaultSettings": {
     "youtubePrivacyMode": false,

@@ -17,7 +17,6 @@ export const defaultFeedFilter = [
   "reposts",
   "quotes",
   "rezaps",
-  "gems",
   "issues",
   "pull-requests",
   "text-only",
@@ -434,15 +433,6 @@ export const isPR = (event: NDKEvent): boolean => {
     const dTag = event.tagValue("d")
     if (dTag) {
       return PR_REGEX.test(dTag)
-    }
-  }
-  return false
-}
-export const isGem = (event: NDKEvent): boolean => {
-  if (event.kind === 30078) {
-    const dTag = event.tagValue("d")
-    if (dTag) {
-      return dTag.includes("user/gems/")
     }
   }
   return false

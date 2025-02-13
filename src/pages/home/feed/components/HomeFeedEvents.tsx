@@ -1,8 +1,8 @@
 import {useCallback, useMemo, useEffect, useState} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
-import {getEventReplyingTo, defaultFeedFilter, isGem, isIssue, isPR} from "@/utils/nostr"
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
+import {getEventReplyingTo, defaultFeedFilter, isIssue, isPR} from "@/utils/nostr"
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import {fnByFilter, widgetFilterKinds} from "@/utils/filtering"
 import Trending from "@/shared/components/feed/Trending.tsx"
@@ -136,7 +136,7 @@ function HomeFeedEvents() {
     (event: NDKEvent) => {
       if (CONFIG.rightColumnFilters) {
         // filter out kind 30078 meta events
-        if (event.kind === 30078 && !isGem(event) && !isIssue(event) && !isPR(event)) {
+        if (event.kind === 30078 && !isIssue(event) && !isPR(event)) {
           return false
         }
         for (const [k, fn] of Object.entries(fnByFilter)) {

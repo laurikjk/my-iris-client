@@ -1,6 +1,6 @@
-import {useLocalState, usePublicState} from "irisdb-hooks"
 import {useEffect, useMemo, useState} from "react"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
+import {useLocalState} from "irisdb-hooks"
 import {ndk} from "@/utils/ndk"
 
 import UploadButton from "@/shared/components/button/UploadButton"
@@ -8,8 +8,6 @@ import useProfile from "@/shared/hooks/useProfile"
 
 export function ProfileSettings() {
   const [myPubKey] = useLocalState("user/publicKey", "")
-  const authors = useMemo(() => (myPubKey ? [myPubKey] : []), [myPubKey])
-  const [, setIrisProfile] = usePublicState(authors, "user/profile", null)
 
   const existingProfile = useProfile(myPubKey)
 
@@ -48,7 +46,6 @@ export function ProfileSettings() {
     }
     user.profile = newProfile
     user.publish()
-    setIrisProfile(newProfile)
   }
 
   const isEdited = useMemo(() => {
