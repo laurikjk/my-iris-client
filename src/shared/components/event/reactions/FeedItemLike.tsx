@@ -6,7 +6,7 @@ import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"
 import Icon from "../../Icons/Icon"
 import {localState} from "irisdb"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 const likeCache = new LRUCache<string, Set<string>>({
   maxSize: 100,

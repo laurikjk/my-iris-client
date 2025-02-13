@@ -6,7 +6,7 @@ import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {feedCache} from "@/utils/memcache"
 import debounce from "lodash/debounce"
 import {localState} from "irisdb"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 // TODO fix useLocalState so initial state is properly set from memory
 let myPubKey = ""
@@ -39,7 +39,7 @@ export default function useFeedEvents({
   const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
   const [newEvents, setNewEvents] = useState(new Map<string, NDKEvent>())
   const eventsRef = useRef(feedCache.get(cacheKey) || new SortedMap([], eventComparator))
-  const oldestRef = useRef<number | undefined>()
+  const oldestRef = useRef<number | undefined>(undefined)
   const initialLoadDone = useRef<boolean>(eventsRef.current.size > 0)
 
   const showNewEvents = () => {

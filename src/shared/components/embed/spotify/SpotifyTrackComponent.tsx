@@ -1,15 +1,8 @@
-import {defaultFeedFilter} from "@/utils/nostr.ts"
-import {useLocalState} from "irisdb-hooks"
-
 interface SpotifyTrackComponentProps {
   match: string
 }
 
 function SpotifyTrackComponent({match}: SpotifyTrackComponentProps) {
-  const [feedFilter] = useLocalState("user/feedFilter", defaultFeedFilter)
-
-  if (!feedFilter.includes("audio")) return <></>
-
   return (
     <iframe
       scrolling="no"

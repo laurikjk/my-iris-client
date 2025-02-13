@@ -41,7 +41,31 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          "react-stuff": ["react", "react-dom", "react-router-dom"],
+          "vendor": [
+            "react", 
+            "react-router-dom",
+            "react-helmet",
+            "react-markdown",
+            "@nostr-dev-kit/ndk",
+            "nostr-tools",
+            "irisdb",
+            "irisdb-hooks",
+            "irisdb-nostr",
+            "bolt11",
+            "lodash",
+            "localforage",
+            "@noble/hashes",
+            "debug",
+            "@nostr-dev-kit/ndk-cache-dexie",
+            "nostr-double-ratchet",
+            "nostr-social-graph",
+            "classnames",
+            "fuse.js",
+            "qrcode",
+            "react-string-replace",
+            "react-swipeable",
+            "uuid"
+          ],
         },
       },
     },

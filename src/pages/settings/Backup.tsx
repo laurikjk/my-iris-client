@@ -32,17 +32,6 @@ function Backup() {
             </button>
           </div>
         </div>
-        {CONFIG.features.git && (
-          <div>
-            <p>Backup your repositories</p>
-            <small>Save your repository data externally.</small>
-            <div className="mt-2">
-              <button className="btn btn-primary" disabled>
-                Coming soon
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

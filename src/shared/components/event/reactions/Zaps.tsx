@@ -3,7 +3,7 @@ import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {shouldHideEvent} from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 export default function Zaps({event}: {event: NDKEvent}) {
   const [zapAmountByUser, setZapAmountByUser] = useState(new Map<string, number>())

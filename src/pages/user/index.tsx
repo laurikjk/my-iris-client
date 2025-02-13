@@ -3,13 +3,11 @@ import Widget from "@/shared/components/ui/Widget"
 import {useMemo, ReactNode} from "react"
 import classNames from "classnames"
 
-import FeedFilters from "../home/feed/components/FeedFilters"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import useFollows from "@/shared/hooks/useFollows"
 import {hasMedia} from "@/shared/components/embed"
-import OrganizationsTab from "./OrganizationsTab"
 import FollowList from "./components/FollowList"
 import socialGraph from "@/utils/socialGraph.ts"
 import {getEventReplyingTo} from "@/utils/nostr"
@@ -17,8 +15,6 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ProfileHeader from "./ProfileHeader"
 import {useLocalState} from "irisdb-hooks"
 import {PublicKey} from "irisdb-nostr"
-import Gems from "./components/Gems"
-import CodeTab from "./CodeTab"
 
 type Tab = {
   name: string
@@ -81,13 +77,6 @@ const tabs: Tab[] = [
   },
 ]
 
-if (CONFIG.features.git) {
-  tabs.push(
-    {name: "Code", path: "code", element: CodeTab},
-    {name: "Organizations", path: "organizations", element: OrganizationsTab}
-  )
-}
-
 function UserPage({pubKey}: {pubKey: string}) {
   const pubKeyHex = useMemo(
     () => (pubKey ? new PublicKey(pubKey).toString() : ""),
@@ -143,7 +132,6 @@ function UserPage({pubKey}: {pubKey: string}) {
       <RightColumn>
         {() => (
           <>
-            {CONFIG.rightColumnFilters && <FeedFilters />}
             {filteredFollows.length > 0 && (
               <Widget title="Follows">
                 <FollowList follows={filteredFollows} />
@@ -153,11 +141,6 @@ function UserPage({pubKey}: {pubKey: string}) {
               <Widget title="Trending posts">
                 <Trending />
               </Widget>
-            )}
-            {pubKey && (
-              <div className="h-auto overflow-y-auto scrollbar-hide">
-                <Gems pubKey={pubKey} />
-              </div>
             )}
           </>
         )}

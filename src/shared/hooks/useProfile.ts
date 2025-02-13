@@ -2,7 +2,8 @@ import {NDKEvent, NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {handleProfile} from "@/utils/socialGraph.ts"
 import {useEffect, useMemo, useState} from "react"
 import {profileCache} from "@/utils/memcache"
-import {ndk, PublicKey} from "irisdb-nostr"
+import {PublicKey} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 export default function useProfile(pubKey?: string, subscribe = true) {
   const pubKeyHex = useMemo(() => {

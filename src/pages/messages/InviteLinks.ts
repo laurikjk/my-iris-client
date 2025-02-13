@@ -10,7 +10,7 @@ import {hexToBytes} from "@noble/hashes/utils"
 import {localState, Unsubscribe} from "irisdb"
 import {VerifiedEvent} from "nostr-tools"
 import debounce from "lodash/debounce"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 const inviteLinks = new Map<string, InviteLink>()
 const subscriptions = new Map<string, Unsubscribe>()

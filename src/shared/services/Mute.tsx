@@ -1,7 +1,7 @@
 import {Hexpubkey, NDKEvent} from "@nostr-dev-kit/ndk"
 import socialGraph from "@/utils/socialGraph"
 import {NostrEvent} from "nostr-social-graph"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 export const muteUser = async (pubkey: string): Promise<string[]> => {
   // Check if pubkey already exists in the list before adding

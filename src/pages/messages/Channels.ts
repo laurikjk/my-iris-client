@@ -2,7 +2,7 @@ import {Channel, deserializeChannelState, NostrFilter} from "nostr-double-ratche
 import {VerifiedEvent} from "nostr-tools"
 import {MessageType} from "./Message"
 import {localState} from "irisdb"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 const channels = new Map<string, Channel | undefined>()
 

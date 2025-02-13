@@ -15,7 +15,6 @@ import Instagram from "./instagram/Instagram.tsx"
 // import TidalTrack from "./tidal/TidalTrack"
 import SmallImage from "./images/SmallImage.tsx"
 import AppleMusic from "./apple/AppleMusic.tsx"
-import IssuePRRef from "./nestr/IssuePRRef.tsx"
 import NostrNpub from "./nostr/NostrNpub.tsx"
 import LightningUri from "./LightningUri.tsx"
 import YouTube from "./youtube/YouTube.tsx"
@@ -72,7 +71,6 @@ export const allEmbeds = [
   InlineMention,
   Url,
   Hashtag,
-  IssuePRRef,
 ]
 
 export const mediaEmbeds = [

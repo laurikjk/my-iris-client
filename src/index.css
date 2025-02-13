@@ -86,46 +86,8 @@ iframe {
   display: none;  /* Safari and Chrome */
 }
 
-/* react-trello kanban board styles */
-
-/* Card & Lane titles */
-.sc-kpDprT {
-  color: #c6c8d3;
-}
-
-/* Lane title */
-.eseTMN {
-  color: #c6c8d3;
-}
-
-/* Card item */
-.ixvwTI {
-  border-bottom: none !important;
-}
-
-/* Card inner divider */
-.iTfYoL {
-  border-bottom: 1px solid #7b7e8b !important;
-}
-
-/* Card label & description */
-.sc-fHjqbK {
-  color: #c6c8d3;
-}
-
-/* Click to add card text */
-.sc-gFqAYk {
-  color: #858894 !important;
-}
-
 /* modals */
 
 .modal-box {
   max-width: fit-content !important;
-}
-
-/* mui tabs */
-
-.MuiTab-root.Mui-selected {
-  color: #c6c8d3 !important;
 }

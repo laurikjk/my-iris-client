@@ -1,6 +1,6 @@
-import {useLocalState, usePublicState} from "irisdb-hooks"
-import {useEffect, useMemo, useState} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {useLocalState} from "irisdb-hooks"
+import {useEffect, useState} from "react"
 import {nip19} from "nostr-tools"
 
 import {unmuteUser} from "@/shared/services/Mute.tsx"
@@ -27,10 +27,6 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
   const [reporting, setReporting] = useState(false)
 
   const mutedList: string[] = []
-
-  const authors = useMemo(() => (myPubKey ? [myPubKey] : []), [myPubKey])
-
-  const [gem, setGem] = usePublicState<string>(authors, `user/gems/${event.id}`, "")
 
   useEffect(() => {
     setMuted(mutedList.includes(event.pubkey))
@@ -69,20 +65,6 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
       } catch (error) {
         console.warn("Event could not be deleted: ", error)
       }
-    }
-  }
-
-  const handleCreateGem = () => {
-    if (event.pubkey === myPubKey) {
-      setGem(event.id)
-      onClose()
-    }
-  }
-
-  const handleRemoveGem = () => {
-    if (gem && gem !== "gem removed") {
-      setGem("gem removed")
-      onClose()
     }
   }
 
@@ -135,15 +117,6 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
               Show reactions
             </button>
           </li>
-          {event.pubkey === myPubKey && event.kind === 1 && (
-            <li>
-              {!gem || gem === "gem removed" ? (
-                <button onClick={handleCreateGem}>Pin as Gem</button>
-              ) : (
-                <button onClick={handleRemoveGem}>Unpin Gem</button>
-              )}
-            </li>
-          )}
           <li>
             <button onClick={handleCopyText}>Copy Note Content</button>
           </li>

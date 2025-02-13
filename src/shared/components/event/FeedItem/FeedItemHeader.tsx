@@ -1,4 +1,5 @@
 import {useEffect, useState, useCallback} from "react"
+import {RiMoreLine} from "@remixicon/react"
 import {Link} from "react-router-dom"
 import classNames from "classnames"
 import {nip19} from "nostr-tools"
@@ -6,7 +7,6 @@ import {nip19} from "nostr-tools"
 import RelativeTime from "@/shared/components/event/RelativeTime.tsx"
 import FeedItemDropdown from "../reactions/FeedItemDropdown.tsx"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
-import MoreVertIcon from "@mui/icons-material/MoreVert"
 import {EVENT_AVATAR_WIDTH} from "../../user/const.ts"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
@@ -106,7 +106,7 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
             setShowDropdown(true)
           }}
         >
-          <MoreVertIcon className="h-6 w-6 cursor-pointer text-base-content/50" />
+          <RiMoreLine className="h-6 w-6 cursor-pointer text-base-content/50" />
         </div>
         {showDropdown && (
           <div ref={setDropdownRef} className="z-40">

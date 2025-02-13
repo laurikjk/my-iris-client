@@ -6,9 +6,8 @@ import {nip19} from "nostr-tools"
 import socialGraph, {searchIndex, SearchResult} from "@/utils/socialGraph"
 import {UserRow} from "@/shared/components/user/UserRow"
 import useMutes from "@/shared/hooks/useMutes"
-import {Check} from "@mui/icons-material"
 import Icon from "../Icons/Icon"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 const NOSTR_REGEX = /(npub|note|nevent)1[a-zA-Z0-9]{58,300}/gi
 const HEX_REGEX = /[0-9a-fA-F]{64}/gi
@@ -24,16 +23,12 @@ interface CustomSearchResult extends SearchResult {
 interface SearchBoxProps {
   onSelect?: (pubKey: string) => void
   redirect?: boolean
-  assignees?: string[]
-  setAssignees?: (assignees: string) => void
   className?: string
   searchNotes?: boolean
 }
 
 function SearchBox({
   redirect = true,
-  assignees = [],
-  setAssignees,
   onSelect,
   className,
   searchNotes = false,
@@ -147,11 +142,7 @@ function SearchBox({
         if (activeItem.pubKey === "search-notes" && activeItem.query && redirect) {
           navigate(`/search/${activeItem.query}`)
         } else {
-          if (!redirect && setAssignees) {
-            setAssignees(activeItem.pubKey)
-          } else {
-            onSelect(activeItem.pubKey)
-          }
+          onSelect(activeItem.pubKey)
         }
         setValue("")
         setSearchResults([])
@@ -161,7 +152,7 @@ function SearchBox({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [searchResults, activeResult, navigate])
 
-  // autofocus the input field when searching for Issue/PR assignees
+  // autofocus the input field when not redirecting
   useEffect(() => {
     if (!redirect && inputRef.current) {
       inputRef.current.focus()
@@ -169,16 +160,12 @@ function SearchBox({
   }, [redirect])
 
   const handleSearchResultClick = (pubKey: string, query?: string) => {
-    if (redirect) {
-      setValue("")
-      setSearchResults([])
-      if (pubKey === "search-notes" && query) {
-        navigate(`/search/${query}`)
-      } else {
-        onSelect(pubKey)
-      }
-    } else if (setAssignees !== undefined) {
-      setAssignees(pubKey)
+    setValue("")
+    setSearchResults([])
+    if (pubKey === "search-notes" && query) {
+      navigate(`/search/${query}`)
+    } else {
+      onSelect(pubKey)
     }
   }
 
@@ -213,40 +200,12 @@ function SearchBox({
               ) : (
                 <div className="flex gap-1">
                   <UserRow pubKey={result.pubKey} linkToProfile={redirect} />
-                  {!redirect &&
-                    assignees &&
-                    assignees.length > 0 &&
-                    assignees.includes(result.pubKey) && (
-                      <Check className="text-purple-500" />
-                    )}
                 </div>
               )}
             </li>
           ))}
         </ul>
       )}
-      {!searchResults.length &&
-        assignees &&
-        assignees.length > 0 &&
-        location.pathname.split("/").pop() !== "settings" && (
-          <ul className="dropdown-content menu shadow bg-base-100 rounded-box z-10 w-full">
-            {assignees.map((pubKey, index) => (
-              <li
-                key={index}
-                className={classNames("cursor-pointer rounded-md", {
-                  "bg-primary text-primary-content": index === activeResult,
-                  "hover:bg-primary/50": index !== activeResult,
-                })}
-                onClick={() => handleSearchResultClick(pubKey)}
-              >
-                <div className="flex gap-1">
-                  <UserRow pubKey={pubKey} linkToProfile={redirect} />
-                  <Check className="text-purple-500" />
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
     </div>
   )
 }

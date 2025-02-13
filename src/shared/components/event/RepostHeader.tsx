@@ -1,5 +1,5 @@
 import {Name} from "@/shared/components/user/Name"
-import {ChangeCircle} from "@mui/icons-material"
+import {RiRepeatFill} from "@remixicon/react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {Link} from "react-router-dom"
 import {nip19} from "nostr-tools"
@@ -16,7 +16,7 @@ function RepostHeader({event}: RepostHeaderProps) {
     >
       <Name pubKey={event.pubkey} />
       <span className="mx-1">reposted</span>
-      <ChangeCircle />
+      <RiRepeatFill />
     </Link>
   )
 }

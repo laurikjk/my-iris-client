@@ -1,5 +1,5 @@
 import AccountName from "./AccountName"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 interface ActiveAccountProps {
   name?: string

@@ -8,7 +8,7 @@ import Embed from "../index.ts"
 
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useState, useEffect} from "react"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 function Naddr({naddr, data}: {naddr: string; data: nip19.AddressPointer}) {
   const [event, setEvent] = useState<NDKEvent | null>(null)

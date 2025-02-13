@@ -66,7 +66,7 @@ function Feed({
     INITIAL_DISPLAY_COUNT,
     "displayCount"
   )
-  const firstFeedItemRef = useRef<HTMLDivElement | null>(null)
+  const firstFeedItemRef = useRef<HTMLDivElement>(null)
   const mutes = useMutes()
 
   const [hideEventsByUnknownUsers] = useLocalState(

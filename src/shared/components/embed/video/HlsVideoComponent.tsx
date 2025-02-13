@@ -1,7 +1,6 @@
 import {useEffect, useRef, useState} from "react"
 import classNames from "classnames"
 import {localState} from "irisdb"
-import Hls from "hls.js"
 
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
@@ -26,13 +25,25 @@ function HlsVideoComponent({match, event}: HlsVideoComponentProps) {
   )
 
   useEffect(() => {
-    if (Hls.isSupported() && videoRef.current) {
-      const hls = new Hls()
-      hls.loadSource(match)
-      hls.attachMedia(videoRef.current)
-    } else if (videoRef.current?.canPlayType("application/vnd.apple.mpegurl")) {
-      videoRef.current.src = match
+    const initHls = async () => {
+      if (videoRef.current?.canPlayType("application/vnd.apple.mpegurl")) {
+        videoRef.current.src = match
+        return
+      }
+
+      try {
+        const { default: Hls } = await import('hls.js')
+        if (Hls.isSupported() && videoRef.current) {
+          const hls = new Hls()
+          hls.loadSource(match)
+          hls.attachMedia(videoRef.current)
+        }
+      } catch (error) {
+        console.error('Failed to load HLS:', error)
+      }
     }
+
+    initHls()
 
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
       const entry = entries[0]

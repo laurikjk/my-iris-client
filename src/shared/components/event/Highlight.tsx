@@ -1,4 +1,4 @@
-import {LinkExternalIcon} from "@primer/octicons-react"
+import {RiExternalLinkLine} from "@remixicon/react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import HyperText from "../HyperText"
@@ -25,7 +25,7 @@ function Highlight({event}: HighlightProps) {
       )}
       {link && (
         <div className="flex items-center gap-4 p-1 rounded-lg">
-          <LinkExternalIcon />
+          <RiExternalLinkLine />
           <HyperText event={event} truncate={10}>
             {link}
           </HyperText>

@@ -3,9 +3,9 @@ import PublishButton from "@/shared/components/ui/PublishButton.tsx"
 import {useRef, ReactNode, MouseEventHandler, useMemo} from "react"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import Icon from "@/shared/components/Icons/Icon"
+import {RiLoginBoxLine} from "@remixicon/react"
 import {npubEncode} from "nostr-tools/nip19"
 import {useLocalState} from "irisdb-hooks"
-import {Login} from "@mui/icons-material"
 import classNames from "classnames"
 import NavLink from "./NavLink"
 
@@ -221,13 +221,13 @@ const NavSideBar = () => {
                 className="ml-2 md:ml-0 hidden md:flex xl:hidden btn btn-primary btn-circle items-center justify-center"
                 onClick={() => setShowLoginDialog(true)}
               >
-                <Login className="w-5 h-5" />
+                <RiLoginBoxLine className="w-5 h-5" />
               </button>
               <button
                 className="ml-2 flex md:hidden xl:flex btn btn-primary items-center gap-2"
                 onClick={() => setShowLoginDialog(true)}
               >
-                <Login className="w-5 h-5" />
+                <RiLoginBoxLine className="w-5 h-5" />
                 <span>Sign up</span>
               </button>
             </>

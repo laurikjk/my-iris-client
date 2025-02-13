@@ -1,6 +1,6 @@
 import {useNavigate} from "react-router-dom"
-import {DEFAULT_RELAYS} from "irisdb-nostr"
 import {useLocalState} from "irisdb-hooks"
+import {DEFAULT_RELAYS} from "@/utils/ndk"
 import localforage from "localforage"
 import {MouseEvent} from "react"
 

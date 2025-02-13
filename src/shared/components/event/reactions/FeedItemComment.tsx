@@ -2,7 +2,7 @@ import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {shouldHideEvent} from "@/utils/socialGraph"
 import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {formatAmount} from "@/utils/utils.ts"

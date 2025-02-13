@@ -1,6 +1,6 @@
-import {usePublicState} from "irisdb-hooks"
 import {useState} from "react"
 
+import usePublicState from "../hooks/usePublicState"
 import Show from "@/shared/components/Show"
 
 export default function NodeValue({

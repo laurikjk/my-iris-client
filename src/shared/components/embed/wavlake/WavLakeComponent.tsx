@@ -1,15 +1,8 @@
-import {defaultFeedFilter} from "@/utils/nostr.ts"
-import {useLocalState} from "irisdb-hooks"
-
 interface WavLakeComponentProps {
   match: string
 }
 
 function WavLakeComponent({match}: WavLakeComponentProps) {
-  const [feedFilter] = useLocalState("user/feedFilter", defaultFeedFilter)
-
-  if (!feedFilter.includes("audio")) return <></>
-
   return (
     <iframe
       height="380"

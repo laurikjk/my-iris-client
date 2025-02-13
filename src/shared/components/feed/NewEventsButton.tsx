@@ -6,7 +6,7 @@ interface NewEventsButtonProps {
   newEventsFiltered: NDKEvent[]
   newEventsFrom: Set<string>
   showNewEvents: () => void
-  firstFeedItemRef: RefObject<HTMLDivElement>
+  firstFeedItemRef: RefObject<HTMLDivElement | null>
 }
 
 const NewEventsButton = ({
@@ -23,7 +23,7 @@ const NewEventsButton = ({
         className="btn btn-info shadow-xl rounded-full"
         onClick={() => {
           showNewEvents()
-          firstFeedItemRef.current?.scrollIntoView({block: "start"})
+          firstFeedItemRef?.current?.scrollIntoView({block: "start"})
           window.scrollBy(0, -200) // scroll a bit above
         }}
       >

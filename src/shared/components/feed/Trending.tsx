@@ -9,7 +9,7 @@ import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {Link} from "react-router-dom"
 import classNames from "classnames"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 class NostrBandApi {
   readonly #url = "https://api.nostr.band"

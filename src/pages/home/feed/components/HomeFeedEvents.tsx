@@ -1,10 +1,8 @@
 import {useCallback, useMemo, useEffect, useState} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
-import {getEventReplyingTo, defaultFeedFilter, isGem, isIssue, isPR} from "@/utils/nostr"
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
-import {fnByFilter, widgetFilterKinds} from "@/utils/filtering"
 import Trending from "@/shared/components/feed/Trending.tsx"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {seenEventIds, feedCache} from "@/utils/memcache"
@@ -12,6 +10,7 @@ import NotificationPrompt from "./NotificationPrompt"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import {hasMedia} from "@/shared/components/embed"
 import useFollows from "@/shared/hooks/useFollows"
+import {getEventReplyingTo} from "@/utils/nostr"
 import socialGraph from "@/utils/socialGraph"
 import {useLocalState} from "irisdb-hooks"
 import {localState} from "irisdb"
@@ -39,7 +38,6 @@ function HomeFeedEvents() {
   useLocalState("user/publicKey", "") // update on login
   const [refreshSignal] = useLocalState("refreshRouteSignal", 0, Number) // update on login
   const [activeTab, setActiveTab] = useHistoryState("unseen", "activeHomeTab")
-  const [widgetFilter] = useLocalState("user/feedFilter", defaultFeedFilter)
   const [forceUpdate, setForceUpdate] = useState(0)
 
   const tabs = useMemo(
@@ -121,37 +119,23 @@ function HomeFeedEvents() {
   }, [activeTabItem, openedAt, refreshSignal])
 
   const filters = useMemo(() => {
-    if (!CONFIG.rightColumnFilters && activeTabItem.filter) {
+    if (activeTabItem.filter) {
       return activeTabItem.filter
     }
 
     return {
       authors: follows,
-      kinds: CONFIG.rightColumnFilters ? widgetFilterKinds(widgetFilter) : [1, 6],
+      kinds: [1, 6],
       limit: 100,
     }
-  }, [follows, activeTabItem, widgetFilter])
+  }, [follows, activeTabItem])
 
   const displayFilterFn = useCallback(
     (event: NDKEvent) => {
-      if (CONFIG.rightColumnFilters) {
-        // filter out kind 30078 meta events
-        if (event.kind === 30078 && !isGem(event) && !isIssue(event) && !isPR(event)) {
-          return false
-        }
-        for (const [k, fn] of Object.entries(fnByFilter)) {
-          const allowed = widgetFilter.includes(k)
-          const match = fn(event)
-          if (match && !allowed) {
-            return false
-          }
-        }
-        return filters.kinds.includes(event.kind!)
-      }
       const tabFilter = activeTabItem.displayFilterFn
       return tabFilter ? tabFilter(event) : true
     },
-    [activeTabItem, filters, widgetFilter]
+    [activeTabItem, filters]
   )
 
   const feedName =
@@ -162,7 +146,7 @@ function HomeFeedEvents() {
   return (
     <>
       <MiddleHeader title={feedName} />
-      {follows.length > 1 && myPubKey && !CONFIG.rightColumnFilters && (
+      {follows.length > 1 && myPubKey && (
         <div className="px-4 pb-4 flex flex-row gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
           {tabs.map((t) => (
             <button
@@ -182,7 +166,7 @@ function HomeFeedEvents() {
         displayFilterFn={displayFilterFn}
         fetchFilterFn={activeTabItem.fetchFilterFn}
         cacheKey={activeTabItem.cacheKey}
-        showRepliedTo={CONFIG.rightColumnFilters || activeTabItem.showRepliedTo}
+        showRepliedTo={activeTabItem.showRepliedTo}
         emptyPlaceholder={<EmptyPlaceholder follows={follows} myPubKey={myPubKey} />}
         forceUpdate={forceUpdate}
         sortLikedPosts={activeTabItem.sortLikedPosts}

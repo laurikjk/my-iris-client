@@ -1,14 +1,8 @@
-import {defaultFeedFilter} from "@/utils/nostr.ts"
-import {useLocalState} from "irisdb-hooks"
-
 interface TwitchComponentProps {
   match: string
 }
 
 function TwitchComponent({match}: TwitchComponentProps) {
-  const [feedFilter] = useLocalState("user/feedFilter", defaultFeedFilter)
-
-  if (!feedFilter.includes("videos")) return <></>
   return (
     <iframe
       className="video"

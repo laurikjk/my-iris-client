@@ -2,7 +2,7 @@ import {ChangeEvent, DragEvent, useEffect, useState} from "react"
 import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
 import {uploadFile} from "@/shared/upload"
 import {useLocalState} from "irisdb-hooks"
-import {ndk} from "irisdb-nostr"
+import {ndk} from "@/utils/ndk"
 
 import UploadButton from "@/shared/components/button/UploadButton.tsx"
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
