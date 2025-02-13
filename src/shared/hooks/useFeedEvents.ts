@@ -39,7 +39,7 @@ export default function useFeedEvents({
   const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
   const [newEvents, setNewEvents] = useState(new Map<string, NDKEvent>())
   const eventsRef = useRef(feedCache.get(cacheKey) || new SortedMap([], eventComparator))
-  const oldestRef = useRef<number | undefined>()
+  const oldestRef = useRef<number | undefined>(undefined)
   const initialLoadDone = useRef<boolean>(eventsRef.current.size > 0)
 
   const showNewEvents = () => {
