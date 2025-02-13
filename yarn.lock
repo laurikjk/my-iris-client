@@ -3995,10 +3995,10 @@ irisdb-nostr@1.0.23:
   optionalDependencies:
     react "*"
 
-irisdb@1.0.11:
-  version "1.0.11"
-  resolved "https://registry.yarnpkg.com/irisdb/-/irisdb-1.0.11.tgz#8c4bcc5d1f4a22bebb26fc1a537416e10b968576"
-  integrity sha512-A//K88h0Qk06JXoyfr5o9UW5PVoVNlxQRx+1YZpz/6gIpcDGbjesKo1aWzv+HgATfaQtZyYDHHFWJNLHapflvQ==
+irisdb@1.0.12:
+  version "1.0.12"
+  resolved "https://registry.yarnpkg.com/irisdb/-/irisdb-1.0.12.tgz#d5c68424e0e32bb5be0d8e0955962af1d1ceef15"
+  integrity sha512-XAq2r447rk2DWnz7rIvTw7xLN+DW38+MTFSi95q0vjZxvYIwjSFIskpO2Qi2w3wRTBvPH5yZheBOtrjnz3zUog==
 
 is-alphabetical@^2.0.0:
   version "2.0.1"
