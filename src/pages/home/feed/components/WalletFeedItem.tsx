@@ -1,4 +1,4 @@
-import {Bolt} from "@mui/icons-material"
+import {RiFlashlightLine} from "@remixicon/react"
 
 import {Avatar} from "@/shared/components/user/Avatar.tsx"
 import {Name} from "@/shared/components/user/Name.tsx"
@@ -7,7 +7,7 @@ const WalletFeedItem = () => {
   return (
     <div className="flex items-center justify-between p-4 border-b border-gray-200">
       <div className="flex items-center">
-        <Bolt className="text-yellow-500 mr-2" />
+        <RiFlashlightLine className="text-yellow-500 mr-2" />
         <span className="text-lg font-bold">-1</span>
       </div>
       <div className="flex items-center space-x-4">

@@ -16,8 +16,7 @@ type ContentProps = {
 const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentProps) => {
   if (!event) {
     return ""
-  }
-  else if (referredEvent) {
+  } else if (referredEvent) {
     return <TextNote event={referredEvent} />
   } else if (event.kind === 9735) {
     return <ZapReceipt event={event} />

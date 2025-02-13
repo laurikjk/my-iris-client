@@ -7,8 +7,8 @@ import {
 } from "@nostr-dev-kit/ndk"
 import {eventRegex} from "@/shared/components/embed/nostr/NostrNote"
 import {nip19} from "nostr-tools"
-import {ndk} from "@/utils/ndk"
 import * as bolt11 from "bolt11"
+import {ndk} from "@/utils/ndk"
 
 export const ISSUE_REGEX =
   /^\/apps\/git\/repos\/[a-zA-Z0-9_-]+\/issues\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/title$/

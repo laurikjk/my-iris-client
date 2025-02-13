@@ -1,4 +1,4 @@
-import {ArrowDownward, ArrowUpward, Bolt} from "@mui/icons-material"
+import {RiArrowDownSLine, RiArrowUpSLine, RiFlashlightLine} from "@remixicon/react"
 import {useState} from "react"
 
 import satoshiSymbolWhite from "@/assets/satoshi-white.png"
@@ -22,7 +22,7 @@ function Wallet() {
         </h2>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <Bolt className="mr-2" /> Lightning
+            <RiFlashlightLine className="mr-2" /> Lightning
           </div>
           <input
             type="checkbox"
@@ -39,7 +39,7 @@ function Wallet() {
           <div className="flex justify-center items-center">
             {walletToggle === "lightning" && (
               <div className="flex items-center text-xl">
-                <Bolt className="text-yellow-500 mr-2" />
+                <RiFlashlightLine className="text-yellow-500 mr-2" />
                 <span>-1 sats</span>
               </div>
             )}
@@ -53,10 +53,10 @@ function Wallet() {
         </div>
         <div className="flex justify-between mb-4">
           <button className="btn btn-primary flex items-center">
-            Send <ArrowUpward className="ml-2" />
+            Send <RiArrowUpSLine className="ml-2" />
           </button>
           <button className="btn btn-primary flex items-center">
-            Receive <ArrowDownward className="ml-2" />
+            Receive <RiArrowDownSLine className="ml-2" />
           </button>
         </div>
       </div>

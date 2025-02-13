@@ -1,4 +1,4 @@
-import {ErrorOutline, Verified} from "@mui/icons-material"
+import {RiErrorWarningLine, RiVerifiedBadgeLine} from "@remixicon/react"
 import {useCallback, useEffect, useState} from "react"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {useNavigate} from "react-router-dom"
@@ -43,9 +43,9 @@ function ProfileName({profile, pubkey}: ProfileNameProps) {
       {profile?.nip05 && (
         <span className="ProfileName-nip05">
           {nip05valid ? (
-            <Verified className="ProfileName-nip05-icon" />
+            <RiVerifiedBadgeLine className="ProfileName-nip05-icon" />
           ) : (
-            <ErrorOutline className="ProfileName-nip05-icon" />
+            <RiErrorWarningLine className="ProfileName-nip05-icon" />
           )}
           <small className="ProfileName-nip05-text">{profile?.nip05}</small>
         </span>

@@ -7,8 +7,7 @@ import {
   FormEvent,
 } from "react"
 import {LnPayCb, NDKEvent, zapInvoiceFromEvent, NDKZapper} from "@nostr-dev-kit/ndk"
-import {Check, ContentCopy} from "@mui/icons-material"
-import * as bolt11 from "bolt11"
+import {RiCheckLine, RiFileCopyLine} from "@remixicon/react"
 import QRCode from "qrcode"
 
 import {requestProvider} from "@getalby/bitcoin-connect-react"
@@ -16,6 +15,7 @@ import zapAnimation from "@/assets/zap-animation.gif"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {useLocalState} from "irisdb-hooks"
 import {ndk} from "@/utils/ndk"
+import * as bolt11 from "bolt11"
 
 interface ZapModalProps {
   onClose: () => void
@@ -197,8 +197,8 @@ function ZapModal({onClose, event, zapped, setZapped, rezappedEvent}: ZapModalPr
                   className="btn btn-neutral gap-2"
                   onClick={handleCopyPaymentRequest}
                 >
-                  {!copiedPaymentRequest && <ContentCopy />}
-                  {copiedPaymentRequest && <Check />}
+                  {!copiedPaymentRequest && <RiFileCopyLine />}
+                  {copiedPaymentRequest && <RiCheckLine />}
                   Copy zap invoice
                 </button>
               </>

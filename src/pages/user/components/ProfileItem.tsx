@@ -1,7 +1,7 @@
 import {Dispatch, SetStateAction, useEffect, useState} from "react"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {useNavigate} from "react-router-dom"
-import {Avatar} from "@mui/material"
+import {RiUserLine} from "@remixicon/react"
 import {ndk} from "@/utils/ndk"
 
 import ProfileAvatar from "./ProfileAvatar.tsx"
@@ -41,7 +41,7 @@ function ProfileItem({pubkey, setShowFollowList}: ProfileItemProps) {
     return (
       <div className="ProfileItem loading-item">
         <div className="ProfileItem-avatar-container">
-          <Avatar></Avatar>
+          <RiUserLine className="h-10 w-10" />
         </div>
         <div className="ProfileItem-text-container">Fetching profile...</div>
       </div>
