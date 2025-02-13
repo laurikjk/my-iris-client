@@ -9,7 +9,6 @@ const channels = new Map<string, Channel | undefined>()
 const subscribe = (filter: NostrFilter, onEvent: (event: VerifiedEvent) => void) => {
   const sub = ndk().subscribe(filter)
   sub.on("event", (event) => {
-    console.log(event)
     onEvent(event as unknown as VerifiedEvent)
   })
   return () => {} // no need to sub.stop(), old nostr senders might still have unseen?
@@ -47,8 +46,6 @@ export function getChannels() {
           if (!channel?.onMessage) continue
 
           channel.onMessage(async (msg) => {
-            console.log("received message", msg)
-
             const message: MessageType = {
               id: msg.id,
               sender: id.split(":").shift()!,
@@ -56,8 +53,7 @@ export function getChannels() {
               time: msg.time,
             }
             localState.get("channels").get(id).get("messages").get(msg.id).put(message)
-            console.log("puttin mesg", msg)
-            localState.get("channels").get(id).get("latest").put(msg)
+            localState.get("channels").get(id).get("latest").put(message)
           })
         }
       }
