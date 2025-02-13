@@ -8,14 +8,11 @@ import {
 } from "react"
 import {LnPayCb, NDKEvent, zapInvoiceFromEvent, NDKZapper} from "@nostr-dev-kit/ndk"
 import {RiCheckLine, RiFileCopyLine} from "@remixicon/react"
-import QRCode from "qrcode"
 
-import {requestProvider} from "@getalby/bitcoin-connect-react"
 import zapAnimation from "@/assets/zap-animation.gif"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {useLocalState} from "irisdb-hooks"
 import {ndk} from "@/utils/ndk"
-import * as bolt11 from "bolt11"
 
 interface ZapModalProps {
   onClose: () => void
@@ -66,6 +63,7 @@ function ZapModal({onClose, event, zapped, setZapped, rezappedEvent}: ZapModalPr
 
       const lnPay: LnPayCb = async ({pr}) => {
         if (isWalletConnect) {
+          const {requestProvider} = await import("@getalby/bitcoin-connect-react")
           const provider = await requestProvider()
           await provider.sendPayment(pr)
           setZapped(true)
@@ -76,6 +74,7 @@ function ZapModal({onClose, event, zapped, setZapped, rezappedEvent}: ZapModalPr
           setBolt11Invoice(pr)
           const img = document.getElementById("qr-image") as HTMLImageElement
 
+          const QRCode = await import("qrcode")
           QRCode.toDataURL(pr, function (error, url) {
             if (error) console.error("Error generating QR code:", error)
             else img.src = url
@@ -124,11 +123,12 @@ function ZapModal({onClose, event, zapped, setZapped, rezappedEvent}: ZapModalPr
     try {
       const sub = ndk().subscribe(filter)
 
-      sub?.on("event", (event: NDKEvent) => {
+      sub?.on("event", async (event: NDKEvent) => {
         sub.stop()
         const receiptInvoice = event.tagValue("bolt11")
         if (receiptInvoice) {
-          const decodedInvoice = bolt11?.decode(receiptInvoice)
+          const bolt11 = await import("bolt11")
+          const decodedInvoice = bolt11.decode(receiptInvoice)
 
           const zapRequest = zapInvoiceFromEvent(event)
 

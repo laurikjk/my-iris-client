@@ -7,7 +7,6 @@ import {
 } from "@nostr-dev-kit/ndk"
 import {eventRegex} from "@/shared/components/embed/nostr/NostrNote"
 import {nip19} from "nostr-tools"
-import * as bolt11 from "bolt11"
 import {ndk} from "@/utils/ndk"
 
 export const ISSUE_REGEX =
@@ -153,8 +152,11 @@ export function getZappingUser(event: NDKEvent, npub = true) {
 export function getZapAmount(event: NDKEvent) {
   const invoice = event.tagValue("bolt11")
   if (invoice) {
-    const decodedInvoice = bolt11.decode(invoice)
-    if (decodedInvoice.complete && decodedInvoice.satoshis) return decodedInvoice.satoshis
+    return import("bolt11").then(bolt11 => {
+      const decodedInvoice = bolt11.decode(invoice)
+      if (decodedInvoice.complete && decodedInvoice.satoshis) return decodedInvoice.satoshis
+      return 0
+    })
   }
   return 0
 }
@@ -215,9 +217,10 @@ export const fetchZappedAmount = async (event: NDKEvent): Promise<number> => {
     try {
       const sub = ndk().subscribe(filter)
 
-      sub?.on("event", (event) => {
+      sub?.on("event", async (event) => {
         const invoice = event.tagValue("bolt11")
         if (invoice) {
+          const bolt11 = await import("bolt11")
           const decodedInvoice = bolt11.decode(invoice)
           if (decodedInvoice.complete && decodedInvoice.satoshis)
             zappedAmount = zappedAmount + decodedInvoice.satoshis

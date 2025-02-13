@@ -2,7 +2,8 @@ import {SocialGraph, NostrEvent, SerializedSocialGraph} from "nostr-social-graph
 import {NDKEvent, NDKSubscription, NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {LRUCache} from "typescript-lru-cache"
 import {VerifiedEvent} from "nostr-tools"
-import {debounce, throttle} from "lodash"
+import debounce from "lodash/debounce"
+import throttle from "lodash/throttle"
 import {profileCache} from "./memcache"
 import localForage from "localforage"
 import {localState} from "irisdb"
@@ -195,21 +196,6 @@ export function getFollowLists(myPubKey: string, missingOnly = true, upToDistanc
 
 function getMissingFollowLists(myPubKey: string) {
   getFollowLists(myPubKey, true)
-}
-
-// Get the WoT distance for a given user. Lower WoT distance means more trusted.
-export function getWoTScore(pubKey: string): number {
-  const followDistance = instance.getFollowDistance(pubKey) // lower is better
-
-  // Get the number of friends who follow the user
-  const followedByFriendsCount = instance.followedByFriendsCount(pubKey) // higher is better
-
-  if (followedByFriendsCount === 0) return followDistance
-
-  // Calculate the WoT distance
-  const woTDistance = (followDistance * followDistance) / followedByFriendsCount
-
-  return woTDistance
 }
 
 const throttledRecalculate = throttle(

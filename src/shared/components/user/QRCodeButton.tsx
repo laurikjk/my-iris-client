@@ -5,8 +5,6 @@ import Icon from "@/shared/components/Icons/Icon"
 import {useNavigate} from "react-router-dom"
 import {PublicKey} from "irisdb-nostr"
 import {UserRow} from "./UserRow"
-import QRCode from "qrcode"
-
 const QRScanner = lazy(() => import("../QRScanner"))
 
 interface QRCodeModalProps {
@@ -29,10 +27,21 @@ function QRCodeModal({
   const navigate = useNavigate()
 
   useEffect(() => {
-    QRCode.toDataURL(data, (error, url) => {
-      if (error) console.error("Error generating QR code:", error)
-      else setQrCodeUrl(url)
-    })
+    const generateQR = async () => {
+      try {
+        const QRCode = await import("qrcode")
+        const url = await new Promise((resolve, reject) => {
+          QRCode.toDataURL(data, (error, url) => {
+            if (error) reject(error)
+            else resolve(url)
+          })
+        })
+        setQrCodeUrl(url as string)
+      } catch (error) {
+        console.error("Error generating QR code:", error)
+      }
+    }
+    generateQR()
   }, [data])
 
   const irisLink = `https://iris.to${location.pathname}`

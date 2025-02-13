@@ -4,14 +4,14 @@ import {useInviteLinkFromUrl} from "../hooks/useInviteLinkFromUrl"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import NavSideBar from "@/shared/components/NavSideBar.tsx"
 import Header from "@/shared/components/header/Header.tsx"
-import {socialGraphLoaded} from "@/utils/socialGraph"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import Footer from "@/shared/components/Footer.tsx"
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {trackEvent} from "@/utils/SnortApi"
 import {useLocalState} from "irisdb-hooks"
-import {useEffect, useState} from "react"
+import {useEffect} from "react"
 import {Helmet} from "react-helmet"
+import {socialGraphLoaded} from "@/utils/socialGraph"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -28,17 +28,12 @@ const Layout = () => {
     "home/showLoginDialog",
     false
   )
-  const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
 
   useInviteLinkFromUrl()
 
-  useEffect(() => {
-    socialGraphLoaded
-      .then(() => setIsSocialGraphLoaded(true))
-      .catch(() => setIsSocialGraphLoaded(true)) // Handle error case as well
-  }, [])
+  socialGraphLoaded.then() // just make sure we start loading social the graph
 
   useEffect(() => {
     if (goToNotifications > openedAt) {
@@ -80,7 +75,7 @@ const Layout = () => {
         <NavSideBar />
         <div className="flex-1 min-h-screen py-16 md:py-0 overscroll-none mb-[env(safe-area-inset-bottom)]">
           <ErrorBoundary>
-            {isSocialGraphLoaded ? <Outlet /> : <div>Loading...</div>}
+            <Outlet />
           </ErrorBoundary>
         </div>
       </div>
