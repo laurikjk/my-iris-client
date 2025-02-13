@@ -13,7 +13,6 @@ import zapAnimation from "@/assets/zap-animation.gif"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {useLocalState} from "irisdb-hooks"
 import {ndk} from "@/utils/ndk"
-import * as bolt11 from "bolt11"
 
 interface ZapModalProps {
   onClose: () => void
@@ -124,11 +123,12 @@ function ZapModal({onClose, event, zapped, setZapped, rezappedEvent}: ZapModalPr
     try {
       const sub = ndk().subscribe(filter)
 
-      sub?.on("event", (event: NDKEvent) => {
+      sub?.on("event", async (event: NDKEvent) => {
         sub.stop()
         const receiptInvoice = event.tagValue("bolt11")
         if (receiptInvoice) {
-          const decodedInvoice = bolt11?.decode(receiptInvoice)
+          const bolt11 = await import("bolt11")
+          const decodedInvoice = bolt11.decode(receiptInvoice)
 
           const zapRequest = zapInvoiceFromEvent(event)
 

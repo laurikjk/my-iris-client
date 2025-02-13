@@ -1,7 +1,6 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import {UserRow} from "../user/UserRow"
-import * as bolt11 from "bolt11"
 
 interface ZapReceiptProps {
   event: NDKEvent
@@ -13,9 +12,11 @@ function ZapReceipt({event}: ZapReceiptProps) {
   useEffect(() => {
     const invoice = event.tagValue("bolt11")
     if (invoice) {
-      const decodedInvoice = bolt11.decode(invoice)
-      if (decodedInvoice.complete && decodedInvoice.satoshis)
-        setZappedAmount(decodedInvoice.satoshis)
+      import("bolt11").then((bolt11) => {
+        const decodedInvoice = bolt11.decode(invoice)
+        if (decodedInvoice.complete && decodedInvoice.satoshis)
+          setZappedAmount(decodedInvoice.satoshis)
+      })
     }
   }, [])
 

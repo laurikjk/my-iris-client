@@ -10,7 +10,6 @@ import Icon from "../../Icons/Icon.tsx"
 import ZapModal from "../ZapModal.tsx"
 import debounce from "lodash/debounce"
 import {localState} from "irisdb"
-import * as bolt11 from "bolt11"
 import {ndk} from "@/utils/ndk"
 
 const zapsByEventCache = new LRUCache<string, Map<string, NDKEvent[]>>({
@@ -37,7 +36,8 @@ function FeedItemZap({event}: FeedItemZapProps) {
     zapsByEventCache.get(event.id) || new Map()
   )
 
-  const calculateZappedAmount = (zaps: Map<string, NDKEvent[]>): number => {
+  const calculateZappedAmount = async (zaps: Map<string, NDKEvent[]>): Promise<number> => {
+    const bolt11 = await import("bolt11")
     return Array.from(zaps.values())
       .flat()
       .reduce((sum, zap) => {
@@ -50,9 +50,7 @@ function FeedItemZap({event}: FeedItemZapProps) {
       }, 0)
   }
 
-  const [zappedAmount, setZappedAmount] = useState<number>(
-    calculateZappedAmount(zapsByAuthor)
-  )
+  const [zappedAmount, setZappedAmount] = useState<number>(0)
 
   const handleZapClick = async () => {
     if (isWalletConnect && !!defaultZapAmount) {
@@ -97,14 +95,16 @@ function FeedItemZap({event}: FeedItemZapProps) {
 
     try {
       const sub = ndk().subscribe(filter)
-      const debouncedUpdateAmount = debounce((zapsByAuthor) => {
-        setZappedAmount(calculateZappedAmount(zapsByAuthor))
+      const debouncedUpdateAmount = debounce(async (zapsByAuthor) => {
+        const amount = await calculateZappedAmount(zapsByAuthor)
+        setZappedAmount(amount)
       }, 300)
 
-      sub?.on("event", (zapEvent: NDKEvent) => {
+      sub?.on("event", async (zapEvent: NDKEvent) => {
         if (shouldHideEvent(zapEvent)) return
         const invoice = zapEvent.tagValue("bolt11")
         if (invoice) {
+          const bolt11 = await import("bolt11")
           const decodedInvoice = bolt11.decode(invoice)
           if (decodedInvoice.complete && decodedInvoice.satoshis) {
             setZapsByAuthor((prev) => {
@@ -130,6 +130,10 @@ function FeedItemZap({event}: FeedItemZapProps) {
     } catch (error) {
       console.warn(error)
     }
+  }, [])
+
+  useEffect(() => {
+    calculateZappedAmount(zapsByAuthor).then(setZappedAmount)
   }, [])
 
   const zapped = zapsByAuthor.has(myPubKey)

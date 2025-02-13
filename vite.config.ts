@@ -51,7 +51,6 @@ export default defineConfig({
             "irisdb",
             "irisdb-hooks",
             "irisdb-nostr",
-            "bolt11",
             "lodash",
             "localforage",
             "@noble/hashes",

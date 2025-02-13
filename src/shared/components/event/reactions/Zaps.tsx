@@ -19,11 +19,11 @@ export default function Zaps({event}: {event: NDKEvent}) {
       }
       const sub = ndk().subscribe(filter)
 
-      sub?.on("event", (event: NDKEvent) => {
+      sub?.on("event", async (event: NDKEvent) => {
         if (shouldHideEvent(event)) return
         const user = getZappingUser(event)
+        const amount = await getZapAmount(event)
         setZapAmountByUser((prev) => {
-          const amount = getZapAmount(event)
           prev.set(user, (prev.get(user) || 0) + amount)
           return new Map(prev)
         })
