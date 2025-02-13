@@ -9,10 +9,6 @@ function Content() {
     "settings/hideEventsByUnknownUsers",
     true
   )
-  const [youtubePrivacyMode, setYoutubePrivacyMode] = useLocalState(
-    "settings/youtubePrivacyMode",
-    CONFIG.defaultSettings.youtubePrivacyMode
-  )
   const [hidePostsByMutedMoreThanFollowed, setHidePostsByMutedMoreThanFollowed] =
     useLocalState<boolean>("settings/hidePostsByMutedMoreThanFollowed", true)
   const mutes = useMutes()
@@ -37,11 +33,6 @@ function Content() {
           checked={blurNSFW}
           onChange={() => handleToggleChange(setBlurNSFW, blurNSFW)}
           label="Blur NSFW Media"
-        />
-        <SettingToggle
-          checked={youtubePrivacyMode}
-          onChange={() => handleToggleChange(setYoutubePrivacyMode, youtubePrivacyMode)}
-          label="Replace Youtube links with an invidious instance for better privacy"
         />
         <SettingToggle
           checked={hidePostsByMutedMoreThanFollowed}

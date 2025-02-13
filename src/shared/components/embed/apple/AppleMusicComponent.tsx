@@ -1,15 +1,8 @@
-import {defaultFeedFilter} from "@/utils/nostr.ts"
-import {useLocalState} from "irisdb-hooks"
-
 interface AppleMusicComponentProps {
   match: string
 }
 
 function AppleMusicComponent({match}: AppleMusicComponentProps) {
-  const [feedFilter] = useLocalState("user/feedFilter", defaultFeedFilter)
-
-  if (!feedFilter.includes("audio")) return <></>
-
   return (
     <iframe
       className="applemusic"

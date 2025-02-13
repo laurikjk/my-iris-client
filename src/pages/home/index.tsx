@@ -1,5 +1,4 @@
 import HomeFeedEvents from "@/pages/home/feed/components/HomeFeedEvents.tsx"
-import FeedFilters from "@/pages/home/feed/components/FeedFilters.tsx"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import Trending from "@/shared/components/feed/Trending.tsx"
 import Widget from "@/shared/components/ui/Widget.tsx"
@@ -13,7 +12,6 @@ function Index() {
       <RightColumn>
         {() => (
           <>
-            {CONFIG.rightColumnFilters && <FeedFilters />}
             <Widget title="Trending posts">
               <Trending />
             </Widget>

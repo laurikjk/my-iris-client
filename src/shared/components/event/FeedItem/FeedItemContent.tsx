@@ -1,10 +1,4 @@
-import PermissionNotification from "../PermissionNotification.tsx"
-import QuotedNestrEvent from "../QuotedNestrEvent.tsx"
-import IssueFeedItem from "../IssueFeedItem.tsx"
-import ReferredEvent from "../ReferredEvent.tsx"
-import {isIssue, isPR} from "@/utils/nostr.ts"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import PRFeedItem from "../PRFeedItem.tsx"
 import ZapReceipt from "../ZapReceipt.tsx"
 import Zapraiser from "../Zapraiser.tsx"
 import Highlight from "../Highlight.tsx"
@@ -23,16 +17,8 @@ const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentPr
   if (!event) {
     return ""
   }
-  if (isIssue(event)) {
-    return <IssueFeedItem event={event} />
-  } else if (isPR(event)) {
-    return <PRFeedItem event={event} />
-  } else if (event.kind === 16629) {
-    return <PermissionNotification event={event} />
-  } else if (referredEvent) {
-    return <ReferredEvent referredEvent={referredEvent} />
-  } else if (event.kind === 9373) {
-    return <QuotedNestrEvent event={event} />
+  else if (referredEvent) {
+    return <TextNote event={referredEvent} />
   } else if (event.kind === 9735) {
     return <ZapReceipt event={event} />
   } else if (event.kind === 1 && event.tagValue("zapraiser")) {

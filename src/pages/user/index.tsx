@@ -3,7 +3,6 @@ import Widget from "@/shared/components/ui/Widget"
 import {useMemo, ReactNode} from "react"
 import classNames from "classnames"
 
-import FeedFilters from "../home/feed/components/FeedFilters"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
 import Feed from "@/shared/components/feed/Feed.tsx"
@@ -133,7 +132,6 @@ function UserPage({pubKey}: {pubKey: string}) {
       <RightColumn>
         {() => (
           <>
-            {CONFIG.rightColumnFilters && <FeedFilters />}
             {filteredFollows.length > 0 && (
               <Widget title="Follows">
                 <FollowList follows={filteredFollows} />

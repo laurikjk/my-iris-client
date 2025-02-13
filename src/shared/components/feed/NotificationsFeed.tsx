@@ -1,14 +1,4 @@
 import {
-  defaultNotificationsFilter,
-  getTag,
-  getZappingUser,
-  isAssignNotification,
-  isGitCommentNotification,
-  isIssueNotification,
-  isPRNotification,
-  isReviewRequestNotification,
-} from "@/utils/nostr.ts"
-import {
   notifications,
   Notification as IrisNotification,
   maybeShowPushNotification,
@@ -18,6 +8,7 @@ import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
 import runningOstrich from "@/assets/running-ostrich.gif"
+import {getTag, getZappingUser} from "@/utils/nostr.ts"
 import {useEffect, useCallback, useState} from "react"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import socialGraph from "@/utils/socialGraph"
@@ -36,9 +27,13 @@ localState.get("user/publicKey").on((myPubKey) => {
 
   sub?.stop()
 
-  const kinds: number[] = defaultNotificationsFilter
-    .filter((kind) => /^\d+$/.test(String(kind)))
-    .map(Number)
+  const kinds: number[] = [
+    7, // reactions
+    6, // reposts
+    1, // replies
+    9735, // zap receipts
+    9802, // highlights
+  ]
 
   const filters = {
     kinds: kinds,
@@ -63,15 +58,14 @@ localState.get("user/publicKey").on((myPubKey) => {
         return
     }
     const eTag = getTag("e", event.tags)
-    const id6927 = event.kind === 6927 ? event.id : ""
-    if ((eTag && event.created_at) || (id6927 && event.created_at)) {
-      const key = `${id6927 ? id6927 : eTag}-${event.kind}`
+    if (eTag && event.created_at) {
+      const key = `${eTag}-${event.kind}`
 
       const notification =
         notifications.get(key) ||
         ({
           id: event.id,
-          originalEventId: eTag || id6927,
+          originalEventId: eTag,
           users: new SortedMap([], "time"),
           kind: event.kind,
           time: event.created_at,
@@ -124,11 +118,6 @@ function NotificationsFeed() {
   }, [notificationsSeenAt])
   console.log("initialNotificationsSeenAt", initialNotificationsSeenAt)
 
-  const [notificationsFilter] = useLocalState(
-    "user/notificationsFilter",
-    defaultNotificationsFilter
-  )
-
   const updateSeenAt = useCallback(() => {
     if (document.hasFocus() && latestNotificationTime > notificationsSeenAt) {
       setTimeout(() => {
@@ -157,50 +146,6 @@ function NotificationsFeed() {
     }
   }, [updateSeenAt])
 
-  const displayFilterFn = useCallback(
-    (notification: IrisNotification) => {
-      // custom filtering
-      if (!notificationsFilter.includes("issues") && isIssueNotification(notification))
-        return false
-      if (
-        !notificationsFilter.includes("pull-requests") &&
-        isPRNotification(notification)
-      )
-        return false
-      if (
-        !notificationsFilter.includes("git-comments") &&
-        isGitCommentNotification(notification)
-      )
-        return false
-      if (
-        !notificationsFilter.includes("git-assigns") &&
-        isAssignNotification(notification)
-      )
-        return false
-      if (
-        !notificationsFilter.includes("review-requests") &&
-        isReviewRequestNotification(notification)
-      )
-        return false
-      // exclude all possibly irrelevant kind 6927 events
-      if (
-        notification.kind === 6927 &&
-        !isIssueNotification(notification) &&
-        !isPRNotification(notification) &&
-        !isGitCommentNotification(notification) &&
-        !isAssignNotification(notification) &&
-        !isReviewRequestNotification(notification)
-      )
-        return false
-      // default filtering
-      if (!notificationsFilter.includes(notification.kind)) {
-        return false
-      }
-      return true
-    },
-    [notificationsFilter]
-  )
-
   useEffect(() => {
     // Check and request notification permission
     if (
@@ -225,7 +170,6 @@ function NotificationsFeed() {
       >
         {notifications.size > 0 ? (
           Array.from(notifications.entries())
-            .filter((notification) => displayFilterFn(notification[1]))
             .reverse()
             .slice(0, displayCount)
             .map((entry) => (

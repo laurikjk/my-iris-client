@@ -11,17 +11,14 @@ declare const CONFIG: {
   defaultTheme: string
   defaultNotesTheme: string
   navItems: string[]
-  rightColumnFilters: boolean
   aboutText: string
   repository: string
   features: {
-    git: boolean
     cashu: boolean
     pushNotifications: boolean
     analytics: boolean
   }
   defaultSettings: {
-    youtubePrivacyMode: boolean
     notificationServer: string
   }
 }

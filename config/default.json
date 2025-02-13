@@ -16,18 +16,15 @@
     "settings",
     "about"
   ],
-  "rightColumnFilters": false,
   "publicDir": "public/iris",
   "aboutText": "Iris - Connecting People",
   "repository": "https://github.com/irislib/iris-client",
   "features": {
-    "git": false,
     "cashu": true,
     "pushNotifications": true,
     "analytics": false
   },
   "defaultSettings": {
-    "youtubePrivacyMode": false,
     "notificationServer": "https://notifications.iris.to"
   }
 }

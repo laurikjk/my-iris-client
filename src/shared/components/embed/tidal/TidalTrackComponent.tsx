@@ -1,15 +1,8 @@
-import {defaultFeedFilter} from "@/utils/nostr.ts"
-import {useLocalState} from "irisdb-hooks"
-
 interface TidalTrackComponentProps {
   match: string
 }
 
 function TidalTrackComponent({match}: TidalTrackComponentProps) {
-  const [feedFilter] = useLocalState("user/feedFilter", defaultFeedFilter)
-
-  if (!feedFilter.includes("audio")) return <></>
-
   return (
     <iframe
       scrolling="no"
