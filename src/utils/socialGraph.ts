@@ -1,6 +1,5 @@
 import {SocialGraph, NostrEvent, SerializedSocialGraph} from "nostr-social-graph"
 import {NDKEvent, NDKSubscription, NDKUserProfile} from "@nostr-dev-kit/ndk"
-import profileJson from "nostr-social-graph/data/profileData.json"
 import {LRUCache} from "typescript-lru-cache"
 import {VerifiedEvent} from "nostr-tools"
 import {debounce, throttle} from "lodash"
@@ -87,31 +86,41 @@ export type SearchResult = {
 
 const latestProfileEvents = new Map<string, number>()
 
-console.time("fuse init")
-// const fuseIndex = Fuse.parseIndex(fuseIndexData)
-
-const processedData = [] as SearchResult[]
-profileJson.forEach((v) => {
-  if (v[0] && v[1]) {
-    processedData.push({
-      pubKey: v[0],
-      name: v[1],
-      nip05: v[2] || undefined,
-    })
-
-    let pictureUrl = v[3]
-    if (pictureUrl && !pictureUrl.startsWith("http://")) {
-      pictureUrl = `https://${pictureUrl}`
-    }
-    profileCache.set(v[0], {username: v[1], picture: pictureUrl || undefined})
-  }
-})
-
-export const searchIndex = new Fuse<SearchResult>(processedData, {
+let searchIndex: Fuse<SearchResult> = new Fuse<SearchResult>([], {
   keys: ["name", "nip05"],
   includeScore: true,
 })
-console.timeEnd("fuse init")
+
+async function initializeSearchIndex() {
+  console.time("fuse init")
+  const {default: profileJson} = await import("nostr-social-graph/data/profileData.json")
+  const processedData = [] as SearchResult[]
+  profileJson.forEach((v) => {
+    if (v[0] && v[1]) {
+      processedData.push({
+        pubKey: v[0],
+        name: v[1],
+        nip05: v[2] || undefined,
+      })
+  
+      let pictureUrl = v[3]
+      if (pictureUrl && !pictureUrl.startsWith("http://")) {
+        pictureUrl = `https://${pictureUrl}`
+      }
+      profileCache.set(v[0], {username: v[1], picture: pictureUrl || undefined})
+    }
+  })
+  
+  searchIndex = new Fuse<SearchResult>(processedData, {
+    keys: ["name", "nip05"],
+    includeScore: true,
+  })
+  console.timeEnd("fuse init")
+}
+
+initializeSearchIndex().catch(console.error)
+
+export {searchIndex}
 
 export function handleProfile(pubKey: string, profile: NDKUserProfile) {
   queueMicrotask(() => {
