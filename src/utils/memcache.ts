@@ -2,7 +2,7 @@ import {NDKEvent, NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {SortedMap} from "./SortedMap/SortedMap"
 import {LRUCache} from "typescript-lru-cache"
 import localforage from "localforage"
-import {debounce} from "lodash"
+import debounce from "lodash/debounce"
 
 export const eventsByIdCache = new LRUCache({maxSize: 500})
 export const feedCache = new LRUCache<string, SortedMap<string, NDKEvent>>({maxSize: 10})
