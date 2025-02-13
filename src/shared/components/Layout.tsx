@@ -11,6 +11,7 @@ import {trackEvent} from "@/utils/SnortApi"
 import {useLocalState} from "irisdb-hooks"
 import {useEffect} from "react"
 import {Helmet} from "react-helmet"
+import {socialGraphLoaded} from "@/utils/socialGraph"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -31,6 +32,8 @@ const Layout = () => {
   const location = useLocation()
 
   useInviteLinkFromUrl()
+
+  socialGraphLoaded.then() // just make sure we start loading social the graph
 
   useEffect(() => {
     if (goToNotifications > openedAt) {
