@@ -1,4 +1,3 @@
-import {init, disconnect, requestProvider} from "@getalby/bitcoin-connect-react"
 import {useLocalState} from "irisdb-hooks"
 import {ChangeEvent} from "react"
 
@@ -11,6 +10,7 @@ const WalletSettings = () => {
   )
 
   const handleConnectWalletClick = async () => {
+    const {init, requestProvider} = await import("@getalby/bitcoin-connect-react")
     init({
       appName: "Nestr",
       filters: ["nwc"],
@@ -20,7 +20,8 @@ const WalletSettings = () => {
     if (provider) setIsWalletConnect(true)
   }
 
-  const handleDisconnectWalletClick = () => {
+  const handleDisconnectWalletClick = async () => {
+    const {disconnect} = await import("@getalby/bitcoin-connect-react")
     disconnect()
     setIsWalletConnect(false)
   }

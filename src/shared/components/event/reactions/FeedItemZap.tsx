@@ -1,5 +1,4 @@
 import {LnPayCb, NDKEvent, NDKZapper} from "@nostr-dev-kit/ndk"
-import {requestProvider} from "@getalby/bitcoin-connect"
 import {shouldHideEvent} from "@/utils/socialGraph.ts"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import {getZappingUser} from "@/utils/nostr.ts"
@@ -69,6 +68,7 @@ function FeedItemZap({event}: FeedItemZapProps) {
 
       const lnPay: LnPayCb = async ({pr}) => {
         if (isWalletConnect) {
+          const {requestProvider} = await import("@getalby/bitcoin-connect")
           const provider = await requestProvider()
           const confirmation = await provider.sendPayment(pr)
           return confirmation

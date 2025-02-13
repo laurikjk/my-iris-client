@@ -61,7 +61,6 @@ export default defineConfig({
             "nostr-social-graph",
             "classnames",
             "fuse.js",
-            "qrcode",
             "react-string-replace",
             "react-swipeable",
             "uuid"
