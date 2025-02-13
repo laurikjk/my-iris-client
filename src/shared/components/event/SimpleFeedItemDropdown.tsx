@@ -1,4 +1,4 @@
-import MoreVertIcon from "@mui/icons-material/MoreVert"
+import {RiMoreLine} from "@remixicon/react"
 
 type FeedItemDropdownProps = {
   eventId: string
@@ -13,7 +13,7 @@ function SimpleFeedItemDropdown({eventId}: FeedItemDropdownProps) {
     <div className="" onClick={(e) => e.stopPropagation()}>
       <div className="dropdown">
         <div tabIndex={0} role="button" className="p-2 text-base-content/50">
-          <MoreVertIcon className="h-6 w-6 cursor-pointer" />
+          <RiMoreLine className="h-6 w-6 cursor-pointer" />
         </div>
         <ul
           tabIndex={0}

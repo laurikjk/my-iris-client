@@ -1,5 +1,5 @@
+import {RiErrorWarningLine, RiGithubFill, RiShieldCheckFill} from "@remixicon/react"
 import {ElementType, ReactNode, useEffect, useMemo, useState} from "react"
-import {ErrorOutline, GitHub, Verified} from "@mui/icons-material"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {useNavigate} from "react-router-dom"
 import {nip19} from "nostr-tools"
@@ -106,7 +106,7 @@ function ProfileDetails({
     <div className="flex flex-col gap-2">
       {isMuted && (
         <div className="flex items-center gap-2 text-warning">
-          <ErrorOutline className="text-warning" />
+          <RiErrorWarningLine className="text-warning" />
           <small>User is muted</small>
           <button className="btn btn-sm btn-neutral" onClick={() => unmuteUser(hexPub)}>
             Unmute
@@ -117,7 +117,7 @@ function ProfileDetails({
       {displayProfile?.nip05 && (
         <div className={nip05valid === null ? "invisible" : "visible"}>
           {renderProfileField(
-            nip05valid ? Verified : ErrorOutline,
+            nip05valid ? RiShieldCheckFill : RiErrorWarningLine,
             nip05valid ? (
               displayProfile.nip05.replace("_@", "")
             ) : (
@@ -136,7 +136,7 @@ function ProfileDetails({
           "website"
         )}
       {externalIdentities?.github &&
-        renderProfileField(GitHub, externalIdentities.github, "github")}
+        renderProfileField(RiGithubFill, externalIdentities.github, "github")}
       {displayProfile?.lud16 && renderProfileField(Bolt, displayProfile.lud16, "lud16")}
       {displayProfile?.about && (
         <article className="prose">
