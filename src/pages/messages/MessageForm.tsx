@@ -45,7 +45,7 @@ const MessageForm = ({channel, id, onSubmit}: MessageFormProps) => {
       ndkEvent
         .publish()
         .then(() => {})
-        .catch((e) => {})
+        .catch((e) => console.error(e))
       const message: MessageType = {
         id: event.id,
         sender: "user",

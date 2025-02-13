@@ -91,14 +91,12 @@ export async function maybeShowPushNotification(event: NDKEvent) {
 
   const name = profile?.name || profile?.username || "Someone"
 
-  if (window.Notification?.permission === "granted") {
-    showNotification(`${name} zapped you ${amount} sats!`, {
-      icon: "/favicon.png",
-      image: "/img/zap.png",
-      sticky: false,
-      data: {url: "/notifications"},
-    })
-  }
+  showNotification(`${name} zapped you ${amount} sats!`, {
+    icon: "/favicon.png",
+    image: "/img/zap.png",
+    sticky: false,
+    data: {url: "/notifications"},
+  })
 }
 
 export async function subscribeToAuthorDMNotifications(authors: string[]) {

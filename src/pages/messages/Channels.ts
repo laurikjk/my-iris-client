@@ -3,6 +3,7 @@ import {VerifiedEvent} from "nostr-tools"
 import {MessageType} from "./Message"
 import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
+import { showNotification } from "@/utils/notifications"
 
 const channels = new Map<string, Channel | undefined>()
 
@@ -11,7 +12,7 @@ const subscribe = (filter: NostrFilter, onEvent: (event: VerifiedEvent) => void)
   sub.on("event", (event) => {
     onEvent(event as unknown as VerifiedEvent)
   })
-  return () => {} // no need to sub.stop(), old nostr senders might still have unseen?
+  return () => sub.stop()
 }
 
 export async function getChannel(id: string): Promise<Channel | undefined> {
@@ -36,8 +37,7 @@ export async function getChannel(id: string): Promise<Channel | undefined> {
 export function getChannels() {
   return localState
     .get("channels")
-    .once()
-    .then(async (channelData) => {
+    .on(async (channelData) => {
       for (const [id, data] of Object.entries(channelData || {})) {
         if (channels.has(id)) continue
         if (data) {
@@ -54,6 +54,16 @@ export function getChannels() {
             }
             localState.get("channels").get(id).get("messages").get(msg.id).put(message)
             localState.get("channels").get(id).get("latest").put(message)
+
+            // Show notification if we're not already on the messages page for this channel
+            console.log('show notif?', !window.location.pathname.includes(`/messages/${id}`))
+            if (!window.location.pathname.includes(`/messages/${id}`)) {
+              showNotification("New Message", {
+                body: msg.data.length > 100 ? msg.data.slice(0, 100) + "..." : msg.data,
+                icon: "/favicon.png",
+                data: { url: `/messages/${id}` },
+              })
+            }
           })
         }
       }
