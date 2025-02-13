@@ -1,4 +1,4 @@
-import {ChangeEvent, FormEvent, useEffect, useRef, useState} from "react"
+import {ChangeEvent, useEffect, useRef, useState} from "react"
 import {generateSecretKey, getPublicKey, nip19} from "nostr-tools"
 import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 import {bytesToHex} from "@noble/hashes/utils"
@@ -32,36 +32,49 @@ export default function SignUp({onClose}: SignUpProps) {
     }
   }
 
-  function onNewUserLogin(e: FormEvent) {
-    e.preventDefault()
+  function handleKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      handleSubmit(true)
+    }
+  }
+
+  function handleSubmit(force = false) {
+    if (!newUserName && !force) {
+      return
+    }
+    ndk()
+    const sk = generateSecretKey()
+    const pk = getPublicKey(sk)
+    const npub = nip19.npubEncode(pk)
+    const privateKeyHex = bytesToHex(sk)
+    localState.get("user/privateKey").put(privateKeyHex)
+    localState.get("user/publicKey").put(pk)
+    localStorage.setItem("cashu.ndk.privateKeySignerPrivateKey", privateKeyHex)
+    localStorage.setItem("cashu.ndk.pubkey", pk)
+    const privateKeySigner = new NDKPrivateKeySigner(privateKeyHex)
+    ndk().signer = privateKeySigner
     if (newUserName) {
-      ndk()
-      const sk = generateSecretKey() // `sk` is a Uint8Array
-      const pk = getPublicKey(sk) // `pk` is a hex string
-      const npub = nip19.npubEncode(pk)
-      const privateKeyHex = bytesToHex(sk)
-      localState.get("user/privateKey").put(privateKeyHex)
-      localState.get("user/publicKey").put(pk)
-      localStorage.setItem("cashu.ndk.privateKeySignerPrivateKey", privateKeyHex)
-      localStorage.setItem("cashu.ndk.pubkey", pk)
-      const privateKeySigner = new NDKPrivateKeySigner(privateKeyHex)
-      ndk().signer = privateKeySigner
       const profileEvent = new NDKEvent(ndk())
       profileEvent.kind = 0
       profileEvent.content = JSON.stringify({
         display_name: newUserName,
         lud16: CONFIG.features.cashu ? `${npub}@npub.cash` : undefined,
       })
-      profileEvent.publish()
-      setShowLoginDialog(false)
+      profileEvent.publish()  
     }
+    setShowLoginDialog(false)
   }
 
   return (
     <div className="flex flex-col gap-4">
       <form
         className="flex flex-col items-center gap-4 flex-wrap"
-        onSubmit={(e) => onNewUserLogin(e)}
+        onSubmit={(e) => {
+          e.preventDefault()
+          handleSubmit()
+        }}
+        onKeyDown={handleKeyDown}
       >
         <h1 className="text-2xl font-bold">Sign up</h1>
         <input

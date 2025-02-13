@@ -39,14 +39,17 @@ export const acceptInviteLink = async (
     // Publish the event
     NDKEventFromRawEvent(event).publish()
 
-    // Save the channel
+    // Create channel ID in the same format as NewChat
+    const channelId = `${inviteLink.inviter}:${channel.name}`
+
+    // Save the channel with the new path format
     localState
-      .get(`channels/${inviteLink.inviter}`)
+      .get(`channels/${channelId}/state`)
       .put(serializeChannelState(channel.state))
 
     // Navigate to the new chat if navigate function is provided
     if (navigate) {
-      navigate(`/messages/${inviteLink.inviter}`)
+      navigate(`/messages/${channelId}`)
     }
 
     return {success: true, inviter: inviteLink.inviter}
