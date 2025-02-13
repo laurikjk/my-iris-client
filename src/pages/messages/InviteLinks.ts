@@ -5,9 +5,11 @@ import {
   serializeChannelState,
 } from "nostr-double-ratchet"
 import {showNotification, subscribeToAuthorDMNotifications} from "@/utils/notifications"
-import {JsonValue, localState, Unsubscribe} from "irisdb"
+import SnortApi, {Subscription} from "@/utils/SnortApi"
 import {hexToBytes} from "@noble/hashes/utils"
+import {localState, Unsubscribe} from "irisdb"
 import {VerifiedEvent} from "nostr-tools"
+import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
 
 const inviteLinks = new Map<string, InviteLink>()
@@ -34,25 +36,28 @@ export function getInviteLinks(
 }
 
 const nostrSubscribe = (filter: NostrFilter, onEvent: (e: VerifiedEvent) => void) => {
+  console.log('nostrSubscribe', filter)
   const sub = ndk().subscribe(filter)
   sub.on("event", (event) => {
+    console.log('nostrSubscribe got event', event)
     onEvent(event as unknown as VerifiedEvent)
   })
   return () => sub.stop()
 }
 
 function listen() {
-  let channels: JsonValue
-  localState.get("channels").on((c) => (channels = c))
-  if (user?.publicKey && user?.privateKey) {
+  console.log(111, user)
+  if (user?.publicKey) {
+    console.log(222)
     for (const id of inviteLinks.keys()) {
       if (!subscriptions.has(id)) {
         const inviteLink = inviteLinks.get(id)!
+        console.log("inviteLink", inviteLink)
         const decrypt = user.privateKey
           ? hexToBytes(user.privateKey)
           : async (cipherText: string, pubkey: string) => {
               if (window.nostr?.nip44) {
-                const result = window.nostr.nip44.decrypt(cipherText, pubkey)
+                const result = window.nostr.nip44.decrypt(pubkey, cipherText)
                 if (!result || typeof result !== "string") {
                   throw new Error("Failed to decrypt")
                 }
@@ -64,23 +69,24 @@ function listen() {
           decrypt,
           nostrSubscribe,
           (channel: Channel, identity?: string) => {
-            const id = identity || "asdf"
-            subscribeToAuthorDMNotifications([channel.state.theirNostrPublicKey])
-            localState.get("channels").on((c) => console.log("channels", c))
-            setTimeout(() => {
-              if (!channels || !Object.keys(channels).includes(id)) {
-                console.log("new channel", identity)
-                localState
-                  .get("channels")
-                  .get(id)
-                  .put(serializeChannelState(channel.state))
-                showNotification("New chat via invite link", {
-                  data: {
-                    url: `/messages/${identity}`,
-                  },
-                })
-              }
-            }, 1000)
+            const channelId = `${identity}:${channel.name}`
+            try {
+              subscribeToAuthorDMNotifications([channel.state.theirNostrPublicKey])
+            } catch (e) {
+              console.error("Error subscribing to author DM notifications", e)
+            }
+
+            localState
+              .get("channels")
+              .get(channelId)
+              .get("state")
+              .put(serializeChannelState(channel.state))
+
+            showNotification("New chat via invite link", {
+              data: {
+                url: `/messages/${identity}`,
+              },
+            })
           }
         )
         subscriptions.set(id, unsubscribe)
@@ -89,10 +95,71 @@ function listen() {
   }
 }
 
+const subscribeInviteLinkNotifications = debounce(async () => {
+  console.log("Checking for missing subscriptions", {
+    size: inviteLinks.size,
+    links: Array.from(inviteLinks.entries()),
+  })
+
+  if (inviteLinks.size === 0) return
+
+  try {
+    const subscriptions = await new SnortApi().getSubscriptions()
+
+    const missing = Array.from(inviteLinks.values()).filter(
+      (link) =>
+        !Object.values(subscriptions).find(
+          (sub: Subscription) =>
+            sub.filter.kinds?.includes(4) &&
+            (sub.filter as any)["#e"]?.includes(link.inviterSessionPublicKey)
+        )
+    )
+
+    console.log("Processing subscriptions:", {
+      inviteLinks: Array.from(inviteLinks.entries()),
+      subscriptions,
+      missing,
+    })
+
+    if (missing.length) {
+      const dmSubscription = Object.entries(subscriptions).find(
+        ([, sub]) => sub.filter.kinds?.length === 1 && sub.filter.kinds[0] === 4
+      )
+
+      if (dmSubscription) {
+        const [id, sub] = dmSubscription
+        await new SnortApi().updateSubscription(id, {
+          filter: {
+            ...sub.filter,
+            "#e": [
+              ...new Set([
+                ...((sub.filter as any)["#e"] || []),
+                ...missing.map((l) => l.inviterSessionPublicKey),
+              ]),
+            ],
+          },
+        })
+      } else {
+        await new SnortApi().createSubscription({
+          kinds: [4],
+          "#e": missing.map((l) => l.inviterSessionPublicKey),
+        })
+      }
+    }
+  } catch (e) {
+    console.error("Error in subscribeInviteLinkNotifications:", e)
+  }
+}, 100)
+
 getInviteLinks((id, inviteLink) => {
   if (!inviteLinks.has(id)) {
     inviteLinks.set(id, inviteLink)
+    console.log("inviteLinks2", inviteLinks)
     listen()
+    setTimeout(() => {
+      console.log("Triggering subscription check with size:", inviteLinks.size)
+      subscribeInviteLinkNotifications()
+    }, 0)
   }
 })
 

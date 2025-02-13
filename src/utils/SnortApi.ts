@@ -9,6 +9,7 @@ export interface PushNotifications {
 }
 
 export interface Subscription {
+  id?: string
   webhooks: any[]
   web_push_subscriptions: PushNotifications[]
   filter: {
@@ -17,6 +18,7 @@ export interface Subscription {
     kinds: number[]
     search?: string
     "#p"?: string[]
+    "#e"?: string[]
   }
   subscriber: string
 }
@@ -45,6 +47,10 @@ export default class SnortApi {
     return this.#getJson<{vapid_public_key: string}>("info")
   }
 
+  getSubscriptions() {
+    return this.#getJsonAuthd<SubscriptionResponse>("subscriptions")
+  }
+
   registerPushNotifications(sub: PushNotifications, filter: NDKFilter) {
     return this.#getJsonAuthd<void>(`subscriptions`, "POST", {
       web_push_subscriptions: [sub],
@@ -53,8 +59,16 @@ export default class SnortApi {
     })
   }
 
-  getSubscriptions() {
-    return this.#getJsonAuthd<SubscriptionResponse>("subscriptions")
+  createSubscription(filter: Subscription["filter"]) {
+    return this.#getJsonAuthd<{id: string; status: string}>("subscriptions", "POST", {
+      webhooks: [],
+      web_push_subscriptions: [],
+      filter,
+    })
+  }
+
+  updateSubscription(id: string, subscription: Partial<Subscription>) {
+    return this.#getJsonAuthd<void>(`subscriptions/${id}`, "POST", subscription)
   }
 
   async #getJsonAuthd<T>(
@@ -115,18 +129,6 @@ export default class SnortApi {
     } else {
       throw new Error("Invalid response")
     }
-  }
-
-  updateSubscription(id: string, subscription: Partial<Subscription>) {
-    return this.#getJsonAuthd<void>(`subscriptions/${id}`, "POST", subscription)
-  }
-
-  createSubscription(filter: Subscription["filter"]) {
-    return this.#getJsonAuthd<{id: string; status: string}>("subscriptions", "POST", {
-      webhooks: [],
-      web_push_subscriptions: [],
-      filter,
-    })
   }
 }
 

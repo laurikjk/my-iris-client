@@ -1,15 +1,11 @@
-import {subscribeToAuthorDMNotifications} from "@/utils/notifications"
+import {Channel, serializeChannelState} from "nostr-double-ratchet"
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
-import {serializeChannelState} from "nostr-double-ratchet"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {hexToBytes} from "@noble/hashes/utils"
 import Message, {MessageType} from "./Message"
 import {useParams} from "react-router-dom"
-import {useLocalState} from "irisdb-hooks"
 import MessageForm from "./MessageForm"
-import {PublicKey} from "irisdb-nostr"
 import {getChannel} from "./Channels"
 import {localState} from "irisdb"
 
@@ -62,12 +58,11 @@ const groupMessages = (
 
 const Chat = () => {
   const {id} = useParams()
-  const hexId = useMemo(() => id && new PublicKey(id).toString(), [id])
   const [messages, setMessages] = useState(
     new SortedMap<string, MessageType>([], comparator)
   )
+  const [channel, setChannel] = useState<Channel | undefined>(undefined)
   //const [myPubKey] = useLocalState("user/publicKey", "")
-  const [ourRatchetPrivateKey] = useLocalState("user/privateKey", "")
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [isAtBottom, setIsAtBottom] = useState(true)
@@ -75,33 +70,35 @@ const Chat = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
-  const channel = useMemo(
-    () =>
-      (hexId &&
-        ourRatchetPrivateKey &&
-        getChannel(hexId, hexId, hexToBytes(ourRatchetPrivateKey))) ||
-      undefined,
-    [hexId, ourRatchetPrivateKey]
-  )
+  useEffect(() => {
+    const fetchChannel = async () => {
+      if (id) {
+        const fetchedChannel = await getChannel(id)
+        setChannel(fetchedChannel)
+      }
+    }
+
+    fetchChannel()
+  }, [id])
 
   const saveState = () => {
-    hexId &&
+    id &&
       channel &&
       localState
         .get("channels")
-        .get(hexId)
+        .get(id)
         .get("state")
         .put(serializeChannelState(channel.state))
   }
 
   useEffect(() => {
-    if (!(hexId && channel)) {
+    if (!(id && channel)) {
       return
     }
     setMessages(new SortedMap<string, MessageType>([], comparator))
     const unsub1 = localState
       .get("channels")
-      .get(hexId)
+      .get(id)
       .get("messages")
       .forEach((message, path) => {
         const split = path.split("/")
@@ -124,25 +121,8 @@ const Chat = () => {
         }
       }, 2)
 
-    const unsub2 = channel.onMessage((message) => {
-      const msg: MessageType = {
-        id: message.id,
-        sender: hexId,
-        content: message.data,
-        time: message.time,
-      }
-      localState.get("channels").get(hexId).get("messages").get(message.id).put(msg)
-      saveState()
-      const keys = [channel.state.ourNextNostrKey.publicKey]
-      if (channel.state.ourCurrentNostrKey) {
-        keys.push(channel.state.ourCurrentNostrKey.publicKey)
-      }
-      subscribeToAuthorDMNotifications(keys)
-    })
-
     return () => {
       unsub1()
-      unsub2()
     }
   }, [channel])
 
@@ -173,13 +153,18 @@ const Chat = () => {
 
   const messageGroups = useMemo(() => groupMessages(messages), [messages])
 
-  if (!hexId || !channel || !ourRatchetPrivateKey) {
+  console.log("id", id)
+  console.log("channel", channel)
+
+  if (!id || !channel) {
     return null
   }
 
+  const user = id.split(":").shift()!
+
   return (
     <>
-      <MiddleHeader>{id && <UserRow avatarWidth={32} pubKey={id} />}</MiddleHeader>
+      <MiddleHeader>{id && <UserRow avatarWidth={32} pubKey={user} />}</MiddleHeader>
       <div
         ref={chatContainerRef}
         className="flex flex-col justify-end flex-1 overflow-y-auto space-y-4 p-4 relative"
@@ -238,7 +223,7 @@ const Chat = () => {
           </svg>
         </button>
       )}
-      <MessageForm channel={channel} id={hexId} onSubmit={saveState} />
+      <MessageForm channel={channel} id={id} onSubmit={saveState} />
     </>
   )
 }

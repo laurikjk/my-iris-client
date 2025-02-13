@@ -42,7 +42,10 @@ const MessageForm = ({channel, id, onSubmit}: MessageFormProps) => {
       const time = Date.now()
       const event = channel.send(text)
       const ndkEvent = NDKEventFromRawEvent(event)
-      ndkEvent.publish().catch((e) => console.warn("Error publishing event:", e))
+      ndkEvent
+        .publish()
+        .then((res) => console.log("published", res))
+        .catch((e) => console.warn("Error publishing event:", e))
       const message: MessageType = {
         id: event.id,
         sender: "user",
@@ -50,6 +53,7 @@ const MessageForm = ({channel, id, onSubmit}: MessageFormProps) => {
         time,
       }
       localState.get("channels").get(id).get("messages").get(event.id).put(message)
+      localState.get("channels").get(id).get("latest").put(message)
       setNewMessage("")
     }
     onSubmit()

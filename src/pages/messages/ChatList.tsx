@@ -1,8 +1,8 @@
 import {UserRow} from "@/shared/components/user/UserRow"
+import {useLocalState} from "irisdb-hooks"
 import {useEffect, useState} from "react"
 import {NavLink} from "react-router-dom"
 import classNames from "classnames"
-import {nip19} from "nostr-tools"
 import {localState} from "irisdb"
 
 interface ChatListProps {
@@ -14,9 +14,11 @@ type Channel = {
 }
 
 const ChatListItem = ({id}: {id: string}) => {
+  const pubKey = id.split(":").shift() || ""
+  const [latest] = useLocalState(`channels/${id}/latest`, {} as {content?: string})
   return (
     <NavLink
-      to={`/messages/${nip19.npubEncode(id)}`}
+      to={`/messages/${id}`}
       key={id}
       className={({isActive}) =>
         classNames("p-2 flex items-center border-b border-custom", {
@@ -27,8 +29,9 @@ const ChatListItem = ({id}: {id: string}) => {
     >
       <div className="flex flex-col">
         <span className="text-base font-semibold">
-          <UserRow pubKey={id} linkToProfile={false} />
+          <UserRow pubKey={pubKey} linkToProfile={false} />
         </span>
+        <span>{latest.content?.slice(0, 20)}</span>
       </div>
     </NavLink>
   )
