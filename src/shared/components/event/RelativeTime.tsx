@@ -9,6 +9,10 @@ const secondsInAnHour = secondsInAMinute * 60
 const secondsInADay = secondsInAnHour * 24
 
 function RelativeTime({from, fallback}: RelativeTimeProps) {
+  if (!from) {
+    return <>{fallback}</>
+  }
+
   const calcTime = useCallback((fromTime: number) => {
     const currentTime = new Date()
     const timeDifference = Math.floor((currentTime.getTime() - fromTime) / 1000)
