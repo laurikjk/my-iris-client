@@ -5198,10 +5198,10 @@ normalize-range@^0.1.2:
   resolved "https://registry.yarnpkg.com/normalize-range/-/normalize-range-0.1.2.tgz#2d10c06bdfd312ea9777695a4d28439456b75942"
   integrity sha512-bdok/XvKII3nUpklnV6P2hxtMNrCboOjAcyBuQnWEhO665FwrSNRxU+AqpsyvO6LgGYPspN+lu5CLtw4jPRKNA==
 
-nostr-double-ratchet@0.0.4:
-  version "0.0.4"
-  resolved "https://registry.yarnpkg.com/nostr-double-ratchet/-/nostr-double-ratchet-0.0.4.tgz#a871ed02ab0934015f16caecfe9e30e13b7834c7"
-  integrity sha512-hWXnJbIXv3HXJ1vHRIHgpvy9+I5Jd+8ro3HKXQFCVXDkPEwobGQmzJLkCA9nZQaTsKibkN4v7WfxMyBB8nyzEw==
+nostr-double-ratchet@0.0.5:
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/nostr-double-ratchet/-/nostr-double-ratchet-0.0.5.tgz#dca4da3d2cfb59bb6e2e2ed6daced1d2d40d5506"
+  integrity sha512-no7iQbutvepU0SXXMwYg7g4reAztdu+sxHjQj0R/SpCvbvAmBoAE/RTMqSBuRel7UZPGhK8pim9LWff10dQohw==
   dependencies:
     nostr-tools "^2.7.2"
 
