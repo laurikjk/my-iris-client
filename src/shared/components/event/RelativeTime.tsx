@@ -36,9 +36,11 @@ function RelativeTime({from, fallback}: RelativeTimeProps) {
     }
   }, [])
 
-  const [time, setTime] = useState<string | ReactNode>(calcTime(from))
+  const [time, setTime] = useState<string | ReactNode>(() => calcTime(from))
 
   useEffect(() => {
+    setTime(calcTime(from))
+    
     const interval = setInterval(() => {
       setTime(calcTime(from))
     }, 60000)

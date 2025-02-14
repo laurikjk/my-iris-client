@@ -55,7 +55,6 @@ const ChatList = ({className}: ChatListProps) => {
       if (typeof id === "string") {
         setChannels((c) => Object.assign({}, c, {[id]: channel}))
       }
-      console.log(5555, channel)
     }, 3)
     return unsub
   }, [])
