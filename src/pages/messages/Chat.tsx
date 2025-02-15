@@ -158,6 +158,7 @@ const Chat = () => {
 
   useEffect(() => {
     if (!id) return;
+    localState.get("channels").get(id).get("lastSeen").put(Date.now())
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
