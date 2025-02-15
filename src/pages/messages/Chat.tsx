@@ -156,6 +156,28 @@ const Chat = () => {
   console.log("id", id)
   console.log("channel", channel)
 
+  useEffect(() => {
+    if (!id) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        localState.get("channels").get(id).get("lastSeen").put(Date.now())
+      }
+    }
+
+    const handleFocus = () => {
+      localState.get("channels").get(id).get("lastSeen").put(Date.now())
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [id])
+
   if (!id || !channel) {
     return null
   }
