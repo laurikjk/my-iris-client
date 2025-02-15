@@ -1,6 +1,6 @@
 import UnseenNotificationsBadge from "@/shared/components/header/UnseenNotificationsBadge.tsx"
 import PublishButton from "@/shared/components/ui/PublishButton.tsx"
-import {useRef, ReactNode, MouseEventHandler, useMemo} from "react"
+import {useRef, ReactNode, MouseEventHandler, useMemo, useEffect, useState} from "react"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiLoginBoxLine} from "@remixicon/react"
@@ -10,6 +10,7 @@ import classNames from "classnames"
 import NavLink from "./NavLink"
 
 import PublicKeyQRCodeButton from "./user/PublicKeyQRCodeButton"
+import { localState } from "irisdb"
 
 interface NavItemProps {
   to: string
@@ -91,6 +92,65 @@ const NotificationNavItem = ({
     </NavLink>
   </li>
 )
+
+const MessagesNavItem = ({
+  to,
+  onClick,
+}: {
+  to: string
+  onClick?: MouseEventHandler<HTMLAnchorElement>
+}) => {
+  const [channels, setChannels] = useState<Record<string, Channel>>({})
+
+  useEffect(() => {
+    const unsub = localState.get("channels").on<Record<string, Channel>>((value) => {
+      console.log('channels update in MessagesNavItem:', value)
+      setChannels({...value});
+    }, false, 3);
+    return unsub;
+  }, []);
+
+  const hasUnread = useMemo(() => {
+    return Object.values(channels).some((channel) => {
+      const latest = channel?.latest?.time
+      const lastSeen = channel?.lastSeen || 0
+      return latest && latest > lastSeen
+    })
+  }, [channels])
+
+  return (
+    <li>
+      <NavLink
+        title="Messages"
+        to={to}
+        onClick={onClick}
+        className={({isActive}) =>
+          classNames({
+            "bg-base-100": isActive,
+            "rounded-full md:aspect-square xl:aspect-auto flex items-center": true,
+          })
+        }
+      >
+        {({isActive}) => (
+          <span className="indicator flex items-center gap-2">
+            {hasUnread && (
+              <span className="indicator-item badge badge-primary badge-xs" />
+            )}
+            <Icon name={`mail-${isActive ? "solid" : "outline"}`} className="w-6 h-6" />
+            <span className="inline md:hidden xl:inline">Messages</span>
+          </span>
+        )}
+      </NavLink>
+    </li>
+  )
+}
+
+interface Channel {
+  latest?: {
+    time: number
+  }
+  lastSeen?: number
+}
 
 const navItemsConfig = (myPubKey: string) => ({
   home: {to: "/", icon: "home", label: "Home"},
@@ -190,7 +250,9 @@ const NavSideBar = () => {
                 label: string
                 onClick?: MouseEventHandler<HTMLAnchorElement>
               }) =>
-                label === "Notifications" ? (
+                label === "Messages" ? (
+                  <MessagesNavItem key={to} to={to} onClick={onClick} />
+                ) : label === "Notifications" ? (
                   <NotificationNavItem key={to} to={to} onClick={onClick} />
                 ) : (
                   <NavItem
