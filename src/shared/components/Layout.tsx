@@ -12,6 +12,7 @@ import {useLocalState} from "irisdb-hooks"
 import {useEffect} from "react"
 import {Helmet} from "react-helmet"
 import {socialGraphLoaded} from "@/utils/socialGraph"
+import {clearNotifications} from "@/utils/notifications"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -67,6 +68,26 @@ const Layout = () => {
       navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage)
     }
   }, [navigate])
+
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        await clearNotifications()
+      }
+    }
+
+    const handleFocus = async () => {
+      await clearNotifications()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [])
 
   return (
     <div className="relative flex flex-col w-full max-w-screen-xl min-h-screen overscroll-none">

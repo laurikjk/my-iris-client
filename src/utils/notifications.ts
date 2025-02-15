@@ -200,3 +200,13 @@ export async function subscribeToNotifications() {
     console.error(e)
   }
 }
+
+export const clearNotifications = async () => {
+  if ('serviceWorker' in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    for (const registration of registrations) {
+      const notifications = await registration.getNotifications();
+      notifications.forEach(notification => notification.close());
+    }
+  }
+}
