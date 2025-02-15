@@ -55,9 +55,10 @@ export function getChannels() {
             localState.get("channels").get(id).get("messages").get(msg.id).put(message)
             localState.get("channels").get(id).get("latest").put(message)
 
-            // Show notification if we're not already on the messages page for this channel
-            console.log('show notif?', !window.location.pathname.includes(`/messages/${id}`))
-            if (!window.location.pathname.includes(`/messages/${id}`)) {
+            // If visible, update lastSeen. If not, show notification.
+            if (window.location.pathname.includes(`/messages/${id}`) && document.visibilityState !== "visible") {
+              localState.get("channels").get(id).get("lastSeen").put(Date.now())
+            } else {
               showNotification("New Message", {
                 body: msg.data.length > 100 ? msg.data.slice(0, 100) + "..." : msg.data,
                 icon: "/favicon.png",

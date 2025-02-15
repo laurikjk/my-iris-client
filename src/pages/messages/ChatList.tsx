@@ -18,10 +18,12 @@ type Channel = {
 const ChatListItem = ({id}: {id: string}) => {
   const pubKey = id.split(":").shift() || ""
   const [latest] = useLocalState(`channels/${id}/latest`, {} as {content: string, time: number})
+  const [lastSeen, setLastSeen] = useLocalState(`channels/${id}/lastSeen`, 0)
   return (
     <NavLink
       to={`/messages/${id}`}
       key={id}
+      onClick={() => setLastSeen(Date.now())}
       className={({isActive}) =>
         classNames("px-2 py-4 flex items-center border-b border-custom", {
           "bg-base-300": isActive,
@@ -32,7 +34,7 @@ const ChatListItem = ({id}: {id: string}) => {
       <div className="flex flex-row items-center gap-2 flex-1">
         <Avatar pubKey={pubKey} />
         <div className="flex flex-col flex-1">
-          <div className="flex flex-row items-center justify-between">
+          <div className="flex flex-row items-center justify-between gap-2">
             <span className="text-base font-semibold">
               <Name pubKey={pubKey} />
             </span>
@@ -40,7 +42,12 @@ const ChatListItem = ({id}: {id: string}) => {
               <RelativeTime from={latest.time} />
             </span>}
           </div>
-          <span className="text-sm text-base-content/70">{latest?.content?.slice(0, 20)}</span>
+          <div className="flex flex-row items-center justify-between gap-2">
+            <span className="text-sm text-base-content/70">{latest?.content?.slice(0, 20)}</span>
+            {latest?.time && (!lastSeen || latest.time > lastSeen) && (
+              <div className="indicator-item badge badge-primary badge-xs"></div>
+            )}
+          </div>
         </div>
       </div>
     </NavLink>

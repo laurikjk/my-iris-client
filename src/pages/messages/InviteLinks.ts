@@ -36,23 +36,18 @@ export function getInviteLinks(
 }
 
 const nostrSubscribe = (filter: NostrFilter, onEvent: (e: VerifiedEvent) => void) => {
-  console.log('nostrSubscribe', filter)
   const sub = ndk().subscribe(filter)
   sub.on("event", (event) => {
-    console.log('nostrSubscribe got event', event)
     onEvent(event as unknown as VerifiedEvent)
   })
   return () => sub.stop()
 }
 
-function listen() {
-  console.log(111, user)
+const listen = debounce(() => {
   if (user?.publicKey) {
-    console.log(222)
     for (const id of inviteLinks.keys()) {
       if (!subscriptions.has(id)) {
         const inviteLink = inviteLinks.get(id)!
-        console.log("inviteLink", inviteLink)
         const decrypt = user.privateKey
           ? hexToBytes(user.privateKey)
           : async (cipherText: string, pubkey: string) => {
@@ -93,7 +88,7 @@ function listen() {
       }
     }
   }
-}
+}, 100)
 
 const subscribeInviteLinkNotifications = debounce(async () => {
   console.log("Checking for missing subscriptions", {
@@ -154,7 +149,6 @@ const subscribeInviteLinkNotifications = debounce(async () => {
 getInviteLinks((id, inviteLink) => {
   if (!inviteLinks.has(id)) {
     inviteLinks.set(id, inviteLink)
-    console.log("inviteLinks2", inviteLinks)
     listen()
     setTimeout(() => {
       console.log("Triggering subscription check with size:", inviteLinks.size)
@@ -164,6 +158,8 @@ getInviteLinks((id, inviteLink) => {
 })
 
 localState.get("user").on((u) => {
-  user = u as {publicKey?: string; privateKey?: string}
-  listen()
+  if (u) {
+    user = u as {publicKey?: string; privateKey?: string}
+    listen()  
+  }
 })

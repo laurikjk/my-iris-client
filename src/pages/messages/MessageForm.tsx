@@ -54,6 +54,7 @@ const MessageForm = ({channel, id, onSubmit}: MessageFormProps) => {
       }
       localState.get("channels").get(id).get("messages").get(event.id).put(message)
       localState.get("channels").get(id).get("latest").put(message)
+      localState.get("channels").get(id).get("lastSeen").put(time)
       setNewMessage("")
     }
     onSubmit()
