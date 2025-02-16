@@ -98,10 +98,10 @@ const NewChat = () => {
       <div className="m-4 p-4 md:p-8 rounded-lg bg-base-100 flex flex-col gap-6">
         <div>
           <h2 className="text-xl font-semibold mb-4">Have someone&apos;s invite link?</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="text"
-              className="input input-bordered w-96 max-w-full"
+              className="input input-bordered w-full md:w-96"
               placeholder="Paste invite link"
               value={inviteLinkInput}
               onChange={handleInviteLinkInput}
@@ -118,12 +118,15 @@ const NewChat = () => {
         </div>
         <div>
           <h2 className="text-xl font-semibold mb-4">Share your invite link</h2>
-          <form onSubmit={createInviteLink} className="flex items-center gap-2 mb-4">
+          <form
+            onSubmit={createInviteLink}
+            className="flex flex-wrap items-center gap-2 mb-4"
+          >
             <input
               ref={labelInputRef}
               type="text"
               placeholder="Label (optional)"
-              className="input input-bordered w-64"
+              className="input input-bordered w-full md:w-64"
             />
             <button type="submit" className="btn btn-primary whitespace-nowrap">
               Create Invite Link
@@ -131,7 +134,10 @@ const NewChat = () => {
           </form>
           <div className="space-y-3">
             {Array.from(inviteLinks).map(([id, link]) => (
-              <div key={id} className="flex items-center justify-between">
+              <div
+                key={id}
+                className="flex flex-col md:flex-row md:items-center justify-between gap-2"
+              >
                 <span>{link.label}</span>
                 <div className="space-x-2 flex items-center">
                   <QRCodeButton
