@@ -13,6 +13,7 @@ interface ChatListProps {
 
 type Channel = {
   messages: string[]
+  deleted?: boolean
 }
 
 const ChatListItem = ({id}: {id: string}) => {
@@ -85,6 +86,7 @@ const ChatList = ({className}: ChatListProps) => {
           </div>
         </NavLink>
         {Object.entries(channels)
+          .filter(([, channel]) => !!channel && !channel.deleted)
           .sort((a: any, b: any) => {
             // If either chat has no latest time, sort it to the bottom
             if (!a[1].latest?.time) return 1

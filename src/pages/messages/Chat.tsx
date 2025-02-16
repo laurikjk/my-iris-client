@@ -8,6 +8,8 @@ import {useParams} from "react-router-dom"
 import MessageForm from "./MessageForm"
 import {getChannel} from "./Channels"
 import {localState} from "irisdb"
+import Dropdown from "@/shared/components/ui/Dropdown"
+import { RiMoreLine } from "@remixicon/react"
 
 const comparator = (a: [string, MessageType], b: [string, MessageType]) =>
   a[1].time - b[1].time
@@ -69,6 +71,7 @@ const Chat = () => {
   const [showScrollDown, setShowScrollDown] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   useEffect(() => {
     const fetchChannel = async () => {
@@ -179,6 +182,17 @@ const Chat = () => {
     }
   }, [id])
 
+  const handleDeleteChat = () => {
+    if (id) {
+      // TODO: delete properly, maybe needs irisdb support
+      localState.get("channels").get(id).get("deleted").put(true)
+      // put null to each message. at least the content is removed
+      for (const [messageId] of messages) {
+        localState.get("channels").get(id).get("messages").get(messageId).put(null)
+      }
+    }
+  }
+
   if (!id || !channel) {
     return null
   }
@@ -187,7 +201,25 @@ const Chat = () => {
 
   return (
     <>
-      <MiddleHeader>{id && <UserRow avatarWidth={32} pubKey={user} />}</MiddleHeader>
+      <MiddleHeader centered={false}>
+        <div className="flex items-center justify-between w-full">
+          <div>{id && <UserRow avatarWidth={32} pubKey={user} />}</div>
+          <div className="relative">
+            <button onClick={() => setDropdownOpen(!dropdownOpen)} className="btn btn-ghost btn-sm btn-circle">
+              <RiMoreLine className="h-6 w-6 cursor-pointer text-base-content/50" />
+            </button>
+            {dropdownOpen && (
+              <Dropdown onClose={() => setDropdownOpen(false)}>
+                <ul className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                  <li>
+                    <button onClick={handleDeleteChat}>Delete Chat</button>
+                  </li>
+                </ul>
+              </Dropdown>
+            )}
+          </div>
+        </div>
+      </MiddleHeader>
       <div
         ref={chatContainerRef}
         className="flex flex-col justify-end flex-1 overflow-y-auto space-y-4 p-4 relative"

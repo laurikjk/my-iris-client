@@ -7,9 +7,10 @@ import classNames from "classnames"
 interface MiddleHeaderProps {
   title?: string
   children?: ReactNode
+  centered?: boolean
 }
 
-const MiddleHeader = ({title, children}: MiddleHeaderProps) => {
+const MiddleHeader = ({title, children, centered = true}: MiddleHeaderProps) => {
   const navigate = useNavigate()
   const {pathname} = useLocation()
 
@@ -51,7 +52,7 @@ const MiddleHeader = ({title, children}: MiddleHeaderProps) => {
         </div>
         <div
           className={classNames("mr-4", {
-            hidden: pathname === "/",
+            hidden: pathname === "/" || !centered,
           })}
         >
           <RiArrowLeftLine size={24} style={{opacity: 0}} />
