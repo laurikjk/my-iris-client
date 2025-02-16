@@ -1,6 +1,6 @@
 import UnseenNotificationsBadge from "@/shared/components/header/UnseenNotificationsBadge.tsx"
-import PublishButton from "@/shared/components/ui/PublishButton.tsx"
 import {useRef, ReactNode, MouseEventHandler, useMemo, useEffect, useState} from "react"
+import PublishButton from "@/shared/components/ui/PublishButton.tsx"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiLoginBoxLine} from "@remixicon/react"
@@ -10,7 +10,7 @@ import classNames from "classnames"
 import NavLink from "./NavLink"
 
 import PublicKeyQRCodeButton from "./user/PublicKeyQRCodeButton"
-import { localState } from "irisdb"
+import {localState} from "irisdb"
 
 interface NavItemProps {
   to: string
@@ -103,12 +103,16 @@ const MessagesNavItem = ({
   const [channels, setChannels] = useState<Record<string, Channel>>({})
 
   useEffect(() => {
-    const unsub = localState.get("channels").on<Record<string, Channel>>((value) => {
-      console.log('channels update in MessagesNavItem:', value)
-      setChannels({...value});
-    }, false, 3);
-    return unsub;
-  }, []);
+    const unsub = localState.get("channels").on<Record<string, Channel>>(
+      (value) => {
+        console.log("channels update in MessagesNavItem:", value)
+        setChannels({...value})
+      },
+      false,
+      3
+    )
+    return unsub
+  }, [])
 
   const hasUnread = useMemo(() => {
     return Object.values(channels).some((channel) => {
@@ -152,7 +156,17 @@ interface Channel {
   lastSeen?: number
 }
 
-const navItemsConfig = (myPubKey: string) => ({
+type NavItemConfig = {
+  to: string
+  label: string
+  icon?: string
+  activeIcon?: string
+  inactiveIcon?: string
+  requireLogin?: boolean
+  onClick?: MouseEventHandler<HTMLAnchorElement>
+}
+
+const navItemsConfig = (myPubKey: string): Record<string, NavItemConfig> => ({
   home: {to: "/", icon: "home", label: "Home"},
   wallet: {
     to: "/wallet",
@@ -234,38 +248,25 @@ const NavSideBar = () => {
             <span className="inline md:hidden xl:inline">{CONFIG.appName}</span>
           </NavLink>
           <ul className="menu px-2 py-0 text-xl flex flex-col gap-4 md:gap-2 xl:gap-4 rounded-2xl">
-            {navItems.map(
-              ({
-                to,
-                icon,
-                activeIcon,
-                inactiveIcon,
-                label,
-                onClick,
-              }: {
-                to: string
-                icon?: string
-                activeIcon?: string
-                inactiveIcon?: string
-                label: string
-                onClick?: MouseEventHandler<HTMLAnchorElement>
-              }) =>
-                label === "Messages" ? (
-                  <MessagesNavItem key={to} to={to} onClick={onClick} />
-                ) : label === "Notifications" ? (
-                  <NotificationNavItem key={to} to={to} onClick={onClick} />
-                ) : (
-                  <NavItem
-                    key={to}
-                    to={to}
-                    icon={icon}
-                    activeIcon={activeIcon}
-                    inactiveIcon={inactiveIcon}
-                    label={label}
-                    onClick={onClick}
-                  />
-                )
-            )}
+            {navItems.map(({to, icon, activeIcon, inactiveIcon, label, onClick}) => {
+              if (label === "Messages") {
+                return <MessagesNavItem key={to} to={to} onClick={onClick} />
+              }
+              if (label === "Notifications") {
+                return <NotificationNavItem key={to} to={to} onClick={onClick} />
+              }
+              return (
+                <NavItem
+                  key={to}
+                  to={to}
+                  icon={icon}
+                  activeIcon={activeIcon}
+                  inactiveIcon={inactiveIcon}
+                  label={label}
+                  onClick={onClick}
+                />
+              )
+            })}
           </ul>
           {myPubKey && (
             <div className="ml-2 md:ml-0 xl:ml-2 md:mt-2 xl:mt-0">

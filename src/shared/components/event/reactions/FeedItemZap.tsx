@@ -36,7 +36,9 @@ function FeedItemZap({event}: FeedItemZapProps) {
     zapsByEventCache.get(event.id) || new Map()
   )
 
-  const calculateZappedAmount = async (zaps: Map<string, NDKEvent[]>): Promise<number> => {
+  const calculateZappedAmount = async (
+    zaps: Map<string, NDKEvent[]>
+  ): Promise<number> => {
     const bolt11 = await import("bolt11")
     return Array.from(zaps.values())
       .flat()

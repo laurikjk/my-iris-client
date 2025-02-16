@@ -160,6 +160,6 @@ getInviteLinks((id, inviteLink) => {
 localState.get("user").on((u) => {
   if (u) {
     user = u as {publicKey?: string; privateKey?: string}
-    listen()  
+    listen()
   }
 })

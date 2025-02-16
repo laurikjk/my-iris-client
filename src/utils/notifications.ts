@@ -202,11 +202,11 @@ export async function subscribeToNotifications() {
 }
 
 export const clearNotifications = async () => {
-  if ('serviceWorker' in navigator) {
-    const registrations = await navigator.serviceWorker.getRegistrations();
+  if ("serviceWorker" in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations()
     for (const registration of registrations) {
-      const notifications = await registration.getNotifications();
-      notifications.forEach(notification => notification.close());
+      const notifications = await registration.getNotifications()
+      notifications.forEach((notification) => notification.close())
     }
   }
 }

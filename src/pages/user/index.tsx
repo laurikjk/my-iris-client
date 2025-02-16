@@ -100,7 +100,7 @@ function UserPage({pubKey}: {pubKey: string}) {
               {tabs.map((tab) => (
                 <NavLink
                   key={tab.path}
-                  to={`/${pubKey}${tab.path ? `/${tab.path}` : ''}`}
+                  to={`/${pubKey}${tab.path ? `/${tab.path}` : ""}`}
                   end={tab.path === ""}
                   replace={true}
                   preventScrollReset={true}

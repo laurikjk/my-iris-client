@@ -9,12 +9,12 @@ import {localState} from "irisdb"
 
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
 import useFeedEvents from "@/shared/hooks/useFeedEvents.ts"
+import {socialGraphLoaded} from "@/utils/socialGraph.ts"
 import UnknownUserEvents from "./UnknownUserEvents.tsx"
 import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
 import useMutes from "@/shared/hooks/useMutes.ts"
 import MediaFeed from "./MediaFeed"
-import { socialGraphLoaded } from "@/utils/socialGraph.ts"
 
 interface FeedProps {
   filters: NDKFilter
@@ -124,7 +124,9 @@ function Feed({
 
   const [, setForceUpdateCount] = useState(0)
 
-  const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(filters?.authors?.length === 1)
+  const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(
+    filters?.authors?.length === 1
+  )
 
   useEffect(() => {
     if (forceUpdate !== undefined) {

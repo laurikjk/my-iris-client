@@ -1,4 +1,4 @@
-import {ChangeEvent, useEffect, useRef, useState} from "react"
+import {ChangeEvent, KeyboardEvent, useEffect, useRef, useState} from "react"
 import {generateSecretKey, getPublicKey, nip19} from "nostr-tools"
 import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 import {bytesToHex} from "@noble/hashes/utils"
@@ -32,8 +32,8 @@ export default function SignUp({onClose}: SignUpProps) {
     }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+  function handleKeyDown(e: KeyboardEvent<HTMLFormElement>) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       handleSubmit(true)
     }
@@ -61,7 +61,7 @@ export default function SignUp({onClose}: SignUpProps) {
         display_name: newUserName,
         lud16: CONFIG.features.cashu ? `${npub}@npub.cash` : undefined,
       })
-      profileEvent.publish()  
+      profileEvent.publish()
     }
     setShowLoginDialog(false)
   }

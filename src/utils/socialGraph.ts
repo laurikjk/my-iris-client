@@ -2,9 +2,9 @@ import {SocialGraph, NostrEvent, SerializedSocialGraph} from "nostr-social-graph
 import {NDKEvent, NDKSubscription, NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {LRUCache} from "typescript-lru-cache"
 import {VerifiedEvent} from "nostr-tools"
+import {profileCache} from "./memcache"
 import debounce from "lodash/debounce"
 import throttle from "lodash/throttle"
-import {profileCache} from "./memcache"
 import localForage from "localforage"
 import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
@@ -103,7 +103,7 @@ async function initializeSearchIndex() {
         name: v[1],
         nip05: v[2] || undefined,
       })
-  
+
       let pictureUrl = v[3]
       if (pictureUrl && !pictureUrl.startsWith("http://")) {
         pictureUrl = `https://${pictureUrl}`
@@ -111,7 +111,7 @@ async function initializeSearchIndex() {
       profileCache.set(v[0], {username: v[1], picture: pictureUrl || undefined})
     }
   })
-  
+
   searchIndex = new Fuse<SearchResult>(processedData, {
     keys: ["name", "nip05"],
     includeScore: true,

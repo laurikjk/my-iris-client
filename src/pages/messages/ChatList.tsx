@@ -1,11 +1,11 @@
+import RelativeTime from "@/shared/components/event/RelativeTime"
+import {Avatar} from "@/shared/components/user/Avatar"
+import {Name} from "@/shared/components/user/Name"
 import {useLocalState} from "irisdb-hooks"
 import {useEffect, useState} from "react"
 import {NavLink} from "react-router-dom"
 import classNames from "classnames"
 import {localState} from "irisdb"
-import RelativeTime from "@/shared/components/event/RelativeTime"
-import { Avatar } from "@/shared/components/user/Avatar"
-import { Name } from "@/shared/components/user/Name"
 
 interface ChatListProps {
   className?: string
@@ -18,7 +18,10 @@ type Channel = {
 
 const ChatListItem = ({id}: {id: string}) => {
   const pubKey = id.split(":").shift() || ""
-  const [latest] = useLocalState(`channels/${id}/latest`, {} as {content: string, time: number})
+  const [latest] = useLocalState(
+    `channels/${id}/latest`,
+    {} as {content: string; time: number}
+  )
   const [lastSeen, setLastSeen] = useLocalState(`channels/${id}/lastSeen`, 0)
   return (
     <NavLink
@@ -39,12 +42,16 @@ const ChatListItem = ({id}: {id: string}) => {
             <span className="text-base font-semibold">
               <Name pubKey={pubKey} />
             </span>
-            {latest && <span className="text-sm text-base-content/70 ml-2">
-              <RelativeTime from={latest.time} />
-            </span>}
+            {latest?.time && (
+              <span className="text-sm text-base-content/70 ml-2">
+                <RelativeTime from={latest.time} />
+              </span>
+            )}
           </div>
           <div className="flex flex-row items-center justify-between gap-2">
-            <span className="text-sm text-base-content/70">{latest?.content?.slice(0, 20)}</span>
+            <span className="text-sm text-base-content/70">
+              {latest?.content?.slice(0, 20)}
+            </span>
             {latest?.time && (!lastSeen || latest.time > lastSeen) && (
               <div className="indicator-item badge badge-primary badge-xs"></div>
             )}

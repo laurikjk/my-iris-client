@@ -2,14 +2,14 @@ import {Channel, serializeChannelState} from "nostr-double-ratchet"
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {UserRow} from "@/shared/components/user/UserRow"
+import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import Message, {MessageType} from "./Message"
+import {RiMoreLine} from "@remixicon/react"
 import {useParams} from "react-router-dom"
 import MessageForm from "./MessageForm"
 import {getChannel} from "./Channels"
 import {localState} from "irisdb"
-import Dropdown from "@/shared/components/ui/Dropdown"
-import { RiMoreLine } from "@remixicon/react"
 
 const comparator = (a: [string, MessageType], b: [string, MessageType]) =>
   a[1].time - b[1].time
@@ -160,11 +160,11 @@ const Chat = () => {
   console.log("channel", channel)
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) return
     localState.get("channels").get(id).get("lastSeen").put(Date.now())
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         localState.get("channels").get(id).get("lastSeen").put(Date.now())
       }
     }
@@ -173,12 +173,12 @@ const Chat = () => {
       localState.get("channels").get(id).get("lastSeen").put(Date.now())
     }
 
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('focus', handleFocus)
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("focus", handleFocus)
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("focus", handleFocus)
     }
   }, [id])
 
@@ -205,7 +205,10 @@ const Chat = () => {
         <div className="flex items-center justify-between w-full">
           <div>{id && <UserRow avatarWidth={32} pubKey={user} />}</div>
           <div className="relative">
-            <button onClick={() => setDropdownOpen(!dropdownOpen)} className="btn btn-ghost btn-sm btn-circle">
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="btn btn-ghost btn-sm btn-circle"
+            >
               <RiMoreLine className="h-6 w-6 cursor-pointer text-base-content/50" />
             </button>
             {dropdownOpen && (

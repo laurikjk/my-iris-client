@@ -152,9 +152,10 @@ export function getZappingUser(event: NDKEvent, npub = true) {
 export function getZapAmount(event: NDKEvent) {
   const invoice = event.tagValue("bolt11")
   if (invoice) {
-    return import("bolt11").then(bolt11 => {
+    return import("bolt11").then((bolt11) => {
       const decodedInvoice = bolt11.decode(invoice)
-      if (decodedInvoice.complete && decodedInvoice.satoshis) return decodedInvoice.satoshis
+      if (decodedInvoice.complete && decodedInvoice.satoshis)
+        return decodedInvoice.satoshis
       return 0
     })
   }

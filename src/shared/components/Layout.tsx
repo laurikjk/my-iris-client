@@ -4,15 +4,15 @@ import {useInviteLinkFromUrl} from "../hooks/useInviteLinkFromUrl"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import NavSideBar from "@/shared/components/NavSideBar.tsx"
 import Header from "@/shared/components/header/Header.tsx"
+import {clearNotifications} from "@/utils/notifications"
+import {socialGraphLoaded} from "@/utils/socialGraph"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import Footer from "@/shared/components/Footer.tsx"
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {trackEvent} from "@/utils/SnortApi"
 import {useLocalState} from "irisdb-hooks"
-import {useEffect} from "react"
 import {Helmet} from "react-helmet"
-import {socialGraphLoaded} from "@/utils/socialGraph"
-import {clearNotifications} from "@/utils/notifications"
+import {useEffect} from "react"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -71,7 +71,7 @@ const Layout = () => {
 
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         await clearNotifications()
       }
     }
@@ -80,12 +80,12 @@ const Layout = () => {
       await clearNotifications()
     }
 
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('focus', handleFocus)
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("focus", handleFocus)
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("focus", handleFocus)
     }
   }, [])
 

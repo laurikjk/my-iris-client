@@ -1,10 +1,9 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ZapReceipt from "../ZapReceipt.tsx"
+import {lazy, memo, Suspense} from "react"
 import Zapraiser from "../Zapraiser.tsx"
 import Highlight from "../Highlight.tsx"
-import {lazy, Suspense} from "react"
 import TextNote from "../TextNote.tsx"
-import {memo} from "react"
 
 type ContentProps = {
   event: NDKEvent | undefined

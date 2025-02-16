@@ -10,7 +10,7 @@ const secondsInADay = secondsInAnHour * 24
 
 function RelativeTime({from, fallback}: RelativeTimeProps) {
   if (!from) {
-    return <>{fallback}</>
+    throw new Error("from prop is required, got " + from)
   }
 
   const calcTime = useCallback((fromTime: number) => {
@@ -44,7 +44,7 @@ function RelativeTime({from, fallback}: RelativeTimeProps) {
 
   useEffect(() => {
     setTime(calcTime(from))
-    
+
     const interval = setInterval(() => {
       setTime(calcTime(from))
     }, 60000)

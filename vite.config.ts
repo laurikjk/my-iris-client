@@ -41,8 +41,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          "vendor": [
-            "react", 
+          vendor: [
+            "react",
             "react-router-dom",
             "react-helmet",
             "@nostr-dev-kit/ndk",
@@ -61,7 +61,7 @@ export default defineConfig({
             "fuse.js",
             "react-string-replace",
             "react-swipeable",
-            "uuid"
+            "uuid",
           ],
         },
       },

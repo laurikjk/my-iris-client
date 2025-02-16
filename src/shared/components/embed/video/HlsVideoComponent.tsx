@@ -32,14 +32,14 @@ function HlsVideoComponent({match, event}: HlsVideoComponentProps) {
       }
 
       try {
-        const { default: Hls } = await import('hls.js')
+        const {default: Hls} = await import("hls.js")
         if (Hls.isSupported() && videoRef.current) {
           const hls = new Hls()
           hls.loadSource(match)
           hls.attachMedia(videoRef.current)
         }
       } catch (error) {
-        console.error('Failed to load HLS:', error)
+        console.error("Failed to load HLS:", error)
       }
     }
 
