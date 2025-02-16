@@ -18,9 +18,7 @@ export function ProfileSettings() {
     return ndk().getUser({pubkey: myPubKey})
   }, [myPubKey])
 
-  const [newProfile, setNewProfile] = useState<NDKUserProfile | null>(
-    user?.profile || null
-  )
+  const [newProfile, setNewProfile] = useState<NDKUserProfile>(user?.profile || {})
 
   useEffect(() => {
     if (existingProfile) {
@@ -30,9 +28,6 @@ export function ProfileSettings() {
 
   function setProfileField(field: keyof NDKUserProfile, value: string) {
     setNewProfile((prev) => {
-      if (!prev) {
-        return null
-      }
       return {
         ...prev,
         [field]: value,
@@ -170,11 +165,7 @@ export function ProfileSettings() {
             onChange={(e) => setProfileField("about", e.target.value)}
           />
         </label>
-        <button
-          className="btn btn-primary"
-          onClick={onSaveProfile}
-          disabled={!newProfile || !isEdited}
-        >
+        <button className="btn btn-primary" onClick={onSaveProfile} disabled={!isEdited}>
           Save
         </button>
       </div>

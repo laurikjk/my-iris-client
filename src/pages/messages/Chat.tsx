@@ -6,7 +6,7 @@ import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import Message, {MessageType} from "./Message"
 import {RiMoreLine} from "@remixicon/react"
-import {useParams} from "react-router-dom"
+import {useNavigate, useParams} from "react-router-dom"
 import MessageForm from "./MessageForm"
 import {getChannel} from "./Channels"
 import {localState} from "irisdb"
@@ -182,14 +182,19 @@ const Chat = () => {
     }
   }, [id])
 
+  const navigate = useNavigate()
+
   const handleDeleteChat = () => {
-    if (id) {
-      // TODO: delete properly, maybe needs irisdb support
+    if (id && confirm("Delete this chat?")) {
+      // TODO: delete properly, maybe needs irisdb support.
+      // also somehow make sure chatlinks dont respawn it
+      localState.get("channels").get(id).get("state").put(null)
       localState.get("channels").get(id).get("deleted").put(true)
       // put null to each message. at least the content is removed
       for (const [messageId] of messages) {
         localState.get("channels").get(id).get("messages").get(messageId).put(null)
       }
+      navigate("/messages")
     }
   }
 

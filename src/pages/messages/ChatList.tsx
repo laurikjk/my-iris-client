@@ -27,6 +27,8 @@ const ChatListItem = ({id}: {id: string}) => {
     {} as {content: string; time: number}
   )
   const [lastSeen, setLastSeen] = useLocalState(`channels/${id}/lastSeen`, 0)
+  const [deleted] = useLocalState(`channels/${id}/deleted`, false)
+  if (deleted) return null
   return (
     <NavLink
       to={`/messages/${id}`}
