@@ -15,6 +15,8 @@ type MessageProps = {
 
 const Message = ({message, isFirst, isLast}: MessageProps) => {
   const isUser = message.sender === "user"
+  const emojiRegex = /^\p{Emoji}(\p{Emoji})?(\p{Emoji})?$/u
+  const isShortEmoji = emojiRegex.test(message.content.trim())
 
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp)
@@ -50,7 +52,9 @@ const Message = ({message, isFirst, isLast}: MessageProps) => {
       <div
         className={classNames("px-3 py-2", isLast && "flex justify-between items-end")}
       >
-        <p className="text-sm">{message.content}</p>
+        <p className={classNames(isShortEmoji ? "text-3xl" : "text-sm")}>
+          {message.content}
+        </p>
         {isLast && (
           <p className="text-xs opacity-50 ml-2 whitespace-nowrap">
             {message.time && formatTime(message.time)}

@@ -1,9 +1,12 @@
 import {Channel, deserializeChannelState, NostrFilter} from "nostr-double-ratchet"
 import {showNotification} from "@/utils/notifications"
+import socialGraph from "@/utils/socialGraph"
+import {profileCache} from "@/utils/memcache"
 import {VerifiedEvent} from "nostr-tools"
 import {MessageType} from "./Message"
 import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
+import AnimalName from "@/utils/AnimalName"
 
 const channels = new Map<string, Channel | undefined>()
 
@@ -60,7 +63,16 @@ export function getChannels() {
           ) {
             localState.get("channels").get(id).get("lastSeen").put(Date.now())
           } else {
-            showNotification("New Message", {
+            const sender = id.split(":").shift()!
+            const profile = profileCache.get(sender)
+            // TODO if not cached, try to fetch
+            const name =
+              profile?.name ||
+              profile?.display_name ||
+              profile?.username ||
+              profile?.nip05?.split("@")[0] ||
+              (sender && AnimalName(sender))
+            showNotification(String(name), {
               body: msg.data.length > 100 ? msg.data.slice(0, 100) + "..." : msg.data,
               icon: "/favicon.png",
               data: {url: `/messages/${id}`},
