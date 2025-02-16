@@ -2,11 +2,11 @@ import {Channel, deserializeChannelState, NostrFilter} from "nostr-double-ratche
 import {showNotification} from "@/utils/notifications"
 import socialGraph from "@/utils/socialGraph"
 import {profileCache} from "@/utils/memcache"
+import AnimalName from "@/utils/AnimalName"
 import {VerifiedEvent} from "nostr-tools"
 import {MessageType} from "./Message"
 import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
-import AnimalName from "@/utils/AnimalName"
 
 const channels = new Map<string, Channel | undefined>()
 
@@ -64,11 +64,20 @@ export function getChannels() {
             localState.get("channels").get(id).get("lastSeen").put(Date.now())
           } else {
             const sender = id.split(":").shift()!
-            const profile = profileCache.get(sender)
-            // TODO if not cached, try to fetch
+            let profile = profileCache.get(sender)
+            if (!profile) {
+              try {
+                profile = await ndk()
+                  .getUser({pubkey: sender})
+                  .fetchProfile({closeOnEose: true})
+              } catch (e) {
+                console.warn("Failed to fetch profile for", sender, e)
+              }
+            }
             const name =
               profile?.name ||
               profile?.display_name ||
+              profile?.displayName ||
               profile?.username ||
               profile?.nip05?.split("@")[0] ||
               (sender && AnimalName(sender))
