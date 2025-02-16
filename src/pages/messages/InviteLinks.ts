@@ -76,12 +76,6 @@ const listen = debounce(() => {
               .get(channelId)
               .get("state")
               .put(serializeChannelState(channel.state))
-
-            showNotification("New chat via invite link", {
-              data: {
-                url: `/messages/${identity}`,
-              },
-            })
           }
         )
         subscriptions.set(id, unsubscribe)
