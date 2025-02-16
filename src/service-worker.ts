@@ -203,9 +203,13 @@ self.addEventListener("push", async (e) => {
   console.debug(data)
 
   if (data) {
+    const icon = data.icon?.startsWith("http")
+      ? `https://imgproxy.iris.to/insecure/rs:fill:128:128/plain/${data.icon}`
+      : data.icon
+
     await self.registration.showNotification(data.title, {
       body: data.body,
-      icon: data.icon,
+      icon: icon,
       data: data,
     })
   }

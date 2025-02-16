@@ -1,6 +1,5 @@
 import {Channel, deserializeChannelState, NostrFilter} from "nostr-double-ratchet"
 import {showNotification} from "@/utils/notifications"
-import socialGraph from "@/utils/socialGraph"
 import {profileCache} from "@/utils/memcache"
 import AnimalName from "@/utils/AnimalName"
 import {VerifiedEvent} from "nostr-tools"
@@ -83,7 +82,9 @@ export function getChannels() {
               (sender && AnimalName(sender))
             showNotification(String(name), {
               body: msg.data.length > 100 ? msg.data.slice(0, 100) + "..." : msg.data,
-              icon: "/favicon.png",
+              icon: profile?.picture
+                ? `https://imgproxy.iris.to/insecure/rs:fill:128:128/plain/${profile.picture}`
+                : "/favicon.png",
               data: {url: `/messages/${id}`},
             })
           }

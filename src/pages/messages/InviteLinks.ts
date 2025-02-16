@@ -4,7 +4,7 @@ import {
   NostrFilter,
   serializeChannelState,
 } from "nostr-double-ratchet"
-import {showNotification, subscribeToAuthorDMNotifications} from "@/utils/notifications"
+import {subscribeToAuthorDMNotifications} from "@/utils/notifications"
 import SnortApi, {Subscription} from "@/utils/SnortApi"
 import {hexToBytes} from "@noble/hashes/utils"
 import {localState, Unsubscribe} from "irisdb"
