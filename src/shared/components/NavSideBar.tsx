@@ -103,9 +103,9 @@ const MessagesNavItem = ({
   const [channels, setChannels] = useState<Record<string, Channel>>({})
 
   useEffect(() => {
+    localState.get("channels").put({})
     const unsub = localState.get("channels").on<Record<string, Channel>>(
       (value) => {
-        console.log("channels update in MessagesNavItem:", value)
         setChannels({...value})
       },
       false,

@@ -18,6 +18,10 @@ type Channel = {
 
 const ChatListItem = ({id}: {id: string}) => {
   const pubKey = id.split(":").shift() || ""
+  useEffect(() => {
+    // TODO irisdb should have subscriptions work without this
+    localState.get(`channels/${id}`).get("latest").put({})
+  }, [])
   const [latest] = useLocalState(
     `channels/${id}/latest`,
     {} as {content: string; time: number}
@@ -49,7 +53,7 @@ const ChatListItem = ({id}: {id: string}) => {
             )}
           </div>
           <div className="flex flex-row items-center justify-between gap-2">
-            <span className="text-sm text-base-content/70">
+            <span className="text-sm text-base-content/70 min-h-[1.25rem]">
               {latest?.content?.slice(0, 20)}
             </span>
             {latest?.time && (!lastSeen || latest.time > lastSeen) && (
@@ -65,12 +69,12 @@ const ChatListItem = ({id}: {id: string}) => {
 const ChatList = ({className}: ChatListProps) => {
   const [channels, setChannels] = useState({} as Record<string, Channel>)
   useEffect(() => {
-    const unsub = localState.get("channels").forEach((channel, path) => {
-      const id = path.split("/").pop()
-      if (typeof id === "string") {
-        setChannels((c) => Object.assign({}, c, {[id]: channel}))
-      }
-    }, 3)
+    localState.get("channels").put({})
+    // TODO irisdb doesnt work right on initial update if we use recursion 3 param
+    const unsub = localState.get("channels").on((channels) => {
+      if (!channels || typeof channels !== "object") return
+      setChannels({...channels} as Record<string, Channel>)
+    })
     return unsub
   }, [])
 
