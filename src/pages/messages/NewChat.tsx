@@ -75,7 +75,7 @@ const NewChat = () => {
       ndk().publish(e)
       console.log("published event?", event)
 
-      const channelId = `${inviteLink.inviter}:${channel.name}`
+      const channelId = `${nip19.npubEncode(inviteLink.inviter)}:${channel.name}`
       // Save the channel
       localState
         .get(`channels/${channelId}/state`)

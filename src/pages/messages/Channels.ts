@@ -2,12 +2,14 @@ import {Channel, deserializeChannelState, NostrFilter} from "nostr-double-ratche
 import {showNotification} from "@/utils/notifications"
 import {profileCache} from "@/utils/memcache"
 import AnimalName from "@/utils/AnimalName"
-import {VerifiedEvent} from "nostr-tools"
+import {nip19, VerifiedEvent} from "nostr-tools"
 import {MessageType} from "./Message"
 import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
 
 const channels = new Map<string, Channel | undefined>()
+
+const openedAt = Date.now()
 
 const subscribe = (filter: NostrFilter, onEvent: (event: VerifiedEvent) => void) => {
   const sub = ndk().subscribe(filter)
@@ -61,8 +63,8 @@ export function getChannels() {
             document.visibilityState !== "visible"
           ) {
             localState.get("channels").get(id).get("lastSeen").put(Date.now())
-          } else {
-            const sender = id.split(":").shift()!
+          } else if (msg.time > openedAt) {
+            const sender = nip19.decode(id.split(":").shift()!).data as string
             let profile = profileCache.get(sender)
             if (!profile) {
               try {
