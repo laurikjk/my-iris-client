@@ -100,7 +100,7 @@ const subscribeInviteLinkNotifications = debounce(async () => {
         !Object.values(subscriptions).find(
           (sub: Subscription) =>
             sub.filter.kinds?.includes(4) &&
-            (sub.filter as any)["#e"]?.includes(link.inviterSessionPublicKey)
+            (sub.filter as any)["#p"]?.includes(link.inviterSessionPublicKey)
         )
     )
 
@@ -120,9 +120,9 @@ const subscribeInviteLinkNotifications = debounce(async () => {
         await new SnortApi().updateSubscription(id, {
           filter: {
             ...sub.filter,
-            "#e": [
+            "#p": [
               ...new Set([
-                ...((sub.filter as any)["#e"] || []),
+                ...((sub.filter as any)["#p"] || []),
                 ...missing.map((l) => l.inviterSessionPublicKey),
               ]),
             ],
@@ -131,7 +131,7 @@ const subscribeInviteLinkNotifications = debounce(async () => {
       } else {
         await new SnortApi().createSubscription({
           kinds: [4],
-          "#e": missing.map((l) => l.inviterSessionPublicKey),
+          "#p": missing.map((l) => l.inviterSessionPublicKey),
         })
       }
     }
