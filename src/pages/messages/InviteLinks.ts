@@ -8,7 +8,7 @@ import {subscribeToAuthorDMNotifications} from "@/utils/notifications"
 import SnortApi, {Subscription} from "@/utils/SnortApi"
 import {hexToBytes} from "@noble/hashes/utils"
 import {localState, Unsubscribe} from "irisdb"
-import {VerifiedEvent} from "nostr-tools"
+import {nip19, VerifiedEvent} from "nostr-tools"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
 
@@ -64,7 +64,7 @@ const listen = debounce(() => {
           decrypt,
           nostrSubscribe,
           (channel: Channel, identity?: string) => {
-            const channelId = `${identity}:${channel.name}`
+            const channelId = `${nip19.npubEncode(identity!)}:${channel.name}`
             try {
               subscribeToAuthorDMNotifications([channel.state.theirNostrPublicKey])
             } catch (e) {
