@@ -232,7 +232,7 @@ const NavSideBar = () => {
       <div
         ref={ref}
         className={classNames(
-          "bg-base-200 transition-transform duration-300 fixed md:sticky md:translate-x-0 top-0 select-none w-56 md:w-20 xl:w-64 h-screen z-40 flex flex-col md:justify-between gap-4 border-r border-custom overflow-y-auto",
+          "bg-base-200 transition-transform duration-300 fixed md:sticky md:translate-x-0 top-0 select-none w-56 md:w-20 xl:w-64 h-screen z-40 flex flex-col md:justify-between border-r border-custom overflow-y-auto",
           {
             "translate-x-0": isSidebarOpen,
             "-translate-x-full": !isSidebarOpen,
@@ -273,9 +273,6 @@ const NavSideBar = () => {
               <div className="hidden md:flex">
                 <PublishButton />
               </div>
-              <div className="md:hidden p-2" onClick={(e) => e.stopPropagation()}>
-                <PublicKeyQRCodeButton publicKey={myPubKey} />
-              </div>
             </div>
           )}
           {!myPubKey && (
@@ -297,14 +294,19 @@ const NavSideBar = () => {
           )}
         </div>
         {myPubKey && (
-          <div className="flex p-4 md:mb-2 xl:mb-6">
-            <UserRow
-              pubKey={myPubKey}
-              showBadge={false}
-              textClassName="md:hidden xl:inline font-bold"
-              avatarWidth={45}
-            />
-          </div>
+          <>
+            <div className="flex flex-col p-4 md:mb-2 xl:mb-6 gap-4">
+              <UserRow
+                pubKey={myPubKey}
+                showBadge={false}
+                textClassName="md:hidden xl:inline font-bold"
+                avatarWidth={45}
+              />
+              <div className="md:hidden text-center" onClick={(e) => e.stopPropagation()}>
+                <PublicKeyQRCodeButton publicKey={myPubKey} />
+              </div>
+            </div>
+          </>
         )}
       </div>
     </>
