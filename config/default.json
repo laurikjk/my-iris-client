@@ -20,7 +20,6 @@
   "aboutText": "Iris - Connecting People",
   "repository": "https://github.com/irislib/iris-client",
   "features": {
-    "cashu": true,
     "pushNotifications": true,
     "analytics": false
   },

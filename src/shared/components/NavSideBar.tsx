@@ -297,7 +297,7 @@ const NavSideBar = () => {
           )}
         </div>
         {myPubKey && (
-          <div className="hidden md:flex p-4 md:mb-2 xl:mb-6">
+          <div className="flex p-4 md:mb-2 xl:mb-6">
             <UserRow
               pubKey={myPubKey}
               showBadge={false}

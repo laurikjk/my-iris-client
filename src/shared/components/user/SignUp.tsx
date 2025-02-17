@@ -59,7 +59,7 @@ export default function SignUp({onClose}: SignUpProps) {
       profileEvent.kind = 0
       profileEvent.content = JSON.stringify({
         display_name: newUserName,
-        lud16: CONFIG.features.cashu ? `${npub}@npub.cash` : undefined,
+        lud16: `${npub}@npub.cash`,
       })
       profileEvent.publish()
     }

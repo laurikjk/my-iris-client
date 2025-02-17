@@ -14,7 +14,6 @@ declare const CONFIG: {
   aboutText: string
   repository: string
   features: {
-    cashu: boolean
     pushNotifications: boolean
     analytics: boolean
   }

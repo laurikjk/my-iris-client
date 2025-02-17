@@ -1,13 +1,11 @@
 import classNames from "classnames"
 import React from "react"
 
+import UnseenMessagesBadge from "@/shared/components/messages/UnseenMessagesBadge"
 import PublishButton from "@/shared/components/ui/PublishButton"
-import {Avatar} from "@/shared/components/user/Avatar" // Adjusted import path
 import Icon from "@/shared/components/Icons/Icon" // Add this import
 import NavLink from "@/shared/components/NavLink" // Adjusted import path
 import {useLocalState} from "irisdb-hooks"
-import {Link} from "react-router-dom"
-import {nip19} from "nostr-tools"
 
 type MenuItem = {
   label?: string
@@ -25,14 +23,12 @@ const Footer = () => {
 
   const MENU_ITEMS: MenuItem[] = [
     {link: "/", icon: "home"},
-    CONFIG.features.cashu
-      ? {
-          link: "/wallet",
-          activeIcon: "wallet",
-          inactiveIcon: "wallet",
-          loggedInOnly: true,
-        }
-      : {link: "/settings", icon: "settings", loggedInOnly: true},
+    {
+      link: "/wallet",
+      activeIcon: "wallet",
+      inactiveIcon: "wallet",
+      loggedInOnly: true,
+    },
     {
       el: (
         <div className="flex flex-grow items-center justify-center">
@@ -41,7 +37,6 @@ const Footer = () => {
       ),
       loggedInOnly: true,
     },
-    {link: "/search", icon: "search"},
   ]
 
   return (
@@ -55,13 +50,27 @@ const Footer = () => {
             )
         )}
         {publicKey && (
-          <Link
-            className="flex flex-grow p-2 justify-center items-center cursor-pointer"
-            to={`/${nip19.npubEncode(publicKey)}`}
+          <NavLink
+            to="/messages"
+            className={({isActive}) =>
+              classNames(
+                {active: isActive},
+                "flex flex-grow p-4 justify-center items-center cursor-pointer"
+              )
+            }
           >
-            <Avatar pubKey={publicKey} width={40} showBadge={false} />
-          </Link>
+            {({isActive}) => (
+              <span className="indicator">
+                <UnseenMessagesBadge />
+                <Icon
+                  className="w-5 h-5"
+                  name={`mail-${isActive ? "solid" : "outline"}`}
+                />
+              </span>
+            )}
+          </NavLink>
         )}
+        <FooterNavItem item={{link: "/search", icon: "search"}} readonly={readonly} />
       </div>
     </footer>
   )

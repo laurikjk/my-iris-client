@@ -41,26 +41,22 @@ const WalletSettings = () => {
 
   return (
     <div className="mb-4">
-      {!CONFIG.features.cashu && (
-        <>
-          <h2 className="mb-4">Nostr Wallet Connect</h2>
-          <div className="py-2 flex flex-col gap-4">
-            {!isWalletConnect ? (
-              <div>
-                <button className="btn btn-primary" onClick={handleConnectWalletClick}>
-                  Connect Wallet
-                </button>
-              </div>
-            ) : (
-              <div>
-                <button className="btn btn-primary" onClick={handleDisconnectWalletClick}>
-                  Disconnect Wallet
-                </button>
-              </div>
-            )}
+      <h2 className="mb-4">Nostr Wallet Connect</h2>
+      <div className="py-2 flex flex-col gap-4">
+        {!isWalletConnect ? (
+          <div>
+            <button className="btn btn-primary" onClick={handleConnectWalletClick}>
+              Connect Wallet
+            </button>
           </div>
-        </>
-      )}
+        ) : (
+          <div>
+            <button className="btn btn-primary" onClick={handleDisconnectWalletClick}>
+              Disconnect Wallet
+            </button>
+          </div>
+        )}
+      </div>
       <div className="flex flex-col gap-4">
         <p>Default zap amount (sats)</p>
         <div>
