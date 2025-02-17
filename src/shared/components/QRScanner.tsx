@@ -8,15 +8,14 @@ interface QRScannerProps {
 const QRScanner = ({onScanSuccess}: QRScannerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [qrCodeResult, setQrCodeResult] = useState("")
+  const streamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
     const codeReader = new BrowserMultiFormatReader()
-    let stream: MediaStream
 
     codeReader
       .listVideoInputDevices()
       .then((videoInputDevices) => {
-        // Filter for the back camera
         const backCamera =
           videoInputDevices.find((device) =>
             device.label.toLowerCase().includes("back")
@@ -24,9 +23,9 @@ const QRScanner = ({onScanSuccess}: QRScannerProps) => {
         const deviceId = backCamera.deviceId
 
         navigator.mediaDevices.getUserMedia({video: {deviceId}}).then((mediaStream) => {
-          stream = mediaStream
+          streamRef.current = mediaStream
           if (videoRef.current) {
-            videoRef.current.srcObject = stream
+            videoRef.current.srcObject = mediaStream
             codeReader.decodeFromVideoDevice(
               deviceId,
               videoRef.current,
@@ -52,8 +51,8 @@ const QRScanner = ({onScanSuccess}: QRScannerProps) => {
 
     return () => {
       codeReader.reset()
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop())
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop())
       }
     }
   }, [onScanSuccess])
