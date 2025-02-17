@@ -1,6 +1,6 @@
-import {Outlet, ScrollRestoration, useLocation, useNavigate} from "react-router-dom"
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import {useInviteLinkFromUrl} from "../hooks/useInviteLinkFromUrl"
+import {Outlet, useLocation, useNavigate} from "react-router-dom"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import NavSideBar from "@/shared/components/NavSideBar.tsx"
 import Header from "@/shared/components/header/Header.tsx"
@@ -100,12 +100,6 @@ const Layout = () => {
           </ErrorBoundary>
         </div>
       </div>
-      <ScrollRestoration
-        getKey={(location) => {
-          const paths = ["/"]
-          return paths.includes(location.pathname) ? location.pathname : location.key
-        }}
-      />
       {newPostOpen && (
         <Modal onClose={() => setNewPostOpen(!newPostOpen)} hasBackground={false}>
           <div
