@@ -40,7 +40,10 @@ export default function useFeedEvents({
   const [newEvents, setNewEvents] = useState(new Map<string, NDKEvent>())
   const eventsRef = useRef(feedCache.get(cacheKey) || new SortedMap([], eventComparator))
   const oldestRef = useRef<number | undefined>(undefined)
-  const initialLoadDone = useRef<boolean>(eventsRef.current.size > 0)
+  const initialLoadDoneRef = useRef<boolean>(eventsRef.current.size > 0)
+  const [initialLoadDoneState, setInitialLoadDoneState] = useState(
+    initialLoadDoneRef.current
+  )
 
   const showNewEvents = () => {
     newEvents.forEach((event) => {
@@ -130,7 +133,8 @@ export default function useFeedEvents({
 
     const debouncedInitialLoadDone = debounce(
       () => {
-        initialLoadDone.current = true
+        initialLoadDoneRef.current = true
+        setInitialLoadDoneState(true)
       },
       500,
       {maxWait: 2000}
@@ -153,14 +157,14 @@ export default function useFeedEvents({
           event.pubkey === myPubKey && event.created_at * 1000 > Date.now() - 10000
         if (
           !isMyRecent &&
-          initialLoadDone.current &&
+          initialLoadDoneRef.current &&
           (!oldestShownTime || event.created_at > oldestShownTime)
         ) {
           setNewEvents((prev) => new Map([...prev, [event.id, event]]))
           setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
         } else {
           eventsRef.current.set(event.id, event)
-          if (!initialLoadDone.current) {
+          if (!initialLoadDoneRef.current) {
             debouncedInitialLoadDone()
           }
         }
@@ -198,6 +202,6 @@ export default function useFeedEvents({
     eventsByUnknownUsers,
     showNewEvents,
     loadMoreItems,
-    initialLoadDone: initialLoadDone.current,
+    initialLoadDone: initialLoadDoneState,
   }
 }
