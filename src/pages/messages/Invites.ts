@@ -147,9 +147,15 @@ getInvites((id, inviteLink) => {
   }
 })
 
+const publish = debounce(async (invite: Invite) => {
+  const event = invite.getEvent() as RawEvent
+  await NDKEventFromRawEvent(event).publish()
+}, 100)
+
 localState.get("user").on(async (u) => {
   if (u) {
     user = u as {publicKey?: string; privateKey?: string}
+    if (!user.publicKey) return
     listen()
     const publicInvite = await localState
       .get("inviteLinks")
@@ -158,13 +164,13 @@ localState.get("user").on(async (u) => {
     if (publicInvite && typeof publicInvite === "string") {
       const invite = Invite.deserialize(publicInvite)
       setTimeout(() => {
-        NDKEventFromRawEvent(invite.getEvent() as RawEvent).publish()
+        publish(invite)
       }, 1000)
     } else {
       console.log("Creating public invite")
       const invite = Invite.createNew(user.publicKey!, "Public Invite")
       localState.get("inviteLinks").get("public").put(invite.serialize())
-      await NDKEventFromRawEvent(invite.getEvent() as RawEvent).publish()
+      publish(invite)
       console.log("Published public invite")
     }
   }
