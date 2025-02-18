@@ -156,9 +156,6 @@ const Chat = () => {
 
   const messageGroups = useMemo(() => groupMessages(messages), [messages])
 
-  console.log("id", id)
-  console.log("channel", channel)
-
   useEffect(() => {
     if (!id) return
     localState.get("channels").get(id).get("lastSeen").put(Date.now())

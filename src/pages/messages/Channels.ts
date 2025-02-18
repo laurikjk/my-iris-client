@@ -1,5 +1,5 @@
 import {Channel, deserializeChannelState} from "nostr-double-ratchet"
-import {Filter, nip19, VerifiedEvent} from "nostr-tools"
+import {Filter, VerifiedEvent} from "nostr-tools"
 import {showNotification} from "@/utils/notifications"
 import {profileCache} from "@/utils/memcache"
 import AnimalName from "@/utils/AnimalName"
