@@ -72,7 +72,6 @@ const NewChat = () => {
       e.publish()
         .then((res) => console.log("published", res))
         .catch((e) => console.warn("Error publishing event:", e))
-      ndk().publish(e)
       console.log("published event?", event)
 
       const channelId = `${inviteLink.inviter}:${channel.name}`
@@ -161,6 +160,22 @@ const NewChat = () => {
           </div>
         </div>
       </div>
+      <hr className="mx-4 my-6 border-base-300" />
+      <p className="text-center text-sm text-base-content/70">
+        Iris uses Signal-style{" "}
+        <a
+          href="https://github.com/mmalmi/nostr-double-ratchet"
+          target="_blank"
+          className="link"
+          rel="noreferrer"
+        >
+          double ratchet encryption
+        </a>{" "}
+        to keep your messages safe.
+      </p>
+      <p className="text-center text-sm text-base-content/70">
+        Chat history is stored locally on this device and cleared when you log out.
+      </p>
     </>
   )
 }
