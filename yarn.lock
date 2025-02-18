@@ -5241,10 +5241,10 @@ normalize-range@^0.1.2:
   resolved "https://registry.yarnpkg.com/normalize-range/-/normalize-range-0.1.2.tgz#2d10c06bdfd312ea9777695a4d28439456b75942"
   integrity sha512-bdok/XvKII3nUpklnV6P2hxtMNrCboOjAcyBuQnWEhO665FwrSNRxU+AqpsyvO6LgGYPspN+lu5CLtw4jPRKNA==
 
-nostr-double-ratchet@0.0.10:
-  version "0.0.10"
-  resolved "https://registry.yarnpkg.com/nostr-double-ratchet/-/nostr-double-ratchet-0.0.10.tgz#527e5b4e8a18d133ad1878f21d6ffa498ae4ea8a"
-  integrity sha512-8im4ArwrNGoecSK+/zQhQ4lY892Sf17X+K6YH0VYXzab9CEftzULkQKKfUS6IJcHV/p+EkSZAiS49cSryBZo/w==
+nostr-double-ratchet@0.0.11:
+  version "0.0.11"
+  resolved "https://registry.yarnpkg.com/nostr-double-ratchet/-/nostr-double-ratchet-0.0.11.tgz#3ec392038326f80a6d79d0b6a3960381223427aa"
+  integrity sha512-Zs6C/fAIJSEBiYL8x10VqyVmkG0QF53iOOxGgQM15fwW4Hkdn15O+U+d0tF4EfiEu6+7XcI90y+uS9c9v5VneA==
   dependencies:
     nostr-tools "^2.7.2"
 

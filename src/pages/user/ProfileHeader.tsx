@@ -47,9 +47,8 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
       sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
       return () => sub.stop()
     }
-    Invite.fromUser(pubKeyHex, subscribe).then((invite) => {
-      setInvite(invite)
-    })
+    const unsub = Invite.fromUser(pubKeyHex, subscribe, (invite) => setInvite(invite))
+    return unsub
   }, [pubKeyHex])
 
   return (

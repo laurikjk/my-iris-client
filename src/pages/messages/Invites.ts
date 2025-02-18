@@ -168,10 +168,10 @@ localState.get("user").on(async (u) => {
       }, 1000)
     } else {
       console.log("Creating public invite")
-      const invite = Invite.createNew(user.publicKey!, "Public Invite")
+      const invite = Invite.createNew(user.publicKey, "Public Invite")
       localState.get("inviteLinks").get("public").put(invite.serialize())
       publish(invite)
-      console.log("Published public invite")
+      console.log("Published public invite", invite)
     }
   }
 })
