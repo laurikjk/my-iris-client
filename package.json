@@ -63,7 +63,7 @@
     "localforage": "^1.10.0",
     "lodash": "^4.17.21",
     "minidenticons": "^4.2.1",
-    "nostr-double-ratchet": "0.0.9",
+    "nostr-double-ratchet": "0.0.10",
     "nostr-social-graph": "1.0.16",
     "nostr-tools": "^2.10.4",
     "qrcode": "^1.5.4",

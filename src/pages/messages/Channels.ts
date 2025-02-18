@@ -64,7 +64,7 @@ export function getChannels() {
           ) {
             localState.get("channels").get(id).get("lastSeen").put(Date.now())
           } else if (msg.time > openedAt) {
-            const sender = nip19.decode(id.split(":").shift()!).data as string
+            const sender = id.split(":").shift()!
             let profile = profileCache.get(sender)
             if (!profile) {
               try {
