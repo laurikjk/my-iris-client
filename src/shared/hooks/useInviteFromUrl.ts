@@ -1,4 +1,4 @@
-import {InviteLink, serializeChannelState} from "nostr-double-ratchet"
+import {Invite, serializeChannelState} from "nostr-double-ratchet"
 import {useNavigate, useLocation} from "react-router-dom"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {hexToBytes} from "@noble/hashes/utils"
@@ -8,14 +8,16 @@ import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
 import {useEffect} from "react"
 
-export const acceptInviteLink = async (
-  url: string,
+export const acceptInvite = async (
+  invite: string | Invite,
   myPubKey: string,
   myPrivKey?: string,
   navigate?: (path: string) => void
 ) => {
   try {
-    const inviteLink = InviteLink.fromUrl(url)
+    if (typeof invite === "string") {
+      invite = Invite.fromUrl(invite)
+    }
 
     const encrypt = myPrivKey
       ? hexToBytes(myPrivKey)
@@ -26,7 +28,7 @@ export const acceptInviteLink = async (
           throw new Error("No nostr extension or private key")
         }
 
-    const {channel, event} = await inviteLink.acceptInvite(
+    const {channel, event} = await invite.accept(
       (filter, onEvent) => {
         const sub = ndk().subscribe(filter)
         sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
@@ -40,7 +42,7 @@ export const acceptInviteLink = async (
     NDKEventFromRawEvent(event).publish()
 
     // Create channel ID in the same format as NewChat
-    const channelId = `${inviteLink.inviter}:${channel.name}`
+    const channelId = `${invite.inviter}:${channel.name}`
 
     // Save the channel with the new path format
     localState
@@ -52,14 +54,14 @@ export const acceptInviteLink = async (
       navigate(`/messages/${channelId}`)
     }
 
-    return {success: true, inviter: inviteLink.inviter}
+    return {success: true, inviter: invite.inviter}
   } catch (error) {
     //console.error("Not a valid invite link URL:", error)
     return {success: false, error}
   }
 }
 
-export const useInviteLinkFromUrl = () => {
+export const useInviteFromUrl = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [myPubKey] = useLocalState("user/publicKey", "")
@@ -80,7 +82,7 @@ export const useInviteLinkFromUrl = () => {
     } else {
       const acceptInviteFromUrl = async () => {
         const fullUrl = `${window.location.origin}${location.pathname}${location.search}${location.hash}`
-        const result = await acceptInviteLink(fullUrl, myPubKey, myPrivKey, navigate)
+        const result = await acceptInvite(fullUrl, myPubKey, myPrivKey, navigate)
         if (!result.success) {
           // Optionally, you can show an error message to the user here
         }

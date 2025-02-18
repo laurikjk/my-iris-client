@@ -1,5 +1,5 @@
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
-import {useInviteLinkFromUrl} from "../hooks/useInviteLinkFromUrl"
+import {useInviteFromUrl} from "../hooks/useInviteFromUrl"
 import {Outlet, useLocation, useNavigate} from "react-router-dom"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import NavSideBar from "@/shared/components/NavSideBar.tsx"
@@ -32,7 +32,7 @@ const Layout = () => {
   const navigate = useNavigate()
   const location = useLocation()
 
-  useInviteLinkFromUrl()
+  useInviteFromUrl()
 
   socialGraphLoaded.then() // just make sure we start loading social the graph
 

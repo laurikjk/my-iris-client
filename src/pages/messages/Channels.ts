@@ -1,6 +1,6 @@
-import {Channel, deserializeChannelState, NostrFilter} from "nostr-double-ratchet"
+import {Channel, deserializeChannelState} from "nostr-double-ratchet"
+import {Filter, nip19, VerifiedEvent} from "nostr-tools"
 import {showNotification} from "@/utils/notifications"
-import {nip19, VerifiedEvent} from "nostr-tools"
 import {profileCache} from "@/utils/memcache"
 import AnimalName from "@/utils/AnimalName"
 import {MessageType} from "./Message"
@@ -11,7 +11,7 @@ const channels = new Map<string, Channel | undefined>()
 
 const openedAt = Date.now()
 
-const subscribe = (filter: NostrFilter, onEvent: (event: VerifiedEvent) => void) => {
+const subscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
   const sub = ndk().subscribe(filter)
   sub.on("event", (event) => {
     onEvent(event as unknown as VerifiedEvent)

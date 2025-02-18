@@ -1,7 +1,7 @@
+import {Link, useNavigate} from "react-router-dom"
 import {useMemo, useState, useEffect} from "react"
 import {useLocalState} from "irisdb-hooks"
 import {PublicKey} from "irisdb-nostr"
-import {Link} from "react-router-dom"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import {FollowButton} from "@/shared/components/button/FollowButton.tsx"
@@ -11,13 +11,18 @@ import FollowsCount from "@/pages/user/components/FollowsCount.tsx"
 import {PROFILE_AVATAR_WIDTH} from "@/shared/components/user/const"
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import FollowedBy from "@/shared/components/user/FollowedBy"
+import {acceptInvite} from "@/shared/hooks/useInviteFromUrl"
 import {Avatar} from "@/shared/components/user/Avatar.tsx"
 import ProxyImg from "@/shared/components/ProxyImg.tsx"
 import {Name} from "@/shared/components/user/Name.tsx"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import Modal from "@/shared/components/ui/Modal.tsx"
+import Icon from "@/shared/components/Icons/Icon"
+import {Filter, VerifiedEvent} from "nostr-tools"
 import socialGraph from "@/utils/socialGraph.ts"
+import {Invite} from "nostr-double-ratchet"
 import {Helmet} from "react-helmet"
+import {ndk} from "@/utils/ndk"
 
 const ProfileHeader = ({pubKey}: {pubKey: string}) => {
   const profile = useProfile(pubKey, true)
@@ -26,12 +31,25 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
     [pubKey]
   )
   const [myPubKey] = useLocalState("user/publicKey", "", String)
+  const [myPrivKey] = useLocalState("user/privateKey", "", String)
   const [showProfilePhotoModal, setShowProfilePhotoModal] = useState(false)
   const [showBannerModal, setShowBannerModal] = useState(false)
+  const [invite, setInvite] = useState<Invite | undefined>(undefined)
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     const followDistance = socialGraph().getFollowDistance(pubKeyHex)
     console.log("ProfileHeader followDistance:", followDistance)
+
+    const subscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
+      const sub = ndk().subscribe(filter)
+      sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
+      return () => sub.stop()
+    }
+    Invite.fromUser(pubKeyHex, subscribe).then((invite) => {
+      setInvite(invite)
+    })
   }, [pubKeyHex])
 
   return (
@@ -83,6 +101,14 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
             )}
 
             <div className="flex flex-row gap-2">
+              {invite && myPubKey && (
+                <button
+                  className="btn btn-circle btn-neutral"
+                  onClick={() => acceptInvite(invite, myPubKey, myPrivKey, navigate)}
+                >
+                  <Icon name="mail-outline" className="w-6 h-6" />
+                </button>
+              )}
               <PublicKeyQRCodeButton publicKey={pubKey} />
               {myPubKey && myPubKey === pubKeyHex ? (
                 <Link to="/settings/profile" className="btn btn-neutral">

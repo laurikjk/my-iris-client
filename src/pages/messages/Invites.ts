@@ -1,24 +1,20 @@
-import {
-  Channel,
-  InviteLink,
-  NostrFilter,
-  serializeChannelState,
-} from "nostr-double-ratchet"
+import {Channel, Invite, serializeChannelState} from "nostr-double-ratchet"
 import {subscribeToAuthorDMNotifications} from "@/utils/notifications"
+import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
+import {Filter, nip19, VerifiedEvent} from "nostr-tools"
 import SnortApi, {Subscription} from "@/utils/SnortApi"
 import {hexToBytes} from "@noble/hashes/utils"
 import {localState, Unsubscribe} from "irisdb"
-import {nip19, VerifiedEvent} from "nostr-tools"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
 
-const inviteLinks = new Map<string, InviteLink>()
+const inviteLinks = new Map<string, Invite>()
 const subscriptions = new Map<string, Unsubscribe>()
 
 let user: {publicKey?: string; privateKey?: string} | null = null
 
-export function getInviteLinks(
-  callback: (id: string, inviteLink: InviteLink) => void
+export function getInvites(
+  callback: (id: string, inviteLink: Invite) => void
 ): Unsubscribe {
   inviteLinks.clear() // Clear the existing map before repopulating
 
@@ -26,7 +22,7 @@ export function getInviteLinks(
     const id = path.split("/").pop()!
     if (link && typeof link === "string") {
       try {
-        const inviteLink = InviteLink.deserialize(link)
+        const inviteLink = Invite.deserialize(link)
         callback(id, inviteLink)
       } catch (e) {
         console.error(e)
@@ -35,7 +31,7 @@ export function getInviteLinks(
   })
 }
 
-const nostrSubscribe = (filter: NostrFilter, onEvent: (e: VerifiedEvent) => void) => {
+const nostrSubscribe = (filter: Filter, onEvent: (e: VerifiedEvent) => void) => {
   const sub = ndk().subscribe(filter)
   sub.on("event", (event) => {
     onEvent(event as unknown as VerifiedEvent)
@@ -64,7 +60,7 @@ const listen = debounce(() => {
           decrypt,
           nostrSubscribe,
           (channel: Channel, identity?: string) => {
-            const channelId = `${nip19.npubEncode(identity!)}:${channel.name}`
+            const channelId = `${identity}:${channel.name}`
             try {
               subscribeToAuthorDMNotifications([channel.state.theirNostrPublicKey])
             } catch (e) {
@@ -84,7 +80,7 @@ const listen = debounce(() => {
   }
 }, 100)
 
-const subscribeInviteLinkNotifications = debounce(async () => {
+const subscribeInviteNotifications = debounce(async () => {
   console.log("Checking for missing subscriptions", {
     size: inviteLinks.size,
     links: Array.from(inviteLinks.entries()),
@@ -136,24 +132,40 @@ const subscribeInviteLinkNotifications = debounce(async () => {
       }
     }
   } catch (e) {
-    console.error("Error in subscribeInviteLinkNotifications:", e)
+    console.error("Error in subscribeInviteNotifications:", e)
   }
 }, 100)
 
-getInviteLinks((id, inviteLink) => {
+getInvites((id, inviteLink) => {
   if (!inviteLinks.has(id)) {
     inviteLinks.set(id, inviteLink)
     listen()
     setTimeout(() => {
       console.log("Triggering subscription check with size:", inviteLinks.size)
-      subscribeInviteLinkNotifications()
+      subscribeInviteNotifications()
     }, 0)
   }
 })
 
-localState.get("user").on((u) => {
+localState.get("user").on(async (u) => {
   if (u) {
     user = u as {publicKey?: string; privateKey?: string}
     listen()
+    const publicInvite = await localState
+      .get("inviteLinks")
+      .get("public")
+      .once(undefined, true)
+    if (publicInvite && typeof publicInvite === "string") {
+      const invite = Invite.deserialize(publicInvite)
+      setTimeout(() => {
+        NDKEventFromRawEvent(invite.getEvent() as RawEvent).publish()
+      }, 1000)
+    } else {
+      console.log("Creating public invite")
+      const invite = Invite.createNew(user.publicKey!, "Public Invite")
+      localState.get("inviteLinks").get("public").put(invite.serialize())
+      await NDKEventFromRawEvent(invite.getEvent() as RawEvent).publish()
+      console.log("Published public invite")
+    }
   }
 })
