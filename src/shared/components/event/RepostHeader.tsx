@@ -16,7 +16,7 @@ function RepostHeader({event}: RepostHeaderProps) {
     >
       <Name pubKey={event.pubkey} />
       <span className="mx-1">reposted</span>
-      <RiRepeatFill />
+      <RiRepeatFill className="w-4 h-4" />
     </Link>
   )
 }

@@ -23,7 +23,7 @@ export const acceptInvite = async (
       ? hexToBytes(myPrivKey)
       : async (plaintext: string, pubkey: string) => {
           if (window.nostr?.nip44) {
-            return window.nostr.nip44.encrypt(plaintext, pubkey)
+            return window.nostr.nip44.encrypt(pubkey, plaintext)
           }
           throw new Error("No nostr extension or private key")
         }
