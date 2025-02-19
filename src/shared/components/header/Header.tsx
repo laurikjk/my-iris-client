@@ -4,6 +4,7 @@ import {RiMenuLine} from "@remixicon/react"
 
 import NotificationButton from "@/shared/components/header/NotificationButton.tsx"
 import {MOBILE_BREAKPOINT} from "@/shared/components/user/const.ts"
+import {UserRow} from "@/shared/components/user/UserRow"
 import {useLocalState} from "irisdb-hooks"
 
 export default function Header() {
@@ -113,6 +114,10 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  const isChatRoute = location.pathname === "/messages/chat"
+  const chatId = location.state?.id
+  const chatUserPubkey = chatId?.split(":").shift()
+
   return (
     <>
       <header
@@ -128,7 +133,7 @@ export default function Header() {
             <button
               tabIndex={0}
               onClick={(e) => {
-                e.stopPropagation() // Prevent click from propagating to document
+                e.stopPropagation()
                 setSidebarOpen(!isSidebarOpen)
               }}
               className="md:hidden btn btn-ghost btn-circle"
@@ -136,12 +141,16 @@ export default function Header() {
               <RiMenuLine className="w-6 h-6" />
             </button>
             <div className="flex items-center gap-4">
-              <h1
-                className="text-lg text-base-content cursor-pointer"
-                onClick={() => window.scrollTo(0, 0)}
-              >
-                {title}
-              </h1>
+              {isChatRoute && chatUserPubkey ? (
+                <UserRow avatarWidth={32} pubKey={chatUserPubkey} />
+              ) : (
+                <h1
+                  className="text-lg text-base-content cursor-pointer"
+                  onClick={() => window.scrollTo(0, 0)}
+                >
+                  {title}
+                </h1>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-4 mr-2">
