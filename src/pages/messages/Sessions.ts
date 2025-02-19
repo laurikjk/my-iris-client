@@ -1,5 +1,5 @@
+import {showNotification, subscribeToAuthorDMNotifications} from "@/utils/notifications"
 import {Session, deserializeSessionState} from "nostr-double-ratchet"
-import {showNotification} from "@/utils/notifications"
 import {Filter, VerifiedEvent} from "nostr-tools"
 import {profileCache} from "@/utils/memcache"
 import AnimalName from "@/utils/AnimalName"
@@ -38,7 +38,7 @@ export async function getSession(id: string): Promise<Session | undefined> {
 }
 
 // function that gets all our sessions and subscribes to messages from them
-export function getSessions() {
+export function loadSessions() {
   return localState.get("sessions").on(async (sessionData) => {
     for (const [id, data] of Object.entries(sessionData || {})) {
       if (sessions.has(id)) continue
@@ -93,10 +93,8 @@ export function getSessions() {
         })
       }
     }
+    subscribeToAuthorDMNotifications()
   })
 }
 
-localState.get("user").on((u) => {
-  if (!u) return
-  getSessions()
-})
+export const getSessions = () => sessions

@@ -30,7 +30,7 @@ export interface SubscriptionResponse {
 /**
  * Can be used for web push notifications
  */
-export default class SnortApi {
+export default class IrisAPI {
   #url: string
 
   constructor(url?: string) {
@@ -51,18 +51,13 @@ export default class SnortApi {
     return this.#getJsonAuthd<SubscriptionResponse>("subscriptions")
   }
 
-  registerPushNotifications(sub: PushNotifications, filter: NDKFilter) {
+  registerPushNotifications(
+    web_push_subscriptions: PushNotifications[],
+    filter: NDKFilter
+  ) {
     return this.#getJsonAuthd<void>(`subscriptions`, "POST", {
-      web_push_subscriptions: [sub],
+      web_push_subscriptions,
       webhooks: [],
-      filter,
-    })
-  }
-
-  createSubscription(filter: Subscription["filter"]) {
-    return this.#getJsonAuthd<{id: string; status: string}>("subscriptions", "POST", {
-      webhooks: [],
-      web_push_subscriptions: [],
       filter,
     })
   }

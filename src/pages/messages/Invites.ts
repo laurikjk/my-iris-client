@@ -1,33 +1,34 @@
 import {Session, Invite, serializeSessionState} from "nostr-double-ratchet"
 import {subscribeToAuthorDMNotifications} from "@/utils/notifications"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
-import SnortApi, {Subscription} from "@/utils/SnortApi"
 import {Filter, VerifiedEvent} from "nostr-tools"
 import {hexToBytes} from "@noble/hashes/utils"
 import {localState, Unsubscribe} from "irisdb"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
 
-const inviteLinks = new Map<string, Invite>()
+const invites = new Map<string, Invite>()
 const subscriptions = new Map<string, Unsubscribe>()
 
 let user: {publicKey?: string; privateKey?: string} | null = null
 
-export function getInvites(
-  callback: (id: string, inviteLink: Invite) => void
-): Unsubscribe {
-  inviteLinks.clear() // Clear the existing map before repopulating
+export function loadInvites(): Unsubscribe {
+  invites.clear() // Clear the existing map before repopulating
 
-  return localState.get("inviteLinks").forEach((link, path) => {
+  return localState.get("invites").forEach((link, path) => {
     const id = path.split("/").pop()!
     if (link && typeof link === "string") {
       try {
-        const inviteLink = Invite.deserialize(link)
-        callback(id, inviteLink)
+        const invite = Invite.deserialize(link)
+        if (!invites.has(id)) {
+          invites.set(id, invite)
+          listen()
+        }
       } catch (e) {
         console.error(e)
       }
     }
+    subscribeToAuthorDMNotifications()
   })
 }
 
@@ -41,9 +42,9 @@ const nostrSubscribe = (filter: Filter, onEvent: (e: VerifiedEvent) => void) => 
 
 const listen = debounce(() => {
   if (user?.publicKey) {
-    for (const id of inviteLinks.keys()) {
+    for (const id of invites.keys()) {
       if (!subscriptions.has(id)) {
-        const inviteLink = inviteLinks.get(id)!
+        const invite = invites.get(id)!
         const decrypt = user.privateKey
           ? hexToBytes(user.privateKey)
           : async (cipherText: string, pubkey: string) => {
@@ -56,17 +57,11 @@ const listen = debounce(() => {
               }
               throw new Error("No nostr extension or private key")
             }
-        const unsubscribe = inviteLink.listen(
+        const unsubscribe = invite.listen(
           decrypt,
           nostrSubscribe,
           (session: Session, identity?: string) => {
             const sessionId = `${identity}:${session.name}`
-            try {
-              subscribeToAuthorDMNotifications([session.state.theirNostrPublicKey])
-            } catch (e) {
-              console.error("Error subscribing to author DM notifications", e)
-            }
-
             localState
               .get("sessions")
               .get(sessionId)
@@ -80,73 +75,6 @@ const listen = debounce(() => {
   }
 }, 100)
 
-const subscribeInviteNotifications = debounce(async () => {
-  console.log("Checking for missing subscriptions", {
-    size: inviteLinks.size,
-    links: Array.from(inviteLinks.entries()),
-  })
-
-  if (inviteLinks.size === 0) return
-
-  try {
-    const subscriptions = await new SnortApi().getSubscriptions()
-
-    const missing = Array.from(inviteLinks.values()).filter(
-      (link) =>
-        !Object.values(subscriptions).find(
-          (sub: Subscription) =>
-            sub.filter.kinds?.includes(4) &&
-            (sub.filter as any)["#p"]?.includes(link.inviterEphemeralPublicKey)
-        )
-    )
-
-    console.log("Processing subscriptions:", {
-      inviteLinks: Array.from(inviteLinks.entries()),
-      subscriptions,
-      missing,
-    })
-
-    if (missing.length) {
-      const dmSubscription = Object.entries(subscriptions).find(
-        ([, sub]) => sub.filter.kinds?.length === 1 && sub.filter.kinds[0] === 4
-      )
-
-      if (dmSubscription) {
-        const [id, sub] = dmSubscription
-        await new SnortApi().updateSubscription(id, {
-          filter: {
-            ...sub.filter,
-            "#p": [
-              ...new Set([
-                ...((sub.filter as any)["#p"] || []),
-                ...missing.map((l) => l.inviterEphemeralPublicKey),
-              ]),
-            ],
-          },
-        })
-      } else {
-        await new SnortApi().createSubscription({
-          kinds: [4],
-          "#p": missing.map((l) => l.inviterEphemeralPublicKey),
-        })
-      }
-    }
-  } catch (e) {
-    console.error("Error in subscribeInviteNotifications:", e)
-  }
-}, 100)
-
-getInvites((id, inviteLink) => {
-  if (!inviteLinks.has(id)) {
-    inviteLinks.set(id, inviteLink)
-    listen()
-    setTimeout(() => {
-      console.log("Triggering subscription check with size:", inviteLinks.size)
-      subscribeInviteNotifications()
-    }, 0)
-  }
-})
-
 const publish = debounce(async (invite: Invite) => {
   const event = invite.getEvent() as RawEvent
   await NDKEventFromRawEvent(event).publish()
@@ -158,7 +86,7 @@ localState.get("user").on(async (u) => {
     if (!user.publicKey) return
     listen()
     const publicInvite = await localState
-      .get("inviteLinks")
+      .get("invites")
       .get("public")
       .once(undefined, true)
     if (publicInvite && typeof publicInvite === "string") {
@@ -169,9 +97,11 @@ localState.get("user").on(async (u) => {
     } else {
       console.log("Creating public invite")
       const invite = Invite.createNew(user.publicKey, "Public Invite")
-      localState.get("inviteLinks").get("public").put(invite.serialize())
+      localState.get("invites").get("public").put(invite.serialize())
       publish(invite)
       console.log("Published public invite", invite)
     }
   }
 })
+
+export const getInvites = () => invites

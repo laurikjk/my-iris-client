@@ -2,7 +2,7 @@ import {showNotification, subscribeToNotifications} from "@/utils/notifications"
 import {useEffect, useState, ChangeEvent} from "react"
 import Icon from "@/shared/components/Icons/Icon"
 import {useLocalState} from "irisdb-hooks"
-import SnortApi from "@/utils/SnortApi"
+import IrisAPI from "@/utils/IrisAPI"
 
 interface StatusIndicatorProps {
   status: boolean
@@ -119,7 +119,7 @@ const NotificationSettings = () => {
   useEffect(() => {
     const fetchSubscriptionsData = async () => {
       try {
-        const api = new SnortApi()
+        const api = new IrisAPI()
         const data = await api.getSubscriptions()
         setSubscriptionsData(JSON.stringify(data, null, 2)) // Pretty print with 2 spaces
       } catch (error) {

@@ -15,13 +15,13 @@ const NewChat = () => {
   const navigate = useNavigate()
   const [myPubKey] = useLocalState("user/publicKey", "")
   const [myPrivKey] = useLocalState("user/privateKey", "")
-  const [inviteLinks, setInvites] = useState<Map<string, Invite>>(new Map())
-  const [inviteLinkInput, setInviteInput] = useState("")
+  const [invites, setInvites] = useState<Map<string, Invite>>(new Map())
+  const [inviteInput, setInviteInput] = useState("")
   const labelInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    return getInvites((id, inviteLink) => {
-      setInvites(new Map(inviteLinks.set(id, inviteLink)))
+    return localState.get("invites").on(() => {
+      setInvites(getInvites())
     })
   }, [])
 
@@ -31,16 +31,16 @@ const NewChat = () => {
       const label = labelInputRef.current.value.trim() || "New Invite Link"
       const newLink = Invite.createNew(myPubKey, label)
       const id = crypto.randomUUID()
-      localState.get(`inviteLinks/${id}`).put(newLink.serialize())
-      setInvites(new Map(inviteLinks.set(id, newLink)))
+      localState.get(`invites/${id}`).put(newLink.serialize())
+      setInvites(new Map(invites.set(id, newLink)))
       labelInputRef.current.value = "" // Clear the input after creating
     }
   }
 
   const deleteInvite = (id: string) => {
-    localState.get(`inviteLinks/${id}`).put(null)
-    inviteLinks.delete(id)
-    setInvites(new Map(inviteLinks))
+    localState.get(`invites/${id}`).put(null)
+    invites.delete(id)
+    setInvites(new Map(invites))
   }
 
   const handleInviteInput = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -48,7 +48,7 @@ const NewChat = () => {
     setInviteInput(input)
 
     try {
-      const inviteLink = Invite.fromUrl(input)
+      const invite = Invite.fromUrl(input)
       const encrypt = myPrivKey
         ? hexToBytes(myPrivKey)
         : async (plaintext: string, pubkey: string) => {
@@ -57,7 +57,7 @@ const NewChat = () => {
             }
             throw new Error("No nostr extension or private key")
           }
-      const {session, event} = await inviteLink.accept(
+      const {session, event} = await invite.accept(
         (filter, onEvent) => {
           const sub = ndk().subscribe(filter)
           sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
@@ -74,7 +74,7 @@ const NewChat = () => {
         .catch((e) => console.warn("Error publishing event:", e))
       console.log("published event?", event)
 
-      const sessionId = `${inviteLink.inviter}:${session.name}`
+      const sessionId = `${invite.inviter}:${session.name}`
       // Save the session
       localState
         .get(`sessions/${sessionId}/state`)
@@ -102,7 +102,7 @@ const NewChat = () => {
               type="text"
               className="input input-bordered w-full md:w-96"
               placeholder="Paste invite link"
-              value={inviteLinkInput}
+              value={inviteInput}
               onChange={handleInviteInput}
             />
             <QRCodeButton
@@ -130,7 +130,7 @@ const NewChat = () => {
             </button>
           </form>
           <div className="space-y-3">
-            {Array.from(inviteLinks).map(([id, link]) => (
+            {Array.from(invites).map(([id, link]) => (
               <div
                 key={id}
                 className="flex flex-col md:flex-row md:items-center justify-between gap-2"

@@ -1,10 +1,13 @@
 import {NDKTag, NDKEvent, NDKUser} from "@nostr-dev-kit/ndk"
+import {getSessions} from "@/pages/messages/Sessions"
 import {getZapAmount, getZappingUser} from "./nostr"
+import {getInvites} from "@/pages/messages/Invites"
 import {SortedMap} from "./SortedMap/SortedMap"
 import socialGraph from "@/utils/socialGraph"
 import {profileCache} from "@/utils/memcache"
 import {base64} from "@scure/base"
-import SnortApi from "./SnortApi"
+import IrisAPI from "./IrisAPI"
+import {debounce} from "lodash"
 
 interface ReactedTime {
   time: number
@@ -99,15 +102,49 @@ export async function maybeShowPushNotification(event: NDKEvent) {
   })
 }
 
-export async function subscribeToAuthorDMNotifications(authors: string[]) {
+export const subscribeToAuthorDMNotifications = debounce(async () => {
+  // Get push subscription from service worker
+  const reg = await navigator.serviceWorker.ready
+  const pushSubscription = await reg.pushManager.getSubscription()
+
+  if (!pushSubscription) {
+    console.log("No push subscription available")
+    return
+  }
+
+  // TODO actually these should be added to #p filter
+  const inviteAuthors = Array.from(getInvites().values())
+    .map((i) => i.inviterEphemeralPublicKey)
+    .filter((a) => typeof a === "string") as string[]
+
+  const sessionAuthors = Array.from(getSessions().values())
+    .map((s) => s?.state.theirNostrPublicKey)
+    .filter((a) => typeof a === "string") as string[]
+
+  console.log("inviteAuthors", ...inviteAuthors)
+  console.log("sessionAuthors", ...sessionAuthors)
+
+  const authors = [...inviteAuthors, ...sessionAuthors]
   console.log("Subscribing to DM notifications for authors:", authors)
-  const api = new SnortApi()
+
+  const api = new IrisAPI()
   const currentSubscriptions = await api.getSubscriptions()
   console.log("Current subscriptions:", currentSubscriptions)
 
-  // Find existing DM subscription
+  const webPushData = {
+    endpoint: pushSubscription.endpoint,
+    p256dh: base64.encode(new Uint8Array(pushSubscription.getKey("p256dh")!)),
+    auth: base64.encode(new Uint8Array(pushSubscription.getKey("auth")!)),
+  }
+
+  // Find existing DM subscription with matching endpoint
   const dmSubscription = Object.entries(currentSubscriptions).find(
-    ([, sub]) => sub.filter.kinds?.length === 1 && sub.filter.kinds[0] === 4
+    ([, sub]) =>
+      sub.filter.kinds?.length === 1 &&
+      sub.filter.kinds[0] === 4 &&
+      (sub.web_push_subscriptions || []).some(
+        (sub) => sub.endpoint === webPushData.endpoint
+      )
   )
   console.log("Found DM subscription:", dmSubscription)
 
@@ -115,27 +152,32 @@ export async function subscribeToAuthorDMNotifications(authors: string[]) {
     const [id, sub] = dmSubscription
     const existingAuthors = sub.filter.authors || []
     console.log("Existing authors:", existingAuthors)
+    console.log("Authors to add:", authors)
 
-    const newAuthors = authors.filter((author) => !existingAuthors.includes(author))
+    const newAuthors = sessionAuthors.filter(
+      (author) => !existingAuthors.includes(author)
+    )
     console.log("New authors to add:", newAuthors)
 
-    if (newAuthors.length > 0) {
+    if (newAuthors.length > 0 || existingAuthors.length !== sessionAuthors.length) {
       console.log("Updating subscription with new authors")
       await api.updateSubscription(id, {
         filter: {
-          ...sub.filter,
-          authors: [...existingAuthors, ...newAuthors],
+          kinds: [4],
+          authors: sessionAuthors,
+          "#p": inviteAuthors,
         },
+        web_push_subscriptions: [webPushData],
       })
     }
   } else {
     console.log("Creating new DM subscription")
-    await api.createSubscription({
+    await api.registerPushNotifications([webPushData], {
       kinds: [4],
       authors,
     })
   }
-}
+}, 5000)
 
 export async function subscribeToNotifications() {
   if (!CONFIG.features.pushNotifications) {
@@ -156,7 +198,7 @@ export async function subscribeToNotifications() {
     if ("serviceWorker" in navigator) {
       const reg = await navigator.serviceWorker.ready
       if (reg) {
-        const api = new SnortApi()
+        const api = new IrisAPI()
         const {vapid_public_key: newVapidKey} = await api.getPushNotificationInfo()
 
         // Check for existing subscription
@@ -187,11 +229,13 @@ export async function subscribeToNotifications() {
           kinds: [1, 6, 7],
         }
         await api.registerPushNotifications(
-          {
-            endpoint: sub.endpoint,
-            p256dh: base64.encode(new Uint8Array(sub.getKey("p256dh")!)),
-            auth: base64.encode(new Uint8Array(sub.getKey("auth")!)),
-          },
+          [
+            {
+              endpoint: sub.endpoint,
+              p256dh: base64.encode(new Uint8Array(sub.getKey("p256dh")!)),
+              auth: base64.encode(new Uint8Array(sub.getKey("auth")!)),
+            },
+          ],
           filter
         )
       }
