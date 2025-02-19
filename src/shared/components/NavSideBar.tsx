@@ -1,6 +1,6 @@
 import UnseenNotificationsBadge from "@/shared/components/header/UnseenNotificationsBadge.tsx"
-import {useRef, ReactNode, MouseEventHandler, useMemo, useEffect, useState} from "react"
 import PublishButton from "@/shared/components/ui/PublishButton.tsx"
+import {useRef, ReactNode, MouseEventHandler, useMemo} from "react"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiLoginBoxLine} from "@remixicon/react"
@@ -9,8 +9,8 @@ import {useLocalState} from "irisdb-hooks"
 import classNames from "classnames"
 import NavLink from "./NavLink"
 
+import UnseenMessagesBadge from "./messages/UnseenMessagesBadge"
 import PublicKeyQRCodeButton from "./user/PublicKeyQRCodeButton"
-import {localState} from "irisdb"
 
 interface NavItemProps {
   to: string
@@ -99,62 +99,29 @@ const MessagesNavItem = ({
 }: {
   to: string
   onClick?: MouseEventHandler<HTMLAnchorElement>
-}) => {
-  const [sessions, setSessions] = useState<Record<string, Session>>({})
-
-  useEffect(() => {
-    localState.get("sessions").put({})
-    const unsub = localState.get("sessions").on<Record<string, Session>>(
-      (value) => {
-        setSessions({...value})
-      },
-      false,
-      3
-    )
-    return unsub
-  }, [])
-
-  const hasUnread = useMemo(() => {
-    return Object.values(sessions).some((session) => {
-      const latest = session?.latest?.time
-      const lastSeen = session?.lastSeen || 0
-      return latest && latest > lastSeen
-    })
-  }, [sessions])
-
-  return (
-    <li>
-      <NavLink
-        title="Messages"
-        to={to}
-        onClick={onClick}
-        className={({isActive}) =>
-          classNames({
-            "bg-base-100": isActive,
-            "rounded-full md:aspect-square xl:aspect-auto flex items-center": true,
-          })
-        }
-      >
-        {({isActive}) => (
-          <span className="indicator flex items-center gap-2">
-            {hasUnread && (
-              <span className="indicator-item badge badge-primary badge-xs" />
-            )}
-            <Icon name={`mail-${isActive ? "solid" : "outline"}`} className="w-6 h-6" />
-            <span className="inline md:hidden xl:inline">Messages</span>
-          </span>
-        )}
-      </NavLink>
-    </li>
-  )
-}
-
-interface Session {
-  latest?: {
-    time: number
-  }
-  lastSeen?: number
-}
+}) => (
+  <li>
+    <NavLink
+      title="Messages"
+      to={to}
+      onClick={onClick}
+      className={({isActive}) =>
+        classNames({
+          "bg-base-100": isActive,
+          "rounded-full md:aspect-square xl:aspect-auto flex items-center": true,
+        })
+      }
+    >
+      {({isActive}) => (
+        <span className="indicator flex items-center gap-2">
+          <UnseenMessagesBadge />
+          <Icon name={`mail-${isActive ? "solid" : "outline"}`} className="w-6 h-6" />
+          <span className="inline md:hidden xl:inline">Messages</span>
+        </span>
+      )}
+    </NavLink>
+  </li>
+)
 
 type NavItemConfig = {
   to: string
