@@ -15,12 +15,14 @@ let user: {publicKey?: string; privateKey?: string} | null = null
 export function loadInvites(): Unsubscribe {
   invites.clear() // Clear the existing map before repopulating
 
+  localState.get("invites").put({}) // Ensure the invites object exists
+  localState.get("invites").on(() => subscribeToAuthorDMNotifications())
   return localState.get("invites").forEach((link, path) => {
     const id = path.split("/").pop()!
     if (link && typeof link === "string") {
       try {
-        const invite = Invite.deserialize(link)
         if (!invites.has(id)) {
+          const invite = Invite.deserialize(link)
           invites.set(id, invite)
           listen()
         }
@@ -28,7 +30,6 @@ export function loadInvites(): Unsubscribe {
         console.error(e)
       }
     }
-    subscribeToAuthorDMNotifications()
   })
 }
 
