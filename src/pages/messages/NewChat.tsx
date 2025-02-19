@@ -161,21 +161,23 @@ const NewChat = () => {
         </div>
       </div>
       <hr className="mx-4 my-6 border-base-300" />
-      <p className="text-center text-sm text-base-content/70">
-        Iris uses Signal-style{" "}
-        <a
-          href="https://github.com/mmalmi/nostr-double-ratchet"
-          target="_blank"
-          className="link"
-          rel="noreferrer"
-        >
-          double ratchet encryption
-        </a>{" "}
-        to keep your messages safe.
-      </p>
-      <p className="text-center text-sm text-base-content/70">
-        Chat history is stored locally on this device and cleared when you log out.
-      </p>
+      <div className="px-2">
+        <p className="text-center text-sm text-base-content/70">
+          Iris uses Signal-style{" "}
+          <a
+            href="https://github.com/mmalmi/nostr-double-ratchet"
+            target="_blank"
+            className="link"
+            rel="noreferrer"
+          >
+            double ratchet encryption
+          </a>{" "}
+          to keep your messages safe.
+        </p>
+        <p className="text-center text-sm text-base-content/70">
+          Chat history is stored locally on this device and cleared when you log out.
+        </p>
+      </div>
     </>
   )
 }

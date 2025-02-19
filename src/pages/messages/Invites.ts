@@ -48,11 +48,11 @@ const listen = debounce(() => {
           ? hexToBytes(user.privateKey)
           : async (cipherText: string, pubkey: string) => {
               if (window.nostr?.nip44) {
-                const result = window.nostr.nip44.decrypt(pubkey, cipherText)
+                const result = await window.nostr.nip44.decrypt(pubkey, cipherText)
                 if (!result || typeof result !== "string") {
                   throw new Error("Failed to decrypt")
                 }
-                return result as string
+                return result
               }
               throw new Error("No nostr extension or private key")
             }
