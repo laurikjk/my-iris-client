@@ -2,10 +2,10 @@ import {Session, serializeSessionState} from "nostr-double-ratchet"
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {UserRow} from "@/shared/components/user/UserRow"
-import {useNavigate, useParams} from "react-router-dom"
 import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import Message, {MessageType} from "./Message"
+import {useNavigate} from "react-router-dom"
 import {RiMoreLine} from "@remixicon/react"
 import MessageForm from "./MessageForm"
 import {getSession} from "./Sessions"
@@ -58,8 +58,8 @@ const groupMessages = (
   return groups
 }
 
-const Chat = () => {
-  const {id} = useParams()
+const Chat = ({id}: {id: string}) => {
+  const navigate = useNavigate()
   const [messages, setMessages] = useState(
     new SortedMap<string, MessageType>([], comparator)
   )
@@ -178,8 +178,6 @@ const Chat = () => {
       window.removeEventListener("focus", handleFocus)
     }
   }, [id])
-
-  const navigate = useNavigate()
 
   const handleDeleteChat = () => {
     if (id && confirm("Delete this chat?")) {

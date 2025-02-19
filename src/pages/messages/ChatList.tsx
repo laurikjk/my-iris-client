@@ -31,7 +31,8 @@ const ChatListItem = ({id}: {id: string}) => {
   if (deleted) return null
   return (
     <NavLink
-      to={`/messages/${id}`}
+      to="/messages/chat"
+      state={{id}}
       key={id}
       onClick={() => setLastSeen(Date.now())}
       className={({isActive}) =>

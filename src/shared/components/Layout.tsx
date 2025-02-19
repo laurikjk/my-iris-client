@@ -59,7 +59,12 @@ const Layout = () => {
     const handleServiceWorkerMessage = (event: MessageEvent<ServiceWorkerMessage>) => {
       if (event.data?.type === "NAVIGATE_REACT_ROUTER") {
         const url = new URL(event.data.url)
-        navigate(url.pathname + url.search + url.hash)
+        if (url.pathname.match(/^\/messages\/[^/]+$/)) {
+          const chatId = url.pathname.split("/")[2]
+          navigate("/messages/chat", {state: {id: chatId}})
+        } else {
+          navigate(url.pathname + url.search + url.hash)
+        }
       }
     }
 

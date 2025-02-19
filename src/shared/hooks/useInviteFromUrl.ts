@@ -12,7 +12,7 @@ export const acceptInvite = async (
   invite: string | Invite,
   myPubKey: string,
   myPrivKey?: string,
-  navigate?: (path: string) => void
+  navigate?: (path: string, options?: any) => void
 ) => {
   try {
     if (typeof invite === "string") {
@@ -51,7 +51,7 @@ export const acceptInvite = async (
 
     // Navigate to the new chat if navigate function is provided
     if (navigate) {
-      navigate(`/messages/${sessionId}`)
+      navigate(`/messages/chat`, {state: {id: sessionId}})
     }
 
     return {success: true, inviter: invite.inviter}

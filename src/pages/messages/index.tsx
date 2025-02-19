@@ -28,7 +28,7 @@ function Messages() {
       >
         <Routes>
           <Route path="new" element={<NewChat />} />
-          <Route path=":id" element={<Chat />} />
+          <Route path="chat" element={<Chat id={location.state?.id} />} />
           <Route path="/" element={<NewChat />} />
         </Routes>
       </div>

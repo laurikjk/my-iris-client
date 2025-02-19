@@ -81,7 +81,7 @@ const NewChat = () => {
         .put(serializeSessionState(session.state))
 
       // Navigate to the new chat
-      navigate(`/messages/${sessionId}`)
+      navigate("/messages/chat", {state: {id: sessionId}})
     } catch (error) {
       console.error("Invalid invite link:", error)
       // Optionally, you can show an error message to the user here
