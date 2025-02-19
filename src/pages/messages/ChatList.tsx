@@ -1,9 +1,9 @@
 import RelativeTime from "@/shared/components/event/RelativeTime"
 import {Avatar} from "@/shared/components/user/Avatar"
+import {NavLink, useLocation} from "react-router-dom"
 import {Name} from "@/shared/components/user/Name"
 import {useLocalState} from "irisdb-hooks"
 import {useEffect, useState} from "react"
-import {NavLink} from "react-router-dom"
 import classNames from "classnames"
 import {localState} from "irisdb"
 
@@ -17,7 +17,9 @@ type Session = {
 }
 
 const ChatListItem = ({id}: {id: string}) => {
+  const location = useLocation()
   const pubKey = id.split(":").shift() || ""
+  const isActive = location.state?.id === id
   useEffect(() => {
     // TODO irisdb should have subscriptions work without this
     localState.get(`sessions/${id}`).get("latest").put({})
@@ -35,12 +37,10 @@ const ChatListItem = ({id}: {id: string}) => {
       state={{id}}
       key={id}
       onClick={() => setLastSeen(Date.now())}
-      className={({isActive}) =>
-        classNames("px-2 py-4 flex items-center border-b border-custom", {
-          "bg-base-300": isActive,
-          "hover:bg-base-300": !isActive,
-        })
-      }
+      className={classNames("px-2 py-4 flex items-center border-b border-custom", {
+        "bg-base-300": isActive,
+        "hover:bg-base-300": !isActive,
+      })}
     >
       <div className="flex flex-row items-center gap-2 flex-1">
         <Avatar pubKey={pubKey} />

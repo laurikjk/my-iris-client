@@ -54,8 +54,8 @@ function Account() {
       <div className="flex flex-col gap-4">
         <small>Make sure you have a backup of your secret key before logging out.</small>
         <small>
-          Your Iris secret chats will be deleted from this device on logout and are not
-          recoverable by logging in again.
+          Your <b>Iris chats</b> and <b>Cashu wallet</b> on this device will be
+          permanently deleted.
         </small>
         <div className="mt-2">
           <button className="btn btn-primary" onClick={handleLogout}>
