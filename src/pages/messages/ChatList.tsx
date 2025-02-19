@@ -11,7 +11,7 @@ interface ChatListProps {
   className?: string
 }
 
-type Channel = {
+type Session = {
   messages: string[]
   deleted?: boolean
 }
@@ -20,14 +20,14 @@ const ChatListItem = ({id}: {id: string}) => {
   const pubKey = id.split(":").shift() || ""
   useEffect(() => {
     // TODO irisdb should have subscriptions work without this
-    localState.get(`channels/${id}`).get("latest").put({})
+    localState.get(`sessions/${id}`).get("latest").put({})
   }, [])
   const [latest] = useLocalState(
-    `channels/${id}/latest`,
+    `sessions/${id}/latest`,
     {} as {content: string; time: number}
   )
-  const [lastSeen, setLastSeen] = useLocalState(`channels/${id}/lastSeen`, 0)
-  const [deleted] = useLocalState(`channels/${id}/deleted`, false)
+  const [lastSeen, setLastSeen] = useLocalState(`sessions/${id}/lastSeen`, 0)
+  const [deleted] = useLocalState(`sessions/${id}/deleted`, false)
   if (deleted) return null
   return (
     <NavLink
@@ -69,13 +69,13 @@ const ChatListItem = ({id}: {id: string}) => {
 }
 
 const ChatList = ({className}: ChatListProps) => {
-  const [channels, setChannels] = useState({} as Record<string, Channel>)
+  const [sessions, setSessions] = useState({} as Record<string, Session>)
   useEffect(() => {
-    localState.get("channels").put({})
+    localState.get("sessions").put({})
     // TODO irisdb doesnt work right on initial update if we use recursion 3 param
-    const unsub = localState.get("channels").on((channels) => {
-      if (!channels || typeof channels !== "object") return
-      setChannels({...channels} as Record<string, Channel>)
+    const unsub = localState.get("sessions").on((sessions) => {
+      if (!sessions || typeof sessions !== "object") return
+      setSessions({...sessions} as Record<string, Session>)
     })
     return unsub
   }, [])
@@ -98,8 +98,8 @@ const ChatList = ({className}: ChatListProps) => {
             <span className="text-sm text-base-content/70">Start a new conversation</span>
           </div>
         </NavLink>
-        {Object.entries(channels)
-          .filter(([, channel]) => !!channel && !channel.deleted)
+        {Object.entries(sessions)
+          .filter(([, session]) => !!session && !session.deleted)
           .sort((a: any, b: any) => {
             // If either chat has no latest time, sort it to the bottom
             if (!a[1].latest?.time) return 1

@@ -1,5 +1,5 @@
 import {useState, useRef, useEffect, ChangeEvent, FormEvent} from "react"
-import {Invite, serializeChannelState} from "nostr-double-ratchet"
+import {Invite, serializeSessionState} from "nostr-double-ratchet"
 import QRCodeButton from "@/shared/components/user/QRCodeButton"
 import {acceptInvite} from "@/shared/hooks/useInviteFromUrl"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
@@ -57,7 +57,7 @@ const NewChat = () => {
             }
             throw new Error("No nostr extension or private key")
           }
-      const {channel, event} = await inviteLink.accept(
+      const {session, event} = await inviteLink.accept(
         (filter, onEvent) => {
           const sub = ndk().subscribe(filter)
           sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
@@ -74,14 +74,14 @@ const NewChat = () => {
         .catch((e) => console.warn("Error publishing event:", e))
       console.log("published event?", event)
 
-      const channelId = `${inviteLink.inviter}:${channel.name}`
-      // Save the channel
+      const sessionId = `${inviteLink.inviter}:${session.name}`
+      // Save the session
       localState
-        .get(`channels/${channelId}/state`)
-        .put(serializeChannelState(channel.state))
+        .get(`sessions/${sessionId}/state`)
+        .put(serializeSessionState(session.state))
 
       // Navigate to the new chat
-      navigate(`/messages/${channelId}`)
+      navigate(`/messages/${sessionId}`)
     } catch (error) {
       console.error("Invalid invite link:", error)
       // Optionally, you can show an error message to the user here

@@ -1,17 +1,17 @@
 import {FormEvent, useState, useEffect, useRef} from "react"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import Icon from "@/shared/components/Icons/Icon"
-import {Channel} from "nostr-double-ratchet"
+import {Session} from "nostr-double-ratchet"
 import {MessageType} from "./Message"
 import {localState} from "irisdb"
 
 interface MessageFormProps {
-  channel: Channel
+  session: Session
   id: string
   onSubmit: () => void
 }
 
-const MessageForm = ({channel, id, onSubmit}: MessageFormProps) => {
+const MessageForm = ({session, id, onSubmit}: MessageFormProps) => {
   const [newMessage, setNewMessage] = useState("")
   const [isTouchDevice, setIsTouchDevice] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -40,7 +40,7 @@ const MessageForm = ({channel, id, onSubmit}: MessageFormProps) => {
     const text = newMessage.trim()
     if (text) {
       const time = Date.now()
-      const event = channel.send(text)
+      const event = session.send(text)
       const ndkEvent = NDKEventFromRawEvent(event)
       ndkEvent
         .publish()
@@ -52,9 +52,9 @@ const MessageForm = ({channel, id, onSubmit}: MessageFormProps) => {
         content: text,
         time,
       }
-      localState.get("channels").get(id).get("messages").get(event.id).put(message)
-      localState.get("channels").get(id).get("latest").put(message)
-      localState.get("channels").get(id).get("lastSeen").put(time)
+      localState.get("sessions").get(id).get("messages").get(event.id).put(message)
+      localState.get("sessions").get(id).get("latest").put(message)
+      localState.get("sessions").get(id).get("lastSeen").put(time)
       setNewMessage("")
     }
     onSubmit()

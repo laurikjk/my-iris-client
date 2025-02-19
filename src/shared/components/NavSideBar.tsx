@@ -100,13 +100,13 @@ const MessagesNavItem = ({
   to: string
   onClick?: MouseEventHandler<HTMLAnchorElement>
 }) => {
-  const [channels, setChannels] = useState<Record<string, Channel>>({})
+  const [sessions, setSessions] = useState<Record<string, Session>>({})
 
   useEffect(() => {
-    localState.get("channels").put({})
-    const unsub = localState.get("channels").on<Record<string, Channel>>(
+    localState.get("sessions").put({})
+    const unsub = localState.get("sessions").on<Record<string, Session>>(
       (value) => {
-        setChannels({...value})
+        setSessions({...value})
       },
       false,
       3
@@ -115,12 +115,12 @@ const MessagesNavItem = ({
   }, [])
 
   const hasUnread = useMemo(() => {
-    return Object.values(channels).some((channel) => {
-      const latest = channel?.latest?.time
-      const lastSeen = channel?.lastSeen || 0
+    return Object.values(sessions).some((session) => {
+      const latest = session?.latest?.time
+      const lastSeen = session?.lastSeen || 0
       return latest && latest > lastSeen
     })
-  }, [channels])
+  }, [sessions])
 
   return (
     <li>
@@ -149,7 +149,7 @@ const MessagesNavItem = ({
   )
 }
 
-interface Channel {
+interface Session {
   latest?: {
     time: number
   }

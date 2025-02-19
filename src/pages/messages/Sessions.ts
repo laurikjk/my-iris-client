@@ -1,13 +1,13 @@
-import {Channel, deserializeChannelState} from "nostr-double-ratchet"
-import {Filter, VerifiedEvent} from "nostr-tools"
+import {Session, deserializeSessionState} from "nostr-double-ratchet"
 import {showNotification} from "@/utils/notifications"
+import {Filter, VerifiedEvent} from "nostr-tools"
 import {profileCache} from "@/utils/memcache"
 import AnimalName from "@/utils/AnimalName"
 import {MessageType} from "./Message"
 import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
 
-const channels = new Map<string, Channel | undefined>()
+const sessions = new Map<string, Session | undefined>()
 
 const openedAt = Date.now()
 
@@ -19,50 +19,50 @@ const subscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
   return () => sub.stop()
 }
 
-export async function getChannel(id: string): Promise<Channel | undefined> {
-  if (channels.has(id)) return channels.get(id)
+export async function getSession(id: string): Promise<Session | undefined> {
+  if (sessions.has(id)) return sessions.get(id)
 
   // Mark as loading to prevent duplicate work
-  channels.set(id, undefined)
+  sessions.set(id, undefined)
 
-  const state = await localState.get("channels").get(id).get("state").once()
+  const state = await localState.get("sessions").get(id).get("state").once()
 
   if (typeof state === "string" && state !== null) {
-    const deserialized = deserializeChannelState(state)
-    const channel = new Channel(subscribe, deserialized)
-    channels.set(id, channel)
-    return channel
+    const deserialized = deserializeSessionState(state)
+    const session = new Session(subscribe, deserialized)
+    sessions.set(id, session)
+    return session
   }
 
   return undefined
 }
 
-// function that gets all our channels and subscribes to messages from them
-export function getChannels() {
-  return localState.get("channels").on(async (channelData) => {
-    for (const [id, data] of Object.entries(channelData || {})) {
-      if (channels.has(id)) continue
+// function that gets all our sessions and subscribes to messages from them
+export function getSessions() {
+  return localState.get("sessions").on(async (sessionData) => {
+    for (const [id, data] of Object.entries(sessionData || {})) {
+      if (sessions.has(id)) continue
       if (data) {
-        const channelId = id.split("/").pop()!
-        const channel = await getChannel(channelId)
-        if (!channel?.onMessage) continue
+        const sessionId = id.split("/").pop()!
+        const session = await getSession(sessionId)
+        if (!session?.onMessage) continue
 
-        channel.onMessage(async (msg) => {
+        session.onMessage(async (msg) => {
           const message: MessageType = {
             id: msg.id,
             sender: id.split(":").shift()!,
             content: msg.data,
             time: msg.time,
           }
-          localState.get("channels").get(id).get("messages").get(msg.id).put(message)
-          localState.get("channels").get(id).get("latest").put(message)
+          localState.get("sessions").get(id).get("messages").get(msg.id).put(message)
+          localState.get("sessions").get(id).get("latest").put(message)
 
           // If visible, update lastSeen. If not, show notification.
           if (
             window.location.pathname.includes(`/messages/${id}`) &&
             document.visibilityState !== "visible"
           ) {
-            localState.get("channels").get(id).get("lastSeen").put(Date.now())
+            localState.get("sessions").get(id).get("lastSeen").put(Date.now())
           } else if (msg.time > openedAt) {
             const sender = id.split(":").shift()!
             let profile = profileCache.get(sender)
@@ -98,5 +98,5 @@ export function getChannels() {
 
 localState.get("user").on((u) => {
   if (!u) return
-  getChannels()
+  getSessions()
 })

@@ -1,7 +1,7 @@
 import {useState, useEffect, useMemo} from "react"
 import {localState} from "irisdb"
 
-interface Channel {
+interface Session {
   latest?: {
     time: number
   }
@@ -9,13 +9,13 @@ interface Channel {
 }
 
 export default function UnseenMessagesBadge() {
-  const [channels, setChannels] = useState<Record<string, Channel>>({})
+  const [sessions, setSessions] = useState<Record<string, Session>>({})
 
   useEffect(() => {
-    localState.get("channels").put({})
-    const unsub = localState.get("channels").on<Record<string, Channel>>(
+    localState.get("sessions").put({})
+    const unsub = localState.get("sessions").on<Record<string, Session>>(
       (value) => {
-        setChannels({...value})
+        setSessions({...value})
       },
       false,
       3
@@ -24,12 +24,12 @@ export default function UnseenMessagesBadge() {
   }, [])
 
   const hasUnread = useMemo(() => {
-    return Object.values(channels).some((channel) => {
-      const latest = channel?.latest?.time
-      const lastSeen = channel?.lastSeen || 0
+    return Object.values(sessions).some((session) => {
+      const latest = session?.latest?.time
+      const lastSeen = session?.lastSeen || 0
       return latest && latest > lastSeen
     })
-  }, [channels])
+  }, [sessions])
 
   return (
     <>

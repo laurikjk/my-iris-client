@@ -1,4 +1,4 @@
-import {Channel, serializeChannelState} from "nostr-double-ratchet"
+import {Session, serializeSessionState} from "nostr-double-ratchet"
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {UserRow} from "@/shared/components/user/UserRow"
@@ -8,7 +8,7 @@ import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import Message, {MessageType} from "./Message"
 import {RiMoreLine} from "@remixicon/react"
 import MessageForm from "./MessageForm"
-import {getChannel} from "./Channels"
+import {getSession} from "./Sessions"
 import {localState} from "irisdb"
 
 const comparator = (a: [string, MessageType], b: [string, MessageType]) =>
@@ -63,7 +63,7 @@ const Chat = () => {
   const [messages, setMessages] = useState(
     new SortedMap<string, MessageType>([], comparator)
   )
-  const [channel, setChannel] = useState<Channel | undefined>(undefined)
+  const [session, setSession] = useState<Session | undefined>(undefined)
   //const [myPubKey] = useLocalState("user/publicKey", "")
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
@@ -74,33 +74,33 @@ const Chat = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
   useEffect(() => {
-    const fetchChannel = async () => {
+    const fetchSession = async () => {
       if (id) {
-        const fetchedChannel = await getChannel(id)
-        setChannel(fetchedChannel)
+        const fetchedSession = await getSession(id)
+        setSession(fetchedSession)
       }
     }
 
-    fetchChannel()
+    fetchSession()
   }, [id])
 
   const saveState = () => {
     id &&
-      channel &&
+      session &&
       localState
-        .get("channels")
+        .get("sessions")
         .get(id)
         .get("state")
-        .put(serializeChannelState(channel.state))
+        .put(serializeSessionState(session.state))
   }
 
   useEffect(() => {
-    if (!(id && channel)) {
+    if (!(id && session)) {
       return
     }
     setMessages(new SortedMap<string, MessageType>([], comparator))
     const unsub1 = localState
-      .get("channels")
+      .get("sessions")
       .get(id)
       .get("messages")
       .forEach((message, path) => {
@@ -127,7 +127,7 @@ const Chat = () => {
     return () => {
       unsub1()
     }
-  }, [channel])
+  }, [session])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView()
@@ -158,16 +158,16 @@ const Chat = () => {
 
   useEffect(() => {
     if (!id) return
-    localState.get("channels").get(id).get("lastSeen").put(Date.now())
+    localState.get("sessions").get(id).get("lastSeen").put(Date.now())
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        localState.get("channels").get(id).get("lastSeen").put(Date.now())
+        localState.get("sessions").get(id).get("lastSeen").put(Date.now())
       }
     }
 
     const handleFocus = () => {
-      localState.get("channels").get(id).get("lastSeen").put(Date.now())
+      localState.get("sessions").get(id).get("lastSeen").put(Date.now())
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
@@ -185,17 +185,17 @@ const Chat = () => {
     if (id && confirm("Delete this chat?")) {
       // TODO: delete properly, maybe needs irisdb support.
       // also somehow make sure chatlinks dont respawn it
-      localState.get("channels").get(id).get("state").put(null)
-      localState.get("channels").get(id).get("deleted").put(true)
+      localState.get("sessions").get(id).get("state").put(null)
+      localState.get("sessions").get(id).get("deleted").put(true)
       // put null to each message. at least the content is removed
       for (const [messageId] of messages) {
-        localState.get("channels").get(id).get("messages").get(messageId).put(null)
+        localState.get("sessions").get(id).get("messages").get(messageId).put(null)
       }
       navigate("/messages")
     }
   }
 
-  if (!id || !channel) {
+  if (!id || !session) {
     return null
   }
 
@@ -283,7 +283,7 @@ const Chat = () => {
           </svg>
         </button>
       )}
-      <MessageForm channel={channel} id={id} onSubmit={saveState} />
+      <MessageForm session={session} id={id} onSubmit={saveState} />
     </>
   )
 }

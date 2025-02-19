@@ -1,4 +1,4 @@
-import {Invite, serializeChannelState} from "nostr-double-ratchet"
+import {Invite, serializeSessionState} from "nostr-double-ratchet"
 import {useNavigate, useLocation} from "react-router-dom"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {hexToBytes} from "@noble/hashes/utils"
@@ -28,7 +28,7 @@ export const acceptInvite = async (
           throw new Error("No nostr extension or private key")
         }
 
-    const {channel, event} = await invite.accept(
+    const {session, event} = await invite.accept(
       (filter, onEvent) => {
         const sub = ndk().subscribe(filter)
         sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
@@ -41,17 +41,17 @@ export const acceptInvite = async (
     // Publish the event
     NDKEventFromRawEvent(event).publish()
 
-    // Create channel ID in the same format as NewChat
-    const channelId = `${invite.inviter}:${channel.name}`
+    // Create session ID in the same format as NewChat
+    const sessionId = `${invite.inviter}:${session.name}`
 
-    // Save the channel with the new path format
+    // Save the session with the new path format
     localState
-      .get(`channels/${channelId}/state`)
-      .put(serializeChannelState(channel.state))
+      .get(`sessions/${sessionId}/state`)
+      .put(serializeSessionState(session.state))
 
     // Navigate to the new chat if navigate function is provided
     if (navigate) {
-      navigate(`/messages/${channelId}`)
+      navigate(`/messages/${sessionId}`)
     }
 
     return {success: true, inviter: invite.inviter}

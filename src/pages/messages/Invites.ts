@@ -1,4 +1,4 @@
-import {Channel, Invite, serializeChannelState} from "nostr-double-ratchet"
+import {Session, Invite, serializeSessionState} from "nostr-double-ratchet"
 import {subscribeToAuthorDMNotifications} from "@/utils/notifications"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
 import SnortApi, {Subscription} from "@/utils/SnortApi"
@@ -59,19 +59,19 @@ const listen = debounce(() => {
         const unsubscribe = inviteLink.listen(
           decrypt,
           nostrSubscribe,
-          (channel: Channel, identity?: string) => {
-            const channelId = `${identity}:${channel.name}`
+          (session: Session, identity?: string) => {
+            const sessionId = `${identity}:${session.name}`
             try {
-              subscribeToAuthorDMNotifications([channel.state.theirNostrPublicKey])
+              subscribeToAuthorDMNotifications([session.state.theirNostrPublicKey])
             } catch (e) {
               console.error("Error subscribing to author DM notifications", e)
             }
 
             localState
-              .get("channels")
-              .get(channelId)
+              .get("sessions")
+              .get(sessionId)
               .get("state")
-              .put(serializeChannelState(channel.state))
+              .put(serializeSessionState(session.state))
           }
         )
         subscriptions.set(id, unsubscribe)
@@ -96,7 +96,7 @@ const subscribeInviteNotifications = debounce(async () => {
         !Object.values(subscriptions).find(
           (sub: Subscription) =>
             sub.filter.kinds?.includes(4) &&
-            (sub.filter as any)["#p"]?.includes(link.inviterSessionPublicKey)
+            (sub.filter as any)["#p"]?.includes(link.inviterEphemeralPublicKey)
         )
     )
 
@@ -119,7 +119,7 @@ const subscribeInviteNotifications = debounce(async () => {
             "#p": [
               ...new Set([
                 ...((sub.filter as any)["#p"] || []),
-                ...missing.map((l) => l.inviterSessionPublicKey),
+                ...missing.map((l) => l.inviterEphemeralPublicKey),
               ]),
             ],
           },
@@ -127,7 +127,7 @@ const subscribeInviteNotifications = debounce(async () => {
       } else {
         await new SnortApi().createSubscription({
           kinds: [4],
-          "#p": missing.map((l) => l.inviterSessionPublicKey),
+          "#p": missing.map((l) => l.inviterEphemeralPublicKey),
         })
       }
     }
