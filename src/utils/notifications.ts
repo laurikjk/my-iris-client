@@ -168,6 +168,8 @@ export const subscribeToAuthorDMNotifications = debounce(async () => {
           "#p": inviteAuthors,
         },
         web_push_subscriptions: [webPushData],
+        webhooks: [],
+        subscriber: dmSubscription[1].subscriber,
       })
     }
   } else {

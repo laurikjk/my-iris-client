@@ -1,5 +1,9 @@
+import {
+  Session,
+  deserializeSessionState,
+  serializeSessionState,
+} from "nostr-double-ratchet"
 import {showNotification, subscribeToAuthorDMNotifications} from "@/utils/notifications"
-import {Session, deserializeSessionState} from "nostr-double-ratchet"
 import {Filter, VerifiedEvent} from "nostr-tools"
 import {profileCache} from "@/utils/memcache"
 import AnimalName from "@/utils/AnimalName"
@@ -43,11 +47,16 @@ export function loadSessions() {
     for (const [id, data] of Object.entries(sessionData || {})) {
       if (sessions.has(id)) continue
       if (data) {
-        const sessionId = id.split("/").pop()!
-        const session = await getSession(sessionId)
+        const session = await getSession(id)
         if (!session?.onMessage) continue
 
         session.onMessage(async (msg) => {
+          // important to save the updated channel state
+          localState
+            .get("sessions")
+            .get(id)
+            .get("state")
+            .put(serializeSessionState(session.state))
           const message: MessageType = {
             id: msg.id,
             sender: id.split(":").shift()!,

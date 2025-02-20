@@ -62,7 +62,7 @@ export default class IrisAPI {
     })
   }
 
-  updateSubscription(id: string, subscription: Partial<Subscription>) {
+  updateSubscription(id: string, subscription: Subscription) {
     return this.#getJsonAuthd<void>(`subscriptions/${id}`, "POST", subscription)
   }
 
