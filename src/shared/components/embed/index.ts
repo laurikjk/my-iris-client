@@ -26,7 +26,6 @@ import Image from "./images/Image.tsx"
 import Video from "./video/Video.tsx"
 import Nip19 from "./nostr/Nip19.tsx"
 import Hashtag from "./Hashtag.tsx"
-import Twitter from "./Twitter.tsx"
 import Audio from "./Audio.tsx"
 import Url from "./Url.tsx"
 
@@ -50,7 +49,6 @@ export const allEmbeds = [
   HlsVideo,
   YouTube,
   Instagram,
-  Twitter,
   SoundCloud,
   SpotifyTrack,
   SpotifyAlbum,
@@ -80,7 +78,6 @@ export const mediaEmbeds = [
   HlsVideo,
   YouTube,
   Instagram,
-  Twitter,
   SoundCloud,
   SpotifyTrack,
   SpotifyAlbum,
