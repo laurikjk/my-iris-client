@@ -1,5 +1,5 @@
-import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import {Outlet, useLocation, useNavigate, useNavigationType} from "react-router-dom"
+import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import NavSideBar from "@/shared/components/NavSideBar.tsx"
 import Header from "@/shared/components/header/Header.tsx"
