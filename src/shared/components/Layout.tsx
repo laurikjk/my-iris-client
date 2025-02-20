@@ -1,5 +1,5 @@
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
-import {Outlet, useLocation, useNavigate} from "react-router-dom"
+import {Outlet, useLocation, useNavigate, useNavigationType} from "react-router-dom"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import NavSideBar from "@/shared/components/NavSideBar.tsx"
 import Header from "@/shared/components/header/Header.tsx"
@@ -30,6 +30,7 @@ const Layout = () => {
     false
   )
   const navigate = useNavigate()
+  const navigationType = useNavigationType()
   const location = useLocation()
 
   useInviteFromUrl()
@@ -43,6 +44,10 @@ const Layout = () => {
   }, [navigate, goToNotifications])
 
   useEffect(() => {
+    if (navigationType === "PUSH") {
+      window.scrollTo(0, 0)
+    }
+
     const isMessagesRoute = location.pathname.startsWith("/messages/")
     const isSearchRoute = location.pathname.startsWith("/search/")
     if (
@@ -53,7 +58,7 @@ const Layout = () => {
     ) {
       trackEvent("pageview")
     }
-  }, [location])
+  }, [location, navigationType])
 
   useEffect(() => {
     const handleServiceWorkerMessage = (event: MessageEvent<ServiceWorkerMessage>) => {
