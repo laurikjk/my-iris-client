@@ -2,6 +2,7 @@ import {useEffect, useRef, useState} from "react"
 import classNames from "classnames"
 import {localState} from "irisdb"
 
+import {generateProxyUrl} from "@/shared/utils/imgproxy"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 interface VideoComponentProps {
@@ -69,7 +70,7 @@ function VideoComponent({match, event}: VideoComponentProps) {
         autoPlay
         playsInline
         loop
-        poster={`https://imgproxy.iris.to/thumbnail/638/${match}`}
+        poster={generateProxyUrl(match, {height: 638})}
       ></video>
     </div>
   )
