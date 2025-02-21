@@ -103,7 +103,6 @@ export async function maybeShowPushNotification(event: NDKEvent) {
 }
 
 export const subscribeToAuthorDMNotifications = debounce(async () => {
-  // Get push subscription from service worker
   const reg = await navigator.serviceWorker.ready
   const pushSubscription = await reg.pushManager.getSubscription()
 
@@ -112,8 +111,7 @@ export const subscribeToAuthorDMNotifications = debounce(async () => {
     return
   }
 
-  // TODO actually these should be added to #p filter
-  const inviteAuthors = Array.from(getInvites().values())
+  const inviteRecipients = Array.from(getInvites().values())
     .map((i) => i.inviterEphemeralPublicKey)
     .filter((a) => typeof a === "string") as string[]
 
@@ -121,15 +119,8 @@ export const subscribeToAuthorDMNotifications = debounce(async () => {
     .map((s) => s?.state.theirNostrPublicKey)
     .filter((a) => typeof a === "string") as string[]
 
-  console.log("inviteAuthors", ...inviteAuthors)
+  console.log("inviteRecipients", ...inviteRecipients)
   console.log("sessionAuthors", ...sessionAuthors)
-
-  const authors = [...inviteAuthors, ...sessionAuthors]
-  console.log("Subscribing to DM notifications for authors:", authors)
-
-  const api = new IrisAPI()
-  const currentSubscriptions = await api.getSubscriptions()
-  console.log("Current subscriptions:", currentSubscriptions)
 
   const webPushData = {
     endpoint: pushSubscription.endpoint,
@@ -137,49 +128,83 @@ export const subscribeToAuthorDMNotifications = debounce(async () => {
     auth: base64.encode(new Uint8Array(pushSubscription.getKey("auth")!)),
   }
 
-  // Find existing DM subscription with matching endpoint
-  const dmSubscription = Object.entries(currentSubscriptions).find(
-    ([, sub]) =>
-      sub.filter.kinds?.length === 1 &&
-      sub.filter.kinds[0] === 4 &&
-      (sub.web_push_subscriptions || []).some(
-        (sub) => sub.endpoint === webPushData.endpoint
-      )
-  )
-  console.log("Found DM subscription:", dmSubscription)
+  const api = new IrisAPI()
+  const currentSubscriptions = await api.getSubscriptions()
 
-  if (dmSubscription) {
-    const [id, sub] = dmSubscription
-    const existingAuthors = sub.filter.authors || []
-    console.log("Existing authors:", existingAuthors)
-    console.log("Authors to add:", authors)
-
-    const newAuthors = sessionAuthors.filter(
-      (author) => !existingAuthors.includes(author)
+  // Create/update subscription for session authors
+  if (sessionAuthors.length > 0) {
+    const sessionSub = Object.entries(currentSubscriptions).find(
+      ([, sub]) =>
+        sub.filter.kinds?.length === 1 &&
+        sub.filter.kinds[0] === 4 &&
+        sub.filter.authors && // Look for subscription with authors filter
+        (sub.web_push_subscriptions || []).some(
+          (sub) => sub.endpoint === webPushData.endpoint
+        )
     )
-    console.log("New authors to add:", newAuthors)
 
-    if (newAuthors.length > 0 || existingAuthors.length !== sessionAuthors.length) {
-      console.log("Updating subscription with new authors")
-      await api.updateSubscription(id, {
-        filter: {
-          kinds: [4],
-          authors: sessionAuthors,
-          "#p": inviteAuthors,
-        },
-        web_push_subscriptions: [webPushData],
-        webhooks: [],
-        subscriber: dmSubscription[1].subscriber,
+    if (sessionSub) {
+      const [id, sub] = sessionSub
+      const existingAuthors = sub.filter.authors || []
+      if (!arrayEqual(existingAuthors, sessionAuthors)) {
+        await api.updateSubscription(id, {
+          filter: {
+            kinds: [4],
+            authors: sessionAuthors,
+          },
+          web_push_subscriptions: [webPushData],
+          webhooks: [],
+          subscriber: sub.subscriber,
+        })
+      }
+    } else {
+      await api.registerPushNotifications([webPushData], {
+        kinds: [4],
+        authors: sessionAuthors,
       })
     }
-  } else {
-    console.log("Creating new DM subscription")
-    await api.registerPushNotifications([webPushData], {
-      kinds: [4],
-      authors,
-    })
+  }
+
+  // Create/update subscription for invite authors
+  if (inviteRecipients.length > 0) {
+    const inviteSub = Object.entries(currentSubscriptions).find(
+      ([, sub]) =>
+        sub.filter.kinds?.length === 1 &&
+        sub.filter.kinds[0] === 4 &&
+        sub.filter["#p"] && // Look for subscription with #p tags
+        !sub.filter.authors && // but no authors filter
+        (sub.web_push_subscriptions || []).some(
+          (sub) => sub.endpoint === webPushData.endpoint
+        )
+    )
+
+    if (inviteSub) {
+      const [id, sub] = inviteSub
+      const existinginviteRecipients = sub.filter["#p"] || []
+      if (!arrayEqual(existinginviteRecipients, inviteRecipients)) {
+        await api.updateSubscription(id, {
+          filter: {
+            kinds: [4],
+            "#p": inviteRecipients,
+          },
+          web_push_subscriptions: [webPushData],
+          webhooks: [],
+          subscriber: sub.subscriber,
+        })
+      }
+    } else {
+      await api.registerPushNotifications([webPushData], {
+        kinds: [4],
+        "#p": inviteRecipients,
+      })
+    }
   }
 }, 5000)
+
+// Helper function to compare arrays
+function arrayEqual(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((val, idx) => b[idx] === val)
+}
 
 export async function subscribeToNotifications() {
   if (!CONFIG.features.pushNotifications) {
