@@ -21,7 +21,7 @@ const NewChat = () => {
   const labelInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (Object.keys(getSessions()).length === 0) {
+    if (getSessions().size === 0) {
       navigate("/messages/new", {replace: true})
     }
 
