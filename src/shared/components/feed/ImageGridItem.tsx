@@ -4,6 +4,7 @@ import {nip19} from "nostr-tools"
 
 import imageEmbed from "@/shared/components/embed/images/Image"
 import Video from "@/shared/components/embed/video/Video"
+import {generateProxyUrl} from "@/shared/utils/imgproxy"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {MutableRefObject} from "react"
 import {localState} from "irisdb"
@@ -43,7 +44,7 @@ export const ImageGridItem = ({
 
   return urls.map((url, i) => {
     const isVideo = !imageMatch
-    const proxyUrl = isVideo ? `https://imgproxy.iris.to/thumbnail/638/${url}` : url
+    const proxyUrl = isVideo ? generateProxyUrl(url, {width: 638}) : url
 
     const shouldBlur =
       blurNSFW &&

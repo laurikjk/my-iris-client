@@ -3,6 +3,7 @@ import {PROFILE_AVATAR_WIDTH, EVENT_AVATAR_WIDTH} from "./shared/components/user
 import {CacheFirst, StaleWhileRevalidate} from "workbox-strategies"
 import {CacheableResponsePlugin} from "workbox-cacheable-response"
 import {precacheAndRoute, PrecacheEntry} from "workbox-precaching"
+import {generateProxyUrl} from "./shared/utils/imgproxy"
 import {ExpirationPlugin} from "workbox-expiration"
 import {registerRoute} from "workbox-routing"
 import {clientsClaim} from "workbox-core"
@@ -204,7 +205,7 @@ self.addEventListener("push", async (e) => {
 
   if (data) {
     const icon = data.icon?.startsWith("http")
-      ? `https://imgproxy.iris.to/insecure/rs:fill:128:128/plain/${data.icon}`
+      ? generateProxyUrl(data.icon, {width: 128, square: true})
       : data.icon
 
     await self.registration.showNotification(data.title, {

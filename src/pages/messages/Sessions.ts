@@ -4,6 +4,7 @@ import {
   serializeSessionState,
 } from "nostr-double-ratchet"
 import {showNotification, subscribeToAuthorDMNotifications} from "@/utils/notifications"
+import {generateProxyUrl} from "@/shared/utils/imgproxy"
 import {Filter, VerifiedEvent} from "nostr-tools"
 import {profileCache} from "@/utils/memcache"
 import {JsonObject, localState} from "irisdb"
@@ -114,7 +115,7 @@ export function loadSessions() {
             showNotification(String(name), {
               body: msg.data.length > 100 ? msg.data.slice(0, 100) + "..." : msg.data,
               icon: profile?.picture
-                ? `https://imgproxy.iris.to/insecure/rs:fill:128:128/plain/${profile.picture}`
+                ? generateProxyUrl(String(profile.picture), {width: 128, square: true})
                 : "/favicon.png",
               data: {url: `/messages/${id}`},
             })

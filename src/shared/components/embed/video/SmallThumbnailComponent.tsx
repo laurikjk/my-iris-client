@@ -1,3 +1,4 @@
+import {generateProxyUrl} from "../../../utils/imgproxy"
 import {RiVideoLine} from "@remixicon/react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useState, MouseEvent} from "react"
@@ -40,7 +41,7 @@ function SmallThumbnailComponent({match, event}: SmallThumbnailComponentProps) {
           onClick={onClick}
           onError={() => setError(true)}
           className={classNames("rounded w-24 h-24", {"blur-xl": blur})}
-          src={`https://imgproxy.iris.to/thumbnail/192/${match}`}
+          src={generateProxyUrl(match, {width: 192})}
           alt="thumbnail"
         />
       )}
