@@ -64,11 +64,20 @@ export function loadSessions() {
             time: msg.time,
           }
           localState.get("sessions").get(id).get("messages").get(msg.id).put(message)
-          const latest = await localState
-            .get("sessions")
-            .get(id)
-            .get("latest")
-            .once(undefined, true)
+          let latest
+          try {
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("Timeout")), 100)
+            )
+            latest = await Promise.race([
+              // TODO: apparently irisdb return if undefined is not working here, so we need to do this
+              localState.get("sessions").get(id).get("latest").once(),
+              timeoutPromise,
+            ])
+          } catch (e) {
+            latest = undefined
+          }
+
           if (
             !latest ||
             !(latest as JsonObject).time ||
