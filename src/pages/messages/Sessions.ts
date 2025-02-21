@@ -6,9 +6,9 @@ import {
 import {showNotification, subscribeToAuthorDMNotifications} from "@/utils/notifications"
 import {Filter, VerifiedEvent} from "nostr-tools"
 import {profileCache} from "@/utils/memcache"
+import {JsonObject, localState} from "irisdb"
 import AnimalName from "@/utils/AnimalName"
 import {MessageType} from "./Message"
-import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
 
 const sessions = new Map<string, Session | undefined>()
@@ -64,7 +64,18 @@ export function loadSessions() {
             time: msg.time,
           }
           localState.get("sessions").get(id).get("messages").get(msg.id).put(message)
-          localState.get("sessions").get(id).get("latest").put(message)
+          const latest = await localState
+            .get("sessions")
+            .get(id)
+            .get("latest")
+            .once(undefined, true)
+          if (
+            !latest ||
+            !(latest as JsonObject).time ||
+            Number((latest as JsonObject).time) < msg.time
+          ) {
+            localState.get("sessions").get(id).get("latest").put(message)
+          }
 
           // If visible, update lastSeen. If not, show notification.
           if (
