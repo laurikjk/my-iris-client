@@ -7,6 +7,7 @@ import {nip19, VerifiedEvent} from "nostr-tools"
 import {hexToBytes} from "@noble/hashes/utils"
 import {useNavigate} from "react-router-dom"
 import {useLocalState} from "irisdb-hooks"
+import {getSessions} from "./Sessions"
 import {getInvites} from "./Invites"
 import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
@@ -20,10 +21,14 @@ const NewChat = () => {
   const labelInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    if (Object.keys(getSessions()).length === 0) {
+      navigate("/messages/new", {replace: true})
+    }
+
     return localState.get("invites").on(() => {
       setInvites(getInvites())
     })
-  }, [])
+  }, [navigate])
 
   const createInvite = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
