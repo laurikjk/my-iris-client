@@ -117,7 +117,7 @@ export function loadSessions() {
               icon: profile?.picture
                 ? generateProxyUrl(String(profile.picture), {width: 128, square: true})
                 : "/favicon.png",
-              data: {url: `/messages/${id}`},
+              data: {url: `/messages`}, // TODO add session id state param
             })
           }
         })
