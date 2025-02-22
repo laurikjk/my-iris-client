@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import {PROFILE_AVATAR_WIDTH, EVENT_AVATAR_WIDTH} from "./shared/components/user/const"
+import {INVITE_EVENT_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet"
 import {CacheFirst, StaleWhileRevalidate} from "workbox-strategies"
 import {CacheableResponsePlugin} from "workbox-cacheable-response"
 import {precacheAndRoute, PrecacheEntry} from "workbox-precaching"
@@ -201,7 +202,24 @@ self.addEventListener("notificationclick", (event) => {
 
 self.addEventListener("push", async (e) => {
   const data = e.data?.json() as PushData | undefined
-  console.debug(data)
+  console.debug("Received web push data:", data)
+
+  const clients = await self.clients.matchAll({type: "window", includeUncontrolled: true})
+  if (clients.length > 0) {
+    console.debug("Page is visible, ignoring web push")
+    return
+  }
+
+  if (
+    data?.event.kind &&
+    [INVITE_EVENT_KIND, MESSAGE_EVENT_KIND].includes(data?.event.kind)
+  ) {
+    await self.registration.showNotification("New private message", {
+      icon: "/favicon.png",
+      data: {url: "/messages"},
+    })
+    return
+  }
 
   if (data) {
     const icon = data.icon?.startsWith("http")
