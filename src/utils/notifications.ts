@@ -116,7 +116,10 @@ export const subscribeToAuthorDMNotifications = debounce(async () => {
     .filter((a) => typeof a === "string") as string[]
 
   const sessionAuthors = Array.from(getSessions().values())
-    .map((s) => s?.state.theirNostrPublicKey)
+    .flatMap((s) => [
+      s?.state.theirCurrentNostrPublicKey,
+      s?.state.theirNextNostrPublicKey,
+    ])
     .filter((a) => typeof a === "string") as string[]
 
   console.log("inviteRecipients", ...inviteRecipients)
