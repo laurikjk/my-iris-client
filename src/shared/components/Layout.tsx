@@ -80,6 +80,9 @@ const Layout = () => {
   }, [navigate])
 
   useEffect(() => {
+    // clear potential push notifications when the app is opened
+    clearNotifications()
+
     const handleVisibilityChange = async () => {
       if (document.visibilityState === "visible") {
         await clearNotifications()
