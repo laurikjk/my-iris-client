@@ -13,12 +13,12 @@ function Backup() {
         {myPrivateKey && (
           <div>
             <p>Backup your Nostr key</p>
-            <small>Copy and securely store your private key.</small>
+            <small>Copy and securely store your secret key.</small>
             <div className="mt-2">
               <CopyButton
                 className="btn btn-primary"
                 copyStr={nip19.nsecEncode(hexToBytes(myPrivateKey))}
-                text="Copy private key"
+                text="Copy secret key"
               />
             </div>
           </div>
