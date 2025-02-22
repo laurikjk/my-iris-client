@@ -39,8 +39,8 @@ const NotificationPrompt = () => {
   if (!showPrompt) return null
 
   return (
-    <div className="w-full bg-neutral text-neutral-content p-4 flex justify-between items-center select-none">
-      <span>Enable push notifications to stay updated?</span>
+    <div className="w-full bg-neutral text-neutral-content p-4 flex justify-between items-center select-none flex-col md:flex-row gap-4">
+      <span>Enable push notifications?</span>
       <div>
         <button className="btn btn-primary mr-2" onClick={handleEnableNotifications}>
           Enable

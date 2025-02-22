@@ -11,6 +11,7 @@ import {getSessions} from "./Sessions"
 import {getInvites} from "./Invites"
 import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
+import NotificationPrompt from "../home/feed/components/NotificationPrompt"
 
 const NewChat = () => {
   const navigate = useNavigate()
@@ -99,6 +100,7 @@ const NewChat = () => {
 
   return (
     <>
+      <NotificationPrompt />
       <div className="m-4 p-4 md:p-8 rounded-lg bg-base-100 flex flex-col gap-6">
         <div>
           <h2 className="text-xl font-semibold mb-4">Have someone&apos;s invite link?</h2>
