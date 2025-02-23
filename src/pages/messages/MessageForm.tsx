@@ -62,8 +62,8 @@ const MessageForm = ({session, id}: MessageFormProps) => {
   }
 
   return (
-    <footer className="p-4 border-t border-custom sticky bottom-0 bg-base-200">
-      <form onSubmit={handleSubmit} className="flex space-x-2">
+    <footer className="border-t border-custom fixed md:sticky bottom-0 w-full pb-[env(safe-area-inset-bottom)] bg-base-200">
+      <form onSubmit={handleSubmit} className="flex space-x-2 p-4">
         <input
           ref={inputRef}
           type="text"
