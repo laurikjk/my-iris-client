@@ -40,6 +40,7 @@ type Embed = {
   regex: RegExp
   component: (props: EmbedProps) => ReactNode
   settingsKey?: string
+  inline?: boolean
 }
 
 export const allEmbeds = [

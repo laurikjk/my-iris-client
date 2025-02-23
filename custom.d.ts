@@ -9,7 +9,6 @@ declare const CONFIG: {
   icon: string
   navLogo: string
   defaultTheme: string
-  defaultNotesTheme: string
   navItems: string[]
   aboutText: string
   repository: string

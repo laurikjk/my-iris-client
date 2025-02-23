@@ -17,7 +17,7 @@ function Highlight({event}: HighlightProps) {
   }, [event])
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 px-4">
       {event.content && (
         <div className="border-l-4 p-2 border-purple-500">
           <HyperText event={event}>{event.content}</HyperText>

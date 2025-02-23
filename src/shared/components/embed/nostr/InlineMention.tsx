@@ -12,7 +12,7 @@ const fail = (s: string) => `#[${s}]`
 
 const InlineMention: Embed = {
   regex: /#\[([0-9]+)]/g,
-  component: ({match, index, event}) => {
+  component: ({match, index, event, key}) => {
     if (!event?.tags) {
       console.warn("no tags", event)
       return <>{fail(match)}</>
@@ -31,19 +31,22 @@ const InlineMention: Embed = {
       )
     } else if (type === "e") {
       return (
-        <FeedItem
-          asEmbed={true}
-          eventId={id}
-          key={id}
-          showActions={false}
-          showRepliedTo={false}
-        />
+        <div className="px-4" key={key}>
+          <FeedItem
+            asEmbed={true}
+            eventId={id}
+            key={id}
+            showActions={false}
+            showRepliedTo={false}
+          />
+        </div>
       )
     } else {
       console.warn("unknown tag type in InlineMention", type, index, event)
       return <>{fail(match)}</>
     }
   },
+  inline: true,
 }
 
 export default InlineMention

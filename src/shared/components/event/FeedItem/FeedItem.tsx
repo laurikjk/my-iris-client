@@ -16,7 +16,6 @@ import {Link, useNavigate} from "react-router-dom"
 import FeedItemHeader from "./FeedItemHeader.tsx"
 import FeedItemTitle from "./FeedItemTitle.tsx"
 import RezapHeader from "../RezapHeader.tsx"
-import {useLocalState} from "irisdb-hooks"
 import LikeHeader from "../LikeHeader"
 import {nip19} from "nostr-tools"
 
@@ -64,7 +63,6 @@ function FeedItem({
   const [referredEvent, setReferredEvent] = useState<NDKEvent>(
     eventsByIdCache.get(eventIdHex)
   )
-  const [notesTheme] = useLocalState("user/notesTheme", CONFIG.defaultNotesTheme)
 
   if (!event && !eventId)
     throw new Error("FeedItem requires either an event or an eventId")
@@ -168,10 +166,8 @@ function FeedItem({
       <div
         ref={feedItemRef}
         className={classNames(
-          "flex flex-col border-custom px-4 transition-colors duration-200 ease-in-out relative",
+          "flex flex-col border-custom pt-3 pb-0 transition-colors duration-200 ease-in-out relative",
           {
-            "pt-3 pb-0": notesTheme === "iris",
-            "pt-5 pb-16 hover:relative": notesTheme === "nestr",
             "cursor-pointer": !standalone,
             "border-b": !asRepliedTo && !asEmbed,
             "border-t": !asReply && borderTop,
@@ -187,13 +183,13 @@ function FeedItem({
           <div className="h-full w-0.5 bg-base-300 absolute top-12 left-9" />
         )}
         {(event.kind === 6 || event.kind === 9372 || isRezap(event)) && (
-          <div className="flex flex-row select-none mb-2">
+          <div className="flex flex-row select-none mb-2 px-4">
             {(event.kind === 6 || event.kind === 9372) && <RepostHeader event={event} />}
             {isRezap(event) && <RezapHeader event={event} />}
           </div>
         )}
         {event.kind === 7 && (
-          <div className="flex flex-row select-none mb-2">
+          <div className="flex flex-row select-none mb-2 px-4">
             <LikeHeader event={event} />
           </div>
         )}
@@ -214,7 +210,7 @@ function FeedItem({
             </div>
           </div>
         </div>
-        <div className={classNames({"pl-10": asReply || asRepliedTo})}>
+        <div className={classNames("px-4", {"pl-6": asReply || asRepliedTo})}>
           {showActions && <FeedItemActions event={referredEvent || event} />}
         </div>
       </div>

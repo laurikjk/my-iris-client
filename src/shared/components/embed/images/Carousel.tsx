@@ -117,7 +117,7 @@ function Carousel({images, event}: CarouselProps) {
   return (
     <div
       {...handlers} // Add swipe handlers here
-      className={`relative w-full h-96 max-h-screen my-2 flex flex-col items-${images.length > 1 ? "center" : "start"}`}
+      className={`relative w-full my-2 flex flex-col items-center`}
     >
       <ImageComponent
         match={images[currentIndex]}

@@ -1,4 +1,4 @@
-import {MouseEvent, ReactNode, useState, Fragment, memo} from "react"
+import {MouseEvent, ReactNode, useState, memo} from "react"
 import reactStringReplace from "react-string-replace"
 import {localState, JsonObject} from "irisdb"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -41,17 +41,13 @@ const HyperText = memo(
 
     embeds.forEach((embed) => {
       if (settings?.[embed.settingsKey || ""] === false) return
-      processedChildren = reactStringReplace(
-        processedChildren,
-        embed.regex,
-        (match, i) => {
-          return embed.component({
-            match,
-            index: i,
-            event,
-            key: `${embed.settingsKey}-${match}-${i}`,
-          })
-        }
+      processedChildren = reactStringReplace(processedChildren, embed.regex, (match, i) =>
+        embed.component({
+          match,
+          index: i,
+          event,
+          key: `${embed.settingsKey}-${i}${embed.inline ? "-inline" : ""}`,
+        })
       )
     })
 
@@ -102,14 +98,48 @@ const HyperText = memo(
 
     processedChildren = processedChildren.map((x, index) => {
       if (x === "" && index > 0) x = " "
-      return (
-        <Fragment key={`processed-${index}`}>{x}</Fragment> // Ensure each element has a unique key
-      )
+      return x
     })
+
+    // Group consecutive inline elements and strings
+    const groupedChildren: ReactNode[] = []
+    let currentGroup: ReactNode[] = []
+
+    processedChildren.forEach((child) => {
+      const isInline =
+        typeof child === "string" ||
+        (child &&
+          typeof child === "object" &&
+          "key" in child &&
+          child.key?.includes("-inline"))
+
+      if (isInline) {
+        currentGroup.push(child)
+      } else {
+        if (currentGroup.length > 0) {
+          groupedChildren.push(
+            <div key={`group-${groupedChildren.length}`} className="px-4">
+              {currentGroup}
+            </div>
+          )
+          currentGroup = []
+        }
+        groupedChildren.push(child)
+      }
+    })
+
+    // Add any remaining group
+    if (currentGroup.length > 0) {
+      groupedChildren.push(
+        <div key={`group-${groupedChildren.length}`} className="px-4">
+          {currentGroup}
+        </div>
+      )
+    }
 
     const result = (
       <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
-        {processedChildren}
+        {groupedChildren}
       </div>
     )
 

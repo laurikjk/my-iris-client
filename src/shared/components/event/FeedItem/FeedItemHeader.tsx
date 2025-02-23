@@ -73,7 +73,9 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
   }, [dropdownRef, dropdownIconRef])
 
   return (
-    <header className={classNames("flex justify-between items-center", {"mb-2": !tight})}>
+    <header
+      className={classNames("flex justify-between items-center px-4", {"mb-2": !tight})}
+    >
       {!isRezap && (
         <div className="cursor-pointer font-bold">
           <UserRow

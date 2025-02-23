@@ -4,18 +4,8 @@ import {ChangeEvent} from "react"
 function AppearanceSettings() {
   const [theme, setTheme] = useLocalState("user/theme", CONFIG.defaultTheme, String)
 
-  const [notesTheme, setNotesTheme] = useLocalState(
-    "user/notesTheme",
-    CONFIG.defaultNotesTheme,
-    String
-  )
-
   function handleThemeChange(e: ChangeEvent<HTMLSelectElement>) {
     setTheme(e.target.value)
-  }
-
-  function handleNotesThemeChange(e: ChangeEvent<HTMLSelectElement>) {
-    setNotesTheme(e.target.value)
   }
 
   return (
@@ -34,19 +24,6 @@ function AppearanceSettings() {
               <option value="dark">Dark</option>
               <option value="iris">Iris</option>
               <option value="system">System</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <p>Notes</p>
-          <div className="mt-2">
-            <select
-              className="select select-primary"
-              value={notesTheme}
-              onChange={handleNotesThemeChange}
-            >
-              <option value="nestr">Nestr</option>
-              <option value="iris">Iris</option>
             </select>
           </div>
         </div>

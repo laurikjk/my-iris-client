@@ -38,29 +38,33 @@ function Naddr({naddr, data}: {naddr: string; data: nip19.AddressPointer}) {
 
 const NostrUser: Embed = {
   regex: /\bnostr:(n(?:event|profile|addr)1\w+)\b/g,
-  component: ({match}) => {
+  component: ({match, key}) => {
     try {
       const {type, data} = nip19.decode(match)
       if (type === "nprofile") {
         return (
-          <>
-            <Link className="link link-info" to={`/${nip19.npubEncode(data.pubkey)}`}>
-              <Name pubKey={data.pubkey} />
-            </Link>
-          </>
+          <Link
+            key={key}
+            className="link link-info"
+            to={`/${nip19.npubEncode(data.pubkey)}`}
+          >
+            <Name pubKey={data.pubkey} />
+          </Link>
         )
       } else if (type === "nevent") {
         // same as note
         const authorHints = data.author ? [data.author] : undefined
         return (
-          <FeedItem
-            eventId={data.id}
-            key={data.id}
-            authorHints={authorHints}
-            showActions={false}
-            showRepliedTo={false}
-            asEmbed={true}
-          />
+          <div className="px-4">
+            <FeedItem
+              eventId={data.id}
+              key={data.id}
+              authorHints={authorHints}
+              showActions={false}
+              showRepliedTo={false}
+              asEmbed={true}
+            />
+          </div>
         )
       } else if (type === "naddr") {
         return <Naddr data={data} naddr={match} />
@@ -70,6 +74,7 @@ const NostrUser: Embed = {
     }
     return <span>{match}</span>
   },
+  inline: true,
 }
 
 export default NostrUser

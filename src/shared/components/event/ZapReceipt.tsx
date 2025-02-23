@@ -22,7 +22,7 @@ function ZapReceipt({event}: ZapReceiptProps) {
 
   return (
     <div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 px-4">
         <p className="">Zapped {zappedAmount} sats to</p>
         <UserRow pubKey={event.tagValue("p") || ""} avatarWidth={30} />
       </div>

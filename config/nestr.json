@@ -6,7 +6,6 @@
   "icon": "/img/icon128.png",
   "navLogo": "/nestr-logo-no-name.png",
   "defaultTheme": "dark",
-  "defaultNotesTheme": "nestr",
   "navItems": [
     "home",
     "search",

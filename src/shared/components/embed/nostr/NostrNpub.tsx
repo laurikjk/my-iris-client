@@ -7,14 +7,15 @@ const pubKeyRegex =
 
 const NostrNpub: Embed = {
   regex: pubKeyRegex,
-  component: ({match}) => {
+  component: ({match, key}) => {
     const pub = match.replace("@", "")
     return (
-      <Link to={`/${pub}`} className="link link-info">
+      <Link key={key} to={`/${pub}`} className="link link-info">
         <Name pubKey={pub} className="inline" />
       </Link>
     )
   },
+  inline: true,
 }
 
 export default NostrNpub

@@ -5,7 +5,7 @@ interface YoutubeComponentProps {
 function YoutubeComponent({match}: YoutubeComponentProps) {
   return (
     <iframe
-      className="max-w-full rounded-sm"
+      className="w-full"
       width="650"
       height="400"
       src={`https://youtube.com/embed/${match}`}
