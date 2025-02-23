@@ -6,6 +6,7 @@ import NotificationButton from "@/shared/components/header/NotificationButton.ts
 import {MOBILE_BREAKPOINT} from "@/shared/components/user/const.ts"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {useLocalState} from "irisdb-hooks"
+import {Avatar} from "../user/Avatar"
 
 export default function Header() {
   const [myPubKey] = useLocalState("user/publicKey", "", String)
@@ -114,6 +115,7 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  const showAvatar = myPubKey && location.pathname === "/"
   const isChatRoute = location.pathname === "/messages/chat"
   const chatId = location.state?.id
   const chatUserPubkey = chatId?.split(":").shift()
@@ -138,7 +140,11 @@ export default function Header() {
               }}
               className="md:hidden btn btn-ghost btn-circle"
             >
-              <RiMenuLine className="w-6 h-6" />
+              {showAvatar ? (
+                <Avatar pubKey={myPubKey} width={32} showBadge={false} />
+              ) : (
+                <RiMenuLine className="w-6 h-6" />
+              )}
             </button>
             <div className="flex items-center gap-4">
               {isChatRoute && chatUserPubkey ? (
