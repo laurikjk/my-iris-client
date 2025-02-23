@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from "react"
+import {useEffect, useMemo, useState} from "react"
 
 import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
 import {useHoverCard} from "@/shared/components/user/useHoverCard"
@@ -54,14 +54,7 @@ export const Avatar = ({
     setImage("")
   }
 
-  const {hoverProps, showCard} = useHoverCard(showHoverCard) as {
-    hoverProps: {
-      onMouseEnter: () => void
-      onMouseLeave: () => void
-      onClick: (e: React.MouseEvent<HTMLDivElement>) => void
-    }
-    showCard: boolean
-  }
+  const {hoverProps, showCard} = useHoverCard(showHoverCard)
 
   return (
     <div
