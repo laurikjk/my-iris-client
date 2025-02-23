@@ -1,9 +1,11 @@
 import RelativeTime from "@/shared/components/event/RelativeTime"
 import {Avatar} from "@/shared/components/user/Avatar"
 import {NavLink, useLocation} from "react-router-dom"
+import {getMillisecondTimestamp} from "@/utils/utils"
 import {Name} from "@/shared/components/user/Name"
 import {useLocalState} from "irisdb-hooks"
 import {useEffect, useState} from "react"
+import {MessageType} from "./Message"
 import classNames from "classnames"
 import {localState} from "irisdb"
 
@@ -24,10 +26,7 @@ const ChatListItem = ({id}: {id: string}) => {
     // TODO irisdb should have subscriptions work without this
     localState.get(`sessions/${id}`).get("latest").put({})
   }, [])
-  const [latest] = useLocalState(
-    `sessions/${id}/latest`,
-    {} as {content: string; time: number}
-  )
+  const [latest] = useLocalState(`sessions/${id}/latest`, {} as MessageType)
   const [lastSeen, setLastSeen] = useLocalState(`sessions/${id}/lastSeen`, 0)
   const [deleted] = useLocalState(`sessions/${id}/deleted`, false)
   if (deleted) return null
@@ -49,9 +48,9 @@ const ChatListItem = ({id}: {id: string}) => {
             <span className="text-base font-semibold">
               <Name pubKey={pubKey} />
             </span>
-            {latest?.time && (
+            {latest?.created_at && (
               <span className="text-sm text-base-content/70 ml-2">
-                <RelativeTime from={latest.time} />
+                <RelativeTime from={getMillisecondTimestamp(latest)} />
               </span>
             )}
           </div>
@@ -59,7 +58,7 @@ const ChatListItem = ({id}: {id: string}) => {
             <span className="text-sm text-base-content/70 min-h-[1.25rem]">
               {latest?.content?.slice(0, 30)}
             </span>
-            {latest?.time && (!lastSeen || latest.time > lastSeen) && (
+            {latest?.created_at && (!lastSeen || latest.created_at > lastSeen) && (
               <div className="indicator-item badge badge-primary badge-xs"></div>
             )}
           </div>

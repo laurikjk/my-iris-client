@@ -4,6 +4,7 @@ import {useEffect, useMemo, useState, useRef} from "react"
 import {UserRow} from "@/shared/components/user/UserRow"
 import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
+import {getMillisecondTimestamp} from "@/utils/utils"
 import Message, {MessageType} from "./Message"
 import {useNavigate} from "react-router-dom"
 import {RiMoreLine} from "@remixicon/react"
@@ -12,7 +13,7 @@ import {getSession} from "./Sessions"
 import {localState} from "irisdb"
 
 const comparator = (a: [string, MessageType], b: [string, MessageType]) =>
-  a[1].time - b[1].time
+  getMillisecondTimestamp(a[1]) - getMillisecondTimestamp(b[1])
 
 const groupingThreshold = 60 * 1000 // 60 seconds = 1 minute
 
@@ -25,7 +26,7 @@ const groupMessages = (
   let lastDate: string | null = null
 
   for (const [, message] of messages) {
-    const messageDate = new Date(message.time).toDateString()
+    const messageDate = new Date(getMillisecondTimestamp(message)).toDateString()
 
     if (lastDate !== messageDate) {
       if (currentGroup.length > 0) {
@@ -38,7 +39,8 @@ const groupMessages = (
         currentGroup.push(message)
       } else {
         const lastMessage = currentGroup[currentGroup.length - 1]
-        const timeDiff = message.time - lastMessage.time
+        const timeDiff =
+          getMillisecondTimestamp(message) - getMillisecondTimestamp(lastMessage)
         const isSameSender = message.sender === lastMessage.sender
 
         if (isSameSender && timeDiff <= timeThreshold) {
@@ -102,15 +104,15 @@ const Chat = ({id}: {id: string}) => {
     const unsub1 = localState
       .get("sessions")
       .get(id)
-      .get("messages")
-      .forEach((message, path) => {
+      .get("events")
+      .forEach((event, path) => {
         const split = path.split("/")
         const id = split[split.length - 1]
-        if (message && typeof message === "object" && message !== null) {
-          if (!haveReply && (message as MessageType).sender !== "user") {
+        if (event && typeof event === "object" && event !== null) {
+          if (!haveReply && (event as MessageType).sender !== "user") {
             setHaveReply(true)
           }
-          if (!haveSent && (message as MessageType).sender === "user") {
+          if (!haveSent && (event as MessageType).sender === "user") {
             setHaveSent(true)
           }
           setMessages((prev) => {
@@ -118,7 +120,7 @@ const Chat = ({id}: {id: string}) => {
               return prev
             }
             const newMessages = new SortedMap(prev, comparator)
-            newMessages.set(id as string, message as MessageType)
+            newMessages.set(id as string, event as MessageType)
             return newMessages
           })
         }
@@ -187,7 +189,7 @@ const Chat = ({id}: {id: string}) => {
       localState.get("sessions").get(id).get("deleted").put(true)
       // put null to each message. at least the content is removed
       for (const [messageId] of messages) {
-        localState.get("sessions").get(id).get("messages").get(messageId).put(null)
+        localState.get("sessions").get(id).get("events").get(messageId).put(null)
       }
       navigate("/messages")
     }
@@ -240,9 +242,13 @@ const Chat = ({id}: {id: string}) => {
         )}
           */}
         {messageGroups.map((group, index) => {
-          const groupDate = new Date(group[0].time).toDateString()
+          const groupDate = new Date(getMillisecondTimestamp(group[0])).toDateString()
           const prevGroupDate =
-            index > 0 ? new Date(messageGroups[index - 1][0].time).toDateString() : null
+            index > 0
+              ? new Date(
+                  getMillisecondTimestamp(messageGroups[index - 1][0])
+                ).toDateString()
+              : null
 
           return (
             <div key={index} className="mb-6">

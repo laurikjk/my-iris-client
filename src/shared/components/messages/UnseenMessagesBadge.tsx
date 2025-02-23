@@ -1,10 +1,9 @@
+import {getMillisecondTimestamp, Rumor} from "nostr-double-ratchet"
 import {useState, useEffect, useMemo} from "react"
 import {localState} from "irisdb"
 
 interface Session {
-  latest?: {
-    time: number
-  }
+  latest?: Rumor
   lastSeen?: number
 }
 
@@ -25,7 +24,7 @@ export default function UnseenMessagesBadge() {
 
   const hasUnread = useMemo(() => {
     return Object.values(sessions).some((session) => {
-      const latest = session?.latest?.time
+      const latest = session?.latest ? getMillisecondTimestamp(session.latest) : 0
       const lastSeen = session?.lastSeen || 0
       return latest && latest > lastSeen
     })

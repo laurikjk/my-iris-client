@@ -9,7 +9,6 @@ import {Filter, VerifiedEvent} from "nostr-tools"
 import {profileCache} from "@/utils/memcache"
 import {JsonObject, localState} from "irisdb"
 import AnimalName from "@/utils/AnimalName"
-import {MessageType} from "./Message"
 import {ndk} from "@/utils/ndk"
 
 const sessions = new Map<string, Session | undefined>()
@@ -49,22 +48,16 @@ export function loadSessions() {
       if (sessions.has(id)) continue
       if (data) {
         const session = await getSession(id)
-        if (!session?.onMessage) continue
+        if (!session?.onEvent) continue
 
-        session.onMessage(async (msg) => {
+        session.onEvent(async (event) => {
           // important to save the updated channel state
           localState
             .get("sessions")
             .get(id)
             .get("state")
             .put(serializeSessionState(session.state))
-          const message: MessageType = {
-            id: msg.id,
-            sender: id.split(":").shift()!,
-            content: msg.data,
-            time: msg.time,
-          }
-          localState.get("sessions").get(id).get("messages").get(msg.id).put(message)
+          localState.get("sessions").get(id).get("events").get(event.id).put(event)
           let latest
           try {
             const timeoutPromise = new Promise((_, reject) =>
@@ -81,19 +74,20 @@ export function loadSessions() {
 
           if (
             !latest ||
-            !(latest as JsonObject).time ||
-            Number((latest as JsonObject).time) < msg.time
+            !(latest as JsonObject).created_at ||
+            Number((latest as JsonObject).time) < event.created_at
           ) {
-            localState.get("sessions").get(id).get("latest").put(message)
+            localState.get("sessions").get(id).get("latest").put(event)
           }
 
           // If visible, update lastSeen. If not, show notification.
           if (
-            window.location.pathname.includes(`/messages/${id}`) &&
+            window.location.pathname.includes(`/messages`) &&
+            window.history.state?.id === id && // TODO this is always false. figure out how to check it.
             document.visibilityState !== "visible"
           ) {
             localState.get("sessions").get(id).get("lastSeen").put(Date.now())
-          } else if (msg.time > openedAt) {
+          } else if (event.created_at * 1000 > openedAt) {
             const sender = id.split(":").shift()!
             let profile = profileCache.get(sender)
             if (!profile) {
@@ -113,7 +107,10 @@ export function loadSessions() {
               profile?.nip05?.split("@")[0] ||
               (sender && AnimalName(sender))
             showNotification(String(name), {
-              body: msg.data.length > 100 ? msg.data.slice(0, 100) + "..." : msg.data,
+              body:
+                event.content.length > 100
+                  ? event.content.slice(0, 100) + "..."
+                  : event.content,
               icon: profile?.picture
                 ? generateProxyUrl(String(profile.picture), {width: 128, square: true})
                 : "/favicon.png",

@@ -40,19 +40,17 @@ const MessageForm = ({session, id, onSubmit}: MessageFormProps) => {
     const text = newMessage.trim()
     if (text) {
       const time = Date.now()
-      const event = session.send(text)
+      const {event, innerEvent} = session.send(text)
       const ndkEvent = NDKEventFromRawEvent(event)
       ndkEvent
         .publish()
         .then(() => {})
         .catch((e) => console.error(e))
       const message: MessageType = {
-        id: event.id,
+        ...innerEvent,
         sender: "user",
-        content: text,
-        time,
       }
-      localState.get("sessions").get(id).get("messages").get(event.id).put(message)
+      localState.get("sessions").get(id).get("events").get(event.id).put(message)
       localState.get("sessions").get(id).get("latest").put(message)
       localState.get("sessions").get(id).get("lastSeen").put(time)
       setNewMessage("")

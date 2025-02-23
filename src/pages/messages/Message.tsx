@@ -1,10 +1,8 @@
+import {Rumor} from "nostr-double-ratchet"
 import classNames from "classnames"
 
-export type MessageType = {
-  id: string
-  sender: string
-  content: string
-  time: number
+export type MessageType = Rumor & {
+  sender?: "user"
 }
 
 type MessageProps = {

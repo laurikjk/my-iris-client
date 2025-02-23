@@ -8,6 +8,7 @@ import {profileCache} from "@/utils/memcache"
 import {base64} from "@scure/base"
 import IrisAPI from "./IrisAPI"
 import {debounce} from "lodash"
+import { INVITE_EVENT_KIND, MESSAGE_EVENT_KIND } from "nostr-double-ratchet"
 
 interface ReactedTime {
   time: number
@@ -139,7 +140,7 @@ export const subscribeToAuthorDMNotifications = debounce(async () => {
     const sessionSub = Object.entries(currentSubscriptions).find(
       ([, sub]) =>
         sub.filter.kinds?.length === 1 &&
-        sub.filter.kinds[0] === 4 &&
+        sub.filter.kinds[0] === MESSAGE_EVENT_KIND &&
         sub.filter.authors && // Look for subscription with authors filter
         (sub.web_push_subscriptions || []).some(
           (sub) => sub.endpoint === webPushData.endpoint
@@ -152,7 +153,7 @@ export const subscribeToAuthorDMNotifications = debounce(async () => {
       if (!arrayEqual(existingAuthors, sessionAuthors)) {
         await api.updateSubscription(id, {
           filter: {
-            kinds: [4],
+            kinds: [MESSAGE_EVENT_KIND],
             authors: sessionAuthors,
           },
           web_push_subscriptions: [webPushData],
@@ -162,7 +163,7 @@ export const subscribeToAuthorDMNotifications = debounce(async () => {
       }
     } else {
       await api.registerPushNotifications([webPushData], {
-        kinds: [4],
+        kinds: [MESSAGE_EVENT_KIND],
         authors: sessionAuthors,
       })
     }
@@ -173,7 +174,7 @@ export const subscribeToAuthorDMNotifications = debounce(async () => {
     const inviteSub = Object.entries(currentSubscriptions).find(
       ([, sub]) =>
         sub.filter.kinds?.length === 1 &&
-        sub.filter.kinds[0] === 4 &&
+        sub.filter.kinds[0] === INVITE_EVENT_KIND &&
         sub.filter["#p"] && // Look for subscription with #p tags
         !sub.filter.authors && // but no authors filter
         (sub.web_push_subscriptions || []).some(
@@ -187,7 +188,7 @@ export const subscribeToAuthorDMNotifications = debounce(async () => {
       if (!arrayEqual(existinginviteRecipients, inviteRecipients)) {
         await api.updateSubscription(id, {
           filter: {
-            kinds: [4],
+            kinds: [INVITE_EVENT_KIND],
             "#p": inviteRecipients,
           },
           web_push_subscriptions: [webPushData],
@@ -197,7 +198,7 @@ export const subscribeToAuthorDMNotifications = debounce(async () => {
       }
     } else {
       await api.registerPushNotifications([webPushData], {
-        kinds: [4],
+        kinds: [INVITE_EVENT_KIND],
         "#p": inviteRecipients,
       })
     }
