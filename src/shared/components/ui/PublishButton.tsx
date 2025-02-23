@@ -1,4 +1,4 @@
-import {RiAddLine} from "@remixicon/react" // Import Plus icon from Remix Icons
+import {RiAddCircleLine} from "@remixicon/react" // Import Plus icon from Remix Icons
 import {useLocalState} from "irisdb-hooks"
 import classNames from "classnames" // Import classnames library
 import {useCallback} from "react"
@@ -23,7 +23,7 @@ function PublishButton({
     <>
       <div
         className={classNames(
-          "cursor-pointer flex flex-row items-center justify-center primary rounded-full btn-primary",
+          "cursor-pointer flex flex-row items-center justify-center primary rounded-full",
           {
             "p-4 md:p-2 aspect-auto md:aspect-square xl:aspect-auto xl:p-4": showLabel,
             "aspect-square": !showLabel,
@@ -32,7 +32,7 @@ function PublishButton({
         )}
         onClick={handlePress}
       >
-        <RiAddLine />
+        <RiAddCircleLine />
         {showLabel && <span className="ml-2 inline md:hidden xl:inline">New post</span>}
       </div>
     </>
