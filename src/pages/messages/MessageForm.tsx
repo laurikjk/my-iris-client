@@ -54,7 +54,7 @@ const MessageForm = ({session, id}: MessageFormProps) => {
         .get(id)
         .get("state")
         .put(serializeSessionState(session.state))
-      localState.get("sessions").get(id).get("events").get(event.id).put(message)
+      localState.get("sessions").get(id).get("events").get(innerEvent.id).put(message)
       localState.get("sessions").get(id).get("latest").put(message)
       localState.get("sessions").get(id).get("lastSeen").put(time)
       setNewMessage("")
