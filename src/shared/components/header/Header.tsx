@@ -1,13 +1,13 @@
-import {useEffect, useRef, useState} from "react"
-import {useLocation} from "react-router-dom"
-import {RiMenuLine} from "@remixicon/react"
+import {useEffect, useRef, useState, useCallback, MouseEvent} from "react"
+import {RiMenuLine, RiArrowLeftLine} from "@remixicon/react"
+import {useLocation, useNavigate} from "react-router-dom"
 
 import NotificationButton from "@/shared/components/header/NotificationButton.tsx"
 import {MOBILE_BREAKPOINT} from "@/shared/components/user/const.ts"
 import {UserRow} from "@/shared/components/user/UserRow"
+import ErrorBoundary from "../ui/ErrorBoundary"
 import {useLocalState} from "irisdb-hooks"
 import {Avatar} from "../user/Avatar"
-import ErrorBoundary from "../ui/ErrorBoundary"
 
 export default function Header() {
   const [myPubKey] = useLocalState("user/publicKey", "", String)
@@ -17,6 +17,8 @@ export default function Header() {
   const [isSidebarOpen, setSidebarOpen] = useLocalState("isSidebarOpen", false)
 
   const location = useLocation()
+  const isChatRoute = location.pathname === "/messages/chat"
+  const navigate = useNavigate()
   let pageName = location.pathname.split("/")[1]
 
   if (pageName.startsWith("note")) {
@@ -31,6 +33,7 @@ export default function Header() {
 
   const [title, setTitle] = useState(document.title)
   useEffect(() => {
+    // special weapons and tactics
     const timeout1 = setTimeout(() => {
       mySetTitle()
     }, 0)
@@ -78,7 +81,7 @@ export default function Header() {
     const OPACITY_MIN_POINT = 30
 
     const handleScroll = () => {
-      if (window.innerWidth >= MOBILE_BREAKPOINT) {
+      if (window.innerWidth >= MOBILE_BREAKPOINT || isChatRoute) {
         return
       }
       const currentScrollY = window.scrollY
@@ -114,12 +117,41 @@ export default function Header() {
 
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+  }, [isChatRoute])
 
   const showAvatar = myPubKey && location.pathname === "/"
-  const isChatRoute = location.pathname === "/messages/chat"
   const chatId = location.state?.id
   const chatUserPubkey = chatId?.split(":").shift()
+
+  const handleBackClick = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation()
+      if (window.history.state?.idx > 0) {
+        navigate(-1)
+      } else {
+        navigate("/messages")
+      }
+    },
+    [navigate]
+  )
+
+  const handleButtonClick = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation()
+      if (isChatRoute) {
+        handleBackClick(e)
+      } else {
+        setSidebarOpen(!isSidebarOpen)
+      }
+    },
+    [isChatRoute, handleBackClick]
+  )
+
+  const getButtonContent = () => {
+    if (showAvatar) return <Avatar pubKey={myPubKey} width={32} showBadge={false} />
+    if (isChatRoute) return <RiArrowLeftLine className="w-6 h-6" />
+    return <RiMenuLine className="w-6 h-6" />
+  }
 
   return (
     <ErrorBoundary>
@@ -135,17 +167,10 @@ export default function Header() {
           <div className="flex items-center gap-2">
             <button
               tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation()
-                setSidebarOpen(!isSidebarOpen)
-              }}
+              onClick={handleButtonClick}
               className="md:hidden btn btn-ghost btn-circle"
             >
-              {showAvatar ? (
-                <Avatar pubKey={myPubKey} width={32} showBadge={false} />
-              ) : (
-                <RiMenuLine className="w-6 h-6" />
-              )}
+              {getButtonContent()}
             </button>
             <div className="flex items-center gap-4">
               {isChatRoute && chatUserPubkey ? (

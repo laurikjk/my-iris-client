@@ -6,6 +6,7 @@ import PublishButton from "@/shared/components/ui/PublishButton"
 import Icon from "@/shared/components/Icons/Icon" // Add this import
 import NavLink from "@/shared/components/NavLink" // Adjusted import path
 import ErrorBoundary from "./ui/ErrorBoundary"
+import {useLocation} from "react-router-dom"
 import {useLocalState} from "irisdb-hooks"
 
 type MenuItem = {
@@ -21,6 +22,7 @@ type MenuItem = {
 const Footer = () => {
   const [publicKey] = useLocalState("user/publicKey", "")
   const readonly = false
+  const location = useLocation()
 
   const MENU_ITEMS: MenuItem[] = [
     {link: "/", icon: "home"},
@@ -38,6 +40,10 @@ const Footer = () => {
       loggedInOnly: true,
     },
   ]
+
+  if (location.pathname.startsWith("/messages/chat")) {
+    return null
+  }
 
   return (
     // -mb-[1px] because weird 1px gap under footer?

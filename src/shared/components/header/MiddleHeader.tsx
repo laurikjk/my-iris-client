@@ -1,6 +1,6 @@
 import {useNavigate, useLocation} from "react-router-dom"
+import {ReactNode, useCallback, MouseEvent} from "react"
 import {RiArrowLeftLine} from "@remixicon/react"
-import {ReactNode, useCallback} from "react"
 import {Helmet} from "react-helmet"
 import classNames from "classnames"
 
@@ -14,9 +14,17 @@ const MiddleHeader = ({title, children, centered = true}: MiddleHeaderProps) => 
   const navigate = useNavigate()
   const {pathname} = useLocation()
 
-  const handleBackClick = useCallback(() => {
-    navigate(-1)
-  }, [navigate])
+  const handleBackClick = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation()
+      if (window.history.state?.idx > 0) {
+        navigate(-1)
+      } else {
+        navigate("/")
+      }
+    },
+    [navigate]
+  )
 
   const handleHeaderClick = useCallback(() => {
     window.scrollTo({top: 0})
@@ -29,10 +37,7 @@ const MiddleHeader = ({title, children, centered = true}: MiddleHeaderProps) => 
     >
       <div className="mx-auto px-4 py-3 flex items-center w-full">
         <button
-          onClick={(e) => {
-            e.stopPropagation()
-            handleBackClick()
-          }}
+          onClick={handleBackClick}
           className={classNames(
             "mr-4 text-base-content hover:text-primary transition-colors",
             {
