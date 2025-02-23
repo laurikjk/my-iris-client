@@ -25,8 +25,7 @@ const Footer = () => {
     {link: "/", icon: "home"},
     {
       link: "/wallet",
-      activeIcon: "wallet",
-      inactiveIcon: "wallet",
+      icon: "wallet",
       loggedInOnly: true,
     },
     {

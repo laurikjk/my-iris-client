@@ -137,8 +137,7 @@ const navItemsConfig = (myPubKey: string): Record<string, NavItemConfig> => ({
   home: {to: "/", icon: "home", label: "Home"},
   wallet: {
     to: "/wallet",
-    activeIcon: "wallet",
-    inactiveIcon: "wallet",
+    icon: "wallet",
     label: "Wallet",
     requireLogin: true,
   },
