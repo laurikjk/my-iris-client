@@ -32,6 +32,12 @@ export default class ErrorBoundary extends React.Component<
       // Render any custom fallback UI with the error message
       return (
         <div className="p-2">
+          <button
+            onClick={() => window.location.reload()}
+            className="btn btn-primary mb-4"
+          >
+            Reload Page
+          </button>
           <h1>Something went wrong.</h1>
           <p>Error: {this.state.errorMessage}</p>
           <pre className="text-xs overflow-auto mt-8">{this.state.stack}</pre>
