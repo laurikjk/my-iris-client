@@ -1,5 +1,3 @@
-import {Rumor} from "nostr-double-ratchet"
-
 export const getLanguageFromFilename = (filename: string) => {
   const basename = filename.split("/").pop()
   const extension = filename.split(".").pop()
@@ -79,12 +77,4 @@ export const formatFileSize = (size: number): string => {
 
 export function uint8ArrayToHexString(uint8Array: Uint8Array): string {
   return Array.from(uint8Array, (byte) => byte.toString(16).padStart(2, "0")).join("")
-}
-
-export function getMillisecondTimestamp(event: Rumor) {
-  const msTag = event.tags.find((tag) => tag[0] === "ms")
-  if (msTag) {
-    return parseInt(msTag[1])
-  }
-  return event.created_at * 1000
 }

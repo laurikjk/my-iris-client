@@ -1,6 +1,8 @@
 import {
+  Rumor,
   Session,
   deserializeSessionState,
+  getMillisecondTimestamp,
   serializeSessionState,
 } from "nostr-double-ratchet"
 import {showNotification, subscribeToDMNotifications} from "@/utils/notifications"
@@ -75,7 +77,7 @@ export function loadSessions() {
           if (
             !latest ||
             !(latest as JsonObject).created_at ||
-            Number((latest as JsonObject).time) < event.created_at
+            getMillisecondTimestamp(latest as Rumor) < getMillisecondTimestamp(event)
           ) {
             localState.get("sessions").get(id).get("latest").put(event)
           }

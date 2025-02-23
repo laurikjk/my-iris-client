@@ -1,7 +1,7 @@
 import RelativeTime from "@/shared/components/event/RelativeTime"
+import {getMillisecondTimestamp} from "nostr-double-ratchet"
 import {Avatar} from "@/shared/components/user/Avatar"
 import {NavLink, useLocation} from "react-router-dom"
-import {getMillisecondTimestamp} from "@/utils/utils"
 import {Name} from "@/shared/components/user/Name"
 import {useLocalState} from "irisdb-hooks"
 import {useEffect, useState} from "react"
@@ -58,9 +58,10 @@ const ChatListItem = ({id}: {id: string}) => {
             <span className="text-sm text-base-content/70 min-h-[1.25rem]">
               {latest?.content?.slice(0, 30)}
             </span>
-            {latest?.created_at && (!lastSeen || latest.created_at > lastSeen) && (
-              <div className="indicator-item badge badge-primary badge-xs"></div>
-            )}
+            {latest?.created_at &&
+              (!lastSeen || getMillisecondTimestamp(latest) > lastSeen) && (
+                <div className="indicator-item badge badge-primary badge-xs"></div>
+              )}
           </div>
         </div>
       </div>

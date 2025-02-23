@@ -1,10 +1,13 @@
-import {Session, serializeSessionState} from "nostr-double-ratchet"
+import {
+  Session,
+  getMillisecondTimestamp,
+  serializeSessionState,
+} from "nostr-double-ratchet"
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {UserRow} from "@/shared/components/user/UserRow"
 import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {getMillisecondTimestamp} from "@/utils/utils"
 import Message, {MessageType} from "./Message"
 import {useNavigate} from "react-router-dom"
 import {RiMoreLine} from "@remixicon/react"
