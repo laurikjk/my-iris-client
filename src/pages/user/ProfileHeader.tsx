@@ -41,6 +41,9 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
   useEffect(() => {
     const followDistance = socialGraph().getFollowDistance(pubKeyHex)
     console.log("ProfileHeader followDistance:", followDistance)
+    if (followDistance === 0) {
+      return
+    }
 
     const subscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
       const sub = ndk().subscribe(filter)
