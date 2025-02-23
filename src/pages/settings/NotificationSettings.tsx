@@ -1,4 +1,8 @@
-import {showNotification, subscribeToNotifications} from "@/utils/notifications"
+import {
+  showNotification,
+  subscribeToDMNotifications,
+  subscribeToNotifications,
+} from "@/utils/notifications"
 import {useEffect, useState, ChangeEvent} from "react"
 import Icon from "@/shared/components/Icons/Icon"
 import {useLocalState} from "irisdb-hooks"
@@ -51,7 +55,7 @@ const NotificationSettings = () => {
   const trySubscribePush = async () => {
     try {
       if (allGood && !subscribedToPush) {
-        await subscribeToNotifications()
+        await Promise.all([subscribeToNotifications(), subscribeToDMNotifications()])
         setSubscribedToPush(true)
       }
     } catch (e) {

@@ -1,4 +1,4 @@
-import {Rumor} from "nostr-double-ratchet"
+import {getMillisecondTimestamp, Rumor} from "nostr-double-ratchet"
 import classNames from "classnames"
 
 export type MessageType = Rumor & {
@@ -55,7 +55,7 @@ const Message = ({message, isFirst, isLast}: MessageProps) => {
         </p>
         {isLast && (
           <p className="text-xs opacity-50 ml-2 whitespace-nowrap">
-            {message.time && formatTime(message.time)}
+            {formatTime(getMillisecondTimestamp(message))}
           </p>
         )}
       </div>

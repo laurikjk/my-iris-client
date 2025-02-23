@@ -3,7 +3,7 @@ import {
   deserializeSessionState,
   serializeSessionState,
 } from "nostr-double-ratchet"
-import {showNotification, subscribeToAuthorDMNotifications} from "@/utils/notifications"
+import {showNotification, subscribeToDMNotifications} from "@/utils/notifications"
 import {generateProxyUrl} from "@/shared/utils/imgproxy"
 import {Filter, VerifiedEvent} from "nostr-tools"
 import {profileCache} from "@/utils/memcache"
@@ -120,7 +120,7 @@ export function loadSessions() {
         })
       }
     }
-    subscribeToAuthorDMNotifications()
+    subscribeToDMNotifications()
   })
 }
 

@@ -103,7 +103,7 @@ export async function maybeShowPushNotification(event: NDKEvent) {
   })
 }
 
-export const subscribeToAuthorDMNotifications = debounce(async () => {
+export const subscribeToDMNotifications = debounce(async () => {
   const reg = await navigator.serviceWorker.ready
   const pushSubscription = await reg.pushManager.getSubscription()
 

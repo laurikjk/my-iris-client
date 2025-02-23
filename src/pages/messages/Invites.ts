@@ -1,5 +1,5 @@
 import {Session, Invite, serializeSessionState} from "nostr-double-ratchet"
-import {subscribeToAuthorDMNotifications} from "@/utils/notifications"
+import {subscribeToDMNotifications} from "@/utils/notifications"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
 import {Filter, VerifiedEvent} from "nostr-tools"
 import {hexToBytes} from "@noble/hashes/utils"
@@ -16,7 +16,7 @@ export function loadInvites(): Unsubscribe {
   invites.clear() // Clear the existing map before repopulating
 
   localState.get("invites").put({}) // Ensure the invites object exists
-  localState.get("invites").on(() => subscribeToAuthorDMNotifications())
+  localState.get("invites").on(() => subscribeToDMNotifications())
   return localState.get("invites").forEach((link, path) => {
     const id = path.split("/").pop()!
     if (link && typeof link === "string") {
@@ -101,6 +101,7 @@ localState.get("user").on(async (u) => {
       localState.get("invites").get("public").put(invite.serialize())
       publish(invite)
       console.log("Published public invite", invite)
+      subscribeToDMNotifications()
     }
   }
 })
