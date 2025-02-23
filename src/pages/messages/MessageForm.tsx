@@ -1,17 +1,16 @@
+import {serializeSessionState, Session} from "nostr-double-ratchet"
 import {FormEvent, useState, useEffect, useRef} from "react"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import Icon from "@/shared/components/Icons/Icon"
-import {Session} from "nostr-double-ratchet"
 import {MessageType} from "./Message"
 import {localState} from "irisdb"
 
 interface MessageFormProps {
   session: Session
   id: string
-  onSubmit: () => void
 }
 
-const MessageForm = ({session, id, onSubmit}: MessageFormProps) => {
+const MessageForm = ({session, id}: MessageFormProps) => {
   const [newMessage, setNewMessage] = useState("")
   const [isTouchDevice, setIsTouchDevice] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -50,12 +49,16 @@ const MessageForm = ({session, id, onSubmit}: MessageFormProps) => {
         ...innerEvent,
         sender: "user",
       }
+      localState
+        .get("sessions")
+        .get(id)
+        .get("state")
+        .put(serializeSessionState(session.state))
       localState.get("sessions").get(id).get("events").get(event.id).put(message)
       localState.get("sessions").get(id).get("latest").put(message)
       localState.get("sessions").get(id).get("lastSeen").put(time)
       setNewMessage("")
     }
-    onSubmit()
   }
 
   return (

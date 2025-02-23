@@ -61,8 +61,13 @@ const listen = debounce(() => {
         const unsubscribe = invite.listen(
           decrypt,
           nostrSubscribe,
-          (session: Session, identity?: string) => {
+          async (session: Session, identity?: string) => {
             const sessionId = `${identity}:${session.name}`
+            const existing = await localState
+              .get("sessions")
+              .get(sessionId)
+              .once(undefined, true)
+            if (existing) return
             localState
               .get("sessions")
               .get(sessionId)

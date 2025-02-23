@@ -1,8 +1,4 @@
-import {
-  Session,
-  getMillisecondTimestamp,
-  serializeSessionState,
-} from "nostr-double-ratchet"
+import {Session, getMillisecondTimestamp} from "nostr-double-ratchet"
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {UserRow} from "@/shared/components/user/UserRow"
@@ -88,16 +84,6 @@ const Chat = ({id}: {id: string}) => {
 
     fetchSession()
   }, [id])
-
-  const saveState = () => {
-    id &&
-      session &&
-      localState
-        .get("sessions")
-        .get(id)
-        .get("state")
-        .put(serializeSessionState(session.state))
-  }
 
   useEffect(() => {
     if (!(id && session)) {
@@ -290,7 +276,7 @@ const Chat = ({id}: {id: string}) => {
           </svg>
         </button>
       )}
-      <MessageForm session={session} id={id} onSubmit={saveState} />
+      <MessageForm session={session} id={id} />
     </>
   )
 }

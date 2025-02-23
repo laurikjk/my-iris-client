@@ -24,7 +24,6 @@ export default function UnseenMessagesBadge() {
 
   const hasUnread = useMemo(() => {
     return Object.values(sessions).some((session) => {
-      console.log('session', session)
       const latest = session?.latest ? getMillisecondTimestamp(session.latest) : 0
       const lastSeen = session?.lastSeen || 0
       return latest && latest > lastSeen
