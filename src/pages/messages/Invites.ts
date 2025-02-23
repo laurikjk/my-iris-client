@@ -90,7 +90,11 @@ localState.get("user").on(async (u) => {
       .get("invites")
       .get("public")
       .once(undefined, true)
-    if (publicInvite && typeof publicInvite === "string") {
+    if (
+      publicInvite &&
+      typeof publicInvite === "string" &&
+      publicInvite.includes("sharedSecret") // migration from old invites
+    ) {
       const invite = Invite.deserialize(publicInvite)
       setTimeout(() => {
         publish(invite)
