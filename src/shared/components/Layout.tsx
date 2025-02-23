@@ -113,21 +113,23 @@ const Layout = () => {
           </ErrorBoundary>
         </div>
       </div>
-      {newPostOpen && (
-        <Modal onClose={() => setNewPostOpen(!newPostOpen)} hasBackground={false}>
-          <div
-            className="w-full max-w-prose rounded-2xl bg-base-100"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <NoteCreator handleClose={() => setNewPostOpen(!newPostOpen)} />
-          </div>
-        </Modal>
-      )}
-      {showLoginDialog && (
-        <Modal onClose={() => setShowLoginDialog(false)}>
-          <LoginDialog />
-        </Modal>
-      )}
+      <ErrorBoundary>
+        {newPostOpen && (
+          <Modal onClose={() => setNewPostOpen(!newPostOpen)} hasBackground={false}>
+            <div
+              className="w-full max-w-prose rounded-2xl bg-base-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <NoteCreator handleClose={() => setNewPostOpen(!newPostOpen)} />
+            </div>
+          </Modal>
+        )}
+        {showLoginDialog && (
+          <Modal onClose={() => setShowLoginDialog(false)}>
+            <LoginDialog />
+          </Modal>
+        )}
+      </ErrorBoundary>
       <Footer /> {/* Add Footer component here */}
       <Helmet titleTemplate={`%s / ${CONFIG.appName}`} defaultTitle={CONFIG.appName}>
         <title>{CONFIG.appName}</title>

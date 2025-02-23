@@ -11,6 +11,7 @@ import NavLink from "./NavLink"
 
 import UnseenMessagesBadge from "./messages/UnseenMessagesBadge"
 import PublicKeyQRCodeButton from "./user/PublicKeyQRCodeButton"
+import ErrorBoundary from "./ui/ErrorBoundary"
 
 interface NavItemProps {
   to: string
@@ -188,7 +189,7 @@ const NavSideBar = () => {
   const logoUrl = CONFIG.navLogo
 
   return (
-    <>
+    <ErrorBoundary>
       {isSidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black opacity-50 md:hidden"
@@ -275,7 +276,7 @@ const NavSideBar = () => {
           </>
         )}
       </div>
-    </>
+    </ErrorBoundary>
   )
 }
 

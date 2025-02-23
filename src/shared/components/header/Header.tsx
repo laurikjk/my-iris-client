@@ -7,6 +7,7 @@ import {MOBILE_BREAKPOINT} from "@/shared/components/user/const.ts"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {useLocalState} from "irisdb-hooks"
 import {Avatar} from "../user/Avatar"
+import ErrorBoundary from "../ui/ErrorBoundary"
 
 export default function Header() {
   const [myPubKey] = useLocalState("user/publicKey", "", String)
@@ -121,7 +122,7 @@ export default function Header() {
   const chatUserPubkey = chatId?.split(":").shift()
 
   return (
-    <>
+    <ErrorBoundary>
       <header
         ref={headerRef}
         style={{transform: `translateY(0px)`}}
@@ -175,6 +176,6 @@ export default function Header() {
           </div>
         </div>
       </header>
-    </>
+    </ErrorBoundary>
   )
 }
