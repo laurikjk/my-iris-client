@@ -2,13 +2,21 @@ import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import PreloadImages from "@/shared/components/media/PreloadImages"
 import {useEffect, useState, MouseEvent, useCallback} from "react"
 import MediaModal from "@/shared/components/media/MediaModal"
+import HlsVideoComponent from "./HlsVideoComponent"
 import ImageComponent from "./ImageComponent"
+import VideoComponent from "./VideoComponent"
 import {useSwipeable} from "react-swipeable"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import classNames from "classnames"
 import {localState} from "irisdb"
 
+interface MediaItem {
+  url: string
+  type: "image" | "video"
+}
+
 interface CarouselProps {
-  images: string[]
+  media: MediaItem[]
   event?: NDKEvent
 }
 
@@ -20,7 +28,7 @@ localState.get("settings/blurNSFW").once((value) => {
   }
 })
 
-function Carousel({images, event}: CarouselProps) {
+function Carousel({media, event}: CarouselProps) {
   const CarouselButton = ({
     direction,
     onClick,
@@ -44,7 +52,7 @@ function Carousel({images, event}: CarouselProps) {
     images,
     currentIndex,
   }: {
-    images: string[]
+    images: MediaItem[]
     currentIndex: number
   }) => (
     <div className="flex space-x-2 mt-2">
@@ -67,12 +75,12 @@ function Carousel({images, event}: CarouselProps) {
 
   const nextImage = (e?: MouseEvent | KeyboardEvent) => {
     e?.stopPropagation()
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length)
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % media.length)
   }
 
   const prevImage = (e?: MouseEvent | KeyboardEvent) => {
     e?.stopPropagation()
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length)
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + media.length) % media.length)
   }
 
   const onClickImage = () => {
@@ -114,41 +122,85 @@ function Carousel({images, event}: CarouselProps) {
     setShowModal(false)
   }, [])
 
-  return (
-    <div
-      {...handlers} // Add swipe handlers here
-      className={`relative w-full my-2 flex flex-col items-center`}
-    >
-      <ImageComponent
-        match={images[currentIndex]}
-        index={currentIndex}
-        onClickImage={onClickImage}
+  const limitHeight = media.length > 1
+
+  const renderMediaComponent = (item: MediaItem, index: number) => {
+    if (item.type === "image") {
+      return (
+        <ImageComponent
+          match={item.url}
+          index={index}
+          onClickImage={onClickImage}
+          blur={blur}
+          key={item.url}
+          limitHeight={limitHeight}
+        />
+      )
+    }
+
+    if (item.url.endsWith(".m3u8")) {
+      return (
+        <HlsVideoComponent
+          match={item.url}
+          event={event}
+          key={item.url}
+          blur={blur}
+          onClick={() => setBlur(false)}
+          limitHeight={limitHeight}
+        />
+      )
+    }
+
+    return (
+      <VideoComponent
+        match={item.url}
+        event={event}
+        key={item.url}
         blur={blur}
-        key={images[currentIndex]}
+        onClick={() => setBlur(false)}
+        limitHeight={limitHeight}
       />
-      {images.length > 1 && (
-        <>
-          <CarouselButton direction="left" onClick={prevImage} />
-          <CarouselButton direction="right" onClick={nextImage} />
-          <ImageIndicators images={images} currentIndex={currentIndex} />
-          <PreloadImages images={images} currentIndex={currentIndex} size={600} />
-        </>
-      )}
-      {showModal && (
-        <>
-          <MediaModal
-            onClose={onCloseModal}
-            onPrev={images.length > 1 ? prevImage : undefined}
-            onNext={images.length > 1 ? nextImage : undefined}
-            mediaUrl={images[currentIndex]}
-            mediaType="image"
-            currentIndex={images.length > 1 ? currentIndex : undefined}
-            totalCount={images.length > 1 ? images.length : undefined}
-          />
-          <PreloadImages images={images} currentIndex={currentIndex} />
-        </>
-      )}
-    </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="w-full my-2 flex flex-col items-center gap-2">
+        <div
+          {...handlers}
+          className={classNames(`relative w-full flex flex-col items-center`, {
+            "h-[600px]": limitHeight,
+          })}
+        >
+          {renderMediaComponent(media[currentIndex], currentIndex)}
+          {media.length > 1 && (
+            <>
+              <CarouselButton direction="left" onClick={prevImage} />
+              <CarouselButton direction="right" onClick={nextImage} />
+              <PreloadImages
+                images={media.filter((m) => m.type === "image").map((m) => m.url)}
+                currentIndex={currentIndex}
+                size={650}
+              />
+            </>
+          )}
+          {showModal && (
+            <MediaModal
+              onClose={onCloseModal}
+              onPrev={media.length > 1 ? prevImage : undefined}
+              onNext={media.length > 1 ? nextImage : undefined}
+              mediaUrl={media[currentIndex].url}
+              mediaType={media[currentIndex].type}
+              currentIndex={media.length > 1 ? currentIndex : undefined}
+              totalCount={media.length > 1 ? media.length : undefined}
+            />
+          )}
+        </div>
+        {media.length > 1 && (
+          <ImageIndicators images={media} currentIndex={currentIndex} />
+        )}
+      </div>
+    </>
   )
 }
 

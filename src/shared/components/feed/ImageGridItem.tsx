@@ -2,8 +2,7 @@ import {useNavigate} from "react-router-dom"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {nip19} from "nostr-tools"
 
-import imageEmbed from "@/shared/components/embed/images/Image"
-import Video from "@/shared/components/embed/video/Video"
+import {IMAGE_REGEX, VIDEO_REGEX} from "../embed/media/MediaEmbed"
 import {generateProxyUrl} from "@/shared/utils/imgproxy"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {MutableRefObject} from "react"
@@ -33,8 +32,8 @@ export const ImageGridItem = ({
 }: ImageGridItemProps) => {
   const navigate = useNavigate()
 
-  const imageMatch = event.content.match(imageEmbed.regex)?.[0]
-  const videoMatch = event.content.match(Video.regex)?.[0]
+  const imageMatch = event.content.match(IMAGE_REGEX)?.[0]
+  const videoMatch = event.content.match(VIDEO_REGEX)?.[0]
 
   if (!imageMatch && !videoMatch) return null
 

@@ -1,3 +1,4 @@
+import NotificationPrompt from "../home/feed/components/NotificationPrompt"
 import {useState, useRef, useEffect, ChangeEvent, FormEvent} from "react"
 import {Invite, serializeSessionState} from "nostr-double-ratchet"
 import QRCodeButton from "@/shared/components/user/QRCodeButton"
@@ -11,7 +12,6 @@ import {getSessions} from "./Sessions"
 import {getInvites} from "./Invites"
 import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
-import NotificationPrompt from "../home/feed/components/NotificationPrompt"
 
 const NewChat = () => {
   const navigate = useNavigate()

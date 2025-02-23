@@ -7,9 +7,16 @@ interface ImageComponentProps {
   index: number
   onClickImage: () => void
   blur?: boolean
+  limitHeight?: boolean
 }
 
-const ImageComponent = ({match, index, onClickImage, blur}: ImageComponentProps) => {
+const ImageComponent = ({
+  match,
+  index,
+  onClickImage,
+  blur,
+  limitHeight,
+}: ImageComponentProps) => {
   const [hasError, setHasError] = useState(false)
 
   const onClick = (event: MouseEvent) => {
@@ -20,17 +27,21 @@ const ImageComponent = ({match, index, onClickImage, blur}: ImageComponentProps)
   return (
     <div
       key={match + index}
-      className="flex justify-center items-center md:justify-start my-2"
+      className={classNames("flex justify-center items-center md:justify-start my-2", {
+        "h-[600px]": limitHeight,
+      })}
     >
       {hasError ? (
         <div className="my-2 text-sm break-all">{match}</div>
       ) : (
         <ProxyImg
-          width={600}
+          width={650}
           onError={() => setHasError(true)}
           onClick={onClick}
-          className={classNames("my-2 max-h-[90vh] max-w-full cursor-pointer", {
+          className={classNames("my-2 max-w-full cursor-pointer object-contain", {
             "blur-md": blur,
+            "h-full max-h-[600px]": limitHeight,
+            "max-h-[90vh] lg:max-h-[600px]": !limitHeight,
           })}
           src={match}
         />

@@ -1,8 +1,7 @@
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
+import {IMAGE_REGEX, VIDEO_REGEX} from "../embed/media/MediaEmbed"
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
-import imageEmbed from "@/shared/components/embed/images/Image"
 import useHistoryState from "@/shared/hooks/useHistoryState"
-import Video from "@/shared/components/embed/video/Video"
 import PreloadImages from "../media/PreloadImages"
 import {useState, useEffect, useMemo} from "react"
 import MediaModal from "../media/MediaModal"
@@ -24,8 +23,8 @@ export default function MediaFeed({events}: MediaFeedProps) {
   const mediaEvents = useMemo(() => {
     return events.filter((event): event is NDKEvent => {
       if (!("content" in event)) return false
-      const hasImageUrl = imageEmbed.regex.test(event.content)
-      const hasVideoUrl = Video.regex.test(event.content)
+      const hasImageUrl = IMAGE_REGEX.test(event.content)
+      const hasVideoUrl = VIDEO_REGEX.test(event.content)
       return hasImageUrl || hasVideoUrl
     })
   }, [events])
@@ -37,8 +36,8 @@ export default function MediaFeed({events}: MediaFeedProps) {
     >()
 
     mediaEvents.forEach((event) => {
-      const imageMatches = event.content.match(imageEmbed.regex) || []
-      const videoMatches = event.content.match(Video.regex) || []
+      const imageMatches = event.content.match(IMAGE_REGEX) || []
+      const videoMatches = event.content.match(VIDEO_REGEX) || []
 
       const imageUrls = imageMatches.flatMap((match) =>
         match

@@ -2,23 +2,28 @@ import {useEffect, useRef, useState} from "react"
 import classNames from "classnames"
 import {localState} from "irisdb"
 
-import {generateProxyUrl} from "../../../utils/imgproxy"
+import {generateProxyUrl} from "@/shared/utils/imgproxy"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
-interface HlsVideoComponentProps {
+interface VideoComponentProps {
   match: string
   event: NDKEvent | undefined
+  limitHeight?: boolean
+  onClick?: () => void
+  blur?: boolean
 }
 
-function HlsVideoComponent({match, event}: HlsVideoComponentProps) {
-  let blurNSFW = true
-  localState.get("settings/blurNSFW").on((value) => {
-    if (typeof value === "boolean") {
-      blurNSFW = value
-    }
-  })
+let blurNSFW = true
 
+localState.get("settings/blurNSFW").once((value) => {
+  if (typeof value === "boolean") {
+    blurNSFW = value
+  }
+})
+
+function VideoComponent({match, event, limitHeight, onClick}: VideoComponentProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+
   const [blur, setBlur] = useState(
     blurNSFW &&
       (!!event?.content.toLowerCase().includes("#nsfw") ||
@@ -26,26 +31,6 @@ function HlsVideoComponent({match, event}: HlsVideoComponentProps) {
   )
 
   useEffect(() => {
-    const initHls = async () => {
-      if (videoRef.current?.canPlayType("application/vnd.apple.mpegurl")) {
-        videoRef.current.src = match
-        return
-      }
-
-      try {
-        const {default: Hls} = await import("hls.js")
-        if (Hls.isSupported() && videoRef.current) {
-          const hls = new Hls()
-          hls.loadSource(match)
-          hls.attachMedia(videoRef.current)
-        }
-      } catch (error) {
-        console.error("Failed to load HLS:", error)
-      }
-    }
-
-    initHls()
-
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
       const entry = entries[0]
       if (entry.isIntersecting) {
@@ -70,18 +55,23 @@ function HlsVideoComponent({match, event}: HlsVideoComponentProps) {
     }
   }, [match])
 
-  const onClick = () => {
-    if (blur) {
-      setBlur(false)
-    }
-  }
-
   return (
-    <div className="relative w-full object-contain my-2 h-96">
+    <div className="relative w-full justify-center flex object-contain my-2">
       <video
-        onClick={onClick}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (blur) {
+            setBlur(false)
+          }
+          onClick?.()
+        }}
         ref={videoRef}
-        className={classNames("rounded max-h-[70vh] h-96 w-auto", {"blur-xl": blur})}
+        className={classNames("max-w-full object-contain", {
+          "blur-xl": blur,
+          "h-full max-h-[600px]": limitHeight,
+          "max-h-[90vh] lg:max-h-[600px]": !limitHeight,
+        })}
+        src={match}
         controls
         muted
         autoPlay
@@ -93,4 +83,4 @@ function HlsVideoComponent({match, event}: HlsVideoComponentProps) {
   )
 }
 
-export default HlsVideoComponent
+export default VideoComponent
