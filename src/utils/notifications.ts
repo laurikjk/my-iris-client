@@ -1,3 +1,4 @@
+import {INVITE_EVENT_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet"
 import {NDKTag, NDKEvent, NDKUser} from "@nostr-dev-kit/ndk"
 import {getSessions} from "@/pages/messages/Sessions"
 import {getZapAmount, getZappingUser} from "./nostr"
@@ -8,7 +9,6 @@ import {profileCache} from "@/utils/memcache"
 import {base64} from "@scure/base"
 import IrisAPI from "./IrisAPI"
 import {debounce} from "lodash"
-import { INVITE_EVENT_KIND, MESSAGE_EVENT_KIND } from "nostr-double-ratchet"
 
 interface ReactedTime {
   time: number
@@ -284,4 +284,34 @@ export const clearNotifications = async () => {
       notifications.forEach((notification) => notification.close())
     }
   }
+}
+
+export const unsubscribeAll = async () => {
+  if (!("serviceWorker" in navigator)) {
+    return
+  }
+
+  const reg = await navigator.serviceWorker.ready
+  const pushSubscription = await reg.pushManager.getSubscription()
+
+  if (!pushSubscription) {
+    return
+  }
+
+  const api = new IrisAPI()
+  const currentSubscriptions = await api.getSubscriptions()
+
+  // Delete all matching subscriptions simultaneously
+  const deletePromises = Object.entries(currentSubscriptions)
+    .filter(([, sub]) =>
+      (sub.web_push_subscriptions || []).some(
+        (s) => s.endpoint === pushSubscription.endpoint
+      )
+    )
+    .map(([id]) => api.deleteSubscription(id))
+
+  await Promise.all(deletePromises)
+
+  // Unsubscribe from push notifications at the browser level
+  await pushSubscription.unsubscribe()
 }

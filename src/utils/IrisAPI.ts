@@ -66,6 +66,10 @@ export default class IrisAPI {
     return this.#getJsonAuthd<void>(`subscriptions/${id}`, "POST", subscription)
   }
 
+  deleteSubscription(id: string) {
+    return this.#getJsonAuthd<void>(`subscriptions/${id}`, "DELETE")
+  }
+
   async #getJsonAuthd<T>(
     path: string,
     method?: "GET" | string,

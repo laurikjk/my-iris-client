@@ -1,3 +1,4 @@
+import {unsubscribeAll} from "@/utils/notifications"
 import {useNavigate} from "react-router-dom"
 import {useLocalState} from "irisdb-hooks"
 import {DEFAULT_RELAYS} from "@/utils/ndk"
@@ -13,13 +14,18 @@ function Account() {
   const [, setNip07Login] = useLocalState("user/nip07Login", false)
   const navigate = useNavigate()
 
-  function handleLogout(e: MouseEvent) {
+  async function handleLogout(e: MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     if (
       !privateKey ||
       confirm("Log out? Make sure you have a backup of your secret key.")
     ) {
+      try {
+        await unsubscribeAll()
+      } catch (e) {
+        console.error("Error unsubscribing from push notifications:", e)
+      }
       setPublicKey("")
       setPrivateKey("")
       setDHTPublicKey("")

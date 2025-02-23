@@ -30,7 +30,7 @@ function Settings() {
           path: "/settings/profile",
         },
         {
-          icon: "wallet",
+          icon: "wallet-outline",
           iconBg: "bg-emerald-500",
           message: "Wallet",
           path: "/settings/wallet",
