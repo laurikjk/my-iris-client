@@ -105,8 +105,8 @@ localState.get("user").on(async (u) => {
       localState.get("invites").get("public").put(invite.serialize())
       publish(invite)
       console.log("Published public invite", invite)
-      subscribeToDMNotifications()
     }
+    subscribeToDMNotifications()
   }
 })
 
