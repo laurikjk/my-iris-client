@@ -1,5 +1,5 @@
-import NotificationPrompt from "../home/feed/components/NotificationPrompt"
 import {useState, useRef, useEffect, ChangeEvent, FormEvent} from "react"
+import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import {Invite, serializeSessionState} from "nostr-double-ratchet"
 import QRCodeButton from "@/shared/components/user/QRCodeButton"
 import {acceptInvite} from "@/shared/hooks/useInviteFromUrl"
@@ -12,6 +12,7 @@ import {getSessions} from "./Sessions"
 import {getInvites} from "./Invites"
 import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
+import InstallPWAPrompt from "@/shared/components/InstallPWAPrompt"
 
 const NewChat = () => {
   const navigate = useNavigate()
@@ -185,6 +186,7 @@ const NewChat = () => {
           Chat history is stored locally on this device and cleared when you log out.
         </p>
       </div>
+      <InstallPWAPrompt />
     </>
   )
 }
