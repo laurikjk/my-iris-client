@@ -27,7 +27,7 @@ export function loadInvites(): Unsubscribe {
           listen()
         }
       } catch (e) {
-        console.error(e)
+        console.error("Failed to deserialize invite:", e)
       }
     }
   })
@@ -42,41 +42,46 @@ const nostrSubscribe = (filter: Filter, onEvent: (e: VerifiedEvent) => void) => 
 }
 
 const listen = debounce(() => {
-  if (user?.publicKey) {
-    for (const id of invites.keys()) {
-      if (!subscriptions.has(id)) {
-        const invite = invites.get(id)!
-        const decrypt = user.privateKey
-          ? hexToBytes(user.privateKey)
-          : async (cipherText: string, pubkey: string) => {
-              if (window.nostr?.nip44) {
+  if (!user?.publicKey) return
+
+  for (const id of invites.keys()) {
+    if (!subscriptions.has(id)) {
+      const invite = invites.get(id)!
+      const decrypt = user.privateKey
+        ? hexToBytes(user.privateKey)
+        : async (cipherText: string, pubkey: string) => {
+            if (window.nostr?.nip44) {
+              try {
                 const result = await window.nostr.nip44.decrypt(pubkey, cipherText)
                 if (!result || typeof result !== "string") {
                   throw new Error("Failed to decrypt")
                 }
                 return result
+              } catch (error) {
+                console.error("NIP-44 decryption failed:", error)
+                throw new Error("Failed to decrypt message")
               }
-              throw new Error("No nostr extension or private key")
             }
-        const unsubscribe = invite.listen(
-          decrypt,
-          nostrSubscribe,
-          async (session: Session, identity?: string) => {
-            const sessionId = `${identity}:${session.name}`
-            const existing = await localState
-              .get("sessions")
-              .get(sessionId)
-              .once(undefined, true)
-            if (existing) return
-            localState
-              .get("sessions")
-              .get(sessionId)
-              .get("state")
-              .put(serializeSessionState(session.state))
+            throw new Error("No nostr extension or private key")
           }
-        )
-        subscriptions.set(id, unsubscribe)
-      }
+      const unsubscribe = invite.listen(
+        decrypt,
+        nostrSubscribe,
+        async (session: Session, identity?: string) => {
+          const sessionId = `${identity}:${session.name}`
+          const existing = await localState
+            .get("sessions")
+            .get(sessionId)
+            .once(undefined, true)
+          if (existing) return
+          localState
+            .get("sessions")
+            .get(sessionId)
+            .get("state")
+            .put(serializeSessionState(session.state))
+        }
+      )
+      subscriptions.set(id, unsubscribe)
     }
   }
 }, 100)
@@ -116,25 +121,40 @@ async function maybeCreateInvite(
   type: "Public" | "Private",
   shouldPublish: boolean
 ) {
+  if (!user?.publicKey) {
+    console.error("Cannot create invite: user public key is missing")
+    return
+  }
+
   if (
     existingInvite &&
     typeof existingInvite === "string" &&
     existingInvite.includes("sharedSecret")
   ) {
-    const invite = Invite.deserialize(existingInvite)
-    if (shouldPublish) {
-      setTimeout(() => {
-        publish(invite)
-      }, 1000)
+    console.log(`Found existing ${type} invite`)
+    try {
+      const invite = Invite.deserialize(existingInvite)
+      if (shouldPublish) {
+        setTimeout(() => {
+          publish(invite)
+        }, 1000)
+      }
+    } catch (error) {
+      console.error(`Failed to deserialize existing ${type} invite:`, error)
+      createNewInvite(type, shouldPublish)
     }
   } else {
-    console.log(`Creating ${type} invite`)
-    const invite = Invite.createNew(user!.publicKey!, `${type} Invite`)
-    localState.get("invites").get(type).put(invite.serialize())
-    if (shouldPublish) {
-      publish(invite)
-      console.log(`Published ${type} invite`, invite)
-    }
+    createNewInvite(type, shouldPublish)
+  }
+}
+
+function createNewInvite(type: "Public" | "Private", shouldPublish: boolean) {
+  console.log(`Creating ${type} invite`)
+  const invite = Invite.createNew(user!.publicKey!, `${type} Invite`)
+  localState.get("invites").get(type.toLowerCase()).put(invite.serialize())
+  if (shouldPublish) {
+    publish(invite)
+    console.log(`Published ${type} invite`)
   }
 }
 
