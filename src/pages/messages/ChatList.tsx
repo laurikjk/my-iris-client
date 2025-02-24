@@ -29,6 +29,8 @@ const ChatListItem = ({id}: {id: string}) => {
   const [latest] = useLocalState(`sessions/${id}/latest`, {} as MessageType)
   const [lastSeen, setLastSeen] = useLocalState(`sessions/${id}/lastSeen`, 0)
   const [deleted] = useLocalState(`sessions/${id}/deleted`, false)
+  const previewText =
+    latest?.content?.length > 30 ? latest.content.slice(0, 30) + "..." : latest.content
   if (deleted) return null
   return (
     <NavLink
@@ -56,7 +58,7 @@ const ChatListItem = ({id}: {id: string}) => {
           </div>
           <div className="flex flex-row items-center justify-between gap-2">
             <span className="text-sm text-base-content/70 min-h-[1.25rem]">
-              {latest?.content?.slice(0, 30)}
+              {previewText}
             </span>
             {latest?.created_at &&
               (!lastSeen || getMillisecondTimestamp(latest) > lastSeen) && (
