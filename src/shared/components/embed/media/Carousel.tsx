@@ -168,9 +168,12 @@ function Carousel({media, event}: CarouselProps) {
       <div className="w-full my-2 flex flex-col items-center gap-2">
         <div
           {...handlers}
-          className={classNames(`relative w-full flex flex-col items-center`, {
-            "h-[600px]": limitHeight,
-          })}
+          className={classNames(
+            `relative w-full flex flex-col items-center justify-center`,
+            {
+              "h-[600px]": limitHeight,
+            }
+          )}
         >
           {renderMediaComponent(media[currentIndex], currentIndex)}
           {media.length > 1 && (
