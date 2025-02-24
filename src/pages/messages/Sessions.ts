@@ -53,6 +53,7 @@ export function loadSessions() {
       const session = await getSession(id)
       if (!session?.onEvent) continue
 
+      // TODO called twice?
       session.onEvent(async (event) => {
         handleNewSessionEvent(id, session, event)
       })

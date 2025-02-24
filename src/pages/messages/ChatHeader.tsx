@@ -3,6 +3,7 @@ import {RiMoreLine, RiAttachment2} from "@remixicon/react"
 import {UserRow} from "@/shared/components/user/UserRow"
 import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
+import PeerConnection from "./webrtc/PeerConnection"
 import {Session} from "nostr-double-ratchet"
 import {useNavigate} from "react-router-dom"
 import {useEffect, useState} from "react"
@@ -38,16 +39,9 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
     // TODO: Implement file sending functionality
     console.log("Send file clicked")
     if (session) {
-      import("./webrtc/PeerConnection")
-        .then((module) => {
-          const PeerConnection = module.default
-          const peerConnection = new PeerConnection(session)
-          peerConnection.connect()
-          console.log("peerConnection", peerConnection)
-        })
-        .catch((error) => {
-          console.error("Error loading PeerConnection module:", error)
-        })
+      const peerConnection = new PeerConnection(session)
+      peerConnection.connect()
+      console.log("peerConnection", peerConnection)
     }
   }
 
@@ -69,13 +63,15 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
       <div className="flex items-center justify-between w-full">
         <div>{id && <UserRow avatarWidth={32} pubKey={user} />}</div>
         <div className="flex items-center gap-2 relative">
-          <button
-            onClick={handleSendFile}
-            className="btn btn-ghost btn-sm btn-circle"
-            title="Send file"
-          >
-            <RiAttachment2 className="h-5 w-5 cursor-pointer text-base-content/50" />
-          </button>
+          {window.location.hostname === "localhost" && (
+            <button
+              onClick={handleSendFile}
+              className="btn btn-ghost btn-sm btn-circle"
+              title="Send file"
+            >
+              <RiAttachment2 className="h-5 w-5 cursor-pointer text-base-content/50" />
+            </button>
+          )}
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="btn btn-ghost btn-sm btn-circle"

@@ -8,7 +8,14 @@ const log = debug("webrtc:connection")
 
 const connections = new Map<string, PeerConnection>()
 export function getPeerConnection(session: Session, peerId: string) {
-  if (!connections.has(peerId)) {
+  const isLocalhost =
+    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+
+  if (
+    isLocalhost &&
+    !connections.has(peerId) &&
+    confirm(`WebRTC connect with ${peerId}?`)
+  ) {
     const connection = new PeerConnection(session, peerId)
     connections.set(peerId, connection)
     return connection
