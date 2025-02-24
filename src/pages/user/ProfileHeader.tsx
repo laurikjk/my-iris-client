@@ -19,7 +19,6 @@ import useProfile from "@/shared/hooks/useProfile.ts"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import Icon from "@/shared/components/Icons/Icon"
 import {Filter, VerifiedEvent} from "nostr-tools"
-import socialGraph from "@/utils/socialGraph.ts"
 import {Invite} from "nostr-double-ratchet"
 import {Helmet} from "react-helmet"
 import {ndk} from "@/utils/ndk"
@@ -39,9 +38,7 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const followDistance = socialGraph().getFollowDistance(pubKeyHex)
-    console.log("ProfileHeader followDistance:", followDistance)
-    if (followDistance === 0) {
+    if (myPubKey === pubKeyHex) {
       return
     }
 
@@ -52,7 +49,7 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
     }
     const unsub = Invite.fromUser(pubKeyHex, subscribe, (invite) => setInvite(invite))
     return unsub
-  }, [pubKeyHex])
+  }, [myPubKey, pubKeyHex])
 
   return (
     <>
