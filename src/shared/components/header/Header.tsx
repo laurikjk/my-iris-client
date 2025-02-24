@@ -18,6 +18,8 @@ export default function Header() {
 
   const location = useLocation()
   const isChatRoute = location.pathname === "/messages/chat"
+  const isThread = location.pathname.startsWith("/note")
+  const isProfile = location.pathname.startsWith("/npub")
   const navigate = useNavigate()
   let pageName = location.pathname.split("/")[1]
 
@@ -119,7 +121,7 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [isChatRoute])
 
-  const showAvatar = myPubKey && location.pathname === "/"
+  const showBackArrow = isChatRoute || isThread || isProfile
   const chatId = location.state?.id
   const chatUserPubkey = chatId?.split(":").shift()
 
@@ -138,19 +140,22 @@ export default function Header() {
   const handleButtonClick = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation()
-      if (isChatRoute) {
+      if (showBackArrow) {
         handleBackClick(e)
       } else {
         setSidebarOpen(!isSidebarOpen)
       }
     },
-    [isChatRoute, handleBackClick]
+    [showBackArrow, handleBackClick]
   )
 
   const getButtonContent = () => {
-    if (showAvatar) return <Avatar pubKey={myPubKey} width={32} showBadge={false} />
-    if (isChatRoute) return <RiArrowLeftLine className="w-6 h-6" />
-    return <RiMenuLine className="w-6 h-6" />
+    if (showBackArrow) return <RiArrowLeftLine className="w-6 h-6" />
+    return myPubKey ? (
+      <Avatar pubKey={myPubKey} width={32} showBadge={false} />
+    ) : (
+      <RiMenuLine className="w-6 h-6" />
+    )
   }
 
   return (
