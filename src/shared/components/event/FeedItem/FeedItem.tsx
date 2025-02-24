@@ -210,7 +210,7 @@ function FeedItem({
             </div>
           </div>
         </div>
-        <div className={classNames("px-4", {"pl-6": asReply || asRepliedTo})}>
+        <div className={classNames("px-4", {"pl-14": asRepliedTo})}>
           {showActions && <FeedItemActions event={referredEvent || event} />}
         </div>
       </div>
