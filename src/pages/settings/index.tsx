@@ -54,12 +54,6 @@ function Settings() {
           path: "/settings/appearance",
         },
         {
-          icon: "media",
-          iconBg: "bg-blue-500",
-          message: "Media Servers",
-          path: "/settings/mediaservers",
-        },
-        {
           icon: "hard-drive",
           iconBg: "bg-yellow-500",
           message: "Content",
@@ -87,6 +81,12 @@ function Settings() {
           iconBg: "bg-blue-500",
           message: "Network",
           path: "/settings/network",
+        },
+        {
+          icon: "media",
+          iconBg: "bg-blue-500",
+          message: "Media Servers",
+          path: "/settings/mediaservers",
         },
         {
           icon: "key",

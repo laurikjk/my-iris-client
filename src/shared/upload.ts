@@ -1,13 +1,13 @@
 import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {ndk} from "@/utils/ndk"
 import {localState} from "irisdb"
+import {ndk} from "@/utils/ndk"
 
 function getMediaServerUrl(): Promise<string> {
   return new Promise((resolve) => {
     localState.get("user/mediaserver").once((v) => {
       resolve((v as string) || "https://nostr.build/api/v2/nip96/upload")
-    })
+    }, true)
   })
 }
 
