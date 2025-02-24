@@ -39,10 +39,7 @@ export default function SignUp({onClose}: SignUpProps) {
     }
   }
 
-  function handleSubmit(force = false) {
-    if (!newUserName && !force) {
-      return
-    }
+  function handleSubmit(ctrlPressed = false) {
     ndk()
     const sk = generateSecretKey()
     const pk = getPublicKey(sk)
@@ -54,15 +51,18 @@ export default function SignUp({onClose}: SignUpProps) {
     localStorage.setItem("cashu.ndk.pubkey", pk)
     const privateKeySigner = new NDKPrivateKeySigner(privateKeyHex)
     ndk().signer = privateKeySigner
-    if (newUserName) {
+
+    const incognito = ctrlPressed && newUserName.trim() === ""
+    if (!incognito) {
       const profileEvent = new NDKEvent(ndk())
       profileEvent.kind = 0
       profileEvent.content = JSON.stringify({
-        display_name: newUserName,
+        display_name: newUserName.trim(),
         lud16: `${npub}@npub.cash`,
       })
       profileEvent.publish()
     }
+
     setShowLoginDialog(false)
   }
 
