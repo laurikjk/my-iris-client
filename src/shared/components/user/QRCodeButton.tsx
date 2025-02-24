@@ -76,7 +76,7 @@ function QRCodeModal({
 
   return (
     <Modal onClose={onClose}>
-      <div className="flex flex-col items-center justify-center p-4 gap-4">
+      <div className="flex flex-col items-center justify-center p-4 gap-4 max-w-[300px] md:max-w-sm lg:max-w-md">
         {showScanQr ? (
           <Suspense fallback={<div>Loading scanner...</div>}>
             <QRScanner onScanSuccess={onScanSuccess || defaultOnScanSuccess} />

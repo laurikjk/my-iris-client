@@ -144,7 +144,7 @@ const NewChat = () => {
                 className="flex flex-col md:flex-row md:items-center justify-between gap-2"
               >
                 <span>{link.label}</span>
-                <div className="space-x-2 flex items-center">
+                <div className="flex gap-4 items-center">
                   <QRCodeButton
                     npub={myPubKey && nip19.npubEncode(myPubKey)}
                     data={link.getUrl()}
