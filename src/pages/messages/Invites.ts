@@ -87,12 +87,13 @@ const publish = debounce(async (invite: Invite) => {
 }, 100)
 
 localState.get("user").on(async (u) => {
-  if (u) {
+  if (u && typeof u === "object" && "publicKey" in u && u.publicKey !== user?.publicKey) {
     user = u as {publicKey?: string; privateKey?: string}
     if (!user.publicKey) return
     listen()
 
     // Handle public invite
+    // TODO these always return undefined first? as they're not in memory at first?
     const existingPublicInvite = await localState
       .get("invites")
       .get("public")
