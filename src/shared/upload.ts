@@ -1,6 +1,15 @@
 import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
+import {localState} from "irisdb"
+
+function getMediaServerUrl(): Promise<string> {
+  return new Promise((resolve) => {
+    localState.get("user/mediaserver").once((v) => {
+      resolve((v as string) || "https://nostr.build/api/v2/nip96/upload")
+    })
+  })
+}
 
 export async function uploadFile(
   file: File,
@@ -10,7 +19,8 @@ export async function uploadFile(
   fd.append("fileToUpload", file)
   fd.append("submit", "Upload Image")
 
-  const url = "https://nostr.build/api/v2/nip96/upload"
+  // Get the media server URL from localState
+  const url = await getMediaServerUrl()
 
   // Create a Nostr event for authentication
   const event = new NDKEvent(ndk(), {

@@ -3,6 +3,7 @@ import {useLocation, Link, Routes, Route} from "react-router-dom"
 import {ProfileSettings} from "@/pages/settings/Profile.tsx"
 import NotificationSettings from "./NotificationSettings"
 import Appearance from "@/pages/settings/Appearance.tsx"
+import MediaServers from "@/pages/settings/Mediaservers.tsx"
 import IrisSettings from "./IrisAccount/IrisSettings"
 import {Network} from "@/pages/settings/Network.tsx"
 import {RiArrowRightSLine} from "@remixicon/react"
@@ -51,6 +52,12 @@ function Settings() {
           iconBg: "bg-purple-500",
           message: "Appearance",
           path: "/settings/appearance",
+        },
+        {
+          icon: "media",
+          iconBg: "bg-blue-500",
+          message: "Media Servers",
+          path: "/settings/mediaservers",
         },
         {
           icon: "hard-drive",
@@ -163,6 +170,7 @@ function Settings() {
             <Route path="wallet" element={<WalletSettings />} />
             <Route path="backup" element={<Backup />} />
             <Route path="appearance" element={<Appearance />} />
+            <Route path="mediaservers" element={<MediaServers />} />
             <Route path="social-graph" element={<SocialGraphSettings />} />
             <Route path="notifications" element={<NotificationSettings />} />
             <Route path="privacy" element={<PrivacySettings />} />
