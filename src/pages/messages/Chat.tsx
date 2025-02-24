@@ -1,13 +1,9 @@
 import {Session, getMillisecondTimestamp} from "nostr-double-ratchet"
-import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import {useEffect, useMemo, useState, useRef} from "react"
-import {UserRow} from "@/shared/components/user/UserRow"
-import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import Message, {MessageType} from "./Message"
-import {useNavigate} from "react-router-dom"
-import {RiMoreLine} from "@remixicon/react"
 import MessageForm from "./MessageForm"
+import ChatHeader from "./ChatHeader"
 import {getSession} from "./Sessions"
 import {localState} from "irisdb"
 
@@ -60,19 +56,16 @@ const groupMessages = (
 }
 
 const Chat = ({id}: {id: string}) => {
-  const navigate = useNavigate()
   const [messages, setMessages] = useState(
     new SortedMap<string, MessageType>([], comparator)
   )
   const [session, setSession] = useState<Session | undefined>(undefined)
-  //const [myPubKey] = useLocalState("user/publicKey", "")
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [showScrollDown, setShowScrollDown] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -170,66 +163,18 @@ const Chat = ({id}: {id: string}) => {
     }
   }, [id])
 
-  const handleDeleteChat = () => {
-    if (id && confirm("Delete this chat?")) {
-      // TODO: delete properly, maybe needs irisdb support.
-      // also somehow make sure chatlinks dont respawn it
-      localState.get("sessions").get(id).get("state").put(null)
-      localState.get("sessions").get(id).get("deleted").put(true)
-      // put null to each message. at least the content is removed
-      for (const [messageId] of messages) {
-        localState.get("sessions").get(id).get("events").get(messageId).put(null)
-      }
-      navigate("/messages")
-    }
-  }
-
   if (!id || !session) {
     return null
   }
 
-  const user = id.split(":").shift()!
-
   return (
     <>
-      <MiddleHeader centered={false}>
-        <div className="flex items-center justify-between w-full">
-          <div>{id && <UserRow avatarWidth={32} pubKey={user} />}</div>
-          <div className="relative">
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="btn btn-ghost btn-sm btn-circle"
-            >
-              <RiMoreLine className="h-6 w-6 cursor-pointer text-base-content/50" />
-            </button>
-            {dropdownOpen && (
-              <Dropdown onClose={() => setDropdownOpen(false)}>
-                <ul className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
-                  <li>
-                    <button onClick={handleDeleteChat}>Delete Chat</button>
-                  </li>
-                </ul>
-              </Dropdown>
-            )}
-          </div>
-        </div>
-      </MiddleHeader>
+      <ChatHeader id={id} messages={messages} />
       <div
         ref={chatContainerRef}
         className="flex flex-col justify-end flex-1 overflow-y-auto space-y-4 p-4 relative"
         onScroll={handleScroll}
       >
-        {/*}
-        {haveSent && !haveReply && (
-          <div className="flex flex-col items-center justify-center gap-4 h-full">
-            <span className="text-lg font-semibold">No replies yet</span>
-            <span className="text-sm text-base-content/70">
-              Send them a link to this chat elsewhere
-            </span>
-            <QRCodeButton publicKey={myPubKey} />
-          </div>
-        )}
-          */}
         {messageGroups.map((group, index) => {
           const groupDate = new Date(getMillisecondTimestamp(group[0])).toDateString()
           const prevGroupDate =

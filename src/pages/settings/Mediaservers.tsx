@@ -1,5 +1,5 @@
-import { useLocalState } from "irisdb-hooks"
-import { ChangeEvent } from "react"
+import {useLocalState} from "irisdb-hooks"
+import {ChangeEvent} from "react"
 
 function MediaServers() {
   const [selectedServer, setSelectedServer] = useLocalState<string>(

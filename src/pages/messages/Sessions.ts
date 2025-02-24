@@ -6,6 +6,7 @@ import {
   serializeSessionState,
 } from "nostr-double-ratchet"
 import {showNotification, subscribeToDMNotifications} from "@/utils/notifications"
+import {getPeerConnection} from "./webrtc/PeerConnection"
 import {generateProxyUrl} from "@/shared/utils/imgproxy"
 import {Filter, VerifiedEvent} from "nostr-tools"
 import {profileCache} from "@/utils/memcache"
@@ -60,29 +61,27 @@ export function loadSessions() {
   })
 }
 
-// Handle a new event in a session
 async function handleNewSessionEvent(id: string, session: Session, event: Rumor) {
-  // Save updated session state
-  saveSessionState(id, session, event)
-
-  // Update latest message if needed
+  saveSessionState(id, session)
+  if (event.kind === 30078) {
+    console.log("got 30078", event)
+    const connection = getPeerConnection(session, id)
+    connection?.handleEvent(event)
+    return
+  }
+  localState.get("sessions").get(id).get("events").get(event.id).put(event)
   await updateLatestMessageIfNewer(id, event)
-
-  // Handle user notifications
   handleEventNotification(id, event)
 }
 
-// Save the session state and event
-function saveSessionState(id: string, session: Session, event: Rumor) {
+function saveSessionState(id: string, session: Session) {
   localState
     .get("sessions")
     .get(id)
     .get("state")
     .put(serializeSessionState(session.state))
-  localState.get("sessions").get(id).get("events").get(event.id).put(event)
 }
 
-// Update the latest message if this one is newer
 async function updateLatestMessageIfNewer(id: string, event: Rumor) {
   let latest
   try {
@@ -106,7 +105,6 @@ async function updateLatestMessageIfNewer(id: string, event: Rumor) {
   }
 }
 
-// Handle notifications for new events
 function handleEventNotification(id: string, event: Rumor) {
   // If visible, update lastSeen. If not, show notification.
   if (
@@ -120,7 +118,6 @@ function handleEventNotification(id: string, event: Rumor) {
   }
 }
 
-// Show a notification for a new event
 async function showEventNotification(id: string, event: Rumor) {
   const sender = id.split(":").shift()!
   let profile = profileCache.get(sender)
