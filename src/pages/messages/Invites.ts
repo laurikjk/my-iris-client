@@ -91,28 +91,50 @@ localState.get("user").on(async (u) => {
     user = u as {publicKey?: string; privateKey?: string}
     if (!user.publicKey) return
     listen()
-    const publicInvite = await localState
+
+    // Handle public invite
+    const existingPublicInvite = await localState
       .get("invites")
       .get("public")
       .once(undefined, true)
-    if (
-      publicInvite &&
-      typeof publicInvite === "string" &&
-      publicInvite.includes("sharedSecret") // migration from old invites
-    ) {
-      const invite = Invite.deserialize(publicInvite)
-      setTimeout(() => {
-        publish(invite)
-      }, 1000)
-    } else {
-      console.log("Creating public invite")
-      const invite = Invite.createNew(user.publicKey, "Public Invite")
-      localState.get("invites").get("public").put(invite.serialize())
-      publish(invite)
-      console.log("Published public invite", invite)
-    }
+    await maybeCreateInvite(existingPublicInvite, "Public", true)
+
+    // Handle private invite
+    const existingPrivateInvite = await localState
+      .get("invites")
+      .get("private")
+      .once(undefined, true)
+    await maybeCreateInvite(existingPrivateInvite, "Private", false)
+
     subscribeToDMNotifications()
   }
 })
+
+async function maybeCreateInvite(
+  existingInvite: unknown,
+  type: "Public" | "Private",
+  shouldPublish: boolean
+) {
+  if (
+    existingInvite &&
+    typeof existingInvite === "string" &&
+    existingInvite.includes("sharedSecret")
+  ) {
+    const invite = Invite.deserialize(existingInvite)
+    if (shouldPublish) {
+      setTimeout(() => {
+        publish(invite)
+      }, 1000)
+    }
+  } else {
+    console.log(`Creating ${type} invite`)
+    const invite = Invite.createNew(user!.publicKey!, `${type} Invite`)
+    localState.get("invites").get(type).put(invite.serialize())
+    if (shouldPublish) {
+      publish(invite)
+      console.log(`Published ${type} invite`, invite)
+    }
+  }
+}
 
 export const getInvites = () => invites
