@@ -1,4 +1,4 @@
-import {NavLink, Route, Routes} from "react-router-dom"
+import {NavLink, Route, Routes, useLocation} from "react-router-dom"
 import Widget from "@/shared/components/ui/Widget"
 import {useMemo, ReactNode} from "react"
 import classNames from "classnames"
@@ -89,6 +89,8 @@ function UserPage({pubKey}: {pubKey: string}) {
       .filter((follow) => socialGraph().getFollowDistance(follow) > 1)
       .sort(() => Math.random() - 0.5) // Randomize order
   }, [follows])
+  const location = useLocation()
+  const activeProfile = location.pathname.split("/")[1] || ""
 
   return (
     <div className="flex flex-1 justify-center">
@@ -100,7 +102,7 @@ function UserPage({pubKey}: {pubKey: string}) {
               {tabs.map((tab) => (
                 <NavLink
                   key={tab.path}
-                  to={`/${pubKey}${tab.path ? `/${tab.path}` : ""}`}
+                  to={`/${activeProfile}${tab.path ? `/${tab.path}` : ""}`}
                   end={tab.path === ""}
                   replace={true}
                   preventScrollReset={true}
