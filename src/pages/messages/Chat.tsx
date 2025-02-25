@@ -1,4 +1,5 @@
 import {Session, getMillisecondTimestamp} from "nostr-double-ratchet"
+import ErrorBoundary from "@/shared/components/ui/ErrorBoundary"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import Message, {MessageType} from "./Message"
@@ -192,14 +193,18 @@ const Chat = ({id}: {id: string}) => {
                 </div>
               )}
               <div className=" flex flex-col gap-[2px] ">
-                {group.map((message, messageIndex) => (
-                  <Message
-                    key={message.id}
-                    message={message}
-                    isFirst={messageIndex === 0}
-                    isLast={messageIndex === group.length - 1}
-                  />
-                ))}
+                <ErrorBoundary>
+                  {group.map((message, messageIndex) => (
+                    <Message
+                      key={message.id}
+                      message={message}
+                      isFirst={messageIndex === 0}
+                      isLast={messageIndex === group.length - 1}
+                      session={session}
+                      sessionId={id}
+                    />
+                  ))}
+                </ErrorBoundary>
               </div>
             </div>
           )

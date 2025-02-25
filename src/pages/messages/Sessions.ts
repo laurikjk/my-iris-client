@@ -73,8 +73,23 @@ async function handleNewSessionEvent(id: string, session: Session, event: Rumor)
     connection?.handleEvent(event)
     return
   }
-  localState.get("sessions").get(id).get("events").get(event.id).put(event)
-  await updateLatestMessageIfNewer(id, event)
+  if (event.kind === 6 && event.content.length <= 2) {
+    const targetEvent = event.tags.find((tag) => tag[0] === "e")?.[1]
+    const pubkey = id.split(":")[0]
+    if (targetEvent) {
+      localState
+        .get("sessions")
+        .get(id)
+        .get("events")
+        .get(targetEvent)
+        .get("reactions")
+        .get(pubkey)
+        .put(event.content)
+    }
+  } else {
+    localState.get("sessions").get(id).get("events").get(event.id).put(event)
+    await updateLatestMessageIfNewer(id, event)
+  }
   handleEventNotification(id, event)
 }
 
@@ -142,7 +157,9 @@ async function showEventNotification(id: string, event: Rumor) {
     profile?.nip05?.split("@")[0] ||
     (sender && AnimalName(sender))
 
-  showNotification(String(name), {
+  const title = `${name}${event.kind === 6 && " reacted"}`
+
+  showNotification(title, {
     body:
       event.content.length > 100 ? event.content.slice(0, 100) + "..." : event.content,
     icon: profile?.picture

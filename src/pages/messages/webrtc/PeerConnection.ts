@@ -68,13 +68,13 @@ export default class PeerConnection extends EventEmitter {
       this.log("Missing required tags or content:", {
         hasTypeTag: !!typeTag,
         hasWebrtcTag: !!webrtcTag,
-        hasContent: !!content
+        hasContent: !!content,
       })
       return
     }
 
     this.log("Processing WebRTC message type:", typeTag[1], "with content:", content)
-    
+
     try {
       const parsedContent = JSON.parse(content)
       switch (typeTag[1]) {
