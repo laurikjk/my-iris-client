@@ -30,7 +30,8 @@ const Message = ({message, isFirst, isLast}: MessageProps) => {
       className={classNames(
         "max-w-[85%] md:max-w-[70%]",
         isUser ? "ml-auto" : "mr-auto",
-        isUser ? "bg-primary text-primary-content" : "bg-neutral text-neutral-content",
+        !isShortEmoji && (isUser ? "bg-primary text-primary-content" : "bg-neutral text-neutral-content"),
+        isShortEmoji && "bg-transparent",
         isFirst && isLast && "rounded-2xl",
         isFirst &&
           !isLast &&
@@ -48,9 +49,9 @@ const Message = ({message, isFirst, isLast}: MessageProps) => {
       )}
     >
       <div
-        className={classNames("px-3 py-2", isLast && "flex justify-between items-end")}
+        className={classNames("px-3 py-2", isLast && "flex justify-between items-end", isShortEmoji && "flex-col gap-1 items-center")}
       >
-        <p className={classNames(isShortEmoji ? "text-3xl" : "text-sm")}>
+        <p className={classNames(isShortEmoji ? "text-5xl" : "text-sm")}>
           {message.content}
         </p>
         {isLast && (

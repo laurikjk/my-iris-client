@@ -1,4 +1,4 @@
-import {FormEvent, useState, useEffect, useRef, lazy, Suspense} from "react"
+import {FormEvent, useState, useEffect, useRef, lazy, Suspense, ChangeEvent} from "react"
 import {serializeSessionState, Session} from "nostr-double-ratchet"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import Icon from "@/shared/components/Icons/Icon"
@@ -47,6 +47,8 @@ const MessageForm = ({session, id}: MessageFormProps) => {
         emojiPickerRef.current &&
         !emojiPickerRef.current.contains(event.target as Node)
       ) {
+        event.stopPropagation()
+        event.preventDefault()
         setShowEmojiPicker(false)
       }
     }
@@ -60,6 +62,11 @@ const MessageForm = ({session, id}: MessageFormProps) => {
 
     document.addEventListener("mousedown", handleClickOutside)
     document.addEventListener("keydown", handleEscKey)
+
+    // Focus input whenever emoji picker is closed
+    if (!showEmojiPicker && !isTouchDevice && inputRef.current) {
+      inputRef.current.focus()
+    }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
@@ -94,29 +101,38 @@ const MessageForm = ({session, id}: MessageFormProps) => {
     }
   }
 
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setNewMessage(value)
+  }
+
   const handleEmojiClick = (emojiData: any) => {
+    // Simply add the emoji to the message
     setNewMessage((prev) => prev + emojiData.emoji)
-    if (inputRef.current) {
-      inputRef.current.focus()
-    }
+
+    // Input will be focused by the useEffect that watches showEmojiPicker
   }
 
   return (
     <footer className="border-t border-custom fixed md:sticky bottom-0 w-full pb-[env(safe-area-inset-bottom)] bg-base-200">
-      <form onSubmit={handleSubmit} className="flex p-4 relative">
+      <form onSubmit={handleSubmit} className="flex space-x-2 p-4 relative">
         <div className="relative flex-1 flex gap-4 items-center">
-          <button
-            type="button"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="btn btn-ghost btn-circle btn-sm"
-          >
-            <RiEmotionLine size={20} />
-          </button>
+          {!isTouchDevice && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowEmojiPicker(!showEmojiPicker)
+              }}
+              className="btn btn-ghost btn-circle btn-sm left-2"
+            >
+              <RiEmotionLine size={20} />
+            </button>
+          )}
           <input
             ref={inputRef}
             type="text"
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={handleInputChange}
             placeholder="Message"
             className="flex-1 input input-sm md:input-md input-bordered pl-12"
           />
@@ -127,7 +143,11 @@ const MessageForm = ({session, id}: MessageFormProps) => {
                   <div className="p-4 bg-base-100 rounded shadow">Loading...</div>
                 }
               >
-                <EmojiPicker onEmojiClick={handleEmojiClick} />
+                <EmojiPicker
+                  onEmojiClick={handleEmojiClick}
+                  searchPlaceholder="Search emoji..."
+                  autoFocusSearch={true}
+                />
               </Suspense>
             </div>
           )}
