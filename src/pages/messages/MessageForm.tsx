@@ -124,9 +124,9 @@ const MessageForm = ({session, id}: MessageFormProps) => {
               onClick={() => {
                 setShowEmojiPicker(!showEmojiPicker)
               }}
-              className="btn btn-ghost btn-circle btn-sm left-2"
+              className="btn btn-ghost btn-circle btn-sm md:btn-md left-2"
             >
-              <RiEmotionLine size={20} />
+              <RiEmotionLine className="w-6 w-6" />
             </button>
           )}
           <input
