@@ -1,5 +1,4 @@
 import {EventEmitter} from "tseep"
-import debug from "debug"
 
 import {Rumor, Session} from "nostr-double-ratchet"
 import {NDKEventFromRawEvent} from "@/utils/nostr"

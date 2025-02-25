@@ -55,6 +55,7 @@
     "bolt11": "^1.4.1",
     "classnames": "^2.5.1",
     "debug": "^4.4.0",
+    "emoji-picker-react": "^4.12.0",
     "fuse.js": "^7.1.0",
     "hls.js": "^1.5.20",
     "irisdb": "1.0.12",
