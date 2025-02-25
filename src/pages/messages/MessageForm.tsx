@@ -76,6 +76,7 @@ const MessageForm = ({session, id}: MessageFormProps) => {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
+    setShowEmojiPicker(false)
     const text = newMessage.trim()
     if (text) {
       const time = Date.now()
@@ -115,8 +116,8 @@ const MessageForm = ({session, id}: MessageFormProps) => {
 
   return (
     <footer className="border-t border-custom fixed md:sticky bottom-0 w-full pb-[env(safe-area-inset-bottom)] bg-base-200">
-      <form onSubmit={handleSubmit} className="flex space-x-2 p-4 relative">
-        <div className="relative flex-1 flex gap-4 items-center">
+      <form onSubmit={handleSubmit} className="flex gap-2 p-4 relative">
+        <div className="relative flex-1 flex gap-2 items-center">
           {!isTouchDevice && (
             <button
               type="button"
