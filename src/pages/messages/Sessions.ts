@@ -33,6 +33,8 @@ export async function getSession(id: string): Promise<Session | undefined> {
   sessions.set(id, undefined)
 
   const state = await localState.get("sessions").get(id).get("state").once()
+  // TODO: if we have multiple browser tabs open, sessions go out of sync
+  // as they generate different new ratchet keys
 
   if (typeof state === "string" && state !== null) {
     const deserialized = deserializeSessionState(state)
@@ -53,7 +55,6 @@ export function loadSessions() {
       const session = await getSession(id)
       if (!session?.onEvent) continue
 
-      // TODO called twice?
       session.onEvent(async (event) => {
         handleNewSessionEvent(id, session, event)
       })
@@ -63,10 +64,12 @@ export function loadSessions() {
 }
 
 async function handleNewSessionEvent(id: string, session: Session, event: Rumor) {
+  // TODO: if we have multiple browser tabs open, sessions go out of sync
+  // as they generate different new ratchet keys
   saveSessionState(id, session)
   if (event.kind === 30078) {
     console.log("got 30078", event)
-    const connection = getPeerConnection(session, id)
+    const connection = getPeerConnection(id)
     connection?.handleEvent(event)
     return
   }

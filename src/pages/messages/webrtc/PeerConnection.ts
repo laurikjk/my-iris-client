@@ -3,24 +3,28 @@ import debug from "debug"
 
 import {Rumor, Session} from "nostr-double-ratchet"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
-
-const log = debug("webrtc:connection")
+import {getSessions} from "../Sessions"
 
 const connections = new Map<string, PeerConnection>()
-export function getPeerConnection(session: Session, peerId: string) {
+export function getPeerConnection(sessionId: string, ask = true) {
   const isLocalhost =
     window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
 
   if (
     isLocalhost &&
-    !connections.has(peerId) &&
-    confirm(`WebRTC connect with ${peerId}?`)
+    !connections.has(sessionId) &&
+    (!ask || confirm(`WebRTC connect with ${sessionId}?`))
   ) {
-    const connection = new PeerConnection(session, peerId)
-    connections.set(peerId, connection)
+    const session = getSessions().get(sessionId)
+    if (!session) {
+      console.error("Session not found for peer:", sessionId)
+      return
+    }
+    const connection = new PeerConnection(session, sessionId)
+    connections.set(sessionId, connection)
     return connection
   }
-  return connections.get(peerId)
+  return connections.get(sessionId)
 }
 
 export default class PeerConnection extends EventEmitter {
@@ -43,7 +47,10 @@ export default class PeerConnection extends EventEmitter {
     this.dataChannel = null
     this.fileChannel = null
     this.setupPeerConnectionEvents()
-    this.session.onEvent((e) => this.handleEvent(e))
+  }
+
+  log(...args: any[]) {
+    console.log(this.peerId, ...args)
   }
 
   connect() {
@@ -51,26 +58,44 @@ export default class PeerConnection extends EventEmitter {
   }
 
   handleEvent(event: Rumor) {
-    console.log("Received event:", event)
+    this.log("Received event:", event)
     if (event.kind !== 30078) return
 
     const typeTag = event.tags.find((tag) => tag[0] === "type")
+    const webrtcTag = event.tags.find((tag) => tag[0] === "l" && tag[1] === "webrtc")
     const content = event.content
 
-    if (!typeTag || !content) return
+    if (!typeTag || !content || !webrtcTag) {
+      this.log("Missing required tags or content:", {
+        hasTypeTag: !!typeTag,
+        hasWebrtcTag: !!webrtcTag,
+        hasContent: !!content
+      })
+      return
+    }
 
-    switch (typeTag[1]) {
-      case "offer":
-        this.handleOffer(JSON.parse(content))
-        break
-      case "answer":
-        this.handleAnswer(JSON.parse(content))
-        break
-      case "candidate":
-        this.handleCandidate(JSON.parse(content))
-        break
-      default:
-        console.error("Unknown message type:", typeTag[1])
+    this.log("Processing WebRTC message type:", typeTag[1], "with content:", content)
+    
+    try {
+      const parsedContent = JSON.parse(content)
+      switch (typeTag[1]) {
+        case "offer":
+          this.log("Received offer, handling...")
+          this.handleOffer(parsedContent)
+          break
+        case "answer":
+          this.log("Received answer, handling...")
+          this.handleAnswer(parsedContent)
+          break
+        case "candidate":
+          this.log("Received ICE candidate")
+          this.handleCandidate(parsedContent)
+          break
+        default:
+          console.error("Unknown message type:", typeTag[1])
+      }
+    } catch (e) {
+      console.error("Error processing WebRTC message:", e)
     }
   }
 
@@ -93,6 +118,12 @@ export default class PeerConnection extends EventEmitter {
   }
 
   async handleCandidate(candidate: RTCIceCandidateInit) {
+    if (this.peerConnection.remoteDescription === null) {
+      // Queue the candidate to be added after remote description is set
+      this.log("Remote description not set yet, queuing candidate")
+      setTimeout(() => this.handleCandidate(candidate), 500)
+      return
+    }
     await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
   }
 
@@ -101,11 +132,10 @@ export default class PeerConnection extends EventEmitter {
       if (event.candidate) {
         this.send({
           kind: 30078,
+          content: JSON.stringify(event.candidate),
           tags: [
             ["l", "webrtc"],
             ["type", "candidate"],
-            ["candidate", event.candidate.toString()],
-            ["expiration", (Math.floor(Date.now() / 1000) + 5 * 60).toString()],
           ],
         })
       }
@@ -121,9 +151,9 @@ export default class PeerConnection extends EventEmitter {
     }
 
     this.peerConnection.onconnectionstatechange = () => {
-      log("Connection state:", this.peerConnection.connectionState)
+      this.log("Connection state:", this.peerConnection.connectionState)
       if (this.peerConnection.connectionState === "closed") {
-        log(`${this.peerId} connection closed`)
+        this.log(`${this.peerId} connection closed`)
         this.close()
       }
     }
@@ -144,7 +174,7 @@ export default class PeerConnection extends EventEmitter {
       ],
       content: JSON.stringify(offer),
     })
-    console.log("Sent offer:", offer)
+    this.log("Sent offer:", offer)
   }
 
   async sendAnswer(offer: RTCSessionDescriptionInit) {
@@ -163,20 +193,24 @@ export default class PeerConnection extends EventEmitter {
   }
 
   private send(eventData: Partial<Rumor>) {
+    eventData.tags?.push([
+      "expiration",
+      (Math.floor(Date.now() / 1000) + 5 * 60).toString(),
+    ])
     const {event} = this.session.sendEvent(eventData)
     NDKEventFromRawEvent(event).publish()
-    log("Sent event:", eventData)
+    this.log("Sent event:", eventData)
     return event
   }
 
   setDataChannel(dataChannel: RTCDataChannel) {
     this.dataChannel = dataChannel
-    this.dataChannel.onopen = () => log("Data channel is open")
+    this.dataChannel.onopen = () => this.log("Data channel is open")
     this.dataChannel.onmessage = (event) => {
-      log("Received message:", event.data)
+      this.log("Received message:", event.data)
     }
     this.dataChannel.onclose = () => {
-      log("Data channel is closed")
+      this.log("Data channel is closed")
       this.close()
     }
   }
@@ -184,30 +218,30 @@ export default class PeerConnection extends EventEmitter {
   setFileChannel(fileChannel: RTCDataChannel) {
     this.fileChannel = fileChannel
     this.fileChannel.binaryType = "arraybuffer"
-    this.fileChannel.onopen = () => log("File channel is open")
+    this.fileChannel.onopen = () => this.log("File channel is open")
     this.fileChannel.onmessage = (event) => {
-      log("File channel received message:", event.data)
+      this.log("File channel received message:", event.data)
       if (typeof event.data === "string") {
         const metadata = JSON.parse(event.data)
         if (metadata.type === "file-metadata") {
           this.incomingFileMetadata = metadata.metadata
           this.receivedFileData = []
           this.receivedFileSize = 0
-          log("Received file metadata:", this.incomingFileMetadata)
+          this.log("Received file metadata:", this.incomingFileMetadata)
         }
       } else if (event.data instanceof ArrayBuffer) {
         this.receivedFileData.push(event.data)
         this.receivedFileSize += event.data.byteLength
-        log("Received file chunk:", event.data.byteLength, "bytes")
-        log("Total received size:", this.receivedFileSize, "bytes")
+        this.log("Received file chunk:", event.data.byteLength, "bytes")
+        this.log("Total received size:", this.receivedFileSize, "bytes")
 
         if (this.incomingFileMetadata) {
-          log("Expected file size:", this.incomingFileMetadata.size, "bytes")
+          this.log("Expected file size:", this.incomingFileMetadata.size, "bytes")
           if (this.receivedFileSize === this.incomingFileMetadata.size) {
-            log("File fully received, saving file...")
+            this.log("File fully received, saving file...")
             this.saveReceivedFile()
           } else {
-            log("File not fully received, waiting...")
+            this.log("File not fully received, waiting...")
           }
         } else {
           console.error("No file metadata available")
@@ -215,7 +249,7 @@ export default class PeerConnection extends EventEmitter {
       }
     }
     this.fileChannel.onclose = () => {
-      log("File channel is closed")
+      this.log("File channel is closed")
     }
   }
 
@@ -227,42 +261,42 @@ export default class PeerConnection extends EventEmitter {
 
     const confirmString = `Save ${this.incomingFileMetadata.name} from ${this.peerId}?`
     if (!confirm(confirmString)) {
-      log("User did not confirm file save")
+      this.log("User did not confirm file save")
       this.incomingFileMetadata = null
       this.receivedFileData = []
       this.receivedFileSize = 0
       return
     }
 
-    log("Saving file with metadata:", this.incomingFileMetadata)
-    log("Total received file data size:", this.receivedFileSize)
+    this.log("Saving file with metadata:", this.incomingFileMetadata)
+    this.log("Total received file data size:", this.receivedFileSize)
 
     const blob = new Blob(this.receivedFileData, {type: this.incomingFileMetadata.type})
-    log("Created Blob:", blob)
+    this.log("Created Blob:", blob)
 
     const url = URL.createObjectURL(blob)
-    log("Created Object URL:", url)
+    this.log("Created Object URL:", url)
 
     const a = document.createElement("a")
     a.href = url
     a.download = this.incomingFileMetadata.name
     document.body.appendChild(a)
-    log("Appended anchor element to body:", a)
+    this.log("Appended anchor element to body:", a)
 
     a.click()
-    log("Triggered download")
+    this.log("Triggered download")
 
     document.body.removeChild(a)
-    log("Removed anchor element from body")
+    this.log("Removed anchor element from body")
 
     URL.revokeObjectURL(url)
-    log("Revoked Object URL")
+    this.log("Revoked Object URL")
 
     // Reset file data
     this.incomingFileMetadata = null
     this.receivedFileData = []
     this.receivedFileSize = 0
-    log("Reset file data")
+    this.log("Reset file data")
   }
 
   sendJsonData(jsonData: unknown) {
@@ -289,7 +323,7 @@ export default class PeerConnection extends EventEmitter {
         },
       }
       fileChannel.onopen = () => {
-        log("File channel is open, sending metadata")
+        this.log("File channel is open, sending metadata")
         fileChannel.send(JSON.stringify(metadata))
 
         // Read and send the file as binary data

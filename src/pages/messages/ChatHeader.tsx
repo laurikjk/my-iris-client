@@ -1,9 +1,9 @@
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import {RiMoreLine, RiAttachment2} from "@remixicon/react"
+import {getPeerConnection} from "./webrtc/PeerConnection"
 import {UserRow} from "@/shared/components/user/UserRow"
 import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import PeerConnection from "./webrtc/PeerConnection"
 import {Session} from "nostr-double-ratchet"
 import {useNavigate} from "react-router-dom"
 import {useEffect, useState} from "react"
@@ -39,8 +39,8 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
     // TODO: Implement file sending functionality
     console.log("Send file clicked")
     if (session) {
-      const peerConnection = new PeerConnection(session)
-      peerConnection.connect()
+      const peerConnection = getPeerConnection(id, false)
+      peerConnection?.connect()
       console.log("peerConnection", peerConnection)
     }
   }
