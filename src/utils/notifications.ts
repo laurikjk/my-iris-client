@@ -76,7 +76,7 @@ export async function maybeShowPushNotification(event: NDKEvent) {
   }
 
   const user = getZappingUser(event)
-  const amount = getZapAmount(event)
+  const amount = await getZapAmount(event)
   let profile = profileCache.get(user)
 
   if (!profile) {

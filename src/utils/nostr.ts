@@ -149,7 +149,7 @@ export function getZappingUser(event: NDKEvent, npub = true) {
   return obj.pubkey
 }
 
-export function getZapAmount(event: NDKEvent) {
+export async function getZapAmount(event: NDKEvent) {
   const invoice = event.tagValue("bolt11")
   if (invoice) {
     return import("bolt11").then((bolt11) => {
