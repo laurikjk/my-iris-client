@@ -157,7 +157,7 @@ async function showEventNotification(id: string, event: Rumor) {
     profile?.nip05?.split("@")[0] ||
     (sender && AnimalName(sender))
 
-  const title = `${name}${event.kind === 6 && " reacted"}`
+  const title = `${name}${event.kind === 6 ? " reacted" : ""}`
 
   showNotification(title, {
     body:

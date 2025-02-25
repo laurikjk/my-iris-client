@@ -13,6 +13,7 @@ import {useEffect, useCallback, useState} from "react"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import socialGraph from "@/utils/socialGraph"
 import {useLocalState} from "irisdb-hooks"
+import debounce from "lodash/debounce"
 import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
 
@@ -21,8 +22,7 @@ const DISPLAY_INCREMENT = 10
 
 let sub: NDKSubscription | undefined
 
-localState.get("user/publicKey").on((myPubKey) => {
-  notifications.clear()
+const getNotifications = debounce((myPubKey?: string) => {
   if (!myPubKey || typeof myPubKey !== "string") return
 
   sub?.stop()
@@ -96,7 +96,17 @@ localState.get("user/publicKey").on((myPubKey) => {
       }
     }
   })
-})
+}, 2000)
+
+localState.get("user/publicKey").on(
+  (myPubKey) => {
+    notifications.clear()
+    getNotifications(myPubKey)
+  },
+  true,
+  undefined,
+  String
+)
 
 let notificationsSeenAt = 0
 localState.get("notifications/seenAt").on((v) => (notificationsSeenAt = v as number))
