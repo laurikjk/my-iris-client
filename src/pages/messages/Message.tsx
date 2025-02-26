@@ -48,6 +48,7 @@ const Message = ({
         "group relative w-full flex",
         isUser ? "justify-end" : "justify-start"
       )}
+      id={message.id}
     >
       <div className="flex items-center justify-center gap-2 max-w-[85%] md:max-w-[70%]">
         {isUser && (

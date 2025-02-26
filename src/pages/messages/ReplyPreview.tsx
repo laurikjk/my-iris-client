@@ -7,7 +7,7 @@ import {localState} from "irisdb"
 type ReplyPreviewProps = {
   isUser: boolean
   sessionId: string
-  replyToId: string | undefined
+  replyToId: string
 }
 
 const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
@@ -16,6 +16,20 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
 
   // No need to find the reply tag here since we're passing it directly
   const theirPublicKey = sessionId.split(":")[0]
+
+  // Function to handle scrolling to the replied message
+  const handleScrollToReply = () => {
+    const element = document.getElementById(replyToId)
+    if (element) {
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      })
+      // Optional: highlight the message briefly
+      element.classList.add("highlight-message")
+      setTimeout(() => element.classList.remove("highlight-message"), 2000)
+    }
+  }
 
   // Fetch the replied-to message if it exists
   useEffect(() => {
@@ -46,11 +60,12 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
   return (
     <div
       className={classNames(
-        "text-xs px-3 py-1 mb-1 rounded-t-lg border-l-2 border-base-content/30",
+        "text-xs px-3 py-1 mb-1 rounded-t-lg border-l-2 border-base-content/30 cursor-pointer",
         isUser
           ? "bg-primary/20 text-primary-content/70"
           : "bg-neutral/20 text-neutral-content/70"
       )}
+      onClick={handleScrollToReply}
     >
       <div className="font-semibold">
         {repliedToMessage.sender === "user" ? (
