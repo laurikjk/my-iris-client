@@ -1,9 +1,9 @@
 import {FormEvent, useState, useEffect, useRef, lazy, Suspense, ChangeEvent} from "react"
 import {CHAT_MESSAGE_KIND, serializeSessionState, Session} from "nostr-double-ratchet"
-import {RiEmotionLine, RiCloseLine} from "@remixicon/react"
-import {Name} from "@/shared/components/user/Name"
+import MessageFormReplyPreview from "./MessageFormReplyPreview"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import Icon from "@/shared/components/Icons/Icon"
+import {RiEmotionLine} from "@remixicon/react"
 import {MessageType} from "./Message"
 import {localState} from "irisdb"
 
@@ -149,23 +149,11 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
   return (
     <footer className="border-t border-custom fixed md:sticky bottom-0 w-full pb-[env(safe-area-inset-bottom)] bg-base-200">
       {replyingTo && (
-        <div className="px-4 pt-2 flex items-center">
-          <div className="flex-1">
-            <div className="text-xs text-base-content/60 mb-1 font-bold">
-              {replyingTo.sender === "user" ? "You" : <Name pubKey={theirPublicKey} />}
-            </div>
-            <div className="text-sm truncate border-l-2 border-primary pl-2">
-              {replyingTo.content}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setReplyingTo(undefined)}
-            className="btn btn-ghost btn-circle btn-sm"
-          >
-            <RiCloseLine className="w-5 h-5" />
-          </button>
-        </div>
+        <MessageFormReplyPreview
+          replyingTo={replyingTo}
+          setReplyingTo={setReplyingTo}
+          theirPublicKey={theirPublicKey}
+        />
       )}
 
       <form onSubmit={handleSubmit} className="flex gap-2 p-4 relative">
