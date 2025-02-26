@@ -1,6 +1,6 @@
 import {useState, useRef, lazy, Suspense, useEffect} from "react"
+import {RiHeartAddLine, RiReplyLine} from "@remixicon/react"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
-import {RiHeartAddLine} from "@remixicon/react"
 import {Session} from "nostr-double-ratchet"
 import {useLocalState} from "irisdb-hooks"
 import classNames from "classnames"
@@ -14,6 +14,7 @@ type MessageReactionButtonProps = {
   session: Session
   sessionId: string
   isUser: boolean
+  onReply?: () => void
 }
 
 const MessageReactionButton = ({
@@ -21,6 +22,7 @@ const MessageReactionButton = ({
   session,
   sessionId,
   isUser,
+  onReply,
 }: MessageReactionButtonProps) => {
   const [myPubKey] = useLocalState("user/publicKey", "")
   const [showReactionsPicker, setShowReactionsPicker] = useState(false)
@@ -79,10 +81,24 @@ const MessageReactionButton = ({
   return (
     <div className="relative">
       <div
-        className="p-2 text-base-content/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity flex-shrink-0"
-        onClick={handleReactionClick}
+        className={classNames("flex items-center", {
+          "flex-row-reverse": !isUser,
+        })}
       >
-        <RiHeartAddLine className="w-6 h-6" />
+        {onReply && (
+          <div
+            className="p-2 text-base-content/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity flex-shrink-0"
+            onClick={onReply}
+          >
+            <RiReplyLine className="w-6 h-6" />
+          </div>
+        )}
+        <div
+          className="p-2 text-base-content/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity flex-shrink-0"
+          onClick={handleReactionClick}
+        >
+          <RiHeartAddLine className="w-6 h-6" />
+        </div>
       </div>
 
       {showReactionsPicker && (

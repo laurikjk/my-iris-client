@@ -65,6 +65,7 @@ const Chat = ({id}: {id: string}) => {
   const [haveSent, setHaveSent] = useState(false)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [showScrollDown, setShowScrollDown] = useState(false)
+  const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
@@ -202,6 +203,7 @@ const Chat = ({id}: {id: string}) => {
                       isLast={messageIndex === group.length - 1}
                       session={session}
                       sessionId={id}
+                      onReply={() => setReplyingTo(message)}
                     />
                   ))}
                 </ErrorBoundary>
@@ -226,7 +228,12 @@ const Chat = ({id}: {id: string}) => {
           </svg>
         </button>
       )}
-      <MessageForm session={session} id={id} />
+      <MessageForm
+        session={session}
+        id={id}
+        replyingTo={replyingTo}
+        setReplyingTo={setReplyingTo}
+      />
     </>
   )
 }

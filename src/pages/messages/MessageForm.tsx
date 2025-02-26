@@ -1,25 +1,29 @@
 import {FormEvent, useState, useEffect, useRef, lazy, Suspense, ChangeEvent} from "react"
-import {serializeSessionState, Session} from "nostr-double-ratchet"
+import {CHAT_MESSAGE_KIND, serializeSessionState, Session} from "nostr-double-ratchet"
+import {RiEmotionLine, RiCloseLine} from "@remixicon/react"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import Icon from "@/shared/components/Icons/Icon"
-import {RiEmotionLine} from "@remixicon/react"
 import {MessageType} from "./Message"
 import {localState} from "irisdb"
+import { Name } from "@/shared/components/user/Name"
 
 interface MessageFormProps {
   session: Session
   id: string
+  replyingTo?: MessageType
+  setReplyingTo: (message?: MessageType) => void
 }
 
 // Lazy load the emoji picker
 const EmojiPicker = lazy(() => import("emoji-picker-react"))
 
-const MessageForm = ({session, id}: MessageFormProps) => {
+const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps) => {
   const [newMessage, setNewMessage] = useState("")
   const [isTouchDevice, setIsTouchDevice] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
+  const theirPublicKey = id.split(":")[0]
 
   useEffect(() => {
     const checkTouchDevice = () => {
@@ -55,8 +59,12 @@ const MessageForm = ({session, id}: MessageFormProps) => {
 
     // Close emoji picker when pressing Escape key
     const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && showEmojiPicker) {
-        setShowEmojiPicker(false)
+      if (event.key === "Escape") {
+        if (showEmojiPicker) {
+          setShowEmojiPicker(false)
+        } else if (replyingTo) {
+          setReplyingTo(undefined)
+        }
       }
     }
 
@@ -72,7 +80,7 @@ const MessageForm = ({session, id}: MessageFormProps) => {
       document.removeEventListener("mousedown", handleClickOutside)
       document.removeEventListener("keydown", handleEscKey)
     }
-  }, [showEmojiPicker])
+  }, [showEmojiPicker, replyingTo, setReplyingTo])
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -80,7 +88,15 @@ const MessageForm = ({session, id}: MessageFormProps) => {
     const text = newMessage.trim()
     if (text) {
       const time = Date.now()
-      const {event, innerEvent} = session.send(text)
+      const tags = [["ms", time.toString()]]
+      if (replyingTo) {
+        tags.push(["e", replyingTo.id])
+      }
+      const {event, innerEvent} = session.sendEvent({
+        content: text,
+        kind: CHAT_MESSAGE_KIND,
+        tags,
+      })
       const ndkEvent = NDKEventFromRawEvent(event)
       ndkEvent
         .publish()
@@ -99,6 +115,9 @@ const MessageForm = ({session, id}: MessageFormProps) => {
       localState.get("sessions").get(id).get("latest").put(message)
       localState.get("sessions").get(id).get("lastSeen").put(time)
       setNewMessage("")
+      if (replyingTo) {
+        setReplyingTo(undefined)
+      }
     }
   }
 
@@ -116,6 +135,26 @@ const MessageForm = ({session, id}: MessageFormProps) => {
 
   return (
     <footer className="border-t border-custom fixed md:sticky bottom-0 w-full pb-[env(safe-area-inset-bottom)] bg-base-200">
+      {replyingTo && (
+        <div className="px-4 pt-2 flex items-center">
+          <div className="flex-1">
+            <div className="text-xs text-base-content/60 mb-1 font-bold">
+              {replyingTo.sender === "user" ? "You" : <Name pubKey={theirPublicKey} />}
+            </div>
+            <div className="text-sm truncate border-l-2 border-primary pl-2">
+              {replyingTo.content}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReplyingTo(undefined)}
+            className="btn btn-ghost btn-circle btn-sm"
+          >
+            <RiCloseLine className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="flex gap-2 p-4 relative">
         <div className="relative flex-1 flex gap-2 items-center">
           {!isTouchDevice && (
