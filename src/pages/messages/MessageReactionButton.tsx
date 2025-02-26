@@ -91,7 +91,7 @@ const MessageReactionButton = ({
   }
 
   return (
-    <div className="relative">
+    <div className="relative -mb-1">
       <div
         className={classNames("flex items-center", {
           "flex-row-reverse": !isUser,

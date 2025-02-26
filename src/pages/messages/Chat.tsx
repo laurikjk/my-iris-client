@@ -23,6 +23,20 @@ const groupMessages = (
 
   for (const [, message] of messages) {
     const messageDate = new Date(getMillisecondTimestamp(message)).toDateString()
+    const hasReply = message.tags?.some((tag) => tag[0] === "e")
+    const hasReactions = message.reactions && Object.keys(message.reactions).length > 0
+
+    // If this message is a reply or has reactions, finish the current group
+    if (hasReply || hasReactions) {
+      if (currentGroup.length > 0) {
+        groups.push(currentGroup)
+      }
+      // Add this message as its own group
+      groups.push([message])
+      currentGroup = []
+      lastDate = messageDate
+      continue
+    }
 
     if (lastDate !== messageDate) {
       if (currentGroup.length > 0) {
@@ -193,7 +207,7 @@ const Chat = ({id}: {id: string}) => {
                   {groupDate}
                 </div>
               )}
-              <div className=" flex flex-col gap-[2px] ">
+              <div className="flex flex-col gap-[2px]">
                 <ErrorBoundary>
                   {group.map((message, messageIndex) => (
                     <Message
