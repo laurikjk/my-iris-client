@@ -117,8 +117,12 @@ const MessageReactionButton = ({
         <div
           ref={reactionsPickerRef}
           className={classNames(
-            "absolute z-10 -top-6 mb-2",
-            isUser ? "right-0" : "left-0"
+            "z-10 mb-2",
+            // Use fixed positioning on mobile, absolute on desktop
+            "fixed md:absolute",
+            isUser ? "right-4 md:right-0 md:-top-6" : "left-4 md:left-0 md:-top-6",
+            // Position at bottom of screen on mobile
+            "bottom-20 md:bottom-auto"
           )}
         >
           <Suspense
