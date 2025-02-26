@@ -88,6 +88,13 @@ async function handleNewSessionEvent(id: string, session: Session, event: Rumor)
     }
   } else {
     localState.get("sessions").get(id).get("events").get(event.id).put(event)
+    localState
+      .get("sessions")
+      .get(id)
+      .get("events")
+      .get(event.id)
+      .get("reactions")
+      .put({})
     await updateLatestMessageIfNewer(id, event)
   }
   handleEventNotification(id, event)

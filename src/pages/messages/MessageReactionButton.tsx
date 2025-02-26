@@ -6,8 +6,8 @@ import {useLocalState} from "irisdb-hooks"
 import classNames from "classnames"
 import {localState} from "irisdb"
 
-// Lazy load the emoji picker
-const EmojiPicker = lazy(() => import("emoji-picker-react"))
+// Lazy load both the emoji picker and data
+const EmojiPicker = lazy(() => import("@emoji-mart/react"))
 
 type MessageReactionButtonProps = {
   messageId: string
@@ -27,6 +27,18 @@ const MessageReactionButton = ({
   const [myPubKey] = useLocalState("user/publicKey", "")
   const [showReactionsPicker, setShowReactionsPicker] = useState(false)
   const reactionsPickerRef = useRef<HTMLDivElement>(null)
+  const [emojiData, setEmojiData] = useState<any>(null)
+
+  // Load emoji data only when needed
+  useEffect(() => {
+    if (showReactionsPicker && !emojiData) {
+      import("@emoji-mart/data")
+        .then((module) => module.default)
+        .then((data) => {
+          setEmojiData(data)
+        })
+    }
+  }, [showReactionsPicker, emojiData])
 
   useEffect(() => {
     // Close reactions picker when clicking outside
@@ -59,12 +71,12 @@ const MessageReactionButton = ({
     setShowReactionsPicker(!showReactionsPicker)
   }
 
-  const handleEmojiClick = (emojiData: any) => {
-    console.log("Reaction selected:", emojiData.emoji)
+  const handleEmojiClick = (emoji: any) => {
+    console.log("Reaction selected:", emoji.native)
     setShowReactionsPicker(false)
     const {event} = session.sendEvent({
       kind: 6,
-      content: emojiData.emoji,
+      content: emoji.native,
       tags: [["e", messageId]],
     })
     localState
@@ -74,7 +86,7 @@ const MessageReactionButton = ({
       .get(messageId)
       .get("reactions")
       .get(myPubKey)
-      .put(emojiData.emoji)
+      .put(emoji.native)
     NDKEventFromRawEvent(event).publish()
   }
 
@@ -112,12 +124,17 @@ const MessageReactionButton = ({
           <Suspense
             fallback={<div className="p-4 bg-base-100 rounded shadow">Loading...</div>}
           >
-            <EmojiPicker
-              reactionsDefaultOpen={true}
-              onEmojiClick={handleEmojiClick}
-              width={320}
-              height="auto"
-            />
+            {emojiData && (
+              <EmojiPicker
+                data={emojiData}
+                onEmojiSelect={handleEmojiClick}
+                autoFocus={true}
+                previewPosition="none"
+                skinTonePosition="none"
+                theme="auto"
+                maxFrequentRows={1}
+              />
+            )}
           </Suspense>
         </div>
       )}

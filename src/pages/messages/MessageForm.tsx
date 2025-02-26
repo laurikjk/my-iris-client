@@ -1,11 +1,11 @@
 import {FormEvent, useState, useEffect, useRef, lazy, Suspense, ChangeEvent} from "react"
 import {CHAT_MESSAGE_KIND, serializeSessionState, Session} from "nostr-double-ratchet"
 import {RiEmotionLine, RiCloseLine} from "@remixicon/react"
+import {Name} from "@/shared/components/user/Name"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import Icon from "@/shared/components/Icons/Icon"
 import {MessageType} from "./Message"
 import {localState} from "irisdb"
-import { Name } from "@/shared/components/user/Name"
 
 interface MessageFormProps {
   session: Session
@@ -14,8 +14,8 @@ interface MessageFormProps {
   setReplyingTo: (message?: MessageType) => void
 }
 
-// Lazy load the emoji picker
-const EmojiPicker = lazy(() => import("emoji-picker-react"))
+// Lazy load emoji-mart instead of emoji-picker-react
+const EmojiPicker = lazy(() => import("@emoji-mart/react"))
 
 const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps) => {
   const [newMessage, setNewMessage] = useState("")
@@ -24,6 +24,20 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
   const inputRef = useRef<HTMLInputElement>(null)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
   const theirPublicKey = id.split(":")[0]
+
+  // Add data import for emoji-mart
+  const [emojiData, setEmojiData] = useState<any>(null)
+
+  // Load emoji data
+  useEffect(() => {
+    if (showEmojiPicker && !emojiData) {
+      import("@emoji-mart/data")
+        .then((module) => module.default)
+        .then((data) => {
+          setEmojiData(data)
+        })
+    }
+  }, [showEmojiPicker, emojiData])
 
   useEffect(() => {
     const checkTouchDevice = () => {
@@ -105,6 +119,7 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
       const message: MessageType = {
         ...innerEvent,
         sender: "user",
+        reactions: {},
       }
       localState
         .get("sessions")
@@ -126,11 +141,9 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
     setNewMessage(value)
   }
 
-  const handleEmojiClick = (emojiData: any) => {
-    // Simply add the emoji to the message
-    setNewMessage((prev) => prev + emojiData.emoji)
-
-    // Input will be focused by the useEffect that watches showEmojiPicker
+  const handleEmojiClick = (emoji: any) => {
+    // emoji-mart returns different structure than emoji-picker-react
+    setNewMessage((prev) => prev + emoji.native)
   }
 
   return (
@@ -176,7 +189,7 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
             placeholder="Message"
             className="flex-1 input input-sm md:input-md input-bordered pl-12"
           />
-          {showEmojiPicker && (
+          {showEmojiPicker && emojiData && (
             <div ref={emojiPickerRef} className="absolute bottom-14 left-0 z-10">
               <Suspense
                 fallback={
@@ -184,9 +197,13 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
                 }
               >
                 <EmojiPicker
-                  onEmojiClick={handleEmojiClick}
-                  searchPlaceholder="Search emoji..."
-                  autoFocusSearch={true}
+                  data={emojiData}
+                  onEmojiSelect={handleEmojiClick}
+                  autoFocus={true}
+                  searchPosition="sticky"
+                  previewPosition="none"
+                  skinTonePosition="none"
+                  theme="auto"
                 />
               </Suspense>
             </div>
