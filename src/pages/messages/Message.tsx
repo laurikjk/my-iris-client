@@ -31,7 +31,7 @@ const Message = ({
   const isUser = message.sender === "user"
   const emojiRegex =
     /^(\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}]|\p{Emoji_Component}|\u200D|[\u{E0020}-\u{E007F}])+$/u
-  const isShortEmoji = emojiRegex.test(message.content.trim())
+  const isShortEmoji = emojiRegex.test(message.content?.trim())
   const [repliedToMessage, setRepliedToMessage] = useState<MessageType | null>(null)
 
   // Check if message has a reply tag
