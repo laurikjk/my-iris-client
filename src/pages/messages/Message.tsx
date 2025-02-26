@@ -62,10 +62,6 @@ const Message = ({
         )}
 
         <div className="flex flex-col">
-          {repliedId && (
-            <ReplyPreview isUser={isUser} sessionId={sessionId} replyToId={repliedId} />
-          )}
-
           <div
             className={classNames(
               !isShortEmoji &&
@@ -73,10 +69,9 @@ const Message = ({
                   ? "bg-primary text-primary-content"
                   : "bg-neutral text-neutral-content"),
               isShortEmoji && "bg-transparent",
-              isFirst && isLast && !repliedId && "rounded-2xl",
+              isFirst && isLast && "rounded-2xl",
               isFirst &&
                 !isLast &&
-                !repliedId &&
                 (isUser
                   ? "rounded-t-2xl rounded-bl-2xl rounded-br-sm"
                   : "rounded-t-2xl rounded-br-2xl rounded-bl-sm"),
@@ -87,15 +82,12 @@ const Message = ({
                   : "rounded-b-2xl rounded-tr-2xl rounded-tl-sm"),
               !isFirst &&
                 !isLast &&
-                (isUser ? "rounded-l-2xl rounded-r-sm" : "rounded-r-2xl rounded-l-sm"),
-              // If there's a replied-to message, adjust the top corners
-              repliedId &&
-                isFirst &&
-                (isUser
-                  ? "rounded-bl-2xl rounded-br-sm rounded-tr-2xl"
-                  : "rounded-br-2xl rounded-bl-sm rounded-tl-2xl")
+                (isUser ? "rounded-l-2xl rounded-r-sm" : "rounded-r-2xl rounded-l-sm")
             )}
           >
+            {repliedId && (
+              <ReplyPreview isUser={isUser} sessionId={sessionId} replyToId={repliedId} />
+            )}
             <div
               className={classNames(
                 "px-3 py-2",

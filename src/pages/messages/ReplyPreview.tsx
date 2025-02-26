@@ -60,10 +60,8 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
   return (
     <div
       className={classNames(
-        "text-xs px-3 py-1 mb-1 rounded-t-lg border-l-2 border-base-content/30 cursor-pointer",
-        isUser
-          ? "bg-primary/20 text-primary-content/70"
-          : "bg-neutral/20 text-neutral-content/70"
+        "text-xs px-3 py-1 mx-2 mt-2 border-l-2 border-base-content/30 rounded-sm cursor-pointer text-primary-content/70",
+        isUser ? "bg-neutral/20" : "bg-primary/80"
       )}
       onClick={handleScrollToReply}
     >

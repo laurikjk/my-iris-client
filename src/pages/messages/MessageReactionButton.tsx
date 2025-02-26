@@ -119,8 +119,10 @@ const MessageReactionButton = ({
           className={classNames(
             "z-10 mb-2",
             // Use fixed positioning on mobile, absolute on desktop
-            "fixed md:absolute",
-            isUser ? "right-4 md:right-0 md:bottom-6" : "left-4 md:left-0 md:-bottom-6",
+            "fixed md:absolute md:top-0",
+            isUser
+              ? "right-4 md:right-0 md:-translate-y-full"
+              : "left-4 md:left-0 md:-translate-y-full",
             // Position at bottom of screen on mobile
             "bottom-20 md:bottom-auto"
           )}
