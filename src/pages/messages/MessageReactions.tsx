@@ -87,9 +87,17 @@ const MessageReactions = ({rawReactions, isUser}: MessageReactionsProps) => {
         ))}
       </div>
 
-      {/* User list popup showing all reactions */}
       {showReactedUsers && (
-        <div className="absolute z-10 mt-1 bg-base-100 shadow-md rounded-md p-2 text-sm w-64 max-h-48 overflow-y-auto flex flex-col">
+        <div
+          className={classNames(
+            "z-20 bg-base-100 shadow-md rounded-md p-2 text-sm w-64 max-h-48 overflow-y-auto flex flex-col",
+            "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2", // Centered on mobile
+            "md:absolute md:w-64 md:mt-1", // Reset positioning on desktop
+            "md:translate-x-0", // Reset horizontal centering on desktop
+            isUser ? "md:right-0 md:left-auto" : "md:left-0 md:right-auto", // For user messages, align to left instead of right
+            "md:bottom-auto md:-top-3 md:-translate-y-full" // Position above on desktop
+          )}
+        >
           {Object.entries(usersByEmoji).map(([emoji, userIds]) => (
             <div key={emoji} className="pb-2 last:border-0 last:mb-0 last:pb-0">
               {userIds.map((userId) => (
