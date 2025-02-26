@@ -82,6 +82,11 @@ export const useInviteFromUrl = () => {
     } else {
       const acceptInviteFromUrl = async () => {
         const fullUrl = `${window.location.origin}${location.pathname}${location.search}${location.hash}`
+
+        // Clear the invite from URL history by replacing current state with a clean URL
+        const cleanUrl = `${window.location.origin}${location.pathname}${location.search}`
+        window.history.replaceState({}, document.title, cleanUrl)
+
         const result = await acceptInvite(fullUrl, myPubKey, myPrivKey, navigate)
         if (!result.success) {
           // Optionally, you can show an error message to the user here
