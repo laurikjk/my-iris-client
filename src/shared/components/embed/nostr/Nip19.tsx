@@ -33,7 +33,11 @@ function Naddr({naddr, data}: {naddr: string; data: nip19.AddressPointer}) {
     )
   }
 
-  return <FeedItem event={event} key={event.id} asEmbed={true} />
+  return (
+    <div className="px-4">
+      <FeedItem event={event} key={event.id} asEmbed={true} />
+    </div>
+  )
 }
 
 const NostrUser: Embed = {
