@@ -9,7 +9,7 @@ import useMutes from "@/shared/hooks/useMutes"
 import Icon from "../Icons/Icon"
 import {ndk} from "@/utils/ndk"
 
-const NOSTR_REGEX = /(npub|note|nevent)1[a-zA-Z0-9]{58,300}/gi
+const NOSTR_REGEX = /(npub|note|nevent|naddr)1[a-zA-Z0-9]{58,300}/gi
 const HEX_REGEX = /[0-9a-fA-F]{64}/gi
 const NIP05_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_RESULTS = 5

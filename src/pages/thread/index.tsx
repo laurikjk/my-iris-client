@@ -7,16 +7,54 @@ import FollowList from "@/pages/user/components/FollowList"
 import Widget from "@/shared/components/ui/Widget"
 import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {useState, useEffect} from "react"
 import {getTags} from "@/utils/nostr"
-import {useState} from "react"
+import {nip19} from "nostr-tools"
+import {ndk} from "@/utils/ndk"
 
-export default function ThreadPage({id}: {id: string}) {
+export default function ThreadPage({
+  id,
+  isNaddr = false,
+  naddrData = null,
+}: {
+  id: string
+  isNaddr?: boolean
+  naddrData?: nip19.AddressPointer | null
+}) {
   const [relevantPeople, setRelevantPeople] = useState(new Map<string, boolean>())
   const [hideEventsByUnknownUsers] = useLocalState(
     "settings/hideEventsByUnknownUsers",
     true,
     Boolean
   )
+  const [event, setEvent] = useState<NDKEvent | null>(null)
+  const [loading, setLoading] = useState(isNaddr)
+
+  useEffect(() => {
+    if (isNaddr && naddrData) {
+      setLoading(true)
+      ndk()
+        .fetchEvent(
+          {
+            authors: [naddrData.pubkey],
+            kinds: [naddrData.kind],
+            "#d": [naddrData.identifier],
+          },
+          undefined
+        )
+        .then((e) => {
+          if (e) {
+            setEvent(e)
+            if (e.pubkey) addRelevantPerson(e.pubkey)
+          }
+          setLoading(false)
+        })
+        .catch((err) => {
+          console.warn("Error fetching naddr event:", err)
+          setLoading(false)
+        })
+    }
+  }, [isNaddr, naddrData])
 
   const addRelevantPerson = (person: string) => {
     setRelevantPeople((prev) => new Map(prev).set(person, true))
@@ -35,13 +73,39 @@ export default function ThreadPage({id}: {id: string}) {
     <div className="flex justify-center">
       <div className="flex-1">
         <MiddleHeader title="Thread" />
-        <FeedItem
-          key={id}
-          eventId={id}
-          standalone={true}
-          onEvent={addToThread}
-          showReplies={Infinity}
-        />
+        {(() => {
+          if (isNaddr) {
+            if (loading) {
+              return (
+                <div className="flex relative flex-col pt-3 px-4 min-h-[186px] pb-0 transition-colors duration-200 ease-in-out border-custom cursor-pointer border-2 pt-3 pb-3 my-2 rounded hover:bg-[var(--note-hover-color)] break-all">
+                  Loading naddr:{id}
+                </div>
+              )
+            } else if (event) {
+              return (
+                <FeedItem
+                  event={event}
+                  key={event.id}
+                  standalone={true}
+                  onEvent={addToThread}
+                  showReplies={Infinity}
+                />
+              )
+            } else {
+              return <div className="p-4">Failed to load naddr:{id}</div>
+            }
+          } else {
+            return (
+              <FeedItem
+                key={id}
+                eventId={id}
+                standalone={true}
+                onEvent={addToThread}
+                showReplies={Infinity}
+              />
+            )
+          }
+        })()}
       </div>
       <RightColumn>
         {() => (
