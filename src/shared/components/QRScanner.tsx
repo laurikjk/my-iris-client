@@ -1,5 +1,5 @@
-import {BrowserMultiFormatReader} from "@zxing/library"
 import {useEffect, useRef, useState} from "react"
+import jsQR from "jsqr"
 
 interface QRScannerProps {
   onScanSuccess: (result: string) => void
@@ -7,50 +7,71 @@ interface QRScannerProps {
 
 const QRScanner = ({onScanSuccess}: QRScannerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const [qrCodeResult, setQrCodeResult] = useState("")
   const streamRef = useRef<MediaStream | null>(null)
+  const animationRef = useRef<number | null>(null)
 
   useEffect(() => {
-    const codeReader = new BrowserMultiFormatReader()
+    // Set up canvas for processing video frames
+    const canvas = canvasRef.current
+    const video = videoRef.current
+    if (!canvas || !video) return
 
-    codeReader
-      .listVideoInputDevices()
-      .then((videoInputDevices) => {
-        const backCamera =
-          videoInputDevices.find((device) =>
-            device.label.toLowerCase().includes("back")
-          ) || videoInputDevices[0]
-        const deviceId = backCamera.deviceId
+    const ctx = canvas.getContext("2d", {willReadFrequently: true})
+    if (!ctx) return
 
-        navigator.mediaDevices.getUserMedia({video: {deviceId}}).then((mediaStream) => {
-          streamRef.current = mediaStream
-          if (videoRef.current) {
-            videoRef.current.srcObject = mediaStream
-            codeReader.decodeFromVideoDevice(
-              deviceId,
-              videoRef.current,
-              (result, error) => {
-                if (result) {
-                  const text = result.getText()
-                  setQrCodeResult(text)
-                  if (onScanSuccess) {
-                    onScanSuccess(text)
-                  }
-                }
-                if (error) {
-                  console.log(error)
-                }
-              }
-            )
+    // Start camera
+    navigator.mediaDevices
+      .getUserMedia({
+        video: {facingMode: "environment"}, // Use back camera if available
+      })
+      .then((stream) => {
+        streamRef.current = stream
+        video.srcObject = stream
+        video.play()
+
+        // Start scanning loop
+        const scanQRCode = () => {
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            // Set canvas dimensions to match video
+            canvas.height = video.videoHeight
+            canvas.width = video.videoWidth
+
+            // Draw current video frame to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+            // Get image data for QR processing
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+            // Process with jsQR
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: "dontInvert", // Faster processing
+            })
+
+            if (code) {
+              // QR code found
+              const text = code.data
+              setQrCodeResult(text)
+              onScanSuccess(text)
+            }
           }
-        })
+
+          // Continue scanning
+          animationRef.current = requestAnimationFrame(scanQRCode)
+        }
+
+        scanQRCode()
       })
       .catch((err) => {
-        console.error(err)
+        console.error("Error accessing camera:", err)
       })
 
+    // Cleanup function
     return () => {
-      codeReader.reset()
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop())
       }
@@ -61,6 +82,7 @@ const QRScanner = ({onScanSuccess}: QRScannerProps) => {
     <div>
       <h1 className="text-center text-2xl mb-4">Scan QR</h1>
       <video ref={videoRef} style={{width: "100%"}} />
+      <canvas ref={canvasRef} style={{display: "none"}} />
       {qrCodeResult && <p>QR Code Result: {qrCodeResult}</p>}
     </div>
   )
