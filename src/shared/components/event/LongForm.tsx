@@ -1,7 +1,7 @@
 import longFormIcon from "@/assets/long-form-icon.png"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import ReactMarkdown from "react-markdown"
 import {useEffect, useState} from "react"
+import Markdown from "markdown-to-jsx"
 
 interface LongFormProps {
   event: NDKEvent
@@ -34,9 +34,12 @@ function LongForm({event, standalone}: LongFormProps) {
         <img src={longFormIcon} className="opacity-80 w-8 h-8" />
         {title}
       </h1>
-      <ReactMarkdown className="prose leading-relaxed tracking-wide text-gray-450">
+      <Markdown
+        className="prose leading-relaxed tracking-wide text-gray-450"
+        options={{forceBlock: true}}
+      >
         {standalone ? textBody : summary || `${textBody.substring(0, 100)}...`}
-      </ReactMarkdown>
+      </Markdown>
       {topics && <small className="text-custom-accent">#{topics}</small>}
     </div>
   )
