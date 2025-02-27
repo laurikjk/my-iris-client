@@ -8,9 +8,9 @@ import {
 } from "react"
 import {LnPayCb, NDKEvent, zapInvoiceFromEvent, NDKZapper} from "@nostr-dev-kit/ndk"
 import {RiCheckLine, RiFileCopyLine} from "@remixicon/react"
+import {decode} from "light-bolt11-decoder"
 
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import zapAnimation from "@/assets/zap-animation.gif"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {ndk} from "@/utils/ndk"
 
@@ -127,20 +127,19 @@ function ZapModal({onClose, event, zapped, setZapped, rezappedEvent}: ZapModalPr
         sub.stop()
         const receiptInvoice = event.tagValue("bolt11")
         if (receiptInvoice) {
-          const bolt11 = await import("bolt11")
-          const decodedInvoice = bolt11.decode(receiptInvoice)
-
+          const decodedInvoice = decode(receiptInvoice)
           const zapRequest = zapInvoiceFromEvent(event)
 
-          const invoiceComplete = decodedInvoice.complete
-          const amountPaid = decodedInvoice.satoshis
+          const amountSection = decodedInvoice.sections.find(
+            (section) => section.name === "amount"
+          )
+          const amountPaid =
+            amountSection && "value" in amountSection
+              ? Math.floor(parseInt(amountSection.value) / 1000)
+              : 0
           const amountRequested = zapRequest?.amount ? zapRequest.amount / 1000 : -1
 
-          if (
-            bolt11Invoice === receiptInvoice &&
-            invoiceComplete &&
-            amountPaid === amountRequested
-          ) {
+          if (bolt11Invoice === receiptInvoice && amountPaid === amountRequested) {
             if (rezappedEvent) rezap(event)
             setZapped(true)
             setTimeout(() => {
@@ -233,15 +232,7 @@ function ZapModal({onClose, event, zapped, setZapped, rezappedEvent}: ZapModalPr
             )}
           </div>
         )}
-        {zapped && (
-          <div className="flex flex-col items-center">
-            <img
-              src={zapAnimation}
-              className="max-w-[90vw] w-80"
-              alt="zap successful animation"
-            />
-          </div>
-        )}
+        {zapped && <div className="flex flex-col items-center">Zapped!</div>}
       </div>
     </Modal>
   )

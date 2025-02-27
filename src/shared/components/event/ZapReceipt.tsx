@@ -1,3 +1,4 @@
+import {decode} from "light-bolt11-decoder"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import {UserRow} from "../user/UserRow"
@@ -12,11 +13,13 @@ function ZapReceipt({event}: ZapReceiptProps) {
   useEffect(() => {
     const invoice = event.tagValue("bolt11")
     if (invoice) {
-      import("bolt11").then((bolt11) => {
-        const decodedInvoice = bolt11.decode(invoice)
-        if (decodedInvoice.complete && decodedInvoice.satoshis)
-          setZappedAmount(decodedInvoice.satoshis)
-      })
+      const decodedInvoice = decode(invoice)
+      const amountSection = decodedInvoice.sections.find(
+        (section) => section.name === "amount"
+      )
+      if (amountSection && "value" in amountSection) {
+        setZappedAmount(Math.floor(parseInt(amountSection.value) / 1000))
+      }
     }
   }, [])
 

@@ -5,6 +5,7 @@ import useProfile from "@/shared/hooks/useProfile.ts"
 import {getZappingUser} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
+import {decode} from "light-bolt11-decoder"
 import {useEffect, useState} from "react"
 import Icon from "../../Icons/Icon.tsx"
 import ZapModal from "../ZapModal.tsx"
@@ -39,14 +40,18 @@ function FeedItemZap({event}: FeedItemZapProps) {
   const calculateZappedAmount = async (
     zaps: Map<string, NDKEvent[]>
   ): Promise<number> => {
-    const bolt11 = await import("bolt11")
     return Array.from(zaps.values())
       .flat()
       .reduce((sum, zap) => {
         const invoice = zap.tagValue("bolt11")
         if (invoice) {
-          const decodedInvoice = bolt11.decode(invoice)
-          return sum + (decodedInvoice.satoshis || 0)
+          const decodedInvoice = decode(invoice)
+          const amountSection = decodedInvoice.sections.find(
+            (section) => section.name === "amount"
+          )
+          if (amountSection && "value" in amountSection) {
+            return sum + Math.floor(parseInt(amountSection.value) / 1000)
+          }
         }
         return sum
       }, 0)
@@ -106,9 +111,11 @@ function FeedItemZap({event}: FeedItemZapProps) {
         if (shouldHideEvent(zapEvent)) return
         const invoice = zapEvent.tagValue("bolt11")
         if (invoice) {
-          const bolt11 = await import("bolt11")
-          const decodedInvoice = bolt11.decode(invoice)
-          if (decodedInvoice.complete && decodedInvoice.satoshis) {
+          const decodedInvoice = decode(invoice)
+          const amountSection = decodedInvoice.sections.find(
+            (section) => section.name === "amount"
+          )
+          if (amountSection && "value" in amountSection) {
             setZapsByAuthor((prev) => {
               const zappingUser = getZappingUser(zapEvent)
               const newMap = new Map(prev)

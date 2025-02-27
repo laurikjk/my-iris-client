@@ -6,6 +6,7 @@ import {
   NDKUserProfile,
 } from "@nostr-dev-kit/ndk"
 import {eventRegex} from "@/shared/components/embed/nostr/NostrNote"
+import {decode} from "light-bolt11-decoder"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 
@@ -152,12 +153,14 @@ export function getZappingUser(event: NDKEvent, npub = true) {
 export async function getZapAmount(event: NDKEvent) {
   const invoice = event.tagValue("bolt11")
   if (invoice) {
-    return import("bolt11").then((bolt11) => {
-      const decodedInvoice = bolt11.decode(invoice)
-      if (decodedInvoice.complete && decodedInvoice.satoshis)
-        return decodedInvoice.satoshis
-      return 0
-    })
+    const decodedInvoice = decode(invoice)
+    const amountSection = decodedInvoice.sections.find(
+      (section) => section.name === "amount"
+    )
+    if (amountSection && "value" in amountSection) {
+      // Convert millisatoshis to satoshis
+      return Math.floor(parseInt(amountSection.value) / 1000)
+    }
   }
   return 0
 }
@@ -221,10 +224,14 @@ export const fetchZappedAmount = async (event: NDKEvent): Promise<number> => {
       sub?.on("event", async (event) => {
         const invoice = event.tagValue("bolt11")
         if (invoice) {
-          const bolt11 = await import("bolt11")
-          const decodedInvoice = bolt11.decode(invoice)
-          if (decodedInvoice.complete && decodedInvoice.satoshis)
-            zappedAmount = zappedAmount + decodedInvoice.satoshis
+          const decodedInvoice = decode(invoice)
+          const amountSection = decodedInvoice.sections.find(
+            (section) => section.name === "amount"
+          )
+          if (amountSection && "value" in amountSection) {
+            // Convert millisatoshis to satoshis
+            zappedAmount = zappedAmount + Math.floor(parseInt(amountSection.value) / 1000)
+          }
         }
       })
       sub?.on("eose", () => {
