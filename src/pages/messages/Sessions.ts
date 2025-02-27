@@ -173,6 +173,7 @@ async function showEventNotification(id: string, event: Rumor) {
       ? generateProxyUrl(String(profile.picture), {width: 128, square: true})
       : "/favicon.png",
     data: {url: `/messages`}, // TODO add session id state param
+    sticky: false,
   })
 }
 

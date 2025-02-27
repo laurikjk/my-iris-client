@@ -75,8 +75,10 @@ function QRCodeModal({
   }
 
   function handleScanSuccess(scannedData: string) {
-    onClose()
+    // Process the data first
     ;(onScanSuccess || defaultOnScanSuccess)(scannedData)
+    // Then close the modal
+    onClose()
   }
 
   return (
