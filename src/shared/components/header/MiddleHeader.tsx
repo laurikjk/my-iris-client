@@ -1,4 +1,4 @@
-import {useNavigate, useLocation} from "react-router-dom"
+import {useNavigate, useLocation} from "react-router"
 import {ReactNode, useCallback, MouseEvent} from "react"
 import {RiArrowLeftLine} from "@remixicon/react"
 import {Helmet} from "react-helmet"

@@ -1,4 +1,4 @@
-import {useLocation, Routes, Route} from "react-router-dom"
+import {useLocation, Routes, Route} from "react-router"
 import {Helmet} from "react-helmet"
 import classNames from "classnames"
 import ChatList from "./ChatList"

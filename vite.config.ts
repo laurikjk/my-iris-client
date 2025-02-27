@@ -43,7 +43,7 @@ export default defineConfig({
         manualChunks: {
           vendor: [
             "react",
-            "react-router-dom",
+            "react-router",
             "react-helmet",
             "@nostr-dev-kit/ndk",
             "nostr-tools",

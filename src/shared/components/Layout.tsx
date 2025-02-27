@@ -1,4 +1,4 @@
-import {Outlet, useLocation, useNavigate, useNavigationType} from "react-router-dom"
+import {Outlet, useLocation, useNavigate, useNavigationType} from "react-router"
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"

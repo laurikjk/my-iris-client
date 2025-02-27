@@ -7,7 +7,7 @@ import EventBorderless from "../event/EventBorderless"
 import FeedItem from "../event/FeedItem/FeedItem"
 import useMutes from "@/shared/hooks/useMutes"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {Link} from "react-router-dom"
+import {Link} from "react-router"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
 

@@ -1,4 +1,4 @@
-import {createBrowserRouter, createRoutesFromElements, Route} from "react-router-dom"
+import {createBrowserRouter, createRoutesFromElements, Route} from "react-router"
 
 import NostrLinkHandler from "@/pages/NostrLinkHandler.tsx"
 import Notifications from "./notifications/Notifications"

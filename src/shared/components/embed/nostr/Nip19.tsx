@@ -1,4 +1,4 @@
-import {Link} from "react-router-dom"
+import {Link} from "react-router"
 import {nip19} from "nostr-tools"
 
 import {Name} from "@/shared/components/user/Name.tsx"

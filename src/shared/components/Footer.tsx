@@ -7,7 +7,7 @@ import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import Icon from "@/shared/components/Icons/Icon" // Add this import
 import NavLink from "@/shared/components/NavLink" // Adjusted import path
 import ErrorBoundary from "./ui/ErrorBoundary"
-import {useLocation} from "react-router-dom"
+import {useLocation} from "react-router"
 
 type MenuItem = {
   label?: string

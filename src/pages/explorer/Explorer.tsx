@@ -1,5 +1,5 @@
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import {useNavigate} from "react-router-dom"
+import {useNavigate} from "react-router"
 import {localState} from "irisdb/src"
 import {nip19} from "nostr-tools"
 import {useEffect} from "react"

@@ -1,4 +1,4 @@
-import {NavLink, Route, Routes, useLocation} from "react-router-dom"
+import {NavLink, Route, Routes, useLocation} from "react-router"
 import Widget from "@/shared/components/ui/Widget"
 import {useMemo, ReactNode} from "react"
 import classNames from "classnames"

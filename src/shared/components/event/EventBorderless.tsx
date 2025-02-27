@@ -1,7 +1,7 @@
 import {useCallback, MouseEvent, useState} from "react"
 import {eventsByIdCache} from "@/utils/memcache"
 import ErrorBoundary from "../ui/ErrorBoundary"
-import {useNavigate} from "react-router-dom"
+import {useNavigate} from "react-router"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import RelativeTime from "./RelativeTime"
 import {UserRow} from "../user/UserRow"

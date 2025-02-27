@@ -1,4 +1,4 @@
-import {useLocation} from "react-router-dom"
+import {useLocation} from "react-router"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"

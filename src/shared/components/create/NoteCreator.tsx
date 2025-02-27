@@ -10,7 +10,7 @@ import {Avatar} from "@/shared/components/user/Avatar.tsx"
 import HyperText from "@/shared/components/HyperText.tsx"
 
 import {eventsByIdCache} from "@/utils/memcache"
-import {useNavigate} from "react-router-dom"
+import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
 import Textarea from "./Textarea"
 

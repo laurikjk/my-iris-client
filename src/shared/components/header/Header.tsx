@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState, useCallback, MouseEvent} from "react"
 import {RiMenuLine, RiArrowLeftLine} from "@remixicon/react"
-import {useLocation, useNavigate} from "react-router-dom"
+import {useLocation, useNavigate} from "react-router"
 
 import NotificationButton from "@/shared/components/header/NotificationButton.tsx"
 import {MOBILE_BREAKPOINT} from "@/shared/components/user/const.ts"

@@ -2,7 +2,7 @@ import socialGraph, {shouldSocialHide} from "@/utils/socialGraph"
 import FollowList from "@/pages/user/components/FollowList"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {Fragment, useMemo, useState} from "react"
-import {Link} from "react-router-dom"
+import {Link} from "react-router"
 import {nip19} from "nostr-tools"
 import {Name} from "./Name"
 

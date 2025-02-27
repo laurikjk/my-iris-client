@@ -1,6 +1,6 @@
 import "@/index.css"
 
-import {RouterProvider} from "react-router-dom"
+import {RouterProvider} from "react-router"
 import ReactDOM from "react-dom/client"
 import {localState} from "irisdb/src"
 

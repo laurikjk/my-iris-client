@@ -1,4 +1,4 @@
-import {useParams, useNavigate, useLocation} from "react-router-dom"
+import {useParams, useNavigate, useLocation} from "react-router"
 import {queryProfile} from "nostr-tools/nip05"
 import {useEffect, useState} from "react"
 import ThreadPage from "@/pages/thread"

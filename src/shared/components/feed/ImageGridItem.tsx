@@ -1,4 +1,4 @@
-import {useNavigate} from "react-router-dom"
+import {useNavigate} from "react-router"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {nip19} from "nostr-tools"
 

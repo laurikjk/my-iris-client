@@ -1,7 +1,7 @@
 import {RiErrorWarningLine, RiVerifiedBadgeLine} from "@remixicon/react"
 import {useCallback, useEffect, useState} from "react"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {useNavigate} from "react-router-dom"
+import {useNavigate} from "react-router"
 import {ndk} from "@/utils/ndk"
 
 interface ProfileNameProps {

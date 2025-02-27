@@ -1,5 +1,5 @@
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {useNavigate} from "react-router-dom"
+import {useNavigate} from "react-router"
 
 interface ProfileAvatarProps {
   profile: NDKUserProfile | null | undefined

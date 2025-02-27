@@ -1,7 +1,7 @@
 import {RiErrorWarningLine, RiGithubFill, RiShieldCheckFill} from "@remixicon/react"
 import {ElementType, ReactNode, useEffect, useMemo, useState} from "react"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {useNavigate} from "react-router-dom"
+import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 

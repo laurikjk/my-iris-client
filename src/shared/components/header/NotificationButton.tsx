@@ -1,7 +1,7 @@
 import UnseenNotificationsBadge from "./UnseenNotificationsBadge"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import Show from "@/shared/components/Show.tsx"
-import {NavLink} from "react-router-dom"
+import {NavLink} from "react-router"
 import Icon from "../Icons/Icon"
 
 export default function NotificationButton() {
