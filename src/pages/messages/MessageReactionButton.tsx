@@ -1,6 +1,7 @@
 import {useState, useRef, lazy, Suspense, useEffect} from "react"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiHeartAddLine, RiReplyLine} from "@remixicon/react"
+import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {Session} from "nostr-double-ratchet"
 import {localState} from "irisdb/src"
@@ -134,7 +135,7 @@ const MessageReactionButton = ({
               <EmojiPicker
                 data={emojiData}
                 onEmojiSelect={handleEmojiClick}
-                autoFocus={true}
+                autoFocus={!isTouchDevice}
                 previewPosition="none"
                 skinTonePosition="none"
                 theme="auto"

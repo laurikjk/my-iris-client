@@ -1,6 +1,7 @@
 import {FormEvent, useState, useEffect, useRef, lazy, Suspense, ChangeEvent} from "react"
 import {CHAT_MESSAGE_KIND, serializeSessionState, Session} from "nostr-double-ratchet"
 import MessageFormReplyPreview from "./MessageFormReplyPreview"
+import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiEmotionLine} from "@remixicon/react"
@@ -19,7 +20,6 @@ const EmojiPicker = lazy(() => import("@emoji-mart/react"))
 
 const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps) => {
   const [newMessage, setNewMessage] = useState("")
-  const [isTouchDevice, setIsTouchDevice] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
@@ -38,19 +38,6 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
         })
     }
   }, [showEmojiPicker, emojiData])
-
-  useEffect(() => {
-    const checkTouchDevice = () => {
-      setIsTouchDevice("ontouchstart" in window || navigator.maxTouchPoints > 0)
-    }
-
-    checkTouchDevice()
-    window.addEventListener("touchstart", checkTouchDevice)
-
-    return () => {
-      window.removeEventListener("touchstart", checkTouchDevice)
-    }
-  }, [])
 
   useEffect(() => {
     if (!isTouchDevice && inputRef.current) {
@@ -187,7 +174,7 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
                 <EmojiPicker
                   data={emojiData}
                   onEmojiSelect={handleEmojiClick}
-                  autoFocus={true}
+                  autoFocus={!isTouchDevice}
                   searchPosition="sticky"
                   previewPosition="none"
                   skinTonePosition="none"
