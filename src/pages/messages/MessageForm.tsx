@@ -175,7 +175,7 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
             value={newMessage}
             onChange={handleInputChange}
             placeholder="Message"
-            className="flex-1 input input-sm md:input-md input-bordered pl-12"
+            className="flex-1 input input-sm md:input-md input-bordered"
           />
           {showEmojiPicker && emojiData && (
             <div ref={emojiPickerRef} className="absolute bottom-14 left-0 z-10">
