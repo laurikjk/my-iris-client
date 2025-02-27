@@ -1,7 +1,7 @@
 import {Dispatch, SetStateAction, useEffect, useState} from "react"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {useNavigate} from "react-router"
 import {RiUserLine} from "@remixicon/react"
+import {useNavigate} from "react-router"
 import {ndk} from "@/utils/ndk"
 
 import ProfileAvatar from "./ProfileAvatar.tsx"

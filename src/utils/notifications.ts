@@ -58,7 +58,16 @@ export const showNotification = (
   options?: NotificationOptions,
   nag = false
 ) => {
-  if ("serviceWorker" in navigator && window.Notification?.permission === "granted") {
+  if (!("serviceWorker" in navigator)) {
+    if (nag) {
+      alert(
+        "Your browser doesn't support service workers, which are required for notifications."
+      )
+    }
+    return
+  }
+
+  if (window.Notification?.permission === "granted") {
     navigator.serviceWorker.ready.then(async function (serviceWorker) {
       await serviceWorker.showNotification(title, options)
     })
@@ -103,6 +112,11 @@ export async function maybeShowPushNotification(event: NDKEvent) {
 }
 
 export const subscribeToDMNotifications = debounce(async () => {
+  if (!("serviceWorker" in navigator)) {
+    console.log("Service workers not supported in this browser")
+    return
+  }
+
   const reg = await navigator.serviceWorker.ready
   const pushSubscription = await reg.pushManager.getSubscription()
 
@@ -210,7 +224,7 @@ function arrayEqual(a: string[], b: string[]): boolean {
 }
 
 export async function subscribeToNotifications() {
-  if (!CONFIG.features.pushNotifications) {
+  if (!CONFIG.features.pushNotifications || !("serviceWorker" in navigator)) {
     return
   }
 
@@ -225,50 +239,48 @@ export async function subscribeToNotifications() {
     }
   }
   try {
-    if ("serviceWorker" in navigator) {
-      const reg = await navigator.serviceWorker.ready
-      if (reg) {
-        const api = new IrisAPI()
-        const {vapid_public_key: newVapidKey} = await api.getPushNotificationInfo()
+    const reg = await navigator.serviceWorker.ready
+    if (reg) {
+      const api = new IrisAPI()
+      const {vapid_public_key: newVapidKey} = await api.getPushNotificationInfo()
 
-        // Check for existing subscription
-        const existingSub = await reg.pushManager.getSubscription()
-        if (existingSub) {
-          const existingKey = new Uint8Array(existingSub.options.applicationServerKey!)
-          const newKey = new Uint8Array(Buffer.from(newVapidKey, "base64"))
+      // Check for existing subscription
+      const existingSub = await reg.pushManager.getSubscription()
+      if (existingSub) {
+        const existingKey = new Uint8Array(existingSub.options.applicationServerKey!)
+        const newKey = new Uint8Array(Buffer.from(newVapidKey, "base64"))
 
-          // Only subscribe if the keys are different
-          if (
-            existingKey.length === newKey.length &&
-            existingKey.every((byte, i) => byte === newKey[i])
-          ) {
-            return // Already subscribed with the same key
-          }
-
-          await existingSub.unsubscribe()
+        // Only subscribe if the keys are different
+        if (
+          existingKey.length === newKey.length &&
+          existingKey.every((byte, i) => byte === newKey[i])
+        ) {
+          return // Already subscribed with the same key
         }
 
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: newVapidKey,
-        })
-
-        const myKey = [...socialGraph().getUsersByFollowDistance(0)][0]
-        const filter = {
-          "#p": [myKey],
-          kinds: [1, 6, 7],
-        }
-        await api.registerPushNotifications(
-          [
-            {
-              endpoint: sub.endpoint,
-              p256dh: base64.encode(new Uint8Array(sub.getKey("p256dh")!)),
-              auth: base64.encode(new Uint8Array(sub.getKey("auth")!)),
-            },
-          ],
-          filter
-        )
+        await existingSub.unsubscribe()
       }
+
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: newVapidKey,
+      })
+
+      const myKey = [...socialGraph().getUsersByFollowDistance(0)][0]
+      const filter = {
+        "#p": [myKey],
+        kinds: [1, 6, 7],
+      }
+      await api.registerPushNotifications(
+        [
+          {
+            endpoint: sub.endpoint,
+            p256dh: base64.encode(new Uint8Array(sub.getKey("p256dh")!)),
+            auth: base64.encode(new Uint8Array(sub.getKey("auth")!)),
+          },
+        ],
+        filter
+      )
     }
   } catch (e) {
     console.error(e)
@@ -276,12 +288,14 @@ export async function subscribeToNotifications() {
 }
 
 export const clearNotifications = async () => {
-  if ("serviceWorker" in navigator) {
-    const registrations = await navigator.serviceWorker.getRegistrations()
-    for (const registration of registrations) {
-      const notifications = await registration.getNotifications()
-      notifications.forEach((notification) => notification.close())
-    }
+  if (!("serviceWorker" in navigator)) {
+    return
+  }
+
+  const registrations = await navigator.serviceWorker.getRegistrations()
+  for (const registration of registrations) {
+    const notifications = await registration.getNotifications()
+    notifications.forEach((notification) => notification.close())
   }
 }
 

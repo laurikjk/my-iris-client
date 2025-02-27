@@ -1,5 +1,5 @@
-import {useNavigate} from "react-router"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
 import {MouseEvent} from "react"
 
