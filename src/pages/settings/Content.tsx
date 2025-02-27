@@ -13,6 +13,10 @@ function Content() {
     useLocalState<boolean>("settings/hidePostsByMutedMoreThanFollowed", true)
   const mutes = useMutes()
   const [showMutedUsers, setShowMutedUsers] = useState<boolean>(false)
+  const [autoplayVideos, setAutoplayVideos] = useLocalState<boolean>(
+    "settings/autoplayVideos",
+    true
+  )
 
   const handleToggleChange = (setter: (value: boolean) => void, value: boolean) => {
     setter(!value)
@@ -43,6 +47,11 @@ function Content() {
             )
           }
           label="Hide posts by users who are muted more than followed"
+        />
+        <SettingToggle
+          checked={autoplayVideos}
+          onChange={() => handleToggleChange(setAutoplayVideos, autoplayVideos)}
+          label="Autoplay Videos"
         />
       </div>
       <div className="mt-6">

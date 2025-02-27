@@ -4,6 +4,7 @@ import {localState} from "irisdb"
 
 import {generateProxyUrl} from "../../../utils/imgproxy"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {useLocalState} from "irisdb-hooks"
 
 interface HlsVideoComponentProps {
   match: string
@@ -28,6 +29,8 @@ function HlsVideoComponent({match, event, limitHeight, onClick}: HlsVideoCompone
         event?.tags.some((t) => t[0] === "content-warning"))
   )
 
+  const [autoplayVideos] = useLocalState<boolean>("settings/autoplayVideos", true)
+
   useEffect(() => {
     const initHls = async () => {
       if (videoRef.current?.canPlayType("application/vnd.apple.mpegurl")) {
@@ -51,7 +54,7 @@ function HlsVideoComponent({match, event, limitHeight, onClick}: HlsVideoCompone
 
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
       const entry = entries[0]
-      if (entry.isIntersecting) {
+      if (entry.isIntersecting && autoplayVideos) {
         videoRef.current?.play()
       } else {
         videoRef.current?.pause()
@@ -71,7 +74,7 @@ function HlsVideoComponent({match, event, limitHeight, onClick}: HlsVideoCompone
         observer.unobserve(videoRef.current)
       }
     }
-  }, [match])
+  }, [match, autoplayVideos])
 
   return (
     <div
@@ -94,8 +97,8 @@ function HlsVideoComponent({match, event, limitHeight, onClick}: HlsVideoCompone
           "max-h-[90vh] lg:max-h-[600px]": !limitHeight,
         })}
         controls
-        muted
-        autoPlay
+        muted={autoplayVideos}
+        autoPlay={autoplayVideos}
         playsInline
         loop
         poster={generateProxyUrl(match, {height: 638})}

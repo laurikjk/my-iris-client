@@ -4,6 +4,7 @@ import {localState} from "irisdb"
 
 import {generateProxyUrl} from "@/shared/utils/imgproxy"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {useLocalState} from "irisdb-hooks"
 
 interface VideoComponentProps {
   match: string
@@ -30,10 +31,12 @@ function VideoComponent({match, event, limitHeight, onClick}: VideoComponentProp
         event?.tags.some((t) => t[0] === "content-warning"))
   )
 
+  const [autoplayVideos] = useLocalState<boolean>("settings/autoplayVideos", true)
+
   useEffect(() => {
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
       const entry = entries[0]
-      if (entry.isIntersecting) {
+      if (entry.isIntersecting && autoplayVideos) {
         videoRef.current?.play()
       } else {
         videoRef.current?.pause()
@@ -53,7 +56,7 @@ function VideoComponent({match, event, limitHeight, onClick}: VideoComponentProp
         observer.unobserve(videoRef.current)
       }
     }
-  }, [match])
+  }, [match, autoplayVideos])
 
   return (
     <div className="relative w-full justify-center flex object-contain my-2">
@@ -73,8 +76,8 @@ function VideoComponent({match, event, limitHeight, onClick}: VideoComponentProp
         })}
         src={match}
         controls
-        muted
-        autoPlay
+        muted={autoplayVideos}
+        autoPlay={autoplayVideos}
         playsInline
         loop
         poster={generateProxyUrl(match, {height: 638})}
