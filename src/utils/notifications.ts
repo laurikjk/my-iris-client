@@ -1,4 +1,4 @@
-import {INVITE_EVENT_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
+import {INVITE_RESPONSE_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
 import {NDKTag, NDKEvent, NDKUser} from "@nostr-dev-kit/ndk"
 import {getSessions} from "@/pages/messages/Sessions"
 import {getZapAmount, getZappingUser} from "./nostr"
@@ -187,7 +187,7 @@ export const subscribeToDMNotifications = debounce(async () => {
     const inviteSub = Object.entries(currentSubscriptions).find(
       ([, sub]) =>
         sub.filter.kinds?.length === 1 &&
-        sub.filter.kinds[0] === INVITE_EVENT_KIND &&
+        sub.filter.kinds[0] === INVITE_RESPONSE_KIND &&
         sub.filter["#p"] && // Look for subscription with #p tags
         !sub.filter.authors && // but no authors filter
         (sub.web_push_subscriptions || []).some(
@@ -201,7 +201,7 @@ export const subscribeToDMNotifications = debounce(async () => {
       if (!arrayEqual(existinginviteRecipients, inviteRecipients)) {
         await api.updateSubscription(id, {
           filter: {
-            kinds: [INVITE_EVENT_KIND],
+            kinds: [INVITE_RESPONSE_KIND],
             "#p": inviteRecipients,
           },
           web_push_subscriptions: [webPushData],
@@ -211,7 +211,7 @@ export const subscribeToDMNotifications = debounce(async () => {
       }
     } else {
       await api.registerPushNotifications([webPushData], {
-        kinds: [INVITE_EVENT_KIND],
+        kinds: [INVITE_RESPONSE_KIND],
         "#p": inviteRecipients,
       })
     }
