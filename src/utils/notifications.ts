@@ -6,9 +6,9 @@ import {getInvites} from "@/pages/messages/Invites"
 import {SortedMap} from "./SortedMap/SortedMap"
 import socialGraph from "@/utils/socialGraph"
 import {profileCache} from "@/utils/memcache"
+import debounce from "lodash/debounce"
 import {base64} from "@scure/base"
 import IrisAPI from "./IrisAPI"
-import {debounce} from "lodash"
 
 interface ReactedTime {
   time: number
