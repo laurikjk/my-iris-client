@@ -8,8 +8,8 @@ import {Session} from "nostr-double-ratchet"
 import {useNavigate} from "react-router-dom"
 import {useEffect, useState} from "react"
 import {getSession} from "./Sessions"
+import {localState} from "irisdb/src"
 import {MessageType} from "./Message"
-import {localState} from "irisdb"
 
 interface ChatHeaderProps {
   id: string

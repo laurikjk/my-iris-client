@@ -6,15 +6,15 @@ import {
 import NotificationsFeedItem from "@/pages/notifications/NotificationsFeedItem"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import useHistoryState from "@/shared/hooks/useHistoryState"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
 import runningOstrich from "@/assets/running-ostrich.gif"
 import {getTag, getZappingUser} from "@/utils/nostr.ts"
 import {useEffect, useCallback, useState} from "react"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import socialGraph from "@/utils/socialGraph"
-import {useLocalState} from "irisdb-hooks"
 import debounce from "lodash/debounce"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
 
 const INITIAL_DISPLAY_COUNT = 10

@@ -1,7 +1,7 @@
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
 import {Link, useNavigate} from "react-router-dom"
 import {useMemo, useState, useEffect} from "react"
-import {useLocalState} from "irisdb-hooks"
-import {PublicKey} from "irisdb-nostr"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import {FollowButton} from "@/shared/components/button/FollowButton.tsx"

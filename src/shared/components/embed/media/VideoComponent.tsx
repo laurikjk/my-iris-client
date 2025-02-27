@@ -1,10 +1,10 @@
 import {useEffect, useRef, useState} from "react"
+import {localState} from "irisdb/src"
 import classNames from "classnames"
-import {localState} from "irisdb"
 
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {generateProxyUrl} from "../../../utils/imgproxy"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {useLocalState} from "irisdb-hooks"
 
 interface HlsVideoComponentProps {
   match: string

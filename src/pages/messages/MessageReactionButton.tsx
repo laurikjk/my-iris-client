@@ -1,10 +1,10 @@
 import {useState, useRef, lazy, Suspense, useEffect} from "react"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiHeartAddLine, RiReplyLine} from "@remixicon/react"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {Session} from "nostr-double-ratchet"
-import {useLocalState} from "irisdb-hooks"
+import {localState} from "irisdb/src"
 import classNames from "classnames"
-import {localState} from "irisdb"
 
 // Lazy load both the emoji picker and data
 const EmojiPicker = lazy(() => import("@emoji-mart/react"))

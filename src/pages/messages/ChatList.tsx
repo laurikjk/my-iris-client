@@ -1,13 +1,13 @@
 import RelativeTime from "@/shared/components/event/RelativeTime"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {getMillisecondTimestamp} from "nostr-double-ratchet"
 import {Avatar} from "@/shared/components/user/Avatar"
 import {NavLink, useLocation} from "react-router-dom"
 import {Name} from "@/shared/components/user/Name"
-import {useLocalState} from "irisdb-hooks"
 import {useEffect, useState} from "react"
+import {localState} from "irisdb/src"
 import {MessageType} from "./Message"
 import classNames from "classnames"
-import {localState} from "irisdb"
 
 interface ChatListProps {
   className?: string

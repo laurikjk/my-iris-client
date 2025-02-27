@@ -1,10 +1,10 @@
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {hexToBytes, bytesToHex} from "@noble/hashes/utils"
 import {NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 import {ChangeEvent, useEffect, useState} from "react"
 import {getPublicKey, nip19} from "nostr-tools"
-import {useLocalState} from "irisdb-hooks"
+import {localState} from "irisdb/src"
 import classNames from "classnames"
-import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
 
 const NSEC_NPUB_REGEX = /(nsec1|npub1)[a-zA-Z0-9]{20,65}/gi

@@ -1,5 +1,5 @@
 import {ReactNode, useMemo} from "react"
-import {JsonValue} from "irisdb"
+import {JsonValue} from "irisdb/src"
 
 interface FeedToggleProps {
   title: string

@@ -3,11 +3,11 @@ import React from "react"
 
 import UnseenMessagesBadge from "@/shared/components/messages/UnseenMessagesBadge"
 import PublishButton from "@/shared/components/ui/PublishButton"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import Icon from "@/shared/components/Icons/Icon" // Add this import
 import NavLink from "@/shared/components/NavLink" // Adjusted import path
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {useLocation} from "react-router-dom"
-import {useLocalState} from "irisdb-hooks"
 
 type MenuItem = {
   label?: string

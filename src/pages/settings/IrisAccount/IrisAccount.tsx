@@ -6,7 +6,7 @@ import {profileCache} from "@/utils/memcache"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ActiveAccount from "./ActiveAccount"
 import AccountName from "./AccountName"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
 
 declare global {

@@ -1,10 +1,10 @@
 import {Invite, serializeSessionState} from "nostr-double-ratchet"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {useNavigate, useLocation} from "react-router-dom"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {hexToBytes} from "@noble/hashes/utils"
-import {useLocalState} from "irisdb-hooks"
 import {VerifiedEvent} from "nostr-tools"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
 import {useEffect} from "react"
 

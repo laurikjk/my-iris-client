@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "react"
-import {JsonValue} from "irisdb"
+import {JsonValue} from "irisdb/src"
 
 const VALUE_TRUNCATE_LENGTH = 20
 

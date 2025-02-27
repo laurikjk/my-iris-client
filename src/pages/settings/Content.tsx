@@ -1,6 +1,6 @@
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {UserRow} from "@/shared/components/user/UserRow"
 import useMutes from "@/shared/hooks/useMutes"
-import {useLocalState} from "irisdb-hooks"
 import {useState} from "react"
 
 function Content() {

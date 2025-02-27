@@ -2,7 +2,7 @@ import "@/index.css"
 
 import {RouterProvider} from "react-router-dom"
 import ReactDOM from "react-dom/client"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 
 import {loadSessions} from "./pages/messages/Sessions"
 import {loadInvites} from "./pages/messages/Invites"

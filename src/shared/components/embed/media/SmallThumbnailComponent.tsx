@@ -2,8 +2,8 @@ import {generateProxyUrl} from "../../../utils/imgproxy"
 import {RiVideoLine} from "@remixicon/react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useState, MouseEvent} from "react"
+import {localState} from "irisdb/src"
 import classNames from "classnames"
-import {localState} from "irisdb"
 
 interface SmallThumbnailComponentProps {
   match: string

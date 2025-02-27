@@ -6,7 +6,7 @@ import {profileCache} from "./memcache"
 import debounce from "lodash/debounce"
 import throttle from "lodash/throttle"
 import localForage from "localforage"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
 import Fuse from "fuse.js"
 

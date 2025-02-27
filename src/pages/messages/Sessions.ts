@@ -9,8 +9,8 @@ import {showNotification, subscribeToDMNotifications} from "@/utils/notification
 import {getPeerConnection} from "./webrtc/PeerConnection"
 import {generateProxyUrl} from "@/shared/utils/imgproxy"
 import {Filter, VerifiedEvent} from "nostr-tools"
+import {JsonObject, localState} from "irisdb/src"
 import {profileCache} from "@/utils/memcache"
-import {JsonObject, localState} from "irisdb"
 import AnimalName from "@/utils/AnimalName"
 import {ndk} from "@/utils/ndk"
 

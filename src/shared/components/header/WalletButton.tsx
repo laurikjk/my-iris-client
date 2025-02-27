@@ -1,4 +1,4 @@
-import {useLocalState} from "irisdb-hooks"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 
 import Wallet from "@/pages/home/feed/components/Wallet.tsx"
 import Icon from "@/shared/components/Icons/Icon"

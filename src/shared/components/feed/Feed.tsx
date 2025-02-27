@@ -3,9 +3,9 @@ import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import useHistoryState from "@/shared/hooks/useHistoryState"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import FeedItem from "../event/FeedItem/FeedItem"
-import {useLocalState} from "irisdb-hooks"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
 import useFeedEvents from "@/shared/hooks/useFeedEvents.ts"

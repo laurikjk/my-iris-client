@@ -1,15 +1,15 @@
 import {LnPayCb, NDKEvent, NDKZapper} from "@nostr-dev-kit/ndk"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {shouldHideEvent} from "@/utils/socialGraph.ts"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import {getZappingUser} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
-import {useLocalState} from "irisdb-hooks"
 import {useEffect, useState} from "react"
 import Icon from "../../Icons/Icon.tsx"
 import ZapModal from "../ZapModal.tsx"
 import debounce from "lodash/debounce"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
 
 const zapsByEventCache = new LRUCache<string, Map<string, NDKEvent[]>>({

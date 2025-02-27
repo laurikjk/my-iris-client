@@ -3,12 +3,12 @@ import {useEffect, useMemo, useState} from "react"
 import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
 import {useHoverCard} from "@/shared/components/user/useHoverCard"
 import ProfileCard from "@/shared/components/user/ProfileCard"
+import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
 import ProxyImg from "@/shared/components/ProxyImg.tsx"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import {Badge} from "@/shared/components/user/Badge"
 import AnimalName from "@/utils/AnimalName.ts"
 import {AVATAR_DEFAULT_WIDTH} from "./const"
-import {PublicKey} from "irisdb-nostr"
 
 export const Avatar = ({
   width = AVATAR_DEFAULT_WIDTH,

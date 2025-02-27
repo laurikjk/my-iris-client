@@ -1,5 +1,5 @@
 import {ChangeEvent, FormEvent, useState} from "react"
-import {DIRECTORY_VALUE, Node} from "irisdb"
+import {DIRECTORY_VALUE, Node} from "irisdb/src"
 
 type EditRowProps = {
   level: number

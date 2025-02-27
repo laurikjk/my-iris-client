@@ -1,7 +1,7 @@
 import {ChangeEvent, DragEvent, useEffect, useState} from "react"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
 import {uploadFile} from "@/shared/upload"
-import {useLocalState} from "irisdb-hooks"
 import {ndk} from "@/utils/ndk"
 
 import UploadButton from "@/shared/components/button/UploadButton.tsx"

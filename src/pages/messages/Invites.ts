@@ -1,9 +1,9 @@
 import {Session, Invite, serializeSessionState} from "nostr-double-ratchet"
 import {subscribeToDMNotifications} from "@/utils/notifications"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
+import {localState, Unsubscribe} from "irisdb/src"
 import {Filter, VerifiedEvent} from "nostr-tools"
 import {hexToBytes} from "@noble/hashes/utils"
-import {localState, Unsubscribe} from "irisdb"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
 

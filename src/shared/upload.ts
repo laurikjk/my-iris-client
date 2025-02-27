@@ -1,6 +1,6 @@
 import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
 
 function getMediaServerUrl(): Promise<string> {

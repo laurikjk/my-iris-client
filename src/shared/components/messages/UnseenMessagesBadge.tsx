@@ -1,6 +1,6 @@
 import {getMillisecondTimestamp, Rumor} from "nostr-double-ratchet"
 import {useState, useEffect, useMemo} from "react"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 
 interface Session {
   latest?: Rumor

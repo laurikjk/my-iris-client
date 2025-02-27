@@ -1,4 +1,4 @@
-import {DIRECTORY_VALUE, isDirectory, JsonValue, Node} from "irisdb"
+import {DIRECTORY_VALUE, isDirectory, JsonValue, Node} from "irisdb/src"
 import {RiArrowRightSLine} from "@remixicon/react"
 import {useEffect, useState} from "react"
 

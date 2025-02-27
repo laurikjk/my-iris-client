@@ -6,7 +6,7 @@ import Message, {MessageType} from "./Message"
 import MessageForm from "./MessageForm"
 import ChatHeader from "./ChatHeader"
 import {getSession} from "./Sessions"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 
 const comparator = (a: [string, MessageType], b: [string, MessageType]) =>
   getMillisecondTimestamp(a[1]) - getMillisecondTimestamp(b[1])

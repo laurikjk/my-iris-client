@@ -1,7 +1,7 @@
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
 import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
-import {useLocalState} from "irisdb-hooks"
 import {useMemo, useState} from "react"
-import {PublicKey} from "irisdb-nostr"
 
 import {unmuteUser} from "@/shared/services/Mute"
 import socialGraph from "@/utils/socialGraph.ts"

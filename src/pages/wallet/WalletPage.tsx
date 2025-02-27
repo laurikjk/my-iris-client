@@ -1,7 +1,7 @@
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import Trending from "@/shared/components/feed/Trending.tsx"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import Widget from "@/shared/components/ui/Widget"
-import {useLocalState} from "irisdb-hooks"
 
 export default function WalletPage() {
   const [myPubKey] = useLocalState("user/publicKey", "")

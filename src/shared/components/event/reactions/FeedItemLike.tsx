@@ -4,8 +4,8 @@ import {formatAmount} from "@/utils/utils.ts"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"
+import {localState} from "irisdb/src"
 import Icon from "../../Icons/Icon"
-import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
 
 const likeCache = new LRUCache<string, Set<string>>({

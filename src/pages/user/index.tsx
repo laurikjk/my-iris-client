@@ -3,8 +3,10 @@ import Widget from "@/shared/components/ui/Widget"
 import {useMemo, ReactNode} from "react"
 import classNames from "classnames"
 
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
+import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import useFollows from "@/shared/hooks/useFollows"
 import {hasMedia} from "@/shared/components/embed"
@@ -13,8 +15,6 @@ import socialGraph from "@/utils/socialGraph.ts"
 import {getEventReplyingTo} from "@/utils/nostr"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ProfileHeader from "./ProfileHeader"
-import {useLocalState} from "irisdb-hooks"
-import {PublicKey} from "irisdb-nostr"
 
 type Tab = {
   name: string

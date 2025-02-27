@@ -1,6 +1,6 @@
 import {MouseEvent, ReactNode, useState, memo} from "react"
 import reactStringReplace from "react-string-replace"
-import {localState, JsonObject} from "irisdb"
+import {localState, JsonObject} from "irisdb/src"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 import {allEmbeds, smallEmbeds} from "./embed"

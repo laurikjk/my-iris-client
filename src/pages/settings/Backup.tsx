@@ -1,6 +1,6 @@
 import CopyButton from "@/shared/components/button/CopyButton.tsx"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {hexToBytes} from "@noble/hashes/utils"
-import {useLocalState} from "irisdb-hooks"
 import {nip19} from "nostr-tools"
 
 function Backup() {

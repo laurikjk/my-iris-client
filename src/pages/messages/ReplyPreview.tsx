@@ -1,8 +1,8 @@
 import {Name} from "@/shared/components/user/Name"
 import {useState, useEffect} from "react"
+import {localState} from "irisdb/src"
 import {MessageType} from "./Message"
 import classNames from "classnames"
-import {localState} from "irisdb"
 
 type ReplyPreviewProps = {
   isUser: boolean

@@ -1,5 +1,5 @@
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {useLocalState} from "irisdb-hooks"
 import {useEffect, useState} from "react"
 import {nip19} from "nostr-tools"
 

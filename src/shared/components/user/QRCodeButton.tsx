@@ -1,9 +1,9 @@
 import CopyButton from "@/shared/components/button/CopyButton.tsx"
 import {useEffect, useState, lazy, Suspense, useMemo} from "react"
+import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import Icon from "@/shared/components/Icons/Icon"
 import {useNavigate} from "react-router-dom"
-import {PublicKey} from "irisdb-nostr"
 import {UserRow} from "./UserRow"
 const QRScanner = lazy(() => import("../QRScanner"))
 

@@ -1,6 +1,6 @@
 import {useState, MouseEvent} from "react"
 import ProxyImg from "../../ProxyImg"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 
 import classNames from "classnames"
 

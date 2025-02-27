@@ -1,9 +1,9 @@
 import {ChangeEvent, KeyboardEvent, useEffect, useRef, useState} from "react"
 import {generateSecretKey, getPublicKey, nip19} from "nostr-tools"
 import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {bytesToHex} from "@noble/hashes/utils"
-import {useLocalState} from "irisdb-hooks"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
 
 const NSEC_NPUB_REGEX = /(nsec1|npub1)[a-zA-Z0-9]{20,65}/gi

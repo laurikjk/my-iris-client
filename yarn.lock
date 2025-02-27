@@ -4095,7 +4095,7 @@ irisdb-hooks@1.0.14:
   resolved "https://registry.yarnpkg.com/irisdb-hooks/-/irisdb-hooks-1.0.14.tgz#10dece15f790eb3ff5b0e287d8dd66d3f6c6edf4"
   integrity sha512-l7PILXx4DnIS3btlG+pdj+vhc80bfaGScLBCcW/jmZ/ur8xBuvii0dk9btkrjF4aoVDIHNZOEqnZ07fRTBbCAw==
 
-irisdb-nostr@1.0.23:
+irisdb-nostr@^1.0.23:
   version "1.0.23"
   resolved "https://registry.yarnpkg.com/irisdb-nostr/-/irisdb-nostr-1.0.23.tgz#9f620c4b543b76baa28d55d03f97085cafe357d8"
   integrity sha512-Y3irsZTTNtQH7YrfOpID0985SHSgq3ae2C+CIQh3FlUfKJSPrx49OarvUg3LfxwTBBBlM2Hg8uyRAWy866tnJQ==
@@ -5256,10 +5256,10 @@ normalize-range@^0.1.2:
   resolved "https://registry.yarnpkg.com/normalize-range/-/normalize-range-0.1.2.tgz#2d10c06bdfd312ea9777695a4d28439456b75942"
   integrity sha512-bdok/XvKII3nUpklnV6P2hxtMNrCboOjAcyBuQnWEhO665FwrSNRxU+AqpsyvO6LgGYPspN+lu5CLtw4jPRKNA==
 
-nostr-double-ratchet@0.0.19:
-  version "0.0.19"
-  resolved "https://registry.yarnpkg.com/nostr-double-ratchet/-/nostr-double-ratchet-0.0.19.tgz#3f0061eba14295e9b88f7fb238916a6a32d98449"
-  integrity sha512-XDHo6DPY01voett43ZV2YjwTZKckF/wAlTjT1Z7dZnx+OUI7cl8GCKwyC6gtZE5KyrRZyEtvF7nCxZK/ejcxzw==
+nostr-double-ratchet@0.0.20:
+  version "0.0.20"
+  resolved "https://registry.yarnpkg.com/nostr-double-ratchet/-/nostr-double-ratchet-0.0.20.tgz#48b2f10b14ef46d09e6f409514edc3064d727b40"
+  integrity sha512-iwmPxmk19AVySlLWO/PfrZxaXTbcGj1XorsJHjmKRYIqx+VgejWE5uz/UyptqYEp8RWIdCSSw2G98iXzf71UpA==
   dependencies:
     nostr-tools "^2.10.4"
 

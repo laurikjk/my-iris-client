@@ -5,7 +5,7 @@ import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {feedCache} from "@/utils/memcache"
 import debounce from "lodash/debounce"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
 
 // TODO fix useLocalState so initial state is properly set from memory

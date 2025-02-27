@@ -10,7 +10,7 @@ import NDK, {
 import {generateSecretKey, getPublicKey, nip19} from "nostr-tools"
 import NDKCacheAdapterDexie from "@nostr-dev-kit/ndk-cache-dexie"
 import {bytesToHex, hexToBytes} from "@noble/hashes/utils"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined

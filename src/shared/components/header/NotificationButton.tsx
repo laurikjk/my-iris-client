@@ -1,6 +1,6 @@
 import UnseenNotificationsBadge from "./UnseenNotificationsBadge"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import Show from "@/shared/components/Show.tsx"
-import {useLocalState} from "irisdb-hooks"
 import {NavLink} from "react-router-dom"
 import Icon from "../Icons/Icon"
 

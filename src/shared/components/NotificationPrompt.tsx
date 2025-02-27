@@ -1,5 +1,5 @@
 import {subscribeToDMNotifications, subscribeToNotifications} from "@/utils/notifications"
-import {useLocalState} from "irisdb-hooks"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {useEffect, useState} from "react"
 
 const NotificationPrompt = () => {

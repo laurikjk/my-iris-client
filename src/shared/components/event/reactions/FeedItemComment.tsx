@@ -6,8 +6,8 @@ import {ndk} from "@/utils/ndk"
 
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {formatAmount} from "@/utils/utils.ts"
+import {localState} from "irisdb/src"
 import Icon from "../../Icons/Icon"
-import {localState} from "irisdb"
 
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import {LRUCache} from "typescript-lru-cache"

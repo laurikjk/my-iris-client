@@ -1,5 +1,5 @@
 import {NavLink as RouterNavLink, NavLinkProps, useLocation} from "react-router-dom"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 import {MouseEvent} from "react"
 
 export default function NavLink(props: NavLinkProps) {

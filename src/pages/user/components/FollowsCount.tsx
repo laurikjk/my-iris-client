@@ -1,4 +1,4 @@
-import {useLocalState} from "irisdb-hooks"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {useState, useMemo} from "react"
 
 import useFollows from "@/shared/hooks/useFollows.ts"

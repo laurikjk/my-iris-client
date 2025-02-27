@@ -13,7 +13,7 @@ import {formatAmount} from "@/utils/utils.ts"
 import Icon from "../../Icons/Icon"
 
 import {shouldHideEvent} from "@/utils/socialGraph"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 
 interface FeedItemRepostProps {
   event: NDKEvent

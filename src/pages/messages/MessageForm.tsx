@@ -4,8 +4,8 @@ import MessageFormReplyPreview from "./MessageFormReplyPreview"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiEmotionLine} from "@remixicon/react"
+import {localState} from "irisdb/src"
 import {MessageType} from "./Message"
-import {localState} from "irisdb"
 
 interface MessageFormProps {
   session: Session

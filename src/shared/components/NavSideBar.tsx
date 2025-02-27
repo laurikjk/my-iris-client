@@ -2,10 +2,10 @@ import UnseenNotificationsBadge from "@/shared/components/header/UnseenNotificat
 import PublishButton from "@/shared/components/ui/PublishButton.tsx"
 import {useRef, ReactNode, MouseEventHandler, useMemo} from "react"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiLoginBoxLine} from "@remixicon/react"
 import {npubEncode} from "nostr-tools/nip19"
-import {useLocalState} from "irisdb-hooks"
 import classNames from "classnames"
 import NavLink from "./NavLink"
 

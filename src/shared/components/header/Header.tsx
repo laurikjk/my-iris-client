@@ -4,9 +4,9 @@ import {useLocation, useNavigate} from "react-router-dom"
 
 import NotificationButton from "@/shared/components/header/NotificationButton.tsx"
 import {MOBILE_BREAKPOINT} from "@/shared/components/user/const.ts"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {UserRow} from "@/shared/components/user/UserRow"
 import ErrorBoundary from "../ui/ErrorBoundary"
-import {useLocalState} from "irisdb-hooks"
 import {Avatar} from "../user/Avatar"
 
 export default function Header() {

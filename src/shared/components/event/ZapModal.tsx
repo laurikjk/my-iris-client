@@ -9,9 +9,9 @@ import {
 import {LnPayCb, NDKEvent, zapInvoiceFromEvent, NDKZapper} from "@nostr-dev-kit/ndk"
 import {RiCheckLine, RiFileCopyLine} from "@remixicon/react"
 
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import zapAnimation from "@/assets/zap-animation.gif"
 import Modal from "@/shared/components/ui/Modal.tsx"
-import {useLocalState} from "irisdb-hooks"
 import {ndk} from "@/utils/ndk"
 
 interface ZapModalProps {

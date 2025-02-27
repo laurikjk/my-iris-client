@@ -6,8 +6,8 @@ import ImageComponent from "./ImageComponent"
 import VideoComponent from "./VideoComponent"
 import {useSwipeable} from "react-swipeable"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {localState} from "irisdb/src"
 import classNames from "classnames"
-import {localState} from "irisdb"
 
 interface MediaItem {
   url: string

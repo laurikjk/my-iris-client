@@ -1,5 +1,5 @@
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiAddCircleLine, RiAddLine} from "@remixicon/react" // Import Plus icon from Remix Icons
-import {useLocalState} from "irisdb-hooks"
 import classNames from "classnames" // Import classnames library
 import {useCallback} from "react"
 

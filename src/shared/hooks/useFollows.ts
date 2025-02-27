@@ -1,8 +1,8 @@
 import socialGraph, {handleSocialGraphEvent} from "@/utils/socialGraph.ts"
+import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
 import {useEffect, useState, useMemo} from "react"
 import {NostrEvent} from "nostr-social-graph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {PublicKey} from "irisdb-nostr"
 import {ndk} from "@/utils/ndk"
 
 const useFollows = (pubKey: string, includeSelf = false) => {

@@ -3,9 +3,9 @@ import {
   subscribeToDMNotifications,
   subscribeToNotifications,
 } from "@/utils/notifications"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {useEffect, useState, ChangeEvent} from "react"
 import Icon from "@/shared/components/Icons/Icon"
-import {useLocalState} from "irisdb-hooks"
 import IrisAPI from "@/utils/IrisAPI"
 
 interface StatusIndicatorProps {

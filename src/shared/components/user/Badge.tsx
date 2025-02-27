@@ -1,6 +1,6 @@
 import socialGraph from "@/utils/socialGraph.ts"
 import {RiCheckLine} from "@remixicon/react"
-import {localState} from "irisdb"
+import {localState} from "irisdb/src"
 
 let loggedIn = false
 localState.get("user/publicKey").on((v?: string) => (loggedIn = !!v))
