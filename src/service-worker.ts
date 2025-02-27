@@ -136,8 +136,6 @@ self.addEventListener("install", (event) => {
       )
     })
   )
-  // always skip waiting
-  self.skipWaiting()
 })
 
 interface PushData {
