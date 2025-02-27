@@ -73,9 +73,11 @@ const Layout = () => {
       }
     }
 
-    navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage)
-    return () => {
-      navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage)
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage)
+      return () => {
+        navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage)
+      }
     }
   }, [navigate])
 

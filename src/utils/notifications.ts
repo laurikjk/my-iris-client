@@ -58,7 +58,7 @@ export const showNotification = (
   options?: NotificationOptions,
   nag = false
 ) => {
-  if (window.Notification?.permission === "granted") {
+  if ("serviceWorker" in navigator && window.Notification?.permission === "granted") {
     navigator.serviceWorker.ready.then(async function (serviceWorker) {
       await serviceWorker.showNotification(title, options)
     })
