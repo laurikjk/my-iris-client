@@ -95,7 +95,12 @@ const Message = ({
                 isShortEmoji && "flex-col gap-1 items-center"
               )}
             >
-              <p className={classNames(isShortEmoji ? "text-6xl" : "text-sm")}>
+              <p
+                className={classNames(
+                  isShortEmoji ? "text-6xl" : "text-sm",
+                  "whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                )}
+              >
                 {message.content}
               </p>
               {isLast && (
