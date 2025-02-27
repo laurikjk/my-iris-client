@@ -1,10 +1,12 @@
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiMoreLine, RiAttachment2} from "@remixicon/react"
 import {getPeerConnection} from "./webrtc/PeerConnection"
 import {UserRow} from "@/shared/components/user/UserRow"
 import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {Session} from "nostr-double-ratchet/src"
+import socialGraph from "@/utils/socialGraph"
 import {useEffect, useState} from "react"
 import {useNavigate} from "react-router"
 import {getSession} from "./Sessions"
@@ -19,6 +21,7 @@ interface ChatHeaderProps {
 const ChatHeader = ({id, messages}: ChatHeaderProps) => {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [session, setSession] = useState<Session | undefined>(undefined)
+  const [myPubKey] = useLocalState("user/publicKey", "")
   const navigate = useNavigate()
 
   const handleDeleteChat = () => {
@@ -36,12 +39,23 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
   }
 
   const handleSendFile = () => {
-    // TODO: Implement file sending functionality
-    console.log("Send file clicked")
     if (session) {
-      const peerConnection = getPeerConnection(id, false)
-      peerConnection?.connect()
-      console.log("peerConnection", peerConnection)
+      const peerConnection = getPeerConnection(id, false, true)
+      if (peerConnection) {
+        // Create a hidden file input
+        const fileInput = document.createElement("input")
+        fileInput.type = "file"
+        fileInput.style.display = "none"
+        fileInput.onchange = (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0]
+          if (file) {
+            peerConnection.sendFile(file)
+          }
+        }
+        document.body.appendChild(fileInput)
+        fileInput.click()
+        document.body.removeChild(fileInput)
+      }
     }
   }
 
@@ -63,7 +77,7 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
       <div className="flex items-center justify-between w-full">
         <div>{id && <UserRow avatarWidth={32} pubKey={user} />}</div>
         <div className="flex items-center gap-2 relative">
-          {window.location.hostname === "localhost" && (
+          {socialGraph().getFollowedByUser(user).has(myPubKey) && (
             <button
               onClick={handleSendFile}
               className="btn btn-ghost btn-sm btn-circle"

@@ -1,9 +1,8 @@
 import {useParams, useNavigate, useLocation} from "react-router"
 import {useEffect, useState} from "react"
+import {nip05, nip19} from "nostr-tools"
 import ThreadPage from "@/pages/thread"
 import ProfilePage from "@/pages/user"
-import {nip05} from "nostr-tools"
-import {nip19} from "nostr-tools"
 
 export default function NostrLinkHandler() {
   const {link} = useParams()

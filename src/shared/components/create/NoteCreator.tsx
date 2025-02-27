@@ -9,12 +9,12 @@ import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
 import {Avatar} from "@/shared/components/user/Avatar.tsx"
 import HyperText from "@/shared/components/HyperText.tsx"
 
+import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import EmojiButton from "@/pages/messages/EmojiButton"
 import {eventsByIdCache} from "@/utils/memcache"
 import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
 import Textarea from "./Textarea"
-import { isTouchDevice } from "@/shared/utils/isTouchDevice"
 
 type handleCloseFunction = () => void
 

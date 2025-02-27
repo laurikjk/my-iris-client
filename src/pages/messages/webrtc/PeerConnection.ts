@@ -1,18 +1,22 @@
 import {EventEmitter} from "tseep"
 
+import socialGraph, {shouldSocialHide} from "@/utils/socialGraph"
 import {Rumor, Session} from "nostr-double-ratchet/src"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {getSessions} from "../Sessions"
 
 const connections = new Map<string, PeerConnection>()
-export function getPeerConnection(sessionId: string, ask = true) {
-  const isLocalhost =
-    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-
+export function getPeerConnection(sessionId: string, ask = true, connect = false) {
+  const pubKey = sessionId.split(":")[0]
+  if (socialGraph().getFollowDistance(pubKey) > 2 || shouldSocialHide(pubKey)) {
+    console.log("Rejected connection request from untrusted user:", pubKey)
+    return
+  }
   if (
-    isLocalhost &&
     !connections.has(sessionId) &&
-    (!ask || confirm(`WebRTC connect with ${sessionId}?`))
+    (pubKey === socialGraph().getRoot() ||
+      !ask ||
+      confirm(`WebRTC connect with ${sessionId}?`))
   ) {
     const session = getSessions().get(sessionId)
     if (!session) {
@@ -21,6 +25,9 @@ export function getPeerConnection(sessionId: string, ask = true) {
     }
     const connection = new PeerConnection(session, sessionId)
     connections.set(sessionId, connection)
+    if (connect) {
+      connection?.connect()
+    }
     return connection
   }
   return connections.get(sessionId)
