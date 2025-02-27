@@ -2,11 +2,11 @@ import {useEffect, useRef, useState} from "react"
 import classNames from "classnames"
 import {localState} from "irisdb"
 
-import {generateProxyUrl} from "@/shared/utils/imgproxy"
+import {generateProxyUrl} from "../../../utils/imgproxy"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useLocalState} from "irisdb-hooks"
 
-interface VideoComponentProps {
+interface HlsVideoComponentProps {
   match: string
   event: NDKEvent | undefined
   limitHeight?: boolean
@@ -14,17 +14,15 @@ interface VideoComponentProps {
   blur?: boolean
 }
 
-let blurNSFW = true
+function HlsVideoComponent({match, event, limitHeight, onClick}: HlsVideoComponentProps) {
+  let blurNSFW = true
+  localState.get("settings/blurNSFW").on((value) => {
+    if (typeof value === "boolean") {
+      blurNSFW = value
+    }
+  })
 
-localState.get("settings/blurNSFW").once((value) => {
-  if (typeof value === "boolean") {
-    blurNSFW = value
-  }
-})
-
-function VideoComponent({match, event, limitHeight, onClick}: VideoComponentProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
-
   const [blur, setBlur] = useState(
     blurNSFW &&
       (!!event?.content.toLowerCase().includes("#nsfw") ||
@@ -34,32 +32,60 @@ function VideoComponent({match, event, limitHeight, onClick}: VideoComponentProp
   const [autoplayVideos] = useLocalState<boolean>("settings/autoplayVideos", true)
 
   useEffect(() => {
-    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
-      const entry = entries[0]
-      if (entry.isIntersecting && autoplayVideos) {
-        videoRef.current?.play()
-      } else {
-        videoRef.current?.pause()
+    const initVideo = async () => {
+      const isHls = match.includes(".m3u8") || match.includes("playlist")
+
+      if (!isHls || videoRef.current?.canPlayType("application/vnd.apple.mpegurl")) {
+        videoRef.current!.src = match
+        return
+      }
+
+      try {
+        const {default: Hls} = await import("hls.js")
+        if (Hls.isSupported() && videoRef.current) {
+          const hls = new Hls()
+          hls.loadSource(match)
+          hls.attachMedia(videoRef.current)
+        }
+      } catch (error) {
+        console.error("Failed to load HLS:", error)
       }
     }
 
-    const observer = new IntersectionObserver(handleIntersection, {
-      threshold: 0.33,
-    })
+    initVideo()
 
-    if (videoRef.current) {
-      observer.observe(videoRef.current)
-    }
+    if (autoplayVideos) {
+      const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+        const entry = entries[0]
+        if (entry.isIntersecting) {
+          videoRef.current?.play()
+        } else {
+          videoRef.current?.pause()
+        }
+      }
 
-    return () => {
+      const observer = new IntersectionObserver(handleIntersection, {
+        threshold: 0.33,
+      })
+
       if (videoRef.current) {
-        observer.unobserve(videoRef.current)
+        observer.observe(videoRef.current)
+      }
+
+      return () => {
+        if (videoRef.current) {
+          observer.unobserve(videoRef.current)
+        }
       }
     }
   }, [match, autoplayVideos])
 
   return (
-    <div className="relative w-full justify-center flex object-contain my-2">
+    <div
+      className={classNames("relative w-full justify-center flex object-contain my-2", {
+        "h-[600px]": limitHeight,
+      })}
+    >
       <video
         onClick={(e) => {
           e.stopPropagation()
@@ -74,7 +100,6 @@ function VideoComponent({match, event, limitHeight, onClick}: VideoComponentProp
           "h-full max-h-[600px]": limitHeight,
           "max-h-[90vh] lg:max-h-[600px]": !limitHeight,
         })}
-        src={match}
         controls
         muted={autoplayVideos}
         autoPlay={autoplayVideos}
@@ -86,4 +111,4 @@ function VideoComponent({match, event, limitHeight, onClick}: VideoComponentProp
   )
 }
 
-export default VideoComponent
+export default HlsVideoComponent

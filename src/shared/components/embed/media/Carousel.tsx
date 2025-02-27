@@ -2,7 +2,6 @@ import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import PreloadImages from "@/shared/components/media/PreloadImages"
 import {useEffect, useState, MouseEvent, useCallback} from "react"
 import MediaModal from "@/shared/components/media/MediaModal"
-import HlsVideoComponent from "./HlsVideoComponent"
 import ImageComponent from "./ImageComponent"
 import VideoComponent from "./VideoComponent"
 import {useSwipeable} from "react-swipeable"
@@ -133,19 +132,6 @@ function Carousel({media, event}: CarouselProps) {
           onClickImage={onClickImage}
           blur={blur}
           key={item.url}
-          limitHeight={limitHeight}
-        />
-      )
-    }
-
-    if (item.url.endsWith(".m3u8")) {
-      return (
-        <HlsVideoComponent
-          match={item.url}
-          event={event}
-          key={item.url}
-          blur={blur}
-          onClick={() => setBlur(false)}
           limitHeight={limitHeight}
         />
       )
