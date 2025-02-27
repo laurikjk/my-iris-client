@@ -51,8 +51,8 @@ function QRCodeModal({
   useEffect(() => {
     async function checkCameraAvailability() {
       try {
-        const devices = await navigator.mediaDevices.enumerateDevices()
-        const hasCamera = devices.some((device) => device.kind === "videoinput")
+        const devices = await navigator.mediaDevices?.enumerateDevices()
+        const hasCamera = devices?.some((device) => device.kind === "videoinput") ?? false
         setIsCameraAvailable(hasCamera)
       } catch (error) {
         console.error("Error checking camera availability:", error)

@@ -11,6 +11,7 @@ const QRScanner = ({onScanSuccess}: QRScannerProps) => {
   const [qrCodeResult, setQrCodeResult] = useState("")
   const streamRef = useRef<MediaStream | null>(null)
   const animationRef = useRef<number | null>(null)
+  const [error, setError] = useState<string>("")
 
   useEffect(() => {
     // Set up canvas for processing video frames
@@ -22,6 +23,11 @@ const QRScanner = ({onScanSuccess}: QRScannerProps) => {
     if (!ctx) return
 
     // Start camera
+    if (!navigator.mediaDevices?.getUserMedia) {
+      console.error("Camera access not supported in this browser")
+      return
+    }
+
     navigator.mediaDevices
       .getUserMedia({
         video: {facingMode: "environment"}, // Use back camera if available
@@ -65,6 +71,9 @@ const QRScanner = ({onScanSuccess}: QRScannerProps) => {
       })
       .catch((err) => {
         console.error("Error accessing camera:", err)
+        setError(
+          "Unable to access camera. Please make sure you have granted camera permissions."
+        )
       })
 
     // Cleanup function
@@ -81,9 +90,15 @@ const QRScanner = ({onScanSuccess}: QRScannerProps) => {
   return (
     <div>
       <h1 className="text-center text-2xl mb-4">Scan QR</h1>
-      <video ref={videoRef} style={{width: "100%"}} />
-      <canvas ref={canvasRef} style={{display: "none"}} />
-      {qrCodeResult && <p>QR Code Result: {qrCodeResult}</p>}
+      {error ? (
+        <p className="text-red-500 text-center">{error}</p>
+      ) : (
+        <>
+          <video ref={videoRef} style={{width: "100%"}} />
+          <canvas ref={canvasRef} style={{display: "none"}} />
+          {qrCodeResult && <p>QR Code Result: {qrCodeResult}</p>}
+        </>
+      )}
     </div>
   )
 }
