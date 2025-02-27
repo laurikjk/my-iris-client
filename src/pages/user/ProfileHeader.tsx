@@ -19,7 +19,7 @@ import useProfile from "@/shared/hooks/useProfile.ts"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import Icon from "@/shared/components/Icons/Icon"
 import {Filter, VerifiedEvent} from "nostr-tools"
-import {Invite} from "nostr-double-ratchet"
+import {Invite} from "nostr-double-ratchet/src"
 import {Helmet} from "react-helmet"
 import {ndk} from "@/utils/ndk"
 

@@ -93,7 +93,7 @@ const NotificationSettings = () => {
       const options = {
         body: "Seems like it's working!",
         icon: "/favicon.png",
-        sticky: false,
+        requireInteraction: false,
         image:
           "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Orange_tabby_cat_sitting_on_fallen_leaves-Hisashi-01A.jpg/1920px-Orange_tabby_cat_sitting_on_fallen_leaves-Hisashi-01A.jpg",
       }

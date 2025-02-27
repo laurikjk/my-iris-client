@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import {PROFILE_AVATAR_WIDTH, EVENT_AVATAR_WIDTH} from "./shared/components/user/const"
-import {INVITE_EVENT_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet"
+import {INVITE_EVENT_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
 import {CacheFirst, StaleWhileRevalidate} from "workbox-strategies"
 import {CacheableResponsePlugin} from "workbox-cacheable-response"
 import {precacheAndRoute, PrecacheEntry} from "workbox-precaching"

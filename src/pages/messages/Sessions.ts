@@ -4,7 +4,7 @@ import {
   deserializeSessionState,
   getMillisecondTimestamp,
   serializeSessionState,
-} from "nostr-double-ratchet"
+} from "nostr-double-ratchet/src"
 import {showNotification, subscribeToDMNotifications} from "@/utils/notifications"
 import {getPeerConnection} from "./webrtc/PeerConnection"
 import {generateProxyUrl} from "@/shared/utils/imgproxy"
@@ -173,7 +173,7 @@ async function showEventNotification(id: string, event: Rumor) {
       ? generateProxyUrl(String(profile.picture), {width: 128, square: true})
       : "/favicon.png",
     data: {url: `/messages`}, // TODO add session id state param
-    sticky: false,
+    requireInteraction: false,
   })
 }
 

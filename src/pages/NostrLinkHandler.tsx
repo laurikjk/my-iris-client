@@ -46,15 +46,15 @@ export default function NostrLinkHandler() {
   useEffect(() => {
     if (isAddress && cleanLink) {
       try {
-        const decoded = nip19.decode(cleanLink);
+        const decoded = nip19.decode(cleanLink)
         if (decoded.type === "naddr") {
-          setNaddrData(decoded.data as nip19.AddressPointer);
+          setNaddrData(decoded.data as nip19.AddressPointer)
         }
       } catch (error) {
-        console.warn("Failed to decode naddr:", error);
+        console.warn("Failed to decode naddr:", error)
       }
     }
-  }, [cleanLink, isAddress]);
+  }, [cleanLink, isAddress])
 
   if (pubkey || isProfile) {
     const k = pubkey || cleanLink!
@@ -62,7 +62,14 @@ export default function NostrLinkHandler() {
   } else if (isNote) {
     return <ThreadPage id={cleanLink!} key={location.pathname} />
   } else if (isAddress) {
-    return <ThreadPage id={cleanLink!} isNaddr={true} naddrData={naddrData} key={location.pathname} />
+    return (
+      <ThreadPage
+        id={cleanLink!}
+        isNaddr={true}
+        naddrData={naddrData}
+        key={location.pathname}
+      />
+    )
   } else if (loading) {
     return <ProfilePage pubKey={""} key={pubkey || location.pathname} />
   } else {

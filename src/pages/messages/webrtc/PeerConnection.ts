@@ -1,6 +1,6 @@
 import {EventEmitter} from "tseep"
 
-import {Rumor, Session} from "nostr-double-ratchet"
+import {Rumor, Session} from "nostr-double-ratchet/src"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {getSessions} from "../Sessions"
 

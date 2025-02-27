@@ -1,4 +1,4 @@
-import {INVITE_EVENT_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet"
+import {INVITE_EVENT_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
 import {NDKTag, NDKEvent, NDKUser} from "@nostr-dev-kit/ndk"
 import {getSessions} from "@/pages/messages/Sessions"
 import {getZapAmount, getZappingUser} from "./nostr"
@@ -43,7 +43,6 @@ interface NotificationOptions {
   lang?: string
   timestamp?: number
   noscreen?: boolean
-  sticky?: boolean
   sound?: string
 }
 
@@ -98,7 +97,7 @@ export async function maybeShowPushNotification(event: NDKEvent) {
   showNotification(`${name} zapped you ${amount} sats!`, {
     icon: "/favicon.png",
     image: "/img/zap.png",
-    sticky: false,
+    requireInteraction: false,
     data: {url: "/notifications"},
   })
 }

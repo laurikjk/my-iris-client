@@ -1,4 +1,4 @@
-import {Session, getMillisecondTimestamp} from "nostr-double-ratchet"
+import {Session, getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import ErrorBoundary from "@/shared/components/ui/ErrorBoundary"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"

@@ -1,4 +1,4 @@
-import {Session, Invite, serializeSessionState} from "nostr-double-ratchet"
+import {Session, Invite, serializeSessionState} from "nostr-double-ratchet/src"
 import {subscribeToDMNotifications} from "@/utils/notifications"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
 import {localState, Unsubscribe} from "irisdb/src"

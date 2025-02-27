@@ -1,5 +1,5 @@
+import {CHAT_MESSAGE_KIND, serializeSessionState, Session} from "nostr-double-ratchet/src"
 import {FormEvent, useState, useEffect, useRef, lazy, Suspense, ChangeEvent} from "react"
-import {CHAT_MESSAGE_KIND, serializeSessionState, Session} from "nostr-double-ratchet"
 import MessageFormReplyPreview from "./MessageFormReplyPreview"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {NDKEventFromRawEvent} from "@/utils/nostr"

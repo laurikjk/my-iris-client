@@ -1,7 +1,7 @@
 import {useState, useRef, useEffect, ChangeEvent, FormEvent} from "react"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
+import {Invite, serializeSessionState} from "nostr-double-ratchet/src"
 import InstallPWAPrompt from "@/shared/components/InstallPWAPrompt"
-import {Invite, serializeSessionState} from "nostr-double-ratchet"
 import QRCodeButton from "@/shared/components/user/QRCodeButton"
 import {acceptInvite} from "@/shared/hooks/useInviteFromUrl"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"

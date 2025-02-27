@@ -1,4 +1,4 @@
-import {getMillisecondTimestamp, Rumor, Session} from "nostr-double-ratchet"
+import {getMillisecondTimestamp, Rumor, Session} from "nostr-double-ratchet/src"
 import MessageReactionButton from "./MessageReactionButton"
 import MessageReactions from "./MessageReactions"
 import ReplyPreview from "./ReplyPreview"

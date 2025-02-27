@@ -3,7 +3,7 @@ import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiHeartAddLine, RiReplyLine} from "@remixicon/react"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
-import {Session} from "nostr-double-ratchet"
+import {Session} from "nostr-double-ratchet/src"
 import {localState} from "irisdb/src"
 import classNames from "classnames"
 

@@ -1,6 +1,6 @@
 import RelativeTime from "@/shared/components/event/RelativeTime"
+import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import {getMillisecondTimestamp} from "nostr-double-ratchet"
 import {Avatar} from "@/shared/components/user/Avatar"
 import {NavLink, useLocation} from "react-router-dom"
 import {Name} from "@/shared/components/user/Name"

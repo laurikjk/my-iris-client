@@ -1,4 +1,4 @@
-import {getMillisecondTimestamp, Rumor} from "nostr-double-ratchet"
+import {getMillisecondTimestamp, Rumor} from "nostr-double-ratchet/src"
 import {useState, useEffect, useMemo} from "react"
 import {localState} from "irisdb/src"
 
