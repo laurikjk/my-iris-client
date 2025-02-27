@@ -9,10 +9,12 @@ import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
 import {Avatar} from "@/shared/components/user/Avatar.tsx"
 import HyperText from "@/shared/components/HyperText.tsx"
 
+import EmojiButton from "@/pages/messages/EmojiButton"
 import {eventsByIdCache} from "@/utils/memcache"
 import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
 import Textarea from "./Textarea"
+import { isTouchDevice } from "@/shared/utils/isTouchDevice"
 
 type handleCloseFunction = () => void
 
@@ -181,6 +183,16 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
     }
   }
 
+  const handleEmojiSelect = (emoji: any) => {
+    if (textarea) {
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      const textBeforeCursor = noteContent.substring(0, start)
+      const textAfterCursor = noteContent.substring(end)
+      setNoteContent(textBeforeCursor + emoji.native + textAfterCursor)
+    }
+  }
+
   const publish = () => {
     const event = new NDKEvent(ndk())
     event.kind = 1
@@ -245,13 +257,14 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
           </div>
         )}
         {uploadError && <p className="text-sm text-error mt-2">{uploadError}</p>}
-        <div className="flex flex-row gap-2">
+        <div className="flex flex-row gap-2 items-center">
           {myPubKey && <Avatar showBadge={false} pubKey={myPubKey} />}
           <UploadButton
             className="rounded-full btn btn-primary"
             onUpload={handleUpload}
             text="Upload file"
           />
+          {!isTouchDevice && <EmojiButton onEmojiSelect={handleEmojiSelect} />}
           <div className="flex-1"></div>
           <button className="btn btn-ghost rounded-full" onClick={handleClose}>
             Cancel

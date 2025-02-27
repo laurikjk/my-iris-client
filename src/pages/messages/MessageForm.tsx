@@ -1,10 +1,10 @@
 import {CHAT_MESSAGE_KIND, serializeSessionState, Session} from "nostr-double-ratchet/src"
-import {FormEvent, useState, useEffect, useRef, lazy, Suspense, ChangeEvent} from "react"
+import {FormEvent, useState, useEffect, useRef, ChangeEvent} from "react"
 import MessageFormReplyPreview from "./MessageFormReplyPreview"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import Icon from "@/shared/components/Icons/Icon"
-import {RiEmotionLine} from "@remixicon/react"
+import EmojiButton from "./EmojiButton"
 import {localState} from "irisdb/src"
 import {MessageType} from "./Message"
 
@@ -15,29 +15,10 @@ interface MessageFormProps {
   setReplyingTo: (message?: MessageType) => void
 }
 
-// Lazy load emoji-mart instead of emoji-picker-react
-const EmojiPicker = lazy(() => import("@emoji-mart/react"))
-
 const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps) => {
   const [newMessage, setNewMessage] = useState("")
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const emojiPickerRef = useRef<HTMLDivElement>(null)
   const theirPublicKey = id.split(":")[0]
-
-  // Add data import for emoji-mart
-  const [emojiData, setEmojiData] = useState<any>(null)
-
-  // Load emoji data
-  useEffect(() => {
-    if (showEmojiPicker && !emojiData) {
-      import("@emoji-mart/data")
-        .then((module) => module.default)
-        .then((data) => {
-          setEmojiData(data)
-        })
-    }
-  }, [showEmojiPicker, emojiData])
 
   useEffect(() => {
     if (!isTouchDevice && inputRef.current) {
@@ -46,46 +27,21 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
   }, [id, isTouchDevice])
 
   useEffect(() => {
-    // Close emoji picker when clicking outside
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        emojiPickerRef.current &&
-        !emojiPickerRef.current.contains(event.target as Node)
-      ) {
-        event.stopPropagation()
-        event.preventDefault()
-        setShowEmojiPicker(false)
-      }
-    }
-
-    // Close emoji picker when pressing Escape key
     const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        if (showEmojiPicker) {
-          setShowEmojiPicker(false)
-        } else if (replyingTo) {
-          setReplyingTo(undefined)
-        }
+      if (event.key === "Escape" && replyingTo) {
+        setReplyingTo(undefined)
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside)
     document.addEventListener("keydown", handleEscKey)
 
-    // Focus input whenever emoji picker is closed
-    if (!showEmojiPicker && !isTouchDevice && inputRef.current) {
-      inputRef.current.focus()
-    }
-
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
       document.removeEventListener("keydown", handleEscKey)
     }
-  }, [showEmojiPicker, replyingTo, setReplyingTo])
+  }, [replyingTo, setReplyingTo])
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    setShowEmojiPicker(false)
     const text = newMessage.trim()
     if (text) {
       const time = Date.now()
@@ -145,17 +101,7 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
 
       <form onSubmit={handleSubmit} className="flex gap-2 p-4 relative">
         <div className="relative flex-1 flex gap-2 items-center">
-          {!isTouchDevice && (
-            <button
-              type="button"
-              onClick={() => {
-                setShowEmojiPicker(!showEmojiPicker)
-              }}
-              className="btn btn-ghost btn-circle btn-sm md:btn-md left-2"
-            >
-              <RiEmotionLine className="w-6 w-6" />
-            </button>
-          )}
+          {!isTouchDevice && <EmojiButton onEmojiSelect={handleEmojiClick} />}
           <input
             ref={inputRef}
             type="text"
@@ -164,25 +110,6 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
             placeholder="Message"
             className="flex-1 input input-sm md:input-md input-bordered"
           />
-          {showEmojiPicker && emojiData && (
-            <div ref={emojiPickerRef} className="absolute bottom-14 left-0 z-10">
-              <Suspense
-                fallback={
-                  <div className="p-4 bg-base-100 rounded shadow">Loading...</div>
-                }
-              >
-                <EmojiPicker
-                  data={emojiData}
-                  onEmojiSelect={handleEmojiClick}
-                  autoFocus={!isTouchDevice}
-                  searchPosition="sticky"
-                  previewPosition="none"
-                  skinTonePosition="none"
-                  theme="auto"
-                />
-              </Suspense>
-            </div>
-          )}
         </div>
         <button
           type="submit"
