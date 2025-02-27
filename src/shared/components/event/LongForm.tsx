@@ -1,4 +1,3 @@
-import longFormIcon from "@/assets/long-form-icon.png"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import Markdown from "markdown-to-jsx"
@@ -30,10 +29,7 @@ function LongForm({event, standalone}: LongFormProps) {
 
   return (
     <div className="flex flex-col gap-2 px-5">
-      <h1 className="flex items-center gap-2 text-lg">
-        <img src={longFormIcon} className="opacity-80 w-8 h-8" />
-        {title}
-      </h1>
+      <h1 className="flex items-center gap-2 text-lg">{title}</h1>
       <Markdown
         className="prose leading-relaxed tracking-wide text-gray-450"
         options={{forceBlock: true}}

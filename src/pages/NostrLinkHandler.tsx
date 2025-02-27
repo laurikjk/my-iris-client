@@ -1,8 +1,8 @@
 import {useParams, useNavigate, useLocation} from "react-router"
-import {queryProfile} from "nostr-tools/nip05"
 import {useEffect, useState} from "react"
 import ThreadPage from "@/pages/thread"
 import ProfilePage from "@/pages/user"
+import {nip05} from "nostr-tools"
 import {nip19} from "nostr-tools"
 
 export default function NostrLinkHandler() {
@@ -34,7 +34,7 @@ export default function NostrLinkHandler() {
     if (isProfile || isNote || isAddress) return
     const query = async () => {
       const maybeNip05 = cleanLink?.includes("@") ? cleanLink : `${cleanLink}@iris.to`
-      const profile = await queryProfile(maybeNip05)
+      const profile = await nip05.queryProfile(maybeNip05)
       if (profile) {
         setPubkey(profile.pubkey)
       }
