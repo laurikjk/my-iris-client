@@ -1,5 +1,6 @@
-import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import socialGraph from "@/utils/socialGraph"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {Filter} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 
 export interface PushNotifications {
@@ -51,10 +52,7 @@ export default class IrisAPI {
     return this.#getJsonAuthd<SubscriptionResponse>("subscriptions")
   }
 
-  registerPushNotifications(
-    web_push_subscriptions: PushNotifications[],
-    filter: NDKFilter
-  ) {
+  registerPushNotifications(web_push_subscriptions: PushNotifications[], filter: Filter) {
     return this.#getJsonAuthd<void>(`subscriptions`, "POST", {
       web_push_subscriptions,
       webhooks: [],
