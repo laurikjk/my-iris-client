@@ -1216,21 +1216,21 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@nostr-dev-kit/ndk-cache-dexie@^2.5.13":
-  version "2.5.13"
-  resolved "https://registry.yarnpkg.com/@nostr-dev-kit/ndk-cache-dexie/-/ndk-cache-dexie-2.5.13.tgz#3b53b5e985554e5d90673593583835c7e6856234"
-  integrity sha512-Suv/ChvtLzmIa0yKnAjggT9SnoWAmxBrsWGGbVZea4lMCrZErlej+RVjza1SRphZhSDTB+ZtH6Q+O5TKUZpWPA==
+"@nostr-dev-kit/ndk-cache-dexie@2.5.11":
+  version "2.5.11"
+  resolved "https://registry.yarnpkg.com/@nostr-dev-kit/ndk-cache-dexie/-/ndk-cache-dexie-2.5.11.tgz#ca5cf73f98545cecc01af5af066401a2de3c1788"
+  integrity sha512-lhoKcjwxlNB2rrnZ2zDAGJeh5k7x1f51oAwUnlDAuPvNEe4q/2XynxnI3uTe7rBg9+pq085esOQK7pg75E+BgQ==
   dependencies:
-    "@nostr-dev-kit/ndk" "2.12.0"
+    "@nostr-dev-kit/ndk" "2.11.2"
     debug "^4.3.7"
     dexie "^4.0.8"
     nostr-tools "^2.4.0"
     typescript-lru-cache "^2.0.0"
 
-"@nostr-dev-kit/ndk@2.12.0":
-  version "2.12.0"
-  resolved "https://registry.yarnpkg.com/@nostr-dev-kit/ndk/-/ndk-2.12.0.tgz#43da2995e0917c7875143d49a5f3f0f92670dfb8"
-  integrity sha512-B9NKdgn9CKNn0WHIFzj7SxeZhr+daT5im/ozj9Ey791MkaZiTB5XUCy5j9O15FDHTyFy0/gpCyq7LvJKIxCOoA==
+"@nostr-dev-kit/ndk@2.11.2":
+  version "2.11.2"
+  resolved "https://registry.yarnpkg.com/@nostr-dev-kit/ndk/-/ndk-2.11.2.tgz#b56e9d7a1b45e778bd0ec2ffb17e983fb5d33dea"
+  integrity sha512-DNrodIBC0j2MqEUQ5Mqaa671iZiRiKluu0c/wLkX7PCva07KSPyvcuyGp5fhk+/EZBurwZccMaML0syH0Qu8kQ==
   dependencies:
     "@noble/curves" "^1.6.0"
     "@noble/hashes" "^1.5.0"
