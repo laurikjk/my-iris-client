@@ -248,7 +248,7 @@ export async function subscribeToNotifications() {
       const existingSub = await reg.pushManager.getSubscription()
       if (existingSub) {
         const existingKey = new Uint8Array(existingSub.options.applicationServerKey!)
-        const newKey = new Uint8Array(Buffer.from(newVapidKey, "base64"))
+        const newKey = base64.decode(newVapidKey)
 
         // Only subscribe if the keys are different
         if (
