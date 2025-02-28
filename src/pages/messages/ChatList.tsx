@@ -1,3 +1,4 @@
+import {ConnectionStatus} from "@/shared/components/connection/ConnectionStatus"
 import RelativeTime from "@/shared/components/event/RelativeTime"
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
@@ -50,11 +51,14 @@ const ChatListItem = ({id}: {id: string}) => {
             <span className="text-base font-semibold">
               <Name pubKey={pubKey} />
             </span>
-            {latest?.created_at && (
-              <span className="text-sm text-base-content/70 ml-2">
-                <RelativeTime from={getMillisecondTimestamp(latest)} />
-              </span>
-            )}
+            <div className="flex flex-col gap-2">
+              {latest?.created_at && (
+                <span className="text-sm text-base-content/70 ml-2">
+                  <RelativeTime from={getMillisecondTimestamp(latest)} />
+                </span>
+              )}
+              <ConnectionStatus peerId={id} />
+            </div>
           </div>
           <div className="flex flex-row items-center justify-between gap-2">
             <span className="text-sm text-base-content/70 min-h-[1.25rem]">

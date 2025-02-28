@@ -69,7 +69,7 @@ async function handleNewSessionEvent(id: string, session: Session, event: Rumor)
   saveSessionState(id, session)
   if (event.kind === 30078) {
     console.log("got 30078", event)
-    const connection = getPeerConnection(id)
+    const connection = getPeerConnection(id, {ask: true})
     connection?.handleEvent(event)
     return
   }

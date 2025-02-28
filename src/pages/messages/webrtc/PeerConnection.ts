@@ -1,20 +1,29 @@
 import {EventEmitter} from "tseep"
 
-import socialGraph, {shouldSocialHide} from "@/utils/socialGraph"
 import {getCachedName, NDKEventFromRawEvent} from "@/utils/nostr"
 import {Rumor, Session} from "nostr-double-ratchet/src"
+import socialGraph from "@/utils/socialGraph"
 
 import {getSessions} from "../Sessions"
 
 const connections = new Map<string, PeerConnection>()
-export function getPeerConnection(sessionId: string, ask = true, connect = false) {
+export function getPeerConnection(
+  sessionId: string,
+  options: {
+    ask?: boolean
+    connect?: boolean
+    create?: boolean
+  } = {}
+) {
+  const {ask = true, connect = false, create = true} = options
   const pubKey = sessionId.split(":")[0]
-  if (socialGraph().getFollowDistance(pubKey) > 2 || shouldSocialHide(pubKey)) {
+  if (socialGraph().getFollowDistance(pubKey) > 1) {
     console.log("Rejected connection request from untrusted user:", pubKey)
     return
   }
   if (
     !connections.has(sessionId) &&
+    create &&
     (pubKey === socialGraph().getRoot() ||
       !ask ||
       confirm(`WebRTC connect with ${getCachedName(pubKey)}?`))

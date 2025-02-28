@@ -1,3 +1,4 @@
+import {ConnectionStatus} from "@/shared/components/connection/ConnectionStatus"
 import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiMoreLine, RiAttachment2} from "@remixicon/react"
@@ -40,7 +41,7 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
 
   const handleSendFile = () => {
     if (session) {
-      const peerConnection = getPeerConnection(id, false, true)
+      const peerConnection = getPeerConnection(id, {ask: false, connect: true})
       if (peerConnection) {
         // Create a hidden file input
         const fileInput = document.createElement("input")
@@ -72,12 +73,19 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
 
   const user = id.split(":").shift()!
 
+  const showWebRtc =
+    socialGraph().getFollowedByUser(user).has(myPubKey) ||
+    socialGraph().getRoot() === myPubKey
+
   return (
     <MiddleHeader centered={false}>
       <div className="flex items-center justify-between w-full">
-        <div>{id && <UserRow avatarWidth={32} pubKey={user} />}</div>
+        <div className="flex flex-row items-center gap-2">
+          {id && <UserRow avatarWidth={32} pubKey={user} />}
+          <ConnectionStatus peerId={id} />
+        </div>
         <div className="flex items-center gap-2 relative">
-          {socialGraph().getFollowedByUser(user).has(myPubKey) && (
+          {showWebRtc && (
             <button
               onClick={handleSendFile}
               className="btn btn-ghost btn-sm btn-circle"
