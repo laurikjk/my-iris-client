@@ -1,16 +1,10 @@
-import {
-  NDKEvent,
-  NDKFilter,
-  NDKRelayList,
-  NDKTag,
-  NDKUserProfile,
-} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKFilter, NDKRelayList, NDKTag} from "@nostr-dev-kit/ndk"
 import {eventRegex} from "@/shared/components/embed/nostr/NostrNote"
 import {decode} from "light-bolt11-decoder"
+import {profileCache} from "./memcache"
+import AnimalName from "./AnimalName"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
-import { profileCache } from "./memcache"
-import AnimalName from "./AnimalName"
 
 export const ISSUE_REGEX =
   /^\/apps\/git\/repos\/[a-zA-Z0-9_-]+\/issues\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/title$/

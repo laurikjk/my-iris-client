@@ -4,10 +4,22 @@ import {useEffect, useState} from "react"
 interface ConnectionStatusProps {
   peerId: string
   size?: "xs" | "sm" | "md" | "lg"
+  showDisconnect?: boolean
 }
 
-export const ConnectionStatus = ({peerId, size = "xs"}: ConnectionStatusProps) => {
+export const ConnectionStatus = ({
+  peerId,
+  size = "xs",
+  showDisconnect = false,
+}: ConnectionStatusProps) => {
   const [status, setStatus] = useState<string>()
+
+  const handleDisconnect = () => {
+    const peerConnection = getPeerConnection(peerId, {create: false})
+    if (peerConnection) {
+      peerConnection.close()
+    }
+  }
 
   useEffect(() => {
     let peerConnection = getPeerConnection(peerId, {create: false})
@@ -65,9 +77,20 @@ export const ConnectionStatus = ({peerId, size = "xs"}: ConnectionStatusProps) =
   }
 
   return (
-    <span
-      className={`badge badge-${size} ${getStatusColor(status)}`}
-      title={`Connection: ${status}`}
-    />
+    <div className="flex items-center gap-2">
+      <span
+        className={`badge badge-${size} ${getStatusColor(status)}`}
+        title={`Connection: ${status}`}
+      />
+      {showDisconnect && status === "connected" && (
+        <button
+          onClick={handleDisconnect}
+          className="btn btn-error btn-xs btn-circle"
+          title="Disconnect"
+        >
+          ✕
+        </button>
+      )}
+    </div>
   )
 }

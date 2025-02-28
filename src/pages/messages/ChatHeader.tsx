@@ -74,15 +74,14 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
   const user = id.split(":").shift()!
 
   const showWebRtc =
-    socialGraph().getFollowedByUser(user).has(myPubKey) ||
-    socialGraph().getRoot() === myPubKey
+    socialGraph().getFollowedByUser(user).has(myPubKey) || user === myPubKey
 
   return (
     <MiddleHeader centered={false}>
       <div className="flex items-center justify-between w-full">
         <div className="flex flex-row items-center gap-2">
           {id && <UserRow avatarWidth={32} pubKey={user} />}
-          <ConnectionStatus peerId={id} />
+          <ConnectionStatus peerId={id} showDisconnect={true} />
         </div>
         <div className="flex items-center gap-2 relative">
           {showWebRtc && (
