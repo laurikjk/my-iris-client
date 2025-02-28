@@ -17,7 +17,7 @@ export function getPeerConnection(
 ) {
   const {ask = true, connect = false, create = true} = options
   const pubKey = sessionId.split(":")[0]
-  if (socialGraph().getFollowDistance(pubKey) > 1) {
+  if (socialGraph().getFollowDistance(pubKey) > 1 && socialGraph().getRoot() !== pubKey) {
     console.log("Rejected connection request from untrusted user:", pubKey)
     return
   }
@@ -70,7 +70,10 @@ export default class PeerConnection extends EventEmitter {
   }
 
   connect() {
-    this.sendOffer()
+    const state = this.peerConnection.connectionState
+    if (state === "disconnected" || state === "closed" || state === "failed" || !state) {
+      this.sendOffer()
+    }
   }
 
   handleEvent(event: Rumor) {
