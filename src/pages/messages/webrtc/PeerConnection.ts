@@ -71,7 +71,7 @@ export default class PeerConnection extends EventEmitter {
 
   connect() {
     const state = this.peerConnection.connectionState
-    if (state === "disconnected" || state === "closed" || state === "failed" || !state) {
+    if (state !== "connected" && state !== "connecting") {
       this.sendOffer()
     }
   }

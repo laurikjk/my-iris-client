@@ -41,7 +41,11 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
 
   const handleSendFile = () => {
     if (session) {
-      const peerConnection = getPeerConnection(id, {ask: false, connect: true})
+      const peerConnection = getPeerConnection(id, {
+        ask: false,
+        create: true,
+        connect: true,
+      })
       if (peerConnection) {
         // Create a hidden file input
         const fileInput = document.createElement("input")
