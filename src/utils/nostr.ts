@@ -9,6 +9,8 @@ import {eventRegex} from "@/shared/components/embed/nostr/NostrNote"
 import {decode} from "light-bolt11-decoder"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
+import { profileCache } from "./memcache"
+import AnimalName from "./AnimalName"
 
 export const ISSUE_REGEX =
   /^\/apps\/git\/repos\/[a-zA-Z0-9_-]+\/issues\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/title$/
@@ -313,22 +315,26 @@ export const deserializeEvent = (event: string): NDKEvent => {
   ndkEvent.sig = parsedEvent.sig
   return ndkEvent
 }
-export const getProfileName = (profile: NDKUserProfile): string => {
-  let name = ""
+export const getCachedName = (pubKey: string): string => {
+  const profile = profileCache.get(pubKey)
 
-  if (profile.name) {
-    name = profile.name
-  } else if (!profile.name && profile.displayName) {
-    name = profile.displayName
-  } else if (
-    !profile.name &&
-    !profile.displayName &&
-    profile.display_name &&
-    typeof profile.display_name === "string" // can be number for some reason
-  ) {
-    name = profile.display_name
+  let name = ""
+  if (profile) {
+    if (profile.name) {
+      name = profile.name
+    } else if (!profile.name && profile.displayName) {
+      name = profile.displayName
+    } else if (
+      !profile.name &&
+      !profile.displayName &&
+      profile.display_name &&
+      typeof profile.display_name === "string" // can be number for some reason
+    ) {
+      name = profile.display_name
+    }
   }
-  return name
+
+  return name || AnimalName(pubKey)
 }
 export const isQuote = (event: NDKEvent): boolean => {
   if (event.kind === 9373 && event.tagValue("q")) return true

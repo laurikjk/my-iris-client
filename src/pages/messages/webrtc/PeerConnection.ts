@@ -1,8 +1,9 @@
 import {EventEmitter} from "tseep"
 
 import socialGraph, {shouldSocialHide} from "@/utils/socialGraph"
+import {getCachedName, NDKEventFromRawEvent} from "@/utils/nostr"
 import {Rumor, Session} from "nostr-double-ratchet/src"
-import {NDKEventFromRawEvent} from "@/utils/nostr"
+
 import {getSessions} from "../Sessions"
 
 const connections = new Map<string, PeerConnection>()
@@ -16,7 +17,7 @@ export function getPeerConnection(sessionId: string, ask = true, connect = false
     !connections.has(sessionId) &&
     (pubKey === socialGraph().getRoot() ||
       !ask ||
-      confirm(`WebRTC connect with ${sessionId}?`))
+      confirm(`WebRTC connect with ${getCachedName(pubKey)}?`))
   ) {
     const session = getSessions().get(sessionId)
     if (!session) {
@@ -265,7 +266,9 @@ export default class PeerConnection extends EventEmitter {
       return
     }
 
-    const confirmString = `Save ${this.incomingFileMetadata.name} from ${this.peerId}?`
+    const pubkey = this.peerId.split(":")[0]
+    const name = getCachedName(pubkey)
+    const confirmString = `Save ${this.incomingFileMetadata.name} from ${name}?`
     if (!confirm(confirmString)) {
       this.log("User did not confirm file save")
       this.incomingFileMetadata = null
