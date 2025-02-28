@@ -50,7 +50,8 @@ const NotificationSettings = () => {
     String
   )
   const [isValidUrl, setIsValidUrl] = useState(true)
-  const [subscriptionsData, setSubscriptionsData] = useState<string | null>(null)
+  const [subscriptionsData, setSubscriptionsData] = useState<Record<string, any>>({})
+  const [showDebugData, setShowDebugData] = useState(false)
 
   const trySubscribePush = async () => {
     try {
@@ -126,7 +127,7 @@ const NotificationSettings = () => {
       try {
         const api = new IrisAPI()
         const data = await api.getSubscriptions()
-        setSubscriptionsData(JSON.stringify(data, null, 2)) // Pretty print with 2 spaces
+        setSubscriptionsData(data) // Store as an object
       } catch (error) {
         console.error("Failed to fetch subscriptions:", error)
       }
@@ -134,6 +135,26 @@ const NotificationSettings = () => {
 
     fetchSubscriptionsData()
   }, [])
+
+  const handleDeleteSubscription = async (subscriptionId: string) => {
+    try {
+      const api = new IrisAPI()
+      await api.deleteSubscription(subscriptionId)
+      console.log(`Deleted subscription with ID: ${subscriptionId}`)
+      // Optionally, update the local state to reflect the deletion
+      setSubscriptionsData((prevData) => {
+        const newData = {...prevData}
+        delete newData[subscriptionId]
+        return newData
+      })
+    } catch (error) {
+      console.error(`Failed to delete subscription with ID: ${subscriptionId}`, error)
+    }
+  }
+
+  const removeNullValues = (obj: Record<string, any>) => {
+    return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== null))
+  }
 
   return (
     <div className="flex flex-col">
@@ -206,10 +227,60 @@ const NotificationSettings = () => {
           </div>
         </div>
         <div className="mt-4">
+          <div className="my-4 font-bold">
+            {Object.keys(subscriptionsData).length} subscriptions
+          </div>
+          <div className="flex flex-col space-y-2 w-full">
+            {Object.entries(subscriptionsData).map(([id, subscription]) =>
+              subscription.web_push_subscriptions.map(
+                (pushSubscription: any, index: number) => (
+                  <div
+                    key={`${id}-${index}`}
+                    // Make it a flex container, but let the left portion shrink if needed
+                    className="flex w-full items-start gap-4 p-2 border rounded"
+                  >
+                    {/* The left side that holds the JSON block */}
+                    <div className="flex-1 min-w-0 w-full">
+                      <div>
+                        <strong>Endpoint:</strong>{" "}
+                        {new URL(pushSubscription.endpoint).host}
+                      </div>
+                      <div>
+                        <strong>Filters:</strong>
+                      </div>
+                      {/* This wrapper ensures only the <pre> can scroll horizontally */}
+                      <pre className="w-full overflow-x-auto whitespace-pre bg-base-200 p-2 rounded text-sm">
+                        {JSON.stringify(removeNullValues(subscription.filter), null, 2)}
+                      </pre>
+                    </div>
+
+                    {/* The button, set to 'shrink-0' so it won't expand or push the row wide */}
+                    <button
+                      className="btn btn-error btn-sm shrink-0"
+                      onClick={() => handleDeleteSubscription(id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )
+              )
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4">
           <b>Debug: /subscriptions Response</b>
-          <pre className="bg-base-200 p-4 rounded overflow-auto whitespace-pre-wrap break-all">
-            {subscriptionsData || "Loading..."}
-          </pre>
+          <button
+            className="btn btn-neutral btn-sm ml-2"
+            onClick={() => setShowDebugData(!showDebugData)}
+          >
+            {showDebugData ? "Hide" : "Show"}
+          </button>
+          {showDebugData && (
+            <pre className="bg-base-200 p-4 rounded overflow-auto whitespace-pre-wrap break-all">
+              {JSON.stringify(subscriptionsData, null, 2) || "Loading..."}
+            </pre>
+          )}
         </div>
       </div>
     </div>
