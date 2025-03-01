@@ -21,7 +21,6 @@
   "features": {
     "git": true,
     "cashu": false,
-    "pushNotifications": false,
     "analytics": false
   },
   "defaultSettings": {

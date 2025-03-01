@@ -19,7 +19,6 @@
   "aboutText": "Iris - Connecting People",
   "repository": "https://github.com/irislib/iris-client",
   "features": {
-    "pushNotifications": true,
     "analytics": false
   },
   "defaultSettings": {

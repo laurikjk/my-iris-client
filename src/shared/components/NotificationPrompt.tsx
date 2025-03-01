@@ -33,10 +33,6 @@ const NotificationPrompt = () => {
     setShowPrompt(false)
   }
 
-  if (!CONFIG.features.pushNotifications) {
-    return null
-  }
-
   if (!showPrompt) return null
 
   return (

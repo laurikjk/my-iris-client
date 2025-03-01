@@ -13,7 +13,6 @@ declare const CONFIG: {
   aboutText: string
   repository: string
   features: {
-    pushNotifications: boolean
     analytics: boolean
   }
   defaultSettings: {

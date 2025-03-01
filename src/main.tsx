@@ -4,6 +4,7 @@ import {RouterProvider} from "react-router"
 import ReactDOM from "react-dom/client"
 import {localState} from "irisdb/src"
 
+import {subscribeToDMNotifications, subscribeToNotifications} from "./utils/notifications"
 import {loadSessions} from "./pages/messages/Sessions"
 import {loadInvites} from "./pages/messages/Invites"
 import {ndk} from "./utils/ndk"
@@ -15,6 +16,8 @@ localState.get("user").on((user) => {
   if (user) {
     loadSessions()
     loadInvites()
+    subscribeToNotifications()
+    subscribeToDMNotifications()
   }
 })
 

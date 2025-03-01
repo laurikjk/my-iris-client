@@ -224,7 +224,7 @@ function arrayEqual(a: string[], b: string[]): boolean {
 }
 
 export async function subscribeToNotifications() {
-  if (!CONFIG.features.pushNotifications || !("serviceWorker" in navigator)) {
+  if (!("serviceWorker" in navigator)) {
     return
   }
 

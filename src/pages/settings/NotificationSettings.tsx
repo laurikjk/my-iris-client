@@ -50,6 +50,7 @@ const NotificationSettings = () => {
     String
   )
   const [isValidUrl, setIsValidUrl] = useState(true)
+  const [currentEndpoint, setCurrentEndpoint] = useState<string | null>(null)
   const [subscriptionsData, setSubscriptionsData] = useState<Record<string, any>>({})
   const [showDebugData, setShowDebugData] = useState(false)
 
@@ -77,6 +78,25 @@ const NotificationSettings = () => {
       })
     }
   }, [])
+
+  // Get the current service worker subscription endpoint
+  useEffect(() => {
+    const getCurrentEndpoint = async () => {
+      if ("serviceWorker" in navigator && "PushManager" in window) {
+        try {
+          const registration = await navigator.serviceWorker.ready
+          const subscription = await registration.pushManager.getSubscription()
+          if (subscription) {
+            setCurrentEndpoint(subscription.endpoint)
+          }
+        } catch (error) {
+          console.error("Failed to get current subscription endpoint:", error)
+        }
+      }
+    }
+
+    getCurrentEndpoint()
+  }, [serviceWorkerReady])
 
   const requestNotificationPermission = () => {
     Notification.requestPermission().then((permission) => {
@@ -229,42 +249,68 @@ const NotificationSettings = () => {
         <div className="mt-4">
           <div className="my-4 font-bold">
             {Object.keys(subscriptionsData).length} subscriptions
+            {currentEndpoint && (
+              <span className="ml-2 text-sm text-base-content/70">
+                (Current device endpoint highlighted)
+              </span>
+            )}
           </div>
           <div className="flex flex-col space-y-2 w-full">
-            {Object.entries(subscriptionsData).map(([id, subscription]) =>
-              subscription.web_push_subscriptions.map(
-                (pushSubscription: any, index: number) => (
-                  <div
-                    key={`${id}-${index}`}
-                    // Make it a flex container, but let the left portion shrink if needed
-                    className="flex w-full items-start gap-4 p-2 border rounded"
-                  >
-                    {/* The left side that holds the JSON block */}
-                    <div className="flex-1 min-w-0 w-full">
-                      <div>
-                        <strong>Endpoint:</strong>{" "}
-                        {new URL(pushSubscription.endpoint).host}
-                      </div>
-                      <div>
-                        <strong>Filters:</strong>
-                      </div>
-                      {/* This wrapper ensures only the <pre> can scroll horizontally */}
-                      <pre className="w-full overflow-x-auto whitespace-pre bg-base-200 p-2 rounded text-sm">
-                        {JSON.stringify(removeNullValues(subscription.filter), null, 2)}
-                      </pre>
-                    </div>
-
-                    {/* The button, set to 'shrink-0' so it won't expand or push the row wide */}
-                    <button
-                      className="btn btn-error btn-sm shrink-0"
-                      onClick={() => handleDeleteSubscription(id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
+            {Object.entries(subscriptionsData)
+              .flatMap(([id, subscription]) =>
+                subscription.web_push_subscriptions.map(
+                  (pushSubscription: any, index: number) => {
+                    const isCurrentDevice = currentEndpoint === pushSubscription.endpoint
+                    return {
+                      id,
+                      subscription,
+                      pushSubscription,
+                      index,
+                      isCurrentDevice,
+                    }
+                  }
                 )
               )
-            )}
+              .sort((a, b) => (b.isCurrentDevice ? 1 : 0) - (a.isCurrentDevice ? 1 : 0))
+              .map(({id, subscription, pushSubscription, index, isCurrentDevice}) => (
+                <div
+                  key={`${id}-${index}`}
+                  className={`flex w-full items-start gap-4 p-2 border rounded ${
+                    isCurrentDevice ? "border-primary bg-primary/5" : ""
+                  }`}
+                >
+                  {/* The left side that holds the JSON block */}
+                  <div className="flex-1 min-w-0 w-full">
+                    <div className="flex items-center gap-2">
+                      <strong>Endpoint:</strong>{" "}
+                      {(() => {
+                        const url = new URL(pushSubscription.endpoint)
+                        const path = url.pathname
+                        const last4 = path.length > 4 ? path.slice(-4) : path
+                        return `${url.host}/...${last4}`
+                      })()}
+                      {isCurrentDevice && (
+                        <span className="badge badge-primary text-xs">This device</span>
+                      )}
+                    </div>
+                    <div>
+                      <strong>Filters:</strong>
+                    </div>
+                    {/* This wrapper ensures only the <pre> can scroll horizontally */}
+                    <pre className="w-full overflow-x-auto whitespace-pre bg-base-200 p-2 rounded text-sm">
+                      {JSON.stringify(removeNullValues(subscription.filter), null, 2)}
+                    </pre>
+                  </div>
+
+                  {/* The button, set to 'shrink-0' so it won't expand or push the row wide */}
+                  <button
+                    className="btn btn-error btn-sm shrink-0"
+                    onClick={() => handleDeleteSubscription(id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
           </div>
         </div>
 
