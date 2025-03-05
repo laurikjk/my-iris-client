@@ -17,7 +17,11 @@ export function getPeerConnection(
 ) {
   const {ask = true, connect = false, create = true} = options
   const pubKey = sessionId.split(":")[0]
-  if (socialGraph().getFollowDistance(pubKey) > 1 && socialGraph().getRoot() !== pubKey) {
+  if (
+    create &&
+    socialGraph().getFollowDistance(pubKey) > 1 &&
+    socialGraph().getRoot() !== pubKey
+  ) {
     console.log("Rejected connection request from untrusted user:", pubKey)
     return
   }

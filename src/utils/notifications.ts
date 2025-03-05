@@ -218,7 +218,7 @@ function arrayEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((val, idx) => b[idx] === val)
 }
 
-export async function subscribeToNotifications() {
+export const subscribeToNotifications = debounce(async () => {
   if (!("serviceWorker" in navigator)) {
     return
   }
@@ -276,7 +276,7 @@ export async function subscribeToNotifications() {
   } catch (e) {
     console.error(e)
   }
-}
+}, 5000)
 
 export const clearNotifications = async () => {
   if (!("serviceWorker" in navigator)) {

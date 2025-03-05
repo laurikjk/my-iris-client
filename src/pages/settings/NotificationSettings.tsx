@@ -249,11 +249,6 @@ const NotificationSettings = () => {
         <div className="mt-4">
           <div className="my-4 font-bold">
             {Object.keys(subscriptionsData).length} subscriptions
-            {currentEndpoint && (
-              <span className="ml-2 text-sm text-base-content/70">
-                (Current device endpoint highlighted)
-              </span>
-            )}
           </div>
           <div className="flex flex-col space-y-2 w-full">
             {Object.entries(subscriptionsData)
