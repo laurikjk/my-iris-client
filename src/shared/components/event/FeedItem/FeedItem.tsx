@@ -13,11 +13,24 @@ import Feed from "@/shared/components/feed/Feed.tsx"
 import FeedItemContent from "./FeedItemContent.tsx"
 import {onClick, TRUNCATE_LENGTH} from "./utils.ts"
 import FeedItemHeader from "./FeedItemHeader.tsx"
+import socialGraph from "@/utils/socialGraph.ts"
 import FeedItemTitle from "./FeedItemTitle.tsx"
 import {Link, useNavigate} from "react-router"
 import RezapHeader from "../RezapHeader.tsx"
 import LikeHeader from "../LikeHeader"
 import {nip19} from "nostr-tools"
+
+const replySortFn = (a: NDKEvent, b: NDKEvent) => {
+  const followDistanceA = socialGraph().getFollowDistance(a.pubkey)
+  const followDistanceB = socialGraph().getFollowDistance(b.pubkey)
+  if (followDistanceA !== followDistanceB) {
+    console.log("sort by follow distance")
+    return followDistanceA - followDistanceB
+  }
+  if (a.created_at && b.created_at) return a.created_at - b.created_at
+  console.warn("timestamps could not be compared:", a, b)
+  return 0
+}
 
 type FeedItemProps = {
   event?: NDKEvent
@@ -225,6 +238,7 @@ function FeedItem({
             borderTopFirst={false}
             emptyPlaceholder={null}
             showReplies={showReplies}
+            sortFn={replySortFn}
             showDisplayAsSelector={false}
             displayAs="list"
             showEventsByUnknownUsersButton={!!standalone}

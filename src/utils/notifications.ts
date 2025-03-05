@@ -136,13 +136,20 @@ export const subscribeToDMNotifications = debounce(async () => {
     ])
     .filter((a) => typeof a === "string") as string[]
 
-  console.log("inviteRecipients", ...inviteRecipients)
-  console.log("sessionAuthors", ...sessionAuthors)
-
   const webPushData = {
     endpoint: pushSubscription.endpoint,
     p256dh: base64.encode(new Uint8Array(pushSubscription.getKey("p256dh")!)),
     auth: base64.encode(new Uint8Array(pushSubscription.getKey("auth")!)),
+  }
+
+  const messageFilter = {
+    kinds: [MESSAGE_EVENT_KIND],
+    authors: sessionAuthors,
+  }
+
+  const inviteFilter = {
+    kinds: [INVITE_RESPONSE_KIND],
+    "#p": inviteRecipients,
   }
 
   const api = new IrisAPI()
@@ -152,7 +159,7 @@ export const subscribeToDMNotifications = debounce(async () => {
   if (sessionAuthors.length > 0) {
     const sessionSub = Object.entries(currentSubscriptions).find(
       ([, sub]) =>
-        sub.filter.kinds?.length === 1 &&
+        sub.filter.kinds?.length === messageFilter.kinds.length &&
         sub.filter.kinds[0] === MESSAGE_EVENT_KIND &&
         sub.filter.authors && // Look for subscription with authors filter
         (sub.web_push_subscriptions || []).some(
@@ -165,20 +172,14 @@ export const subscribeToDMNotifications = debounce(async () => {
       const existingAuthors = sub.filter.authors || []
       if (!arrayEqual(existingAuthors, sessionAuthors)) {
         await api.updateSubscription(id, {
-          filter: {
-            kinds: [MESSAGE_EVENT_KIND],
-            authors: sessionAuthors,
-          },
+          filter: messageFilter,
           web_push_subscriptions: [webPushData],
           webhooks: [],
           subscriber: sub.subscriber,
         })
       }
     } else {
-      await api.registerPushNotifications([webPushData], {
-        kinds: [MESSAGE_EVENT_KIND],
-        authors: sessionAuthors,
-      })
+      await api.registerPushNotifications([webPushData], messageFilter)
     }
   }
 
@@ -186,7 +187,7 @@ export const subscribeToDMNotifications = debounce(async () => {
   if (inviteRecipients.length > 0) {
     const inviteSub = Object.entries(currentSubscriptions).find(
       ([, sub]) =>
-        sub.filter.kinds?.length === 1 &&
+        sub.filter.kinds?.length === inviteFilter.kinds.length &&
         sub.filter.kinds[0] === INVITE_RESPONSE_KIND &&
         sub.filter["#p"] && // Look for subscription with #p tags
         !sub.filter.authors && // but no authors filter
@@ -200,20 +201,14 @@ export const subscribeToDMNotifications = debounce(async () => {
       const existinginviteRecipients = sub.filter["#p"] || []
       if (!arrayEqual(existinginviteRecipients, inviteRecipients)) {
         await api.updateSubscription(id, {
-          filter: {
-            kinds: [INVITE_RESPONSE_KIND],
-            "#p": inviteRecipients,
-          },
+          filter: inviteFilter,
           web_push_subscriptions: [webPushData],
           webhooks: [],
           subscriber: sub.subscriber,
         })
       }
     } else {
-      await api.registerPushNotifications([webPushData], {
-        kinds: [INVITE_RESPONSE_KIND],
-        "#p": inviteRecipients,
-      })
+      await api.registerPushNotifications([webPushData], inviteFilter)
     }
   }
 }, 5000)
@@ -244,43 +239,39 @@ export async function subscribeToNotifications() {
       const api = new IrisAPI()
       const {vapid_public_key: newVapidKey} = await api.getPushNotificationInfo()
 
-      // Check for existing subscription
-      const existingSub = await reg.pushManager.getSubscription()
-      if (existingSub) {
-        const existingKey = new Uint8Array(existingSub.options.applicationServerKey!)
-        const newKey = base64.decode(newVapidKey)
-
-        // Only subscribe if the keys are different
-        if (
-          existingKey.length === newKey.length &&
-          existingKey.every((byte, i) => byte === newKey[i])
-        ) {
-          return // Already subscribed with the same key
-        }
-
-        await existingSub.unsubscribe()
-      }
-
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: newVapidKey,
-      })
-
       const myKey = [...socialGraph().getUsersByFollowDistance(0)][0]
-      const filter = {
+      const notificationFilter = {
         "#p": [myKey],
         kinds: [1, 6, 7],
       }
-      await api.registerPushNotifications(
-        [
-          {
-            endpoint: sub.endpoint,
-            p256dh: base64.encode(new Uint8Array(sub.getKey("p256dh")!)),
-            auth: base64.encode(new Uint8Array(sub.getKey("auth")!)),
-          },
-        ],
-        filter
+
+      // Check for existing subscription on notification server
+      const currentSubscriptions = await api.getSubscriptions()
+      const existingSub = Object.entries(currentSubscriptions).find(
+        ([, sub]) =>
+          sub.filter["#p"]?.includes(myKey) &&
+          sub.filter.kinds?.length === notificationFilter.kinds.length &&
+          sub.filter.kinds.every((k) => notificationFilter.kinds.includes(k))
       )
+
+      // If no matching subscription exists, create new one
+      if (!existingSub) {
+        const browserSub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: newVapidKey,
+        })
+
+        await api.registerPushNotifications(
+          [
+            {
+              endpoint: browserSub.endpoint,
+              p256dh: base64.encode(new Uint8Array(browserSub.getKey("p256dh")!)),
+              auth: base64.encode(new Uint8Array(browserSub.getKey("auth")!)),
+            },
+          ],
+          notificationFilter
+        )
+      }
     }
   } catch (e) {
     console.error(e)

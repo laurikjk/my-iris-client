@@ -20,6 +20,7 @@ interface FeedProps {
   filters: NDKFilter
   displayFilterFn?: (event: NDKEvent) => boolean
   fetchFilterFn?: (event: NDKEvent) => boolean
+  sortFn?: (a: NDKEvent, b: NDKEvent) => number
   cacheKey?: string
   asReply?: boolean
   showRepliedTo?: boolean
@@ -49,6 +50,7 @@ function Feed({
   filters,
   displayFilterFn,
   fetchFilterFn,
+  sortFn,
   cacheKey = JSON.stringify(filters),
   asReply = false,
   showRepliedTo = true,
@@ -106,6 +108,7 @@ function Feed({
     displayCount,
     displayFilterFn,
     fetchFilterFn,
+    sortFn,
     hideEventsByUnknownUsers,
     hidePostsByMutedMoreThanFollowed,
     mutes,

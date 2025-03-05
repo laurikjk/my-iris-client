@@ -22,6 +22,7 @@ interface UseFeedEventsProps {
   hidePostsByMutedMoreThanFollowed: boolean
   mutes: string[]
   sortLikedPosts?: boolean
+  sortFn?: (a: NDKEvent, b: NDKEvent) => number
 }
 
 export default function useFeedEvents({
@@ -30,6 +31,7 @@ export default function useFeedEvents({
   displayCount,
   displayFilterFn,
   fetchFilterFn,
+  sortFn,
   hideEventsByUnknownUsers,
   hidePostsByMutedMoreThanFollowed,
   mutes,
@@ -38,7 +40,15 @@ export default function useFeedEvents({
   const [localFilter, setLocalFilter] = useState(filters)
   const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
   const [newEvents, setNewEvents] = useState(new Map<string, NDKEvent>())
-  const eventsRef = useRef(feedCache.get(cacheKey) || new SortedMap([], eventComparator))
+  const eventsRef = useRef(
+    feedCache.get(cacheKey) ||
+      new SortedMap(
+        [],
+        sortFn
+          ? ([, a]: [string, NDKEvent], [, b]: [string, NDKEvent]) => sortFn(a, b)
+          : eventComparator
+      )
+  )
   const oldestRef = useRef<number | undefined>(undefined)
   const initialLoadDoneRef = useRef<boolean>(eventsRef.current.size > 0)
   const [initialLoadDoneState, setInitialLoadDoneState] = useState(
