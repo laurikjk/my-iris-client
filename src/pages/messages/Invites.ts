@@ -79,6 +79,7 @@ const listen = debounce(() => {
             .get(sessionId)
             .get("state")
             .put(serializeSessionState(session.state))
+          subscribeToDMNotifications()
         }
       )
       subscriptions.set(id, unsubscribe)

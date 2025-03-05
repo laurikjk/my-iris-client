@@ -272,7 +272,10 @@ export const subscribeToNotifications = debounce(async () => {
       ([, sub]) =>
         sub.filter["#p"]?.includes(myKey) &&
         sub.filter.kinds?.length === notificationFilter.kinds.length &&
-        sub.filter.kinds.every((k) => notificationFilter.kinds.includes(k))
+        sub.filter.kinds.every((k) => notificationFilter.kinds.includes(k)) &&
+        (sub.web_push_subscriptions || []).some(
+          (s) => s.endpoint === pushSubscription.endpoint
+        )
     )
 
     // If no matching subscription exists, create new one
