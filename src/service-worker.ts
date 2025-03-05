@@ -1,6 +1,10 @@
 /// <reference lib="webworker" />
+import {
+  INVITE_EVENT_KIND,
+  INVITE_RESPONSE_KIND,
+  MESSAGE_EVENT_KIND,
+} from "nostr-double-ratchet/src"
 import {PROFILE_AVATAR_WIDTH, EVENT_AVATAR_WIDTH} from "./shared/components/user/const"
-import {INVITE_EVENT_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
 import {CacheFirst, StaleWhileRevalidate} from "workbox-strategies"
 import {CacheableResponsePlugin} from "workbox-cacheable-response"
 import {precacheAndRoute, PrecacheEntry} from "workbox-precaching"
@@ -198,36 +202,64 @@ self.addEventListener("notificationclick", (event) => {
   )
 })
 
+const NOTIFICATION_CONFIGS: Record<
+  number,
+  {
+    title: string
+    url: string
+    icon: string
+  }
+> = {
+  [MESSAGE_EVENT_KIND]: {
+    title: "New private message",
+    url: "/messages",
+    icon: "/favicon.png",
+  },
+  [INVITE_EVENT_KIND]: {
+    title: "New message request",
+    url: "/messages",
+    icon: "/favicon.png",
+  },
+  [INVITE_RESPONSE_KIND]: {
+    title: "Message request response",
+    url: "/messages",
+    icon: "/favicon.png",
+  },
+} as const
+
 self.addEventListener("push", async (e) => {
   const data = e.data?.json() as PushData | undefined
   console.debug("Received web push data:", data)
 
+  // Check if we should show notification based on page visibility
   const clients = await self.clients.matchAll({type: "window", includeUncontrolled: true})
-  if (clients.length > 0) {
+  const isPageVisible = clients.some((client) => client.visibilityState === "visible")
+  if (isPageVisible) {
     console.debug("Page is visible, ignoring web push")
     return
   }
 
-  if (
-    data?.event.kind &&
-    [INVITE_EVENT_KIND, MESSAGE_EVENT_KIND].includes(data?.event.kind)
-  ) {
-    await self.registration.showNotification("New private message", {
-      icon: "/favicon.png",
-      data: {url: "/messages"},
+  if (!data?.event) return
+
+  // Handle predefined notification types
+  if (NOTIFICATION_CONFIGS[data.event.kind]) {
+    const config = NOTIFICATION_CONFIGS[data.event.kind]
+    await self.registration.showNotification(config.title, {
+      icon: config.icon,
+      data: {url: config.url, event: data.event},
     })
     return
   }
 
-  if (data) {
-    const icon = data.icon?.startsWith("http")
+  // Handle custom notifications
+  const icon =
+    data.icon && data.icon.startsWith("http")
       ? generateProxyUrl(data.icon, {width: 128, square: true})
-      : data.icon
+      : data.icon || "/favicon.png"
 
-    await self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: icon,
-      data: data,
-    })
-  }
+  await self.registration.showNotification(data.title || "New notification", {
+    body: data.body,
+    icon,
+    data,
+  })
 })

@@ -111,17 +111,47 @@ export async function maybeShowPushNotification(event: NDKEvent) {
   })
 }
 
-export const subscribeToDMNotifications = debounce(async () => {
-  if (!("serviceWorker" in navigator)) {
-    console.log("Service workers not supported in this browser")
-    return
+let subscriptionPromise: Promise<PushSubscription | null> | null = null
+
+async function getOrCreatePushSubscription() {
+  if (!("serviceWorker" in navigator) || !("Notification" in window)) {
+    return null
   }
 
-  const reg = await navigator.serviceWorker.ready
-  const pushSubscription = await reg.pushManager.getSubscription()
+  if (Notification.permission !== "granted") {
+    return null
+  }
 
+  if (!subscriptionPromise) {
+    subscriptionPromise = (async () => {
+      const reg = await navigator.serviceWorker.ready
+      let pushSubscription = await reg.pushManager.getSubscription()
+
+      if (!pushSubscription) {
+        const api = new IrisAPI()
+        const {vapid_public_key: vapidKey} = await api.getPushNotificationInfo()
+
+        try {
+          pushSubscription = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: vapidKey,
+          })
+        } catch (e) {
+          console.error("Failed to subscribe to push notifications:", e)
+          return null
+        }
+      }
+
+      return pushSubscription
+    })()
+  }
+
+  return subscriptionPromise
+}
+
+export const subscribeToDMNotifications = debounce(async () => {
+  const pushSubscription = await getOrCreatePushSubscription()
   if (!pushSubscription) {
-    console.log("No push subscription available")
     return
   }
 
@@ -223,55 +253,40 @@ export const subscribeToNotifications = debounce(async () => {
     return
   }
 
-  // request permissions to send notifications
-  if ("Notification" in window) {
-    try {
-      if (Notification.permission !== "granted") {
-        await Notification.requestPermission()
-      }
-    } catch (e) {
-      console.error(e)
-    }
-  }
   try {
-    const reg = await navigator.serviceWorker.ready
-    if (reg) {
-      const api = new IrisAPI()
-      const {vapid_public_key: newVapidKey} = await api.getPushNotificationInfo()
+    const pushSubscription = await getOrCreatePushSubscription()
+    if (!pushSubscription) {
+      return
+    }
 
-      const myKey = [...socialGraph().getUsersByFollowDistance(0)][0]
-      const notificationFilter = {
-        "#p": [myKey],
-        kinds: [1, 6, 7],
-      }
+    const api = new IrisAPI()
+    const myKey = [...socialGraph().getUsersByFollowDistance(0)][0]
+    const notificationFilter = {
+      "#p": [myKey],
+      kinds: [1, 6, 7],
+    }
 
-      // Check for existing subscription on notification server
-      const currentSubscriptions = await api.getSubscriptions()
-      const existingSub = Object.entries(currentSubscriptions).find(
-        ([, sub]) =>
-          sub.filter["#p"]?.includes(myKey) &&
-          sub.filter.kinds?.length === notificationFilter.kinds.length &&
-          sub.filter.kinds.every((k) => notificationFilter.kinds.includes(k))
+    // Check for existing subscription on notification server
+    const currentSubscriptions = await api.getSubscriptions()
+    const existingSub = Object.entries(currentSubscriptions).find(
+      ([, sub]) =>
+        sub.filter["#p"]?.includes(myKey) &&
+        sub.filter.kinds?.length === notificationFilter.kinds.length &&
+        sub.filter.kinds.every((k) => notificationFilter.kinds.includes(k))
+    )
+
+    // If no matching subscription exists, create new one
+    if (!existingSub) {
+      await api.registerPushNotifications(
+        [
+          {
+            endpoint: pushSubscription.endpoint,
+            p256dh: base64.encode(new Uint8Array(pushSubscription.getKey("p256dh")!)),
+            auth: base64.encode(new Uint8Array(pushSubscription.getKey("auth")!)),
+          },
+        ],
+        notificationFilter
       )
-
-      // If no matching subscription exists, create new one
-      if (!existingSub) {
-        const browserSub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: newVapidKey,
-        })
-
-        await api.registerPushNotifications(
-          [
-            {
-              endpoint: browserSub.endpoint,
-              p256dh: base64.encode(new Uint8Array(browserSub.getKey("p256dh")!)),
-              auth: base64.encode(new Uint8Array(browserSub.getKey("auth")!)),
-            },
-          ],
-          notificationFilter
-        )
-      }
     }
   } catch (e) {
     console.error(e)
