@@ -1,6 +1,7 @@
 import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {Filter} from "nostr-tools"
+import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
 
 export interface PushNotifications {
@@ -28,6 +29,16 @@ export interface SubscriptionResponse {
   [key: string]: Subscription
 }
 
+let notificationServerUrl = CONFIG.defaultSettings.notificationServer
+localState.get("notifications/server").on(
+  (url) => {
+    notificationServerUrl = url as string
+  },
+  false,
+  undefined,
+  String
+)
+
 /**
  * Can be used for web push notifications
  */
@@ -35,7 +46,7 @@ export default class IrisAPI {
   #url: string
 
   constructor(url?: string) {
-    this.#url = new URL(url ?? CONFIG.defaultSettings.notificationServer).toString()
+    this.#url = new URL(url ?? notificationServerUrl).toString()
   }
 
   twitterImport(username: string) {

@@ -126,11 +126,23 @@ async function getOrCreatePushSubscription() {
     subscriptionPromise = (async () => {
       const reg = await navigator.serviceWorker.ready
       let pushSubscription = await reg.pushManager.getSubscription()
+      const api = new IrisAPI()
+      const {vapid_public_key: vapidKey} = await api.getPushNotificationInfo()
+
+      // Check if we need to resubscribe due to different vapid key
+      if (pushSubscription) {
+        const currentKey = pushSubscription.options.applicationServerKey
+        // Add padding if needed and decode the VAPID key
+        const paddedVapidKey = vapidKey.padEnd(Math.ceil(vapidKey.length / 4) * 4, '=')
+        const vapidKeyArray = base64.decode(paddedVapidKey.replace(/-/g, '+').replace(/_/g, '/'))
+        
+        if (currentKey && !arrayBufferEqual(currentKey, vapidKeyArray)) {
+          await pushSubscription.unsubscribe()
+          pushSubscription = null
+        }
+      }
 
       if (!pushSubscription) {
-        const api = new IrisAPI()
-        const {vapid_public_key: vapidKey} = await api.getPushNotificationInfo()
-
         try {
           pushSubscription = await reg.pushManager.subscribe({
             userVisibleOnly: true,
@@ -336,4 +348,10 @@ export const unsubscribeAll = async () => {
 
   // Unsubscribe from push notifications at the browser level
   await pushSubscription.unsubscribe()
+}
+
+// Add this helper function at the bottom of the file
+function arrayBufferEqual(a: ArrayBuffer, b: Uint8Array): boolean {
+  const view1 = new Uint8Array(a);
+  return view1.length === b.length && view1.every((val, i) => val === b[i]);
 }

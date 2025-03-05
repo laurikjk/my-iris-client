@@ -6,6 +6,7 @@ import {
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {useEffect, useState, ChangeEvent} from "react"
 import Icon from "@/shared/components/Icons/Icon"
+import debounce from "lodash/debounce"
 import IrisAPI from "@/utils/IrisAPI"
 
 interface StatusIndicatorProps {
@@ -53,6 +54,16 @@ const NotificationSettings = () => {
   const [currentEndpoint, setCurrentEndpoint] = useState<string | null>(null)
   const [subscriptionsData, setSubscriptionsData] = useState<Record<string, any>>({})
   const [showDebugData, setShowDebugData] = useState(false)
+  const [inputValue, setInputValue] = useState(CONFIG.defaultSettings.notificationServer)
+  const [debouncedValidation] = useState(() =>
+    debounce((url: string) => {
+      const valid = validateUrl(url)
+      setIsValidUrl(valid)
+      if (valid) {
+        setNotificationServer(url)
+      }
+    }, 500)
+  )
 
   const trySubscribePush = async () => {
     try {
@@ -126,12 +137,13 @@ const NotificationSettings = () => {
 
   function handleServerChange(e: ChangeEvent<HTMLInputElement>) {
     const url = e.target.value
-    const valid = validateUrl(url)
-    setIsValidUrl(valid)
-    if (valid) {
-      setNotificationServer(url)
-    }
+    setInputValue(url)
+    debouncedValidation(url)
   }
+
+  useEffect(() => {
+    setInputValue(notificationServer)
+  }, [notificationServer])
 
   function validateUrl(url: string): boolean {
     try {
@@ -231,7 +243,7 @@ const NotificationSettings = () => {
             <input
               type="text"
               className={`w-96 max-w-full input input-primary ${isValidUrl ? "" : "input-error"}`}
-              value={notificationServer}
+              value={inputValue}
               onChange={handleServerChange}
             />
             {!isValidUrl && <p className="text-error">Invalid URL</p>}
