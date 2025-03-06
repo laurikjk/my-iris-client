@@ -8,15 +8,16 @@ export const Page404 = () => {
   }
 
   return (
-    <section className="Page404-root">
-      <h1>
-        404
-        <br></br>
-        Oops! The page you are looking for could not be found.
-      </h1>
-      <button onClick={handleHomeClick} className="btn btn-primary large">
-        Go back to homepage
-      </button>
+    <section className="hero min-h-screen bg-base-200">
+      <div className="hero-content text-center">
+        <div className="max-w-md">
+          <h1 className="text-9xl font-bold text-primary mb-2">404</h1>
+          <p className="text-xl mb-8">The page you are looking for could not be found.</p>
+          <button onClick={handleHomeClick} className="btn btn-primary btn-lg">
+            Go back to homepage
+          </button>
+        </div>
+      </div>
     </section>
   )
 }

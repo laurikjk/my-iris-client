@@ -1,6 +1,7 @@
 import {useParams, useNavigate, useLocation} from "react-router"
 import {useEffect, useState} from "react"
 import {nip05, nip19} from "nostr-tools"
+import {Page404} from "@/pages/Page404"
 import ThreadPage from "@/pages/thread"
 import ProfilePage from "@/pages/user"
 
@@ -8,7 +9,16 @@ export default function NostrLinkHandler() {
   const {link} = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string>()
+  const [pubkey, setPubkey] = useState<string>()
+  const [naddrData, setNaddrData] = useState<{
+    pubkey: string
+    kind: number
+    identifier: string
+  }>()
 
+  // Clean web+nostr:// prefix if present
   const cleanLink = link?.replace(/^web\+nostr:\/\//, "")
 
   useEffect(() => {
@@ -21,46 +31,57 @@ export default function NostrLinkHandler() {
   const isNote = cleanLink?.startsWith("note") || cleanLink?.startsWith("nevent")
   const isAddress = cleanLink?.startsWith("naddr")
 
-  const [pubkey, setPubkey] = useState<string | null>(null)
-  const [naddrData, setNaddrData] = useState<nip19.AddressPointer | null>(null)
-  const [loading, setLoading] = useState(!isProfile && !isNote && !isAddress)
-
   useEffect(() => {
-    setLoading(!isProfile && !isNote && !isAddress)
-    setPubkey(null)
-    setNaddrData(null)
-
-    if (isProfile || isNote || isAddress) return
-    const query = async () => {
-      const maybeNip05 = cleanLink?.includes("@") ? cleanLink : `${cleanLink}@iris.to`
-      const profile = await nip05.queryProfile(maybeNip05)
-      if (profile) {
-        setPubkey(profile.pubkey)
+    const resolveLink = async () => {
+      if (!cleanLink) {
+        setError("No link provided")
+        setLoading(false)
+        return
       }
-      setLoading(false)
-    }
-    query()
-  }, [cleanLink, isProfile, isNote, isAddress])
 
-  useEffect(() => {
-    if (isAddress && cleanLink) {
       try {
-        const decoded = nip19.decode(cleanLink)
-        if (decoded.type === "naddr") {
-          setNaddrData(decoded.data as nip19.AddressPointer)
+        if (isProfile) {
+          const decoded = nip19.decode(cleanLink)
+          setPubkey(decoded.data as string)
+        } else if (isAddress) {
+          const decoded = nip19.decode(cleanLink)
+          setNaddrData(decoded.data as any)
+        } else if (cleanLink.includes("@")) {
+          const resolved = await nip05.queryProfile(cleanLink)
+          if (!resolved) throw new Error("NIP-05 address not found")
+          setPubkey(resolved.pubkey)
         }
-      } catch (error) {
-        console.warn("Failed to decode naddr:", error)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to resolve link")
+      } finally {
+        setLoading(false)
       }
     }
-  }, [cleanLink, isAddress])
 
-  if (pubkey || isProfile) {
-    const k = pubkey || cleanLink!
-    return <ProfilePage pubKey={k} key={k} />
-  } else if (isNote) {
+    resolveLink()
+  }, [cleanLink, isProfile, isAddress])
+
+  if (error) {
+    return <Page404 />
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="loading loading-spinner loading-lg" />
+      </div>
+    )
+  }
+
+  if (isProfile && pubkey) {
+    return <ProfilePage pubKey={pubkey} key={pubkey || location.pathname} />
+  }
+
+  if (isNote) {
     return <ThreadPage id={cleanLink!} key={location.pathname} />
-  } else if (isAddress) {
+  }
+
+  if (isAddress && naddrData) {
     return (
       <ThreadPage
         id={cleanLink!}
@@ -69,9 +90,7 @@ export default function NostrLinkHandler() {
         key={location.pathname}
       />
     )
-  } else if (loading) {
-    return <ProfilePage pubKey={""} key={pubkey || location.pathname} />
-  } else {
-    return <div className="p-4">Page /{cleanLink} not found</div>
   }
+
+  return <Page404 />
 }

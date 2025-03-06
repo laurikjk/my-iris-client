@@ -10,6 +10,7 @@ import MutedBy from "@/shared/components/user/MutedBy"
 import Icon from "@/shared/components/Icons/Icon"
 import {unmuteUser} from "@/shared/services/Mute"
 import useMutes from "@/shared/hooks/useMutes"
+import {Page404} from "@/pages/Page404"
 
 const Bolt = () => <Icon name="zap-solid" className="text-accent" />
 const Link = () => <Icon name="link-02" className="text-info" />
@@ -30,44 +31,35 @@ function ProfileDetails({
   pubKey,
 }: ProfileDetailsProps) {
   const navigate = useNavigate()
-  const [nip05valid, setNIP05valid] = useState(null as boolean | null)
+  const [nip05valid, setNIP05valid] = useState<boolean | null>(null)
+  const [isValidPubkey, setIsValidPubkey] = useState(true)
+
   const website = useMemo(() => {
+    if (!displayProfile?.website) return null
     try {
-      if (displayProfile?.website) {
-        return new URL(displayProfile.website).toString()
-      }
-    } catch (e) {
-      // ignore
+      return new URL(displayProfile.website).toString()
+    } catch {
+      return null
     }
-    return null
   }, [displayProfile])
 
-  const npub = useMemo(() => {
-    if (pubKey) {
-      try {
-        const npub = pubKey.startsWith("npub") ? pubKey : nip19.npubEncode(pubKey)
-        return npub
-      } catch (error) {
-        console.warn(error)
-        navigate("/404")
-      }
-    }
-    return ""
-  }, [pubKey, navigate])
-  const hexPub = useMemo(() => {
-    if (pubKey) {
-      try {
-        return pubKey.startsWith("npub") ? String(nip19.decode(pubKey).data) : pubKey
-      } catch (error) {
-        console.warn(error)
-        navigate("/404")
-      }
-    }
-    return ""
-  }, [pubKey, navigate])
+  const {npub, hexPub} = useMemo(() => {
+    if (!pubKey) return {npub: "", hexPub: ""}
 
-  const mutes = useMutes()
-  useMutes(hexPub) // update their mute list
+    try {
+      const npub = pubKey.startsWith("npub") ? pubKey : nip19.npubEncode(pubKey)
+      const hexPub = pubKey.startsWith("npub")
+        ? String(nip19.decode(pubKey).data)
+        : pubKey
+      return {npub, hexPub}
+    } catch (error) {
+      console.warn("Invalid pubkey:", error)
+      setIsValidPubkey(false)
+      return {npub: "", hexPub: ""}
+    }
+  }, [pubKey])
+
+  const mutes = useMutes(hexPub)
   const isMuted = useMemo(() => mutes.includes(hexPub), [mutes, hexPub])
 
   useEffect(() => {
@@ -101,6 +93,10 @@ function ProfileDetails({
       <small>{content}</small>
     </div>
   )
+
+  if (!isValidPubkey) {
+    return <Page404 />
+  }
 
   return (
     <div className="flex flex-col gap-2">

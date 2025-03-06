@@ -5,7 +5,6 @@ import Notifications from "./notifications/Notifications"
 import Explorer from "@/pages/explorer/Explorer"
 import Layout from "@/shared/components/Layout"
 import WalletPage from "./wallet/WalletPage"
-import {Page404} from "@/pages/Page404.tsx"
 import SettingsPage from "@/pages/settings"
 import MessagesPage from "@/pages/messages"
 import {AboutPage} from "@/pages/HelpPage"
@@ -23,7 +22,6 @@ export const router = createBrowserRouter(
       <Route path="/explorer/:file?" element={<Explorer />} />
       <Route path="/search/:query?" element={<SearchPage />} />
       <Route path="/about" element={<AboutPage />} />
-      <Route path="/404" element={<Page404 />} />
       <Route path="/:link/*" element={<NostrLinkHandler />} />
     </Route>,
   ])
