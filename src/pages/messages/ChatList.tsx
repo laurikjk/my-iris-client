@@ -91,7 +91,7 @@ const ChatList = ({className}: ChatListProps) => {
   return (
     <nav className={className}>
       <div className="md:hidden">
-        <Header title="Messages" />
+        <Header title="Messages" slideUp={false} />
       </div>
       <div className="flex flex-col">
         <NavLink

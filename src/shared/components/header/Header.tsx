@@ -14,6 +14,7 @@ interface HeaderProps {
   showNotifications?: boolean
   scrollDown?: boolean
   slideUp?: boolean
+  bold?: boolean
 }
 
 const Header = ({
@@ -23,6 +24,7 @@ const Header = ({
   showNotifications = true,
   scrollDown = false,
   slideUp = true,
+  bold = true,
 }: HeaderProps) => {
   const [myPubKey] = useLocalState("user/publicKey", "", String)
   const [, setShowLoginDialog] = useLocalState("home/showLoginDialog", false)
@@ -142,10 +144,12 @@ const Header = ({
       <div ref={contentRef} className="flex justify-between items-center flex-1 w-full">
         <div className="flex items-center gap-2 w-full">
           {leftButton}
-          <div className="flex items-center gap-4 w-full">
-            {children || (
-              <h1 className="text-lg font-semibold text-base-content">{title}</h1>
-            )}
+          <div
+            className={classNames("flex items-center gap-4 w-full text-base-content", {
+              "text-lg font-semibold": bold,
+            })}
+          >
+            {children || title}
           </div>
         </div>
         <div className="flex items-center gap-4 mr-2">
