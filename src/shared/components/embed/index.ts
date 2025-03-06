@@ -11,6 +11,7 @@ import InlineMention from "./nostr/InlineMention.tsx"
 import SoundCloud from "./soundcloud/SoundCloud.tsx"
 import ApplePodcast from "./apple/ApplePodcast.tsx"
 import Instagram from "./instagram/Instagram.tsx"
+import CustomEmoji from "./nostr/CustomEmoji.tsx"
 // import TidalPlaylist from "./tidal/TidalPlaylist"
 // import TidalTrack from "./tidal/TidalTrack"
 import SmallImage from "./media/SmallImage.tsx"
@@ -64,6 +65,7 @@ export const allEmbeds = [
   NostrNpub,
   Nip19,
   InlineMention,
+  CustomEmoji,
   Url,
   Hashtag,
 ]
@@ -99,6 +101,16 @@ export const hasMedia = (e: NDKEvent) => {
   return false
 }
 
-export const smallEmbeds = [NostrNpub, Hashtag, SmallImage, SmallThumbnail, Url]
+export const smallEmbeds = [
+  NostrNpub,
+  Hashtag,
+  SmallImage,
+  SmallThumbnail,
+  Url,
+  CustomEmoji,
+  InlineMention,
+  Nip19,
+  LightningUri,
+]
 
 export default Embed
