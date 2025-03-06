@@ -17,12 +17,11 @@ import {ndk} from "@/utils/ndk"
 interface ZapModalProps {
   onClose: () => void
   event: NDKEvent
-  zapped: boolean
   setZapped: Dispatch<SetStateAction<boolean>>
   rezappedEvent?: NDKEvent
 }
 
-function ZapModal({onClose, event, zapped, setZapped, rezappedEvent}: ZapModalProps) {
+function ZapModal({onClose, event, setZapped, rezappedEvent}: ZapModalProps) {
   const [defaultZapAmount] = useLocalState("user/defaultZapAmount", 21)
   const [copiedPaymentRequest, setCopiedPaymentRequest] = useState(false)
   const [noAddress, setNoAddress] = useState(false)
@@ -68,7 +67,8 @@ function ZapModal({onClose, event, zapped, setZapped, rezappedEvent}: ZapModalPr
           await provider.sendPayment(pr)
           setZapped(true)
           setZapRefresh(!zapRefresh)
-          return undefined
+          onClose()
+          return provider.sendPayment(pr)
         } else {
           // no Nostr wallet connect set
           setBolt11Invoice(pr)
@@ -142,12 +142,7 @@ function ZapModal({onClose, event, zapped, setZapped, rezappedEvent}: ZapModalPr
           if (bolt11Invoice === receiptInvoice && amountPaid === amountRequested) {
             if (rezappedEvent) rezap(event)
             setZapped(true)
-            setTimeout(() => {
-              setZapAmount("21000")
-              setZapped(false)
-              setShowQRCode(false)
-              onClose()
-            }, 4500)
+            onClose()
           }
         }
       })
@@ -177,62 +172,59 @@ function ZapModal({onClose, event, zapped, setZapped, rezappedEvent}: ZapModalPr
   }
 
   return (
-    <Modal onClose={onClose} hasBackground={!zapped}>
+    <Modal onClose={onClose} hasBackground={true}>
       <div className="flex flex-col items-center justify-center p-4">
-        {!zapped && (
-          <div className="flex flex-col items-center gap-4">
-            {showQRCode && (
-              <p>
-                Scan the QR code to zap <b>{zapAmount} sats</b>.
-              </p>
-            )}
-            <img id="qr-image" className={showQRCode ? "w-40 h-40" : ""} />
-            {showQRCode && (
-              <>
-                <a href={`lightning:${bolt11Invoice}`} className="btn btn-primary">
-                  Open in Wallet
-                </a>
-                <button
-                  className="btn btn-neutral gap-2"
-                  onClick={handleCopyPaymentRequest}
-                >
-                  {!copiedPaymentRequest && <RiFileCopyLine />}
-                  {copiedPaymentRequest && <RiCheckLine />}
-                  Copy zap invoice
-                </button>
-              </>
-            )}
-            {!showQRCode && (
-              <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
-                <h3>Choose the amount to zap</h3>
-                {noAddress && (
-                  <span className="text-red-500">The user has no lightning address.</span>
-                )}
-                <div className="flex flex-col gap-2">
-                  <label>Amount (sats)</label>
-                  <input
-                    type="text"
-                    className="input input-bordered w-full"
-                    value={zapAmount}
-                    onChange={handleZapAmountChange}
-                    placeholder="21000"
-                  />
-                  <input
-                    type="text"
-                    className="input input-bordered w-full"
-                    value={zapMessage}
-                    onChange={handleZapMessageChange}
-                    placeholder="message (optional)"
-                  />
-                </div>
-                <button type="submit" className="btn btn-primary">
-                  Zap
-                </button>
-              </form>
-            )}
-          </div>
-        )}
-        {zapped && <div className="flex flex-col items-center">Zapped!</div>}
+        <div className="flex flex-col items-center gap-4">
+          {showQRCode && (
+            <p>
+              Scan the QR code to zap <b>{zapAmount} sats</b>.
+            </p>
+          )}
+          <img id="qr-image" className={showQRCode ? "w-40 h-40" : ""} />
+          {showQRCode && (
+            <>
+              <a href={`lightning:${bolt11Invoice}`} className="btn btn-primary">
+                Open in Wallet
+              </a>
+              <button
+                className="btn btn-neutral gap-2"
+                onClick={handleCopyPaymentRequest}
+              >
+                {!copiedPaymentRequest && <RiFileCopyLine />}
+                {copiedPaymentRequest && <RiCheckLine />}
+                Copy zap invoice
+              </button>
+            </>
+          )}
+          {!showQRCode && (
+            <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
+              <h3>Choose the amount to zap</h3>
+              {noAddress && (
+                <span className="text-red-500">The user has no lightning address.</span>
+              )}
+              <div className="flex flex-col gap-2">
+                <label>Amount (sats)</label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full"
+                  value={zapAmount}
+                  onChange={handleZapAmountChange}
+                  placeholder="21000"
+                />
+                <input
+                  type="text"
+                  className="input input-bordered w-full"
+                  value={zapMessage}
+                  onChange={handleZapMessageChange}
+                  placeholder="message (optional)"
+                />
+              </div>
+              <button type="submit" className="btn btn-primary">
+                Zap
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </Modal>
   )

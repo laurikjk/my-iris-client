@@ -224,7 +224,9 @@ function FeedItem({
           </div>
         </div>
         <div className={classNames("px-4", {"pl-14": asRepliedTo})}>
-          {showActions && <FeedItemActions event={referredEvent || event} />}
+          {showActions && (
+            <FeedItemActions feedItemRef={feedItemRef} event={referredEvent || event} />
+          )}
         </div>
       </div>
       {showReplies > 0 && (eventId || event?.id) && (

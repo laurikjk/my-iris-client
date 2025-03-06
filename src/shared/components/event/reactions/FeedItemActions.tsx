@@ -5,12 +5,14 @@ import FeedItemRepost from "./FeedItemRepost.tsx"
 import FeedItemShare from "./FeedItemShare.tsx"
 import {FeedItemLike} from "./FeedItemLike.tsx"
 import FeedItemZap from "./FeedItemZap.tsx"
+import {RefObject} from "react"
 
 type FeedItemActionsProps = {
   event: NDKEvent
+  feedItemRef: RefObject<HTMLDivElement | null>
 }
 
-function FeedItemActions({event}: FeedItemActionsProps) {
+function FeedItemActions({event, feedItemRef}: FeedItemActionsProps) {
   return (
     <div
       onClick={(e) => e.stopPropagation()}
@@ -21,7 +23,7 @@ function FeedItemActions({event}: FeedItemActionsProps) {
       {event.kind !== 30078 && <FeedItemComment event={event} />}
       {event.kind !== 30078 && <FeedItemRepost event={event} />}
       <FeedItemLike event={event} />
-      <FeedItemZap event={event} />
+      <FeedItemZap feedItemRef={feedItemRef} event={event} />
       <FeedItemShare event={event} />
     </div>
   )

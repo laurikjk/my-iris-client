@@ -2,11 +2,11 @@ import {LnPayCb, NDKEvent, NDKZapper} from "@nostr-dev-kit/ndk"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {shouldHideEvent} from "@/utils/socialGraph.ts"
 import useProfile from "@/shared/hooks/useProfile.ts"
+import {RefObject, useEffect, useState} from "react"
 import {getZappingUser} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
 import {decode} from "light-bolt11-decoder"
-import {useEffect, useState} from "react"
 import Icon from "../../Icons/Icon.tsx"
 import ZapModal from "../ZapModal.tsx"
 import debounce from "lodash/debounce"
@@ -19,13 +19,14 @@ const zapsByEventCache = new LRUCache<string, Map<string, NDKEvent[]>>({
 
 interface FeedItemZapProps {
   event: NDKEvent
+  feedItemRef: RefObject<HTMLDivElement | null>
 }
 
 // TODO fix useLocalState so initial state is properly set from memory, so we can use it instead of this
 let myPubKey = ""
 localState.get("user/publicKey").on((k) => (myPubKey = k as string))
 
-function FeedItemZap({event}: FeedItemZapProps) {
+function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
   const [isWalletConnect] = useLocalState("user/walletConnect", false)
   const [defaultZapAmount] = useLocalState("user/defaultZapAmount", undefined)
 
@@ -59,9 +60,22 @@ function FeedItemZap({event}: FeedItemZapProps) {
 
   const [zappedAmount, setZappedAmount] = useState<number>(0)
 
+  const flashElement = () => {
+    if (feedItemRef.current) {
+      feedItemRef.current.style.transition = "background-color 1.0s ease"
+      feedItemRef.current.style.backgroundColor = "rgba(234, 88, 12, 0.2)" // orange flash
+      setTimeout(() => {
+        if (feedItemRef.current) {
+          feedItemRef.current.style.backgroundColor = ""
+        }
+      }, 1000)
+    }
+  }
+
   const handleZapClick = async () => {
     if (isWalletConnect && !!defaultZapAmount) {
-      handleOneClickZap()
+      await handleOneClickZap()
+      flashElement()
     } else {
       setShowZapModal(true)
     }
@@ -76,6 +90,7 @@ function FeedItemZap({event}: FeedItemZapProps) {
           const {requestProvider} = await import("@getalby/bitcoin-connect")
           const provider = await requestProvider()
           const confirmation = await provider.sendPayment(pr)
+          setShowZapModal(false)
           return confirmation
         }
         return undefined
@@ -157,8 +172,9 @@ function FeedItemZap({event}: FeedItemZapProps) {
         <ZapModal
           onClose={() => setShowZapModal(false)}
           event={event}
-          zapped={zapped}
-          setZapped={() => {}}
+          setZapped={() => {
+            flashElement()
+          }}
         />
       )}
       <div
