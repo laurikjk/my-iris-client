@@ -1,7 +1,7 @@
 import NotificationsFeed from "@/shared/components/feed/NotificationsFeed.tsx"
-import Header from "@/shared/components/header/Header"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
+import Header from "@/shared/components/header/Header"
 import Widget from "@/shared/components/ui/Widget"
 
 import {subscribeToNotifications} from "@/utils/notifications"
