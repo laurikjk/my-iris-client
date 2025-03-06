@@ -145,7 +145,9 @@ function HomeFeedEvents() {
 
   return (
     <>
-      <Header title={feedName} showBack={false} />
+      <Header showBack={false}>
+        <span className="md:px-3 md:py-2">{feedName}</span>
+      </Header>
       {follows.length > 1 && myPubKey && (
         <div className="px-4 pb-4 flex flex-row gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
           {tabs.map((t) => (
