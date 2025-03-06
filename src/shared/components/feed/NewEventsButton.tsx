@@ -18,7 +18,7 @@ const NewEventsButton = ({
   if (newEventsFiltered.length === 0) return null
 
   return (
-    <div className="fixed bottom-20 md:bottom-10 left-1/2 transform -translate-x-1/2 z-40 flex justify-center w-full max-w-lg pb-[env(safe-area-inset-bottom)]">
+    <div className="fixed bottom-20 md:bottom-10 left-1/2 transform -translate-x-1/2 z-30 flex justify-center w-full max-w-lg pb-[env(safe-area-inset-bottom)]">
       <button
         className="btn btn-info shadow-xl rounded-full"
         onClick={() => {

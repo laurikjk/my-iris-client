@@ -111,8 +111,12 @@ const Header = ({
   }
 
   const handleHeaderClick = (e: MouseEvent) => {
-    // Don't scroll if clicking on a button
-    if ((e.target as HTMLElement).closest("button")) return
+    // Don't scroll if clicking on a button or link
+    if (
+      (e.target as HTMLElement).closest("button") ||
+      (e.target as HTMLElement).closest("a")
+    )
+      return
 
     window.scrollTo({
       top: scrollDown ? document.body.scrollHeight : 0,

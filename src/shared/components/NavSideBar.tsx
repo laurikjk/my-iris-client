@@ -219,7 +219,7 @@ const NavSideBar = () => {
     <ErrorBoundary>
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black opacity-50 md:hidden"
+          className="fixed inset-0 z-40 bg-black opacity-50 md:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
