@@ -13,6 +13,7 @@ interface MiddleHeaderProps {
   showBack?: boolean
   showNotifications?: boolean
   scrollDown?: boolean
+  slideUp?: boolean
 }
 
 const MiddleHeader = ({
@@ -21,6 +22,7 @@ const MiddleHeader = ({
   showBack = true,
   showNotifications = true,
   scrollDown = false,
+  slideUp = true,
 }: MiddleHeaderProps) => {
   const [myPubKey] = useLocalState("user/publicKey", "", String)
   const [, setShowLoginDialog] = useLocalState("home/showLoginDialog", false)
@@ -37,7 +39,7 @@ const MiddleHeader = ({
     const OPACITY_MIN_POINT = 30
 
     const handleScroll = () => {
-      if (window.innerWidth >= MOBILE_BREAKPOINT) return
+      if (window.innerWidth >= MOBILE_BREAKPOINT || !slideUp) return
 
       const currentScrollY = window.scrollY
       let newTranslateY = 0
@@ -85,7 +87,7 @@ const MiddleHeader = ({
       window.removeEventListener("scroll", handleScroll)
       window.removeEventListener("resize", handleResize)
     }
-  }, [])
+  }, [slideUp])
 
   const getButtonContent = () => {
     if (showBack) return <RiArrowLeftLine className="w-6 h-6" />
@@ -133,10 +135,10 @@ const MiddleHeader = ({
       style={{transform: `translateY(0px)`}}
       className="min-h-16 shadow-theme-xl flex fixed top-0 left-0 right-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none md:sticky w-full cursor-pointer"
     >
-      <div ref={contentRef} className="flex justify-between items-center flex-1">
-        <div className="flex items-center gap-2">
+      <div ref={contentRef} className="flex justify-between items-center flex-1 w-full">
+        <div className="flex items-center gap-2 w-full">
           {leftButton}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 w-full">
             {children || (
               <h1 className="text-lg font-semibold text-base-content">{title}</h1>
             )}
