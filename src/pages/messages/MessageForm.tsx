@@ -24,9 +24,11 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
     if (!isTouchDevice && inputRef.current) {
       inputRef.current.focus()
     }
-  }, [id, isTouchDevice])
 
-  useEffect(() => {
+    if (replyingTo && inputRef.current) {
+      inputRef.current.focus()
+    }
+
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && replyingTo) {
         setReplyingTo(undefined)
@@ -34,65 +36,59 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
     }
 
     document.addEventListener("keydown", handleEscKey)
-
-    return () => {
-      document.removeEventListener("keydown", handleEscKey)
-    }
-  }, [replyingTo, setReplyingTo])
-
-  useEffect(() => {
-    if (replyingTo && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [replyingTo])
+    return () => document.removeEventListener("keydown", handleEscKey)
+  }, [id, isTouchDevice, replyingTo, setReplyingTo])
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     const text = newMessage.trim()
-    if (text) {
-      const time = Date.now()
-      const tags = [["ms", time.toString()]]
-      if (replyingTo) {
-        tags.push(["e", replyingTo.id])
-      }
+    if (!text) return
+
+    const time = Date.now()
+    const tags = [["ms", time.toString()]]
+    if (replyingTo) {
+      tags.push(["e", replyingTo.id])
+    }
+
+    try {
       const {event, innerEvent} = session.sendEvent({
         content: text,
         kind: CHAT_MESSAGE_KIND,
         tags,
       })
-      const ndkEvent = NDKEventFromRawEvent(event)
-      ndkEvent
+
+      NDKEventFromRawEvent(event)
         .publish()
-        .then(() => {})
-        .catch((e) => console.error(e))
+        .catch((e) => console.error("Failed to publish message:", e))
+
       const message: MessageType = {
         ...innerEvent,
         sender: "user",
         reactions: {},
       }
-      localState
-        .get("sessions")
-        .get(id)
-        .get("state")
-        .put(serializeSessionState(session.state))
-      localState.get("sessions").get(id).get("events").get(innerEvent.id).put(message)
-      localState.get("sessions").get(id).get("latest").put(message)
-      localState.get("sessions").get(id).get("lastSeen").put(time)
+
+      const sessionState = localState.get("sessions").get(id)
+      sessionState.get("state").put(serializeSessionState(session.state))
+      sessionState.get("events").get(innerEvent.id).put(message)
+      sessionState.get("latest").put(message)
+      sessionState.get("lastSeen").put(time)
+
       setNewMessage("")
       if (replyingTo) {
         setReplyingTo(undefined)
       }
+    } catch (error) {
+      console.error("Failed to send message:", error)
     }
   }
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setNewMessage(value)
+    setNewMessage(e.target.value)
   }
 
   const handleEmojiClick = (emoji: any) => {
-    // emoji-mart returns different structure than emoji-picker-react
     setNewMessage((prev) => prev + emoji.native)
+    inputRef.current?.focus()
   }
 
   return (
@@ -115,11 +111,16 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
             onChange={handleInputChange}
             placeholder="Message"
             className="flex-1 input input-sm md:input-md input-bordered"
+            aria-label="Message input"
           />
         </div>
         <button
           type="submit"
-          className={`btn btn-primary btn-circle btn-sm md:btn-md ${isTouchDevice ? "" : "hidden"}`}
+          className={`btn btn-primary btn-circle btn-sm md:btn-md ${
+            isTouchDevice ? "" : "hidden"
+          }`}
+          aria-label="Send message"
+          disabled={!newMessage.trim()}
         >
           <Icon name="arrow-right" className="-rotate-90" />
         </button>
