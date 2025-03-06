@@ -81,7 +81,7 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
     socialGraph().getFollowedByUser(user).has(myPubKey) || user === myPubKey
 
   return (
-    <MiddleHeader showNotifications={false}>
+    <MiddleHeader showNotifications={false} scrollDown={true}>
       <div className="flex items-center justify-between w-full">
         <div className="flex flex-row items-center gap-2">
           {id && <UserRow avatarWidth={32} pubKey={user} />}
