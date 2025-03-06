@@ -28,8 +28,11 @@ const Modal = ({onClose, children, hasBackground = true}: ModalProps) => {
       if (e.key === "Escape") {
         // prevent daisyUI default
         e.preventDefault()
-        onClose()
-        closeModal()
+        // Only close if no emoji picker is open
+        if (!document.querySelector('[data-emoji-picker="true"]')) {
+          onClose()
+          closeModal()
+        }
       }
     }
 

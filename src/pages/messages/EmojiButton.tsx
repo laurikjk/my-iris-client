@@ -59,7 +59,11 @@ const EmojiButton = ({onEmojiSelect}: EmojiButtonProps) => {
         <RiEmotionLine className="w-6 w-6" />
       </button>
       {showEmojiPicker && emojiData && (
-        <div ref={emojiPickerRef} className="absolute bottom-14 left-0 z-10">
+        <div
+          ref={emojiPickerRef}
+          className="absolute bottom-14 left-0 z-10"
+          data-emoji-picker="true"
+        >
           <Suspense
             fallback={<div className="p-4 bg-base-100 rounded shadow">Loading...</div>}
           >
