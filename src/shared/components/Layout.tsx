@@ -3,7 +3,6 @@ import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import NavSideBar from "@/shared/components/NavSideBar.tsx"
-import Header from "@/shared/components/header/Header.tsx"
 import {useInviteFromUrl} from "../hooks/useInviteFromUrl"
 import {clearNotifications} from "@/utils/notifications"
 import {socialGraphLoaded} from "@/utils/socialGraph"
@@ -106,7 +105,6 @@ const Layout = () => {
 
   return (
     <div className="relative flex flex-col w-full max-w-screen-xl min-h-screen overscroll-none">
-      <Header />
       <div className="flex relative min-h-screen flex-1 overscroll-none">
         <NavSideBar />
         <div className="flex-1 min-h-screen py-16 md:py-0 overscroll-none mb-[env(safe-area-inset-bottom)]">

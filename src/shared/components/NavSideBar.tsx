@@ -33,36 +33,45 @@ const NavItem = ({
   onClick,
   children,
   className,
-}: NavItemProps) => (
-  <li>
-    <NavLink
-      title={label}
-      to={to}
-      onClick={onClick}
-      className={({isActive}) =>
-        classNames(className, {
-          "bg-base-100": isActive,
-          "rounded-full md:aspect-square xl:aspect-auto flex md:justify-center xl:justify-start items-center":
-            true,
-        })
-      }
-    >
-      {({isActive}) => (
-        <>
-          <Icon
-            className="w-6 h-6"
-            name={
-              (isActive ? activeIcon : inactiveIcon) ||
-              (icon ? `${icon}-${isActive ? "solid" : "outline"}` : "")
-            }
-          />
-          <span className="inline md:hidden xl:inline">{label}</span>
-          {children}
-        </>
-      )}
-    </NavLink>
-  </li>
-)
+}: NavItemProps) => {
+  const [, setIsSidebarOpen] = useLocalState("isSidebarOpen", false)
+
+  const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
+    setIsSidebarOpen(false)
+    onClick?.(e)
+  }
+
+  return (
+    <li>
+      <NavLink
+        title={label}
+        to={to}
+        onClick={handleClick}
+        className={({isActive}) =>
+          classNames(className, {
+            "bg-base-100": isActive,
+            "rounded-full md:aspect-square xl:aspect-auto flex md:justify-center xl:justify-start items-center":
+              true,
+          })
+        }
+      >
+        {({isActive}) => (
+          <>
+            <Icon
+              className="w-6 h-6"
+              name={
+                (isActive ? activeIcon : inactiveIcon) ||
+                (icon ? `${icon}-${isActive ? "solid" : "outline"}` : "")
+              }
+            />
+            <span className="inline md:hidden xl:inline">{label}</span>
+            {children}
+          </>
+        )}
+      </NavLink>
+    </li>
+  )
+}
 
 const NotificationNavItem = ({
   to,
@@ -70,29 +79,38 @@ const NotificationNavItem = ({
 }: {
   to: string
   onClick?: MouseEventHandler<HTMLAnchorElement>
-}) => (
-  <li>
-    <NavLink
-      title="Notifications"
-      to={to}
-      onClick={onClick}
-      className={({isActive}) =>
-        classNames({
-          "bg-base-100": isActive,
-          "rounded-full md:aspect-square xl:aspect-auto flex items-center": true,
-        })
-      }
-    >
-      {({isActive}) => (
-        <span className="indicator flex items-center gap-2">
-          <UnseenNotificationsBadge />
-          <Icon name={`bell-${isActive ? "solid" : "outline"}`} className="w-6 h-6" />
-          <span className="inline md:hidden xl:inline">Notifications</span>
-        </span>
-      )}
-    </NavLink>
-  </li>
-)
+}) => {
+  const [, setIsSidebarOpen] = useLocalState("isSidebarOpen", false)
+
+  const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
+    setIsSidebarOpen(false)
+    onClick?.(e)
+  }
+
+  return (
+    <li>
+      <NavLink
+        title="Notifications"
+        to={to}
+        onClick={handleClick}
+        className={({isActive}) =>
+          classNames({
+            "bg-base-100": isActive,
+            "rounded-full md:aspect-square xl:aspect-auto flex items-center": true,
+          })
+        }
+      >
+        {({isActive}) => (
+          <span className="indicator flex items-center gap-2">
+            <UnseenNotificationsBadge />
+            <Icon name={`bell-${isActive ? "solid" : "outline"}`} className="w-6 h-6" />
+            <span className="inline md:hidden xl:inline">Notifications</span>
+          </span>
+        )}
+      </NavLink>
+    </li>
+  )
+}
 
 const MessagesNavItem = ({
   to,
@@ -100,29 +118,38 @@ const MessagesNavItem = ({
 }: {
   to: string
   onClick?: MouseEventHandler<HTMLAnchorElement>
-}) => (
-  <li>
-    <NavLink
-      title="Messages"
-      to={to}
-      onClick={onClick}
-      className={({isActive}) =>
-        classNames({
-          "bg-base-100": isActive,
-          "rounded-full md:aspect-square xl:aspect-auto flex items-center": true,
-        })
-      }
-    >
-      {({isActive}) => (
-        <span className="indicator flex items-center gap-2">
-          <UnseenMessagesBadge />
-          <Icon name={`mail-${isActive ? "solid" : "outline"}`} className="w-6 h-6" />
-          <span className="inline md:hidden xl:inline">Messages</span>
-        </span>
-      )}
-    </NavLink>
-  </li>
-)
+}) => {
+  const [, setIsSidebarOpen] = useLocalState("isSidebarOpen", false)
+
+  const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
+    setIsSidebarOpen(false)
+    onClick?.(e)
+  }
+
+  return (
+    <li>
+      <NavLink
+        title="Messages"
+        to={to}
+        onClick={handleClick}
+        className={({isActive}) =>
+          classNames({
+            "bg-base-100": isActive,
+            "rounded-full md:aspect-square xl:aspect-auto flex items-center": true,
+          })
+        }
+      >
+        {({isActive}) => (
+          <span className="indicator flex items-center gap-2">
+            <UnseenMessagesBadge />
+            <Icon name={`mail-${isActive ? "solid" : "outline"}`} className="w-6 h-6" />
+            <span className="inline md:hidden xl:inline">Messages</span>
+          </span>
+        )}
+      </NavLink>
+    </li>
+  )
+}
 
 type NavItemConfig = {
   to: string

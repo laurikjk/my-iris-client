@@ -4,6 +4,7 @@ import RightColumn from "@/shared/components/RightColumn.tsx"
 import Trending from "@/shared/components/feed/Trending.tsx"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import FollowList from "@/pages/user/components/FollowList"
+import {Name} from "@/shared/components/user/Name"
 import Widget from "@/shared/components/ui/Widget"
 import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -29,6 +30,7 @@ export default function ThreadPage({
   )
   const [event, setEvent] = useState<NDKEvent | null>(null)
   const [loading, setLoading] = useState(isNaddr)
+  const [threadAuthor, setThreadAuthor] = useState<string | null>(null)
 
   useEffect(() => {
     if (isNaddr && naddrData) {
@@ -45,7 +47,10 @@ export default function ThreadPage({
         .then((e) => {
           if (e) {
             setEvent(e)
-            if (e.pubkey) addRelevantPerson(e.pubkey)
+            if (e.pubkey) {
+              setThreadAuthor(e.pubkey)
+              addRelevantPerson(e.pubkey)
+            }
           }
           setLoading(false)
         })
@@ -57,6 +62,7 @@ export default function ThreadPage({
   }, [isNaddr, naddrData])
 
   const addRelevantPerson = (person: string) => {
+    if (!threadAuthor) setThreadAuthor(person)
     setRelevantPeople((prev) => new Map(prev).set(person, true))
   }
 
@@ -72,7 +78,15 @@ export default function ThreadPage({
   return (
     <div className="flex justify-center">
       <div className="flex-1">
-        <MiddleHeader title="Thread" />
+        <MiddleHeader>
+          {threadAuthor ? (
+            <>
+              Thread by <Name pubKey={threadAuthor} />
+            </>
+          ) : (
+            "Thread"
+          )}
+        </MiddleHeader>
         {(() => {
           if (isNaddr) {
             if (loading) {

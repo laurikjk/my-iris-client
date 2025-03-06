@@ -1,4 +1,5 @@
 import {ConnectionStatus} from "@/shared/components/connection/ConnectionStatus"
+import MiddleHeader from "@/shared/components/header/MiddleHeader"
 import RelativeTime from "@/shared/components/event/RelativeTime"
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
@@ -89,6 +90,9 @@ const ChatList = ({className}: ChatListProps) => {
 
   return (
     <nav className={className}>
+      <div className="md:hidden">
+        <MiddleHeader title="Messages" />
+      </div>
       <div className="flex flex-col">
         <NavLink
           to="/messages/new"

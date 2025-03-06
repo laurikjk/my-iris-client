@@ -1,73 +1,163 @@
-import {ReactNode, useCallback, MouseEvent} from "react"
-import {useNavigate, useLocation} from "react-router"
-import {RiArrowLeftLine} from "@remixicon/react"
-import {Helmet} from "react-helmet"
+import {MOBILE_BREAKPOINT} from "@/shared/components/user/const.ts"
+import {ReactNode, useRef, useEffect, MouseEvent} from "react"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import {RiMenuLine, RiArrowLeftLine} from "@remixicon/react"
+import NotificationButton from "./NotificationButton"
+import {useNavigate} from "react-router"
+import {Avatar} from "../user/Avatar"
 import classNames from "classnames"
 
 interface MiddleHeaderProps {
   title?: string
   children?: ReactNode
-  centered?: boolean
+  showBack?: boolean
+  showNotifications?: boolean
+  scrollDown?: boolean
 }
 
-const MiddleHeader = ({title, children, centered = true}: MiddleHeaderProps) => {
+const MiddleHeader = ({
+  title,
+  children,
+  showBack = true,
+  showNotifications = true,
+  scrollDown = false,
+}: MiddleHeaderProps) => {
+  const [myPubKey] = useLocalState("user/publicKey", "", String)
+  const [, setShowLoginDialog] = useLocalState("home/showLoginDialog", false)
+  const [isSidebarOpen, setSidebarOpen] = useLocalState("isSidebarOpen", false)
   const navigate = useNavigate()
-  const {pathname} = useLocation()
 
-  const handleBackClick = useCallback(
-    (e: MouseEvent) => {
-      e.stopPropagation()
+  const headerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const lastScrollY = useRef(window.scrollY)
+
+  useEffect(() => {
+    const MIN_TRANSLATE_Y = -80
+    const MAX_TRANSLATE_Y = 0
+    const OPACITY_MIN_POINT = 30
+
+    const handleScroll = () => {
+      if (window.innerWidth >= MOBILE_BREAKPOINT) return
+
+      const currentScrollY = window.scrollY
+      let newTranslateY = 0
+      if (currentScrollY > lastScrollY.current) {
+        newTranslateY = Math.max(
+          MIN_TRANSLATE_Y,
+          parseFloat(
+            headerRef.current?.style.transform
+              .replace("translateY(", "")
+              .replace("px)", "") || "0"
+          ) -
+            (currentScrollY - lastScrollY.current)
+        )
+      } else {
+        newTranslateY = Math.min(
+          MAX_TRANSLATE_Y,
+          parseFloat(
+            headerRef.current?.style.transform
+              .replace("translateY(", "")
+              .replace("px)", "") || "0"
+          ) +
+            (lastScrollY.current - currentScrollY)
+        )
+      }
+      lastScrollY.current = currentScrollY
+      if (headerRef.current) {
+        headerRef.current.style.transform = `translateY(${newTranslateY}px)`
+        contentRef.current!.style.opacity = `${1 - Math.min(1, newTranslateY / -OPACITY_MIN_POINT)}`
+      }
+    }
+
+    const handleResize = () => {
+      if (headerRef.current) {
+        headerRef.current.style.transform = `translateY(0px)`
+        if (contentRef.current) {
+          contentRef.current.style.opacity = "1"
+        }
+        lastScrollY.current = window.scrollY // Reset the scroll position reference
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll)
+    window.addEventListener("resize", handleResize)
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [])
+
+  const getButtonContent = () => {
+    if (showBack) return <RiArrowLeftLine className="w-6 h-6" />
+    return myPubKey ? (
+      <Avatar pubKey={myPubKey} width={32} showBadge={false} />
+    ) : (
+      <RiMenuLine className="w-6 h-6" />
+    )
+  }
+
+  const handleButtonClick = () => {
+    if (showBack) {
       if (window.history.state?.idx > 0) {
         navigate(-1)
       } else {
-        navigate("/")
+        navigate("/messages")
       }
-    },
-    [navigate]
-  )
+    } else {
+      setSidebarOpen(!isSidebarOpen)
+    }
+  }
 
-  const handleHeaderClick = useCallback(() => {
-    window.scrollTo({top: 0})
-  }, [])
+  const handleHeaderClick = (e: MouseEvent) => {
+    // Don't scroll if clicking on a button
+    if ((e.target as HTMLElement).closest("button")) return
+
+    window.scrollTo({
+      top: scrollDown ? document.body.scrollHeight : 0,
+    })
+  }
+
+  const leftButton = getButtonContent() && (
+    <button
+      onClick={handleButtonClick}
+      className={classNames("btn btn-ghost btn-circle", {"md:hidden": !showBack})}
+    >
+      {getButtonContent()}
+    </button>
+  )
 
   return (
     <header
-      className="hidden cursor-pointer md:flex sticky top-0 z-10 w-full bg-base-200 bg-opacity-80 backdrop-blur-sm"
+      ref={headerRef}
       onClick={handleHeaderClick}
+      style={{transform: `translateY(0px)`}}
+      className="min-h-16 shadow-theme-xl flex fixed top-0 left-0 right-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none md:sticky w-full cursor-pointer"
     >
-      <div className="mx-auto px-4 py-3 flex items-center w-full">
-        <button
-          onClick={handleBackClick}
-          className={classNames(
-            "mr-4 text-base-content hover:text-primary transition-colors",
-            {
-              hidden: pathname === "/",
-            }
-          )}
-          aria-label="Go back"
-        >
-          <RiArrowLeftLine size={24} />
-        </button>
-        <div className="flex-grow text-center">
-          {children ? (
-            children
-          ) : (
-            <h1 className="text-lg font-semibold text-base-content">{title}</h1>
-          )}
+      <div ref={contentRef} className="flex justify-between items-center flex-1">
+        <div className="flex items-center gap-2">
+          {leftButton}
+          <div className="flex items-center gap-4">
+            {children || (
+              <h1 className="text-lg font-semibold text-base-content">{title}</h1>
+            )}
+          </div>
         </div>
-        <div
-          className={classNames("mr-4", {
-            hidden: pathname === "/" || !centered,
-          })}
-        >
-          <RiArrowLeftLine size={24} style={{opacity: 0}} />
+        <div className="flex items-center gap-4 mr-2">
+          {showNotifications && myPubKey && (
+            <div className="md:hidden">
+              <NotificationButton />
+            </div>
+          )}
+          {!myPubKey && (
+            <button
+              className="md:hidden btn btn-sm btn-primary"
+              onClick={() => setShowLoginDialog(true)}
+            >
+              Sign up
+            </button>
+          )}
         </div>
       </div>
-      {title && (
-        <Helmet>
-          <title>{title}</title>
-        </Helmet>
-      )}
     </header>
   )
 }

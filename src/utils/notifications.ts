@@ -133,9 +133,11 @@ async function getOrCreatePushSubscription() {
       if (pushSubscription) {
         const currentKey = pushSubscription.options.applicationServerKey
         // Add padding if needed and decode the VAPID key
-        const paddedVapidKey = vapidKey.padEnd(Math.ceil(vapidKey.length / 4) * 4, '=')
-        const vapidKeyArray = base64.decode(paddedVapidKey.replace(/-/g, '+').replace(/_/g, '/'))
-        
+        const paddedVapidKey = vapidKey.padEnd(Math.ceil(vapidKey.length / 4) * 4, "=")
+        const vapidKeyArray = base64.decode(
+          paddedVapidKey.replace(/-/g, "+").replace(/_/g, "/")
+        )
+
         if (currentKey && !arrayBufferEqual(currentKey, vapidKeyArray)) {
           await pushSubscription.unsubscribe()
           pushSubscription = null
@@ -352,6 +354,6 @@ export const unsubscribeAll = async () => {
 
 // Add this helper function at the bottom of the file
 function arrayBufferEqual(a: ArrayBuffer, b: Uint8Array): boolean {
-  const view1 = new Uint8Array(a);
-  return view1.length === b.length && view1.every((val, i) => val === b[i]);
+  const view1 = new Uint8Array(a)
+  return view1.length === b.length && view1.every((val, i) => val === b[i])
 }
