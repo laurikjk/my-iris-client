@@ -93,9 +93,15 @@ function QRCodeModal({
             {npub && (
               <UserRow linkToProfile={false} pubKey={npub} textClassName="font-bold" />
             )}
-            {qrCodeUrl && (
-              <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64 rounded-2xl" />
-            )}
+            <div className="aspect-square w-64">
+              {qrCodeUrl && (
+                <img
+                  src={qrCodeUrl}
+                  alt="QR Code"
+                  className="w-full h-full rounded-2xl"
+                />
+              )}
+            </div>
             <p className="text-xs break-all select-all">{data}</p>
             <div className="flex gap-2">
               <CopyButton
