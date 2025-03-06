@@ -1,4 +1,12 @@
-import {useEffect, useState, lazy, Suspense, useRef} from "react"
+import {
+  MouseEvent as ReactMouseEvent,
+  TouchEvent as ReactTouchEvent,
+  useEffect,
+  useState,
+  lazy,
+  Suspense,
+  useRef,
+} from "react"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {shouldHideEvent} from "@/utils/socialGraph"
 import {LRUCache} from "typescript-lru-cache"
@@ -29,8 +37,9 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [emojiData, setEmojiData] = useState<any>(null)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
-  const longPressTimeout = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const longPressTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [isLongPress, setIsLongPress] = useState(false)
+  const [pickerDirection, setPickerDirection] = useState("up")
 
   const like = async () => {
     if (likesByAuthor.has(myPubKey)) return
@@ -91,8 +100,28 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  const handleMouseDown = () => {
+  const handleMouseDown = (
+    e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>
+  ) => {
     setIsLongPress(false)
+    let clientY: number | undefined
+    if ("touches" in e && e.touches.length > 0) {
+      clientY = e.touches[0].clientY
+    } else if ("clientY" in e) {
+      clientY = e.clientY
+    }
+    if (
+      clientY !== undefined &&
+      typeof window !== "undefined" &&
+      window.innerWidth >= 768
+    ) {
+      // If you're closer to the top, open downwards
+      if (clientY < window.innerHeight / 2) {
+        setPickerDirection("down")
+      } else {
+        setPickerDirection("up")
+      }
+    }
     longPressTimeout.current = setTimeout(() => {
       setIsLongPress(true)
       setShowEmojiPicker(true)
@@ -119,8 +148,8 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
 
     try {
       const sub = ndk().subscribe(filter)
-      const debouncedUpdate = debounce((likesByAuthor) => {
-        setLikeCount(likesByAuthor.size)
+      const debouncedUpdate = debounce((likesSet: Set<string>) => {
+        setLikeCount(likesSet.size)
       }, 300)
 
       sub?.on("event", (likeEvent: NDKEvent) => {
@@ -154,6 +183,18 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
     return <span className="text-base leading-none">{myReaction}</span>
   }
 
+  // Determine the appropriate emoji picker positioning classes
+  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768
+
+  const getEmojiPickerClass = () => {
+    if (!isDesktop) return "bottom-20 fixed left-4 z-10"
+    return pickerDirection === "down"
+      ? "md:absolute md:left-0 md:top-full z-10"
+      : "md:absolute md:left-0 md:top-0 md:-translate-y-full z-10"
+  }
+
+  const emojiPickerClass = getEmojiPickerClass()
+
   return (
     <div
       title="Like"
@@ -161,10 +202,10 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
         liked ? "text-error" : "hover:text-error"
       } flex flex-row gap-1 items-center`}
       onClick={handleClick}
-      onMouseDown={handleMouseDown}
+      onMouseDown={(e) => handleMouseDown(e)}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      onTouchStart={handleMouseDown}
+      onTouchStart={(e) => handleMouseDown(e)}
       onTouchEnd={handleMouseUp}
     >
       {getReactionIcon()}
@@ -173,7 +214,7 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
       {showEmojiPicker && emojiData && (
         <div
           ref={emojiPickerRef}
-          className={`z-10 mb-2 fixed md:absolute md:top-0 left-4 md:left-0 md:-translate-y-full bottom-20 md:bottom-auto`}
+          className={emojiPickerClass}
           onClick={(e) => e.stopPropagation()}
         >
           <Suspense
