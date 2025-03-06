@@ -39,6 +39,7 @@ export default function NostrLinkHandler() {
         return
       }
 
+      console.log("Resolving link:", cleanLink)
       try {
         if (isProfile) {
           const decoded = nip19.decode(cleanLink)
@@ -46,24 +47,35 @@ export default function NostrLinkHandler() {
         } else if (isAddress) {
           const decoded = nip19.decode(cleanLink)
           setNaddrData(decoded.data as any)
-        } else if (cleanLink.includes("@")) {
-          const resolved = await nip05.queryProfile(cleanLink)
+        } else if (cleanLink.includes("@") || !isNote) {
+          // Try exact match first
+          console.log("Attempting NIP-05 resolution for:", cleanLink)
+          let resolved = await nip05.queryProfile(cleanLink)
+          console.log("First attempt result:", resolved)
+
+          // If not found and doesn't include @iris.to, try with @iris.to
+          if (!resolved && !cleanLink.includes("@iris.to")) {
+            const withIris = `${cleanLink}@iris.to`
+            console.log("Trying with iris.to:", withIris)
+            resolved = await nip05.queryProfile(withIris)
+            console.log("Second attempt result:", resolved)
+          }
+
           if (!resolved) throw new Error("NIP-05 address not found")
+          console.log("Setting pubkey to:", resolved.pubkey)
           setPubkey(resolved.pubkey)
+          setLoading(false)
+          return
         }
       } catch (err) {
+        console.error("Resolution error:", err)
         setError(err instanceof Error ? err.message : "Failed to resolve link")
-      } finally {
-        setLoading(false)
       }
+      setLoading(false)
     }
 
     resolveLink()
-  }, [cleanLink, isProfile, isAddress])
-
-  if (error) {
-    return <Page404 />
-  }
+  }, [cleanLink, isProfile, isAddress, isNote])
 
   if (loading) {
     return (
@@ -73,7 +85,11 @@ export default function NostrLinkHandler() {
     )
   }
 
-  if (isProfile && pubkey) {
+  if (error) {
+    return <Page404 />
+  }
+
+  if ((isProfile || !isNote) && pubkey) {
     return <ProfilePage pubKey={pubkey} key={pubkey || location.pathname} />
   }
 
