@@ -1,9 +1,9 @@
-import MiddleHeader from "@/shared/components/header/MiddleHeader"
+import Header from "@/shared/components/header/Header"
 
 export const AboutPage = () => {
   return (
     <section className="flex flex-col">
-      <MiddleHeader title="About" />
+      <Header title="About" />
       <div className="flex flex-1 mx-4 my-4 lg:mx-8">
         <div className="prose max-w-prose">
           <h1>About</h1>

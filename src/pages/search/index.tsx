@@ -1,5 +1,5 @@
 import {useMemo, useState, useEffect, FormEvent, useCallback} from "react"
-import MiddleHeader from "@/shared/components/header/MiddleHeader"
+import Header from "@/shared/components/header/Header"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import Trending from "@/shared/components/feed/Trending.tsx"
 import SearchBox from "@/shared/components/ui/SearchBox"
@@ -44,7 +44,7 @@ function SearchPage() {
   return (
     <div className="flex flex-row">
       <div key={query} className="flex flex-col items-center flex-1">
-        <MiddleHeader title={query ? `Search: "${query}"` : "Search"} />
+        <Header title={query ? `Search: "${query}"` : "Search"} />
         <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4">
           {activeTab === "people" ? (
             <SearchBox searchNotes={true} />

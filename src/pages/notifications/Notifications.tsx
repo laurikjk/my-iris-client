@@ -1,5 +1,5 @@
 import NotificationsFeed from "@/shared/components/feed/NotificationsFeed.tsx"
-import MiddleHeader from "@/shared/components/header/MiddleHeader"
+import Header from "@/shared/components/header/Header"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
 import Widget from "@/shared/components/ui/Widget"
@@ -20,7 +20,7 @@ function Notifications() {
   return (
     <section className="flex flex-1 relative">
       <div className="flex flex-col flex-1 gap-2">
-        <MiddleHeader title="Notifications" />
+        <Header title="Notifications" />
         <NotificationsFeed />
       </div>
       <RightColumn>

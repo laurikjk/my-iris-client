@@ -1,5 +1,5 @@
 import SocialGraphSettings from "@/pages/settings/SocialGraphSettings"
-import MiddleHeader from "@/shared/components/header/MiddleHeader"
+import Header from "@/shared/components/header/Header"
 import {useLocation, Link, Routes, Route} from "react-router"
 import MediaServers from "@/pages/settings/Mediaservers.tsx"
 import {ProfileSettings} from "@/pages/settings/Profile.tsx"
@@ -161,7 +161,7 @@ function Settings() {
         </div>
       </nav>
       <div className={`flex-1 ${isSettingsRoot ? "hidden lg:block" : "block"}`}>
-        <MiddleHeader title="Settings" />
+        <Header title="Settings" />
         <div className="p-4 mx-4 md:p-8 rounded-lg bg-base-100 shadow">
           <Routes>
             <Route path="account" element={<Account />} />

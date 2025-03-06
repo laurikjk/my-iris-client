@@ -2,7 +2,7 @@ import {useState, useRef, useEffect, ChangeEvent, FormEvent} from "react"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import {Invite, serializeSessionState} from "nostr-double-ratchet/src"
 import InstallPWAPrompt from "@/shared/components/InstallPWAPrompt"
-import MiddleHeader from "@/shared/components/header/MiddleHeader"
+import Header from "@/shared/components/header/Header"
 import QRCodeButton from "@/shared/components/user/QRCodeButton"
 import {acceptInvite} from "@/shared/hooks/useInviteFromUrl"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
@@ -102,7 +102,7 @@ const NewChat = () => {
 
   return (
     <>
-      <MiddleHeader title="New Chat" />
+      <Header title="New Chat" />
       <NotificationPrompt />
       <div className="m-4 p-4 md:p-8 rounded-lg bg-base-100 flex flex-col gap-6">
         <div>

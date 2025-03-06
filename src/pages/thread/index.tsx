@@ -1,5 +1,5 @@
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
-import MiddleHeader from "@/shared/components/header/MiddleHeader"
+import Header from "@/shared/components/header/Header"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import Trending from "@/shared/components/feed/Trending.tsx"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
@@ -78,7 +78,7 @@ export default function ThreadPage({
   return (
     <div className="flex justify-center">
       <div className="flex-1">
-        <MiddleHeader>
+        <Header>
           {threadAuthor ? (
             <>
               Thread by <Name pubKey={threadAuthor} />
@@ -86,7 +86,7 @@ export default function ThreadPage({
           ) : (
             "Thread"
           )}
-        </MiddleHeader>
+        </Header>
         {(() => {
           if (isNaddr) {
             if (loading) {

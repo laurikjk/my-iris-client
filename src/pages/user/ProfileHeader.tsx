@@ -9,7 +9,7 @@ import ProfileDetails from "@/pages/user/components/ProfileDetails.tsx"
 import FollowerCount from "@/pages/user/components/FollowerCount.tsx"
 import FollowsCount from "@/pages/user/components/FollowsCount.tsx"
 import {PROFILE_AVATAR_WIDTH} from "@/shared/components/user/const"
-import MiddleHeader from "@/shared/components/header/MiddleHeader"
+import Header from "@/shared/components/header/Header"
 import FollowedBy from "@/shared/components/user/FollowedBy"
 import {acceptInvite} from "@/shared/hooks/useInviteFromUrl"
 import {Avatar} from "@/shared/components/user/Avatar.tsx"
@@ -53,9 +53,9 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
 
   return (
     <>
-      <MiddleHeader>
+      <Header>
         <Name pubKey={pubKeyHex} />
-      </MiddleHeader>
+      </Header>
       <div className="flex flex-col gap-4 w-full break-all">
         <div className="w-full h-48 md:h-72 bg-gradient-to-r from-primary to-primary-dark">
           {profile?.banner && (

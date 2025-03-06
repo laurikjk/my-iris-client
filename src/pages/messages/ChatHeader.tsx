@@ -1,5 +1,5 @@
 import {ConnectionStatus} from "@/shared/components/connection/ConnectionStatus"
-import MiddleHeader from "@/shared/components/header/MiddleHeader"
+import Header from "@/shared/components/header/Header"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiMoreLine, RiAttachment2} from "@remixicon/react"
 import {getPeerConnection} from "./webrtc/PeerConnection"
@@ -81,7 +81,7 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
     socialGraph().getFollowedByUser(user).has(myPubKey) || user === myPubKey
 
   return (
-    <MiddleHeader showNotifications={false} scrollDown={true} slideUp={false}>
+    <Header showNotifications={false} scrollDown={true} slideUp={false}>
       <div className="flex items-center justify-between w-full">
         <div className="flex flex-row items-center gap-2">
           {id && <UserRow avatarWidth={32} pubKey={user} />}
@@ -114,7 +114,7 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
           )}
         </div>
       </div>
-    </MiddleHeader>
+    </Header>
   )
 }
 

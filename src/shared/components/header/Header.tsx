@@ -1,77 +1,33 @@
-import {useEffect, useRef, useState, useCallback, MouseEvent} from "react"
-import {RiMenuLine, RiArrowLeftLine} from "@remixicon/react"
-import {useLocation, useNavigate} from "react-router"
-
-import NotificationButton from "@/shared/components/header/NotificationButton.tsx"
 import {MOBILE_BREAKPOINT} from "@/shared/components/user/const.ts"
+import {ReactNode, useRef, useEffect, MouseEvent} from "react"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import {UserRow} from "@/shared/components/user/UserRow"
-import ErrorBoundary from "../ui/ErrorBoundary"
+import {RiMenuLine, RiArrowLeftLine} from "@remixicon/react"
+import NotificationButton from "./NotificationButton"
+import {useNavigate} from "react-router"
 import {Avatar} from "../user/Avatar"
+import classNames from "classnames"
 
-export default function Header() {
+interface HeaderProps {
+  title?: string
+  children?: ReactNode
+  showBack?: boolean
+  showNotifications?: boolean
+  scrollDown?: boolean
+  slideUp?: boolean
+}
+
+const Header = ({
+  title,
+  children,
+  showBack = true,
+  showNotifications = true,
+  scrollDown = false,
+  slideUp = true,
+}: HeaderProps) => {
   const [myPubKey] = useLocalState("user/publicKey", "", String)
-
   const [, setShowLoginDialog] = useLocalState("home/showLoginDialog", false)
-
   const [isSidebarOpen, setSidebarOpen] = useLocalState("isSidebarOpen", false)
-
-  const location = useLocation()
-  const isChatRoute = location.pathname === "/messages/chat"
-  const isThread = location.pathname.startsWith("/note")
-  const isProfile = location.pathname.startsWith("/npub")
   const navigate = useNavigate()
-  let pageName = location.pathname.split("/")[1]
-
-  if (pageName.startsWith("note")) {
-    pageName = "note"
-  } else if (pageName.startsWith("npub")) {
-    pageName = "profile"
-  }
-
-  const mySetTitle = () => {
-    setTitle(document.title.replace(` / ${CONFIG.appName}`, ""))
-  }
-
-  const [title, setTitle] = useState(document.title)
-  useEffect(() => {
-    // special weapons and tactics
-    const timeout1 = setTimeout(() => {
-      mySetTitle()
-    }, 0)
-    const timeout2 = setTimeout(() => {
-      mySetTitle()
-    }, 100)
-    const timeout3 = setTimeout(() => {
-      mySetTitle()
-    }, 1000)
-
-    return () => {
-      clearTimeout(timeout1)
-      clearTimeout(timeout2)
-      clearTimeout(timeout3)
-    }
-  }, [location])
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setSidebarOpen(false)
-      }
-    }
-
-    const handleClick = () => {
-      setSidebarOpen(false)
-    }
-
-    document.addEventListener("keydown", handleKeyDown)
-    document.addEventListener("click", handleClick)
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown)
-      document.removeEventListener("click", handleClick)
-    }
-  }, [])
 
   const headerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -83,74 +39,58 @@ export default function Header() {
     const OPACITY_MIN_POINT = 30
 
     const handleScroll = () => {
-      if (window.innerWidth >= MOBILE_BREAKPOINT || isChatRoute) {
-        return
-      }
+      if (window.innerWidth >= MOBILE_BREAKPOINT || !slideUp) return
+
       const currentScrollY = window.scrollY
       let newTranslateY = 0
       if (currentScrollY > lastScrollY.current) {
-        // Scrolling down
-        // bypass React's setState loop for smoother animation
         newTranslateY = Math.max(
           MIN_TRANSLATE_Y,
           parseFloat(
-            headerRef
-              .current!.style.transform.replace("translateY(", "")
-              .replace("px)", "")
+            headerRef.current?.style.transform
+              .replace("translateY(", "")
+              .replace("px)", "") || "0"
           ) -
             (currentScrollY - lastScrollY.current)
         )
       } else {
-        // Scrolling up
         newTranslateY = Math.min(
           MAX_TRANSLATE_Y,
           parseFloat(
-            headerRef
-              .current!.style.transform.replace("translateY(", "")
-              .replace("px)", "")
+            headerRef.current?.style.transform
+              .replace("translateY(", "")
+              .replace("px)", "") || "0"
           ) +
             (lastScrollY.current - currentScrollY)
         )
       }
       lastScrollY.current = currentScrollY
-      headerRef.current!.style.transform = `translateY(${newTranslateY}px)`
-      contentRef.current!.style.opacity = `${1 - Math.min(1, newTranslateY / -OPACITY_MIN_POINT)}`
+      if (headerRef.current) {
+        headerRef.current.style.transform = `translateY(${newTranslateY}px)`
+        contentRef.current!.style.opacity = `${1 - Math.min(1, newTranslateY / -OPACITY_MIN_POINT)}`
+      }
+    }
+
+    const handleResize = () => {
+      if (headerRef.current) {
+        headerRef.current.style.transform = `translateY(0px)`
+        if (contentRef.current) {
+          contentRef.current.style.opacity = "1"
+        }
+        lastScrollY.current = window.scrollY // Reset the scroll position reference
+      }
     }
 
     window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [isChatRoute])
-
-  const showBackArrow = isChatRoute || isThread || isProfile
-  const chatId = location.state?.id
-  const chatUserPubkey = chatId?.split(":").shift()
-
-  const handleBackClick = useCallback(
-    (e: MouseEvent) => {
-      e.stopPropagation()
-      if (window.history.state?.idx > 0) {
-        navigate(-1)
-      } else {
-        navigate("/messages")
-      }
-    },
-    [navigate]
-  )
-
-  const handleButtonClick = useCallback(
-    (e: MouseEvent) => {
-      e.stopPropagation()
-      if (showBackArrow) {
-        handleBackClick(e)
-      } else {
-        setSidebarOpen(!isSidebarOpen)
-      }
-    },
-    [showBackArrow, handleBackClick]
-  )
+    window.addEventListener("resize", handleResize)
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [slideUp])
 
   const getButtonContent = () => {
-    if (showBackArrow) return <RiArrowLeftLine className="w-6 h-6" />
+    if (showBack) return <RiArrowLeftLine className="w-6 h-6" />
     return myPubKey ? (
       <Avatar pubKey={myPubKey} width={32} showBadge={false} />
     ) : (
@@ -158,54 +98,70 @@ export default function Header() {
     )
   }
 
+  const handleButtonClick = () => {
+    if (showBack) {
+      if (window.history.state?.idx > 0) {
+        navigate(-1)
+      } else {
+        navigate("/messages")
+      }
+    } else {
+      setSidebarOpen(!isSidebarOpen)
+    }
+  }
+
+  const handleHeaderClick = (e: MouseEvent) => {
+    // Don't scroll if clicking on a button
+    if ((e.target as HTMLElement).closest("button")) return
+
+    window.scrollTo({
+      top: scrollDown ? document.body.scrollHeight : 0,
+    })
+  }
+
+  const leftButton = getButtonContent() && (
+    <button
+      onClick={handleButtonClick}
+      className={classNames("btn btn-ghost btn-circle", {"md:hidden": !showBack})}
+    >
+      {getButtonContent()}
+    </button>
+  )
+
   return (
-    <ErrorBoundary>
-      <header
-        ref={headerRef}
-        style={{transform: `translateY(0px)`}}
-        className="md:hidden shadow-theme-xl mb-8 flex fixed top-0 left-0 right-0 bg-base-200 text-base-content p-2 z-30 select-none"
-      >
-        <div
-          ref={contentRef}
-          className="flex md:pl-20 xl:pl-40 justify-between items-center flex-1 max-w-screen-lg mx-auto"
-        >
-          <div className="flex items-center gap-2">
-            <button
-              tabIndex={0}
-              onClick={handleButtonClick}
-              className="md:hidden btn btn-ghost btn-circle"
-            >
-              {getButtonContent()}
-            </button>
-            <div className="flex items-center gap-4">
-              {isChatRoute && chatUserPubkey ? (
-                <UserRow avatarWidth={32} pubKey={chatUserPubkey} />
-              ) : (
-                <h1
-                  className="text-lg text-base-content cursor-pointer"
-                  onClick={() => window.scrollTo(0, 0)}
-                >
-                  {title}
-                </h1>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-4 mr-2">
-            {myPubKey ? (
-              <div className="md:hidden">
-                <NotificationButton />
-              </div>
-            ) : (
-              <button
-                className="md:hidden btn btn-sm btn-primary"
-                onClick={() => setShowLoginDialog(true)}
-              >
-                Sign up
-              </button>
+    <header
+      ref={headerRef}
+      onClick={handleHeaderClick}
+      style={{transform: `translateY(0px)`}}
+      className="min-h-16 shadow-theme-xl flex fixed top-0 left-0 right-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none md:sticky w-full cursor-pointer"
+    >
+      <div ref={contentRef} className="flex justify-between items-center flex-1 w-full">
+        <div className="flex items-center gap-2 w-full">
+          {leftButton}
+          <div className="flex items-center gap-4 w-full">
+            {children || (
+              <h1 className="text-lg font-semibold text-base-content">{title}</h1>
             )}
           </div>
         </div>
-      </header>
-    </ErrorBoundary>
+        <div className="flex items-center gap-4 mr-2">
+          {showNotifications && myPubKey && (
+            <div className="md:hidden">
+              <NotificationButton />
+            </div>
+          )}
+          {!myPubKey && (
+            <button
+              className="md:hidden btn btn-sm btn-primary"
+              onClick={() => setShowLoginDialog(true)}
+            >
+              Sign up
+            </button>
+          )}
+        </div>
+      </div>
+    </header>
   )
 }
+
+export default Header

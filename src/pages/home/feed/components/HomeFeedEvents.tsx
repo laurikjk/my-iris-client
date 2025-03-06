@@ -3,7 +3,7 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
-import MiddleHeader from "@/shared/components/header/MiddleHeader"
+import Header from "@/shared/components/header/Header"
 import Trending from "@/shared/components/feed/Trending.tsx"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
@@ -145,7 +145,7 @@ function HomeFeedEvents() {
 
   return (
     <>
-      <MiddleHeader title={feedName} showBack={false} />
+      <Header title={feedName} showBack={false} />
       {follows.length > 1 && myPubKey && (
         <div className="px-4 pb-4 flex flex-row gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
           {tabs.map((t) => (
