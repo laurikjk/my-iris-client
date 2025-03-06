@@ -81,7 +81,7 @@ export default function ThreadPage({
         <Header>
           {threadAuthor ? (
             <>
-              Thread by <Name pubKey={threadAuthor} />
+              Thread by <Name className="-ml-3" pubKey={threadAuthor} />
             </>
           ) : (
             "Thread"
