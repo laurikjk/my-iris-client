@@ -62,13 +62,13 @@ export default function ThreadPage({
   }, [isNaddr, naddrData])
 
   const addRelevantPerson = (person: string) => {
-    if (!threadAuthor) setThreadAuthor(person)
     setRelevantPeople((prev) => new Map(prev).set(person, true))
   }
 
   const addToThread = (event: NDKEvent) => {
     if (hideEventsByUnknownUsers && socialGraph().getFollowDistance(event.pubkey) > 5)
       return
+    if (!threadAuthor) setThreadAuthor(event.pubkey)
     addRelevantPerson(event.pubkey)
     for (const user of getTags("p", event.tags)) {
       addRelevantPerson(user)
@@ -81,10 +81,10 @@ export default function ThreadPage({
         <Header>
           {threadAuthor ? (
             <>
-              Thread by <Name className="-ml-3" pubKey={threadAuthor} />
+              Post by <Name className="-ml-3" pubKey={threadAuthor} />
             </>
           ) : (
-            "Thread"
+            "Post"
           )}
         </Header>
         {(() => {
