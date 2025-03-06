@@ -3,6 +3,7 @@ import MessageReactionButton from "./MessageReactionButton"
 import MessageReactions from "./MessageReactions"
 import ReplyPreview from "./ReplyPreview"
 import classNames from "classnames"
+import {useMemo} from "react"
 
 export type MessageType = Rumor & {
   sender?: "user"
@@ -18,6 +19,47 @@ type MessageProps = {
   onReply?: () => void
 }
 
+// Moved regex outside component to avoid recreation on each render
+const EMOJI_REGEX =
+  /^(\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}]|\p{Emoji_Component}|\u200D|[\u{E0020}-\u{E007F}])+$/u
+
+// Extracted time formatting logic
+const formatMessageTime = (timestamp: number): string => {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "numeric",
+    hour12: undefined,
+  }).format(new Date(timestamp))
+}
+
+// Extracted className generation logic
+const getMessageClassName = (
+  isUser: boolean,
+  isFirst: boolean,
+  isLast: boolean,
+  isShortEmoji: boolean
+) => {
+  return classNames(
+    !isShortEmoji &&
+      (isUser ? "bg-primary text-primary-content" : "bg-neutral text-neutral-content"),
+    isShortEmoji && "bg-transparent",
+    isFirst && isLast && "rounded-2xl",
+    isFirst &&
+      !isLast &&
+      (isUser
+        ? "rounded-t-2xl rounded-bl-2xl rounded-br-sm"
+        : "rounded-t-2xl rounded-br-2xl rounded-bl-sm"),
+    !isFirst &&
+      isLast &&
+      (isUser
+        ? "rounded-b-2xl rounded-tl-2xl rounded-tr-sm"
+        : "rounded-b-2xl rounded-tr-2xl rounded-tl-sm"),
+    !isFirst &&
+      !isLast &&
+      (isUser ? "rounded-l-2xl rounded-r-sm" : "rounded-r-2xl rounded-l-sm")
+  )
+}
+
 const Message = ({
   message,
   isFirst,
@@ -27,20 +69,25 @@ const Message = ({
   onReply,
 }: MessageProps) => {
   const isUser = message.sender === "user"
-  const emojiRegex =
-    /^(\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}]|\p{Emoji_Component}|\u200D|[\u{E0020}-\u{E007F}])+$/u
-  const isShortEmoji = emojiRegex.test(message.content?.trim())
+  const isShortEmoji = useMemo(
+    () => EMOJI_REGEX.test(message.content?.trim() ?? ""),
+    [message.content]
+  )
 
-  const repliedId = message.tags?.find((tag) => tag[0] === "e")?.[1]
+  const repliedId = useMemo(
+    () => message.tags?.find((tag) => tag[0] === "e")?.[1],
+    [message.tags]
+  )
 
-  const formatTime = (timestamp: number) => {
-    const date = new Date(timestamp)
-    return new Intl.DateTimeFormat(undefined, {
-      hour: "numeric",
-      minute: "numeric",
-      hour12: undefined, // This will use the locale's preference for 12/24 hour time
-    }).format(date)
-  }
+  const messageClassName = useMemo(
+    () => getMessageClassName(isUser, isFirst, isLast, isShortEmoji),
+    [isUser, isFirst, isLast, isShortEmoji]
+  )
+
+  const formattedTime = useMemo(
+    () => formatMessageTime(getMillisecondTimestamp(message)),
+    [message]
+  )
 
   return (
     <div
@@ -62,29 +109,7 @@ const Message = ({
         )}
 
         <div className="flex flex-col">
-          <div
-            className={classNames(
-              !isShortEmoji &&
-                (isUser
-                  ? "bg-primary text-primary-content"
-                  : "bg-neutral text-neutral-content"),
-              isShortEmoji && "bg-transparent",
-              isFirst && isLast && "rounded-2xl",
-              isFirst &&
-                !isLast &&
-                (isUser
-                  ? "rounded-t-2xl rounded-bl-2xl rounded-br-sm"
-                  : "rounded-t-2xl rounded-br-2xl rounded-bl-sm"),
-              !isFirst &&
-                isLast &&
-                (isUser
-                  ? "rounded-b-2xl rounded-tl-2xl rounded-tr-sm"
-                  : "rounded-b-2xl rounded-tr-2xl rounded-tl-sm"),
-              !isFirst &&
-                !isLast &&
-                (isUser ? "rounded-l-2xl rounded-r-sm" : "rounded-r-2xl rounded-l-sm")
-            )}
-          >
+          <div className={messageClassName}>
             {repliedId && (
               <ReplyPreview isUser={isUser} sessionId={sessionId} replyToId={repliedId} />
             )}
@@ -105,7 +130,7 @@ const Message = ({
               </p>
               {isLast && (
                 <p className="text-xs opacity-50 ml-2 whitespace-nowrap">
-                  {formatTime(getMillisecondTimestamp(message))}
+                  {formattedTime}
                 </p>
               )}
             </div>

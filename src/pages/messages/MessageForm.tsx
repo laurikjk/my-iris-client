@@ -40,6 +40,12 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
     }
   }, [replyingTo, setReplyingTo])
 
+  useEffect(() => {
+    if (replyingTo && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [replyingTo])
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     const text = newMessage.trim()
