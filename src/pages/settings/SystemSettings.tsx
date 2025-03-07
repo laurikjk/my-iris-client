@@ -10,6 +10,19 @@ export default function SystemSettings() {
   const appVersion = import.meta.env.VITE_APP_VERSION || "dev"
   const buildTime = import.meta.env.VITE_BUILD_TIME || "development"
 
+  const formatBuildTime = (timestamp: string) => {
+    if (timestamp === "development") return timestamp
+    try {
+      const date = new Date(timestamp)
+      return new Intl.DateTimeFormat("default", {
+        dateStyle: "medium",
+        timeStyle: "medium",
+      }).format(date)
+    } catch {
+      return timestamp
+    }
+  }
+
   useEffect(() => {
     const updateMemoryUsage = () => {
       if (
@@ -55,7 +68,7 @@ export default function SystemSettings() {
             <div>App Version:</div>
             <div>{appVersion}</div>
             <div>Build Time:</div>
-            <div>{buildTime}</div>
+            <div>{formatBuildTime(buildTime)}</div>
             {memoryUsage && (
               <>
                 <div>Memory Usage:</div>
