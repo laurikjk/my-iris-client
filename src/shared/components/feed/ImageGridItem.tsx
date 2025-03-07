@@ -3,7 +3,6 @@ import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
 
 import {IMAGE_REGEX, VIDEO_REGEX} from "../embed/media/MediaEmbed"
-import {generateProxyUrl} from "@/shared/utils/imgproxy"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {MutableRefObject} from "react"
 import {localState} from "irisdb/src"

@@ -11,6 +11,7 @@ import {RiArrowRightSLine} from "@remixicon/react"
 import Icon from "@/shared/components/Icons/Icon"
 import Account from "@/pages/settings/Account"
 import WalletSettings from "./WalletSettings"
+import SystemSettings from "./SystemSettings"
 import Backup from "@/pages/settings/Backup"
 import PrivacySettings from "./Privacy"
 import {Helmet} from "react-helmet"
@@ -49,7 +50,7 @@ function Settings() {
       title: "Application",
       items: [
         {
-          icon: "gear",
+          icon: "stars",
           iconBg: "bg-purple-500",
           message: "Appearance",
           path: "/settings/appearance",
@@ -71,6 +72,12 @@ function Settings() {
           iconBg: "bg-red-500",
           message: "Privacy",
           path: "/settings/privacy",
+        },
+        {
+          icon: "gear",
+          iconBg: "bg-indigo-500",
+          message: "System",
+          path: "/settings/system",
         },
       ],
     },
@@ -176,6 +183,7 @@ function Settings() {
             <Route path="social-graph" element={<SocialGraphSettings />} />
             <Route path="notifications" element={<NotificationSettings />} />
             <Route path="privacy" element={<PrivacySettings />} />
+            <Route path="system" element={<SystemSettings />} />
             <Route path="/" element={<ProfileSettings />} />
           </Routes>
         </div>

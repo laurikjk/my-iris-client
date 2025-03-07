@@ -19,3 +19,11 @@ declare const CONFIG: {
     notificationServer: string
   }
 }
+
+interface Performance {
+  memory?: {
+    jsHeapSizeLimit: number
+    totalJSHeapSize: number
+    usedJSHeapSize: number
+  }
+}
