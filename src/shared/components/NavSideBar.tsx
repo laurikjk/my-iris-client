@@ -289,7 +289,10 @@ const NavSideBar = () => {
         </div>
         {myPubKey && (
           <>
-            <div className="flex flex-col p-4 md:mb-2 xl:mb-6 gap-4">
+            <div
+              className="flex flex-col p-4 md:mb-2 xl:mb-6 gap-4"
+              onClick={() => setIsSidebarOpen(false)}
+            >
               <UserRow
                 pubKey={myPubKey}
                 showBadge={false}
