@@ -167,8 +167,11 @@ function Settings() {
           ))}
         </div>
       </nav>
+      <div className="md:hidden">
+        <Header title="Settings" slideUp={false} />
+      </div>
       <div className={`flex-1 ${isSettingsRoot ? "hidden lg:block" : "block"}`}>
-        <Header title="Settings" />
+        <Header title="Settings" slideUp={false} />
         <div className="p-4 mx-4 md:p-8 rounded-lg bg-base-100 shadow">
           <Routes>
             <Route path="account" element={<Account />} />
