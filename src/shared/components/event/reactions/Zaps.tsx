@@ -1,6 +1,7 @@
 import {getZapAmount, getZappingUser} from "@/utils/nostr.ts"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {shouldHideEvent} from "@/utils/socialGraph"
+import {ReactionContent} from "./ReactionContent"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import {ndk} from "@/utils/ndk"
@@ -46,14 +47,21 @@ export default function Zaps({event}: {event: NDKEvent}) {
       {zapAmountByUser.size === 0 && <p>No zaps yet</p>}
       {Array.from(zapAmountByUser.entries())
         .sort(([, a], [, b]) => b - a)
-        .map(([pubKey, amount]) => (
-          <UserRow
-            showHoverCard={true}
-            key={event.id}
-            pubKey={pubKey}
-            description={`${commentByUser.get(pubKey)} ${String(amount)}`}
-          />
-        ))}
+        .map(([pubKey, amount]) => {
+          const comment = commentByUser.get(pubKey) || ""
+          return (
+            <UserRow
+              showHoverCard={true}
+              key={event.id}
+              pubKey={pubKey}
+              description={
+                <>
+                  <ReactionContent content={comment} event={event} /> {String(amount)}
+                </>
+              }
+            />
+          )
+        })}
     </div>
   )
 }

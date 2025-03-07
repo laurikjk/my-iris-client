@@ -1,6 +1,6 @@
+import {useMemo, ReactNode} from "react"
 import {Link} from "react-router"
 import {nip19} from "nostr-tools"
-import {useMemo} from "react"
 
 import {useHoverCard} from "@/shared/components/user/useHoverCard"
 import {Avatar} from "@/shared/components/user/Avatar"
@@ -19,7 +19,7 @@ export function UserRow({
   showHoverCard = false,
 }: {
   pubKey: string
-  description?: string
+  description?: ReactNode
   avatarWidth?: number
   textClassName?: string
   linkToProfile?: boolean
