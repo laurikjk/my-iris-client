@@ -102,6 +102,7 @@ function FeedItem({
           if (entry.isIntersecting) {
             const timer = setTimeout(() => {
               addSeenEventId(event.id)
+              observer.disconnect()
             }, 1000)
 
             return () => clearTimeout(timer)
