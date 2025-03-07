@@ -145,7 +145,11 @@ export function trackEvent(
   props?: Record<string, string | boolean>,
   e?: {destination?: {url: string}}
 ) {
-  if (!import.meta.env.DEV && CONFIG.features.analytics) {
+  if (
+    !import.meta.env.DEV &&
+    CONFIG.features.analytics &&
+    window.location.hostname.endsWith("iris.to")
+  ) {
     fetch("https://pa.v0l.io/api/event", {
       method: "POST",
       headers: {

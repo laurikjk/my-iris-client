@@ -17,7 +17,7 @@ const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentPr
   if (!event) {
     return ""
   } else if (referredEvent) {
-    return <TextNote event={referredEvent} />
+    return <TextNote event={referredEvent} truncate={truncate} />
   } else if (event.kind === 9735) {
     return <ZapReceipt event={event} />
   } else if (event.kind === 1 && event.tagValue("zapraiser")) {
