@@ -5,6 +5,7 @@ export default function SystemSettings() {
     used: number
     total: number
   } | null>(null)
+  const [updateAvailable, setUpdateAvailable] = useState(false)
 
   const appVersion = import.meta.env.VITE_APP_VERSION || "dev"
   const buildTime = import.meta.env.VITE_BUILD_TIME || "development"
@@ -26,6 +27,17 @@ export default function SystemSettings() {
     updateMemoryUsage()
     const interval = setInterval(updateMemoryUsage, 2000)
     return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    // Check for service worker updates
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.addEventListener("controllerchange", () => {
+          setUpdateAvailable(true)
+        })
+      })
+    }
   }, [])
 
   const refreshApp = () => {
@@ -60,11 +72,16 @@ export default function SystemSettings() {
         <div className="card-body">
           <h3 className="card-title">Maintenance</h3>
           <div>
-            <button className="btn btn-primary w-full" onClick={refreshApp}>
-              Refresh Application
+            <button
+              className={`btn btn-primary w-full ${updateAvailable ? "animate-pulse" : ""}`}
+              onClick={refreshApp}
+            >
+              {updateAvailable
+                ? "Update Available - Click to Refresh"
+                : "Refresh Application"}
             </button>
             <p className="text-sm text-base-content/70 mt-1">
-              Reload the application to apply any pending updates
+              Reload the application to apply any pending updates or fix weirdness.
             </p>
           </div>
         </div>
