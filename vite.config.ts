@@ -77,6 +77,8 @@ export default defineConfig({
   define: {
     CONFIG: config,
     global: {}, // needed for custom-event lib
+    "import.meta.env.VITE_APP_VERSION": JSON.stringify(process.env.npm_package_version),
+    "import.meta.env.VITE_BUILD_TIME": JSON.stringify(new Date().toISOString()),
   },
   publicDir: config.get("publicDir"),
   server: {
