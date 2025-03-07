@@ -24,7 +24,6 @@ const replySortFn = (a: NDKEvent, b: NDKEvent) => {
   const followDistanceA = socialGraph().getFollowDistance(a.pubkey)
   const followDistanceB = socialGraph().getFollowDistance(b.pubkey)
   if (followDistanceA !== followDistanceB) {
-    console.log("sort by follow distance")
     return followDistanceA - followDistanceB
   }
   if (a.created_at && b.created_at) return a.created_at - b.created_at

@@ -1,9 +1,9 @@
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import {IMAGE_REGEX, VIDEO_REGEX} from "../embed/media/MediaEmbed"
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
+import {useState, useEffect, useMemo, useCallback} from "react"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import PreloadImages from "../media/PreloadImages"
-import {useState, useEffect, useMemo} from "react"
 import MediaModal from "../media/MediaModal"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ImageGridItem from "./ImageGridItem"
@@ -19,6 +19,9 @@ export default function MediaFeed({events}: MediaFeedProps) {
     INITIAL_DISPLAY_COUNT,
     "displayCount"
   )
+  const [allMedia, setAllMedia] = useState<
+    Array<{type: "image" | "video"; url: string; event: NDKEvent}>
+  >([])
 
   const mediaEvents = useMemo(() => {
     return events.filter((event): event is NDKEvent => {
@@ -29,7 +32,7 @@ export default function MediaFeed({events}: MediaFeedProps) {
     })
   }, [events])
 
-  const allMedia = useMemo(() => {
+  const calculateAllMedia = useCallback(() => {
     const deduplicated = new Map<
       string,
       {type: "image" | "video"; url: string; event: NDKEvent}
@@ -108,6 +111,16 @@ export default function MediaFeed({events}: MediaFeedProps) {
     return false
   }
 
+  const handleImageClick = (event: NDKEvent, clickedUrl: string) => {
+    const mediaArray = calculateAllMedia() // TODO dont recalc on every open
+    const mediaIndex = mediaArray.findIndex(
+      (media) => media.event.id === event.id && media.url === clickedUrl
+    )
+    setAllMedia(mediaArray)
+    setActiveItemIndex(mediaIndex)
+    setShowModal(true)
+  }
+
   return (
     <>
       {showModal && activeItemIndex !== null && (
@@ -116,6 +129,7 @@ export default function MediaFeed({events}: MediaFeedProps) {
             onClose={() => {
               setShowModal(false)
               setActiveItemIndex(null)
+              setAllMedia([])
             }}
             onPrev={handlePrevItem}
             onNext={handleNextItem}
@@ -141,13 +155,9 @@ export default function MediaFeed({events}: MediaFeedProps) {
               key={event.id}
               event={event}
               index={index}
-              setActiveItemIndex={(clickedUrl: string) => {
-                const mediaIndex = allMedia.findIndex(
-                  (media) => media.event.id === event.id && media.url === clickedUrl
-                )
-                setActiveItemIndex(mediaIndex)
-                setShowModal(true)
-              }}
+              setActiveItemIndex={(clickedUrl: string) =>
+                handleImageClick(event, clickedUrl)
+              }
             />
           ))}
         </div>
