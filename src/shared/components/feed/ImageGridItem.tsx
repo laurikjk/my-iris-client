@@ -41,9 +41,10 @@ export const ImageGridItem = ({
     ? imageMatch.trim().split(/\s+/)
     : videoMatch!.trim().split(/\s+/)
 
+  const width = window.innerWidth > 767 ? 314 : 150
+
   return urls.map((url, i) => {
     const isVideo = !imageMatch
-    const proxyUrl = isVideo ? generateProxyUrl(url, {width: 638}) : url
 
     const shouldBlur =
       blurNSFW &&
@@ -65,8 +66,8 @@ export const ImageGridItem = ({
       >
         <ProxyImg
           square={true}
-          width={319}
-          src={proxyUrl}
+          width={width}
+          src={url}
           alt=""
           className="w-full h-full object-cover"
         />

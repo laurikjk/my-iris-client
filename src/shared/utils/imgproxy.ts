@@ -40,8 +40,8 @@ export function generateProxyUrl(originalSrc: string, options: ImgProxyOptions =
   const opts = []
   if (options.width || options.height) {
     const resizeType = options.square ? "fill" : "fit"
-    const w = options.width ? options.width * 2 : options.height! * 2
-    const h = options.height ? options.height * 2 : options.width! * 2
+    const w = options.width ? options.width : options.height!
+    const h = options.height ? options.height : options.width!
     opts.push(`rs:${resizeType}:${w}:${h}`)
     opts.push("dpr:2")
   } else {
