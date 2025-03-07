@@ -3,11 +3,9 @@ import {
   TouchEvent as ReactTouchEvent,
   useEffect,
   useState,
-  lazy,
-  Suspense,
   useRef,
 } from "react"
-import {isTouchDevice} from "@/shared/utils/isTouchDevice"
+import {FloatingEmojiPicker} from "@/shared/components/emoji/FloatingEmojiPicker"
 import {shouldHideEvent} from "@/utils/socialGraph"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
@@ -24,22 +22,17 @@ const likeCache = new LRUCache<string, Set<string>>({
 let myPubKey = ""
 localState.get("user/publicKey").on((k) => (myPubKey = k as string))
 
-const EmojiPicker = lazy(() => import("@emoji-mart/react"))
-
 export const FeedItemLike = ({event}: {event: NDKEvent}) => {
   const cachedLikes = likeCache.get(event.id)
-
   const [likesByAuthor, setLikesByAuthor] = useState<Set<string>>(
     cachedLikes || new Set()
   )
   const [likeCount, setLikeCount] = useState(likesByAuthor.size)
   const [myReaction, setMyReaction] = useState<string>("+")
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const [emojiData, setEmojiData] = useState<any>(null)
-  const emojiPickerRef = useRef<HTMLDivElement>(null)
+  const [pickerPosition, setPickerPosition] = useState<{clientY?: number}>({})
   const longPressTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [isLongPress, setIsLongPress] = useState(false)
-  const [pickerDirection, setPickerDirection] = useState("up")
 
   const like = async () => {
     if (likesByAuthor.has(myPubKey)) return
@@ -76,51 +69,14 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
     }
   }
 
-  useEffect(() => {
-    if (showEmojiPicker && !emojiData) {
-      import("@emoji-mart/data")
-        .then((module) => module.default)
-        .then((data) => setEmojiData(data))
-    }
-  }, [showEmojiPicker, emojiData])
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        emojiPickerRef.current &&
-        !emojiPickerRef.current.contains(event.target as Node)
-      ) {
-        event.stopPropagation()
-        event.preventDefault()
-        setShowEmojiPicker(false)
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
   const handleMouseDown = (
     e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>
   ) => {
     setIsLongPress(false)
-    let clientY: number | undefined
     if ("touches" in e && e.touches.length > 0) {
-      clientY = e.touches[0].clientY
+      setPickerPosition({clientY: e.touches[0].clientY})
     } else if ("clientY" in e) {
-      clientY = e.clientY
-    }
-    if (
-      clientY !== undefined &&
-      typeof window !== "undefined" &&
-      window.innerWidth >= 768
-    ) {
-      // If you're closer to the top, open downwards
-      if (clientY < window.innerHeight / 2) {
-        setPickerDirection("down")
-      } else {
-        setPickerDirection("up")
-      }
+      setPickerPosition({clientY: e.clientY})
     }
     longPressTimeout.current = setTimeout(() => {
       setIsLongPress(true)
@@ -183,18 +139,6 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
     return <span className="text-base leading-none">{myReaction}</span>
   }
 
-  // Determine the appropriate emoji picker positioning classes
-  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768
-
-  const getEmojiPickerClass = () => {
-    if (!isDesktop) return "bottom-20 fixed left-4 z-10"
-    return pickerDirection === "down"
-      ? "md:absolute md:left-0 md:top-full z-10"
-      : "md:absolute md:left-0 md:top-0 md:-translate-y-full z-10"
-  }
-
-  const emojiPickerClass = getEmojiPickerClass()
-
   return (
     <div
       title="Like"
@@ -211,28 +155,12 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
       {getReactionIcon()}
       <span>{formatAmount(likeCount)}</span>
 
-      {showEmojiPicker && emojiData && (
-        <div
-          ref={emojiPickerRef}
-          className={emojiPickerClass}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Suspense
-            fallback={<div className="p-4 bg-base-100 rounded shadow">Loading...</div>}
-          >
-            <EmojiPicker
-              data={emojiData}
-              onEmojiSelect={handleEmojiSelect}
-              autoFocus={!isTouchDevice}
-              searchPosition="sticky"
-              previewPosition="none"
-              skinTonePosition="none"
-              theme="auto"
-              maxFrequentRows={1}
-            />
-          </Suspense>
-        </div>
-      )}
+      <FloatingEmojiPicker
+        isOpen={showEmojiPicker}
+        onClose={() => setShowEmojiPicker(false)}
+        onEmojiSelect={handleEmojiSelect}
+        position={pickerPosition}
+      />
     </div>
   )
 }

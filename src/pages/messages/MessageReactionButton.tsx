@@ -1,14 +1,11 @@
-import {useState, useRef, lazy, Suspense, useEffect} from "react"
+import {FloatingEmojiPicker} from "@/shared/components/emoji/FloatingEmojiPicker"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiHeartAddLine, RiReplyLine} from "@remixicon/react"
-import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {Session} from "nostr-double-ratchet/src"
+import {MouseEvent, useState} from "react"
 import {localState} from "irisdb/src"
 import classNames from "classnames"
-
-// Lazy load both the emoji picker and data
-const EmojiPicker = lazy(() => import("@emoji-mart/react"))
 
 type MessageReactionButtonProps = {
   messageId: string
@@ -27,53 +24,15 @@ const MessageReactionButton = ({
 }: MessageReactionButtonProps) => {
   const [myPubKey] = useLocalState("user/publicKey", "")
   const [showReactionsPicker, setShowReactionsPicker] = useState(false)
-  const reactionsPickerRef = useRef<HTMLDivElement>(null)
-  const [emojiData, setEmojiData] = useState<any>(null)
+  const [pickerPosition, setPickerPosition] = useState<{clientY?: number}>({})
 
-  // Load emoji data only when needed
-  useEffect(() => {
-    if (showReactionsPicker && !emojiData) {
-      import("@emoji-mart/data")
-        .then((module) => module.default)
-        .then((data) => {
-          setEmojiData(data)
-        })
-    }
-  }, [showReactionsPicker, emojiData])
-
-  useEffect(() => {
-    // Close reactions picker when clicking outside
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        reactionsPickerRef.current &&
-        !reactionsPickerRef.current.contains(event.target as Node)
-      ) {
-        setShowReactionsPicker(false)
-      }
-    }
-
-    // Close reactions picker when pressing Escape key
-    const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && showReactionsPicker) {
-        setShowReactionsPicker(false)
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    document.addEventListener("keydown", handleEscKey)
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-      document.removeEventListener("keydown", handleEscKey)
-    }
-  }, [showReactionsPicker])
-
-  const handleReactionClick = () => {
+  const handleReactionClick = (e: MouseEvent) => {
+    const buttonRect = e.currentTarget.getBoundingClientRect()
+    setPickerPosition({clientY: buttonRect.top})
     setShowReactionsPicker(!showReactionsPicker)
   }
 
   const handleEmojiClick = (emoji: any) => {
-    console.log("Reaction selected:", emoji.native)
     setShowReactionsPicker(false)
     const {event} = session.sendEvent({
       kind: 6,
@@ -114,37 +73,12 @@ const MessageReactionButton = ({
         </div>
       </div>
 
-      {showReactionsPicker && (
-        <div
-          ref={reactionsPickerRef}
-          className={classNames(
-            "z-10 mb-2",
-            // Use fixed positioning on mobile, absolute on desktop
-            "fixed md:absolute md:top-0",
-            isUser
-              ? "right-4 md:right-0 md:-translate-y-full"
-              : "left-4 md:left-0 md:-translate-y-full",
-            // Position at bottom of screen on mobile
-            "bottom-20 md:bottom-auto"
-          )}
-        >
-          <Suspense
-            fallback={<div className="p-4 bg-base-100 rounded shadow">Loading...</div>}
-          >
-            {emojiData && (
-              <EmojiPicker
-                data={emojiData}
-                onEmojiSelect={handleEmojiClick}
-                autoFocus={!isTouchDevice}
-                previewPosition="none"
-                skinTonePosition="none"
-                theme="auto"
-                maxFrequentRows={1}
-              />
-            )}
-          </Suspense>
-        </div>
-      )}
+      <FloatingEmojiPicker
+        isOpen={showReactionsPicker}
+        onClose={() => setShowReactionsPicker(false)}
+        onEmojiSelect={handleEmojiClick}
+        position={{clientY: pickerPosition.clientY, openRight: isUser}}
+      />
     </div>
   )
 }
