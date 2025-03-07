@@ -37,4 +37,4 @@ export const CustomEmojiComponent = ({match, event}: CustomEmojiProps) => {
       onError={() => setImgFailed(true)}
     />
   )
-} 
+}

@@ -108,15 +108,15 @@ function HomeFeedEvents() {
     if (activeTab === "unseen" && refreshSignal > openedAt) {
       const cachedFeed = feedCache.get(UNSEEN_CACHE_KEY)
       if (cachedFeed) {
-        for (const [k, v] of cachedFeed) {
-          if (!activeTabItem.fetchFilterFn?.(v)) {
-            cachedFeed.delete(k)
+        for (const [eventId, event] of cachedFeed) {
+          if (seenEventIds.has(event.id) || !activeTabItem.fetchFilterFn?.(event)) {
+            cachedFeed.delete(eventId)
           }
         }
+        setForceUpdate((prev) => prev + 1) // Force update Feed component
       }
-      setForceUpdate((prev) => prev + 1) // Force update Feed component
     }
-  }, [activeTabItem, openedAt, refreshSignal])
+  }, [activeTabItem, openedAt, refreshSignal, activeTab])
 
   const filters = useMemo(() => {
     if (activeTabItem.filter) {
@@ -132,10 +132,13 @@ function HomeFeedEvents() {
 
   const displayFilterFn = useCallback(
     (event: NDKEvent) => {
+      if (activeTab === "unseen" && seenEventIds.has(event.id)) {
+        return false
+      }
       const tabFilter = activeTabItem.displayFilterFn
       return tabFilter ? tabFilter(event) : true
     },
-    [activeTabItem, filters]
+    [activeTabItem, activeTab]
   )
 
   const feedName =

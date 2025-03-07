@@ -96,20 +96,26 @@ function FeedItem({
 
     if (!event) return
 
+    let timeoutId: number | undefined
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const timer = setTimeout(() => {
+            // Start the timer when the item becomes visible
+            timeoutId = window.setTimeout(() => {
               addSeenEventId(event.id)
               observer.disconnect()
             }, 1000)
-
-            return () => clearTimeout(timer)
+          } else {
+            // Clear the timer if the item becomes hidden before 1s
+            if (timeoutId) {
+              window.clearTimeout(timeoutId)
+              timeoutId = undefined
+            }
           }
         })
       },
-      {rootMargin: "-200px 0px 0px 0px"} // Trigger when 200 pixels from the top edge are visible
+      {rootMargin: "-200px 0px 0px 0px"}
     )
 
     if (feedItemRef.current) {
@@ -117,9 +123,10 @@ function FeedItem({
     }
 
     return () => {
-      if (feedItemRef.current) {
-        observer.unobserve(feedItemRef.current)
+      if (timeoutId) {
+        window.clearTimeout(timeoutId)
       }
+      observer.disconnect()
     }
   }, [event])
 
