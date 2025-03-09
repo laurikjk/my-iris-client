@@ -63,6 +63,7 @@ const ProxyImg = (props: Props) => {
 
   return (
     <img
+      loading="lazy"
       src={src}
       onError={handleError}
       onClick={props.onClick}
