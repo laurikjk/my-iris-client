@@ -27,7 +27,6 @@ const HyperText = memo(
     expandable?: boolean
   }) => {
     const [isExpanded, setIsExpanded] = useState(false)
-
     const content = children.trim()
 
     const toggleShowMore = (e: MouseEvent<HTMLAnchorElement>) => {
@@ -36,34 +35,38 @@ const HyperText = memo(
     }
 
     let processedChildren: Array<ReactNode | string> = [content]
-
     const embeds = small ? smallEmbeds : allEmbeds
 
+    // Process embeds
     embeds.forEach((embed) => {
       if (settings?.[embed.settingsKey || ""] === false) return
-      processedChildren = reactStringReplace(processedChildren, embed.regex, (match, i) =>
-        embed.component({
-          match,
-          index: i,
-          event,
-          key: `${embed.settingsKey}-${i}${embed.inline ? "-inline" : ""}`,
-        })
+      processedChildren = reactStringReplace(
+        processedChildren,
+        embed.regex,
+        (match, i) => (
+          <embed.component
+            match={match}
+            index={i}
+            event={event}
+            key={`${embed.settingsKey}-${i}${embed.inline ? "-inline" : ""}`}
+          />
+        )
       )
     })
 
+    // Handle truncation
     let charCount = 0
     if (truncate && !isExpanded) {
       let isTruncated = false
-      processedChildren = processedChildren.reduce(
+      const truncatedChildren = processedChildren.reduce(
         (acc: Array<ReactNode | string>, child) => {
           if (typeof child === "string") {
-            if (typeof child === "string" && charCount + child.length > truncate) {
+            if (charCount + child.length > truncate) {
               acc.push(child.substring(0, truncate - charCount))
               isTruncated = true
               return acc
-            } else if (typeof child === "string") {
-              charCount += child.length
             }
+            charCount += child.length
           }
           acc.push(child)
           return acc
@@ -71,20 +74,20 @@ const HyperText = memo(
         [] as Array<ReactNode | string>
       )
 
-      if (isTruncated) {
+      processedChildren = truncatedChildren
+      if (isTruncated && expandable) {
         processedChildren.push(
           <span key="show-more">
             ...{" "}
-            {expandable && (
-              <a href="#" onClick={toggleShowMore} className="text-info underline">
-                show more
-              </a>
-            )}
+            <a href="#" onClick={toggleShowMore} className="text-info underline">
+              show more
+            </a>
           </span>
         )
       }
     }
 
+    // Add show less button when expanded
     if (isExpanded) {
       processedChildren.push(
         <span key="show-less">
@@ -104,6 +107,7 @@ const HyperText = memo(
     // Group consecutive inline elements and strings
     const groupedChildren: ReactNode[] = []
     let currentGroup: ReactNode[] = []
+    let groupCounter = 0
 
     processedChildren.forEach((child) => {
       const isInline =
@@ -118,7 +122,7 @@ const HyperText = memo(
       } else {
         if (currentGroup.length > 0) {
           groupedChildren.push(
-            <div key={`group-${groupedChildren.length}`} className="px-4">
+            <div key={`inline-group-${groupCounter++}`} className="px-4">
               {currentGroup}
             </div>
           )
@@ -131,7 +135,7 @@ const HyperText = memo(
     // Add any remaining group
     if (currentGroup.length > 0) {
       groupedChildren.push(
-        <div key={`group-${groupedChildren.length}`} className="px-4">
+        <div key={`inline-group-${groupCounter++}`} className="px-4">
           {currentGroup}
         </div>
       )
