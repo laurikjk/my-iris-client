@@ -4,13 +4,9 @@ import Embed from "./index.ts"
 
 const Hashtag: Embed = {
   regex: /(#\w+)/g,
-  component: ({match, key}) => {
+  component: ({match}) => {
     return (
-      <Link
-        to={`/search/${encodeURIComponent(match)}`}
-        key={key}
-        className="link link-info"
-      >
+      <Link to={`/search/${encodeURIComponent(match)}`} className="link link-info">
         {match}
       </Link>
     )

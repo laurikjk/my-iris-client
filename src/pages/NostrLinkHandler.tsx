@@ -39,7 +39,6 @@ export default function NostrLinkHandler() {
         return
       }
 
-      console.log("Resolving link:", cleanLink)
       try {
         if (isProfile) {
           const decoded = nip19.decode(cleanLink)

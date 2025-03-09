@@ -42,16 +42,12 @@ function Naddr({naddr, data}: {naddr: string; data: nip19.AddressPointer}) {
 
 const NostrUser: Embed = {
   regex: /\bnostr:(n(?:event|profile|addr)1\w+)\b/g,
-  component: ({match, key}) => {
+  component: ({match}) => {
     try {
       const {type, data} = nip19.decode(match)
       if (type === "nprofile") {
         return (
-          <Link
-            key={key}
-            className="link link-info"
-            to={`/${nip19.npubEncode(data.pubkey)}`}
-          >
+          <Link className="link link-info" to={`/${nip19.npubEncode(data.pubkey)}`}>
             <Name pubKey={data.pubkey} />
           </Link>
         )
@@ -62,7 +58,6 @@ const NostrUser: Embed = {
           <div className="px-4">
             <FeedItem
               eventId={data.id}
-              key={data.id}
               authorHints={authorHints}
               showActions={false}
               showRepliedTo={false}
