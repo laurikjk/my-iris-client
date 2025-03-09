@@ -19,7 +19,7 @@ export default function MediaFeed({events}: MediaFeedProps) {
     INITIAL_DISPLAY_COUNT,
     "displayCount"
   )
-  const [allMedia, setAllMedia] = useState<
+  const [modalMedia, setModalMedia] = useState<
     Array<{type: "image" | "video"; url: string; event: NDKEvent}>
   >([])
 
@@ -32,13 +32,17 @@ export default function MediaFeed({events}: MediaFeedProps) {
     })
   }, [events])
 
-  const calculateAllMedia = useCallback(() => {
+  const visibleMediaEvents = useMemo(() => {
+    return mediaEvents.slice(0, displayCount)
+  }, [mediaEvents, displayCount])
+
+  const calculateAllMedia = useCallback((events: NDKEvent[]) => {
     const deduplicated = new Map<
       string,
       {type: "image" | "video"; url: string; event: NDKEvent}
     >()
 
-    mediaEvents.forEach((event) => {
+    events.forEach((event) => {
       const imageMatches = event.content.match(IMAGE_REGEX) || []
       const videoMatches = event.content.match(VIDEO_REGEX) || []
 
@@ -73,7 +77,7 @@ export default function MediaFeed({events}: MediaFeedProps) {
     })
 
     return Array.from(deduplicated.values())
-  }, [mediaEvents])
+  }, [])
 
   const handlePrevItem = () => {
     if (activeItemIndex === null) return
@@ -82,7 +86,7 @@ export default function MediaFeed({events}: MediaFeedProps) {
 
   const handleNextItem = () => {
     if (activeItemIndex === null) return
-    setActiveItemIndex(Math.min(allMedia.length - 1, activeItemIndex + 1))
+    setActiveItemIndex(Math.min(modalMedia.length - 1, activeItemIndex + 1))
   }
 
   useEffect(() => {
@@ -104,7 +108,7 @@ export default function MediaFeed({events}: MediaFeedProps) {
   }, [showModal, activeItemIndex])
 
   const loadMoreItems = () => {
-    if (mediaEvents.length > displayCount) {
+    if (events.length > displayCount) {
       setDisplayCount((prev: number) => prev + DISPLAY_INCREMENT)
       return true
     }
@@ -112,11 +116,11 @@ export default function MediaFeed({events}: MediaFeedProps) {
   }
 
   const handleImageClick = (event: NDKEvent, clickedUrl: string) => {
-    const mediaArray = calculateAllMedia() // TODO dont recalc on every open
+    const mediaArray = calculateAllMedia(visibleMediaEvents)
     const mediaIndex = mediaArray.findIndex(
       (media) => media.event.id === event.id && media.url === clickedUrl
     )
-    setAllMedia(mediaArray)
+    setModalMedia(mediaArray)
     setActiveItemIndex(mediaIndex)
     setShowModal(true)
   }
@@ -129,20 +133,20 @@ export default function MediaFeed({events}: MediaFeedProps) {
             onClose={() => {
               setShowModal(false)
               setActiveItemIndex(null)
-              setAllMedia([])
+              setModalMedia([])
             }}
             onPrev={handlePrevItem}
             onNext={handleNextItem}
-            mediaUrl={allMedia[activeItemIndex].url}
-            mediaType={allMedia[activeItemIndex].type}
+            mediaUrl={modalMedia[activeItemIndex].url}
+            mediaType={modalMedia[activeItemIndex].type}
             showFeedItem={true}
-            event={allMedia[activeItemIndex].event}
+            event={modalMedia[activeItemIndex].event}
             currentIndex={activeItemIndex}
-            totalCount={allMedia.length}
+            totalCount={modalMedia.length}
           />
           <PreloadImages
             key={activeItemIndex}
-            images={allMedia.map((m) => m.url)}
+            images={modalMedia.map((m) => m.url)}
             currentIndex={activeItemIndex}
           />
         </>
@@ -150,7 +154,7 @@ export default function MediaFeed({events}: MediaFeedProps) {
 
       <InfiniteScroll onLoadMore={loadMoreItems}>
         <div className="grid grid-cols-3 gap-px md:gap-1">
-          {mediaEvents.slice(0, displayCount).map((event, index) => (
+          {visibleMediaEvents.map((event, index) => (
             <ImageGridItem
               key={event.id}
               event={event}
