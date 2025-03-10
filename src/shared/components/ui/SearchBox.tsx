@@ -3,16 +3,19 @@ import {useNavigate} from "react-router"
 import classNames from "classnames"
 import {nip19} from "nostr-tools"
 
-import socialGraph, {searchIndex, SearchResult} from "@/utils/socialGraph"
+import socialGraph, {
+  searchIndex,
+  SearchResult,
+  shouldSocialHide,
+} from "@/utils/socialGraph"
 import {UserRow} from "@/shared/components/user/UserRow"
-import useMutes from "@/shared/hooks/useMutes"
 import Icon from "../Icons/Icon"
 import {ndk} from "@/utils/ndk"
 
 const NOSTR_REGEX = /(npub|note|nevent|naddr)1[a-zA-Z0-9]{58,300}/gi
 const HEX_REGEX = /[0-9a-fA-F]{64}/gi
 const NIP05_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const MAX_RESULTS = 5
+const MAX_RESULTS = 6
 
 // Search ranking constants
 const DISTANCE_PENALTY = 0.01 // Penalty per step of social distance
@@ -46,7 +49,6 @@ function SearchBox({
   const [value, setValue] = useState<string>("")
   const inputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
-  const mutes = useMutes()
 
   onSelect =
     onSelect ||
@@ -93,9 +95,13 @@ function SearchBox({
 
       const results = searchIndex.search(value.trim())
       const resultsWithAdjustedScores = results
-        .filter((result) => !mutes.includes(result.item.pubKey))
+        .filter(
+          (result) =>
+            !shouldSocialHide(result.item.pubKey) &&
+            socialGraph().getFollowDistance(result.item.pubKey) !== 0
+        )
         .map((result) => {
-          const fuseScore = 1 - (result.score ?? 1) // INVERTED: higher is better
+          const fuseScore = 1 - (result.score ?? 1)
           const followDistance =
             socialGraph().getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE
           const friendsFollowing =
@@ -106,12 +112,6 @@ function SearchBox({
             fuseScore * FUSE_MULTIPLIER -
             DISTANCE_PENALTY * (followDistance - 1) +
             FRIEND_BOOST * friendsFollowing
-
-          /*
-          console.log(
-            `Result: ${result.item.name}, Fuse Score: ${fuseScore}, Follow Distance: ${followDistance}, Friends Following: ${friendsFollowing}, Adjusted Score: ${adjustedScore}`
-          )
-          */
 
           return {...result, adjustedScore}
         })
@@ -133,7 +133,7 @@ function SearchBox({
     } else {
       setSearchResults([])
     }
-  }, [value, navigate, searchNotes, mutes])
+  }, [value, navigate, searchNotes])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
