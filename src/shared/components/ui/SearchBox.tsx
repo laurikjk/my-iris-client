@@ -22,7 +22,7 @@ const DISTANCE_PENALTY = 0.01 // Penalty per step of social distance
 const FRIEND_BOOST = 0.005 // Boost per friend following the result
 const DEFAULT_DISTANCE = 999 // Default distance for users not in social graph
 const FUSE_MULTIPLIER = 5 // Multiplier to emphasize text match
-const PREFIX_MATCH_BOOST = 0.5
+const PREFIX_MATCH_BOOST = 1
 const SELF_PENALTY = 100 // Penalty for self in search results
 
 interface CustomSearchResult extends SearchResult {
@@ -65,86 +65,96 @@ function SearchBox({
 
   useEffect(() => {
     const v = value.trim()
-    if (v) {
-      if (v.match(NOSTR_REGEX)) {
-        let result
-        try {
-          result = nip19.decode(v)
-          if (result.type === "npub") {
-            onSelect(result.data)
-          } else {
-            navigate(`/${v}`)
-          }
-        } catch (e) {
+    if (!v) {
+      setSearchResults([])
+      return
+    }
+
+    // Check if it's a single character query
+    const isSingleChar = v.length === 1
+
+    if (v.match(NOSTR_REGEX)) {
+      let result
+      try {
+        result = nip19.decode(v)
+        if (result.type === "npub") {
+          onSelect(result.data)
+        } else {
           navigate(`/${v}`)
         }
-        setValue("")
-        return
-      } else if (v.match(HEX_REGEX)) {
-        onSelect(v)
-        setValue("")
-        return
-      } else if (v.match(NIP05_REGEX)) {
-        ndk()
-          .getUserFromNip05(v)
-          .then((user) => {
-            if (user) {
-              onSelect(user.pubkey)
-              setValue("")
-            }
-          })
+      } catch (e) {
+        navigate(`/${v}`)
       }
-
-      const query = v.trim().toLowerCase()
-      const results = searchIndex.search(query, {limit: maxResults * 10})
-      const resultsWithAdjustedScores = results
-        .filter((result) => !shouldSocialHide(result.item.pubKey))
-        .map((result) => {
-          const fuseScore = 1 - (result.score ?? 1)
-          const followDistance =
-            socialGraph().getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE
-          const friendsFollowing =
-            socialGraph().followedByFriends(result.item.pubKey).size || 0
-
-          // Split name by word boundaries and check if any word starts with query
-          const nameWords = result.item.name.toLowerCase().match(/\b\w+\b/g) || []
-          const nameStartsWith = nameWords.some((word) => word.startsWith(query))
-          const nip05StartsWith =
-            result.item.nip05?.toLowerCase().startsWith(query) ?? false
-          const prefixBoost = nameStartsWith || nip05StartsWith ? PREFIX_MATCH_BOOST : 0
-
-          // Apply a penalty for distance 0 (self) but don't exclude them
-          const distancePenalty =
-            followDistance === 0
-              ? DISTANCE_PENALTY * SELF_PENALTY // Heavy penalty for self
-              : DISTANCE_PENALTY * (followDistance - 1)
-
-          const adjustedScore =
-            fuseScore * FUSE_MULTIPLIER -
-            distancePenalty +
-            FRIEND_BOOST * friendsFollowing +
-            prefixBoost
-
-          return {...result, adjustedScore}
+      setValue("")
+      return
+    } else if (v.match(HEX_REGEX)) {
+      onSelect(v)
+      setValue("")
+      return
+    } else if (v.match(NIP05_REGEX)) {
+      ndk()
+        .getUserFromNip05(v)
+        .then((user) => {
+          if (user) {
+            onSelect(user.pubkey)
+            setValue("")
+          }
         })
-
-      // Sort by adjustedScore in DESCENDING order (higher is better)
-      resultsWithAdjustedScores.sort((a, b) => b.adjustedScore - a.adjustedScore)
-
-      if (!redirect) {
-        setActiveResult(1)
-      } else {
-        setActiveResult(0)
-      }
-      setSearchResults([
-        ...(searchNotes
-          ? [{pubKey: "search-notes", name: `search notes: ${v}`, query: v}]
-          : []),
-        ...resultsWithAdjustedScores.map((result) => result.item),
-      ])
-    } else {
-      setSearchResults([])
     }
+
+    const query = v.toLowerCase()
+    const results = searchIndex.search(query)
+    const resultsWithAdjustedScores = results
+      .filter((result) => !shouldSocialHide(result.item.pubKey))
+      .map((result) => {
+        const fuseScore = 1 - (result.score ?? 1)
+        const followDistance = socialGraph().getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE
+        const friendsFollowing = socialGraph().followedByFriends(result.item.pubKey).size || 0
+
+        const nameLower = result.item.name.toLowerCase()
+        const nip05Lower = result.item.nip05?.toLowerCase() || ""
+        const prefixMatch = nameLower.startsWith(query) || nip05Lower.startsWith(query)
+
+        if (isSingleChar) {
+          // For single-character queries, exclude non-prefix matches entirely
+          if (!prefixMatch) {
+            return {...result, adjustedScore: Number.NEGATIVE_INFINITY}
+          }
+          // For prefix matches, score by negative follow distance
+          const baseScore = -followDistance
+          const adjustedScore = baseScore + FRIEND_BOOST * friendsFollowing
+          return {...result, adjustedScore}
+        }
+
+        // Original multi-character scoring logic
+        const distancePenalty =
+          followDistance === 0
+            ? DISTANCE_PENALTY * SELF_PENALTY
+            : DISTANCE_PENALTY * (followDistance - 1)
+
+        const adjustedScore =
+          fuseScore * FUSE_MULTIPLIER -
+          distancePenalty +
+          FRIEND_BOOST * friendsFollowing +
+          (prefixMatch ? PREFIX_MATCH_BOOST : 0)
+
+        return {...result, adjustedScore}
+      })
+
+    // Sort by adjustedScore in DESCENDING order (higher is better)
+    resultsWithAdjustedScores.sort((a, b) => b.adjustedScore - a.adjustedScore)
+
+    if (!redirect) {
+      setActiveResult(1)
+    } else {
+      setActiveResult(0)
+    }
+    setSearchResults([
+      ...(searchNotes
+        ? [{pubKey: "search-notes", name: `search notes: ${v}`, query: v}]
+        : []),
+      ...resultsWithAdjustedScores.map((result) => result.item),
+    ])
   }, [value, navigate, searchNotes])
 
   useEffect(() => {
