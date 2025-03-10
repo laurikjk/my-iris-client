@@ -96,7 +96,7 @@ function SearchBox({
       }
 
       const query = v.trim().toLowerCase()
-      const results = searchIndex.search(query)
+      const results = searchIndex.search(query, {limit: maxResults * 10})
       const resultsWithAdjustedScores = results
         .filter((result) => !shouldSocialHide(result.item.pubKey))
         .map((result) => {
