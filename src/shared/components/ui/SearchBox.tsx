@@ -23,6 +23,7 @@ const FRIEND_BOOST = 0.005 // Boost per friend following the result
 const DEFAULT_DISTANCE = 999 // Default distance for users not in social graph
 const FUSE_MULTIPLIER = 5 // Multiplier to emphasize text match
 const PREFIX_MATCH_BOOST = 0.5
+const SELF_PENALTY = 100 // Penalty for self in search results
 
 interface CustomSearchResult extends SearchResult {
   query?: string
@@ -97,11 +98,7 @@ function SearchBox({
       const query = v.trim().toLowerCase()
       const results = searchIndex.search(query)
       const resultsWithAdjustedScores = results
-        .filter(
-          (result) =>
-            !shouldSocialHide(result.item.pubKey) &&
-            socialGraph().getFollowDistance(result.item.pubKey) !== 0
-        )
+        .filter((result) => !shouldSocialHide(result.item.pubKey))
         .map((result) => {
           const fuseScore = 1 - (result.score ?? 1)
           const followDistance =
@@ -116,9 +113,15 @@ function SearchBox({
             result.item.nip05?.toLowerCase().startsWith(query) ?? false
           const prefixBoost = nameStartsWith || nip05StartsWith ? PREFIX_MATCH_BOOST : 0
 
+          // Apply a penalty for distance 0 (self) but don't exclude them
+          const distancePenalty =
+            followDistance === 0
+              ? DISTANCE_PENALTY * SELF_PENALTY // Heavy penalty for self
+              : DISTANCE_PENALTY * (followDistance - 1)
+
           const adjustedScore =
             fuseScore * FUSE_MULTIPLIER -
-            DISTANCE_PENALTY * (followDistance - 1) +
+            distancePenalty +
             FRIEND_BOOST * friendsFollowing +
             prefixBoost
 
