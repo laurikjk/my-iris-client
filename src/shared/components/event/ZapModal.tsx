@@ -75,7 +75,7 @@ function ZapModal({onClose, event, setZapped, rezappedEvent}: ZapModalProps) {
           const img = document.getElementById("qr-image") as HTMLImageElement
 
           const QRCode = await import("qrcode")
-          QRCode.toDataURL(pr, function (error, url) {
+          QRCode.toDataURL(`lightning:${pr}`, function (error, url) {
             if (error) console.error("Error generating QR code:", error)
             else img.src = url
           })
