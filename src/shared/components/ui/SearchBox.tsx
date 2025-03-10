@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from "react"
+import {MouseEvent as ReactMouseEvent, useEffect, useRef, useState} from "react"
 import {useNavigate} from "react-router"
 import classNames from "classnames"
 import {nip19} from "nostr-tools"
@@ -8,8 +8,10 @@ import socialGraph, {
   SearchResult,
   shouldSocialHide,
 } from "@/utils/socialGraph"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {UserRow} from "@/shared/components/user/UserRow"
 import Icon from "../Icons/Icon"
+import {JsonValue} from "irisdb"
 import {ndk} from "@/utils/ndk"
 
 const NOSTR_REGEX = /(npub|note|nevent|naddr)1[a-zA-Z0-9]{58,300}/gi
@@ -48,9 +50,15 @@ function SearchBox({
 }: SearchBoxProps) {
   const [searchResults, setSearchResults] = useState<CustomSearchResult[]>([])
   const [activeResult, setActiveResult] = useState<number>(0)
+  const [recentSearches, setRecentSearches] = useLocalState<CustomSearchResult[]>(
+    "recentSearches",
+    []
+  )
+  const [isFocused, setIsFocused] = useState(false)
   const [value, setValue] = useState<string>("")
   const inputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   onSelect =
     onSelect ||
@@ -108,8 +116,10 @@ function SearchBox({
       .filter((result) => !shouldSocialHide(result.item.pubKey))
       .map((result) => {
         const fuseScore = 1 - (result.score ?? 1)
-        const followDistance = socialGraph().getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE
-        const friendsFollowing = socialGraph().followedByFriends(result.item.pubKey).size || 0
+        const followDistance =
+          socialGraph().getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE
+        const friendsFollowing =
+          socialGraph().followedByFriends(result.item.pubKey).size || 0
 
         const nameLower = result.item.name.toLowerCase()
         const nip05Lower = result.item.nip05?.toLowerCase() || ""
@@ -192,18 +202,46 @@ function SearchBox({
     }
   }, [redirect])
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsFocused(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const addToRecentSearches = (result: CustomSearchResult) => {
+    const filtered = recentSearches.filter((item) => item.pubKey !== result.pubKey)
+    setRecentSearches([result, ...filtered].slice(0, maxResults) as unknown as JsonValue)
+  }
+
+  const removeFromRecentSearches = (pubKey: string, e: ReactMouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    const filtered = recentSearches.filter((item) => item.pubKey !== pubKey)
+    setRecentSearches(filtered as unknown as JsonValue)
+    // Reset after a short delay
+  }
+
   const handleSearchResultClick = (pubKey: string, query?: string) => {
     setValue("")
     setSearchResults([])
     if (pubKey === "search-notes" && query) {
       navigate(`/search/${query}`)
     } else {
+      const selectedResult = searchResults.find((r) => r.pubKey === pubKey)
+      if (selectedResult) {
+        addToRecentSearches(selectedResult)
+      }
       onSelect(pubKey)
     }
   }
 
   return (
-    <div className={"dropdown dropdown-open"}>
+    <div className={"dropdown dropdown-open"} ref={dropdownRef}>
       <label className={classNames("input flex items-center gap-2", className)}>
         <input
           type="text"
@@ -212,31 +250,62 @@ function SearchBox({
           value={value}
           ref={inputRef}
           onChange={(e) => setValue(e.target.value)}
+          onFocus={() => setIsFocused(true)}
         />
         <Icon name="search-outline" className="text-neutral-content/60" />
       </label>
-      {searchResults.length > 0 && (
-        <ul className="dropdown-content menu shadow bg-base-100 rounded-box z-10 w-full">
-          {searchResults.slice(0, maxResults).map((result, index) => (
-            <li
-              key={result.pubKey}
-              className={classNames("cursor-pointer rounded-md", {
-                "bg-primary text-primary-content": index === activeResult,
-                "hover:bg-primary/50": index !== activeResult,
-              })}
-              onClick={() => handleSearchResultClick(result.pubKey, result.query)}
-            >
-              {result.pubKey === "search-notes" && searchNotes ? (
-                <div className={classNames("inline", {hidden: !redirect})}>
-                  Search notes: <span className="font-bold">{result.query}</span>
-                </div>
-              ) : (
-                <div className="flex gap-1">
-                  <UserRow pubKey={result.pubKey} linkToProfile={redirect} />
-                </div>
-              )}
-            </li>
-          ))}
+      {(searchResults.length > 0 ||
+        (isFocused && !value && recentSearches.length > 0)) && (
+        <ul className="dropdown-content menu shadow bg-base-200 rounded-box z-10 w-full border border-info">
+          {value ? (
+            searchResults.slice(0, maxResults).map((result, index) => (
+              <li
+                key={result.pubKey}
+                className={classNames("cursor-pointer rounded-md", {
+                  "bg-primary text-primary-content": index === activeResult,
+                  "hover:bg-primary/50": index !== activeResult,
+                })}
+                onClick={() => handleSearchResultClick(result.pubKey, result.query)}
+              >
+                {result.pubKey === "search-notes" && searchNotes ? (
+                  <div className={classNames("inline", {hidden: !redirect})}>
+                    Search notes: <span className="font-bold">{result.query}</span>
+                  </div>
+                ) : (
+                  <div className="flex gap-1">
+                    <UserRow pubKey={result.pubKey} linkToProfile={redirect} />
+                  </div>
+                )}
+              </li>
+            ))
+          ) : (
+            <>
+              <li className="menu-title text-sm px-4 py-2">Recent</li>
+              {recentSearches.map((result, index) => (
+                <li
+                  key={result.pubKey}
+                  className={classNames("cursor-pointer rounded-md", {
+                    "bg-primary text-primary-content": index === activeResult,
+                    "hover:bg-primary/50": index !== activeResult,
+                  })}
+                  onClick={() => handleSearchResultClick(result.pubKey, result.query)}
+                >
+                  <div className="flex gap-1 justify-between items-center w-full">
+                    <UserRow pubKey={result.pubKey} linkToProfile={redirect} />
+                    <div
+                      className="p-4 cursor-pointer"
+                      onClick={(e) => removeFromRecentSearches(result.pubKey, e)}
+                    >
+                      <Icon
+                        name="close"
+                        className="h-3 w-3 opacity-50 hover:opacity-100"
+                      />
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </>
+          )}
         </ul>
       )}
     </div>

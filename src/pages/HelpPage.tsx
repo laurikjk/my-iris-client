@@ -1,4 +1,7 @@
+import RightColumn from "@/shared/components/RightColumn"
+import Trending from "@/shared/components/feed/Trending"
 import Header from "@/shared/components/header/Header"
+import Widget from "@/shared/components/ui/Widget"
 import {useState, useEffect} from "react"
 
 export const AboutPage = () => {
@@ -48,35 +51,48 @@ export const AboutPage = () => {
   }, [])
 
   return (
-    <section className="flex flex-col">
-      <Header title="About" />
-      <div className="flex flex-1 mx-4 my-4 lg:mx-8">
-        <div className="prose max-w-prose">
-          <h1>About</h1>
-          <p>{CONFIG.aboutText}</p>
-          <p>
-            <a href={CONFIG.repository}>Source code</a>
-          </p>
-          <div className="mt-4">
-            <p>Version: {appVersion}</p>
-            <p>Build Time: {formatBuildTime(buildTime)}</p>
-          </div>
+    <div className="flex justify-center">
+      <div className="flex-1">
+        <section className="flex flex-col">
+          <Header title="About" />
+          <div className="flex flex-1 mx-4 my-4 lg:mx-8">
+            <div className="prose max-w-prose">
+              <h1>About</h1>
+              <p>{CONFIG.aboutText}</p>
+              <p>
+                <a href={CONFIG.repository}>Source code</a>
+              </p>
+              <div className="mt-4">
+                <p>Version: {appVersion}</p>
+                <p>Build Time: {formatBuildTime(buildTime)}</p>
+              </div>
 
-          <div className="mt-6">
-            <button
-              className={`btn btn-primary ${updateAvailable ? "animate-pulse" : ""}`}
-              onClick={refreshApp}
-            >
-              {updateAvailable
-                ? "Update Available - Click to Refresh"
-                : "Refresh Application"}
-            </button>
-            <p className="text-sm mt-1">
-              Reload the application to apply any pending updates or fix issues.
-            </p>
+              <div className="mt-6">
+                <button
+                  className={`btn btn-primary ${updateAvailable ? "animate-pulse" : ""}`}
+                  onClick={refreshApp}
+                >
+                  {updateAvailable
+                    ? "Update Available - Click to Refresh"
+                    : "Refresh Application"}
+                </button>
+                <p className="text-sm mt-1">
+                  Reload the application to apply any pending updates or fix issues.
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
       </div>
-    </section>
+      <RightColumn>
+        {() => (
+          <>
+            <Widget title="Trending posts">
+              <Trending />
+            </Widget>
+          </>
+        )}
+      </RightColumn>
+    </div>
   )
 }
