@@ -22,6 +22,7 @@ const DISTANCE_PENALTY = 0.01 // Penalty per step of social distance
 const FRIEND_BOOST = 0.005 // Boost per friend following the result
 const DEFAULT_DISTANCE = 999 // Default distance for users not in social graph
 const FUSE_MULTIPLIER = 5 // Multiplier to emphasize text match
+const PREFIX_MATCH_BOOST = 0.5
 
 interface CustomSearchResult extends SearchResult {
   query?: string
@@ -93,7 +94,8 @@ function SearchBox({
           })
       }
 
-      const results = searchIndex.search(value.trim())
+      const query = v.trim().toLowerCase()
+      const results = searchIndex.search(query)
       const resultsWithAdjustedScores = results
         .filter(
           (result) =>
@@ -107,11 +109,18 @@ function SearchBox({
           const friendsFollowing =
             socialGraph().followedByFriends(result.item.pubKey).size || 0
 
-          // Calculate adjusted score - HIGHER is better now
+          // Split name by word boundaries and check if any word starts with query
+          const nameWords = result.item.name.toLowerCase().match(/\b\w+\b/g) || []
+          const nameStartsWith = nameWords.some((word) => word.startsWith(query))
+          const nip05StartsWith =
+            result.item.nip05?.toLowerCase().startsWith(query) ?? false
+          const prefixBoost = nameStartsWith || nip05StartsWith ? PREFIX_MATCH_BOOST : 0
+
           const adjustedScore =
             fuseScore * FUSE_MULTIPLIER -
             DISTANCE_PENALTY * (followDistance - 1) +
-            FRIEND_BOOST * friendsFollowing
+            FRIEND_BOOST * friendsFollowing +
+            prefixBoost
 
           return {...result, adjustedScore}
         })
