@@ -47,7 +47,7 @@ function SearchPage() {
         <Header title={query ? `Search: "${query}"` : "Search"} />
         <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4">
           {activeTab === "people" ? (
-            <SearchBox searchNotes={true} />
+            <SearchBox searchNotes={true} maxResults={10} />
           ) : (
             <form onSubmit={handleSubmit} className="flex w-full">
               <input

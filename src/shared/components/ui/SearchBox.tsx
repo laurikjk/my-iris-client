@@ -14,6 +14,12 @@ const HEX_REGEX = /[0-9a-fA-F]{64}/gi
 const NIP05_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_RESULTS = 5
 
+// Search ranking constants
+const DISTANCE_PENALTY = 0.01 // Penalty per step of social distance
+const FRIEND_BOOST = 0.005 // Boost per friend following the result
+const DEFAULT_DISTANCE = 999 // Default distance for users not in social graph
+const FUSE_MULTIPLIER = 5 // Multiplier to emphasize text match
+
 interface CustomSearchResult extends SearchResult {
   query?: string
 }
@@ -25,6 +31,7 @@ interface SearchBoxProps {
   redirect?: boolean
   className?: string
   searchNotes?: boolean
+  maxResults?: number
 }
 
 function SearchBox({
@@ -32,6 +39,7 @@ function SearchBox({
   onSelect,
   className,
   searchNotes = false,
+  maxResults = MAX_RESULTS,
 }: SearchBoxProps) {
   const [searchResults, setSearchResults] = useState<CustomSearchResult[]>([])
   const [activeResult, setActiveResult] = useState<number>(0)
@@ -83,30 +91,33 @@ function SearchBox({
           })
       }
 
-      const results = searchIndex.search(value.trim(), {limit: MAX_RESULTS * 2})
+      const results = searchIndex.search(value.trim())
       const resultsWithAdjustedScores = results
         .filter((result) => !mutes.includes(result.item.pubKey))
         .map((result) => {
-          const followDistance = Math.max(
-            socialGraph().getFollowDistance(result.item.pubKey),
-            1
-          )
-          const followedByFriends = socialGraph().followedByFriends(
-            result.item.pubKey
-          ).size
+          const fuseScore = 1 - (result.score ?? 1) // INVERTED: higher is better
+          const followDistance =
+            socialGraph().getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE
+          const friendsFollowing =
+            socialGraph().followedByFriends(result.item.pubKey).size || 0
+
+          // Calculate adjusted score - HIGHER is better now
           const adjustedScore =
-            result.score! * Math.pow(followDistance, 3) * Math.pow(0.9, followedByFriends)
+            fuseScore * FUSE_MULTIPLIER -
+            DISTANCE_PENALTY * (followDistance - 1) +
+            FRIEND_BOOST * friendsFollowing
 
           /*
           console.log(
-            `Result: ${result.item.name}, Score: ${result.score}, Follow Distance: ${followDistance}, Followed By Friends: ${followedByFriends}, Adjusted Score: ${adjustedScore}`
+            `Result: ${result.item.name}, Fuse Score: ${fuseScore}, Follow Distance: ${followDistance}, Friends Following: ${friendsFollowing}, Adjusted Score: ${adjustedScore}`
           )
           */
 
           return {...result, adjustedScore}
         })
 
-      resultsWithAdjustedScores.sort((a, b) => a.adjustedScore - b.adjustedScore)
+      // Sort by adjustedScore in DESCENDING order (higher is better)
+      resultsWithAdjustedScores.sort((a, b) => b.adjustedScore - a.adjustedScore)
 
       if (!redirect) {
         setActiveResult(1)
@@ -130,10 +141,10 @@ function SearchBox({
 
       if (e.key === "ArrowDown") {
         e.preventDefault()
-        setActiveResult((prev) => (prev + 1) % MAX_RESULTS)
+        setActiveResult((prev) => (prev + 1) % maxResults)
       } else if (e.key === "ArrowUp") {
         e.preventDefault()
-        setActiveResult((prev) => (prev - 1 + MAX_RESULTS) % MAX_RESULTS)
+        setActiveResult((prev) => (prev - 1 + maxResults) % maxResults)
       } else if (e.key === "Escape") {
         setValue("")
         setSearchResults([])
@@ -150,7 +161,7 @@ function SearchBox({
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [searchResults, activeResult, navigate])
+  }, [searchResults, activeResult, navigate, maxResults])
 
   // autofocus the input field when not redirecting
   useEffect(() => {
@@ -184,7 +195,7 @@ function SearchBox({
       </label>
       {searchResults.length > 0 && (
         <ul className="dropdown-content menu shadow bg-base-100 rounded-box z-10 w-full">
-          {searchResults.slice(0, MAX_RESULTS).map((result, index) => (
+          {searchResults.slice(0, maxResults).map((result, index) => (
             <li
               key={result.pubKey}
               className={classNames("cursor-pointer rounded-md", {
