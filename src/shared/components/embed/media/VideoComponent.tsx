@@ -98,7 +98,7 @@ function HlsVideoComponent({match, event, limitHeight, onClick}: HlsVideoCompone
         className={classNames("max-w-full object-contain", {
           "blur-xl": blur,
           "h-full max-h-[600px]": limitHeight,
-          "max-h-[90vh] lg:max-h-[600px]": !limitHeight,
+          "max-h-[90vh] lg:h-[600px]": !limitHeight,
         })}
         controls
         muted={autoplayVideos}
