@@ -129,7 +129,7 @@ function NotificationsFeed() {
   console.log("initialNotificationsSeenAt", initialNotificationsSeenAt)
 
   const updateSeenAt = useCallback(() => {
-    if (document.hasFocus() && latestNotificationTime > notificationsSeenAt) {
+    if (document.hasFocus()) {
       setTimeout(() => {
         localState.get("notifications/seenAt").put(Date.now())
       }, 1000)
