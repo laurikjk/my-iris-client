@@ -62,7 +62,7 @@ function FeedItem({
   onEvent,
   borderTop,
 }: FeedItemProps) {
-  // make sure to populate useState from cache if possible - avoids flicker & layout shift
+  const [expanded, setExpanded] = useState(false)
   const navigate = useNavigate()
 
   const eventIdHex = useMemo(() => {
@@ -148,14 +148,36 @@ function FeedItem({
     }
   }, [eventIdHex])
 
+  const wrapperClasses = classNames("relative", {
+    "h-[200px] overflow-hidden": asEmbed && !expanded,
+  })
+
+  const expandOverlay = asEmbed && !expanded && (
+    <>
+      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-base-100 to-transparent" />
+      <button
+        className="absolute bottom-2 left-1/2 -translate-x-1/2 text-sm text-primary hover:underline"
+        onClick={(e) => {
+          e.stopPropagation()
+          setExpanded(true)
+        }}
+      >
+        Show More
+      </button>
+    </>
+  )
+
   if (!event) {
     return (
-      <FeedItemPlaceholder
-        standalone={standalone}
-        asEmbed={asEmbed}
-        eventIdHex={eventIdHex}
-        onClick={(e) => onClick(e, event, referredEvent, eventId, navigate)}
-      />
+      <div className={wrapperClasses}>
+        <FeedItemPlaceholder
+          standalone={standalone}
+          asEmbed={asEmbed}
+          eventIdHex={eventIdHex}
+          onClick={(e) => onClick(e, event, referredEvent, eventId, navigate)}
+        />
+        {expandOverlay}
+      </div>
     )
   }
 
@@ -183,58 +205,63 @@ function FeedItem({
           />
         </>
       )}
-      <div
-        ref={feedItemRef}
-        className={classNames(
-          "flex flex-col border-custom pt-3 pb-0 transition-colors duration-200 ease-in-out relative",
-          {
-            "cursor-pointer": !standalone,
-            "border-b": !asRepliedTo && !asEmbed,
-            "border-t": !asReply && borderTop,
-            "border pt-3 pb-3 my-2 rounded": asEmbed,
-            "hover:bg-[var(--note-hover-color)]": !standalone,
+      <div className={wrapperClasses}>
+        <div
+          ref={feedItemRef}
+          className={classNames(
+            "flex flex-col border-custom pt-3 pb-0 transition-colors duration-200 ease-in-out relative",
+            {
+              "cursor-pointer": !standalone,
+              "border-b": !asRepliedTo && !asEmbed,
+              "border-t": !asReply && borderTop,
+              "border pt-3 pb-3 my-2 rounded": asEmbed,
+              "hover:bg-[var(--note-hover-color)]": !standalone,
+            }
+          )}
+          onClick={(e) =>
+            !standalone && onClick(e, event, referredEvent, eventId, navigate)
           }
-        )}
-        onClick={(e) =>
-          !standalone && onClick(e, event, referredEvent, eventId, navigate)
-        }
-      >
-        {asRepliedTo && (
-          <div className="h-full w-0.5 bg-base-300 absolute top-12 left-9" />
-        )}
-        {(event.kind === 6 || event.kind === 9372 || isRezap(event)) && (
-          <div className="flex flex-row select-none mb-2 px-4">
-            {(event.kind === 6 || event.kind === 9372) && <RepostHeader event={event} />}
-            {isRezap(event) && <RezapHeader event={event} />}
-          </div>
-        )}
-        {event.kind === 7 && (
-          <div className="flex flex-row select-none mb-2 px-4">
-            <LikeHeader event={event} />
-          </div>
-        )}
-        <div className="flex flex-row gap-4 flex-1">
-          <div className={classNames("flex-1 w-full", {"text-lg": standalone})}>
-            <FeedItemHeader
-              event={event}
-              referredEvent={referredEvent}
-              tight={asReply || asRepliedTo}
-            />
-            <div className={classNames({"pl-12": asReply || asRepliedTo})}>
-              <FeedItemContent
+        >
+          {asRepliedTo && (
+            <div className="h-full w-0.5 bg-base-300 absolute top-12 left-9" />
+          )}
+          {(event.kind === 6 || event.kind === 9372 || isRezap(event)) && (
+            <div className="flex flex-row select-none mb-2 px-4">
+              {(event.kind === 6 || event.kind === 9372) && (
+                <RepostHeader event={event} />
+              )}
+              {isRezap(event) && <RezapHeader event={event} />}
+            </div>
+          )}
+          {event.kind === 7 && (
+            <div className="flex flex-row select-none mb-2 px-4">
+              <LikeHeader event={event} />
+            </div>
+          )}
+          <div className="flex flex-row gap-4 flex-1">
+            <div className={classNames("flex-1 w-full", {"text-lg": standalone})}>
+              <FeedItemHeader
                 event={event}
                 referredEvent={referredEvent}
-                standalone={standalone}
-                truncate={truncate}
+                tight={asReply || asRepliedTo}
               />
+              <div className={classNames({"pl-12": asReply || asRepliedTo})}>
+                <FeedItemContent
+                  event={event}
+                  referredEvent={referredEvent}
+                  standalone={standalone}
+                  truncate={truncate}
+                />
+              </div>
             </div>
           </div>
+          <div className={classNames("px-4", {"pl-14": asRepliedTo})}>
+            {showActions && (
+              <FeedItemActions feedItemRef={feedItemRef} event={referredEvent || event} />
+            )}
+          </div>
         </div>
-        <div className={classNames("px-4", {"pl-14": asRepliedTo})}>
-          {showActions && (
-            <FeedItemActions feedItemRef={feedItemRef} event={referredEvent || event} />
-          )}
-        </div>
+        {expandOverlay}
       </div>
       {showReplies > 0 && (eventId || event?.id) && (
         <div className="flex flex-col justify-center">

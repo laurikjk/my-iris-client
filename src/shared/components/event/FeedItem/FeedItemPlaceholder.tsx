@@ -20,7 +20,7 @@ const FeedItemPlaceholder = ({
     <div
       className={classNames("flex flex-col gap-4 pt-2 px-4 pb-0 border-custom", {
         "cursor-pointer": !standalone,
-        "my-2 min-h-[96px] border pt-3 pb-3 rounded": asEmbed,
+        "my-2 border pt-3 pb-3 rounded h-[200px]": asEmbed,
         "min-h-[135px]": !asEmbed,
       })}
       onClick={onClick}
