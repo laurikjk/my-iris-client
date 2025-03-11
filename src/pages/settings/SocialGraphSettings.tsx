@@ -108,8 +108,9 @@ function SocialGraphSettings() {
         >
           Recalculate Follow Distances (fast, no bandwith usage)
         </button>
-        <button className="btn btn-neutral btn-sm" onClick={() => downloadLargeGraph()}>
-          Download pre-crawled large graph (38.6 MB, relatively fast and light)
+        <button className="btn btn-neutral" onClick={() => downloadLargeGraph()}>
+          Download pre-crawled large graph (46.8 MB — fast operation on desktop, but might
+          crash mobile)
         </button>
         <button
           onClick={() => getFollowLists(socialGraph().getRoot(), false, 2)}
