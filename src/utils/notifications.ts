@@ -282,7 +282,7 @@ export const subscribeToNotifications = debounce(async () => {
 
     // Check for existing subscription on notification server
     const currentSubscriptions = await api.getSubscriptions()
-    
+
     // Find and delete any existing subscription with kinds [1,6,7]. remove at some point
     const oldSub = Object.entries(currentSubscriptions).find(
       ([, sub]) =>

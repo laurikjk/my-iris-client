@@ -4633,17 +4633,17 @@ normalize-range@^0.1.2:
   resolved "https://registry.yarnpkg.com/normalize-range/-/normalize-range-0.1.2.tgz#2d10c06bdfd312ea9777695a4d28439456b75942"
   integrity sha512-bdok/XvKII3nUpklnV6P2hxtMNrCboOjAcyBuQnWEhO665FwrSNRxU+AqpsyvO6LgGYPspN+lu5CLtw4jPRKNA==
 
-nostr-double-ratchet@0.0.26:
-  version "0.0.26"
-  resolved "https://registry.yarnpkg.com/nostr-double-ratchet/-/nostr-double-ratchet-0.0.26.tgz#91155ace37fd5ef742a11b055dc379cae5ab7885"
-  integrity sha512-aQe9/TABBdYPv9TkqZnzJqobIftinhSJS32fEsFrG6QJWRLadU0OMOJKmxOgk3/4JNSf5J4h+OO9h++B5HSlaQ==
+nostr-double-ratchet@0.0.27:
+  version "0.0.27"
+  resolved "https://registry.yarnpkg.com/nostr-double-ratchet/-/nostr-double-ratchet-0.0.27.tgz#e24831f196629d3d896a9cb8c609f34c9ff53a39"
+  integrity sha512-fABVVO4fnnFkk9t1xEyN+MtevFeMwe6WNh/rRSK5q9myCDpwVT00TQikNztVLBzrgNjARdtbVwNOauNsN5sEag==
   dependencies:
     nostr-tools "^2.10.4"
 
-nostr-social-graph@1.0.16:
-  version "1.0.16"
-  resolved "https://registry.yarnpkg.com/nostr-social-graph/-/nostr-social-graph-1.0.16.tgz#c398cb7183af3641855aa93238d0c83debf04669"
-  integrity sha512-KD7bnsMMpfvT4E1n3At23Ul3kELz8HJmcM5GGYjIYctNTj03QJOkb++GHC6/6dQaZf7ESTxleDI2klXLHS0MeQ==
+nostr-social-graph@1.0.17:
+  version "1.0.17"
+  resolved "https://registry.yarnpkg.com/nostr-social-graph/-/nostr-social-graph-1.0.17.tgz#fa14c9bef1d0e5348d79e48a6ccb237ddb13bc1b"
+  integrity sha512-gmrWE6KWvjps/Nj5rCvYZDXimpnaHeRJZF7JwkDs6yyw7xrhZNnOU9sjT46OM4umBRuMb2hH99BWtYwAvf5hRA==
 
 nostr-tools@2.9.4:
   version "2.9.4"
