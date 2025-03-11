@@ -277,7 +277,7 @@ export const subscribeToNotifications = debounce(async () => {
     const myKey = [...socialGraph().getUsersByFollowDistance(0)][0]
     const notificationFilter = {
       "#p": [myKey],
-      kinds: [1, 6, 7],
+      kinds: [1, 6, 7, 9735],
     }
 
     // Check for existing subscription on notification server
