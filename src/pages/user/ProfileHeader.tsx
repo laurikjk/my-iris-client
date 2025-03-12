@@ -62,7 +62,7 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
             <ProxyImg
               src={profile?.banner}
               className="w-full h-48 md:h-72 object-cover cursor-pointer select-none"
-              alt="Banner"
+              alt=""
               onClick={() => setShowBannerModal(true)}
               hideBroken={true}
               width={655}

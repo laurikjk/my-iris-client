@@ -87,7 +87,7 @@ export const Avatar = ({
             width={width}
             square={true}
             src={image}
-            alt="User Avatar"
+            alt=""
             className="w-full h-full object-cover"
             onError={handleImageError}
           />
