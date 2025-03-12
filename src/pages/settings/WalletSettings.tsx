@@ -1,13 +1,28 @@
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import {ChangeEvent} from "react"
+import {ChangeEvent, useState, useEffect} from "react"
 
 const WalletSettings = () => {
   const [isWalletConnect, setIsWalletConnect] = useLocalState("user/walletConnect", false)
+  const [balance, setBalance] = useState<number | null>(null)
 
   const [defaultZapAmount, setDefaultZapAmount] = useLocalState(
     "user/defaultZapAmount",
     21
   )
+
+  useEffect(() => {
+    const getBalance = async () => {
+      if (isWalletConnect) {
+        const {requestProvider} = await import("@getalby/bitcoin-connect-react")
+        const provider = await requestProvider()
+        if (provider) {
+          const balanceInfo = await provider.getBalance()
+          setBalance(balanceInfo.balance)
+        }
+      }
+    }
+    getBalance()
+  }, [isWalletConnect])
 
   const handleConnectWalletClick = async () => {
     const {init, requestProvider} = await import("@getalby/bitcoin-connect-react")
@@ -50,7 +65,8 @@ const WalletSettings = () => {
             </button>
           </div>
         ) : (
-          <div>
+          <div className="flex flex-col gap-2">
+            {balance !== null && <p>Balance: {balance} sats</p>}
             <button className="btn btn-primary" onClick={handleDisconnectWalletClick}>
               Disconnect Wallet
             </button>
