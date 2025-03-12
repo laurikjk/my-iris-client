@@ -229,12 +229,24 @@ function SearchBox({
   const handleSearchResultClick = (pubKey: string, query?: string) => {
     setValue("")
     setSearchResults([])
+    setIsFocused(false) // Hide dropdown immediately
+    
     if (pubKey === "search-notes" && query) {
       navigate(`/search/${query}`)
     } else {
-      const selectedResult = searchResults.find((r) => r.pubKey === pubKey)
-      if (selectedResult) {
-        addToRecentSearches(selectedResult)
+      // First check if it's a recent search being clicked
+      const recentResult = recentSearches.find((r) => r.pubKey === pubKey)
+      if (recentResult) {
+        // Use setTimeout to delay the reordering until after the dropdown is hidden
+        setTimeout(() => {
+          const filtered = recentSearches.filter((item) => item.pubKey !== pubKey)
+          setRecentSearches([recentResult, ...filtered] as unknown as JsonValue)
+        }, 0)
+      } else {
+        const selectedResult = searchResults.find((r) => r.pubKey === pubKey)
+        if (selectedResult) {
+          addToRecentSearches(selectedResult)
+        }
       }
       onSelect(pubKey)
     }
