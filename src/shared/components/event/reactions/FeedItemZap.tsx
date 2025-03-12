@@ -29,6 +29,7 @@ localState.get("user/publicKey").on((k) => (myPubKey = k as string))
 function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
   const [isWalletConnect] = useLocalState("user/walletConnect", false)
   const [defaultZapAmount] = useLocalState("user/defaultZapAmount", undefined)
+  const [isZapping, setIsZapping] = useState(false)
 
   const profile = useProfile(event.pubkey)
 
@@ -75,7 +76,6 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
   const handleZapClick = async () => {
     if (isWalletConnect && !!defaultZapAmount) {
       await handleOneClickZap()
-      flashElement()
     } else {
       setShowZapModal(true)
     }
@@ -83,6 +83,7 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
 
   const handleOneClickZap = async () => {
     try {
+      setIsZapping(true)
       const amount = Number(defaultZapAmount) * 1000
 
       const lnPay: LnPayCb = async ({pr}) => {
@@ -104,8 +105,11 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
       })
 
       await zapper.zap()
+      flashElement()
     } catch (error) {
       console.warn("Unable to one-click zap:", error)
+    } finally {
+      setIsZapping(false)
     }
   }
 
@@ -184,7 +188,11 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
         } flex flex-row items-center gap-1 transition duration-200 ease-in-out min-w-[50px] md:min-w-[80px]`}
         onClick={handleZapClick}
       >
-        <Icon name={zapped ? "zap-solid" : "zap"} size={16} />
+        {isZapping ? (
+          <div className="loading loading-spinner loading-xs" />
+        ) : (
+          <Icon name={zapped ? "zap-solid" : "zap"} size={16} />
+        )}
         <span>{formatAmount(zappedAmount)}</span>
       </div>
     </>
