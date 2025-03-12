@@ -230,7 +230,7 @@ function SearchBox({
     setValue("")
     setSearchResults([])
     setIsFocused(false) // Hide dropdown immediately
-    
+
     if (pubKey === "search-notes" && query) {
       navigate(`/search/${query}`)
     } else {

@@ -1,4 +1,5 @@
 import {LnPayCb, NDKEvent, NDKZapper} from "@nostr-dev-kit/ndk"
+import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {shouldHideEvent} from "@/utils/socialGraph.ts"
 import useProfile from "@/shared/hooks/useProfile.ts"
@@ -169,7 +170,9 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
 
   const zapped = zapsByAuthor.has(myPubKey)
 
-  if (!(profile?.lud16 || profile?.lud06)) {
+  const isOnline = useOnlineStatus()
+
+  if (!(profile?.lud16 || profile?.lud06) || !isOnline) {
     return null
   }
 
