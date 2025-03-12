@@ -28,7 +28,7 @@ const WalletSettings = () => {
   const handleConnectWalletClick = async () => {
     const {init, requestProvider} = await import("@getalby/bitcoin-connect-react")
     init({
-      appName: "Nestr",
+      appName: "Iris",
       filters: ["nwc"],
       showBalance: false,
     })
