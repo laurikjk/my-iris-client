@@ -63,13 +63,16 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
 
   const flashElement = () => {
     if (feedItemRef.current) {
-      feedItemRef.current.style.transition = "background-color 1.0s ease"
-      feedItemRef.current.style.backgroundColor = "rgba(234, 88, 12, 0.2)" // orange flash
+      // Quick flash in
+      feedItemRef.current.style.transition = "background-color 0.05s ease-in"
+      feedItemRef.current.style.backgroundColor = "rgba(234, 88, 12, 0.3)" // slightly more intense orange
       setTimeout(() => {
         if (feedItemRef.current) {
+          // Slower fade out
+          feedItemRef.current.style.transition = "background-color 1.5s ease-out"
           feedItemRef.current.style.backgroundColor = ""
         }
-      }, 1000)
+      }, 800) // Let it linger a bit longer
     }
   }
 
@@ -84,6 +87,7 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
   const handleOneClickZap = async () => {
     try {
       setIsZapping(true)
+      flashElement()
       const amount = Number(defaultZapAmount) * 1000
 
       const lnPay: LnPayCb = async ({pr}) => {
@@ -105,7 +109,6 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
       })
 
       await zapper.zap()
-      flashElement()
     } catch (error) {
       console.warn("Unable to one-click zap:", error)
     } finally {
