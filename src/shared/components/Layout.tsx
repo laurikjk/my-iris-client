@@ -28,6 +28,7 @@ const Layout = () => {
     "home/showLoginDialog",
     false
   )
+  const [cashuEnabled] = useLocalState("user/cashuEnabled", false)
   const navigate = useNavigate()
   const navigationType = useNavigationType()
   const location = useLocation()
@@ -105,11 +106,23 @@ const Layout = () => {
 
   return (
     <div className="relative flex flex-col w-full max-w-screen-xl min-h-screen overscroll-none">
-      <div className="flex relative min-h-screen flex-1 overscroll-none">
+      <div
+        className="flex relative min-h-screen flex-1 overscroll-none"
+        id="main-content"
+      >
         <NavSideBar />
-        <div className="flex-1 min-h-screen py-16 md:py-0 overscroll-none mb-[env(safe-area-inset-bottom)]">
+        <div className="relative flex-1 min-h-screen py-16 md:py-0 overscroll-none mb-[env(safe-area-inset-bottom)]">
           <ErrorBoundary>
             <Outlet />
+            {cashuEnabled && (
+              <iframe
+                allow="clipboard-write clipboard-read"
+                src="/cashu"
+                className="fixed top-0 left-0 w-0 h-0 border-none"
+                style={{zIndex: -1}}
+                title="Background Cashu Wallet"
+              />
+            )}
           </ErrorBoundary>
         </div>
       </div>

@@ -4,6 +4,7 @@ import {ChangeEvent, useState, useEffect} from "react"
 const WalletSettings = () => {
   const [isWalletConnect, setIsWalletConnect] = useLocalState("user/walletConnect", false)
   const [balance, setBalance] = useState<number | null>(null)
+  const [cashuEnabled, setCashuEnabled] = useLocalState("user/cashuEnabled", false)
 
   const [defaultZapAmount, setDefaultZapAmount] = useLocalState(
     "user/defaultZapAmount",
@@ -55,8 +56,20 @@ const WalletSettings = () => {
   }
 
   return (
-    <div className="mb-4">
-      <h2 className="mb-4">Nostr Wallet Connect</h2>
+    <div className="mb-4 prose">
+      <h2>Wallet Settings</h2>
+      <div className="flex flex-col gap-4">
+        <h3>Cashu Wallet</h3>
+        <div>
+          <button
+            className={`btn ${cashuEnabled ? "btn-error" : "btn-primary"}`}
+            onClick={() => setCashuEnabled(!cashuEnabled)}
+          >
+            {cashuEnabled ? "Disable" : "Enable"} Cashu Wallet
+          </button>
+        </div>
+      </div>
+      <h3>Nostr Wallet Connect</h3>
       <div className="py-2 flex flex-col gap-4">
         {!isWalletConnect ? (
           <div>
@@ -74,6 +87,7 @@ const WalletSettings = () => {
         )}
       </div>
       <div className="flex flex-col gap-4">
+        <h3>Zaps</h3>
         <p>Default zap amount (sats)</p>
         <div>
           <input
