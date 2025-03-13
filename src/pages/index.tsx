@@ -23,29 +23,29 @@ export const router = createBrowserRouter(
       <Route path="/" element={<HomePage />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/wallet" element={<WalletPage />} />
-      <Route 
-        path="/messages/*" 
+      <Route
+        path="/messages/*"
         element={
           <Suspense fallback={<LoadingFallback />}>
             <MessagesPage />
           </Suspense>
-        } 
+        }
       />
-      <Route 
-        path="/settings/*" 
+      <Route
+        path="/settings/*"
         element={
           <Suspense fallback={<LoadingFallback />}>
             <SettingsPage />
           </Suspense>
-        } 
+        }
       />
-      <Route 
-        path="/explorer/:file?" 
+      <Route
+        path="/explorer/:file?"
         element={
           <Suspense fallback={<LoadingFallback />}>
             <Explorer />
           </Suspense>
-        } 
+        }
       />
       <Route path="/search/:query?" element={<SearchPage />} />
       <Route path="/about" element={<AboutPage />} />

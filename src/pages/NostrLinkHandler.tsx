@@ -1,5 +1,5 @@
-import {useParams, useNavigate, useLocation} from "react-router"
-import {useEffect, useState} from "react"
+import {useParams, useNavigate} from "react-router"
+import {useEffect, useState, useMemo} from "react"
 import {nip05, nip19} from "nostr-tools"
 import {Page404} from "@/pages/Page404"
 import ThreadPage from "@/pages/thread"
@@ -8,7 +8,6 @@ import ProfilePage from "@/pages/user"
 export default function NostrLinkHandler() {
   const {link} = useParams()
   const navigate = useNavigate()
-  const location = useLocation()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>()
   const [pubkey, setPubkey] = useState<string>()
@@ -19,7 +18,7 @@ export default function NostrLinkHandler() {
   }>()
 
   // Clean web+nostr:// prefix if present
-  const cleanLink = link?.replace(/^web\+nostr:\/\//, "")
+  const cleanLink = useMemo(() => link?.replace(/^web\+nostr:\/\//, ""), [link])
 
   useEffect(() => {
     if (link !== cleanLink) {
@@ -45,23 +44,19 @@ export default function NostrLinkHandler() {
           setPubkey(decoded.data as string)
         } else if (isAddress) {
           const decoded = nip19.decode(cleanLink)
-          setNaddrData(decoded.data as any)
+          const data = decoded.data as {pubkey: string; kind: number; identifier: string}
+          setNaddrData(data)
         } else if (cleanLink.includes("@") || !isNote) {
           // Try exact match first
-          console.log("Attempting NIP-05 resolution for:", cleanLink)
           let resolved = await nip05.queryProfile(cleanLink)
-          console.log("First attempt result:", resolved)
 
           // If not found and doesn't include @iris.to, try with @iris.to
           if (!resolved && !cleanLink.includes("@iris.to")) {
             const withIris = `${cleanLink}@iris.to`
-            console.log("Trying with iris.to:", withIris)
             resolved = await nip05.queryProfile(withIris)
-            console.log("Second attempt result:", resolved)
           }
 
           if (!resolved) throw new Error("NIP-05 address not found")
-          console.log("Setting pubkey to:", resolved.pubkey)
           setPubkey(resolved.pubkey)
           setLoading(false)
           return
@@ -89,22 +84,15 @@ export default function NostrLinkHandler() {
   }
 
   if ((isProfile || !isNote) && pubkey) {
-    return <ProfilePage pubKey={pubkey} key={pubkey || location.pathname} />
+    return <ProfilePage pubKey={pubkey} />
   }
 
   if (isNote) {
-    return <ThreadPage id={cleanLink!} key={location.pathname} />
+    return <ThreadPage id={cleanLink!} />
   }
 
   if (isAddress && naddrData) {
-    return (
-      <ThreadPage
-        id={cleanLink!}
-        isNaddr={true}
-        naddrData={naddrData}
-        key={location.pathname}
-      />
-    )
+    return <ThreadPage id={cleanLink!} isNaddr={true} naddrData={naddrData} />
   }
 
   return <Page404 />
