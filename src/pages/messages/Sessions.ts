@@ -12,8 +12,8 @@ import {Filter, VerifiedEvent} from "nostr-tools"
 import {JsonObject, localState} from "irisdb/src"
 import {profileCache} from "@/utils/memcache"
 import AnimalName from "@/utils/AnimalName"
+import {trackEvent} from "@/utils/IrisAPI"
 import {ndk} from "@/utils/ndk"
-import { trackEvent } from "@/utils/IrisAPI"
 
 const sessions = new Map<string, Session | undefined>()
 

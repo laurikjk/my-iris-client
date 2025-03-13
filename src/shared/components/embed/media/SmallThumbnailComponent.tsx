@@ -2,6 +2,7 @@ import {generateProxyUrl} from "../../../utils/imgproxy"
 import {RiVideoLine} from "@remixicon/react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useState, MouseEvent} from "react"
+import ProxyImg from "../../ProxyImg"
 import {localState} from "irisdb/src"
 import classNames from "classnames"
 
@@ -33,15 +34,17 @@ function SmallThumbnailComponent({match, event}: SmallThumbnailComponentProps) {
   }
 
   return (
-    <div className="relative w-12 h-12 object-contain my-2">
+    <div className="my-2">
       {error ? (
-        <RiVideoLine className="w-12 h-12" />
+        <RiVideoLine className="w-24 h-24" />
       ) : (
-        <img
+        <ProxyImg
+          square={true}
           onClick={onClick}
           onError={() => setError(true)}
-          className={classNames("rounded w-24 h-24", {"blur-xl": blur})}
-          src={generateProxyUrl(match, {width: 192})}
+          className={classNames("rounded object-cover w-24 h-24", {"blur-xl": blur})}
+          src={match}
+          width={90}
           alt="thumbnail"
         />
       )}
