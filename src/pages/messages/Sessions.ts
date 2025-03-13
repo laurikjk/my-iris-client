@@ -13,6 +13,7 @@ import {JsonObject, localState} from "irisdb/src"
 import {profileCache} from "@/utils/memcache"
 import AnimalName from "@/utils/AnimalName"
 import {ndk} from "@/utils/ndk"
+import { trackEvent } from "@/utils/IrisAPI"
 
 const sessions = new Map<string, Session | undefined>()
 
@@ -96,6 +97,15 @@ async function handleNewSessionEvent(id: string, session: Session, event: Rumor)
       .get("reactions")
       .put({})
     await updateLatestMessageIfNewer(id, event)
+
+    // Track first ever DM receipt
+    if (!localStorage.getItem("has_received_first_dm")) {
+      localStorage.setItem("has_received_first_dm", "true")
+      const delay = Math.random() * 10000 // Random delay between 0-10 seconds
+      setTimeout(() => {
+        trackEvent("has_received_dms")
+      }, delay)
+    }
   }
   handleEventNotification(id, event)
 }
