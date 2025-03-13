@@ -1,6 +1,5 @@
 import UnseenNotificationsBadge from "./UnseenNotificationsBadge"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import Show from "@/shared/components/Show.tsx"
 import {NavLink} from "react-router"
 import Icon from "../Icons/Icon"
 
@@ -9,7 +8,7 @@ export default function NotificationButton() {
 
   return (
     <>
-      <Show when={!!myPubKey}>
+      {myPubKey && (
         <NavLink
           to={`/notifications`}
           className={({isActive}) =>
@@ -23,7 +22,7 @@ export default function NotificationButton() {
             </span>
           )}
         </NavLink>
-      </Show>
+      )}
     </>
   )
 }

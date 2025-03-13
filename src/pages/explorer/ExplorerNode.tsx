@@ -3,7 +3,6 @@ import {RiArrowRightSLine} from "@remixicon/react"
 import {useEffect, useState} from "react"
 
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import Show from "@/shared/components/Show"
 
 import {ExplorerNodeEditRow} from "./ExplorerNodeEditRow"
 import ExplorerNodeValue from "./ExplorerNodeValue"
@@ -60,13 +59,13 @@ export default function ExplorerNode({
         onClick={toggleOpen}
         style={{paddingLeft}}
       >
-        <Show when={isDir}>
+        {isDir && (
           <RiArrowRightSLine
             className={`w-4 h-4 transition ${isOpen ? "transform rotate-90" : ""}`}
           />
-        </Show>
+        )}
         <span className="ml-1 w-1/3 truncate">{displayName}</span>
-        <Show when={!isDir}>
+        {!isDir && (
           <div className="ml-auto w-1/2">
             <ExplorerNodeValue
               displayName={displayName}
@@ -74,7 +73,7 @@ export default function ExplorerNode({
               setValue={(v) => node.put(v)}
             />
           </div>
-        </Show>
+        )}
       </div>
       {isDir && isOpen ? (
         <div>

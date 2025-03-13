@@ -85,7 +85,9 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
       </div>
       {notification.kind === 1 && (
         <div className="ml-8 rounded-lg mt-1 px-3 py-4 cursor-pointer">
-          <HyperText>{notification.content}</HyperText>
+          <div className="overflow-hidden text-ellipsis">
+            <HyperText>{notification.content}</HyperText>
+          </div>
         </div>
       )}
       {notification.kind !== 1 && (

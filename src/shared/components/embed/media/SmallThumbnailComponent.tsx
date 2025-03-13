@@ -1,4 +1,3 @@
-import {generateProxyUrl} from "../../../utils/imgproxy"
 import {RiVideoLine} from "@remixicon/react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useState, MouseEvent} from "react"

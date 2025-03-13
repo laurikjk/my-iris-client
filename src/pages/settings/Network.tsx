@@ -3,7 +3,6 @@ import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiDeleteBinLine} from "@remixicon/react"
 
 import {DEFAULT_RELAYS, ndk as getNdk} from "@/utils/ndk"
-import Show from "@/shared/components/Show.tsx"
 
 export function Network() {
   const ndk = getNdk()
@@ -87,13 +86,13 @@ export function Network() {
           <button className="btn btn-primary ml-2">Add Relay</button>
         </form>
       </div>
-      <Show when={!hasDefaultRelays}>
+      {!hasDefaultRelays && (
         <div className="mt-4">
           <button className="btn btn-secondary" onClick={resetDefaults}>
             Reset to defaults
           </button>
         </div>
-      </Show>
+      )}
     </div>
   )
 }
