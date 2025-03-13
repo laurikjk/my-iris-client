@@ -1,15 +1,21 @@
 import {createBrowserRouter, createRoutesFromElements, Route} from "react-router"
+import {lazy, Suspense} from "react"
 
 import NostrLinkHandler from "@/pages/NostrLinkHandler.tsx"
 import Notifications from "./notifications/Notifications"
-import Explorer from "@/pages/explorer/Explorer"
 import Layout from "@/shared/components/Layout"
 import WalletPage from "./wallet/WalletPage"
-import SettingsPage from "@/pages/settings"
-import MessagesPage from "@/pages/messages"
 import {AboutPage} from "@/pages/HelpPage"
 import SearchPage from "@/pages/search"
 import HomePage from "@/pages/home"
+
+// Lazy load components
+const MessagesPage = lazy(() => import("@/pages/messages"))
+const SettingsPage = lazy(() => import("@/pages/settings"))
+const Explorer = lazy(() => import("@/pages/explorer/Explorer"))
+
+// Loading component for Suspense
+const LoadingFallback = () => <div>Loading...</div>
 
 export const router = createBrowserRouter(
   createRoutesFromElements([
@@ -17,9 +23,30 @@ export const router = createBrowserRouter(
       <Route path="/" element={<HomePage />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/wallet" element={<WalletPage />} />
-      <Route path="/messages/*" element={<MessagesPage />} />
-      <Route path="/settings/*" element={<SettingsPage />} />
-      <Route path="/explorer/:file?" element={<Explorer />} />
+      <Route 
+        path="/messages/*" 
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <MessagesPage />
+          </Suspense>
+        } 
+      />
+      <Route 
+        path="/settings/*" 
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <SettingsPage />
+          </Suspense>
+        } 
+      />
+      <Route 
+        path="/explorer/:file?" 
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <Explorer />
+          </Suspense>
+        } 
+      />
       <Route path="/search/:query?" element={<SearchPage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/:link/*" element={<NostrLinkHandler />} />

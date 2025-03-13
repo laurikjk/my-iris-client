@@ -1,9 +1,9 @@
 import {LnPayCb, NDKEvent, NDKZapper} from "@nostr-dev-kit/ndk"
 import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import {RefObject, useEffect, useState, useRef} from "react"
 import {shouldHideEvent} from "@/utils/socialGraph.ts"
 import useProfile from "@/shared/hooks/useProfile.ts"
-import {RefObject, useEffect, useState} from "react"
 import {getZappingUser} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
@@ -31,6 +31,8 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
   const [isWalletConnect] = useLocalState("user/walletConnect", false)
   const [defaultZapAmount] = useLocalState("user/defaultZapAmount", undefined)
   const [isZapping, setIsZapping] = useState(false)
+  const longPressTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const [isLongPress, setIsLongPress] = useState(false)
 
   const profile = useProfile(event.pubkey)
 
@@ -117,6 +119,26 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
     }
   }
 
+  const handleMouseDown = () => {
+    setIsLongPress(false)
+    longPressTimeout.current = setTimeout(() => {
+      setIsLongPress(true)
+      setShowZapModal(true)
+    }, 500)
+  }
+
+  const handleMouseUp = () => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current)
+    }
+  }
+
+  const handleClick = () => {
+    if (!isLongPress) {
+      handleZapClick()
+    }
+  }
+
   useEffect(() => {
     const filter = {
       kinds: [9735],
@@ -192,7 +214,12 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
         className={`${
           zapped ? "cursor-pointer text-accent" : "cursor-pointer hover:text-accent"
         } flex flex-row items-center gap-1 transition duration-200 ease-in-out min-w-[50px] md:min-w-[80px]`}
-        onClick={handleZapClick}
+        onClick={handleClick}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onTouchStart={handleMouseDown}
+        onTouchEnd={handleMouseUp}
       >
         {isZapping ? (
           <div className="loading loading-spinner loading-xs" />
