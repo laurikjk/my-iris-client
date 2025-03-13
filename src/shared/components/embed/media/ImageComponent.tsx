@@ -35,7 +35,7 @@ const ImageComponent = ({
         <div className="my-2 text-sm break-all">{match}</div>
       ) : (
         <ProxyImg
-          width={650}
+          width={Math.min(650, window.innerWidth)}
           onError={() => setHasError(true)}
           onClick={onClick}
           className={classNames("my-2 max-w-full cursor-pointer object-contain", {
