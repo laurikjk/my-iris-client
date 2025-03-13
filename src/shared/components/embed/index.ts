@@ -72,6 +72,7 @@ export const allEmbeds = [
 
 export const mediaEmbeds = [
   Audio,
+  MediaEmbed,
   YouTube,
   Instagram,
   SoundCloud,
