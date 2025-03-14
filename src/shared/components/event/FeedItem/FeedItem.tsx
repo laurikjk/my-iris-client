@@ -147,7 +147,7 @@ function FeedItem({
     }
   }, [eventIdHex])
 
-  const wrapperClasses = classNames("relative", {
+  const wrapperClasses = classNames("relative max-w-[100vw]", {
     "h-[200px] overflow-hidden": asEmbed && !expanded,
   })
 
