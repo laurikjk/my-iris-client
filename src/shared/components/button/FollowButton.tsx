@@ -1,14 +1,16 @@
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
 import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
 import {useMemo, useState} from "react"
 
 import {unmuteUser} from "@/shared/services/Mute"
 import socialGraph from "@/utils/socialGraph.ts"
+import {localState} from "irisdb"
 import {ndk} from "@/utils/ndk"
 
+let myPubKey = ""
+localState.get("user/publicKey").on((k) => (myPubKey = k as string))
+
 export function FollowButton({pubKey, small = true}: {pubKey: string; small?: boolean}) {
-  const [myPubKey] = useLocalState("user/publicKey", "", String)
   const [isHovering, setIsHovering] = useState(false)
   const [, setUpdated] = useState(0)
   const pubKeyHex = useMemo(() => {

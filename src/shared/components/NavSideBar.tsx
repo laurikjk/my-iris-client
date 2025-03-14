@@ -12,6 +12,7 @@ import NavLink from "./NavLink"
 import UnseenMessagesBadge from "./messages/UnseenMessagesBadge"
 import PublicKeyQRCodeButton from "./user/PublicKeyQRCodeButton"
 import ErrorBoundary from "./ui/ErrorBoundary"
+import {localState} from "irisdb"
 
 interface NavItemProps {
   to: string
@@ -23,6 +24,9 @@ interface NavItemProps {
   children?: ReactNode
   className?: string
 }
+
+let myPubKey = ""
+localState.get("user/publicKey").on((k) => (myPubKey = k as string))
 
 const NavItem = ({
   to,
@@ -202,7 +206,6 @@ const navItemsConfig = (myPubKey: string): Record<string, NavItemConfig> => ({
 
 const NavSideBar = () => {
   const ref = useRef<HTMLDivElement>(null)
-  const [myPubKey] = useLocalState("user/publicKey", "")
   const [isSidebarOpen, setIsSidebarOpen] = useLocalState("isSidebarOpen", false)
   const [, setShowLoginDialog] = useLocalState("home/showLoginDialog", false)
 
