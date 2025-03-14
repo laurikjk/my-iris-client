@@ -7,7 +7,7 @@ export const handleEventContent = async (
   setReferredEvent: (event: NDKEvent) => void
 ) => {
   try {
-    if (event.kind === 6 || event.kind === 9372 || event.kind === 7) {
+    if (event.kind === 6 || event.kind === 7) {
       let originalEvent
       try {
         originalEvent = event.content ? JSON.parse(event.content) : undefined
@@ -29,30 +29,6 @@ export const handleEventContent = async (
     console.warn(error)
   }
 }
-export const fetchDeletionRequest = async (
-  event: NDKEvent,
-  setReferredEventDeleted: (value: boolean) => void
-) => {
-  try {
-    if (event.kind === 6 || event.kind === 9372) {
-      const originalAuthor = event.tagValue("p")
-      const originalEventId = event.tagValue("e")
-
-      if (originalAuthor && originalEventId) {
-        const filter = {
-          kinds: [5],
-          authors: [originalAuthor],
-          ["#e"]: [originalEventId],
-        }
-
-        const deletionEvent = await fetchEvent(filter)
-        if (deletionEvent) setReferredEventDeleted(true)
-      }
-    }
-  } catch (error) {
-    console.warn(error)
-  }
-}
 export const getEventIdHex = (event?: NDKEvent, eventId?: string) => {
   if (event?.id) {
     return event.id
@@ -68,24 +44,4 @@ export const getEventIdHex = (event?: NDKEvent, eventId?: string) => {
     throw new Error("FeedItem requires either an event or an eventId")
   }
   return eventId
-}
-
-export const toRootNote = (
-  event: NDKEvent | undefined,
-  navigate: (path: string) => void
-) => {
-  try {
-    const rootNoteId = event?.tags.filter(
-      (tag) => tag[0] === "e" && tag[3] === "root"
-    )[0][1]
-    if (rootNoteId) {
-      fetchEvent({ids: [rootNoteId]}).then((event: NDKEvent) => {
-        if (event) {
-          navigate(`/${event.encode()}`)
-        }
-      })
-    }
-  } catch (error) {
-    console.warn("No root note found")
-  }
 }

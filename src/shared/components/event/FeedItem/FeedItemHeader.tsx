@@ -6,8 +6,6 @@ import {nip19} from "nostr-tools"
 
 import RelativeTime from "@/shared/components/event/RelativeTime.tsx"
 import FeedItemDropdown from "../reactions/FeedItemDropdown.tsx"
-import {UserRow} from "@/shared/components/user/UserRow.tsx"
-import {EVENT_AVATAR_WIDTH} from "../../user/const.ts"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 type FeedItemHeaderProps = {
@@ -17,11 +15,6 @@ type FeedItemHeaderProps = {
 }
 
 function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
-  const isRezap = event?.tags
-    .filter((tag) => tag[0] === "e")
-    .toString()
-    .includes("rezap")
-
   const [publishedAt, setPublishedAt] = useState<number>(0)
   const [showDropdown, setShowDropdown] = useState(false)
 
@@ -76,19 +69,6 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
     <header
       className={classNames("flex justify-between items-center px-4", {"mb-2": !tight})}
     >
-      {!isRezap && (
-        <div className="cursor-pointer font-bold">
-          <UserRow
-            avatarWidth={EVENT_AVATAR_WIDTH}
-            showHoverCard={true}
-            pubKey={
-              (event.kind === 9735 && event.tagValue("P")
-                ? event.tagValue("P")
-                : referredEvent?.pubkey) || event.pubkey
-            }
-          />
-        </div>
-      )}
       <div className="select-none flex justify-end items-center">
         <Link
           to={`/${nip19.noteEncode(event.id)}`}

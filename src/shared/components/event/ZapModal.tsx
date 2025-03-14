@@ -18,10 +18,9 @@ interface ZapModalProps {
   onClose: () => void
   event: NDKEvent
   setZapped: Dispatch<SetStateAction<boolean>>
-  rezappedEvent?: NDKEvent
 }
 
-function ZapModal({onClose, event, setZapped, rezappedEvent}: ZapModalProps) {
+function ZapModal({onClose, event, setZapped}: ZapModalProps) {
   const [defaultZapAmount] = useLocalState("user/defaultZapAmount", 21)
   const [copiedPaymentRequest, setCopiedPaymentRequest] = useState(false)
   const [noAddress, setNoAddress] = useState(false)
@@ -100,21 +99,6 @@ function ZapModal({onClose, event, setZapped, rezappedEvent}: ZapModalProps) {
     }
   }
 
-  const rezap = async (receipt: NDKEvent) => {
-    if (rezappedEvent && receipt) {
-      const rezapEvent = new NDKEvent(ndk())
-      rezapEvent.kind = 1
-      rezapEvent.tags = [
-        ["e", rezappedEvent.id, "", "mention", rezappedEvent.pubkey],
-        ["e", rezappedEvent.id, "", "rezap", rezappedEvent.pubkey],
-      ]
-      rezapEvent.content = `nostr:${receipt.encode()}\nnostr:${rezappedEvent.encode()}`
-      rezapEvent
-        .publish()
-        .catch((error) => console.warn("Unable to publish rezap event", error))
-    }
-  }
-
   const fetchZapReceipt = () => {
     const filter = {
       kinds: [9735],
@@ -140,7 +124,6 @@ function ZapModal({onClose, event, setZapped, rezappedEvent}: ZapModalProps) {
           const amountRequested = zapRequest?.amount ? zapRequest.amount / 1000 : -1
 
           if (bolt11Invoice === receiptInvoice && amountPaid === amountRequested) {
-            if (rezappedEvent) rezap(event)
             setZapped(true)
             onClose()
           }

@@ -7,7 +7,6 @@ import {ndk} from "@/utils/ndk"
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import Dropdown from "@/shared/components/ui/Dropdown"
 import Modal from "@/shared/components/ui/Modal.tsx"
-import {serializeEvent} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
 import Icon from "../../Icons/Icon"
@@ -42,31 +41,14 @@ function FeedItemRepost({event}: FeedItemRepostProps) {
     if (reposted) return
     setShowButtons(false)
     try {
-      if (event.kind === 1) {
-        event.repost()
-        setRepostsByAuthor((prev) => {
-          const newSet = new Set(prev)
-          newSet.add(myPubKey)
-          repostCache.set(event.id, newSet)
-          setRepostCount(newSet.size)
-          return newSet
-        })
-      } else {
-        const repostEvent = new NDKEvent()
-        repostEvent.ndk = ndk()
-        repostEvent.kind = 9372
-        repostEvent.content = serializeEvent(event)
-        repostEvent.tags = [["e", event.id, "", "mention", event.pubkey]]
-
-        repostEvent.publish()
-        setRepostsByAuthor((prev) => {
-          const newSet = new Set(prev)
-          newSet.add(myPubKey)
-          repostCache.set(event.id, newSet)
-          setRepostCount(newSet.size)
-          return newSet
-        })
-      }
+      event.repost()
+      setRepostsByAuthor((prev) => {
+        const newSet = new Set(prev)
+        newSet.add(myPubKey)
+        repostCache.set(event.id, newSet)
+        setRepostCount(newSet.size)
+        return newSet
+      })
     } catch (error) {
       console.warn("Unable to repost", error)
     }

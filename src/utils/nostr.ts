@@ -318,9 +318,3 @@ export const isQuote = (event: NDKEvent): boolean => {
   if (event.content.match(eventRegex)) return true
   return false
 }
-export const isRezap = (event: NDKEvent): boolean => {
-  return event?.tags
-    .filter((tag) => tag[0] === "e")
-    .toString()
-    .includes("rezap")
-}

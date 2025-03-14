@@ -3,7 +3,7 @@ import {useEffect, useMemo, useState, useRef} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 
-import {getEventReplyingTo, isRezap, fetchEvent, getEventRoot} from "@/utils/nostr.ts"
+import {getEventReplyingTo, fetchEvent, getEventRoot, isRepost} from "@/utils/nostr.ts"
 import {getEventIdHex, handleEventContent} from "@/shared/components/event/utils.ts"
 import RepostHeader from "@/shared/components/event/RepostHeader.tsx"
 import FeedItemActions from "../reactions/FeedItemActions.tsx"
@@ -16,7 +16,6 @@ import FeedItemHeader from "./FeedItemHeader.tsx"
 import socialGraph from "@/utils/socialGraph.ts"
 import FeedItemTitle from "./FeedItemTitle.tsx"
 import {Link, useNavigate} from "react-router"
-import RezapHeader from "../RezapHeader.tsx"
 import LikeHeader from "../LikeHeader"
 import {nip19} from "nostr-tools"
 
@@ -194,7 +193,7 @@ function FeedItem({
           </Link>
         </div>
       )}
-      {event.kind === 1 && showRepliedTo && repliedToEventId && !isRezap(event) && (
+      {event.kind === 1 && showRepliedTo && repliedToEventId && (
         <>
           <FeedItem
             borderTop={borderTop}
@@ -225,12 +224,9 @@ function FeedItem({
           {asRepliedTo && (
             <div className="h-full w-0.5 bg-base-300 absolute top-12 left-9" />
           )}
-          {(event.kind === 6 || event.kind === 9372 || isRezap(event)) && (
+          {isRepost(event) && (
             <div className="flex flex-row select-none mb-2 px-4">
-              {(event.kind === 6 || event.kind === 9372) && (
-                <RepostHeader event={event} />
-              )}
-              {isRezap(event) && <RezapHeader event={event} />}
+              <RepostHeader event={event} />
             </div>
           )}
           {event.kind === 7 && (
