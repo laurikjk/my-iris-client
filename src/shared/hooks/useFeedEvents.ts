@@ -126,8 +126,10 @@ export default function useFeedEvents({
     if (!hideEventsByUnknownUsers) {
       return []
     }
-    return Array.from(eventsRef.current.values()).filter(shouldHideEvent)
-  }, [eventsRef.current.size])
+    return Array.from(eventsRef.current.values()).filter(
+      (event) => (!displayFilterFn || displayFilterFn(event)) && shouldHideEvent(event)
+    )
+  }, [eventsRef.current.size, displayFilterFn])
 
   useEffect(() => {
     setLocalFilter(filters)
