@@ -143,8 +143,9 @@ export function getEventRoot(event: NDKEvent) {
   if (rootEvent) {
     return rootEvent
   }
+  const quotedEvent = getQuotedEvent(event)
   // first e tag
-  return event?.tags?.find((t) => t[0] === "e")?.[1]
+  return event?.tags?.find((t) => t[0] === "e" && t[1] !== quotedEvent)?.[1]
 }
 
 export function getLikedEventId(event: NDKEvent) {
@@ -307,14 +308,19 @@ export const getCachedName = (pubKey: string): string => {
 
   return name || AnimalName(pubKey)
 }
-export const isQuote = (event: NDKEvent): boolean => {
-  if (event.kind === 1 && event.tagValue("q")) return true
-  if (
-    event.tags
-      .filter((tag) => tag[0] === "e")
-      .filter((tag) => tag[3] === "mention" && tag[1] === event.id).length
-  )
-    return true
-  if (event.content.match(eventRegex)) return true
+
+export const getQuotedEvent = (event: NDKEvent): string | false => {
+  const qTag = event.tagValue("q")
+  if (event.kind === 1 && qTag) return qTag
+  const mentionTag = event.tags
+    .filter((tag) => tag[0] === "e")
+    .find((tag) => tag[3] === "mention" && tag[1] === event.id)
+  if (mentionTag) return mentionTag[1]
+  const match = event.content.match(eventRegex)
+  if (match) return match[1]
   return false
+}
+
+export const isQuote = (event: NDKEvent): boolean => {
+  return !!getQuotedEvent(event)
 }
