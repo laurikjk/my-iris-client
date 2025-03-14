@@ -11,6 +11,7 @@ import Icon from "../../Icons/Icon"
 
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import {LRUCache} from "typescript-lru-cache"
+import { getEventReplyingTo } from "@/utils/nostr"
 
 interface FeedItemCommentProps {
   event: NDKEvent
@@ -52,9 +53,9 @@ function FeedItemComment({event}: FeedItemCommentProps) {
     try {
       const sub = ndk().subscribe(filter)
 
-      sub?.on("event", (event: NDKEvent) => {
-        if (shouldHideEvent(event)) return
-        replies.add(event.id)
+      sub?.on("event", (e: NDKEvent) => {
+        if (shouldHideEvent(e) || getEventReplyingTo(e) !== event.id) return
+        replies.add(e.id)
         debouncedSetReplyCount(replies.size)
       })
 

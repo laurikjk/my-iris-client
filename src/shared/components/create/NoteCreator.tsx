@@ -203,15 +203,16 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
   const publish = () => {
     const event = new NDKEvent(ndk())
     event.kind = 1
-    if (repliedEvent && repliedEvent.kind !== 1) event.kind = 9373
     event.content = noteContent
-    event.ndk = ndk()
+    event.tags = []
     if (repliedEvent) {
       event.tags = [
-        ["q", repliedEvent.id],
         ["p", repliedEvent.pubkey],
         ["e", repliedEvent.id, "", "reply", repliedEvent.pubkey],
       ]
+    }
+    if (quotedEvent) {
+      event.tags.push(["e", quotedEvent.id, "", "mention", quotedEvent.pubkey])
     }
     addPTags(event, repliedEvent, quotedEvent)
     event.sign().then(() => {

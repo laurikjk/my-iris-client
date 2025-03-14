@@ -121,7 +121,7 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
             <button onClick={handleCopyText}>Copy Note Content</button>
           </li>
           <li>
-            <button onClick={handleShowRawJson}>Show Raw JSON</button>
+            <button onClick={handleShowRawJson}>Show Raw Data</button>
           </li>
           <li>
             <button onClick={handleCopyAuthorID}>Copy Author ID</button>

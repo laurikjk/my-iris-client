@@ -67,41 +67,18 @@ export function formatUnixTimestamp(timestamp: number): string {
   }
 }
 
-export function getReferredEventId(event: NDKEvent) {
-  let id = event.tags?.find((tag) => tag[0] === "e" && tag[3] === "mention")?.[1]
-  if (id) {
-    return id
-  }
-  // last e tag is the reposted post
-  id = event.tags
-    .slice() // so we don't reverse event.tags in place
-    .reverse()
-    .find((tag: NDKTag) => tag[0] === "e")?.[1]
-  return id
-}
-export function getOriginalPostEventId(event: NDKEvent) {
-  return isRepost(event) ? getReferredEventId(event) : event.id
-}
-export function getNoteReplyingTo(event: NDKEvent) {
-  if (event.kind !== 1) {
-    return undefined
-  }
-  return getEventReplyingTo(event)
-}
 export function getEventReplyingTo(event: NDKEvent) {
   if (event.kind !== 1) {
     return undefined
   }
+  const qEvent = event.tags?.find((tag) => tag[0] === "q")?.[1]
   const replyTags = event.tags?.filter((tag) => tag[0] === "e" && tag[3] !== "mention")
-  if (replyTags.length === 1) {
+  if (replyTags.length === 1 && replyTags[0][1] !== qEvent) {
     return replyTags[0][1]
   }
   const replyTag = event.tags?.find((tag) => tag[0] === "e" && tag[3] === "reply")
   if (replyTag) {
     return replyTag[1]
-  }
-  if (replyTags.length > 1) {
-    return replyTags[1][1]
   }
   return undefined
 }
@@ -331,7 +308,6 @@ export const getCachedName = (pubKey: string): string => {
   return name || AnimalName(pubKey)
 }
 export const isQuote = (event: NDKEvent): boolean => {
-  if (event.kind === 9373 && event.tagValue("q")) return true
   if (event.kind === 1 && event.tagValue("q")) return true
   if (
     event.tags
