@@ -27,7 +27,7 @@ interface NoteCreatorProps {
 
 function addPTags(event: NDKEvent, repliedEvent?: NDKEvent, quotedEvent?: NDKEvent) {
   const uniquePTags = new Set<string>()
-  const uniqueETags = new Set<string>()
+  const eTags: NDKTag[] = []
   const otherTags: NDKTag[] = []
 
   if (event.pubkey) {
@@ -39,19 +39,21 @@ function addPTags(event: NDKEvent, repliedEvent?: NDKEvent, quotedEvent?: NDKEve
     if (tag[0] === "p" && tag[1]?.trim()) {
       uniquePTags.add(tag[1])
     } else if (tag[0] === "e" && tag[1]?.trim()) {
-      uniqueETags.add(tag[1])
+      // Store complete e-tag instead of just the ID
+      eTags.push(tag)
     } else if (tag[0] !== "p" && tag[0] !== "e") {
       otherTags.push(tag)
     }
   })
 
-  // Add p-tags from events and e-tag the events themselves
+  // Add p-tags from events
   if (repliedEvent) {
     if (repliedEvent.pubkey?.trim()) {
       uniquePTags.add(repliedEvent.pubkey)
     }
+    // Preserve full e-tag for reply
     if (repliedEvent.id?.trim()) {
-      uniqueETags.add(repliedEvent.id)
+      eTags.push(["e", repliedEvent.id, "", "reply", repliedEvent.pubkey])
     }
     // Add p-tags from replied event
     repliedEvent.tags.forEach((tag) => {
@@ -65,8 +67,9 @@ function addPTags(event: NDKEvent, repliedEvent?: NDKEvent, quotedEvent?: NDKEve
     if (quotedEvent.pubkey?.trim()) {
       uniquePTags.add(quotedEvent.pubkey)
     }
+    // Preserve full e-tag for quote
     if (quotedEvent.id?.trim()) {
-      uniqueETags.add(quotedEvent.id)
+      eTags.push(["e", quotedEvent.id, "", "mention", quotedEvent.pubkey])
     }
     // Add p-tags from quoted event
     quotedEvent.tags.forEach((tag) => {
@@ -78,11 +81,10 @@ function addPTags(event: NDKEvent, repliedEvent?: NDKEvent, quotedEvent?: NDKEve
 
   // Filter out any empty values and reconstruct tags array
   const validPTags = Array.from(uniquePTags).filter(Boolean)
-  const validETags = Array.from(uniqueETags).filter(Boolean)
 
   event.tags = [
     ...validPTags.map<NDKTag>((pubkey) => ["p", pubkey]),
-    ...validETags.map<NDKTag>((id) => ["e", id]),
+    ...eTags,  // Use complete e-tags instead of reconstructing
     ...otherTags,
   ]
 
