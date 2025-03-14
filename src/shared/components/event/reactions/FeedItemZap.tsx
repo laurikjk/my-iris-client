@@ -2,7 +2,6 @@ import {LnPayCb, NDKEvent, NDKZapper} from "@nostr-dev-kit/ndk"
 import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RefObject, useEffect, useState, useRef} from "react"
-import {shouldHideEvent} from "@/utils/socialGraph.ts"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import {getZappingUser} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
@@ -153,7 +152,7 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
       }, 300)
 
       sub?.on("event", async (zapEvent: NDKEvent) => {
-        if (shouldHideEvent(zapEvent)) return
+        // if (shouldHideEvent(zapEvent)) return // blah. disabling this check enables fake receipts but what can we do
         const invoice = zapEvent.tagValue("bolt11")
         if (invoice) {
           const decodedInvoice = decode(invoice)

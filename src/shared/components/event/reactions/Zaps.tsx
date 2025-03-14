@@ -1,6 +1,5 @@
 import {getZapAmount, getZappingUser} from "@/utils/nostr.ts"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
-import {shouldHideEvent} from "@/utils/socialGraph"
 import {ReactionContent} from "./ReactionContent"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
@@ -21,7 +20,7 @@ export default function Zaps({event}: {event: NDKEvent}) {
       const sub = ndk().subscribe(filter)
 
       sub?.on("event", async (event: NDKEvent) => {
-        if (shouldHideEvent(event)) return
+        // if (shouldHideEvent(event)) return // enables fake zap receipts but what can we do.
         const user = getZappingUser(event)
         const amount = await getZapAmount(event)
         setZapAmountByUser((prev) => {
