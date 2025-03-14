@@ -84,7 +84,7 @@ function addPTags(event: NDKEvent, repliedEvent?: NDKEvent, quotedEvent?: NDKEve
 
   event.tags = [
     ...validPTags.map<NDKTag>((pubkey) => ["p", pubkey]),
-    ...eTags,  // Use complete e-tags instead of reconstructing
+    ...eTags, // Use complete e-tags instead of reconstructing
     ...otherTags,
   ]
 

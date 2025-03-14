@@ -39,6 +39,7 @@ const tabs: Tab[] = [
     displayFilterFn: (e: NDKEvent) => !getEventReplyingTo(e),
     element: ({pubKey, displayFilterFn}) => (
       <Feed
+        key={`feed-${pubKey}`}
         filters={{kinds: [1, 6], authors: [pubKey]}}
         displayFilterFn={displayFilterFn}
         borderTopFirst={true}
@@ -50,6 +51,7 @@ const tabs: Tab[] = [
     path: "replies",
     element: ({pubKey}) => (
       <Feed
+        key={`feed-${pubKey}`}
         filters={{kinds: [1, 6], authors: [pubKey]}}
         showRepliedTo={true}
         borderTopFirst={true}
@@ -62,6 +64,7 @@ const tabs: Tab[] = [
     displayFilterFn: (e: NDKEvent) => hasMedia(e),
     element: ({pubKey, displayFilterFn}) => (
       <Feed
+        key={`feed-${pubKey}`}
         filters={{kinds: [1, 6], authors: [pubKey]}}
         displayFilterFn={displayFilterFn}
         borderTopFirst={true}
@@ -72,7 +75,11 @@ const tabs: Tab[] = [
     name: "Likes",
     path: "likes",
     element: ({pubKey}) => (
-      <Feed filters={{kinds: [7], authors: [pubKey]}} borderTopFirst={true} />
+      <Feed
+        key={`feed-${pubKey}`}
+        filters={{kinds: [7], authors: [pubKey]}}
+        borderTopFirst={true}
+      />
     ),
   },
 ]
