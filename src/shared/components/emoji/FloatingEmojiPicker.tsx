@@ -1,3 +1,4 @@
+import {LoadingFallback} from "@/shared/components/LoadingFallback"
 import {useEffect, useRef, useState, lazy, Suspense} from "react"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import classNames from "classnames"
@@ -85,9 +86,7 @@ export const FloatingEmojiPicker = ({
       className={classNames(getPositionClasses(), className)}
       onClick={(e) => e.stopPropagation()}
     >
-      <Suspense
-        fallback={<div className="p-4 bg-base-100 rounded shadow">Loading...</div>}
-      >
+      <Suspense fallback={<LoadingFallback />}>
         <EmojiPicker
           data={emojiData}
           onEmojiSelect={onEmojiSelect}

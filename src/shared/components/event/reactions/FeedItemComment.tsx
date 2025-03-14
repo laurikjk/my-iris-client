@@ -10,8 +10,8 @@ import {localState} from "irisdb/src"
 import Icon from "../../Icons/Icon"
 
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
+import {getEventReplyingTo} from "@/utils/nostr"
 import {LRUCache} from "typescript-lru-cache"
-import { getEventReplyingTo } from "@/utils/nostr"
 
 interface FeedItemCommentProps {
   event: NDKEvent

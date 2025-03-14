@@ -1,3 +1,4 @@
+import {LoadingFallback} from "@/shared/components/LoadingFallback"
 import {lazy, Suspense, useEffect, useRef, useState} from "react"
 import {RiEmotionLine} from "@remixicon/react"
 
@@ -64,9 +65,7 @@ const EmojiButton = ({onEmojiSelect}: EmojiButtonProps) => {
           className="absolute bottom-14 left-0 z-10"
           data-emoji-picker="true"
         >
-          <Suspense
-            fallback={<div className="p-4 bg-base-100 rounded shadow">Loading...</div>}
-          >
+          <Suspense fallback={<LoadingFallback />}>
             <EmojiPicker
               data={emojiData}
               onEmojiSelect={(emoji: string) => {

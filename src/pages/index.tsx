@@ -1,6 +1,7 @@
 import {createBrowserRouter, createRoutesFromElements, Route} from "react-router"
 import {lazy, Suspense} from "react"
 
+import {LoadingFallback} from "@/shared/components/LoadingFallback"
 import NostrLinkHandler from "@/pages/NostrLinkHandler.tsx"
 import Notifications from "./notifications/Notifications"
 import Layout from "@/shared/components/Layout"
@@ -13,9 +14,6 @@ import HomePage from "@/pages/home"
 const MessagesPage = lazy(() => import("@/pages/messages"))
 const SettingsPage = lazy(() => import("@/pages/settings"))
 const Explorer = lazy(() => import("@/pages/explorer/Explorer"))
-
-// Loading component for Suspense
-const LoadingFallback = () => <div>Loading...</div>
 
 export const router = createBrowserRouter(
   createRoutesFromElements([

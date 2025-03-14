@@ -1,3 +1,4 @@
+import {LoadingFallback} from "@/shared/components/LoadingFallback"
 import CopyButton from "@/shared/components/button/CopyButton.tsx"
 import {useEffect, useState, lazy, Suspense, useMemo} from "react"
 import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
@@ -85,7 +86,7 @@ function QRCodeModal({
     <Modal onClose={onClose}>
       <div className="flex flex-col items-center justify-center p-4 gap-4 max-w-[300px] md:max-w-sm lg:max-w-md">
         {showScanQr ? (
-          <Suspense fallback={<div>Loading scanner...</div>}>
+          <Suspense fallback={<LoadingFallback />}>
             <QRScanner onScanSuccess={handleScanSuccess} />
           </Suspense>
         ) : (
