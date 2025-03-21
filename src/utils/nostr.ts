@@ -84,13 +84,18 @@ export function getEventReplyingTo(event: NDKEvent) {
 }
 
 export async function fetchEvent(filter: NDKFilter): Promise<NDKEvent> {
-  return new Promise((resolve) => {
-    const sub = ndk().subscribe(filter)
-    sub.on("event", (event) => {
-      sub.stop()
-      resolve(event)
-    })
-  })
+  return Promise.race([
+    ndk()
+      .fetchEvent(filter) // maybe should do only this?
+      .then((event) => event || Promise.reject()),
+    new Promise<NDKEvent>((resolve) => {
+      const sub = ndk().subscribe(filter)
+      sub.on("event", (event) => {
+        sub.stop()
+        resolve(event)
+      })
+    }),
+  ])
 }
 
 export function isRepost(event: NDKEvent) {
