@@ -21,22 +21,6 @@ declare const self: ServiceWorkerGlobalScope & {
 precacheAndRoute(self.__WB_MANIFEST)
 clientsClaim()
 
-// cache everything in current domain /assets because precache doesn't seem to include everything
-registerRoute(
-  ({url}) => url.origin === self.location.origin && url.pathname.startsWith("/assets"),
-  new StaleWhileRevalidate({
-    cacheName: "assets-cache",
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 100,
-        matchOptions: {
-          ignoreVary: true,
-        },
-      }),
-    ],
-  })
-)
-
 registerRoute(
   ({url}) => url.pathname.endsWith("/.well-known/nostr.json"),
   new StaleWhileRevalidate({
