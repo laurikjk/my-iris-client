@@ -64,6 +64,10 @@ function FeedItem({
   const [expanded, setExpanded] = useState(false)
   const navigate = useNavigate()
 
+  if (!initialEvent && !eventId) {
+    throw new Error("FeedItem requires either an event or an eventId")
+  }
+
   const eventIdHex = useMemo(() => {
     return getEventIdHex(initialEvent, eventId)
   }, [initialEvent, eventId])
