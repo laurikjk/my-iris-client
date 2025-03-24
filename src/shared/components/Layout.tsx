@@ -124,6 +124,9 @@ const Layout = () => {
                 className="fixed top-0 left-0 w-0 h-0 border-none"
                 style={{zIndex: -1}}
                 title="Background Cashu Wallet"
+                allowFullScreen
+                referrerPolicy="no-referrer"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-clipboard-read allow-clipboard-write"
               />
             )}
           </ErrorBoundary>
