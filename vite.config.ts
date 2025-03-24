@@ -14,7 +14,6 @@ export default defineConfig({
       injectManifest: {
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
       },
-      includeAssets: ["cashu/**/*"],
       strategies: "injectManifest",
       injectRegister: "script",
       manifest: false,
@@ -80,7 +79,6 @@ export default defineConfig({
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(process.env.npm_package_version),
     "import.meta.env.VITE_BUILD_TIME": JSON.stringify(new Date().toISOString()),
   },
-  publicDir: config.get("publicDir"),
   server: {
     proxy: {
       "/cashu": {

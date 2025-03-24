@@ -15,7 +15,6 @@
     "settings",
     "about"
   ],
-  "publicDir": "public/nestr",
   "aboutText": "Nestr aims to facilitate truly sovereign and censorship-resistant code development with social network features provided by the Nostr protocol.",
   "repository": "",
   "features": {
