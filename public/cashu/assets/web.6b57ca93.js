@@ -1,0 +1,1 @@
+import{_ as t}from"./ui.6997086f.js";import"./index.32854d59.js";import"./index.0dba230a.js";class o extends t{async getSafeAreaInsets(){return{insets:{top:0,left:0,right:0,bottom:0}}}async getStatusBarHeight(){return{statusBarHeight:0}}setImmersiveNavigationBar(){throw this.unimplemented("Method not supported on Web.")}}export{o as SafeAreaWeb};
