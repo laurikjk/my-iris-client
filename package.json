@@ -22,6 +22,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --fix",
     "preview": "vite preview",
     "test": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "format": "prettier --write \"**/*.+(js|jsx|tsx|json|yml|yaml|css|md)\""
   },
   "build": {
@@ -80,6 +82,7 @@
     "typescript-lru-cache": "^2.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
     "@tailwindcss/postcss": "^4.0.7",
     "@tailwindcss/typography": "^0.5.16",
     "@types/config": "^3.3.5",
