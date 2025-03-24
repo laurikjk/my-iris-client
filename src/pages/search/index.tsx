@@ -81,6 +81,7 @@ function SearchPage() {
               filters={filters}
               displayFilterFn={displayFilterFn}
               showRepliedTo={false}
+              showFilters={true}
             />
           )}
           {!query && (

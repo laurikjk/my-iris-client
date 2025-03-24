@@ -15,6 +15,7 @@ import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
 import useMutes from "@/shared/hooks/useMutes.ts"
 import MediaFeed from "./MediaFeed"
+import { set } from "lodash"
 
 interface FeedProps {
   filters: NDKFilter
@@ -32,6 +33,7 @@ interface FeedProps {
   showEventsByUnknownUsersButton?: boolean
   displayAs?: "list" | "grid"
   showDisplayAsSelector?: boolean
+  showFilters?: boolean
   onDisplayAsChange?: (display: "list" | "grid") => void
   sortLikedPosts?: boolean
 }
@@ -62,6 +64,7 @@ function Feed({
   showEventsByUnknownUsersButton = true,
   displayAs: initialDisplayAs = "list",
   showDisplayAsSelector = true,
+  showFilters = false,
   onDisplayAsChange,
   sortLikedPosts = false,
 }: FeedProps) {
@@ -72,9 +75,13 @@ function Feed({
   const firstFeedItemRef = useRef<HTMLDivElement>(null)
   const mutes = useMutes()
 
-  const [hideEventsByUnknownUsers] = useLocalState(
+  const [initialHideEventsByUnknownUsers] = useLocalState(
     "settings/hideEventsByUnknownUsers",
     true
+  )
+  const [hideEventsByUnknownUsers, setHideEventsByUnknownUsers] = useHistoryState(
+    initialHideEventsByUnknownUsers,
+    "initialHideEventsByUnknownUsers"
   )
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
 
@@ -141,6 +148,12 @@ function Feed({
     socialGraphLoaded.then(() => setIsSocialGraphLoaded(true))
   }, [])
 
+  useEffect(() => {
+    if (history.state?.initialHideEventsByUnknownUsers === undefined) {
+      setHideEventsByUnknownUsers(initialHideEventsByUnknownUsers)
+    }
+  }, [initialHideEventsByUnknownUsers])
+
   if (!isSocialGraphLoaded) {
     return null
   }
@@ -155,6 +168,18 @@ function Feed({
             onDisplayAsChange?.(display)
           }}
         />
+      )}
+
+      {showFilters && (
+        <div className="flex items-center gap-2 p-2">
+          <input
+            type="checkbox"
+            className="toggle toggle-sm"
+            checked={!hideEventsByUnknownUsers}
+            onChange={(e) => setHideEventsByUnknownUsers(!e.target.checked)}
+          />
+          <span className="text-sm">Show posts from unknown users</span>
+        </div>
       )}
 
       {newEventsFiltered.length > 0 && (
