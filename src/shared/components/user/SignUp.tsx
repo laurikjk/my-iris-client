@@ -48,6 +48,7 @@ export default function SignUp({onClose}: SignUpProps) {
     localState.get("user/privateKey").put(privateKeyHex)
     localState.get("user/publicKey").put(pk)
     localState.get("user/cashuEnabled").put(true)
+    localState.get("user/walletConnect").put(true)
     localStorage.setItem("cashu.ndk.privateKeySignerPrivateKey", privateKeyHex)
     localStorage.setItem("cashu.ndk.pubkey", pk)
     const privateKeySigner = new NDKPrivateKeySigner(privateKeyHex)

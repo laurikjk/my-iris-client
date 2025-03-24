@@ -11,9 +11,13 @@ import Footer from "@/shared/components/Footer.tsx"
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {trackEvent} from "@/utils/IrisAPI"
 import {Helmet} from "react-helmet"
+import {localState} from "irisdb"
 import {useEffect} from "react"
 
 const openedAt = Math.floor(Date.now() / 1000)
+
+let cashuEnabled = false
+localState.get("user/cashuEnabled").on((v) => (cashuEnabled = v as boolean))
 
 interface ServiceWorkerMessage {
   type: "NAVIGATE_REACT_ROUTER"
@@ -28,7 +32,6 @@ const Layout = () => {
     "home/showLoginDialog",
     false
   )
-  const [cashuEnabled] = useLocalState("user/cashuEnabled", false)
   const navigate = useNavigate()
   const navigationType = useNavigationType()
   const location = useLocation()

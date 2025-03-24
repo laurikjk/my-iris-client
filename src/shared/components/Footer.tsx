@@ -3,11 +3,11 @@ import React from "react"
 
 import UnseenMessagesBadge from "@/shared/components/messages/UnseenMessagesBadge"
 import PublishButton from "@/shared/components/ui/PublishButton"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import Icon from "@/shared/components/Icons/Icon" // Add this import
 import NavLink from "@/shared/components/NavLink" // Adjusted import path
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {useLocation} from "react-router"
+import {localState} from "irisdb"
 
 type MenuItem = {
   label?: string
@@ -19,8 +19,10 @@ type MenuItem = {
   inactiveIcon?: string
 }
 
+let myPubKey = ""
+localState.get("user/publicKey").on((k) => (myPubKey = k as string))
+
 const Footer = () => {
-  const [publicKey] = useLocalState("user/publicKey", "")
   const readonly = false
   const location = useLocation()
 
@@ -52,11 +54,11 @@ const Footer = () => {
         <div className="flex">
           {MENU_ITEMS.map(
             (item, index) =>
-              (publicKey || !item.loggedInOnly) && (
+              (myPubKey || !item.loggedInOnly) && (
                 <FooterNavItem key={index} item={item} readonly={readonly} />
               )
           )}
-          {publicKey && (
+          {myPubKey && (
             <NavLink
               to="/messages"
               className={({isActive}) =>
