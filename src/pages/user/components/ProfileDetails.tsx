@@ -133,7 +133,14 @@ function ProfileDetails({
         )}
       {externalIdentities?.github &&
         renderProfileField(RiGithubFill, externalIdentities.github, "github")}
-      {displayProfile?.lud16 && renderProfileField(Bolt, displayProfile.lud16, "lud16")}
+      {displayProfile?.lud16 &&
+        renderProfileField(
+          Bolt,
+          <a href={`lightning:${displayProfile.lud16}`} className="link">
+            {displayProfile.lud16}
+          </a>,
+          "lud16"
+        )}
       {displayProfile?.about && (
         <article className="prose">
           <HyperText small={true} truncate={100}>
