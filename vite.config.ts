@@ -70,6 +70,8 @@ export default defineConfig({
         },
       },
     },
+    assetsDir: "assets",
+    copyPublicDir: true,
   },
   test: {
     environment: "jsdom",
