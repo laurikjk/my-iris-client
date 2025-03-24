@@ -15,7 +15,6 @@ import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
 import useMutes from "@/shared/hooks/useMutes.ts"
 import MediaFeed from "./MediaFeed"
-import { set } from "lodash"
 
 interface FeedProps {
   filters: NDKFilter
