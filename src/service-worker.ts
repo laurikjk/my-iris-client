@@ -123,25 +123,6 @@ registerRoute(
   })
 )
 
-// Cache cashu iframe content
-registerRoute(
-  ({url}) => url.pathname.startsWith("/cashu"),
-  new CacheFirst({
-    cacheName: "cashu-cache",
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 100,
-        matchOptions: {
-          ignoreVary: true,
-        },
-      }),
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-    ],
-  })
-)
-
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting()
