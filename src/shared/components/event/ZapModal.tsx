@@ -32,6 +32,7 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
   const [zapAmount, setZapAmount] = useState<string>("21000")
   const [zapMessage, setZapMessage] = useState<string>("")
   const [shouldSetDefault, setShouldSetDefault] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const [isWalletConnect] = useLocalState("user/walletConnect", false)
 
@@ -59,6 +60,7 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
 
   const handleZap = async () => {
     setNoAddress(false)
+    setIsProcessing(true)
     try {
       if (Number(zapAmount) < 1) return
     } catch (error) {
@@ -102,12 +104,14 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
         tags: [["e", event.id]],
       })
 
-      zapper.zap()
+      await zapper.zap()
     } catch (error) {
       console.warn("Zap failed: ", error)
       if (error instanceof Error && error.message.includes("No zap endpoint found")) {
         setNoAddress(true)
       }
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -222,8 +226,12 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
                   />
                 </label>
               </div>
-              <button type="submit" className="btn btn-primary">
-                Zap
+              <button type="submit" className="btn btn-primary" disabled={isProcessing}>
+                {isProcessing ? (
+                  <div className="loading loading-spinner loading-sm" />
+                ) : (
+                  "Zap"
+                )}
               </button>
             </form>
           )}
