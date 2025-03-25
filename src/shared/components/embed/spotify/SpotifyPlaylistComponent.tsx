@@ -5,7 +5,7 @@ interface SpotifyPlaylistComponentProps {
 function SpotifyPlaylistComponent({match}: SpotifyPlaylistComponentProps) {
   return (
     <iframe
-      className="applemusic"
+      className="my-2 mx-4"
       scrolling="no"
       width="650"
       height="150"

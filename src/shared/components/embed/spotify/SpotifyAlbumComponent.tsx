@@ -12,6 +12,7 @@ function SpotifyAlbumComponent({match}: SpotifyAlbumComponentProps) {
       src={`https://open.spotify.com/embed/album/${match}`}
       frameBorder="0"
       allow="encrypted-media"
+      className="my-2 mx-4"
     />
   )
 }

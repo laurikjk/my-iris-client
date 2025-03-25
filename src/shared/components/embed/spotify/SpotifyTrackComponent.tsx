@@ -12,6 +12,7 @@ function SpotifyTrackComponent({match}: SpotifyTrackComponentProps) {
       frameBorder="0"
       allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
       allowFullScreen
+      className="my-2 mx-4"
     />
   )
 }
