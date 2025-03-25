@@ -119,14 +119,14 @@ const Layout = () => {
             <Outlet />
             {cashuEnabled && (
               <iframe
-                allow="clipboard-write clipboard-read"
+                id="cashu-wallet"
+                title="Background Cashu Wallet"
                 src="/cashu"
                 className="fixed top-0 left-0 w-0 h-0 border-none"
                 style={{zIndex: -1}}
-                title="Background Cashu Wallet"
-                allowFullScreen
+                allow="clipboard-write clipboard-read fullscreen"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-modals allow-clipboard-read allow-clipboard-write"
                 referrerPolicy="no-referrer"
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-clipboard-read allow-clipboard-write"
               />
             )}
           </ErrorBoundary>
