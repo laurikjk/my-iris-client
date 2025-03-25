@@ -21,13 +21,17 @@ interface ZapModalProps {
 }
 
 function ZapModal({onClose, event, setZapped}: ZapModalProps) {
-  const [defaultZapAmount] = useLocalState("user/defaultZapAmount", 21)
+  const [defaultZapAmount, setDefaultZapAmount] = useLocalState(
+    "user/defaultZapAmount",
+    21
+  )
   const [copiedPaymentRequest, setCopiedPaymentRequest] = useState(false)
   const [noAddress, setNoAddress] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
   const [bolt11Invoice, setBolt11Invoice] = useState<string>("")
   const [zapAmount, setZapAmount] = useState<string>("21000")
   const [zapMessage, setZapMessage] = useState<string>("")
+  const [shouldSetDefault, setShouldSetDefault] = useState(false)
 
   const [isWalletConnect] = useLocalState("user/walletConnect", false)
 
@@ -39,6 +43,10 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
 
   const handleZapMessageChange = (event: ChangeEvent<HTMLInputElement>) => {
     setZapMessage(event.target.value)
+  }
+
+  const handleSetDefaultAmount = (e: ChangeEvent<HTMLInputElement>) => {
+    setShouldSetDefault(e.target.checked)
   }
 
   const handleCopyPaymentRequest = () => {
@@ -58,6 +66,10 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
     }
     try {
       const amount = Number(zapAmount) * 1000
+
+      if (shouldSetDefault) {
+        setDefaultZapAmount(Number(zapAmount))
+      }
 
       const lnPay: LnPayCb = async ({pr}) => {
         if (isWalletConnect) {
@@ -181,7 +193,6 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
           )}
           {!showQRCode && (
             <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
-              <h3>Choose the amount to zap</h3>
               {noAddress && (
                 <span className="text-red-500">The user has no lightning address.</span>
               )}
@@ -192,7 +203,7 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
                   className="input input-bordered w-full"
                   value={zapAmount}
                   onChange={handleZapAmountChange}
-                  placeholder="21000"
+                  placeholder="amount"
                 />
                 <input
                   type="text"
@@ -201,6 +212,15 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
                   onChange={handleZapMessageChange}
                   placeholder="message (optional)"
                 />
+                <label className="label cursor-pointer gap-2">
+                  <span className="label-text">Set as default zap amount</span>
+                  <input
+                    type="checkbox"
+                    className="checkbox"
+                    checked={shouldSetDefault}
+                    onChange={handleSetDefaultAmount}
+                  />
+                </label>
               </div>
               <button type="submit" className="btn btn-primary">
                 Zap
