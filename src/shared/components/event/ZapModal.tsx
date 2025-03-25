@@ -33,6 +33,7 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
   const [zapMessage, setZapMessage] = useState<string>("")
   const [shouldSetDefault, setShouldSetDefault] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [error, setError] = useState<string>("")
 
   const [isWalletConnect] = useLocalState("user/walletConnect", false)
 
@@ -60,10 +61,15 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
 
   const handleZap = async () => {
     setNoAddress(false)
+    setError("")
     setIsProcessing(true)
     try {
-      if (Number(zapAmount) < 1) return
+      if (Number(zapAmount) < 1) {
+        setError("Zap amount must be greater than 0")
+        return
+      }
     } catch (error) {
+      setError("Zap amount must be a valid number")
       console.warn("Zap amount must be a number: ", error)
     }
     try {
@@ -75,25 +81,37 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
 
       const lnPay: LnPayCb = async ({pr}) => {
         if (isWalletConnect) {
-          const {requestProvider} = await import("@getalby/bitcoin-connect-react")
-          const provider = await requestProvider()
-          await provider.sendPayment(pr)
-          setZapped(true)
-          setZapRefresh(!zapRefresh)
-          onClose()
-          return provider.sendPayment(pr)
+          try {
+            const {requestProvider} = await import("@getalby/bitcoin-connect-react")
+            const provider = await requestProvider()
+            await provider.sendPayment(pr)
+            setZapped(true)
+            setZapRefresh(!zapRefresh)
+            onClose()
+            return provider.sendPayment(pr)
+          } catch (error) {
+            setError("Failed to connect to wallet. Please try again.")
+            throw error
+          }
         } else {
           // no Nostr wallet connect set
           setBolt11Invoice(pr)
           const img = document.getElementById("qr-image") as HTMLImageElement
 
-          const QRCode = await import("qrcode")
-          QRCode.toDataURL(`lightning:${pr}`, function (error, url) {
-            if (error) console.error("Error generating QR code:", error)
-            else img.src = url
-          })
-          setShowQRCode(true)
-          return undefined
+          try {
+            const QRCode = await import("qrcode")
+            QRCode.toDataURL(`lightning:${pr}`, function (error, url) {
+              if (error) {
+                setError("Failed to generate QR code")
+                console.error("Error generating QR code:", error)
+              } else img.src = url
+            })
+            setShowQRCode(true)
+            return undefined
+          } catch (error) {
+            setError("Failed to generate QR code")
+            throw error
+          }
         }
       }
 
@@ -107,8 +125,12 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
       await zapper.zap()
     } catch (error) {
       console.warn("Zap failed: ", error)
-      if (error instanceof Error && error.message.includes("No zap endpoint found")) {
-        setNoAddress(true)
+      if (error instanceof Error) {
+        if (error.message.includes("No zap endpoint found")) {
+          setNoAddress(true)
+        } else {
+          setError(error.message || "Failed to process zap. Please try again.")
+        }
       }
     } finally {
       setIsProcessing(false)
@@ -198,7 +220,14 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
           {!showQRCode && (
             <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
               {noAddress && (
-                <span className="text-red-500">The user has no lightning address.</span>
+                <div className="alert alert-error">
+                  <span>The user has no lightning address.</span>
+                </div>
+              )}
+              {error && (
+                <div className="alert alert-error">
+                  <span>{error}</span>
+                </div>
               )}
               <div className="flex flex-col gap-2">
                 <label>Amount (sats)</label>
