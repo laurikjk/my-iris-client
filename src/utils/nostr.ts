@@ -90,7 +90,7 @@ export async function fetchEvent(filter: NDKFilter): Promise<NDKEvent> {
     sub.on("event", (event) => {
       if (event && event.id) {
         sub.stop()
-        resolve(event)  
+        resolve(event)
       }
     })
   })

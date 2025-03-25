@@ -24,6 +24,7 @@ function PublishButton({
   return (
     <>
       <div
+        data-testid="new-post-button"
         className={classNames(
           "cursor-pointer flex flex-row items-center justify-center rounded-full",
           "primary md:bg-primary md:hover:bg-primary-hover md:text-white",
