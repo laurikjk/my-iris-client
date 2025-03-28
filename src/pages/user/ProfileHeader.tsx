@@ -108,7 +108,7 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
                   <Icon name="mail-outline" className="w-6 h-6" />
                 </button>
               )}
-              <PublicKeyQRCodeButton publicKey={pubKey} />
+              <PublicKeyQRCodeButton publicKey={pubKey} data-testid="profile-qr-button" />
               {myPubKey && myPubKey === pubKeyHex ? (
                 <Link to="/settings/profile" className="btn btn-neutral">
                   Edit profile

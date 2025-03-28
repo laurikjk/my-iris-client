@@ -295,6 +295,7 @@ const NavSideBar = () => {
             <div
               className="flex flex-col p-4 md:mb-2 xl:mb-6 gap-4"
               onClick={() => setIsSidebarOpen(false)}
+              data-testid="sidebar-user-row"
             >
               <UserRow
                 pubKey={myPubKey}

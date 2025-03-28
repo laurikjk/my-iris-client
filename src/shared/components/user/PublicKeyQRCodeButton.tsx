@@ -5,9 +5,10 @@ import {useMemo} from "react"
 interface PublicKeyQRCodeButtonProps {
   publicKey: string
   onScanSuccess?: (data: string) => void
+  "data-testid"?: string
 }
 
-function PublicKeyQRCodeButton({publicKey, onScanSuccess}: PublicKeyQRCodeButtonProps) {
+function PublicKeyQRCodeButton({publicKey, onScanSuccess, "data-testid": dataTestId}: PublicKeyQRCodeButtonProps) {
   const npub = useMemo(() => {
     if (publicKey.startsWith("npub")) {
       return publicKey
@@ -18,7 +19,7 @@ function PublicKeyQRCodeButton({publicKey, onScanSuccess}: PublicKeyQRCodeButton
 
   const data = `nostr:${npub}`
 
-  return <QRCodeButton data={data} onScanSuccess={onScanSuccess} />
+  return <QRCodeButton data={data} onScanSuccess={onScanSuccess} data-testid={dataTestId} />
 }
 
 export default PublicKeyQRCodeButton

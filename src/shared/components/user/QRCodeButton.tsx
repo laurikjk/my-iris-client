@@ -187,7 +187,7 @@ function QRCodeButton({
     <>
       <button
         onClick={openModal}
-        className="p-2 btn btn-neutral btn-circle"
+        className="p-2 btn btn-neutral btn-circle qr-code-button"
         aria-label={showQRCode ? "Show QR Code" : "Scan QR Code"}
       >
         <Icon name={icon} className="w-4 h-4" />
