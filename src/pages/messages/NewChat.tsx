@@ -4,7 +4,6 @@ import {Invite, serializeSessionState} from "nostr-double-ratchet/src"
 import InstallPWAPrompt from "@/shared/components/InstallPWAPrompt"
 import QRCodeButton from "@/shared/components/user/QRCodeButton"
 import {acceptInvite} from "@/shared/hooks/useInviteFromUrl"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import Header from "@/shared/components/header/Header"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {nip19, VerifiedEvent} from "nostr-tools"
@@ -15,10 +14,14 @@ import {localState} from "irisdb/src"
 import {getInvites} from "./Invites"
 import {ndk} from "@/utils/ndk"
 
+let myPubKey = ""
+let myPrivKey = ""
+
+localState.get("user/publicKey").on((k) => (myPubKey = k as string))
+localState.get("user/privateKey").on((k) => (myPrivKey = k as string))
+
 const NewChat = () => {
   const navigate = useNavigate()
-  const [myPubKey] = useLocalState("user/publicKey", "")
-  const [myPrivKey] = useLocalState("user/privateKey", "")
   const [invites, setInvites] = useState<Map<string, Invite>>(new Map())
   const [inviteInput, setInviteInput] = useState("")
   const labelInputRef = useRef<HTMLInputElement>(null)

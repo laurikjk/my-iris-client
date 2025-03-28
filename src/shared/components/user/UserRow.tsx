@@ -39,7 +39,6 @@ export function UserRow({
           showTooltip={false}
           showBadge={showBadge}
           width={avatarWidth}
-          data-testid="user-avatar"
         />
         <Name pubKey={pubKey} className={textClassName} />
       </div>
