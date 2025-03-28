@@ -25,7 +25,7 @@ interface NoteCreatorProps {
   reset?: boolean
 }
 
-function addPTags(event: NDKEvent, repliedEvent?: NDKEvent, quotedEvent?: NDKEvent) {
+function addTags(event: NDKEvent, repliedEvent?: NDKEvent, quotedEvent?: NDKEvent) {
   const uniquePTags = new Set<string>()
   const eTags: NDKTag[] = []
   const otherTags: NDKTag[] = []
@@ -53,7 +53,12 @@ function addPTags(event: NDKEvent, repliedEvent?: NDKEvent, quotedEvent?: NDKEve
     }
     // Preserve full e-tag for reply
     if (repliedEvent.id?.trim()) {
-      eTags.push(["e", repliedEvent.id, "", "reply", repliedEvent.pubkey])
+      const rootEventTag = repliedEvent.tags.find((tag) => tag[0] === "e" && tag[3] === "root")
+      const isDirectReply = !rootEventTag && !repliedEvent.tags.find((tag) => tag[0] === "e" && tag[3] === "reply")
+      if (rootEventTag) {
+        eTags.push(rootEventTag)
+      }
+      eTags.push(["e", repliedEvent.id, "", isDirectReply ? "root" : "reply", repliedEvent.pubkey])
     }
     // Add p-tags from replied event
     repliedEvent.tags.forEach((tag) => {
@@ -207,16 +212,7 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
     event.kind = 1
     event.content = noteContent
     event.tags = []
-    if (repliedEvent) {
-      event.tags = [
-        ["p", repliedEvent.pubkey],
-        ["e", repliedEvent.id, "", "reply", repliedEvent.pubkey],
-      ]
-    }
-    if (quotedEvent) {
-      event.tags.push(["e", quotedEvent.id, "", "mention", quotedEvent.pubkey])
-    }
-    addPTags(event, repliedEvent, quotedEvent)
+    addTags(event, repliedEvent, quotedEvent)
     event.sign().then(() => {
       eventsByIdCache.set(event.id, event)
       setNoteContent("")
