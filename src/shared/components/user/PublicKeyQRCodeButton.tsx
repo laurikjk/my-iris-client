@@ -8,7 +8,11 @@ interface PublicKeyQRCodeButtonProps {
   "data-testid"?: string
 }
 
-function PublicKeyQRCodeButton({publicKey, onScanSuccess, "data-testid": dataTestId}: PublicKeyQRCodeButtonProps) {
+function PublicKeyQRCodeButton({
+  publicKey,
+  onScanSuccess,
+  "data-testid": dataTestId,
+}: PublicKeyQRCodeButtonProps) {
   const npub = useMemo(() => {
     if (publicKey.startsWith("npub")) {
       return publicKey
@@ -19,7 +23,9 @@ function PublicKeyQRCodeButton({publicKey, onScanSuccess, "data-testid": dataTes
 
   const data = `nostr:${npub}`
 
-  return <QRCodeButton data={data} onScanSuccess={onScanSuccess} data-testid={dataTestId} />
+  return (
+    <QRCodeButton data={data} onScanSuccess={onScanSuccess} data-testid={dataTestId} />
+  )
 }
 
 export default PublicKeyQRCodeButton

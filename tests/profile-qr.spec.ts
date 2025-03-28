@@ -13,8 +13,8 @@ test("can open QR code on own profile", async ({page}) => {
 
   // Verify QR code modal is visible
   await expect(page.getByRole("img", {name: "QR Code"})).toBeVisible()
-  
+
   // Verify QR code data is visible and contains nostr:npub
   const qrData = page.getByText(/nostr:npub/)
   await expect(qrData).toBeVisible()
-}) 
+})

@@ -12,7 +12,7 @@ import {router} from "@/pages"
 
 ndk() // init NDK & irisdb login flow
 
-localState.get("user").on((user) => {
+localState.get("user/publicKey").on((user) => {
   if (user) {
     loadSessions()
     loadInvites()

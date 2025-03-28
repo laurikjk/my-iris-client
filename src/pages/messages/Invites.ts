@@ -10,9 +10,11 @@ import {ndk} from "@/utils/ndk"
 const invites = new Map<string, Invite>()
 const subscriptions = new Map<string, Unsubscribe>()
 
-let user: {publicKey?: string; privateKey?: string} | null = null
+let publicKey = ""
+let privateKey = ""
 
 export function loadInvites(): Unsubscribe {
+  console.log("Loading invites")
   invites.clear() // Clear the existing map before repopulating
 
   localState.get("invites").put({}) // Ensure the invites object exists
@@ -42,13 +44,13 @@ const nostrSubscribe = (filter: Filter, onEvent: (e: VerifiedEvent) => void) => 
 }
 
 const listen = debounce(() => {
-  if (!user?.publicKey) return
+  if (!publicKey) return
 
   for (const id of invites.keys()) {
     if (!subscriptions.has(id)) {
       const invite = invites.get(id)!
-      const decrypt = user.privateKey
-        ? hexToBytes(user.privateKey)
+      const decrypt = privateKey
+        ? hexToBytes(privateKey)
         : async (cipherText: string, pubkey: string) => {
             if (window.nostr?.nip44) {
               try {
@@ -92,10 +94,15 @@ const publish = debounce(async (invite: Invite) => {
   await NDKEventFromRawEvent(event).publish()
 }, 100)
 
-localState.get("user").on(async (u) => {
-  if (u && typeof u === "object" && "publicKey" in u && u.publicKey !== user?.publicKey) {
-    user = u as {publicKey?: string; privateKey?: string}
-    if (!user.publicKey) return
+localState.get("user/privateKey").on(async (pk) => {
+  if (pk && typeof pk === "string" && pk !== privateKey) {
+    privateKey = pk
+  }
+})
+
+localState.get("user/publicKey").on(async (pk) => {
+  if (pk && typeof pk === "string" && pk !== publicKey) {
+    publicKey = pk
     listen()
 
     // Handle public invite
@@ -122,7 +129,7 @@ async function maybeCreateInvite(
   type: "Public" | "Private",
   shouldPublish: boolean
 ) {
-  if (!user?.publicKey) {
+  if (!publicKey) {
     console.error("Cannot create invite: user public key is missing")
     return
   }
@@ -151,7 +158,7 @@ async function maybeCreateInvite(
 
 function createNewInvite(type: "Public" | "Private", shouldPublish: boolean) {
   console.log(`Creating ${type} invite`)
-  const invite = Invite.createNew(user!.publicKey!, `${type} Invite`)
+  const invite = Invite.createNew(publicKey!, `${type} Invite`)
   localState.get("invites").get(type.toLowerCase()).put(invite.serialize())
   if (shouldPublish) {
     publish(invite)

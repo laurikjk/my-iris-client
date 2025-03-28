@@ -53,12 +53,22 @@ function addTags(event: NDKEvent, repliedEvent?: NDKEvent, quotedEvent?: NDKEven
     }
     // Preserve full e-tag for reply
     if (repliedEvent.id?.trim()) {
-      const rootEventTag = repliedEvent.tags.find((tag) => tag[0] === "e" && tag[3] === "root")
-      const isDirectReply = !rootEventTag && !repliedEvent.tags.find((tag) => tag[0] === "e" && tag[3] === "reply")
+      const rootEventTag = repliedEvent.tags.find(
+        (tag) => tag[0] === "e" && tag[3] === "root"
+      )
+      const isDirectReply =
+        !rootEventTag &&
+        !repliedEvent.tags.find((tag) => tag[0] === "e" && tag[3] === "reply")
       if (rootEventTag) {
         eTags.push(rootEventTag)
       }
-      eTags.push(["e", repliedEvent.id, "", isDirectReply ? "root" : "reply", repliedEvent.pubkey])
+      eTags.push([
+        "e",
+        repliedEvent.id,
+        "",
+        isDirectReply ? "root" : "reply",
+        repliedEvent.pubkey,
+      ])
     }
     // Add p-tags from replied event
     repliedEvent.tags.forEach((tag) => {
