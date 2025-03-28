@@ -142,6 +142,7 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
   return (
     <div
       title="Like"
+      data-testid="like-button"
       className={`relative min-w-[50px] md:min-w-[80px] transition-colors duration-200 ease-in-out cursor-pointer likeIcon ${
         liked ? "text-error" : "hover:text-error"
       } flex flex-row gap-1 items-center`}
@@ -153,7 +154,7 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
       onTouchEnd={handleMouseUp}
     >
       {getReactionIcon()}
-      <span>{formatAmount(likeCount)}</span>
+      <span data-testid="like-count">{formatAmount(likeCount)}</span>
 
       <FloatingEmojiPicker
         isOpen={showEmojiPicker}

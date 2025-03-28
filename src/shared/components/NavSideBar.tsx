@@ -275,13 +275,13 @@ const NavSideBar = () => {
           {!myPubKey && (
             <>
               <button
-                className="ml-2 md:ml-0 hidden md:flex xl:hidden btn btn-primary btn-circle items-center justify-center"
+                className="ml-2 md:ml-0 hidden md:flex xl:hidden btn btn-primary btn-circle items-center justify-center signup-btn"
                 onClick={() => setShowLoginDialog(true)}
               >
                 <RiLoginBoxLine className="w-5 h-5" />
               </button>
               <button
-                className="ml-2 flex md:hidden xl:flex btn btn-primary items-center gap-2"
+                className="ml-2 flex md:hidden xl:flex btn btn-primary items-center gap-2 signup-btn"
                 onClick={() => setShowLoginDialog(true)}
               >
                 <RiLoginBoxLine className="w-5 h-5" />
