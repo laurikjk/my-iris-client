@@ -1,29 +1,15 @@
+import {useWalletBalance} from "@/shared/hooks/useWalletBalance"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import {ChangeEvent, useState, useEffect} from "react"
+import {ChangeEvent} from "react"
 
 const WalletSettings = () => {
-  const [isWalletConnect, setIsWalletConnect] = useLocalState("user/walletConnect", false)
-  const [balance, setBalance] = useState<number | null>(null)
+  const {isWalletConnect, balance} = useWalletBalance()
+  const [, setIsWalletConnect] = useLocalState("user/walletConnect", false)
   const [cashuEnabled, setCashuEnabled] = useLocalState("user/cashuEnabled", false)
-
   const [defaultZapAmount, setDefaultZapAmount] = useLocalState(
     "user/defaultZapAmount",
     21
   )
-
-  useEffect(() => {
-    const getBalance = async () => {
-      if (isWalletConnect) {
-        const {requestProvider} = await import("@getalby/bitcoin-connect-react")
-        const provider = await requestProvider()
-        if (provider) {
-          const balanceInfo = await provider.getBalance()
-          setBalance(balanceInfo.balance)
-        }
-      }
-    }
-    getBalance()
-  }, [isWalletConnect])
 
   const handleConnectWalletClick = async () => {
     const {init, requestProvider} = await import("@getalby/bitcoin-connect-react")

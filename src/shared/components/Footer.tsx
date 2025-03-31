@@ -3,8 +3,8 @@ import React from "react"
 
 import UnseenMessagesBadge from "@/shared/components/messages/UnseenMessagesBadge"
 import PublishButton from "@/shared/components/ui/PublishButton"
+import NavLink from "@/shared/components/nav/NavLink" // Adjusted import path
 import Icon from "@/shared/components/Icons/Icon" // Add this import
-import NavLink from "@/shared/components/NavLink" // Adjusted import path
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {useLocation} from "react-router"
 import {localState} from "irisdb"

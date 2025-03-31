@@ -1,0 +1,146 @@
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import {RiLoginBoxLine} from "@remixicon/react"
+import {useRef, useMemo} from "react"
+import classNames from "classnames"
+import {localState} from "irisdb"
+import NavLink from "./NavLink"
+
+import PublicKeyQRCodeButton from "../user/PublicKeyQRCodeButton"
+import {useWalletBalance} from "../../hooks/useWalletBalance"
+import {NotificationNavItem} from "./NotificationNavItem"
+import {MessagesNavItem} from "./MessagesNavItem"
+import PublishButton from "../ui/PublishButton"
+import ErrorBoundary from "../ui/ErrorBoundary"
+import {navItemsConfig} from "./navConfig"
+import {UserRow} from "../user/UserRow"
+import {NavItem} from "./NavItem"
+import Icon from "../Icons/Icon"
+
+let myPubKey = ""
+localState.get("user/publicKey").on((k) => (myPubKey = k as string))
+
+const NavSideBar = () => {
+  const ref = useRef<HTMLDivElement>(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useLocalState("isSidebarOpen", false)
+  const [, setShowLoginDialog] = useLocalState("home/showLoginDialog", false)
+  const {balance, isWalletConnect} = useWalletBalance()
+
+  const navItems = useMemo(() => {
+    const configItems = navItemsConfig(myPubKey)
+    return (CONFIG.navItems as Array<keyof typeof configItems>)
+      .map((key) => configItems[key])
+      .filter((item) => !("requireLogin" in item) || (item.requireLogin && myPubKey))
+  }, [myPubKey])
+
+  const logoUrl = CONFIG.navLogo
+
+  return (
+    <ErrorBoundary>
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black opacity-50 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      <div
+        ref={ref}
+        className={classNames(
+          "bg-base-200 transition-transform duration-300 fixed md:sticky md:translate-x-0 top-0 select-none w-56 md:w-20 xl:w-64 h-screen z-40 flex flex-col md:justify-between border-r border-custom overflow-y-auto",
+          {
+            "translate-x-0": isSidebarOpen,
+            "-translate-x-full": !isSidebarOpen,
+          }
+        )}
+      >
+        <div className="flex flex-col items-start md:items-center xl:items-start gap-4 md:gap-2 xl:gap-4">
+          <NavLink
+            className="md:mb-2 xl:mb-0 mt-4 ml-4 md:ml-0 xl:ml-5 flex flex-row gap-2 items-center md:justify-center font-bold font-bold text-3xl"
+            to="/"
+          >
+            <img className="w-8 h-8" src={logoUrl} />
+            <span className="inline md:hidden xl:inline">{CONFIG.appName}</span>
+          </NavLink>
+          {isWalletConnect && balance !== null && (
+            <div className="px-4 md:px-2 xl:px-4 w-full">
+              <div className="flex items-center gap-2 text-sm">
+                <Icon name="wallet" className="w-4 h-4" />
+                <span className="inline md:hidden xl:inline">
+                  ~{balance.toLocaleString()} sats
+                </span>
+                <span className="hidden md:inline xl:hidden">
+                  {balance.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          )}
+          <ul className="menu px-2 py-0 text-xl flex flex-col gap-4 md:gap-2 xl:gap-4 rounded-2xl">
+            {navItems.map(({to, icon, activeIcon, inactiveIcon, label, onClick}) => {
+              if (label === "Messages") {
+                return <MessagesNavItem key={to} to={to} onClick={onClick} />
+              }
+              if (label === "Notifications") {
+                return <NotificationNavItem key={to} to={to} onClick={onClick} />
+              }
+              return (
+                <NavItem
+                  key={to}
+                  to={to}
+                  icon={icon}
+                  activeIcon={activeIcon}
+                  inactiveIcon={inactiveIcon}
+                  label={label}
+                  onClick={onClick}
+                />
+              )
+            })}
+          </ul>
+          {myPubKey && (
+            <div className="ml-2 md:ml-0 xl:ml-2 md:mt-2 xl:mt-0">
+              <div className="hidden md:flex">
+                <PublishButton />
+              </div>
+            </div>
+          )}
+          {!myPubKey && (
+            <>
+              <button
+                className="ml-2 md:ml-0 hidden md:flex xl:hidden btn btn-primary btn-circle items-center justify-center signup-btn"
+                onClick={() => setShowLoginDialog(true)}
+              >
+                <RiLoginBoxLine className="w-5 h-5" />
+              </button>
+              <button
+                className="ml-2 flex md:hidden xl:flex btn btn-primary items-center gap-2 signup-btn"
+                onClick={() => setShowLoginDialog(true)}
+              >
+                <RiLoginBoxLine className="w-5 h-5" />
+                <span>Sign up</span>
+              </button>
+            </>
+          )}
+        </div>
+        {myPubKey && (
+          <>
+            <div
+              className="flex flex-col p-4 md:mb-2 xl:mb-6 gap-4"
+              onClick={() => setIsSidebarOpen(false)}
+              data-testid="sidebar-user-row"
+            >
+              <UserRow
+                pubKey={myPubKey}
+                showBadge={false}
+                textClassName="md:hidden xl:inline font-bold"
+                avatarWidth={45}
+              />
+              <div className="md:hidden text-center" onClick={(e) => e.stopPropagation()}>
+                <PublicKeyQRCodeButton publicKey={myPubKey} />
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </ErrorBoundary>
+  )
+}
+
+export default NavSideBar
