@@ -119,7 +119,10 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
         comment: "",
         ndk: ndk(),
         lnPay,
-        tags: [["e", event.id]],
+        tags: [
+          ["e", event.id],
+          ["p", event.pubkey],
+        ],
       })
 
       await zapper.zap()
@@ -220,15 +223,9 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
           {!showQRCode && (
             <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
               {noAddress && (
-                <div className="alert alert-error">
-                  <span>The user has no lightning address.</span>
-                </div>
+                <span className="text-red-500">The user has no lightning address.</span>
               )}
-              {error && (
-                <div className="alert alert-error">
-                  <span>{error}</span>
-                </div>
-              )}
+              {error && <span className="text-red-500">{error}</span>}
               <div className="flex flex-col gap-2">
                 <label>Amount (sats)</label>
                 <input

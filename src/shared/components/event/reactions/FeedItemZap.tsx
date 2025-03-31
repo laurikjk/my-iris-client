@@ -41,6 +41,8 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
     zapsByEventCache.get(event.id) || new Map()
   )
 
+  const canQuickZap = isWalletConnect && !!defaultZapAmount
+
   const calculateZappedAmount = async (
     zaps: Map<string, NDKEvent[]>
   ): Promise<number> => {
@@ -79,7 +81,7 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
   }
 
   const handleZapClick = async () => {
-    if (isWalletConnect && !!defaultZapAmount) {
+    if (canQuickZap) {
       await handleOneClickZap()
     } else {
       setShowZapModal(true)
@@ -152,6 +154,7 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
       }, 300)
 
       sub?.on("event", async (zapEvent: NDKEvent) => {
+        console.log("zapEvent", zapEvent)
         // if (shouldHideEvent(zapEvent)) return // blah. disabling this check enables fake receipts but what can we do
         const invoice = zapEvent.tagValue("bolt11")
         if (invoice) {
@@ -197,6 +200,15 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
     return null
   }
 
+  let iconName = ""
+  if (canQuickZap) {
+    iconName = "zapFast"
+  } else if (zapped) {
+    iconName = "zap-solid"
+  } else {
+    iconName = "zap"
+  }
+
   return (
     <>
       {showZapModal && (
@@ -223,7 +235,7 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
         {isZapping ? (
           <div className="loading loading-spinner loading-xs" />
         ) : (
-          <Icon name={zapped ? "zap-solid" : "zap"} size={16} />
+          <Icon name={iconName} size={16} />
         )}
         <span>{formatAmount(zappedAmount)}</span>
       </div>
