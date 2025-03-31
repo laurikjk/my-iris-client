@@ -99,7 +99,7 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
               </Modal>
             )}
 
-            <div className="flex flex-row gap-2">
+            <div className="flex flex-row gap-2" data-testid="profile-header-actions">
               {invite && myPubKey && (
                 <button
                   className="btn btn-circle btn-neutral"
