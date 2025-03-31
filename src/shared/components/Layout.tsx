@@ -124,8 +124,6 @@ const Layout = () => {
                 src="/cashu"
                 className="fixed top-0 left-0 w-0 h-0 border-none"
                 style={{zIndex: -1}}
-                allow="clipboard-write clipboard-read fullscreen"
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-modals allow-clipboard-read allow-clipboard-write"
                 referrerPolicy="no-referrer"
               />
             )}
