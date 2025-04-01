@@ -44,6 +44,7 @@ const WalletSettings = () => {
   return (
     <div className="mb-4 prose">
       <h2>Wallet Settings</h2>
+      <p>Balance: {balance !== null ? balance : "?"} sats</p>
       <div className="flex flex-col gap-4">
         <h3>Cashu Wallet</h3>
         <div>
@@ -57,6 +58,7 @@ const WalletSettings = () => {
       </div>
       <h3>Nostr Wallet Connect</h3>
       <div className="py-2 flex flex-col gap-4">
+        <div className="flex flex-col gap-2"></div>
         {!isWalletConnect ? (
           <div>
             <button className="btn btn-primary" onClick={handleConnectWalletClick}>
@@ -65,7 +67,6 @@ const WalletSettings = () => {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            <p>Balance: {balance !== null ? balance : "?"} sats</p>
             <button className="btn btn-primary" onClick={handleDisconnectWalletClick}>
               Disconnect Wallet
             </button>

@@ -1,9 +1,10 @@
-import {LnPayCb, NDKEvent, NDKZapper} from "@nostr-dev-kit/ndk"
+import {LnPayCb, NDKEvent, NDKZapper, NDKPaymentConfirmationLN} from "@nostr-dev-kit/ndk"
 import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RefObject, useEffect, useState, useRef} from "react"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import {getZappingUser} from "@/utils/nostr.ts"
+import {getWebLNProvider} from "@/utils/webln"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
 import {decode} from "light-bolt11-decoder"
@@ -26,11 +27,7 @@ interface FeedItemZapProps {
 let myPubKey = ""
 localState.get("user/publicKey").on((k) => (myPubKey = k as string))
 
-let webLnEnabled = false
-window?.webln?.isEnabled().then((enabled) => (webLnEnabled = enabled))
-
 function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
-  const [isWalletConnect] = useLocalState("user/walletConnect", false)
   const [defaultZapAmount] = useLocalState("user/defaultZapAmount", undefined)
   const [isZapping, setIsZapping] = useState(false)
   const longPressTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -44,7 +41,7 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
     zapsByEventCache.get(event.id) || new Map()
   )
 
-  const canQuickZap = (webLnEnabled || isWalletConnect) && !!defaultZapAmount
+  const canQuickZap = !!defaultZapAmount
 
   const calculateZappedAmount = async (
     zaps: Map<string, NDKEvent[]>
@@ -97,15 +94,14 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
       flashElement()
       const amount = Number(defaultZapAmount) * 1000
 
-      const lnPay: LnPayCb = async ({pr}) => {
-        if (isWalletConnect) {
-          const {requestProvider} = await import("@getalby/bitcoin-connect")
-          const provider = await requestProvider()
-          const confirmation = await provider.sendPayment(pr)
+      const lnPay: LnPayCb = async ({
+        pr,
+      }): Promise<NDKPaymentConfirmationLN | undefined> => {
+        const provider = await getWebLNProvider()
+        if (provider) {
+          await provider.sendPayment(pr)
           setShowZapModal(false)
-          return confirmation
-        } else if (webLnEnabled) {
-          window?.webln?.sendPayment(pr)
+          return {preimage: ""} // TODO: Get actual preimage from provider
         }
         return undefined
       }
