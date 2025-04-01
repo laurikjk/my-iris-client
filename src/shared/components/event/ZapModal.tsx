@@ -32,7 +32,7 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
   const [showQRCode, setShowQRCode] = useState(false)
   const [bolt11Invoice, setBolt11Invoice] = useState<string>("")
   const [zapAmount, setZapAmount] = useState<string>(defaultZapAmount.toString())
-  const [customAmount, setCustomAmount] = useState<string>(defaultZapAmount.toString())
+  const [customAmount, setCustomAmount] = useState<string>("")
   const [zapMessage, setZapMessage] = useState<string>("")
   const [shouldSetDefault, setShouldSetDefault] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -54,6 +54,11 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
 
   const handleZapAmountChange = (amount: string) => {
     setZapAmount(amount)
+    setCustomAmount("")
+  }
+
+  const handleConfirmCustomAmount = () => {
+    setZapAmount(customAmount)
   }
 
   const handleCustomAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -269,7 +274,10 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
               <button
                 type="button"
                 className="btn btn-neutral"
-                onClick={() => handleZapAmountChange(customAmount)}
+                onClick={handleConfirmCustomAmount}
+                disabled={
+                  !customAmount || Number(customAmount) <= 0 || customAmount === zapAmount
+                }
               >
                 Confirm
               </button>
