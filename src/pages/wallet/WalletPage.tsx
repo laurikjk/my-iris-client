@@ -3,6 +3,7 @@ import Trending from "@/shared/components/feed/Trending.tsx"
 import Widget from "@/shared/components/ui/Widget"
 import {useNavigate} from "react-router"
 import {localState} from "irisdb"
+import {useEffect} from "react"
 
 let myPubKey = ""
 localState.get("user/publicKey").on((k) => (myPubKey = k as string))
@@ -12,8 +13,13 @@ localState.get("user/cashuEnabled").on((k) => (cashuEnabled = k as boolean))
 export default function WalletPage() {
   const navigate = useNavigate()
 
+  useEffect(() => {
+    if (!cashuEnabled) {
+      navigate("/settings/wallet", {replace: true})
+    }
+  }, [navigate, cashuEnabled])
+
   if (!cashuEnabled) {
-    navigate("/settings/wallet", {replace: true})
     return null
   }
 
