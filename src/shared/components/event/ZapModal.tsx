@@ -1,17 +1,19 @@
 import {
   ChangeEvent,
   Dispatch,
+  FormEvent,
   SetStateAction,
   useEffect,
   useState,
-  FormEvent,
 } from "react"
 import {LnPayCb, NDKEvent, zapInvoiceFromEvent, NDKZapper} from "@nostr-dev-kit/ndk"
 import {RiCheckLine, RiFileCopyLine} from "@remixicon/react"
 import {decode} from "light-bolt11-decoder"
 
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import {Avatar} from "@/shared/components/user/Avatar"
 import Modal from "@/shared/components/ui/Modal.tsx"
+import {Name} from "@/shared/components/user/Name"
 import {ndk} from "@/utils/ndk"
 
 interface ZapModalProps {
@@ -29,18 +31,33 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
   const [noAddress, setNoAddress] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
   const [bolt11Invoice, setBolt11Invoice] = useState<string>("")
-  const [zapAmount, setZapAmount] = useState<string>("21000")
+  const [zapAmount, setZapAmount] = useState<string>(defaultZapAmount.toString())
+  const [customAmount, setCustomAmount] = useState<string>(defaultZapAmount.toString())
   const [zapMessage, setZapMessage] = useState<string>("")
   const [shouldSetDefault, setShouldSetDefault] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string>("")
 
   const [isWalletConnect] = useLocalState("user/walletConnect", false)
-
   const [zapRefresh, setZapRefresh] = useState(false)
 
-  const handleZapAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setZapAmount(event.target.value)
+  const amounts: Record<string, string> = {
+    [defaultZapAmount.toString()]: "",
+    "1000": "👍",
+    "5000": "💜",
+    "10000": "😍",
+    "20000": "🤩",
+    "50000": "🔥",
+    "100000": "🚀",
+    "1000000": "🤯",
+  }
+
+  const handleZapAmountChange = (amount: string) => {
+    setZapAmount(amount)
+  }
+
+  const handleCustomAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setCustomAmount(event.target.value)
   }
 
   const handleZapMessageChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -94,7 +111,6 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
             throw error
           }
         } else {
-          // no Nostr wallet connect set
           setBolt11Invoice(pr)
           const img = document.getElementById("qr-image") as HTMLImageElement
 
@@ -116,7 +132,7 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
       }
 
       const zapper = new NDKZapper(event, amount, "msat", {
-        comment: "",
+        comment: zapMessage,
         ndk: ndk(),
         lnPay,
         tags: [
@@ -185,11 +201,6 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
     }
   }, [showQRCode])
 
-  // wait for defaultZapAmount to populate
-  useEffect(() => {
-    if (defaultZapAmount) setZapAmount(String(defaultZapAmount))
-  }, [defaultZapAmount])
-
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     handleZap()
@@ -197,71 +208,104 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
 
   return (
     <Modal onClose={onClose} hasBackground={true}>
-      <div className="flex flex-col items-center justify-center p-4">
+      <div className="flex flex-col items-center justify-center p-4 gap-6">
         <div className="flex flex-col items-center gap-4">
-          {showQRCode && (
-            <p>
-              Scan the QR code to zap <b>{zapAmount} sats</b>.
-            </p>
-          )}
-          <img id="qr-image" className={showQRCode ? "w-40 h-40" : ""} />
-          {showQRCode && (
-            <>
-              <a href={`lightning:${bolt11Invoice}`} className="btn btn-primary">
-                Open in Wallet
-              </a>
-              <button
-                className="btn btn-neutral gap-2"
-                onClick={handleCopyPaymentRequest}
-              >
-                {!copiedPaymentRequest && <RiFileCopyLine />}
-                {copiedPaymentRequest && <RiCheckLine />}
-                Copy zap invoice
-              </button>
-            </>
-          )}
-          {!showQRCode && (
-            <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
-              {noAddress && (
-                <span className="text-red-500">The user has no lightning address.</span>
-              )}
-              {error && <span className="text-red-500">{error}</span>}
-              <div className="flex flex-col gap-2">
-                <label>Amount (sats)</label>
-                <input
-                  type="text"
-                  className="input input-bordered w-full"
-                  value={zapAmount}
-                  onChange={handleZapAmountChange}
-                  placeholder="amount"
-                />
-                <input
-                  type="text"
-                  className="input input-bordered w-full"
-                  value={zapMessage}
-                  onChange={handleZapMessageChange}
-                  placeholder="message (optional)"
-                />
-                <label className="label cursor-pointer gap-2">
-                  <span className="label-text">Set as default zap amount</span>
-                  <input
-                    type="checkbox"
-                    className="checkbox"
-                    checked={shouldSetDefault}
-                    onChange={handleSetDefaultAmount}
-                  />
-                </label>
-              </div>
-              <button type="submit" className="btn btn-primary" disabled={isProcessing}>
-                {isProcessing ? (
-                  <div className="loading loading-spinner loading-sm" />
-                ) : (
-                  "Zap"
-                )}
-              </button>
-            </form>
-          )}
+          <div className="flex items-center gap-3">
+            <Avatar pubKey={event.pubkey} width={40} showBadge={false} />
+            <div className="flex flex-col">
+              <span className="text-sm opacity-70">Send zap to</span>
+              <Name pubKey={event.pubkey} className="font-semibold" />
+            </div>
+          </div>
+          <h3 className="font-semibold uppercase">Zap amount in sats</h3>
         </div>
+
+        <div className="grid grid-cols-4 gap-2 w-full">
+          {Object.entries(amounts).map(([amount, emoji]) => (
+            <button
+              key={amount}
+              onClick={() => handleZapAmountChange(amount)}
+              className={`btn ${
+                zapAmount === amount ? "btn-primary" : "btn-neutral"
+              } w-full`}
+            >
+              {emoji} {parseInt(amount) >= 1000 ? `${parseInt(amount) / 1000}K` : amount}
+            </button>
+          ))}
+        </div>
+
+        {showQRCode ? (
+          <div className="flex flex-col items-center gap-4">
+            <p>
+              Scan the QR code to zap <b>{zapAmount} sats</b>
+            </p>
+            <img id="qr-image" className="w-40 h-40" />
+            <a href={`lightning:${bolt11Invoice}`} className="btn btn-primary w-full">
+              Open in Wallet
+            </a>
+            <button
+              className="btn btn-neutral gap-2 w-full"
+              onClick={handleCopyPaymentRequest}
+            >
+              {!copiedPaymentRequest ? <RiFileCopyLine /> : <RiCheckLine />}
+              Copy zap invoice
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
+            {noAddress && (
+              <span className="text-red-500">The user has no lightning address.</span>
+            )}
+            {error && <span className="text-red-500">{error}</span>}
+
+            <div className="flex gap-2">
+              <input
+                type="number"
+                className="input input-bordered grow"
+                value={customAmount}
+                onChange={handleCustomAmountChange}
+                placeholder="Custom amount"
+              />
+              <button
+                type="button"
+                className="btn btn-neutral"
+                onClick={() => handleZapAmountChange(customAmount)}
+              >
+                Confirm
+              </button>
+            </div>
+
+            <input
+              type="text"
+              className="input input-bordered w-full"
+              value={zapMessage}
+              onChange={handleZapMessageChange}
+              placeholder="Comment (optional)"
+            />
+
+            <label className="label cursor-pointer justify-start gap-2">
+              <input
+                type="checkbox"
+                className="checkbox"
+                checked={shouldSetDefault}
+                onChange={handleSetDefaultAmount}
+              />
+              <span className="label-text">Set as default zap amount</span>
+            </label>
+
+            <button
+              type="submit"
+              className="btn btn-primary w-full"
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <div className="loading loading-spinner loading-sm" />
+              ) : (
+                `Zap ${zapAmount} sats`
+              )}
+            </button>
+          </form>
+        )}
       </div>
     </Modal>
   )
