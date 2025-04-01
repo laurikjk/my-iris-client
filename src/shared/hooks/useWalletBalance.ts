@@ -1,20 +1,17 @@
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import {getWebLNProvider} from "@/utils/webln"
+import {useNWCProvider} from "./useNWCProvider"
 import {WebLNProvider} from "@/types/global"
 import {useState, useEffect} from "react"
 
 export const useWalletBalance = () => {
   const [isWalletConnect] = useLocalState("user/walletConnect", false)
   const [balance, setBalance] = useState<number | null>(null)
+  const nwcProvider = useNWCProvider()
   const [provider, setProvider] = useState<WebLNProvider | null>(null)
 
   useEffect(() => {
-    const setupProvider = async () => {
-      const webLNProvider = await getWebLNProvider()
-      setProvider(webLNProvider)
-    }
-    setupProvider()
-  }, [isWalletConnect])
+    setProvider(nwcProvider)
+  }, [nwcProvider])
 
   useEffect(() => {
     if (provider) {

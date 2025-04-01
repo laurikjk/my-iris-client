@@ -1,3 +1,4 @@
+import {requestProvider, disconnect} from "@getalby/bitcoin-connect"
 import {useWalletBalance} from "@/shared/hooks/useWalletBalance"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {ChangeEvent} from "react"
@@ -12,7 +13,7 @@ const WalletSettings = () => {
   )
 
   const handleConnectWalletClick = async () => {
-    const {init, requestProvider} = await import("@getalby/bitcoin-connect-react")
+    const {init} = await import("@getalby/bitcoin-connect-react")
     init({
       appName: "Iris",
       filters: ["nwc"],
@@ -23,7 +24,6 @@ const WalletSettings = () => {
   }
 
   const handleDisconnectWalletClick = async () => {
-    const {disconnect} = await import("@getalby/bitcoin-connect-react")
     disconnect()
     setIsWalletConnect(false)
   }
