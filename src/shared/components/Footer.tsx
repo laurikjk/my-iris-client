@@ -3,9 +3,11 @@ import React from "react"
 
 import UnseenMessagesBadge from "@/shared/components/messages/UnseenMessagesBadge"
 import PublishButton from "@/shared/components/ui/PublishButton"
+import {useWalletBalance} from "@/shared/hooks/useWalletBalance"
 import NavLink from "@/shared/components/nav/NavLink" // Adjusted import path
 import Icon from "@/shared/components/Icons/Icon" // Add this import
 import ErrorBoundary from "./ui/ErrorBoundary"
+import {formatAmount} from "@/utils/utils"
 import {useLocation} from "react-router"
 import {localState} from "irisdb"
 
@@ -17,6 +19,7 @@ type MenuItem = {
   el?: React.ReactNode
   activeIcon?: string
   inactiveIcon?: string
+  badge?: string
 }
 
 let myPubKey = ""
@@ -25,6 +28,7 @@ localState.get("user/publicKey").on((k) => (myPubKey = k as string))
 const Footer = () => {
   const readonly = false
   const location = useLocation()
+  const {balance} = useWalletBalance()
 
   const MENU_ITEMS: MenuItem[] = [
     {link: "/", icon: "home"},
@@ -32,6 +36,7 @@ const Footer = () => {
       link: "/wallet",
       icon: "wallet",
       loggedInOnly: true,
+      badge: balance !== null ? formatAmount(balance) : undefined,
     },
     {
       el: (
@@ -101,7 +106,16 @@ const FooterNavItem = ({item}: {item: MenuItem; readonly: boolean}) => {
         )
       }
     >
-      {({isActive}) => renderIcon(item, isActive)}
+      {({isActive}) => (
+        <span className="indicator">
+          {renderIcon(item, isActive)}
+          {item.badge && (
+            <span className="badge badge-xs absolute -left-4 -bottom-3">
+              {item.badge}
+            </span>
+          )}
+        </span>
+      )}
     </NavLink>
   )
 }

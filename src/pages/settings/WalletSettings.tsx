@@ -65,7 +65,7 @@ const WalletSettings = () => {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {balance !== null && <p>Balance: {balance} sats</p>}
+            <p>Balance: {balance !== null ? balance : "?"} sats</p>
             <button className="btn btn-primary" onClick={handleDisconnectWalletClick}>
               Disconnect Wallet
             </button>

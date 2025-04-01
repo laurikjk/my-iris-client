@@ -11,10 +11,10 @@ import {NotificationNavItem} from "./NotificationNavItem"
 import {MessagesNavItem} from "./MessagesNavItem"
 import PublishButton from "../ui/PublishButton"
 import ErrorBoundary from "../ui/ErrorBoundary"
+import {formatAmount} from "@/utils/utils"
 import {navItemsConfig} from "./navConfig"
 import {UserRow} from "../user/UserRow"
 import {NavItem} from "./NavItem"
-import Icon from "../Icons/Icon"
 
 let myPubKey = ""
 localState.get("user/publicKey").on((k) => (myPubKey = k as string))
@@ -23,7 +23,7 @@ const NavSideBar = () => {
   const ref = useRef<HTMLDivElement>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useLocalState("isSidebarOpen", false)
   const [, setShowLoginDialog] = useLocalState("home/showLoginDialog", false)
-  const {balance, isWalletConnect} = useWalletBalance()
+  const {balance} = useWalletBalance()
 
   const navItems = useMemo(() => {
     const configItems = navItemsConfig(myPubKey)
@@ -60,19 +60,6 @@ const NavSideBar = () => {
             <img className="w-8 h-8" src={logoUrl} />
             <span className="inline md:hidden xl:inline">{CONFIG.appName}</span>
           </NavLink>
-          {isWalletConnect && balance !== null && (
-            <div className="px-4 md:px-2 xl:px-4 w-full">
-              <div className="flex items-center gap-2 text-sm">
-                <Icon name="wallet" className="w-4 h-4" />
-                <span className="inline md:hidden xl:inline">
-                  ~{balance.toLocaleString()} sats
-                </span>
-                <span className="hidden md:inline xl:hidden">
-                  {balance.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          )}
           <ul className="menu px-2 py-0 text-xl flex flex-col gap-4 md:gap-2 xl:gap-4 rounded-2xl">
             {navItems.map(({to, icon, activeIcon, inactiveIcon, label, onClick}) => {
               if (label === "Messages") {
@@ -90,6 +77,11 @@ const NavSideBar = () => {
                   inactiveIcon={inactiveIcon}
                   label={label}
                   onClick={onClick}
+                  badge={
+                    label === "Wallet" && balance !== null
+                      ? formatAmount(balance)
+                      : undefined
+                  }
                 />
               )
             })}

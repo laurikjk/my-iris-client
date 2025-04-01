@@ -154,7 +154,6 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
       }, 300)
 
       sub?.on("event", async (zapEvent: NDKEvent) => {
-        console.log("zapEvent", zapEvent)
         // if (shouldHideEvent(zapEvent)) return // blah. disabling this check enables fake receipts but what can we do
         const invoice = zapEvent.tagValue("bolt11")
         if (invoice) {

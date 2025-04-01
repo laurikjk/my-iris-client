@@ -8,12 +8,14 @@ export const useWalletBalance = () => {
   useEffect(() => {
     const getBalance = async () => {
       if (isWalletConnect) {
-        const {requestProvider} = await import("@getalby/bitcoin-connect-react")
-        const provider = await requestProvider()
-        if (provider) {
-          const balanceInfo = await provider.getBalance()
-          setBalance(balanceInfo.balance)
-        }
+        const {onConnected} = await import("@getalby/bitcoin-connect")
+        const unsub = onConnected(async (provider) => {
+          if (provider) {
+            const balanceInfo = await provider.getBalance()
+            setBalance(balanceInfo.balance)
+          }
+        })
+        return () => unsub()
       }
     }
     getBalance()

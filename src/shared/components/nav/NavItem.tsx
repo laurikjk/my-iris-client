@@ -13,6 +13,7 @@ interface NavItemProps {
   onClick?: MouseEventHandler<HTMLAnchorElement>
   children?: ReactNode
   className?: string
+  badge?: string | number
 }
 
 export const NavItem = ({
@@ -24,6 +25,7 @@ export const NavItem = ({
   onClick,
   children,
   className,
+  badge,
 }: NavItemProps) => {
   const [, setIsSidebarOpen] = useLocalState("isSidebarOpen", false)
 
@@ -56,6 +58,11 @@ export const NavItem = ({
               }
             />
             <span className="inline md:hidden xl:inline">{label}</span>
+            {badge && (
+              <span className="badge badge-sm absolute bottom-0 xl:bottom-auto xl:top-1/2 xl:-translate-y-1/2 xl:right-2">
+                {badge}
+              </span>
+            )}
             {children}
           </>
         )}
