@@ -26,6 +26,9 @@ interface FeedItemZapProps {
 let myPubKey = ""
 localState.get("user/publicKey").on((k) => (myPubKey = k as string))
 
+let webLnEnabled = false
+window?.webln?.isEnabled().then((enabled) => (webLnEnabled = enabled))
+
 function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
   const [isWalletConnect] = useLocalState("user/walletConnect", false)
   const [defaultZapAmount] = useLocalState("user/defaultZapAmount", undefined)
@@ -41,7 +44,7 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
     zapsByEventCache.get(event.id) || new Map()
   )
 
-  const canQuickZap = isWalletConnect && !!defaultZapAmount
+  const canQuickZap = (webLnEnabled || isWalletConnect) && !!defaultZapAmount
 
   const calculateZappedAmount = async (
     zaps: Map<string, NDKEvent[]>
@@ -101,6 +104,8 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
           const confirmation = await provider.sendPayment(pr)
           setShowZapModal(false)
           return confirmation
+        } else if (webLnEnabled) {
+          window?.webln?.sendPayment(pr)
         }
         return undefined
       }

@@ -9,12 +9,6 @@ import AccountName from "./AccountName"
 import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
 
-declare global {
-  interface Window {
-    cf_turnstile_callback: any
-  }
-}
-
 // TODO split into smaller components
 class IrisAccount extends Component {
   state = {
