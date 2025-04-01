@@ -1,17 +1,17 @@
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import {useNWCProvider} from "./useNWCProvider"
+import {useWebLNProvider} from "./useWebLNProvider"
 import {WebLNProvider} from "@/types/global"
 import {useState, useEffect} from "react"
 
 export const useWalletBalance = () => {
   const [isWalletConnect] = useLocalState("user/walletConnect", false)
   const [balance, setBalance] = useState<number | null>(null)
-  const nwcProvider = useNWCProvider()
+  const webLNProvider = useWebLNProvider()
   const [provider, setProvider] = useState<WebLNProvider | null>(null)
 
   useEffect(() => {
-    setProvider(nwcProvider)
-  }, [nwcProvider])
+    setProvider(webLNProvider)
+  }, [webLNProvider])
 
   useEffect(() => {
     if (provider) {

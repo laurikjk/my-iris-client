@@ -1,7 +1,7 @@
 import {LnPayCb, NDKEvent, NDKZapper, NDKPaymentConfirmationLN} from "@nostr-dev-kit/ndk"
+import {useWebLNProvider} from "@/shared/hooks/useWebLNProvider"
 import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import {useNWCProvider} from "@/shared/hooks/useNWCProvider"
 import {RefObject, useEffect, useState, useRef} from "react"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import {getZappingUser} from "@/utils/nostr.ts"
@@ -32,7 +32,7 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
   const [isZapping, setIsZapping] = useState(false)
   const longPressTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [isLongPress, setIsLongPress] = useState(false)
-  const provider = useNWCProvider()
+  const provider = useWebLNProvider()
 
   const profile = useProfile(event.pubkey)
 

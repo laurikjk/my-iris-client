@@ -4,7 +4,7 @@ import {useEffect, useState} from "react"
 
 let nwcUnsubscribe: (() => void) | null = null
 
-export const useNWCProvider = () => {
+export const useWebLNProvider = () => {
   const [provider, setProvider] = useState<WebLNProvider | null>(null)
 
   useEffect(() => {
