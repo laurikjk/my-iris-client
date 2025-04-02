@@ -19,7 +19,6 @@ interface UseFeedEventsProps {
   displayFilterFn?: (event: NDKEvent) => boolean
   fetchFilterFn?: (event: NDKEvent) => boolean
   hideEventsByUnknownUsers: boolean
-  hidePostsByMutedMoreThanFollowed: boolean
   mutes: string[]
   sortLikedPosts?: boolean
   sortFn?: (a: NDKEvent, b: NDKEvent) => number
@@ -33,7 +32,6 @@ export default function useFeedEvents({
   fetchFilterFn,
   sortFn,
   hideEventsByUnknownUsers,
-  hidePostsByMutedMoreThanFollowed,
   mutes,
   sortLikedPosts = false,
 }: UseFeedEventsProps) {
@@ -71,11 +69,7 @@ export default function useFeedEvents({
       if (displayFilterFn && !displayFilterFn(event)) return false
       const inAuthors = localFilter.authors?.includes(event.pubkey)
       if (!inAuthors && mutes.includes(event.pubkey)) return false
-      if (
-        !inAuthors &&
-        hidePostsByMutedMoreThanFollowed &&
-        shouldSocialHide(event.pubkey, 3)
-      ) {
+      if (!inAuthors && shouldSocialHide(event.pubkey, 3)) {
         return false
       }
       if (
@@ -87,14 +81,7 @@ export default function useFeedEvents({
       }
       return true
     },
-    [
-      displayFilterFn,
-      myPubKey,
-      hideEventsByUnknownUsers,
-      filters.authors,
-      mutes,
-      hidePostsByMutedMoreThanFollowed,
-    ]
+    [displayFilterFn, myPubKey, hideEventsByUnknownUsers, filters.authors, mutes]
   )
 
   const filteredEvents = useMemo(() => {

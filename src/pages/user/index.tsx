@@ -3,6 +3,7 @@ import Widget from "@/shared/components/ui/Widget"
 import {useMemo, ReactNode} from "react"
 import classNames from "classnames"
 
+import socialGraph, {shouldSocialHide} from "@/utils/socialGraph.ts"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
@@ -11,7 +12,6 @@ import Feed from "@/shared/components/feed/Feed.tsx"
 import useFollows from "@/shared/hooks/useFollows"
 import {hasMedia} from "@/shared/components/embed"
 import FollowList from "./components/FollowList"
-import socialGraph from "@/utils/socialGraph.ts"
 import {getEventReplyingTo} from "@/utils/nostr"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ProfileHeader from "./ProfileHeader"
@@ -21,10 +21,12 @@ type Tab = {
   path: string
   element: ({
     pubKey,
+    myPubKey,
     showRepliedTo,
     displayFilterFn,
   }: {
     pubKey: string
+    myPubKey: string
     showRepliedTo?: boolean
     displayFilterFn?: (e: NDKEvent) => boolean
   }) => ReactNode
@@ -82,6 +84,18 @@ const tabs: Tab[] = [
       />
     ),
   },
+  {
+    name: "You",
+    path: "you",
+    element: ({pubKey, myPubKey}) => (
+      <Feed
+        key={`feed-${pubKey}`}
+        filters={{kinds: [1, 6, 7], authors: [pubKey], "#e": [myPubKey]}}
+        borderTopFirst={true}
+        showRepliedTo={true}
+      />
+    ),
+  },
 ]
 
 function UserPage({pubKey}: {pubKey: string}) {
@@ -99,6 +113,10 @@ function UserPage({pubKey}: {pubKey: string}) {
   const location = useLocation()
   const activeProfile = location.pathname.split("/")[1] || ""
 
+  const visibleTabs = tabs.filter(
+    (tab) => tab.path !== "you" || (myPubKey && !shouldSocialHide(pubKeyHex))
+  )
+
   return (
     <div className="flex flex-1 justify-center">
       <div className="flex flex-1 justify-center">
@@ -106,7 +124,7 @@ function UserPage({pubKey}: {pubKey: string}) {
           <ProfileHeader pubKey={pubKey} key={pubKey} />
           <div className="flex w-full flex-1 mt-2 flex flex-col gap-4">
             <div className="px-4 flex gap-2 overflow-x-auto">
-              {tabs.map((tab) => (
+              {visibleTabs.map((tab) => (
                 <NavLink
                   key={tab.path}
                   to={`/${activeProfile}${tab.path ? `/${tab.path}` : ""}`}
@@ -122,7 +140,7 @@ function UserPage({pubKey}: {pubKey: string}) {
               ))}
             </div>
             <Routes>
-              {tabs.map((tab) => (
+              {visibleTabs.map((tab) => (
                 <Route
                   key={tab.path}
                   path={tab.path}
@@ -131,6 +149,7 @@ function UserPage({pubKey}: {pubKey: string}) {
                       showRepliedTo={tab.showRepliedTo}
                       pubKey={pubKeyHex}
                       displayFilterFn={tab.displayFilterFn}
+                      myPubKey={myPubKey}
                     />
                   }
                 />

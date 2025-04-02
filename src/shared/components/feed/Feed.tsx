@@ -95,11 +95,6 @@ function Feed({
     setPersistedDisplayAs(value)
   }
 
-  const [hidePostsByMutedMoreThanFollowed] = useLocalState(
-    "settings/hidePostsByMutedMoreThanFollowed",
-    true
-  )
-
   const {
     newEvents: newEventsMap,
     newEventsFrom,
@@ -116,7 +111,6 @@ function Feed({
     fetchFilterFn,
     sortFn,
     hideEventsByUnknownUsers,
-    hidePostsByMutedMoreThanFollowed,
     mutes,
     sortLikedPosts,
   })

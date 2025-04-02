@@ -16,6 +16,11 @@ const DEFAULT_SOCIAL_GRAPH_ROOT =
 let instance = new SocialGraph(DEFAULT_SOCIAL_GRAPH_ROOT)
 let isInitialized = false
 
+let hidePostsByMutedMoreThanFollowed = true
+localState.get("settings/hidePostsByMutedMoreThanFollowed").on((v) => {
+  hidePostsByMutedMoreThanFollowed = v as boolean
+})
+
 async function initializeInstance(publicKey?: string) {
   if (isInitialized) {
     console.log("setting root", publicKey)
@@ -245,7 +250,10 @@ localState.get("settings/hideEventsByUnknownUsers").on((v) => {
 export function shouldHideEvent(ev: NDKEvent) {
   if (!hideEventsByUnknownUsers) return false
   const distance = instance.getFollowDistance(ev.pubkey)
-  return typeof distance !== "number" || distance > 5
+  if (typeof distance !== "number" || distance > 5) {
+    return true
+  }
+  return shouldSocialHide(ev.pubkey)
 }
 
 export const saveToFile = () => {
@@ -300,8 +308,11 @@ export const downloadLargeGraph = () => {
 
 export const loadAndMerge = () => loadFromFile(true)
 
+const cache = new LRUCache<string, boolean>({maxSize: 100})
 export const shouldSocialHide = (pubKey: string, threshold = 1): boolean => {
-  const cache = new LRUCache<string, boolean>({maxSize: 100})
+  if (!hidePostsByMutedMoreThanFollowed) {
+    return false
+  }
 
   // Check if the result is already in the cache
   if (cache.has(pubKey)) {
