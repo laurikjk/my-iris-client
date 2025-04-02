@@ -1,5 +1,4 @@
 import {CustomEmojiComponent} from "../embed/nostr/CustomEmojiComponent"
-import CustomEmoji from "../embed/nostr/CustomEmoji"
 import {Name} from "@/shared/components/user/Name"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {Link} from "react-router"
@@ -16,11 +15,8 @@ function LikeHeader({event}: LikeHeaderProps) {
     ) : (
       <>
         <span className="text-base-content/50">reacted with </span>
-        {event.content.match(CustomEmoji.regex) ? (
-          <CustomEmojiComponent
-            match={event.content.match(CustomEmoji.regex)?.[1] || event.content}
-            event={event}
-          />
+        {event.content.startsWith(":") && event.content.endsWith(":") ? (
+          <CustomEmojiComponent match={event.content.slice(1, -1)} event={event} />
         ) : (
           <span>{event.content}</span>
         )}
