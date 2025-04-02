@@ -90,7 +90,7 @@ const tabs: Tab[] = [
     element: ({pubKey, myPubKey}) => (
       <Feed
         key={`feed-${pubKey}`}
-        filters={{kinds: [1, 6, 7], authors: [pubKey], "#e": [myPubKey]}}
+        filters={{kinds: [1, 6, 7], authors: [pubKey], "#p": [myPubKey]}}
         borderTopFirst={true}
         showRepliedTo={true}
       />
