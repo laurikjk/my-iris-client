@@ -12,6 +12,7 @@ import classNames from "classnames"
 interface MediaItem {
   url: string
   type: "image" | "video"
+  imeta?: string[]
 }
 
 interface CarouselProps {
@@ -133,6 +134,7 @@ function Carousel({media, event}: CarouselProps) {
           blur={blur}
           key={item.url}
           limitHeight={limitHeight}
+          imeta={item.imeta}
         />
       )
     }

@@ -25,7 +25,7 @@ const shouldSkipProxy = (url: string) => {
   return safeOrigins.some((origin) => url.startsWith(origin))
 }
 
-const LOAD_TIMEOUT = 5000 // 5 seconds timeout
+const LOAD_TIMEOUT = 2000 // 2 seconds timeout
 
 const ProxyImg = (props: Props) => {
   const [proxyFailed, setProxyFailed] = useState(false)
