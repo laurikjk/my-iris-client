@@ -147,6 +147,7 @@ function Carousel({media, event}: CarouselProps) {
         blur={blur}
         onClick={() => setBlur(false)}
         limitHeight={limitHeight}
+        imeta={item.imeta}
       />
     )
   }
