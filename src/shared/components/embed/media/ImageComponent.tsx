@@ -1,6 +1,7 @@
-import {useState, MouseEvent} from "react"
+import {useState, MouseEvent, useMemo} from "react"
 import ProxyImg from "../../ProxyImg"
 import classNames from "classnames"
+import {decode} from "blurhash"
 
 interface ImageComponentProps {
   match: string
@@ -26,6 +27,9 @@ const ImageComponent = ({
   const [originalWidth, originalHeight] = dimensions
     ? dimensions.split("x").map(Number)
     : [null, null]
+
+  // Extract blurhash from imeta tag if available
+  const blurhash = imeta?.find((tag) => tag.startsWith("blurhash "))?.split(" ")[1]
 
   // Calculate dimensions that respect max constraints while maintaining aspect ratio
   const calculateDimensions = () => {
@@ -61,6 +65,24 @@ const ImageComponent = ({
 
   const calculatedDimensions = calculateDimensions()
 
+  // Decode blurhash to data URL
+  const blurhashUrl = useMemo(() => {
+    if (!blurhash || !calculatedDimensions) return null
+
+    const width = parseInt(calculatedDimensions.width)
+    const height = parseInt(calculatedDimensions.height)
+    const pixels = decode(blurhash, width, height)
+    const canvas = document.createElement("canvas")
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return null
+    const imageData = ctx.createImageData(width, height)
+    imageData.data.set(pixels)
+    ctx.putImageData(imageData, 0, 0)
+    return canvas.toDataURL()
+  }, [blurhash, calculatedDimensions])
+
   return (
     <div
       key={match + index}
@@ -70,24 +92,36 @@ const ImageComponent = ({
     >
       {hasError ? (
         <div
-          className="my-2 text-sm break-all flex items-center justify-center p-4"
-          style={calculatedDimensions}
+          className="my-2 text-sm break-all flex items-center justify-center p-4 bg-base-200 rounded"
+          style={{
+            ...calculatedDimensions,
+            backgroundImage: blurhashUrl ? `url(${blurhashUrl})` : undefined,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
         >
-          {match}
+          <span className="relative z-10">{match}</span>
         </div>
       ) : (
-        <ProxyImg
-          width={originalWidth || Math.min(650, window.innerWidth)}
-          onError={() => setHasError(true)}
-          onClick={onClick}
-          className={classNames("my-2 max-w-full cursor-pointer object-contain", {
-            "blur-md": blur,
-            "h-full max-h-[600px]": limitHeight || !dimensions,
-            "max-h-[90vh] lg:max-h-[600px]": !limitHeight && dimensions,
-          })}
-          style={calculatedDimensions}
-          src={match}
-        />
+        <div className="relative">
+          <ProxyImg
+            width={originalWidth || Math.min(650, window.innerWidth)}
+            onError={() => setHasError(true)}
+            onClick={onClick}
+            className={classNames("my-2 max-w-full cursor-pointer object-contain", {
+              "blur-md": blur,
+              "h-full max-h-[600px]": limitHeight || !dimensions,
+              "max-h-[90vh] lg:max-h-[600px]": !limitHeight && dimensions,
+            })}
+            style={{
+              ...calculatedDimensions,
+              backgroundImage: blurhashUrl ? `url(${blurhashUrl})` : undefined,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+            src={match}
+          />
+        </div>
       )}
     </div>
   )
