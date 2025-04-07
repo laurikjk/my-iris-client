@@ -75,5 +75,5 @@ export default {
       },
     ],
   },
-  safelist: ["border-custom"],
+  safelist: ["border-custom overflow-y-scroll"],
 }

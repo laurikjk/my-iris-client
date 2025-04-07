@@ -75,7 +75,7 @@ const ImageComponent = ({
     const originalHeight = parseInt(calculatedDimensions.height)
     let width = originalWidth
     let height = originalHeight
-    
+
     // Scale down if either dimension exceeds maxPreviewSize
     if (width > maxPreviewSize || height > maxPreviewSize) {
       const ratio = Math.min(maxPreviewSize / width, maxPreviewSize / height)
