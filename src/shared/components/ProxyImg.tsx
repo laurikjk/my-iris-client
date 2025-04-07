@@ -41,23 +41,8 @@ const ProxyImg = (props: Props) => {
       !props.src.startsWith("data:image") &&
       (!shouldSkipProxy(props.src) || props.width)
     ) {
-      console.log("Proxying image:", {
-        original: props.src,
-        width: props.width,
-        skipProxy: shouldSkipProxy(props.src),
-        reason: shouldSkipProxy(props.src) ? "safe origin" : "unsafe origin",
-      })
       mySrc = generateProxyUrl(props.src, {width: props.width, square: props.square})
       setSrc(mySrc)
-    } else {
-      console.log("Skipping proxy:", {
-        original: props.src,
-        width: props.width,
-        skipProxy: shouldSkipProxy(props.src),
-        reason: props.src.startsWith("data:image")
-          ? "data URL"
-          : "safe origin without width",
-      })
     }
 
     return () => {
@@ -73,7 +58,6 @@ const ProxyImg = (props: Props) => {
     // Otherwise, set your load timer
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     timeoutRef.current = setTimeout(() => {
-      console.log("Image load timeout after 2s on proxy", src)
       handleError()
     }, LOAD_TIMEOUT)
 
