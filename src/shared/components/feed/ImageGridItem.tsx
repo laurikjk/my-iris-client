@@ -1,4 +1,4 @@
-import {useMemo, MutableRefObject} from "react"
+import {useMemo, MutableRefObject, useState} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
@@ -31,6 +31,7 @@ export const ImageGridItem = ({
   lastElementRef,
 }: ImageGridItemProps) => {
   const navigate = useNavigate()
+  const [loadErrors, setLoadErrors] = useState<Record<number, boolean>>({})
 
   const imageMatch = event.content.match(IMAGE_REGEX)?.[0]
   const videoMatch = event.content.match(VIDEO_REGEX)?.[0]
@@ -94,6 +95,7 @@ export const ImageGridItem = ({
 
   return urls.map((url, i) => {
     const isVideo = !imageMatch
+    const hasError = loadErrors[i]
 
     const shouldBlur =
       blurNSFW &&
@@ -113,18 +115,30 @@ export const ImageGridItem = ({
         }}
         ref={i === urls.length - 1 ? lastElementRef : undefined}
       >
-        <ProxyImg
-          square={true}
-          width={width}
-          src={url}
-          alt=""
-          className="w-full h-full object-cover"
-          style={{
-            backgroundImage: blurhashUrls[i] ? `url(${blurhashUrls[i]})` : undefined,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
+        {hasError ? (
+          <div
+            className="w-full h-full"
+            style={{
+              backgroundImage: blurhashUrls[i] ? `url(${blurhashUrls[i]})` : undefined,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
+        ) : (
+          <ProxyImg
+            square={true}
+            width={width}
+            src={url}
+            alt=""
+            className="w-full h-full object-cover"
+            style={{
+              backgroundImage: blurhashUrls[i] ? `url(${blurhashUrls[i]})` : undefined,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+            onError={() => setLoadErrors((prev) => ({...prev, [i]: true}))}
+          />
+        )}
         {isVideo && (
           <div className="absolute top-0 right-0 m-2 shadow-md shadow-gray-500">
             <Icon
