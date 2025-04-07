@@ -1,4 +1,4 @@
-import {CSSProperties, useEffect, useState, MouseEvent} from "react"
+import {CSSProperties, useEffect, useState, MouseEvent, useRef} from "react"
 import {generateProxyUrl} from "../utils/imgproxy"
 
 type Props = {
@@ -25,10 +25,14 @@ const shouldSkipProxy = (url: string) => {
   return safeOrigins.some((origin) => url.startsWith(origin))
 }
 
+const LOAD_TIMEOUT = 5000 // 5 seconds timeout
+
 const ProxyImg = (props: Props) => {
   const [proxyFailed, setProxyFailed] = useState(false)
   const [src, setSrc] = useState(props.src)
   const [loadFailed, setLoadFailed] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const imgRef = useRef<HTMLImageElement | null>(null)
 
   useEffect(() => {
     let mySrc = props.src
@@ -39,6 +43,12 @@ const ProxyImg = (props: Props) => {
     ) {
       mySrc = generateProxyUrl(props.src, {width: props.width, square: props.square})
       setSrc(mySrc)
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
     }
   }, [props.src, props.width, props.square])
 
@@ -57,12 +67,43 @@ const ProxyImg = (props: Props) => {
     }
   }
 
+  useEffect(() => {
+    if (src && imgRef.current) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+      timeoutRef.current = setTimeout(() => {
+        console.log("Image load timeout after 5s", src)
+        handleError()
+      }, LOAD_TIMEOUT)
+
+      // Check if image has started loading
+      const checkLoading = () => {
+        if (imgRef.current?.complete || (imgRef.current?.naturalWidth ?? 0) > 0) {
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current)
+            timeoutRef.current = null
+          }
+        }
+      }
+
+      // Check immediately and after a short delay
+      checkLoading()
+      const checkInterval = setInterval(checkLoading, 100)
+
+      return () => {
+        clearInterval(checkInterval)
+      }
+    }
+  }, [src])
+
   if (!src || loadFailed) {
     return null
   }
 
   return (
     <img
+      ref={imgRef}
       loading="lazy"
       src={src}
       onError={handleError}
