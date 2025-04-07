@@ -52,50 +52,43 @@ const ProxyImg = (props: Props) => {
     }
   }, [props.src, props.width, props.square])
 
+  useEffect(() => {
+    // If we've already switched to the original, do NOT set the timer again
+    if (proxyFailed || !src || !imgRef.current) return
+    // Otherwise, set your load timer
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    timeoutRef.current = setTimeout(() => {
+      console.log("Image load timeout after 2s on proxy", src)
+      handleError()
+    }, LOAD_TIMEOUT)
+
+    // Check if the image loaded quickly
+    const checkLoading = () => {
+      if (imgRef.current?.complete || (imgRef.current?.naturalWidth ?? 0) > 0) {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
+      }
+    }
+
+    checkLoading()
+    const checkInterval = setInterval(checkLoading, 100)
+    return () => clearInterval(checkInterval)
+  }, [src, proxyFailed])
+
   const handleError = () => {
     if (proxyFailed) {
-      console.log("original source failed too", props.src)
+      // We already tried the original, so bail out
       setLoadFailed(true)
-      props.onError && props.onError()
-      if (props.hideBroken) {
-        setSrc("")
-      }
+      props.onError?.()
+      if (props.hideBroken) setSrc("")
     } else {
-      console.log("image proxy failed", src, "trying original source", props.src)
+      // The proxy failed or timed out, so switch to the original
       setProxyFailed(true)
       setSrc(props.src)
     }
   }
-
-  useEffect(() => {
-    if (src && imgRef.current) {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-      timeoutRef.current = setTimeout(() => {
-        console.log("Image load timeout after 5s", src)
-        handleError()
-      }, LOAD_TIMEOUT)
-
-      // Check if image has started loading
-      const checkLoading = () => {
-        if (imgRef.current?.complete || (imgRef.current?.naturalWidth ?? 0) > 0) {
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current)
-            timeoutRef.current = null
-          }
-        }
-      }
-
-      // Check immediately and after a short delay
-      checkLoading()
-      const checkInterval = setInterval(checkLoading, 100)
-
-      return () => {
-        clearInterval(checkInterval)
-      }
-    }
-  }, [src])
 
   if (!src || loadFailed) {
     return null
