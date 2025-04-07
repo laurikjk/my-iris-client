@@ -69,8 +69,20 @@ const ImageComponent = ({
   const blurhashUrl = useMemo(() => {
     if (!blurhash || !calculatedDimensions) return null
 
-    const width = parseInt(calculatedDimensions.width)
-    const height = parseInt(calculatedDimensions.height)
+    // Use smaller dimensions for blurhash preview (max 32px)
+    const maxPreviewSize = 32
+    const originalWidth = parseInt(calculatedDimensions.width)
+    const originalHeight = parseInt(calculatedDimensions.height)
+    let width = originalWidth
+    let height = originalHeight
+    
+    // Scale down if either dimension exceeds maxPreviewSize
+    if (width > maxPreviewSize || height > maxPreviewSize) {
+      const ratio = Math.min(maxPreviewSize / width, maxPreviewSize / height)
+      width = Math.round(width * ratio)
+      height = Math.round(height * ratio)
+    }
+
     const pixels = decode(blurhash, width, height)
     const canvas = document.createElement("canvas")
     canvas.width = width

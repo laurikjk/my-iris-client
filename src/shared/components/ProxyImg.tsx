@@ -41,8 +41,23 @@ const ProxyImg = (props: Props) => {
       !props.src.startsWith("data:image") &&
       (!shouldSkipProxy(props.src) || props.width)
     ) {
+      console.log("Proxying image:", {
+        original: props.src,
+        width: props.width,
+        skipProxy: shouldSkipProxy(props.src),
+        reason: shouldSkipProxy(props.src) ? "safe origin" : "unsafe origin",
+      })
       mySrc = generateProxyUrl(props.src, {width: props.width, square: props.square})
       setSrc(mySrc)
+    } else {
+      console.log("Skipping proxy:", {
+        original: props.src,
+        width: props.width,
+        skipProxy: shouldSkipProxy(props.src),
+        reason: props.src.startsWith("data:image")
+          ? "data URL"
+          : "safe origin without width",
+      })
     }
 
     return () => {
