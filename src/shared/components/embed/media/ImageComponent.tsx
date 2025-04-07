@@ -1,7 +1,7 @@
+import {calculateDimensions, generateBlurhashUrl} from "./mediaUtils"
 import {useState, MouseEvent, useMemo} from "react"
 import ProxyImg from "../../ProxyImg"
 import classNames from "classnames"
-import {decode} from "blurhash"
 
 interface ImageComponentProps {
   match: string
@@ -31,69 +31,22 @@ const ImageComponent = ({
   // Extract blurhash from imeta tag if available
   const blurhash = imeta?.find((tag) => tag.startsWith("blurhash "))?.split(" ")[1]
 
-  // Calculate dimensions that respect max constraints while maintaining aspect ratio
-  const calculateDimensions = () => {
-    if (!originalWidth || !originalHeight) return undefined
+  const calculatedDimensions = calculateDimensions(
+    originalWidth,
+    originalHeight,
+    limitHeight
+  )
 
-    const maxWidth = Math.min(650, window.innerWidth)
-    const maxHeight = limitHeight ? 600 : window.innerHeight * 0.9
-
-    let width = originalWidth
-    let height = originalHeight
-
-    // Scale down if width exceeds max
-    if (width > maxWidth) {
-      const ratio = maxWidth / width
-      width = maxWidth
-      height = Math.round(height * ratio)
-    }
-
-    // Scale down if height exceeds max
-    if (height > maxHeight) {
-      const ratio = maxHeight / height
-      height = maxHeight
-      width = Math.round(width * ratio)
-    }
-
-    return {width: `${width}px`, height: `${height}px`}
-  }
+  // Generate blurhash URL
+  const blurhashUrl = useMemo(
+    () => generateBlurhashUrl(blurhash, calculatedDimensions),
+    [blurhash, calculatedDimensions]
+  )
 
   const onClick = (event: MouseEvent) => {
     event.stopPropagation()
     onClickImage()
   }
-
-  const calculatedDimensions = calculateDimensions()
-
-  // Decode blurhash to data URL
-  const blurhashUrl = useMemo(() => {
-    if (!blurhash || !calculatedDimensions) return null
-
-    // Use smaller dimensions for blurhash preview (max 32px)
-    const maxPreviewSize = 32
-    const originalWidth = parseInt(calculatedDimensions.width)
-    const originalHeight = parseInt(calculatedDimensions.height)
-    let width = originalWidth
-    let height = originalHeight
-
-    // Scale down if either dimension exceeds maxPreviewSize
-    if (width > maxPreviewSize || height > maxPreviewSize) {
-      const ratio = Math.min(maxPreviewSize / width, maxPreviewSize / height)
-      width = Math.round(width * ratio)
-      height = Math.round(height * ratio)
-    }
-
-    const pixels = decode(blurhash, width, height)
-    const canvas = document.createElement("canvas")
-    canvas.width = width
-    canvas.height = height
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return null
-    const imageData = ctx.createImageData(width, height)
-    imageData.data.set(pixels)
-    ctx.putImageData(imageData, 0, 0)
-    return canvas.toDataURL()
-  }, [blurhash, calculatedDimensions])
 
   return (
     <div

@@ -1,10 +1,10 @@
-import {useEffect, useRef, useState} from "react"
-import {localState} from "irisdb/src"
-import classNames from "classnames"
-
+import {calculateDimensions, generateBlurhashUrl} from "./mediaUtils"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import {useEffect, useRef, useState, useMemo} from "react"
 import {generateProxyUrl} from "../../../utils/imgproxy"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {localState} from "irisdb/src"
+import classNames from "classnames"
 
 interface HlsVideoComponentProps {
   match: string
@@ -44,32 +44,20 @@ function HlsVideoComponent({
     ? dimensions.split("x").map(Number)
     : [null, null]
 
-  // Calculate dimensions that respect max constraints while maintaining aspect ratio
-  const calculateDimensions = () => {
-    if (!originalWidth || !originalHeight) return undefined
+  // Extract blurhash from imeta tag if available
+  const blurhash = imeta?.find((tag) => tag.startsWith("blurhash "))?.split(" ")[1]
 
-    const maxWidth = Math.min(650, window.innerWidth)
-    const maxHeight = limitHeight ? 600 : window.innerHeight * 0.9
+  const calculatedDimensions = calculateDimensions(
+    originalWidth,
+    originalHeight,
+    limitHeight
+  )
 
-    let width = originalWidth
-    let height = originalHeight
-
-    // Scale down if width exceeds max
-    if (width > maxWidth) {
-      const ratio = maxWidth / width
-      width = maxWidth
-      height = Math.round(height * ratio)
-    }
-
-    // Scale down if height exceeds max
-    if (height > maxHeight) {
-      const ratio = maxHeight / height
-      height = maxHeight
-      width = Math.round(width * ratio)
-    }
-
-    return {width: `${width}px`, height: `${height}px`}
-  }
+  // Generate blurhash URL
+  const blurhashUrl = useMemo(
+    () => generateBlurhashUrl(blurhash, calculatedDimensions),
+    [blurhash, calculatedDimensions]
+  )
 
   useEffect(() => {
     const initVideo = async () => {
@@ -120,8 +108,6 @@ function HlsVideoComponent({
     }
   }, [match, autoplayVideos])
 
-  const calculatedDimensions = calculateDimensions()
-
   return (
     <div
       className={classNames("relative w-full justify-center flex object-contain my-2", {
@@ -142,7 +128,12 @@ function HlsVideoComponent({
           "h-full max-h-[600px]": limitHeight || !dimensions,
           "max-h-[90vh] lg:h-[600px]": !limitHeight && dimensions,
         })}
-        style={calculatedDimensions}
+        style={{
+          ...calculatedDimensions,
+          backgroundImage: blurhashUrl ? `url(${blurhashUrl})` : undefined,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
         controls
         muted={autoplayVideos}
         autoPlay={autoplayVideos}
