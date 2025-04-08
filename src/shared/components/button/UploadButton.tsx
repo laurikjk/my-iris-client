@@ -1,9 +1,13 @@
 import React, {useRef, useState} from "react"
 
+import {calculateImageMetadata} from "@/shared/components/embed/media/mediaUtils"
 import {uploadFile} from "@/shared/upload"
 
 type Props = {
-  onUpload: (url: string) => void
+  onUpload: (
+    url: string,
+    metadata?: {width: number; height: number; blurhash: string}
+  ) => void
   onError?: (error: Error) => void
   text?: string
   className?: string
@@ -34,10 +38,15 @@ const UploadButton = ({
       setProgress(0)
       setErrorMessage(null)
       const file = e.target.files[0]
+
+      // Calculate image metadata if it's an image
+      const metadata = await calculateImageMetadata(file)
+
       const url = await uploadFile(file, (progress) => {
         setProgress(progress)
       })
-      onUpload(url)
+
+      onUpload(url, metadata || undefined)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       setErrorMessage(errorMessage)

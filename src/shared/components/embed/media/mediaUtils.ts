@@ -1,8 +1,14 @@
-import {decode} from "blurhash"
+import {decode, encode} from "blurhash"
 
 export interface Dimensions {
   width: string
   height: string
+}
+
+export interface ImageMetadata {
+  width: number
+  height: number
+  blurhash: string
 }
 
 export const calculateDimensions = (
@@ -65,4 +71,49 @@ export const generateBlurhashUrl = (
   imageData.data.set(pixels)
   ctx.putImageData(imageData, 0, 0)
   return canvas.toDataURL()
+}
+
+export async function calculateImageMetadata(file: File): Promise<ImageMetadata | null> {
+  if (!file.type.startsWith("image/")) {
+    return null
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement("canvas")
+      const ctx = canvas.getContext("2d")
+      if (!ctx) {
+        resolve(null)
+        return
+      }
+
+      // Set canvas size to a reasonable size for blurhash calculation
+      const maxSize = 32
+      let width = img.width
+      let height = img.height
+
+      // Scale down if either dimension exceeds maxSize
+      if (width > maxSize || height > maxSize) {
+        const ratio = Math.min(maxSize / width, maxSize / height)
+        width = Math.round(width * ratio)
+        height = Math.round(height * ratio)
+      }
+
+      canvas.width = width
+      canvas.height = height
+      ctx.drawImage(img, 0, 0, width, height)
+
+      const imageData = ctx.getImageData(0, 0, width, height)
+      const blurhash = encode(imageData.data, width, height, 4, 3)
+
+      resolve({
+        width: img.width,
+        height: img.height,
+        blurhash,
+      })
+    }
+    img.onerror = () => resolve(null)
+    img.src = URL.createObjectURL(file)
+  })
 }

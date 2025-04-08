@@ -116,6 +116,9 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
   )
 
   const [textarea, setTextarea] = useState<HTMLTextAreaElement | null>(null)
+  const [imageMetadata, setImageMetadata] = useState<
+    Record<string, {width: number; height: number; blurhash: string}>
+  >({})
 
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -136,7 +139,10 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
     }
   }, [quotedEvent])
 
-  const handleUpload = (url: string) => {
+  const handleUpload = (
+    url: string,
+    metadata?: {width: number; height: number; blurhash: string}
+  ) => {
     if (textarea) {
       const start = textarea.selectionStart
       const end = textarea.selectionEnd
@@ -157,6 +163,11 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
         setTimeout(() => {
           textarea.selectionStart = textarea.selectionEnd = start + url.length + 2
         }, 0)
+      }
+
+      // Store metadata if available
+      if (metadata) {
+        setImageMetadata((prev) => ({...prev, [url]: metadata}))
       }
     }
   }
@@ -200,18 +211,18 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
     }
   }
 
-  const handleEmojiSelect = (emoji: any) => {
+  const handleEmojiSelect = (emoji: string) => {
     if (textarea) {
       const start = textarea.selectionStart
       const end = textarea.selectionEnd
       const textBeforeCursor = noteContent.substring(0, start)
       const textAfterCursor = noteContent.substring(end)
-      setNoteContent(textBeforeCursor + emoji.native + textAfterCursor)
+      setNoteContent(textBeforeCursor + emoji + textAfterCursor)
 
       // Restore focus and set cursor position after the inserted emoji
       setTimeout(() => {
         textarea.focus()
-        const newPosition = start + emoji.native.length
+        const newPosition = start + emoji.length
         textarea.setSelectionRange(newPosition, newPosition)
       }, 0)
     }
@@ -222,10 +233,26 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
     event.kind = 1
     event.content = noteContent
     event.tags = []
+
+    // Add imeta tags for images that are in the content
+    Object.entries(imageMetadata).forEach(([url, metadata]) => {
+      if (noteContent.includes(url)) {
+        event.tags.push([
+          "imeta",
+          `url ${url}`,
+          `dim ${metadata.width}x${metadata.height}`,
+          `blurhash ${metadata.blurhash}`,
+        ])
+      }
+    })
+
+    console.log('event tags:', event.tags)
+
     addTags(event, repliedEvent, quotedEvent)
     event.sign().then(() => {
       eventsByIdCache.set(event.id, event)
       setNoteContent("")
+      setImageMetadata({})
       handleClose()
       navigate(`/${nip19.noteEncode(event.id)}`)
     })
