@@ -64,8 +64,24 @@ function FeedItem({
   const [expanded, setExpanded] = useState(false)
   const navigate = useNavigate()
 
-  if (!initialEvent && !eventId) {
-    throw new Error("FeedItem requires either an event or an eventId")
+  if ((!initialEvent || !initialEvent.id) && !eventId) {
+    throw new Error(
+      `FeedItem requires either an event or an eventId. Debug info: ${JSON.stringify(
+        {
+          hasInitialEvent: !!initialEvent,
+          initialEventType: initialEvent?.constructor?.name,
+          initialEventKeys: initialEvent ? Object.keys(initialEvent) : [],
+          eventId,
+          eventIdType: typeof eventId,
+          eventIdValue: initialEvent?.id,
+          eventKind: initialEvent?.kind,
+          eventContent: initialEvent?.content,
+          eventTags: initialEvent?.tags,
+        },
+        null,
+        2
+      )}`
+    )
   }
 
   const eventIdHex = useMemo(() => {

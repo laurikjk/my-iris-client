@@ -142,7 +142,8 @@ export default function useFeedEvents({
     debouncedInitialLoadDone()
 
     sub.on("event", (event) => {
-      if (event && event.created_at && !eventsRef.current.has(event.id)) {
+      if (!event || !event.id) return
+      if (event.created_at && !eventsRef.current.has(event.id)) {
         if (oldestRef.current === undefined || oldestRef.current > event.created_at) {
           oldestRef.current = event.created_at
         }
