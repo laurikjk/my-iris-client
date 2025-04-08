@@ -31,12 +31,7 @@ export default function useProfile(pubKey?: string, subscribe = true) {
     if (newProfile && !subscribe) {
       return
     }
-    const sub = ndk().subscribe(
-      {kinds: [0], authors: [pubKeyHex]},
-      {closeOnEose: false},
-      undefined,
-      true
-    )
+    const sub = ndk().subscribe({kinds: [0], authors: [pubKeyHex]}, {closeOnEose: false})
     let latest = 0
     sub.on("event", (event: NDKEvent) => {
       if (event.pubkey === pubKeyHex && event.kind === 0) {
