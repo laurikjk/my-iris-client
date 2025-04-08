@@ -159,7 +159,7 @@ function FeedItem({
         ids: [eventIdHex],
         authors: authorHints?.length ? authorHints : undefined,
       }).then((fetchedEvent: NDKEvent | null) => {
-        if (fetchedEvent) {
+        if (fetchedEvent && fetchedEvent.id) {
           setEvent(fetchedEvent)
           eventsByIdCache.set(eventIdHex, fetchedEvent)
         }

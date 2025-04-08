@@ -49,7 +49,7 @@ function EventBorderless({
     ndk()
       .fetchEvent({ids: [eventId!]})
       .then((e: NDKEvent | null) => {
-        if (e) {
+        if (e && e.id) {
           setEvent(e)
           eventsByIdCache.set(e.id, e)
         }
