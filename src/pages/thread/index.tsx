@@ -33,6 +33,10 @@ export default function ThreadPage({
   const [threadAuthor, setThreadAuthor] = useState<string | null>(null)
 
   useEffect(() => {
+    setThreadAuthor(null)
+  }, [id])
+
+  useEffect(() => {
     if (isNaddr && naddrData) {
       setLoading(true)
       ndk()
