@@ -5,7 +5,7 @@ import {RiEmotionLine} from "@remixicon/react"
 const EmojiPicker = lazy(() => import("@emoji-mart/react"))
 
 interface EmojiButtonProps {
-  onEmojiSelect: (emoji: string) => void
+  onEmojiSelect: (emoji: {native: string}) => void
 }
 
 const EmojiButton = ({onEmojiSelect}: EmojiButtonProps) => {
@@ -68,9 +68,7 @@ const EmojiButton = ({onEmojiSelect}: EmojiButtonProps) => {
           <Suspense fallback={<LoadingFallback />}>
             <EmojiPicker
               data={emojiData}
-              onEmojiSelect={(emoji: string) => {
-                onEmojiSelect(emoji)
-              }}
+              onEmojiSelect={onEmojiSelect}
               autoFocus={true}
               searchPosition="sticky"
               previewPosition="none"

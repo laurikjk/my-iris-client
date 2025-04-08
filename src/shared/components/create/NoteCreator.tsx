@@ -211,18 +211,18 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
     }
   }
 
-  const handleEmojiSelect = (emoji: string) => {
+  const handleEmojiSelect = (emoji: {native: string}) => {
     if (textarea) {
       const start = textarea.selectionStart
       const end = textarea.selectionEnd
       const textBeforeCursor = noteContent.substring(0, start)
       const textAfterCursor = noteContent.substring(end)
-      setNoteContent(textBeforeCursor + emoji + textAfterCursor)
+      setNoteContent(textBeforeCursor + emoji.native + textAfterCursor)
 
       // Restore focus and set cursor position after the inserted emoji
       setTimeout(() => {
         textarea.focus()
-        const newPosition = start + emoji.length
+        const newPosition = start + emoji.native.length
         textarea.setSelectionRange(newPosition, newPosition)
       }, 0)
     }
@@ -246,7 +246,7 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
       }
     })
 
-    console.log('event tags:', event.tags)
+    console.log("event tags:", event.tags)
 
     addTags(event, repliedEvent, quotedEvent)
     event.sign().then(() => {
