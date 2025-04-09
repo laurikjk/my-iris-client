@@ -5,7 +5,9 @@ import {Name} from "@/shared/components/user/Name"
 import MessageReactions from "./MessageReactions"
 import ReplyPreview from "./ReplyPreview"
 import classNames from "classnames"
+import {Link} from "react-router"
 import {useMemo} from "react"
+import { nip19 } from "nostr-tools"
 
 export type MessageType = Rumor & {
   sender?: "user"
@@ -114,10 +116,13 @@ const Message = ({
 
         <div className="flex flex-col">
           {showAuthor && !isUser && isFirst && (
-            <div className="flex items-center gap-2 mb-1 ml-1">
-              <Avatar pubKey={message.pubkey} width={24} showBadge={false} />
+            <Link
+              to={`/${nip19.npubEncode(message.pubkey)}`}
+              className="flex items-center gap-2 mb-1 ml-1"
+            >
+              <Avatar pubKey={message.pubkey} width={24} showBadge={true} />
               <Name pubKey={message.pubkey} className="text-xs font-medium" />
-            </div>
+            </Link>
           )}
           <div className={messageClassName}>
             {repliedId && (
