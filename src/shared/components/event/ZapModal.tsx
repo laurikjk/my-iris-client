@@ -37,6 +37,7 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
   const [shouldSetDefault, setShouldSetDefault] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string>("")
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
 
   const [isWalletConnect] = useLocalState("user/walletConnect", false)
   const [zapRefresh, setZapRefresh] = useState(false)
@@ -117,22 +118,8 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
           }
         } else {
           setBolt11Invoice(pr)
-          const img = document.getElementById("qr-image") as HTMLImageElement
-
-          try {
-            const QRCode = await import("qrcode")
-            QRCode.toDataURL(`lightning:${pr}`, function (error, url) {
-              if (error) {
-                setError("Failed to generate QR code")
-                console.error("Error generating QR code:", error)
-              } else img.src = url
-            })
-            setShowQRCode(true)
-            return undefined
-          } catch (error) {
-            setError("Failed to generate QR code")
-            throw error
-          }
+          setShowQRCode(true)
+          return undefined
         }
       }
 
@@ -206,6 +193,28 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
     }
   }, [showQRCode])
 
+  useEffect(() => {
+    if (showQRCode && bolt11Invoice) {
+      const generateQRCode = async () => {
+        try {
+          const QRCode = await import("qrcode")
+          QRCode.toDataURL(`lightning:${bolt11Invoice}`, function (error, url) {
+            if (error) {
+              setError("Failed to generate QR code")
+              console.error("Error generating QR code:", error)
+            } else {
+              setQrCodeUrl(url)
+            }
+          })
+        } catch (error) {
+          setError("Failed to generate QR code")
+          console.error("Error importing QRCode:", error)
+        }
+      }
+      generateQRCode()
+    }
+  }, [showQRCode, bolt11Invoice])
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     handleZap()
@@ -244,7 +253,7 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
             <p>
               Scan the QR code to zap <b>{zapAmount} sats</b>
             </p>
-            <img id="qr-image" className="w-40 h-40" />
+            <img id="qr-image" className="w-40 h-40" src={qrCodeUrl} />
             <a href={`lightning:${bolt11Invoice}`} className="btn btn-primary w-full">
               Open in Wallet
             </a>
