@@ -4,6 +4,7 @@ import ErrorBoundary from "@/shared/components/ui/ErrorBoundary"
 import {useEffect, useState, useRef, useMemo} from "react"
 import Header from "@/shared/components/header/Header"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
+import {shouldSocialHide} from "@/utils/socialGraph"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {useNavigate, useParams} from "react-router"
 import Message, {MessageType} from "./Message"
@@ -12,7 +13,6 @@ import MessageForm from "./MessageForm"
 import {localState} from "irisdb/src"
 import {Helmet} from "react-helmet"
 import {ndk} from "@/utils/ndk"
-import { shouldSocialHide } from "@/utils/socialGraph"
 
 // NIP-28 event kinds
 const CHANNEL_CREATE = 40

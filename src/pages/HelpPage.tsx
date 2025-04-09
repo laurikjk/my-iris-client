@@ -3,7 +3,7 @@ import Trending from "@/shared/components/feed/Trending"
 import Header from "@/shared/components/header/Header"
 import Widget from "@/shared/components/ui/Widget"
 import {useState, useEffect} from "react"
-import { Link } from "react-router"
+import {Link} from "react-router"
 
 export const AboutPage = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false)

@@ -6,8 +6,8 @@ import MessageReactions from "./MessageReactions"
 import ReplyPreview from "./ReplyPreview"
 import classNames from "classnames"
 import {Link} from "react-router"
+import {nip19} from "nostr-tools"
 import {useMemo} from "react"
-import { nip19 } from "nostr-tools"
 
 export type MessageType = Rumor & {
   sender?: "user"
