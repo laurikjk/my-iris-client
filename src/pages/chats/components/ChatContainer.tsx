@@ -26,19 +26,39 @@ const ChatContainer = ({
   initialLoadDone = false,
   showNoMessages = false,
 }: ChatContainerProps) => {
-  const [isAtBottom, setIsAtBottom] = useState(true)
   const [showScrollDown, setShowScrollDown] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const wasAtBottomRef = useRef(true)
+  const lastMessageCountRef = useRef(messages.size)
+  const lastMessageIdsRef = useRef<Set<string>>(new Set())
 
   const messageGroups = groupMessages(messages, undefined, isPublicChat)
 
-  // Scroll to bottom when new messages arrive
+  // Handle scroll behavior for new messages
   useEffect(() => {
-    if (isAtBottom) {
-      scrollToBottom()
-    } else {
-      setShowScrollDown(true)
+    const newMessageCount = messages.size
+    const hadNewMessages = newMessageCount > lastMessageCountRef.current
+    lastMessageCountRef.current = newMessageCount
+
+    if (hadNewMessages) {
+      // Check if the new message is from the user
+      const currentMessageIds = new Set(messages.keys())
+      const newMessageIds = Array.from(currentMessageIds).filter(
+        (id) => !lastMessageIdsRef.current.has(id)
+      )
+
+      // If there's a new message and it's from the user, scroll to bottom
+      if (newMessageIds.length > 0) {
+        const newMessage = messages.get(newMessageIds[0])
+        if (newMessage && newMessage.sender === "user") {
+          scrollToBottom()
+        } else if (!wasAtBottomRef.current) {
+          setShowScrollDown(true)
+        }
+      }
+
+      lastMessageIdsRef.current = currentMessageIds
     }
   }, [messages])
 
@@ -50,8 +70,8 @@ const ChatContainer = ({
     if (chatContainerRef.current) {
       const {scrollTop, scrollHeight, clientHeight} = chatContainerRef.current
       const isBottom = scrollTop + clientHeight >= scrollHeight - 10
-      setIsAtBottom(isBottom)
       setShowScrollDown(!isBottom)
+      wasAtBottomRef.current = isBottom
     }
   }
 
