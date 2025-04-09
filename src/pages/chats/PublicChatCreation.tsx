@@ -90,6 +90,38 @@ const PublicChatCreation = () => {
   return (
     <div className="m-4 p-4 md:p-8 rounded-lg bg-base-100 flex flex-col gap-6">
       <div>
+        <h2 className="text-xl font-semibold mb-4">Join a Public Channel</h2>
+        <form onSubmit={handleJoinChannel} className="flex flex-col gap-4">
+          <div>
+            <label className="label">
+              <span className="label-text">Channel ID</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered w-full"
+              placeholder="Enter channel ID"
+              value={channelId}
+              onChange={(e) => setChannelId(e.target.value)}
+              required
+            />
+          </div>
+          {joinError && <div className="text-error">{joinError}</div>}
+          <button type="submit" className="btn btn-primary" disabled={isJoining}>
+            {isJoining ? (
+              <>
+                <span className="loading loading-spinner loading-xs"></span>
+                Joining...
+              </>
+            ) : (
+              "Join Channel"
+            )}
+          </button>
+        </form>
+      </div>
+
+      <div className="divider">OR</div>
+
+      <div>
         <h2 className="text-xl font-semibold mb-4">Create a Public Channel</h2>
         <form onSubmit={handleCreateChannel} className="flex flex-col gap-4">
           <div>
@@ -137,38 +169,6 @@ const PublicChatCreation = () => {
               </>
             ) : (
               "Create Channel"
-            )}
-          </button>
-        </form>
-      </div>
-
-      <div className="divider">OR</div>
-
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Join a Public Channel</h2>
-        <form onSubmit={handleJoinChannel} className="flex flex-col gap-4">
-          <div>
-            <label className="label">
-              <span className="label-text">Channel ID</span>
-            </label>
-            <input
-              type="text"
-              className="input input-bordered w-full"
-              placeholder="Enter channel ID"
-              value={channelId}
-              onChange={(e) => setChannelId(e.target.value)}
-              required
-            />
-          </div>
-          {joinError && <div className="text-error">{joinError}</div>}
-          <button type="submit" className="btn btn-primary" disabled={isJoining}>
-            {isJoining ? (
-              <>
-                <span className="loading loading-spinner loading-xs"></span>
-                Joining...
-              </>
-            ) : (
-              "Join Channel"
             )}
           </button>
         </form>
