@@ -1,10 +1,10 @@
 import {useLocation, Routes, Route} from "react-router"
+import PrivateChat from "./PrivateChat"
 import PublicChat from "./PublicChat"
 import {Helmet} from "react-helmet"
 import classNames from "classnames"
 import ChatList from "./ChatList"
 import NewChat from "./NewChat"
-import Chat from "./Chat"
 
 function Messages() {
   const location = useLocation()
@@ -29,7 +29,7 @@ function Messages() {
       >
         <Routes>
           <Route path="new" element={<NewChat />} />
-          <Route path="chat" element={<Chat id={location.state?.id} />} />
+          <Route path="chat" element={<PrivateChat id={location.state?.id} />} />
           <Route path=":id" element={<PublicChat />} />
           <Route path="/" element={<NewChat />} />
         </Routes>

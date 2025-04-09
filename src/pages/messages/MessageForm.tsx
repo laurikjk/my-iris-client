@@ -13,9 +13,16 @@ interface MessageFormProps {
   id: string
   replyingTo?: MessageType
   setReplyingTo: (message?: MessageType) => void
+  onSendMessage?: (content: string) => Promise<void>
 }
 
-const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps) => {
+const MessageForm = ({
+  session,
+  id,
+  replyingTo,
+  setReplyingTo,
+  onSendMessage,
+}: MessageFormProps) => {
   const [newMessage, setNewMessage] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
   const theirPublicKey = id.split(":")[0]
@@ -39,10 +46,19 @@ const MessageForm = ({session, id, replyingTo, setReplyingTo}: MessageFormProps)
     return () => document.removeEventListener("keydown", handleEscKey)
   }, [id, isTouchDevice, replyingTo, setReplyingTo])
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const text = newMessage.trim()
     if (!text) return
+
+    if (onSendMessage) {
+      await onSendMessage(text)
+      setNewMessage("")
+      if (replyingTo) {
+        setReplyingTo(undefined)
+      }
+      return
+    }
 
     const time = Date.now()
     const tags = [["ms", time.toString()]]
