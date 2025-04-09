@@ -20,11 +20,40 @@ let myPrivKey = ""
 localState.get("user/publicKey").on((k) => (myPubKey = k as string))
 localState.get("user/privateKey").on((k) => (myPrivKey = k as string))
 
+type TabType = "private" | "public"
+
+const TabSelector = ({
+  activeTab,
+  onSelect,
+}: {
+  activeTab: TabType
+  onSelect: (tab: TabType) => void
+}) => {
+  const getClasses = (tabType: TabType) => {
+    const baseClasses = "border-highlight cursor-pointer flex justify-center flex-1 p-3"
+    return activeTab === tabType
+      ? `${baseClasses} border-b border-1`
+      : `${baseClasses} text-base-content/70 hover:text-base-content border-b border-1 border-transparent`
+  }
+
+  return (
+    <div className="flex mb-px md:mb-1">
+      <div className={getClasses("private")} onClick={() => onSelect("private")}>
+        Private
+      </div>
+      <div className={getClasses("public")} onClick={() => onSelect("public")}>
+        Public
+      </div>
+    </div>
+  )
+}
+
 const NewChat = () => {
   const navigate = useNavigate()
   const [invites, setInvites] = useState<Map<string, Invite>>(new Map())
   const [inviteInput, setInviteInput] = useState("")
   const labelInputRef = useRef<HTMLInputElement>(null)
+  const [activeTab, setActiveTab] = useState<TabType>("private")
 
   useEffect(() => {
     if (getSessions().size === 0) {
@@ -103,10 +132,8 @@ const NewChat = () => {
     acceptInvite(data, myPubKey, myPrivKey, navigate)
   }
 
-  return (
+  const renderPrivateContent = () => (
     <>
-      <Header title="New Chat" />
-      <NotificationPrompt />
       <div className="m-4 p-4 md:p-8 rounded-lg bg-base-100 flex flex-col gap-6">
         <div>
           <h2 className="text-xl font-semibold mb-4">Have someone&apos;s invite link?</h2>
@@ -121,17 +148,14 @@ const NewChat = () => {
             <QRCodeButton
               data=""
               showQRCode={false}
-              onScanSuccess={(data) => handleInviteInput({target: {value: data}} as any)}
+              onScanSuccess={(data) => handleInviteInput({target: {value: data}} as ChangeEvent<HTMLInputElement>)}
               icon="qr"
             />
           </div>
         </div>
         <div>
           <h2 className="text-xl font-semibold mb-4">Share your invite link</h2>
-          <form
-            onSubmit={createInvite}
-            className="flex flex-wrap items-center gap-2 mb-4"
-          >
+          <form onSubmit={createInvite} className="flex flex-wrap items-center gap-2 mb-4">
             <input
               ref={labelInputRef}
               type="text"
@@ -161,10 +185,7 @@ const NewChat = () => {
                   >
                     Copy
                   </button>
-                  <button
-                    onClick={() => deleteInvite(id)}
-                    className="btn btn-sm btn-error"
-                  >
+                  <button onClick={() => deleteInvite(id)} className="btn btn-sm btn-error">
                     Delete
                   </button>
                 </div>
@@ -191,6 +212,26 @@ const NewChat = () => {
           Chat history is stored locally on this device and cleared when you log out.
         </p>
       </div>
+    </>
+  )
+
+  const renderPublicContent = () => (
+    <div className="m-4 p-4 md:p-8 rounded-lg bg-base-100 flex flex-col gap-6">
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Public Chat</h2>
+        <p className="text-base-content/70">
+          Public chat functionality will be available soon. Stay tuned!
+        </p>
+      </div>
+    </div>
+  )
+
+  return (
+    <>
+      <Header title="New Chat" />
+      <NotificationPrompt />
+      <TabSelector activeTab={activeTab} onSelect={setActiveTab} />
+      {activeTab === "private" ? renderPrivateContent() : renderPublicContent()}
       <InstallPWAPrompt />
     </>
   )
