@@ -253,7 +253,9 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
             <p>
               Scan the QR code to zap <b>{zapAmount} sats</b>
             </p>
-            <img id="qr-image" className="w-40 h-40" src={qrCodeUrl} />
+            <div className="w-40 h-40">
+              {qrCodeUrl && <img id="qr-image" className="w-40 h-40" src={qrCodeUrl} />}
+            </div>
             <a href={`lightning:${bolt11Invoice}`} className="btn btn-primary w-full">
               Open in Wallet
             </a>
