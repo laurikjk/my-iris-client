@@ -1,9 +1,9 @@
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {unsubscribeAll} from "@/utils/notifications"
 import {DEFAULT_RELAYS} from "@/utils/ndk"
+import {MouseEvent, useState} from "react"
 import {useNavigate} from "react-router"
 import localforage from "localforage"
-import {MouseEvent} from "react"
 
 function Account() {
   const [privateKey, setPrivateKey] = useLocalState("user/privateKey", "", String)
@@ -12,6 +12,7 @@ function Account() {
   const [, setDHTPublicKey] = useLocalState("user/DHTPublicKey", "", String)
   const [, setRelays] = useLocalState("user/relays", [])
   const [, setNip07Login] = useLocalState("user/nip07Login", false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const navigate = useNavigate()
 
   async function handleLogout(e: MouseEvent) {
@@ -21,6 +22,7 @@ function Account() {
       !privateKey ||
       confirm("Log out? Make sure you have a backup of your secret key.")
     ) {
+      setIsLoggingOut(true)
       try {
         await unsubscribeAll()
       } catch (e) {
@@ -64,8 +66,16 @@ function Account() {
           permanently deleted.
         </small>
         <div className="mt-2">
-          <button className="btn btn-primary" onClick={handleLogout}>
-            Log out
+          <button
+            className="btn btn-primary"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+          >
+            {isLoggingOut ? (
+              <div className="loading loading-spinner loading-sm" />
+            ) : (
+              "Log out"
+            )}
           </button>
         </div>
       </div>
