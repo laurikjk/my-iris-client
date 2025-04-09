@@ -84,39 +84,40 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
   useEffect(() => {
     if (!isPublic) return
 
-    const fetchLatestMessage = async () => {
-      try {
-        // Fetch the most recent message in this channel
-        const events = await ndk().fetchEvents({
-          kinds: [CHANNEL_MESSAGE],
-          "#e": [id],
-          limit: 1,
-        })
+    // Set up subscription for latest messages
+    const sub = ndk().subscribe({
+      kinds: [CHANNEL_MESSAGE],
+      "#e": [id],
+      limit: 1,
+    })
 
-        const eventArray = Array.from(events)
-        if (eventArray.length > 0) {
-          const event = eventArray[0]
-          const messageData = {
-            content: event.content,
-            created_at: event.created_at,
-          }
-          setLatestMessage(messageData)
+    // Handle new messages
+    sub.on("event", (event) => {
+      if (!event || !event.id) return
 
-          // Update the timestamp in the parent component
-          if (setPublicChatTimestamps) {
-            setPublicChatTimestamps((prev) => ({
-              ...prev,
-              [id]: event.created_at,
-            }))
-          }
+      // Only update if this message is more recent than what we already have
+      if (!latestMessage || event.created_at > latestMessage.created_at) {
+        const messageData = {
+          content: event.content,
+          created_at: event.created_at,
         }
-      } catch (err) {
-        console.error("Error fetching latest message:", err)
-      }
-    }
+        setLatestMessage(messageData)
 
-    fetchLatestMessage()
-  }, [id, isPublic, setPublicChatTimestamps])
+        // Update the timestamp in the parent component
+        if (setPublicChatTimestamps) {
+          setPublicChatTimestamps((prev) => ({
+            ...prev,
+            [id]: event.created_at,
+          }))
+        }
+      }
+    })
+
+    // Clean up subscription when component unmounts
+    return () => {
+      sub.stop()
+    }
+  }, [id, isPublic, setPublicChatTimestamps, latestMessage])
 
   useEffect(() => {
     // Set a timeout to show the placeholder after 2 seconds if metadata hasn't loaded

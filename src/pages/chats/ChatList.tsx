@@ -73,6 +73,7 @@ const ChatList = ({className}: ChatListProps) => {
         const events = await ndk().fetchEvents({
           kinds: [CHANNEL_MESSAGE],
           authors: [userPublicKey],
+          limit: 100,
         })
 
         // Extract unique channel IDs
