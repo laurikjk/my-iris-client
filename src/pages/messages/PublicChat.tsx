@@ -8,6 +8,7 @@ import {shouldSocialHide} from "@/utils/socialGraph"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {useNavigate, useParams} from "react-router"
 import Message, {MessageType} from "./Message"
+import {RiEarthLine} from "@remixicon/react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import MessageForm from "./MessageForm"
 import {localState} from "irisdb/src"
@@ -261,7 +262,16 @@ const PublicChat = () => {
       const event = new NDKEvent(ndk())
       event.kind = CHANNEL_MESSAGE
       event.content = content
-      event.tags = [["e", id, "", "root"]]
+
+      // Add channel tag
+      const tags = [["e", id, "", "root"]]
+
+      // Add reply tag if replying to a message
+      if (replyingTo) {
+        tags.push(["e", replyingTo.id, "", "reply"])
+      }
+
+      event.tags = tags
 
       // Sign and publish the event
       await event.sign()
@@ -284,6 +294,9 @@ const PublicChat = () => {
         updated.set(newMessage.id, newMessage)
         return updated
       })
+
+      // Clear reply state after sending
+      setReplyingTo(undefined)
     } catch (err) {
       console.error("Error sending message:", err)
       setError("Failed to send message")
@@ -327,7 +340,14 @@ const PublicChat = () => {
               <MinidenticonImg username={id || "unknown"} />
             )}
           </div>
-          <span className="font-medium">{channelMetadata?.name || "Public Chat"}</span>
+          <div className="flex flex-col items-start">
+            <span className="font-medium flex items-center gap-1">
+              {channelMetadata?.name || "Public Chat"}
+            </span>
+            <span className="text-xs text-base-content/50 flex items-center gap-1">
+              <RiEarthLine className="w-4 h-4" /> Public chat
+            </span>
+          </div>
         </div>
       </Header>
       <div

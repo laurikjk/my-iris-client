@@ -80,10 +80,24 @@ const Message = ({
     [message.content]
   )
 
-  const repliedId = useMemo(
-    () => message.tags?.find((tag) => tag[0] === "e")?.[1],
-    [message.tags]
-  )
+  const repliedId = useMemo(() => {
+    // First check for explicit reply tag
+    const replyTag = message.tags?.find(
+      (tag) => tag[0] === "e" && tag[3] === "reply"
+    )?.[1]
+    if (replyTag) return replyTag
+
+    // If no explicit reply tag, check if there's an "e" tag but no "root" tag
+    const hasETag = message.tags?.some((tag) => tag[0] === "e")
+    const hasRootTag = message.tags?.some((tag) => tag[0] === "e" && tag[3] === "root")
+
+    if (hasETag && !hasRootTag) {
+      // Return the first "e" tag's value as the reply ID
+      return message.tags?.find((tag) => tag[0] === "e")?.[1]
+    }
+
+    return undefined
+  }, [message.tags])
 
   const messageClassName = useMemo(
     () => getMessageClassName(isUser, isFirst, isLast, isShortEmoji),

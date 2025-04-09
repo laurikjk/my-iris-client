@@ -3,6 +3,7 @@ import {useState, useEffect} from "react"
 import {localState} from "irisdb/src"
 import {MessageType} from "./Message"
 import classNames from "classnames"
+import {ndk} from "@/utils/ndk"
 
 type ReplyPreviewProps = {
   isUser: boolean
@@ -11,7 +12,6 @@ type ReplyPreviewProps = {
 }
 
 const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
-  // TODO this initialised with null causes chat open scrolldown to not work properly
   const [repliedToMessage, setRepliedToMessage] = useState<MessageType | null>(null)
 
   // No need to find the reply tag here since we're passing it directly
@@ -37,15 +37,42 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
 
     const fetchReplyMessage = async () => {
       try {
-        const replyMsg = await localState
-          .get("sessions")
-          .get(sessionId)
-          .get("events")
-          .get(replyToId)
-          .once()
+        // For private chats (sessionId contains ":")
+        if (sessionId.includes(":")) {
+          console.log("Fetching private message:", sessionId, replyToId)
+          const replyMsg = await localState
+            .get("sessions")
+            .get(sessionId)
+            .get("events")
+            .get(replyToId)
+            .once()
 
-        if (replyMsg && typeof replyMsg === "object") {
-          setRepliedToMessage(replyMsg as MessageType)
+          if (replyMsg && typeof replyMsg === "object") {
+            console.log("Private message found:", replyMsg)
+            setRepliedToMessage(replyMsg as MessageType)
+          }
+          return
+        }
+
+        // For public chats (sessionId is just the channel ID)
+        console.log("Fetching public message:", sessionId, replyToId)
+        const event = await ndk().fetchEvent({
+          ids: [replyToId],
+        })
+
+        if (event) {
+          console.log("Public event:", event)
+          const message: MessageType = {
+            id: event.id,
+            pubkey: event.pubkey,
+            content: event.content,
+            created_at: event.created_at,
+            tags: event.tags,
+            kind: event.kind,
+            sender: undefined,
+            reactions: {},
+          }
+          setRepliedToMessage(message)
         }
       } catch (error) {
         console.error("Error fetching replied-to message:", error)
@@ -53,7 +80,7 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
     }
 
     fetchReplyMessage()
-  }, [replyToId, sessionId])
+  }, [replyToId, sessionId, theirPublicKey])
 
   if (!repliedToMessage) return null
 
@@ -69,7 +96,9 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
         {repliedToMessage.sender === "user" ? (
           "You"
         ) : (
-          <Name pubKey={theirPublicKey} />
+          <Name
+            pubKey={sessionId.includes(":") ? theirPublicKey : repliedToMessage.pubkey}
+          />
         )}{" "}
       </div>
       <div className="truncate max-w-[250px]">{repliedToMessage.content}</div>

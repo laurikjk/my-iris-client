@@ -7,6 +7,7 @@ import {Avatar} from "@/shared/components/user/Avatar"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {Name} from "@/shared/components/user/Name"
 import {NavLink, useLocation} from "react-router"
+import {RiEarthLine} from "@remixicon/react"
 import {useEffect, useState} from "react"
 import {localState} from "irisdb/src"
 import {MessageType} from "./Message"
@@ -154,8 +155,8 @@ const ChatListItem = ({id, isPublic = false}: {id: string; isPublic?: boolean}) 
       })}
     >
       <div className="flex flex-row items-center gap-2 flex-1">
-        {isPublic ? (
-          channelMetadata?.picture ? (
+        {isPublic &&
+          (channelMetadata?.picture ? (
             <ProxyImg
               width={18}
               square={true}
@@ -167,13 +168,12 @@ const ChatListItem = ({id, isPublic = false}: {id: string; isPublic?: boolean}) 
             <div className="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center">
               <span className="text-lg">#</span>
             </div>
-          )
-        ) : (
-          <Avatar pubKey={pubKey} />
-        )}
+          ))}
+        {!isPublic && <Avatar pubKey={pubKey} />}
         <div className="flex flex-col flex-1">
           <div className="flex flex-row items-center justify-between gap-2">
-            <span className="text-base font-semibold">
+            <span className="text-base font-semibold flex items-center gap-1">
+              {isPublic && <RiEarthLine className="w-4 h-4" />}
               {isPublic ? (
                 channelMetadata?.name || `Channel ${id.slice(0, 8)}...`
               ) : (
