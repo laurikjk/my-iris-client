@@ -4,7 +4,7 @@ import {comparator} from "./utils/messageGrouping"
 import {Session} from "nostr-double-ratchet/src"
 import {useEffect, useState} from "react"
 import MessageForm from "./MessageForm"
-import ChatHeader from "./ChatHeader"
+import PrivateChatHeader from "./components/PrivateChatHeader"
 import {getSession} from "./Sessions"
 import {localState} from "irisdb/src"
 import {MessageType} from "./Message"
@@ -93,7 +93,7 @@ const Chat = ({id}: {id: string}) => {
 
   return (
     <>
-      <ChatHeader id={id} messages={messages} />
+      <PrivateChatHeader id={id} messages={messages} />
       <ChatContainer
         messages={messages}
         session={session}

@@ -17,7 +17,7 @@ interface PublicChatHeaderProps {
 
 const PublicChatHeader = ({channelMetadata, channelId}: PublicChatHeaderProps) => {
   return (
-    <Header>
+    <Header showNotifications={false} scrollDown={true} slideUp={false} bold={false}>
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 flex items-center justify-center">
           {channelMetadata?.picture ? (

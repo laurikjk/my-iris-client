@@ -48,7 +48,7 @@ const Footer = () => {
     },
   ]
 
-  if (location.pathname.startsWith("/chats/chat")) {
+  if (location.pathname.startsWith("/chats/") && !location.pathname.endsWith("/new")) {
     return null
   }
 
