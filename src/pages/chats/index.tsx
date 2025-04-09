@@ -8,7 +8,7 @@ import NewChat from "./NewChat"
 
 function Messages() {
   const location = useLocation()
-  const isMessagesRoot = location.pathname === "/messages"
+  const isMessagesRoot = location.pathname === "/chats"
 
   return (
     <div className="flex flex-1 h-full relative">

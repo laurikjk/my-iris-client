@@ -196,17 +196,17 @@ const NOTIFICATION_CONFIGS: Record<
 > = {
   [MESSAGE_EVENT_KIND]: {
     title: "New private message",
-    url: "/messages",
+    url: "/chats",
     icon: "/favicon.png",
   },
   [INVITE_EVENT_KIND]: {
     title: "New message request",
-    url: "/messages",
+    url: "/chats",
     icon: "/favicon.png",
   },
   [INVITE_RESPONSE_KIND]: {
     title: "New chat via invite", // TODO get invite label public or private
-    url: "/messages",
+    url: "/chats",
     icon: "/favicon.png",
   },
 } as const

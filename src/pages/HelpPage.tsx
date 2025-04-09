@@ -64,7 +64,7 @@ export const AboutPage = () => {
                 <a href={CONFIG.repository}>Source code</a>
               </p>
               <p>
-                <Link to="/messages/1d2f13b495d7425b70298a8acd375897a632562043d461e89b63499363eaf8e7">
+                <Link to="/chats/1d2f13b495d7425b70298a8acd375897a632562043d461e89b63499363eaf8e7">
                   Iris feedback, support and discussion chat
                 </Link>
               </p>

@@ -144,7 +144,7 @@ async function updateLatestMessageIfNewer(id: string, event: Rumor) {
 function handleEventNotification(id: string, event: Rumor) {
   // If visible, update lastSeen. If not, show notification.
   if (
-    window.location.pathname.includes(`/messages`) &&
+    window.location.pathname.includes(`/chats`) &&
     window.history.state?.id === id && // TODO this is always false. figure out how to check it.
     document.visibilityState !== "visible"
   ) {
@@ -182,7 +182,7 @@ async function showEventNotification(id: string, event: Rumor) {
     icon: profile?.picture
       ? generateProxyUrl(String(profile.picture), {width: 128, square: true})
       : "/favicon.png",
-    data: {url: `/messages`}, // TODO add session id state param
+    data: {url: `/chats`}, // TODO add session id state param
     requireInteraction: false,
   })
 }

@@ -108,7 +108,7 @@ const Header = ({
       if (window.history.state?.idx > 0) {
         navigate(-1)
       } else {
-        navigate("/messages")
+        navigate("/chats")
       }
     } else {
       setSidebarOpen(!isSidebarOpen)

@@ -25,7 +25,7 @@ const PrivateChatCreation = () => {
 
   useEffect(() => {
     if (getSessions().size === 0) {
-      navigate("/messages/new", {replace: true})
+      navigate("/chats/new", {replace: true})
     }
 
     return localState.get("invites").on(() => {
@@ -89,7 +89,7 @@ const PrivateChatCreation = () => {
         .put(serializeSessionState(session.state))
 
       // Navigate to the new chat
-      navigate("/messages/chat", {state: {id: sessionId}})
+      navigate("/chats/chat", {state: {id: sessionId}})
     } catch (error) {
       console.error("Invalid invite link:", error)
       // Optionally, you can show an error message to the user here

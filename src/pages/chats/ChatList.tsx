@@ -145,7 +145,7 @@ const ChatListItem = ({id, isPublic = false}: {id: string; isPublic?: boolean}) 
 
   return (
     <NavLink
-      to={isPublic ? `/messages/${id}` : "/messages/chat"}
+      to={isPublic ? `/chats/${id}` : "/chats/chat"}
       state={{id}}
       key={id}
       onClick={() => setLastSeen(Date.now())}
@@ -347,11 +347,11 @@ const ChatList = ({className}: ChatListProps) => {
   return (
     <nav className={className}>
       <div className="md:hidden">
-        <Header title="Messages" slideUp={false} />
+        <Header title="Chats" slideUp={false} />
       </div>
       <div className="flex flex-col">
         <NavLink
-          to="/messages/new"
+          to="/chats/new"
           end
           className={({isActive}) =>
             classNames("p-4 flex items-center border-b border-custom", {

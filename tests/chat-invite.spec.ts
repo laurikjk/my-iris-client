@@ -5,8 +5,8 @@ test("can create and use private invite link to chat with self", async ({page}) 
   // Sign up
   await signUp(page)
 
-  // Navigate to messages via navbar
-  await page.getByRole("link", {name: "Messages"}).click()
+  // Navigate to chats via navbar
+  await page.getByRole("link", {name: "Chats"}).click()
   await expect(page.getByRole("banner").getByText("New Chat")).toBeVisible()
 
   // Create a new invite link
@@ -34,7 +34,7 @@ test("can create and use private invite link to chat with self", async ({page}) 
   await page.keyboard.type(inviteLink!)
 
   // Wait for navigation to chat view with a longer timeout since encryption takes time
-  await expect(page).toHaveURL(/\/messages\/chat/, {timeout: 10000})
+  await expect(page).toHaveURL(/\/chats\/chat/, {timeout: 10000})
 
   // Verify we can send a message
   const messageInput = page.getByPlaceholder("Message")

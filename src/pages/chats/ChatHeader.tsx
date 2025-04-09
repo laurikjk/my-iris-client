@@ -35,7 +35,7 @@ const ChatHeader = ({id, messages}: ChatHeaderProps) => {
       for (const [messageId] of messages) {
         localState.get("sessions").get(id).get("events").get(messageId).put(null)
       }
-      navigate("/messages")
+      navigate("/chats")
     }
   }
 

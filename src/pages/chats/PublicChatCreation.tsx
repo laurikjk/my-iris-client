@@ -51,7 +51,7 @@ const PublicChatCreation = () => {
       await event.publish()
 
       // Navigate to the new channel
-      navigate(`/messages/${event.id}`)
+      navigate(`/chats/${event.id}`)
     } catch (err) {
       console.error("Error creating channel:", err)
       setCreateError("Failed to create channel")
@@ -79,7 +79,7 @@ const PublicChatCreation = () => {
       }
 
       // Navigate to the channel
-      navigate(`/messages/${channelId}`)
+      navigate(`/chats/${channelId}`)
     } catch (err) {
       console.error("Error joining channel:", err)
       setJoinError("Failed to join channel")

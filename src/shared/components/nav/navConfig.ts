@@ -20,9 +20,9 @@ export const navItemsConfig = (myPubKey: string): Record<string, NavItemConfig> 
     requireLogin: true,
   },
   messages: {
-    to: "/messages",
+    to: "/chats",
     icon: "mail",
-    label: "Messages",
+    label: "Chats",
     requireLogin: true,
   },
   notifications: {

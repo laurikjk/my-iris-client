@@ -48,7 +48,7 @@ const Footer = () => {
     },
   ]
 
-  if (location.pathname.startsWith("/messages/chat")) {
+  if (location.pathname.startsWith("/chats/chat")) {
     return null
   }
 
@@ -65,7 +65,7 @@ const Footer = () => {
           )}
           {myPubKey && (
             <NavLink
-              to="/messages"
+              to="/chats"
               className={({isActive}) =>
                 classNames(
                   {active: isActive},

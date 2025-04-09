@@ -51,7 +51,7 @@ const Layout = () => {
       window.scrollTo(0, 0)
     }
 
-    const isMessagesRoute = location.pathname.startsWith("/messages/")
+    const isMessagesRoute = location.pathname.startsWith("/chats/")
     const isSearchRoute = location.pathname.startsWith("/search/")
     if (
       CONFIG.features.analytics &&
@@ -67,9 +67,9 @@ const Layout = () => {
     const handleServiceWorkerMessage = (event: MessageEvent<ServiceWorkerMessage>) => {
       if (event.data?.type === "NAVIGATE_REACT_ROUTER") {
         const url = new URL(event.data.url)
-        if (url.pathname.match(/^\/messages\/[^/]+$/)) {
-          const chatId = url.pathname.split("/")[2]
-          navigate("/messages/chat", {state: {id: chatId}})
+        if (url.pathname.match(/^\/chats\/[^/]+$/)) {
+          const chatId = url.pathname.split("/").pop()
+          navigate("/chats/chat", {state: {id: chatId}})
         } else {
           navigate(url.pathname + url.search + url.hash)
         }

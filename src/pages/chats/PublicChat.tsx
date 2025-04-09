@@ -312,8 +312,8 @@ const PublicChat = () => {
         <Header title="Error" />
         <div className="flex flex-col items-center justify-center h-full p-4">
           <p className="text-error mb-4">{error}</p>
-          <button className="btn btn-primary" onClick={() => navigate("/messages")}>
-            Back to Messages
+          <button className="btn btn-primary" onClick={() => navigate("/chats")}>
+            Back to Chats
           </button>
         </div>
       </>

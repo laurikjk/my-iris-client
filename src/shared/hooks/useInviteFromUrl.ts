@@ -51,7 +51,7 @@ export const acceptInvite = async (
 
     // Navigate to the new chat if navigate function is provided
     if (navigate) {
-      navigate(`/messages/chat`, {state: {id: sessionId}})
+      navigate(`/chats/chat`, {state: {id: sessionId}})
     }
 
     return {success: true, inviter: invite.inviter}

@@ -11,7 +11,7 @@ import SearchPage from "@/pages/search"
 import HomePage from "@/pages/home"
 
 // Lazy load components
-const MessagesPage = lazy(() => import("@/pages/messages"))
+const ChatsPage = lazy(() => import("@/pages/chats"))
 const SettingsPage = lazy(() => import("@/pages/settings"))
 const Explorer = lazy(() => import("@/pages/explorer/Explorer"))
 
@@ -22,10 +22,10 @@ export const router = createBrowserRouter(
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/wallet" element={<WalletPage />} />
       <Route
-        path="/messages/*"
+        path="/chats/*"
         element={
           <Suspense fallback={<LoadingFallback />}>
-            <MessagesPage />
+            <ChatsPage />
           </Suspense>
         }
       />
