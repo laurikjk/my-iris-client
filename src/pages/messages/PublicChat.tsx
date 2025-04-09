@@ -6,13 +6,12 @@ import Header from "@/shared/components/header/Header"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {useNavigate, useParams} from "react-router"
+import Message, {MessageType} from "./Message"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import MessageForm from "./MessageForm"
 import {localState} from "irisdb/src"
-import {MessageType} from "./Message"
 import {Helmet} from "react-helmet"
 import {ndk} from "@/utils/ndk"
-import Message from "./Message"
 
 // NIP-28 event kinds
 const CHANNEL_CREATE = 40
@@ -331,6 +330,7 @@ const PublicChat = () => {
                         session={session}
                         sessionId={id || ""}
                         onReply={() => setReplyingTo(message)}
+                        showAuthor={true}
                       />
                     ))}
                   </ErrorBoundary>

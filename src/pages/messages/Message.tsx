@@ -1,5 +1,7 @@
 import {getMillisecondTimestamp, Rumor, Session} from "nostr-double-ratchet/src"
 import MessageReactionButton from "./MessageReactionButton"
+import {Avatar} from "@/shared/components/user/Avatar"
+import {Name} from "@/shared/components/user/Name"
 import MessageReactions from "./MessageReactions"
 import ReplyPreview from "./ReplyPreview"
 import classNames from "classnames"
@@ -17,6 +19,7 @@ type MessageProps = {
   session: Session
   sessionId: string
   onReply?: () => void
+  showAuthor?: boolean
 }
 
 // Moved regex outside component to avoid recreation on each render
@@ -67,6 +70,7 @@ const Message = ({
   session,
   sessionId,
   onReply,
+  showAuthor = false,
 }: MessageProps) => {
   const isUser = message.sender === "user"
   const isShortEmoji = useMemo(
@@ -109,6 +113,12 @@ const Message = ({
         )}
 
         <div className="flex flex-col">
+          {showAuthor && !isUser && isFirst && (
+            <div className="flex items-center gap-2 mb-1 ml-1">
+              <Avatar pubKey={message.pubkey} width={24} showBadge={false} />
+              <Name pubKey={message.pubkey} className="text-xs font-medium" />
+            </div>
+          )}
           <div className={messageClassName}>
             {repliedId && (
               <ReplyPreview isUser={isUser} sessionId={sessionId} replyToId={repliedId} />
