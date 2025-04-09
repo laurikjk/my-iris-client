@@ -39,11 +39,15 @@ const groupMessages = (
 
   for (const [, message] of messages) {
     const messageDate = new Date(getMillisecondTimestamp(message)).toDateString()
-    const hasReply = message.tags?.some((tag) => tag[0] === "e")
+
+    // Check if this is a reply to another message (not just a channel message)
+    // In public chats, all messages have an "e" tag with the channel ID
+    // We need to check if it's a reply to another message in the channel
+    const isReply = message.tags?.some((tag) => tag[0] === "e" && tag[3] === "reply")
     const hasReactions = message.reactions && Object.keys(message.reactions).length > 0
 
     // If this message is a reply or has reactions, finish the current group
-    if (hasReply || hasReactions) {
+    if (isReply || hasReactions) {
       if (currentGroup.length > 0) {
         groups.push(currentGroup)
       }
@@ -67,7 +71,14 @@ const groupMessages = (
         const lastMessage = currentGroup[currentGroup.length - 1]
         const timeDiff =
           getMillisecondTimestamp(message) - getMillisecondTimestamp(lastMessage)
-        const isSameSender = message.pubkey === lastMessage.pubkey
+
+        // For public chats, we need to handle undefined sender values
+        // Messages with the same pubkey should be grouped together
+        const isSameSender =
+          message.sender === lastMessage.sender ||
+          (message.sender === undefined &&
+            lastMessage.sender === undefined &&
+            message.pubkey === lastMessage.pubkey)
 
         if (isSameSender && timeDiff <= timeThreshold) {
           currentGroup.push(message)
