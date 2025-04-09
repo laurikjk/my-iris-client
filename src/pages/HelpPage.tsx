@@ -3,6 +3,7 @@ import Trending from "@/shared/components/feed/Trending"
 import Header from "@/shared/components/header/Header"
 import Widget from "@/shared/components/ui/Widget"
 import {useState, useEffect} from "react"
+import { Link } from "react-router"
 
 export const AboutPage = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false)
@@ -61,6 +62,11 @@ export const AboutPage = () => {
               <p>{CONFIG.aboutText}</p>
               <p>
                 <a href={CONFIG.repository}>Source code</a>
+              </p>
+              <p>
+                <Link to="/messages/1d2f13b495d7425b70298a8acd375897a632562043d461e89b63499363eaf8e7">
+                  Iris feedback, support and discussion chat
+                </Link>
               </p>
               <div className="mt-4">
                 <p>Version: {appVersion}</p>
