@@ -40,6 +40,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     created_at: number
   } | null>(null)
   const {setPublicChatTimestamps} = useContext(PublicChatContext)
+  const [showPlaceholder, setShowPlaceholder] = useState(false)
 
   useEffect(() => {
     // TODO irisdb should have subscriptions work without this
@@ -117,6 +118,17 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     fetchLatestMessage()
   }, [id, isPublic, setPublicChatTimestamps])
 
+  useEffect(() => {
+    // Set a timeout to show the placeholder after 2 seconds if metadata hasn't loaded
+    const timer = setTimeout(() => {
+      if (!channelMetadata) {
+        setShowPlaceholder(true)
+      }
+    }, 2000)
+
+    return () => clearTimeout(timer)
+  }, [channelMetadata])
+
   const getPreviewText = () => {
     if (isPublic && latestMessage?.content) {
       const content = latestMessage.content
@@ -154,7 +166,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
               square={true}
               src={channelMetadata.picture}
               alt="Channel Icon"
-              className="rounded-full"
+              className="rounded-full w-10 h-10"
             />
           ) : (
             <div className="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center">
@@ -167,7 +179,8 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
             <span className="text-base font-semibold flex items-center gap-1">
               {isPublic && <RiEarthLine className="w-4 h-4" />}
               {isPublic ? (
-                channelMetadata?.name || `Channel ${id.slice(0, 8)}...`
+                channelMetadata?.name ||
+                (showPlaceholder ? `Channel ${id.slice(0, 8)}...` : "")
               ) : (
                 <Name pubKey={pubKey} />
               )}
