@@ -1,4 +1,5 @@
 import {ConnectionStatus} from "@/shared/components/connection/ConnectionStatus"
+import {fetchChannelMetadata, ChannelMetadata} from "./utils/channelMetadata"
 import RelativeTime from "@/shared/components/event/RelativeTime"
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
@@ -15,15 +16,7 @@ import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
 
 // NIP-28 event kinds
-const CHANNEL_CREATE = 40
 const CHANNEL_MESSAGE = 42
-
-type ChannelMetadata = {
-  name: string
-  about: string
-  picture: string
-  relays: string[]
-}
 
 interface ChatListItemProps {
   id: string
@@ -56,27 +49,12 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
   // Fetch channel metadata for public chats
   useEffect(() => {
     if (isPublic) {
-      const fetchChannelMetadata = async () => {
-        try {
-          const channelEvent = await ndk().fetchEvent({
-            kinds: [CHANNEL_CREATE],
-            ids: [id],
-          })
-
-          if (channelEvent) {
-            try {
-              const metadata = JSON.parse(channelEvent.content)
-              setChannelMetadata(metadata)
-            } catch (e) {
-              console.error("Failed to parse channel creation content:", e)
-            }
-          }
-        } catch (err) {
-          console.error("Error fetching channel metadata:", err)
-        }
+      const fetchMetadata = async () => {
+        const metadata = await fetchChannelMetadata(id)
+        setChannelMetadata(metadata)
       }
 
-      fetchChannelMetadata()
+      fetchMetadata()
     }
   }, [id, isPublic])
 

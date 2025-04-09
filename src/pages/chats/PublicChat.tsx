@@ -206,7 +206,7 @@ const PublicChat = () => {
         <Helmet>
           <title>Error</title>
         </Helmet>
-        <PublicChatHeader channelMetadata={null} channelId={id || ""} />
+        <PublicChatHeader channelId={id || ""} />
         <div className="flex flex-col items-center justify-center h-full p-4">
           <p className="text-error mb-4">{error}</p>
           <button className="btn btn-primary" onClick={() => navigate("/chats")}>
@@ -222,7 +222,7 @@ const PublicChat = () => {
       <Helmet>
         <title>{channelMetadata?.name || "Public Chat"}</title>
       </Helmet>
-      <PublicChatHeader channelMetadata={channelMetadata} channelId={id || ""} />
+      <PublicChatHeader channelId={id || ""} />
       <ChatContainer
         messages={messages}
         session={session}
