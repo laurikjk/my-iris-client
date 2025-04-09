@@ -1,4 +1,5 @@
 import {useLocation, Routes, Route} from "react-router"
+import PublicChat from "./PublicChat"
 import {Helmet} from "react-helmet"
 import classNames from "classnames"
 import ChatList from "./ChatList"
@@ -29,6 +30,7 @@ function Messages() {
         <Routes>
           <Route path="new" element={<NewChat />} />
           <Route path="chat" element={<Chat id={location.state?.id} />} />
+          <Route path=":id" element={<PublicChat />} />
           <Route path="/" element={<NewChat />} />
         </Routes>
       </div>
