@@ -12,6 +12,7 @@ import MessageForm from "./MessageForm"
 import {localState} from "irisdb/src"
 import {Helmet} from "react-helmet"
 import {ndk} from "@/utils/ndk"
+import { shouldSocialHide } from "@/utils/socialGraph"
 
 // NIP-28 event kinds
 const CHANNEL_CREATE = 40
@@ -187,6 +188,7 @@ const PublicChat = () => {
     // Handle new messages
     sub.on("event", (event) => {
       if (!event || !event.id) return
+      if (shouldSocialHide(event.pubkey)) return
 
       const newMessage: MessageType = {
         id: event.id,
