@@ -116,8 +116,34 @@ const PublicChat = () => {
   const [session] = useState<Session>({} as Session) // Dummy session for public chat
   const initialLoadDoneRef = useRef<boolean>(false)
   const [initialLoadDone, setInitialLoadDone] = useState(false)
+  const [showNoMessages, setShowNoMessages] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const messageGroups = useMemo(() => groupMessages(messages), [messages])
+
+  // Set up timeout to show "No messages yet" after 2 seconds
+  useEffect(() => {
+    if (messages.size === 0) {
+      // Clear any existing timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+
+      // Set a new timeout
+      timeoutRef.current = setTimeout(() => {
+        setShowNoMessages(true)
+      }, 2000)
+    } else {
+      // If there are messages, don't show the "No messages yet" message
+      setShowNoMessages(false)
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [messages.size])
 
   // Fetch channel metadata
   useEffect(() => {
@@ -309,9 +335,9 @@ const PublicChat = () => {
       >
         {messages.size === 0 ? (
           <div className="text-center text-base-content/70 my-8">
-            {initialLoadDone
+            {initialLoadDone && showNoMessages
               ? "No messages yet. Be the first to send a message!"
-              : "Loading messages..."}
+              : ""}
           </div>
         ) : (
           messageGroups.map((group, index) => {
