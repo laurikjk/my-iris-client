@@ -140,12 +140,23 @@ const ChatList = ({className}: ChatListProps) => {
   }, [userPublicKey])
 
   // Combine private and public chats for display
-  const allChats = [
-    ...Object.entries(sessions)
-      .filter(([, session]) => !!session && !session.deleted)
-      .map(([id]) => ({id, isPublic: false})),
-    ...publicChats.map((chat) => ({id: chat.id, isPublic: true})),
-  ]
+  const allChats = Object.values(
+    [
+      ...Object.entries(sessions)
+        .filter(([, session]) => !!session && !session.deleted)
+        .map(([id]) => ({id, isPublic: false})),
+      ...publicChats.map((chat) => ({id: chat.id, isPublic: true})),
+    ].reduce(
+      (acc, chat) => {
+        // If chat doesn't exist or current chat is newer, update it
+        if (!acc[chat.id] || (chat.isPublic && !acc[chat.id].isPublic)) {
+          acc[chat.id] = chat
+        }
+        return acc
+      },
+      {} as Record<string, {id: string; isPublic: boolean}>
+    )
+  )
 
   // Sort all chats by most recent activity
   const sortedChats = allChats.sort((a, b) => {
@@ -168,6 +179,8 @@ const ChatList = ({className}: ChatListProps) => {
     // Sort in descending order (newest first)
     return bLatest - aLatest
   })
+
+  console.log("allChats", allChats)
 
   return (
     <PublicChatContext.Provider value={{setPublicChatTimestamps}}>
