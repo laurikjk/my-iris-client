@@ -103,7 +103,7 @@ const MessageReactions = ({rawReactions, isUser}: MessageReactionsProps) => {
               {userIds.map((userId) => (
                 <div key={userId} className="py-1 flex items-center">
                   <span className="text-lg p-2">{emoji}</span>
-                  <UserRow avatarWidth={32} pubKey={userId} linkToProfile={false} />
+                  <UserRow avatarWidth={32} pubKey={userId} linkToProfile={true} />
                 </div>
               ))}
             </div>
