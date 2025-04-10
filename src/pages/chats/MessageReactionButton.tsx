@@ -13,6 +13,12 @@ type MessageReactionButtonProps = {
   sessionId: string
   isUser: boolean
   onReply?: () => void
+  onSendReaction?: (messageId: string, emoji: string) => Promise<void>
+}
+
+type EmojiData = {
+  native: string
+  [key: string]: unknown
 }
 
 const MessageReactionButton = ({
@@ -21,6 +27,7 @@ const MessageReactionButton = ({
   sessionId,
   isUser,
   onReply,
+  onSendReaction,
 }: MessageReactionButtonProps) => {
   const [myPubKey] = useLocalState("user/publicKey", "")
   const [showReactionsPicker, setShowReactionsPicker] = useState(false)
@@ -32,22 +39,28 @@ const MessageReactionButton = ({
     setShowReactionsPicker(!showReactionsPicker)
   }
 
-  const handleEmojiClick = (emoji: any) => {
+  const handleEmojiClick = (emoji: EmojiData) => {
     setShowReactionsPicker(false)
-    const {event} = session.sendEvent({
-      kind: 6,
-      content: emoji.native,
-      tags: [["e", messageId]],
-    })
-    localState
-      .get("sessions")
-      .get(sessionId)
-      .get("events")
-      .get(messageId)
-      .get("reactions")
-      .get(myPubKey)
-      .put(emoji.native)
-    NDKEventFromRawEvent(event).publish()
+    if (onSendReaction) {
+      // Use the provided onSendReaction function if available
+      onSendReaction(messageId, emoji.native)
+    } else {
+      // Fall back to the original implementation for private chats
+      const {event} = session.sendEvent({
+        kind: 6,
+        content: emoji.native,
+        tags: [["e", messageId]],
+      })
+      localState
+        .get("sessions")
+        .get(sessionId)
+        .get("events")
+        .get(messageId)
+        .get("reactions")
+        .get(myPubKey)
+        .put(emoji.native)
+      NDKEventFromRawEvent(event).publish()
+    }
   }
 
   return (

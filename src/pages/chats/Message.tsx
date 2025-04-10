@@ -22,6 +22,8 @@ type MessageProps = {
   sessionId: string
   onReply?: () => void
   showAuthor?: boolean
+  onSendReaction?: (messageId: string, emoji: string) => Promise<void>
+  reactions?: Record<string, string>
 }
 
 // Moved regex outside component to avoid recreation on each render
@@ -73,6 +75,8 @@ const Message = ({
   sessionId,
   onReply,
   showAuthor = false,
+  onSendReaction,
+  reactions,
 }: MessageProps) => {
   const isUser = message.sender === "user"
   const isShortEmoji = useMemo(
@@ -125,6 +129,7 @@ const Message = ({
             sessionId={sessionId}
             isUser={isUser}
             onReply={onReply}
+            onSendReaction={onSendReaction}
           />
         )}
 
@@ -165,7 +170,7 @@ const Message = ({
             </div>
           </div>
 
-          <MessageReactions rawReactions={message.reactions} isUser={isUser} />
+          <MessageReactions rawReactions={reactions || message.reactions} isUser={isUser} />
         </div>
 
         {!isUser && (
@@ -175,6 +180,7 @@ const Message = ({
             sessionId={sessionId}
             isUser={isUser}
             onReply={onReply}
+            onSendReaction={onSendReaction}
           />
         )}
       </div>
