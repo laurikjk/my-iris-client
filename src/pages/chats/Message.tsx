@@ -1,13 +1,15 @@
 import {getMillisecondTimestamp, Rumor, Session} from "nostr-double-ratchet/src"
 import MessageReactionButton from "./MessageReactionButton"
 import {Avatar} from "@/shared/components/user/Avatar"
+import {shouldSocialHide} from "@/utils/socialGraph"
 import {Name} from "@/shared/components/user/Name"
+import {useMemo, useEffect, useState} from "react"
 import MessageReactions from "./MessageReactions"
 import ReplyPreview from "./ReplyPreview"
 import classNames from "classnames"
 import {Link} from "react-router"
 import {nip19} from "nostr-tools"
-import {useMemo} from "react"
+import {ndk} from "@/utils/ndk"
 
 export type MessageType = Rumor & {
   sender?: "user"
@@ -76,13 +78,40 @@ const Message = ({
   onReply,
   showAuthor = false,
   onSendReaction,
-  reactions,
+  reactions: propReactions,
 }: MessageProps) => {
   const isUser = message.sender === "user"
+  const [localReactions, setLocalReactions] = useState<Record<string, string>>(
+    propReactions || {}
+  )
   const isShortEmoji = useMemo(
     () => EMOJI_REGEX.test(message.content?.trim() ?? ""),
     [message.content]
   )
+
+  // Set up reaction subscription
+  useEffect(() => {
+    const filter = {
+      kinds: [7], // REACTION_KIND
+      "#e": [message.id],
+    }
+
+    const sub = ndk().subscribe(filter)
+
+    sub.on("event", (reactionEvent) => {
+      if (!reactionEvent || !reactionEvent.id) return
+      if (shouldSocialHide(reactionEvent.pubkey)) return
+
+      setLocalReactions((prev) => ({
+        ...prev,
+        [reactionEvent.pubkey]: reactionEvent.content,
+      }))
+    })
+
+    return () => {
+      sub.stop()
+    }
+  }, [message.id])
 
   const repliedId = useMemo(() => {
     // First check for explicit reply tag
@@ -170,7 +199,7 @@ const Message = ({
             </div>
           </div>
 
-          <MessageReactions rawReactions={reactions || message.reactions} isUser={isUser} />
+          <MessageReactions rawReactions={localReactions} isUser={isUser} />
         </div>
 
         {!isUser && (

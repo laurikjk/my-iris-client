@@ -112,8 +112,6 @@ const PublicChat = () => {
       if (!event || !event.id) return
       if (shouldSocialHide(event.pubkey)) return
 
-      console.log("New message received:", event.id)
-
       const newMessage: MessageType = {
         id: event.id,
         pubkey: event.pubkey,
@@ -128,17 +126,12 @@ const PublicChat = () => {
       setMessages((prev) => {
         // Check if message already exists
         if (prev.has(newMessage.id)) {
-          console.log("Message already exists:", newMessage.id)
           return prev
         }
-
-        console.log("Adding new message:", newMessage.id)
 
         // Check if there are any pending reactions for this message
         const pendingReactionsForMessage = reactions[newMessage.id] || {}
         if (Object.keys(pendingReactionsForMessage).length > 0) {
-          console.log("Applying pending reactions for message:", newMessage.id)
-          
           // Create a copy of the reactions
           const updatedReactions = {...newMessage.reactions}
           
@@ -171,47 +164,9 @@ const PublicChat = () => {
       }
     })
 
-    const reactionSub = ndk().subscribe({
-      kinds: [REACTION_KIND],
-      "#e": [id],
-    })
-
-    console.log("Set up reaction subscription for chat:", id)
-
-    // Handle reactions
-    reactionSub.on("event", (reactionEvent) => {
-      console.log("got reaction", reactionEvent)
-      if (!reactionEvent || !reactionEvent.id) return
-      if (shouldSocialHide(reactionEvent.pubkey)) return
-
-      // Find the message this reaction is for
-      // We need to find the "e" tag that doesn't have "root" as the 4th element
-      const messageId = reactionEvent.tags.find(
-        (tag) => tag[0] === "e" && (!tag[3] || tag[3] !== "root")
-      )?.[1]
-      if (!messageId) return
-
-      console.log("Processing reaction for message:", messageId)
-      console.log("Reaction content:", reactionEvent.content)
-      console.log("Reaction pubkey:", reactionEvent.pubkey)
-
-      // Update reactions state
-      setReactions((prev) => {
-        const messageReactions = prev[messageId] || {}
-        return {
-          ...prev,
-          [messageId]: {
-            ...messageReactions,
-            [reactionEvent.pubkey]: reactionEvent.content,
-          },
-        }
-      })
-    })
-
     // Clean up subscription when component unmounts
     return () => {
       sub.stop()
-      reactionSub.stop()
     }
   }, [id])
 
@@ -273,10 +228,6 @@ const PublicChat = () => {
     if (!publicKey || !id) return
 
     try {
-      console.log("Sending reaction for message:", messageId)
-      console.log("Reaction content:", emoji)
-      console.log("Chat ID:", id)
-
       // Create reaction event (kind 7)
       const event = new NDKEvent(ndk())
       event.kind = REACTION_KIND
@@ -288,13 +239,9 @@ const PublicChat = () => {
         ["e", id, "", "root"],
       ]
 
-      console.log("Reaction event tags:", event.tags)
-
       // Sign and publish the event
       await event.sign()
       await event.publish()
-
-      console.log("Reaction event published:", event.id)
 
       // Update reactions state immediately for better UX
       setReactions((prev) => {
