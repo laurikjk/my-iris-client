@@ -77,7 +77,9 @@ const ChatList = ({className}: ChatListProps) => {
         })
 
         // Extract unique channel IDs
-        const channelIds = new Set<string>()
+        const channelIds = new Set<string>([
+          "1d2f13b495d7425b70298a8acd375897a632562043d461e89b63499363eaf8e7",
+        ])
         events.forEach((event) => {
           // In NIP-28, channel messages have an "e" tag with the channel ID
           const channelIdTag = event.tags.find(
