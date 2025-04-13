@@ -22,7 +22,7 @@ function Naddr({naddr, data}: {naddr: string; data: nip19.AddressPointer}) {
         },
         undefined
       )
-      .then((e) => e && setEvent(e))
+      .then((e) => e && e.id && setEvent(e))
   })
 
   if (!event) {
