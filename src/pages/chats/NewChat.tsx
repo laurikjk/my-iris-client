@@ -1,8 +1,8 @@
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import InstallPWAPrompt from "@/shared/components/InstallPWAPrompt"
-import PrivateChatCreation from "./PrivateChatCreation"
+import PrivateChatCreation from "./private/PrivateChatCreation"
+import PublicChatCreation from "./public/PublicChatCreation"
 import Header from "@/shared/components/header/Header"
-import PublicChatCreation from "./PublicChatCreation"
 import {useState} from "react"
 
 type TabType = "private" | "public"

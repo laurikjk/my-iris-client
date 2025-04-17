@@ -1,13 +1,13 @@
-import PrivateChatHeader from "./components/PrivateChatHeader"
-import ChatContainer from "./components/ChatContainer"
+import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {comparator} from "./utils/messageGrouping"
+import {comparator} from "../utils/messageGrouping"
+import PrivateChatHeader from "./PrivateChatHeader"
 import {Session} from "nostr-double-ratchet/src"
+import MessageForm from "../message/MessageForm"
+import {getSession} from "@/utils/chat/Sessions"
+import {MessageType} from "../message/Message"
 import {useEffect, useState} from "react"
-import MessageForm from "./MessageForm"
-import {getSession} from "./Sessions"
 import {localState} from "irisdb/src"
-import {MessageType} from "./Message"
 
 const Chat = ({id}: {id: string}) => {
   const [messages, setMessages] = useState(

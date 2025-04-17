@@ -1,5 +1,5 @@
+import {PublicChatContext} from "../public/PublicChatContext"
 import Header from "@/shared/components/header/Header"
-import {PublicChatContext} from "./PublicChatContext"
 import ChatListItem from "./ChatListItem"
 import {useEffect, useState} from "react"
 import {localState} from "irisdb/src"

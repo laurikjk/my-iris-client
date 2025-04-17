@@ -1,9 +1,9 @@
 import {Session, getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import ErrorBoundary from "@/shared/components/ui/ErrorBoundary"
+import Message, {MessageType} from "../message/Message"
 import {groupMessages} from "../utils/messageGrouping"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {useEffect, useRef, useState} from "react"
-import Message, {MessageType} from "../Message"
 
 interface ChatContainerProps {
   messages: SortedMap<string, MessageType>

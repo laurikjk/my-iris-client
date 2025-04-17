@@ -5,8 +5,8 @@ import ReactDOM from "react-dom/client"
 import {localState} from "irisdb/src"
 
 import {subscribeToDMNotifications, subscribeToNotifications} from "./utils/notifications"
-import {loadSessions} from "./pages/chats/Sessions"
-import {loadInvites} from "./pages/chats/Invites"
+import {loadSessions} from "@/utils/chat/Sessions"
+import {loadInvites} from "@/utils/chat/Invites"
 import {ndk} from "./utils/ndk"
 import {router} from "@/pages"
 

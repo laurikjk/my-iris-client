@@ -1,15 +1,15 @@
-import PublicChatHeader from "./components/PublicChatHeader"
-import ChatContainer from "./components/ChatContainer"
+import PublicChatHeader from "./PublicChatHeader"
+import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {shouldSocialHide} from "@/utils/socialGraph"
 import {useNavigate, useParams} from "react-router"
-import {comparator} from "./utils/messageGrouping"
+import {comparator} from "../utils/messageGrouping"
 import {useEffect, useState, useRef} from "react"
 import {Session} from "nostr-double-ratchet/src"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import MessageForm from "./MessageForm"
+import MessageForm from "../message/MessageForm"
 import {localState} from "irisdb/src"
-import {MessageType} from "./Message"
+import {MessageType} from "../message/Message"
 import {Helmet} from "react-helmet"
 import {ndk} from "@/utils/ndk"
 
@@ -134,15 +134,15 @@ const PublicChat = () => {
         if (Object.keys(pendingReactionsForMessage).length > 0) {
           // Create a copy of the reactions
           const updatedReactions = {...newMessage.reactions}
-          
+
           // Apply all pending reactions
           Object.entries(pendingReactionsForMessage).forEach(([reactionPubkey, reactionContent]) => {
             updatedReactions[reactionPubkey] = reactionContent
           })
-          
+
           // Update the message with the reactions
           newMessage.reactions = updatedReactions
-          
+
           // Remove the pending reactions for this message
           setReactions((prev) => {
             const updated = {...prev}

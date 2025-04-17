@@ -1,6 +1,6 @@
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {MessageType} from "../Message"
+import {MessageType} from "../message/Message"
 
 export const groupingThreshold = 60 * 1000 // 60 seconds = 1 minute
 

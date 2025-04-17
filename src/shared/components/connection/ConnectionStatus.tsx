@@ -1,4 +1,4 @@
-import {getPeerConnection} from "@/pages/chats/webrtc/PeerConnection"
+import {getPeerConnection} from "@/utils/chat/webrtc/PeerConnection"
 import {useEffect, useState} from "react"
 
 interface ConnectionStatusProps {

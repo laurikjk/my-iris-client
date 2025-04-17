@@ -1,9 +1,9 @@
 import {useLocation, Routes, Route} from "react-router"
-import PrivateChat from "./PrivateChat"
-import PublicChat from "./PublicChat"
+import PrivateChat from "./private/PrivateChat"
+import PublicChat from "./public/PublicChat"
+import ChatList from "./list/ChatList"
 import {Helmet} from "react-helmet"
 import classNames from "classnames"
-import ChatList from "./ChatList"
 import NewChat from "./NewChat"
 
 function Messages() {

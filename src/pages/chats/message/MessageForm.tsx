@@ -1,10 +1,10 @@
 import {CHAT_MESSAGE_KIND, serializeSessionState, Session} from "nostr-double-ratchet/src"
 import {FormEvent, useState, useEffect, useRef, ChangeEvent} from "react"
+import EmojiButton from "@/shared/components/emoji/EmojiButton"
 import MessageFormReplyPreview from "./MessageFormReplyPreview"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import Icon from "@/shared/components/Icons/Icon"
-import EmojiButton from "./EmojiButton"
 import {localState} from "irisdb/src"
 import {MessageType} from "./Message"
 
