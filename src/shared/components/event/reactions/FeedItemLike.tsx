@@ -6,7 +6,7 @@ import {
   useRef,
 } from "react"
 import {FloatingEmojiPicker} from "@/shared/components/emoji/FloatingEmojiPicker"
-import {shouldHideEvent} from "@/utils/socialGraph"
+import {shouldHideAuthor} from "@/utils/socialGraph"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -109,7 +109,7 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
       }, 300)
 
       sub?.on("event", (likeEvent: NDKEvent) => {
-        if (shouldHideEvent(likeEvent)) return
+        if (shouldHideAuthor(likeEvent.author.pubkey)) return
         if (likeEvent.pubkey === myPubKey) {
           setMyReaction(likeEvent.content)
         }

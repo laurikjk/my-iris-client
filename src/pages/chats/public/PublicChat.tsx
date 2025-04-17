@@ -1,7 +1,7 @@
 import PublicChatHeader from "./PublicChatHeader"
 import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {shouldSocialHide} from "@/utils/socialGraph"
+import {shouldHideAuthor} from "@/utils/socialGraph"
 import {useNavigate, useParams} from "react-router"
 import {comparator} from "../utils/messageGrouping"
 import {useEffect, useState, useRef} from "react"
@@ -110,7 +110,7 @@ const PublicChat = () => {
     // Handle new messages
     sub.on("event", (event) => {
       if (!event || !event.id) return
-      if (shouldSocialHide(event.pubkey)) return
+      if (shouldHideAuthor(event.pubkey)) return
 
       const newMessage: MessageType = {
         id: event.id,

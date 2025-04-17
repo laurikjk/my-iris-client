@@ -1,4 +1,4 @@
-import socialGraph, {shouldSocialHide} from "@/utils/socialGraph"
+import socialGraph, {shouldHideAuthor} from "@/utils/socialGraph"
 import FollowList from "@/pages/user/components/FollowList"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {Fragment, useMemo, useState} from "react"
@@ -17,7 +17,7 @@ export default function MutedBy({pubkey}: {pubkey: string}) {
     }
   }, [pubkey])
 
-  const isOverMuted = totalMutedBy > 0 && shouldSocialHide(pubkey, 3)
+  const isOverMuted = totalMutedBy > 0 && shouldHideAuthor(pubkey, 3)
 
   const [showMuterList, setShowMuterList] = useState<boolean>(false)
 

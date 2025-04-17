@@ -1,5 +1,5 @@
 import {SocialGraph, NostrEvent, SerializedSocialGraph} from "nostr-social-graph"
-import {NDKEvent, NDKSubscription, NDKUserProfile} from "@nostr-dev-kit/ndk"
+import {NDKSubscription, NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {LRUCache} from "typescript-lru-cache"
 import {VerifiedEvent} from "nostr-tools"
 import {profileCache} from "./memcache"
@@ -247,15 +247,6 @@ localState.get("settings/hideEventsByUnknownUsers").on((v) => {
   hideEventsByUnknownUsers = v as boolean
 })
 
-export function shouldHideEvent(ev: NDKEvent) {
-  if (!hideEventsByUnknownUsers) return false
-  const distance = instance.getFollowDistance(ev.pubkey)
-  if (typeof distance !== "number" || distance > 5) {
-    return true
-  }
-  return shouldSocialHide(ev.pubkey)
-}
-
 export const saveToFile = () => {
   const data = instance.serialize()
   const url = URL.createObjectURL(
@@ -309,7 +300,11 @@ export const downloadLargeGraph = () => {
 export const loadAndMerge = () => loadFromFile(true)
 
 const cache = new LRUCache<string, boolean>({maxSize: 100})
-export const shouldSocialHide = (pubKey: string, threshold = 1): boolean => {
+export const shouldHideAuthor = (pubKey: string, threshold = 1): boolean => {
+  if (hideEventsByUnknownUsers && instance.getFollowDistance(pubKey) >= 5) {
+    return true
+  }
+
   if (!hidePostsByMutedMoreThanFollowed) {
     return false
   }

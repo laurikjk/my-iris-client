@@ -1,5 +1,5 @@
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
-import {shouldHideEvent} from "@/utils/socialGraph"
+import {shouldHideAuthor} from "@/utils/socialGraph"
 import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
@@ -54,7 +54,8 @@ function FeedItemComment({event}: FeedItemCommentProps) {
       const sub = ndk().subscribe(filter)
 
       sub?.on("event", (e: NDKEvent) => {
-        if (shouldHideEvent(e) || getEventReplyingTo(e) !== event.id) return
+        if (shouldHideAuthor(e.author.pubkey) || getEventReplyingTo(e) !== event.id)
+          return
         replies.add(e.id)
         debouncedSetReplyCount(replies.size)
       })

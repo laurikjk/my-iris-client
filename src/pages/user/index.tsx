@@ -3,7 +3,7 @@ import Widget from "@/shared/components/ui/Widget"
 import {useMemo, ReactNode} from "react"
 import classNames from "classnames"
 
-import socialGraph, {shouldSocialHide} from "@/utils/socialGraph.ts"
+import socialGraph, {shouldHideAuthor} from "@/utils/socialGraph.ts"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
@@ -114,7 +114,7 @@ function UserPage({pubKey}: {pubKey: string}) {
   const activeProfile = location.pathname.split("/")[1] || ""
 
   const visibleTabs = tabs.filter(
-    (tab) => tab.path !== "you" || (myPubKey && !shouldSocialHide(pubKeyHex))
+    (tab) => tab.path !== "you" || (myPubKey && !shouldHideAuthor(pubKeyHex))
   )
 
   return (

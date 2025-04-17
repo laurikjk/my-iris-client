@@ -1,4 +1,4 @@
-import socialGraph, {shouldHideEvent} from "@/utils/socialGraph.ts"
+import socialGraph, {shouldHideAuthor} from "@/utils/socialGraph.ts"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {ReactionContent} from "./ReactionContent"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -18,7 +18,7 @@ export default function Likes({event}: {event: NDKEvent}) {
       const sub = ndk().subscribe(filter)
 
       sub?.on("event", (event: NDKEvent) => {
-        if (shouldHideEvent(event)) return
+        if (shouldHideAuthor(event.author.pubkey)) return
         setReactions((prev) => {
           const existing = prev.get(event.author.pubkey)
           if (existing) {

@@ -1,5 +1,5 @@
-import socialGraph, {shouldHideEvent, shouldSocialHide} from "@/utils/socialGraph"
 import {useEffect, useMemo, useRef, useState, useCallback} from "react"
+import socialGraph, {shouldHideAuthor} from "@/utils/socialGraph"
 import {eventComparator} from "../components/feed/utils"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
@@ -69,7 +69,7 @@ export default function useFeedEvents({
       if (displayFilterFn && !displayFilterFn(event)) return false
       const inAuthors = localFilter.authors?.includes(event.pubkey)
       if (!inAuthors && mutes.includes(event.pubkey)) return false
-      if (!inAuthors && shouldSocialHide(event.pubkey, 3)) {
+      if (!inAuthors && shouldHideAuthor(event.pubkey, 3)) {
         return false
       }
       if (
@@ -114,7 +114,9 @@ export default function useFeedEvents({
       return []
     }
     return Array.from(eventsRef.current.values()).filter(
-      (event) => (!displayFilterFn || displayFilterFn(event)) && shouldHideEvent(event)
+      (event) =>
+        (!displayFilterFn || displayFilterFn(event)) &&
+        shouldHideAuthor(event.author.pubkey)
     )
   }, [eventsRef.current.size, displayFilterFn])
 

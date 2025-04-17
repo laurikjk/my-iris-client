@@ -6,7 +6,7 @@ import {nip19} from "nostr-tools"
 import socialGraph, {
   searchIndex,
   SearchResult,
-  shouldSocialHide,
+  shouldHideAuthor,
 } from "@/utils/socialGraph"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {UserRow} from "@/shared/components/user/UserRow"
@@ -113,7 +113,7 @@ function SearchBox({
     const query = v.toLowerCase()
     const results = searchIndex.search(query)
     const resultsWithAdjustedScores = results
-      .filter((result) => !shouldSocialHide(result.item.pubKey))
+      .filter((result) => !shouldHideAuthor(result.item.pubKey))
       .map((result) => {
         const fuseScore = 1 - (result.score ?? 1)
         const followDistance =

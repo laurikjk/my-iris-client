@@ -2,7 +2,7 @@ import {getMillisecondTimestamp, Rumor, Session} from "nostr-double-ratchet/src"
 import MessageReactionButton from "../reaction/MessageReactionButton"
 import MessageReactions from "../reaction/MessageReactions"
 import {Avatar} from "@/shared/components/user/Avatar"
-import {shouldSocialHide} from "@/utils/socialGraph"
+import {shouldHideAuthor} from "@/utils/socialGraph"
 import {Name} from "@/shared/components/user/Name"
 import {useMemo, useEffect, useState} from "react"
 import ReplyPreview from "./ReplyPreview"
@@ -100,7 +100,7 @@ const Message = ({
 
     sub.on("event", (reactionEvent) => {
       if (!reactionEvent || !reactionEvent.id) return
-      if (shouldSocialHide(reactionEvent.pubkey)) return
+      if (shouldHideAuthor(reactionEvent.pubkey)) return
 
       setLocalReactions((prev) => ({
         ...prev,

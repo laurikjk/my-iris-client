@@ -68,7 +68,7 @@ export const generateBlurhashUrl = (
     console.error("Failed to decode blurhash:", error)
     return null
   }
-  
+
   const canvas = document.createElement("canvas")
   canvas.width = width
   canvas.height = height
