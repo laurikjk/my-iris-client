@@ -66,7 +66,7 @@ const NostrUser: Embed = {
           </div>
         )
       } else if (type === "naddr") {
-        return <Naddr data={data} naddr={match} />
+        return <Naddr key={match} data={data} naddr={match} />
       }
     } catch (error) {
       console.warn(error)
