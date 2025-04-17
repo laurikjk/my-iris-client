@@ -40,19 +40,11 @@ export const ImageGridItem = ({
     ? imageMatch.trim().split(/\s+/)
     : videoMatch?.trim().split(/\s+/) || []
 
-  console.log("ImageGridItem debug:", {
-    eventId: event.id,
-    urls,
-    allTags: event.tags,
-    imetaTags: event.tags.filter((t) => t[0] === "imeta"),
-  })
-
   const width = window.innerWidth > 767 ? 314 : 150
 
   // Get imeta tags for all URLs
   const imetaTags = urls.map((url) => {
     const tag = event.tags.find((tag) => tag[0] === "imeta" && tag[1].includes(url))
-    console.log("Looking for imeta tag for URL:", url, "Found:", tag)
     return tag
   })
 
@@ -61,11 +53,8 @@ export const ImageGridItem = ({
     if (!tag) return null
     // Find the blurhash part in the imeta tag array
     const blurhashPart = tag.find((part) => part.startsWith("blurhash "))
-    console.log("Blurhash part:", blurhashPart)
     return blurhashPart ? blurhashPart.split(" ")[1] : null
   })
-
-  console.log("Final blurhashes:", blurhashes)
 
   // Generate blurhash URLs for all images
   const blurhashUrls = useMemo(() => {
@@ -82,10 +71,8 @@ export const ImageGridItem = ({
         imageData.data.set(pixels)
         ctx.putImageData(imageData, 0, 0)
         const dataUrl = canvas.toDataURL()
-        console.log("Generated blurhash URL for:", blurhash.substring(0, 10) + "...")
         return dataUrl
       } catch (e) {
-        console.error("Error generating blurhash:", e)
         return null
       }
     })
