@@ -53,7 +53,7 @@
     "@emoji-mart/react": "^1.1.1",
     "@getalby/bitcoin-connect-react": "^3.7.1",
     "@noble/hashes": "^1.7.1",
-    "@nostr-dev-kit/ndk": "^2.13.1-rc4",
+    "@nostr-dev-kit/ndk": "^2.13.3",
     "@nostr-dev-kit/ndk-cache-dexie": "^2.6.1-rc2",
     "@remixicon/react": "^4.6.0",
     "blurhash": "^2.0.5",
