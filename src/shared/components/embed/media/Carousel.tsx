@@ -2,6 +2,7 @@ import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import PreloadImages from "@/shared/components/media/PreloadImages"
 import {useEffect, useState, MouseEvent, useCallback} from "react"
 import MediaModal from "@/shared/components/media/MediaModal"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import ImageComponent from "./ImageComponent"
 import VideoComponent from "./VideoComponent"
 import {useSwipeable} from "react-swipeable"
@@ -72,6 +73,8 @@ function Carousel({media, event}: CarouselProps) {
         event?.tags.some((t) => t[0] === "content-warning"))
   )
   const [showModal, setShowModal] = useState(false)
+  const [autoplayVideos] = useLocalState<boolean>("settings/autoplayVideos", true)
+  const [isMuted, setIsMuted] = useState(autoplayVideos)
 
   const nextImage = (e?: MouseEvent | KeyboardEvent) => {
     e?.stopPropagation()
@@ -148,6 +151,8 @@ function Carousel({media, event}: CarouselProps) {
         onClick={() => setBlur(false)}
         limitHeight={limitHeight}
         imeta={item.imeta}
+        isMuted={isMuted}
+        onMuteChange={setIsMuted}
       />
     )
   }

@@ -13,6 +13,8 @@ interface HlsVideoComponentProps {
   onClick?: () => void
   blur?: boolean
   imeta?: string[]
+  isMuted?: boolean
+  onMuteChange?: (muted: boolean) => void
 }
 
 function HlsVideoComponent({
@@ -21,6 +23,8 @@ function HlsVideoComponent({
   limitHeight,
   onClick,
   imeta,
+  isMuted = true,
+  onMuteChange,
 }: HlsVideoComponentProps) {
   let blurNSFW = true
   localState.get("settings/blurNSFW").on((value) => {
@@ -122,6 +126,10 @@ function HlsVideoComponent({
           }
           onClick?.()
         }}
+        onVolumeChange={(e) => {
+          const video = e.target as HTMLVideoElement
+          onMuteChange?.(video.muted)
+        }}
         ref={videoRef}
         className={classNames("max-w-full object-contain", {
           "blur-xl": blur,
@@ -135,7 +143,7 @@ function HlsVideoComponent({
           backgroundPosition: "center",
         }}
         controls
-        muted={autoplayVideos}
+        muted={isMuted}
         autoPlay={autoplayVideos}
         playsInline
         loop
