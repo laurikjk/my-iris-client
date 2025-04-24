@@ -1,6 +1,9 @@
 import React, {useRef, useState} from "react"
 
-import {calculateImageMetadata} from "@/shared/components/embed/media/mediaUtils"
+import {
+  calculateImageMetadata,
+  calculateVideoMetadata,
+} from "@/shared/components/embed/media/mediaUtils"
 import {uploadFile} from "@/shared/upload"
 
 type Props = {
@@ -39,8 +42,13 @@ const UploadButton = ({
       setErrorMessage(null)
       const file = e.target.files[0]
 
-      // Calculate image metadata if it's an image
-      const metadata = await calculateImageMetadata(file)
+      // Calculate metadata based on file type
+      let metadata
+      if (file.type.startsWith("image/")) {
+        metadata = await calculateImageMetadata(file)
+      } else if (file.type.startsWith("video/")) {
+        metadata = await calculateVideoMetadata(file)
+      }
 
       const url = await uploadFile(file, (progress) => {
         setProgress(progress)

@@ -124,3 +124,65 @@ export async function calculateImageMetadata(file: File): Promise<ImageMetadata 
     img.src = URL.createObjectURL(file)
   })
 }
+
+export async function calculateVideoMetadata(file: File): Promise<ImageMetadata | null> {
+  if (!file.type.startsWith("video/")) {
+    return null
+  }
+
+  return new Promise((resolve) => {
+    const video = document.createElement("video")
+    video.preload = "metadata"
+
+    video.onloadedmetadata = () => {
+      const canvas = document.createElement("canvas")
+      const ctx = canvas.getContext("2d")
+      if (!ctx) {
+        resolve(null)
+        return
+      }
+
+      // Set canvas size to a reasonable size for blurhash calculation
+      const maxSize = 32
+      let width = video.videoWidth
+      let height = video.videoHeight
+
+      // Scale down if either dimension exceeds maxSize
+      if (width > maxSize || height > maxSize) {
+        const ratio = Math.min(maxSize / width, maxSize / height)
+        width = Math.round(width * ratio)
+        height = Math.round(height * ratio)
+      }
+
+      canvas.width = width
+      canvas.height = height
+
+      // Seek to the first frame
+      video.currentTime = 0
+    }
+
+    video.onseeked = () => {
+      const canvas = document.createElement("canvas")
+      const ctx = canvas.getContext("2d")
+      if (!ctx) {
+        resolve(null)
+        return
+      }
+
+      // Draw the first frame
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      const blurhash = encode(imageData.data, canvas.width, canvas.height, 4, 3)
+
+      resolve({
+        width: video.videoWidth,
+        height: video.videoHeight,
+        blurhash,
+      })
+    }
+
+    video.onerror = () => resolve(null)
+    video.src = URL.createObjectURL(file)
+  })
+}
