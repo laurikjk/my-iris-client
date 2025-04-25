@@ -5,6 +5,7 @@ import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 
+import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
 import HyperText from "@/shared/components/HyperText.tsx"
 import MutedBy from "@/shared/components/user/MutedBy"
 import Icon from "@/shared/components/Icons/Icon"
@@ -33,6 +34,7 @@ function ProfileDetails({
   const navigate = useNavigate()
   const [nip05valid, setNIP05valid] = useState<boolean | null>(null)
   const [isValidPubkey, setIsValidPubkey] = useState(true)
+  const [isSubscriber, setIsSubscriber] = useState(false)
 
   const website = useMemo(() => {
     if (!displayProfile?.website) return null
@@ -83,6 +85,31 @@ function ProfileDetails({
     }
   }, [npub, displayProfile])
 
+  // Check if user is a subscriber with iris.to NIP-05
+  useEffect(() => {
+    const checkSubscriberStatus = async () => {
+      if (displayProfile?.nip05 && displayProfile.nip05.endsWith("@iris.to")) {
+        try {
+          // Fetch the NIP-05 data to check for subscription_plan_id
+          const username = displayProfile.nip05.split("@")[0]
+          const response = await fetch(
+            `https://iris.to/.well-known/nostr.json?name=${username}`
+          )
+          if (response.ok) {
+            const data = await response.json()
+            if (data.subscription_plan_id) {
+              setIsSubscriber(true)
+            }
+          }
+        } catch (error) {
+          console.error("Error checking subscriber status:", error)
+        }
+      }
+    }
+
+    checkSubscriberStatus()
+  }, [displayProfile?.nip05])
+
   const renderProfileField = (
     IconComponent: ElementType,
     content: string | ReactNode,
@@ -110,6 +137,7 @@ function ProfileDetails({
         </div>
       )}
       <MutedBy pubkey={hexPub} />
+      {isSubscriber && <SubscriberBadge className="mb-1" />}
       {displayProfile?.nip05 && (
         <div className={nip05valid === null ? "invisible" : "visible"}>
           {renderProfileField(
