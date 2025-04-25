@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any  */
 import {Component, FormEvent} from "react"
 
+import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
 import ReservedAccount from "./ReservedAccount"
 import {profileCache} from "@/utils/memcache"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -20,6 +21,7 @@ class IrisAccount extends Component {
     error: null as any,
     showChallenge: false,
     invalidUsernameMessage: null as any,
+    isSubscriber: false,
   }
 
   render() {
@@ -27,21 +29,32 @@ class IrisAccount extends Component {
 
     if (this.state.irisToActive) {
       const username = this.state.profile?.nip05.split("@")[0]
-      view = <AccountName name={username} />
+      view = (
+        <div className="flex flex-col gap-2">
+          <AccountName name={username} />
+          {this.state.isSubscriber && <SubscriberBadge className="mt-2" />}
+        </div>
+      )
     } else if (this.state.existing && this.state.existing.confirmed) {
       view = (
-        <ActiveAccount
-          name={this.state.existing.name}
-          setAsPrimary={() => this.setState({irisToActive: true})}
-        />
+        <div className="flex flex-col gap-2">
+          <ActiveAccount
+            name={this.state.existing.name}
+            setAsPrimary={() => this.setState({irisToActive: true})}
+          />
+          {this.state.isSubscriber && <SubscriberBadge className="mt-2" />}
+        </div>
       )
     } else if (this.state.existing) {
       view = (
-        <ReservedAccount
-          name={this.state.existing.name}
-          enableReserved={() => this.enableReserved()}
-          declineReserved={() => this.declineReserved()}
-        />
+        <div className="flex flex-col gap-2">
+          <ReservedAccount
+            name={this.state.existing.name}
+            enableReserved={() => this.enableReserved()}
+            declineReserved={() => this.declineReserved()}
+          />
+          {this.state.isSubscriber && <SubscriberBadge className="mt-2" />}
+        </div>
       )
     } else if (this.state.error) {
       view = <div className="error">Error: {this.state.error}</div>
@@ -52,9 +65,7 @@ class IrisAccount extends Component {
           <div
             className="cf-turnstile"
             data-sitekey={
-              ["iris.to", "beta.iris.to", "snort.social"].includes(
-                window.location.hostname
-              )
+              ["iris.to", "beta.iris.to"].includes(window.location.hostname)
                 ? "0x4AAAAAAACsEd8XuwpPTFwz"
                 : "3x00000000000000000000FF"
             }
@@ -283,6 +294,24 @@ class IrisAccount extends Component {
     }
   }
 
+  async checkSubscriberStatus(username: string) {
+    if (username) {
+      try {
+        const response = await fetch(
+          `https://iris.to/.well-known/nostr.json?name=${username}`
+        )
+        if (response.ok) {
+          const data = await response.json()
+          if (data.subscription_plan_id) {
+            this.setState({isSubscriber: true})
+          }
+        }
+      } catch (error) {
+        console.error("Error checking subscriber status:", error)
+      }
+    }
+  }
+
   componentDidMount() {
     localState.get("user/publicKey").on((myPub) => {
       if (myPub && typeof myPub === "string") {
@@ -290,6 +319,12 @@ class IrisAccount extends Component {
         const irisToActive =
           profile && profile.nip05 && profile.nip05.endsWith("@iris.to")
         this.setState({profile, irisToActive})
+
+        if (profile && profile.nip05 && profile.nip05.endsWith("@iris.to")) {
+          const username = profile.nip05.split("@")[0]
+          this.checkSubscriberStatus(username)
+        }
+
         if (profile && !irisToActive) {
           this.checkExistingAccount(myPub)
         }
@@ -304,6 +339,10 @@ class IrisAccount extends Component {
     if (res.status === 200) {
       const json = await res.json()
       this.setState({existing: json})
+
+      if (json && json.name) {
+        this.checkSubscriberStatus(json.name)
+      }
     }
   }
 }
