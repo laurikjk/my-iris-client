@@ -1,7 +1,9 @@
-import {useMemo, useState} from "react"
+import {useMemo, useState, useEffect} from "react"
 
 import socialGraph from "@/utils/socialGraph.ts"
+import {NostrEvent} from "nostr-social-graph"
 import {formatAmount} from "@/utils/utils.ts"
+import {ndk} from "@/utils/ndk"
 
 import Modal from "@/shared/components/ui/Modal.tsx"
 
@@ -9,11 +11,32 @@ import Icon from "@/shared/components/Icons/Icon.tsx"
 import FollowList from "./FollowList.tsx"
 
 const FollowerCount = ({pubKey}: {pubKey: string}) => {
-  const followers = useMemo(
+  const initialFollowers = useMemo(
     () => Array.from(socialGraph().getFollowersByUser(pubKey)),
     [pubKey]
   )
+  const [followers, setFollowers] = useState<string[]>(initialFollowers)
   const [showFollowList, setShowFollowList] = useState<boolean>(false)
+
+  useEffect(() => {
+    // If no known followers but we have a social graph, query followers from relays
+    if (followers.length === 0 && socialGraph().getUsersByFollowDistance(1).size > 0) {
+      const filter = {
+        kinds: [3],
+        ["#p"]: [pubKey],
+      }
+      const sub = ndk().subscribe(filter)
+      sub.on("event", (event) => {
+        socialGraph().handleEvent(event as NostrEvent)
+        const newFollowers = Array.from(socialGraph().getFollowersByUser(pubKey))
+        setFollowers(newFollowers)
+      })
+
+      return () => {
+        sub.stop()
+      }
+    }
+  }, [followers.length, pubKey])
 
   const handleFollowersClick = () => {
     setShowFollowList(!showFollowList)
