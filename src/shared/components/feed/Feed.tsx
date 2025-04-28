@@ -52,7 +52,7 @@ function Feed({
   displayFilterFn,
   fetchFilterFn,
   sortFn,
-  cacheKey = JSON.stringify(filters),
+  cacheKey = JSON.stringify({...filters, isTruncated: true}),
   asReply = false,
   showRepliedTo = true,
   showReplies = 0,
@@ -194,6 +194,7 @@ function Feed({
                 {filteredEvents.slice(0, displayCount).map((event, index) => (
                   <div key={event.id} ref={index === 0 ? firstFeedItemRef : null}>
                     <FeedItem
+                      key={event.id}
                       asReply={asReply}
                       showRepliedTo={showRepliedTo}
                       showReplies={showReplies}
