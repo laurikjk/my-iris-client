@@ -17,6 +17,7 @@ declare const CONFIG: {
   }
   defaultSettings: {
     notificationServer: string
+    irisApiUrl: string
   }
 }
 

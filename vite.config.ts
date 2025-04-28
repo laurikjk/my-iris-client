@@ -86,6 +86,22 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/cashu/, ""),
       },
+      "/user": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/subscriptions": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/invoices": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/.well-known": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
     },
   },
 })

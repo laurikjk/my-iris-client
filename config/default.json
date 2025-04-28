@@ -21,6 +21,7 @@
     "analytics": false 
   },
   "defaultSettings": {
-    "notificationServer": "https://notifications.iris.to"
+    "notificationServer": "https://notifications.iris.to",
+    "irisApiUrl": "https://api.iris.to"
   }
 }

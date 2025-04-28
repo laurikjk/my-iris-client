@@ -152,7 +152,7 @@ class IrisAccount extends Component {
 
   checkAvailabilityFromAPI = async (name: string) => {
     const res = await fetch(
-      `https://api.iris.to/user/available?name=${encodeURIComponent(name)}`
+      `${CONFIG.defaultSettings.irisApiUrl}/user/available?name=${encodeURIComponent(name)}`
     )
     if (name !== this.state.newUserName) {
       return
@@ -203,7 +203,7 @@ class IrisAccount extends Component {
     event.content = `iris.to/${this.state.newUserName}`
     await event.sign()
     // post signed event as request body to https://api.iris.to/user/confirm_user
-    const res = await fetch("https://api.iris.to/user/signup", {
+    const res = await fetch(`${CONFIG.defaultSettings.irisApiUrl}/user/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -237,7 +237,7 @@ class IrisAccount extends Component {
     event.content = `iris.to/${this.state.newUserName}`
     await event.sign()
     // post signed event as request body to https://api.iris.to/user/confirm_user
-    const res = await fetch("https://api.iris.to/user/confirm_user", {
+    const res = await fetch(`${CONFIG.defaultSettings.irisApiUrl}/user/confirm_user`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -273,7 +273,7 @@ class IrisAccount extends Component {
     event.kind = 1
     event.content = `decline iris.to/${this.state.newUserName}`
     await event.sign()
-    const res = await fetch("https://api.iris.to/user/decline_user", {
+    const res = await fetch(`${CONFIG.defaultSettings.irisApiUrl}/user/decline_user`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -335,7 +335,7 @@ class IrisAccount extends Component {
   }
 
   async checkExistingAccount(pub: any) {
-    const res = await fetch(`https://api.iris.to/user/find?public_key=${pub}`)
+    const res = await fetch(`${CONFIG.defaultSettings.irisApiUrl}/user/find?public_key=${pub}`)
     if (res.status === 200) {
       const json = await res.json()
       this.setState({existing: json})
