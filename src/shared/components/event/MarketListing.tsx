@@ -3,6 +3,7 @@ import HyperText from "@/shared/components/HyperText.tsx"
 import ErrorBoundary from "../ui/ErrorBoundary"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useState} from "react"
+import {RiImageLine} from "@remixicon/react"
 
 type MarketListingProps = {
   event: NDKEvent
@@ -13,8 +14,8 @@ type MarketListingProps = {
 // Component for truncated market listings
 function TruncatedMarketListing({event}: {event: NDKEvent}) {
   const title = event?.tagValue("title")
-  const priceTag = event?.tags?.find((tag) => tag[0] === "price" && tag[2] === "SATS")
-  const price = priceTag ? `${priceTag[1]} sats` : null
+  const priceTag = event?.tags?.find((tag) => tag[0] === "price")
+  const price = priceTag ? `${priceTag[1]} ${priceTag[2] || ""}` : null
   const imageTag = event?.tags?.find((tag) => tag[0] === "image")
   const imageUrl = imageTag ? imageTag[1] : null
   const summary = event?.tagValue("summary") || event?.content || ""
@@ -29,7 +30,7 @@ function TruncatedMarketListing({event}: {event: NDKEvent}) {
               <SmallImageComponent match={imageUrl} event={event} size={160} />
             ) : (
               <div className="w-40 h-40 bg-base-200 rounded flex items-center justify-center">
-                <span className="text-base-content/50">No image</span>
+                <RiImageLine className="w-8 h-8 text-base-content/50" />
               </div>
             )}
           </div>
@@ -58,18 +59,15 @@ function FullMarketListing({event}: {event: NDKEvent}) {
 
   // Format tag values for display
   const formatTagValue = (tag: string[]) => {
-    if (tag[0] === "price" && tag[2] === "SATS") {
-      return `${tag[1]} sats`
-    }
-    if (tag[0] === "image" || tag[0] === "r") {
-      return "Image URL"
+    if (tag[0] === "price") {
+      return `${tag[1]} ${tag[2] || ""}`
     }
     return tag[1]
   }
 
   // Get price tag if it exists
-  const priceTag = event?.tags?.find((tag) => tag[0] === "price" && tag[2] === "SATS")
-  const price = priceTag ? `${priceTag[1]} sats` : null
+  const priceTag = event?.tags?.find((tag) => tag[0] === "price")
+  const price = priceTag ? `${priceTag[1]} ${priceTag[2] || ""}` : null
 
   // Get first image URL if it exists
   const imageTag = event?.tags?.find((tag) => tag[0] === "image")
@@ -79,9 +77,13 @@ function FullMarketListing({event}: {event: NDKEvent}) {
     <ErrorBoundary>
       <div className="px-4">
         <div className="flex gap-4">
-          {imageUrl && (
-            <div className="w-32 flex-shrink-0">
-              <SmallImageComponent match={imageUrl} event={event} />
+          {imageUrl ? (
+            <div className="w-40 flex-shrink-0">
+              <SmallImageComponent match={imageUrl} event={event} size={160} />
+            </div>
+          ) : (
+            <div className="w-40 h-40 bg-base-200 rounded flex items-center justify-center">
+              <RiImageLine className="w-8 h-8 text-base-content/50" />
             </div>
           )}
           <div className="flex-1">

@@ -26,6 +26,7 @@ export default function MediaFeed({events}: MediaFeedProps) {
   const mediaEvents = useMemo(() => {
     return events.filter((event): event is NDKEvent => {
       if (!("content" in event)) return false
+      if (event.kind === 30402) return true
       const hasImageUrl = IMAGE_REGEX.test(event.content)
       const hasVideoUrl = VIDEO_REGEX.test(event.content)
       return hasImageUrl || hasVideoUrl
