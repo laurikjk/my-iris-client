@@ -1,7 +1,7 @@
 import {useMemo, MutableRefObject, useState} from "react"
+import {useNavigate, Link} from "react-router"
 import {RiImageLine} from "@remixicon/react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {useNavigate, Link} from "react-router"
 import {nip19} from "nostr-tools"
 import {decode} from "blurhash"
 

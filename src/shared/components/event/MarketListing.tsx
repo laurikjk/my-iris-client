@@ -1,9 +1,9 @@
 import SmallImageComponent from "../embed/media/SmallImageComponent"
 import HyperText from "@/shared/components/HyperText.tsx"
 import ErrorBoundary from "../ui/ErrorBoundary"
+import {RiImageLine} from "@remixicon/react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useState} from "react"
-import {RiImageLine} from "@remixicon/react"
 
 type MarketListingProps = {
   event: NDKEvent
