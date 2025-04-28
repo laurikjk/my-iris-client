@@ -335,7 +335,9 @@ class IrisAccount extends Component {
   }
 
   async checkExistingAccount(pub: any) {
-    const res = await fetch(`${CONFIG.defaultSettings.irisApiUrl}/user/find?public_key=${pub}`)
+    const res = await fetch(
+      `${CONFIG.defaultSettings.irisApiUrl}/user/find?public_key=${pub}`
+    )
     if (res.status === 200) {
       const json = await res.json()
       this.setState({existing: json})

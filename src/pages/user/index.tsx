@@ -1,6 +1,6 @@
 import {NavLink, Route, Routes, useLocation} from "react-router"
-import Widget from "@/shared/components/ui/Widget"
-import {useMemo, ReactNode} from "react"
+import {useMemo, ReactNode, useState, useEffect} from "react"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 
 import socialGraph, {shouldHideAuthor} from "@/utils/socialGraph.ts"
@@ -9,12 +9,13 @@ import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
 import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
 import Feed from "@/shared/components/feed/Feed.tsx"
+import Widget from "@/shared/components/ui/Widget"
 import useFollows from "@/shared/hooks/useFollows"
 import {hasMedia} from "@/shared/components/embed"
 import FollowList from "./components/FollowList"
 import {getEventReplyingTo} from "@/utils/nostr"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ProfileHeader from "./ProfileHeader"
+import {ndk} from "@/utils/ndk"
 
 type Tab = {
   name: string
@@ -45,6 +46,18 @@ const tabs: Tab[] = [
         filters={{kinds: [1, 6], authors: [pubKey]}}
         displayFilterFn={displayFilterFn}
         borderTopFirst={true}
+      />
+    ),
+  },
+  {
+    name: "Market",
+    path: "market",
+    element: ({pubKey}) => (
+      <Feed
+        key={`feed-${pubKey}`}
+        filters={{kinds: [30402], authors: [pubKey]}}
+        borderTopFirst={true}
+        showRepliedTo={true}
       />
     ),
   },
@@ -98,6 +111,34 @@ const tabs: Tab[] = [
   },
 ]
 
+function useHasMarketEvents(pubKey: string) {
+  const [hasMarketEvents, setHasMarketEvents] = useState(false)
+
+  useEffect(() => {
+    if (!pubKey) return
+
+    // Reset state when pubKey changes
+    setHasMarketEvents(false)
+
+    const sub = ndk().subscribe({
+      kinds: [30402],
+      authors: [pubKey],
+      limit: 1,
+    })
+
+    sub.on("event", () => {
+      setHasMarketEvents(true)
+      sub.stop()
+    })
+
+    return () => {
+      sub.stop()
+    }
+  }, [pubKey])
+
+  return hasMarketEvents
+}
+
 function UserPage({pubKey}: {pubKey: string}) {
   const pubKeyHex = useMemo(
     () => (pubKey ? new PublicKey(pubKey).toString() : ""),
@@ -105,6 +146,7 @@ function UserPage({pubKey}: {pubKey: string}) {
   )
   const [myPubKey] = useLocalState("user/publicKey", "")
   const follows = useFollows(pubKey)
+  const hasMarketEvents = useHasMarketEvents(pubKeyHex)
   const filteredFollows = useMemo(() => {
     return follows
       .filter((follow) => socialGraph().getFollowDistance(follow) > 1)
@@ -114,7 +156,9 @@ function UserPage({pubKey}: {pubKey: string}) {
   const activeProfile = location.pathname.split("/")[1] || ""
 
   const visibleTabs = tabs.filter(
-    (tab) => tab.path !== "you" || (myPubKey && !shouldHideAuthor(pubKeyHex))
+    (tab) =>
+      (tab.path !== "you" || (myPubKey && !shouldHideAuthor(pubKeyHex))) &&
+      (tab.path !== "market" || hasMarketEvents || location.pathname.includes("/market"))
   )
 
   return (

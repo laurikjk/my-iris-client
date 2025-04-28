@@ -69,6 +69,17 @@ function HomeFeedEvents() {
           !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 1,
       },
       {
+        name: "Market",
+        path: "market",
+        showRepliedTo: false,
+        filter: {
+          kinds: [30402],
+          limit: 100,
+        },
+        displayFilterFn: (e: NDKEvent) =>
+          !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 2,
+      },
+      {
         name: "Replies",
         path: "replies",
         displayFilterFn: (e: NDKEvent) => socialGraph().getFollowDistance(e.pubkey) <= 1,

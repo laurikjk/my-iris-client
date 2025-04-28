@@ -1,0 +1,27 @@
+{
+  "appName": "iris",
+  "appNameCapitalized": "Iris",
+  "hostname": "iris.to",
+  "nip05Domain": "iris.to",
+  "icon": "/img/icon128.png",
+  "navLogo": "/img/icon128.png",
+  "defaultTheme": "iris",
+  "navItems": [
+    "home",
+    "search",
+    "messages",
+    "notifications",
+    "wallet",
+    "settings",
+    "about"
+  ],
+  "aboutText": "Iris - Connecting People",
+  "repository": "https://github.com/irislib/iris-client",
+  "features": {
+    "analytics": false 
+  },
+  "defaultSettings": {
+    "notificationServer": "https://notifications.iris.to",
+    "irisApiUrl": ""
+  }
+}
