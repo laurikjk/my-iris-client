@@ -1,3 +1,4 @@
+import MarketListing from "../MarketListing.tsx"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ZapReceipt from "../ZapReceipt.tsx"
 import Zapraiser from "../Zapraiser.tsx"
@@ -26,6 +27,8 @@ const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentPr
     return <Highlight event={event} />
   } else if (event.kind === 30023) {
     return <LongForm event={event} standalone={standalone} />
+  } else if (event.kind === 30402) {
+    return <MarketListing event={event} truncate={truncate} />
   } else {
     return <TextNote event={event} truncate={truncate} />
   }
