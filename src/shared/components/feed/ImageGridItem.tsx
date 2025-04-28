@@ -80,6 +80,80 @@ export const ImageGridItem = ({
 
   if (!imageMatch && !videoMatch) return null
 
+  // For market listings (kind 30402), only show the first image and display price/title
+  if (event.kind === 30402) {
+    const title = event?.tagValue("title")
+    const priceTag = event?.tags?.find((tag) => tag[0] === "price" && tag[2] === "SATS")
+    const price = priceTag ? `${priceTag[1]} sats` : null
+    const imageTag = event?.tags?.find((tag) => tag[0] === "image")
+    const imageUrl = imageTag ? imageTag[1] : urls[0]
+
+    if (!imageUrl) return null
+
+    const isVideo = !imageMatch
+    const hasError = loadErrors[0]
+
+    const shouldBlur =
+      blurNSFW &&
+      (!!event.content.toLowerCase().includes("#nsfw") ||
+        event.tags.some((t) => t[0] === "content-warning"))
+
+    return (
+      <div
+        key={`feed${imageUrl}${index}`}
+        className={`aspect-square cursor-pointer relative bg-neutral-300 hover:opacity-80 ${shouldBlur ? "blur-xl" : ""}`}
+        onClick={() => {
+          if (window.innerWidth > 767) {
+            setActiveItemIndex(imageUrl)
+          } else {
+            navigate(`/${nip19.noteEncode(event.id)}`)
+          }
+        }}
+        ref={lastElementRef}
+      >
+        {(price || title) && (
+          <div className="absolute top-0 left-0 right-0 p-4 pb-8 bg-gradient-to-b from-black/85 via-black/65 via-black/45 to-transparent text-white z-10">
+            {price && <div className="text-sm font-bold text-info drop-shadow-sm">{price}</div>}
+            {title && <div className="text-sm font-bold truncate drop-shadow-sm">{title}</div>}
+          </div>
+        )}
+        {hasError ? (
+          <div
+            className="w-full h-full"
+            style={{
+              backgroundImage: blurhashUrls[0] ? `url(${blurhashUrls[0]})` : undefined,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
+        ) : (
+          <ProxyImg
+            square={true}
+            width={width}
+            src={imageUrl}
+            alt=""
+            className="w-full h-full object-cover"
+            style={{
+              backgroundImage: blurhashUrls[0] ? `url(${blurhashUrls[0]})` : undefined,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+            onError={() => setLoadErrors((prev) => ({...prev, [0]: true}))}
+          />
+        )}
+        {isVideo && (
+          <div className="absolute top-0 right-0 m-2 shadow-md shadow-gray-500">
+            <Icon
+              name="play-square-outline"
+              className="text-white opacity-80 drop-shadow-md"
+            />
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // For non-market listing events, show all images as before
   return urls.map((url, i) => {
     const isVideo = !imageMatch
     const hasError = loadErrors[i]
