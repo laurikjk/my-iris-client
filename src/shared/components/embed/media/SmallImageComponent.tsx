@@ -9,9 +9,10 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 interface SmallImageComponentProps {
   match: string
   event: NDKEvent | undefined
+  size?: number
 }
 
-function SmallImageComponent({match, event}: SmallImageComponentProps) {
+function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps) {
   let blurNSFW = true
   localState.get("settings/blurNSFW").on((value) => {
     if (typeof value === "boolean") {
@@ -44,15 +45,16 @@ function SmallImageComponent({match, event}: SmallImageComponentProps) {
           ) : (
             <ProxyImg
               square={true}
-              width={80}
+              width={size}
               onError={() => setHasError(true)}
               onClick={onClick}
               className={classNames(
-                "mt-2 rounded cursor-pointer aspect-square object-cover h-20",
+                "mt-2 rounded cursor-pointer aspect-square object-cover",
                 {
                   "blur-xl": blur,
                 }
               )}
+              style={{width: size, height: size}}
               src={url}
             />
           )}

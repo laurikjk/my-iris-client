@@ -23,16 +23,26 @@ function TruncatedMarketListing({event}: {event: NDKEvent}) {
   return (
     <ErrorBoundary>
       <div className="px-4">
-        {imageUrl && (
-          <div className="w-full mb-4">
-            <SmallImageComponent match={imageUrl} event={event} />
+        <div className="flex gap-4">
+          <div className="w-40 flex-shrink-0">
+            {imageUrl ? (
+              <SmallImageComponent match={imageUrl} event={event} size={160} />
+            ) : (
+              <div className="w-40 h-40 bg-base-200 rounded flex items-center justify-center">
+                <span className="text-base-content/50">No image</span>
+              </div>
+            )}
           </div>
-        )}
-        {price && <div className="text-lg font-bold text-info mb-2">{price}</div>}
-        {title && <div className="text-lg font-bold text-base-content mb-4">{title}</div>}
-        <HyperText event={event} truncate={100} small={true}>
-          {cleanSummary}
-        </HyperText>
+          <div className="flex-1">
+            {price && <div className="text-lg font-bold text-info mb-2">{price}</div>}
+            {title && (
+              <div className="text-lg font-bold text-base-content mb-4">{title}</div>
+            )}
+            <HyperText event={event} truncate={100} small={true}>
+              {cleanSummary}
+            </HyperText>
+          </div>
+        </div>
       </div>
     </ErrorBoundary>
   )
@@ -68,39 +78,45 @@ function FullMarketListing({event}: {event: NDKEvent}) {
   return (
     <ErrorBoundary>
       <div className="px-4">
-        {imageUrl && (
-          <div className="w-full mb-4">
-            <SmallImageComponent match={imageUrl} event={event} />
-          </div>
-        )}
-        {price && <div className="text-lg font-bold text-info mb-2">{price}</div>}
-        {title && <div className="text-lg font-bold text-base-content mb-4">{title}</div>}
-        <HyperText event={event}>{event?.content || ""}</HyperText>
+        <div className="flex gap-4">
+          {imageUrl && (
+            <div className="w-32 flex-shrink-0">
+              <SmallImageComponent match={imageUrl} event={event} />
+            </div>
+          )}
+          <div className="flex-1">
+            {price && <div className="text-lg font-bold text-info mb-2">{price}</div>}
+            {title && (
+              <div className="text-lg font-bold text-base-content mb-4">{title}</div>
+            )}
+            <HyperText event={event}>{event?.content || ""}</HyperText>
 
-        {tags.length > 0 && (
-          <div className="mt-4">
-            <button
-              className="btn btn-sm btn-outline"
-              onClick={() => setShowDetails(!showDetails)}
-            >
-              {showDetails ? "Hide Details" : "Show Details"}
-            </button>
+            {tags.length > 0 && (
+              <div className="mt-4">
+                <button
+                  className="btn btn-sm btn-outline"
+                  onClick={() => setShowDetails(!showDetails)}
+                >
+                  {showDetails ? "Hide Details" : "Show Details"}
+                </button>
 
-            {showDetails && (
-              <div className="mt-2 p-2 bg-base-200 rounded-lg">
-                <h3 className="text-sm font-semibold mb-2">Listing Details:</h3>
-                <ul className="text-xs space-y-1">
-                  {tags.map((tag, index) => (
-                    <li key={index} className="flex">
-                      <span className="font-medium mr-2">{tag[0]}:</span>
-                      <span>{formatTagValue(tag)}</span>
-                    </li>
-                  ))}
-                </ul>
+                {showDetails && (
+                  <div className="mt-2 p-2 bg-base-200 rounded-lg">
+                    <h3 className="text-sm font-semibold mb-2">Listing Details:</h3>
+                    <ul className="text-xs space-y-1">
+                      {tags.map((tag, index) => (
+                        <li key={index} className="flex">
+                          <span className="font-medium mr-2">{tag[0]}:</span>
+                          <span>{formatTagValue(tag)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
     </ErrorBoundary>
   )
