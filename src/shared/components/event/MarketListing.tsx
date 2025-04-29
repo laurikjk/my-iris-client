@@ -91,34 +91,35 @@ function FullMarketListing({event}: {event: NDKEvent}) {
             {title && (
               <div className="text-lg font-bold text-base-content mb-4">{title}</div>
             )}
-            <HyperText event={event}>{event?.content || ""}</HyperText>
+            <HyperText event={event} textPadding={false}>
+              {event?.content || ""}
+            </HyperText>
+          </div>
+        </div>
+        {tags.length > 0 && (
+          <div className="mt-4">
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={() => setShowDetails(!showDetails)}
+            >
+              {showDetails ? "Hide Details" : "Show Details"}
+            </button>
 
-            {tags.length > 0 && (
-              <div className="mt-4">
-                <button
-                  className="btn btn-sm btn-outline"
-                  onClick={() => setShowDetails(!showDetails)}
-                >
-                  {showDetails ? "Hide Details" : "Show Details"}
-                </button>
-
-                {showDetails && (
-                  <div className="mt-2 p-2 bg-base-200 rounded-lg">
-                    <h3 className="text-sm font-semibold mb-2">Listing Details:</h3>
-                    <ul className="text-xs space-y-1">
-                      {tags.map((tag, index) => (
-                        <li key={index} className="flex">
-                          <span className="font-medium mr-2">{tag[0]}:</span>
-                          <span>{formatTagValue(tag)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+            {showDetails && (
+              <div className="mt-2 p-2 bg-base-200 rounded-lg whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                <h3 className="text-sm font-semibold mb-2">Listing Details:</h3>
+                <ul className="text-xs space-y-1">
+                  {tags.map((tag, index) => (
+                    <li key={index} className="flex">
+                      <span className="font-medium mr-2">{tag[0]}:</span>
+                      <span>{formatTagValue(tag)}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
-        </div>
+        )}
       </div>
     </ErrorBoundary>
   )
