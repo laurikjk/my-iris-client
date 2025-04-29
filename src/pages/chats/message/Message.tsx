@@ -10,6 +10,7 @@ import classNames from "classnames"
 import {Link} from "react-router"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
+import HyperText from "@/shared/components/HyperText"
 
 export type MessageType = Rumor & {
   sender?: "user"
@@ -189,7 +190,7 @@ const Message = ({
                   "whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
                 )}
               >
-                {message.content}
+                <HyperText small={true}>{message.content}</HyperText>
               </p>
               {isLast && (
                 <p className="text-xs opacity-50 ml-2 whitespace-nowrap">
