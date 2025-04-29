@@ -1,13 +1,16 @@
+import {getSubscriptionIcon as getSubscriptionIconComponent} from "@/shared/utils/subscriptionIcons"
+import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
 import SocialGraphSettings from "@/pages/settings/SocialGraphSettings"
-import {RiArrowRightSLine, RiVipCrownFill} from "@remixicon/react"
 import {useLocation, Link, Routes, Route} from "react-router"
 import MediaServers from "@/pages/settings/Mediaservers.tsx"
 import {ProfileSettings} from "@/pages/settings/Profile.tsx"
 import NotificationSettings from "./NotificationSettings"
 import Appearance from "@/pages/settings/Appearance.tsx"
+import {ReactElement, useEffect, useState} from "react"
 import Header from "@/shared/components/header/Header"
 import IrisSettings from "./IrisAccount/IrisSettings"
 import {Network} from "@/pages/settings/Network.tsx"
+import {RiArrowRightSLine} from "@remixicon/react"
 import Icon from "@/shared/components/Icons/Icon"
 import Account from "@/pages/settings/Account"
 import WalletSettings from "./WalletSettings"
@@ -17,7 +20,6 @@ import Subscription from "./Subscription"
 import PrivacySettings from "./Privacy"
 import {Helmet} from "react-helmet"
 import classNames from "classnames"
-import {ReactElement} from "react"
 import Content from "./Content"
 
 interface SettingsItem {
@@ -35,6 +37,25 @@ interface SettingsGroup {
 function Settings() {
   const location = useLocation()
   const isSettingsRoot = location.pathname === "/settings"
+  const [pubkey, setPubkey] = useState<string | undefined>(undefined)
+  const {isSubscriber, isLoading, tier} = useSubscriptionStatus(pubkey)
+
+  useEffect(() => {
+    // Get the user's pubkey from local storage
+    const getPubkey = async () => {
+      const storedPubkey = localStorage.getItem("user/publicKey")
+      if (storedPubkey) {
+        setPubkey(storedPubkey)
+      }
+    }
+    getPubkey()
+  }, [])
+
+  const renderSubscriptionIcon = () => {
+    if (isLoading || !isSubscriber)
+      return getSubscriptionIconComponent(undefined, "text-white", 18)
+    return getSubscriptionIconComponent(tier, "text-white", 18)
+  }
 
   const settingsGroups: SettingsGroup[] = [
     {
@@ -61,7 +82,7 @@ function Settings() {
         ...(CONFIG.features.showSubscriptionSettings
           ? [
               {
-                icon: <RiVipCrownFill size={18} />,
+                icon: renderSubscriptionIcon(),
                 iconBg: "bg-warning",
                 message: "Subscription",
                 path: "/settings/subscription",

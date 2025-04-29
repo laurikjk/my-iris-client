@@ -3,11 +3,14 @@ import {useEffect, useState} from "react"
 /**
  * Hook to check if a user is a subscriber based on their pubkey
  * @param pubkey The user's public key
- * @returns An object containing the subscription status and loading state
+ * @returns An object containing the subscription status, loading state, and tier
  */
 export function useSubscriptionStatus(pubkey?: string) {
   const [isSubscriber, setIsSubscriber] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [tier, setTier] = useState<"supporter" | "premium" | "ultra" | undefined>(
+    undefined
+  )
 
   useEffect(() => {
     const checkSubscriberStatus = async () => {
@@ -17,13 +20,29 @@ export function useSubscriptionStatus(pubkey?: string) {
       }
 
       try {
-        // Fetch the NIP-05 data to check for subscription_plan_id
+        // Fetch the user data to check for subscription status
         const response = await fetch(
-          `https://iris.to/.well-known/nostr.json?pubkey=${pubkey}`
+          `${CONFIG.defaultSettings.irisApiUrl}/user/find?public_key=${pubkey}`
         )
         if (response.ok) {
           const data = await response.json()
-          setIsSubscriber(!!data.subscription_plan_id)
+          const hasSubscription = !!data.subscription_plan
+          setIsSubscriber(hasSubscription)
+
+          // Set the tier based on the subscription plan
+          if (hasSubscription) {
+            // The plan name comes directly from the database
+            const planName = data.subscription_plan.toLowerCase()
+            if (planName.includes("ultra")) {
+              setTier("ultra")
+            } else if (planName.includes("premium")) {
+              setTier("premium")
+            } else {
+              setTier("supporter")
+            }
+          } else {
+            setTier(undefined)
+          }
         }
       } catch (error) {
         console.error("Error checking subscriber status:", error)
@@ -36,5 +55,5 @@ export function useSubscriptionStatus(pubkey?: string) {
     checkSubscriberStatus()
   }, [pubkey])
 
-  return {isSubscriber, isLoading}
-} 
+  return {isSubscriber, isLoading, tier}
+}

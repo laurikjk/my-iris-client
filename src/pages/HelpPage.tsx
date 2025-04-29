@@ -1,3 +1,9 @@
+import {
+  RiInformationLine,
+  RiMessage3Line,
+  RiGithubLine,
+  RiRefreshLine,
+} from "@remixicon/react"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
 import Header from "@/shared/components/header/Header"
@@ -7,7 +13,6 @@ import {Link} from "react-router"
 
 export const AboutPage = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false)
-  const appVersion = import.meta.env.VITE_APP_VERSION || "dev"
   const buildTime = import.meta.env.VITE_BUILD_TIME || "development"
 
   const formatBuildTime = (timestamp: string) => {
@@ -61,16 +66,31 @@ export const AboutPage = () => {
               <h1>About</h1>
               <p>{CONFIG.aboutText}</p>
               <p>
-                <a href={CONFIG.repository}>Source code</a>
+                <a
+                  href="https://soapbox.pub/blog/nostr101/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1"
+                >
+                  <RiInformationLine className="inline" /> What is Nostr?
+                </a>
               </p>
               <p>
-                <Link to="/chats/1d2f13b495d7425b70298a8acd375897a632562043d461e89b63499363eaf8e7">
-                  Iris feedback, support and discussion chat
+                <Link
+                  to="/chats/1d2f13b495d7425b70298a8acd375897a632562043d461e89b63499363eaf8e7"
+                  className="flex items-center gap-1"
+                >
+                  <RiMessage3Line className="inline" /> Iris feedback, support and
+                  discussion chat
                 </Link>
               </p>
+              <p>
+                <a href={CONFIG.repository} className="flex items-center gap-1">
+                  <RiGithubLine className="inline" /> Source code
+                </a>
+              </p>
               <div className="mt-4">
-                <p>Version: {appVersion}</p>
-                <p>Build Time: {formatBuildTime(buildTime)}</p>
+                <p>App build time: {formatBuildTime(buildTime)}</p>
               </div>
 
               <div className="mt-6">
@@ -78,11 +98,12 @@ export const AboutPage = () => {
                   className={`btn btn-primary ${updateAvailable ? "animate-pulse" : ""}`}
                   onClick={refreshApp}
                 >
+                  <RiRefreshLine className="inline mr-1" />
                   {updateAvailable
                     ? "Update Available - Click to Refresh"
                     : "Refresh Application"}
                 </button>
-                <p className="text-sm mt-1">
+                <p className="text-sm mt-4">
                   Reload the application to apply any pending updates or fix issues.
                 </p>
               </div>

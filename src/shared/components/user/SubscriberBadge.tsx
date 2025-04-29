@@ -1,5 +1,6 @@
 import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
-import {RiVipCrownFill} from "@remixicon/react"
+import {getSubscriptionIcon} from "@/shared/utils/subscriptionIcons"
+import {Link} from "react-router"
 
 interface SubscriberBadgeProps {
   className?: string
@@ -7,14 +8,27 @@ interface SubscriberBadgeProps {
 }
 
 export function SubscriberBadge({className = "", pubkey}: SubscriberBadgeProps) {
-  const {isSubscriber, isLoading} = useSubscriptionStatus(pubkey)
+  const {isSubscriber, isLoading, tier} = useSubscriptionStatus(pubkey)
 
   if (isLoading || !isSubscriber) return null
 
+  const getBadgeText = () => {
+    switch (tier) {
+      case "supporter":
+        return "Supporter"
+      case "premium":
+        return "Premium"
+      case "ultra":
+        return "Ultra"
+      default:
+        return "Subscriber"
+    }
+  }
+
   return (
-    <div className={`flex items-center gap-1 ${className}`}>
-      <RiVipCrownFill className="text-warning" />
-      <span className="text-xs font-medium text-warning">Subscriber</span>
-    </div>
+    <Link to="/settings/subscription" className={`flex items-center gap-1 ${className}`}>
+      {getSubscriptionIcon(tier)}
+      <span className="text-xs font-medium text-warning">{getBadgeText()}</span>
+    </Link>
   )
 }

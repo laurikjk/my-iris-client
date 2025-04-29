@@ -1,37 +1,31 @@
 import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
 import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
+import {getSubscriptionIcon} from "@/shared/utils/subscriptionIcons"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiCheckboxCircleFill} from "@remixicon/react"
-import {useEffect, useState} from "react"
+import {useState} from "react"
 
 function Subscription() {
-  const [pubkey, setPubkey] = useState<string | undefined>(undefined)
+  const [pubkey] = useLocalState("user/publicKey", "")
   const {isSubscriber, isLoading} = useSubscriptionStatus(pubkey)
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly")
 
-  useEffect(() => {
-    // Get the user's pubkey from local storage
-    const getPubkey = async () => {
-      const storedPubkey = localStorage.getItem("user/publicKey")
-      if (storedPubkey) {
-        setPubkey(storedPubkey)
-      }
-    }
-    getPubkey()
-  }, [])
-
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center gap-2">
-        {!isLoading && pubkey && isSubscriber && <SubscriberBadge pubkey={pubkey} />}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          {isLoading && (
-            <span className="text-sm text-gray-500">Loading subscription status...</span>
-          )}
+      {!isLoading && pubkey && isSubscriber && (
+        <div className="flex flex-col justify-center items-center gap-2 w-full">
+          <SubscriberBadge pubkey={pubkey} />
+          <div>Thank you for supporting Iris!</div>
         </div>
-      </div>
+      )}
+
+      {isLoading && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Loading subscription status...</span>
+          </div>
+        </div>
+      )}
 
       <div className="divider">Subscription Plans</div>
 
@@ -59,7 +53,10 @@ function Subscription() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card bg-base-200 shadow-xl">
           <div className="card-body flex flex-col h-full">
-            <h3 className="card-title text-xl">Supporter</h3>
+            <div className="flex justify-between items-start">
+              <h3 className="card-title text-xl">Supporter</h3>
+              {getSubscriptionIcon("supporter", "text-warning text-2xl")}
+            </div>
             <div className="text-3xl font-bold my-2">
               {billingPeriod === "yearly" ? "$50" : "$5"}
               <span className="text-sm font-normal">
@@ -97,7 +94,10 @@ function Subscription() {
 
         <div className="card bg-base-200 shadow-xl border-2 border-warning">
           <div className="card-body flex flex-col h-full">
-            <h3 className="card-title text-xl">Premium</h3>
+            <div className="flex justify-between items-start">
+              <h3 className="card-title text-xl">Premium</h3>
+              {getSubscriptionIcon("premium", "text-warning text-2xl")}
+            </div>
             <div className="text-3xl font-bold my-2">
               {billingPeriod === "yearly" ? "$200" : "$20"}
               <span className="text-sm font-normal">
@@ -139,7 +139,10 @@ function Subscription() {
 
         <div className="card bg-base-200 shadow-xl border-2 border-error">
           <div className="card-body flex flex-col h-full">
-            <h3 className="card-title text-xl">Ultra</h3>
+            <div className="flex justify-between items-start">
+              <h3 className="card-title text-xl">Ultra</h3>
+              {getSubscriptionIcon("ultra", "text-error text-2xl")}
+            </div>
             <div className="text-3xl font-bold my-2">
               {billingPeriod === "yearly" ? "$1000" : "$100"}
               <span className="text-sm font-normal">
