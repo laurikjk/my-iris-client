@@ -14,28 +14,33 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 }
 
 /**
+ * Formats a price tag for display
+ */
+export const formatPrice = (priceTag: string[]) => {
+  const amount = priceTag[1]
+  const currency = priceTag[2]?.toUpperCase() || ""
+  const frequency = priceTag[3] || ""
+  const symbol = CURRENCY_SYMBOLS[currency]
+  const parsedPrice = parseInt(amount)
+
+  if (!isNaN(parsedPrice)) {
+    if (currency === "SATS" || currency === "SAT") {
+      return `${formatAmount(parsedPrice)} sats${frequency ? `/ ${frequency}` : ""}`
+    }
+    return symbol
+      ? `${symbol}${formatAmount(parsedPrice)}${frequency ? `/ ${frequency}` : ""}`
+      : `${formatAmount(parsedPrice)} ${currency}${frequency ? `/ ${frequency}` : ""}`
+  }
+  return `${amount} ${currency}${frequency ? `/ ${frequency}` : ""}`
+}
+
+/**
  * Extracts market listing data from an NDKEvent
  */
 export const extractMarketData = (event: NDKEvent) => {
   const title = event?.tagValue("title")
   const priceTag = event?.tags?.find((tag) => tag[0] === "price")
-  const price = priceTag
-    ? (() => {
-        const parsedPrice = parseInt(priceTag[1])
-        const currency = priceTag[2]?.toUpperCase() || ""
-        const symbol = CURRENCY_SYMBOLS[currency]
-
-        if (!isNaN(parsedPrice)) {
-          if (currency === "SATS" || currency === "SAT") {
-            return `${formatAmount(parsedPrice)} sats`
-          }
-          return symbol
-            ? `${symbol}${formatAmount(parsedPrice)}`
-            : `${formatAmount(parsedPrice)} ${currency}`
-        }
-        return `${priceTag[1]} ${currency}`
-      })()
-    : null
+  const price = priceTag ? formatPrice(priceTag) : null
   const imageTag = event?.tags?.find((tag) => tag[0] === "image")
   const imageUrl = imageTag ? imageTag[1] : null
   const summary = event?.tagValue("summary") || event?.content || ""
@@ -64,7 +69,7 @@ export const getMarketImageUrls = (event: NDKEvent) => {
  */
 export const formatTagValue = (tag: string[]) => {
   if (tag[0] === "price") {
-    return `${tag[1]} ${tag[2] || ""}`
+    return formatPrice(tag)
   }
   return tag[1]
 }
