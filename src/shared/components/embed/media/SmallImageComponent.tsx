@@ -1,6 +1,6 @@
 import {getMarketImageUrls} from "@/shared/utils/marketUtils"
-import MediaModal from "../../media/MediaModal"
 import {useState, MouseEvent, useEffect} from "react"
+import MediaModal from "../../media/MediaModal"
 import ProxyImg from "../../ProxyImg"
 import {localState} from "irisdb/src"
 import classNames from "classnames"

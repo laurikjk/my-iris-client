@@ -27,9 +27,7 @@ export const extractMarketData = (event: NDKEvent) => {
  */
 export const getMarketImageUrls = (event: NDKEvent) => {
   if (!isMarketListing(event)) return []
-  return event.tags
-    .filter((tag) => tag[0] === "image")
-    .map((tag) => tag[1])
+  return event.tags.filter((tag) => tag[0] === "image").map((tag) => tag[1])
 }
 
 /**
