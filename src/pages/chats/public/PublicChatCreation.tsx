@@ -3,6 +3,7 @@ import {useState, FormEvent} from "react"
 import {useNavigate} from "react-router"
 import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
+import PopularChannels from "./PopularChannels"
 
 let publicKey = ""
 localState.get("user/publicKey").on((k) => (publicKey = k as string))
@@ -15,8 +16,6 @@ const PublicChatCreation = () => {
   const [channelId, setChannelId] = useState("")
   const [joinError, setJoinError] = useState<string | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
-  const [isCreating, setIsCreating] = useState(false)
-  const [isJoining, setIsJoining] = useState(false)
 
   const handleCreateChannel = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -27,12 +26,10 @@ const PublicChatCreation = () => {
     }
 
     try {
-      setIsCreating(true)
       setCreateError(null)
 
       if (!publicKey) {
         setCreateError("You need to be logged in to create a channel")
-        setIsCreating(false)
         return
       }
 
@@ -55,7 +52,6 @@ const PublicChatCreation = () => {
     } catch (err) {
       console.error("Error creating channel:", err)
       setCreateError("Failed to create channel")
-      setIsCreating(false)
     }
   }
 
@@ -68,13 +64,11 @@ const PublicChatCreation = () => {
     }
 
     try {
-      setIsJoining(true)
       setJoinError(null)
 
       // Validate the channel ID format
       if (!/^[a-f0-9]{64}$/.test(channelId)) {
         setJoinError("Invalid channel ID format")
-        setIsJoining(false)
         return
       }
 
@@ -83,7 +77,6 @@ const PublicChatCreation = () => {
     } catch (err) {
       console.error("Error joining channel:", err)
       setJoinError("Failed to join channel")
-      setIsJoining(false)
     }
   }
 
@@ -106,15 +99,8 @@ const PublicChatCreation = () => {
             />
           </div>
           {joinError && <div className="text-error">{joinError}</div>}
-          <button type="submit" className="btn btn-primary" disabled={isJoining}>
-            {isJoining ? (
-              <>
-                <span className="loading loading-spinner loading-xs"></span>
-                Joining...
-              </>
-            ) : (
-              "Join Channel"
-            )}
+          <button type="submit" className="btn btn-primary">
+            Join Channel
           </button>
         </form>
       </div>
@@ -161,18 +147,15 @@ const PublicChatCreation = () => {
             />
           </div>
           {createError && <div className="text-error">{createError}</div>}
-          <button type="submit" className="btn btn-primary" disabled={isCreating}>
-            {isCreating ? (
-              <>
-                <span className="loading loading-spinner loading-xs"></span>
-                Creating...
-              </>
-            ) : (
-              "Create Channel"
-            )}
+          <button type="submit" className="btn btn-primary">
+            Create Channel
           </button>
         </form>
       </div>
+
+      <div className="divider">OR</div>
+
+      <PopularChannels publicKey={publicKey} />
 
       <div className="mt-4">
         <h3 className="text-lg font-semibold mb-2">About Public Channels</h3>

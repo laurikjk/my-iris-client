@@ -27,13 +27,33 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
   const location = useLocation()
   const pubKey = isPublic ? "" : id.split(":").shift() || ""
   const isActive = location.state?.id === id
-  const [channelMetadata, setChannelMetadata] = useState<ChannelMetadata | null>(null)
   const [latestMessage, setLatestMessage] = useState<{
     content: string
     created_at: number
   } | null>(null)
   const {setPublicChatTimestamps} = useContext(PublicChatContext)
   const [showPlaceholder, setShowPlaceholder] = useState(false)
+  const [channelMetadata, setChannelMetadata] = useState<ChannelMetadata | null>(null)
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false)
+
+  // Fetch channel metadata for public chats
+  useEffect(() => {
+    if (!isPublic) return
+
+    const fetchMetadata = async () => {
+      setIsLoadingMetadata(true)
+      try {
+        const metadata = await fetchChannelMetadata(id)
+        setChannelMetadata(metadata)
+      } catch (err) {
+        console.error("Error fetching channel metadata:", err)
+      } finally {
+        setIsLoadingMetadata(false)
+      }
+    }
+
+    fetchMetadata()
+  }, [id, isPublic])
 
   useEffect(() => {
     // TODO irisdb should have subscriptions work without this
@@ -45,18 +65,6 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
   const [latest] = useLocalState(`sessions/${id}/latest`, {} as MessageType)
   const [lastSeen, setLastSeen] = useLocalState(`sessions/${id}/lastSeen`, 0)
   const [deleted] = useLocalState(`sessions/${id}/deleted`, false)
-
-  // Fetch channel metadata for public chats
-  useEffect(() => {
-    if (isPublic) {
-      const fetchMetadata = async () => {
-        const metadata = await fetchChannelMetadata(id)
-        setChannelMetadata(metadata)
-      }
-
-      fetchMetadata()
-    }
-  }, [id, isPublic])
 
   // Fetch latest message for public chats
   useEffect(() => {
@@ -100,13 +108,13 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
   useEffect(() => {
     // Set a timeout to show the placeholder after 2 seconds if metadata hasn't loaded
     const timer = setTimeout(() => {
-      if (!channelMetadata) {
+      if (!channelMetadata && !isLoadingMetadata) {
         setShowPlaceholder(true)
       }
     }, 2000)
 
     return () => clearTimeout(timer)
-  }, [channelMetadata])
+  }, [channelMetadata, isLoadingMetadata])
 
   const getPreviewText = () => {
     if (isPublic && latestMessage?.content) {

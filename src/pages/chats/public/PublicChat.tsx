@@ -12,6 +12,7 @@ import {localState} from "irisdb/src"
 import {MessageType} from "../message/Message"
 import {Helmet} from "react-helmet"
 import {ndk} from "@/utils/ndk"
+import {useChannelMetadata} from "./hooks/useChannelMetadata"
 
 // NIP-28 event kinds
 const CHANNEL_CREATE = 40
@@ -31,7 +32,7 @@ localState.get("user/publicKey").on((k) => (publicKey = k as string))
 const PublicChat = () => {
   const {id} = useParams<{id: string}>()
   const navigate = useNavigate()
-  const [channelMetadata, setChannelMetadata] = useState<ChannelMetadata | null>(null)
+  const {metadata} = useChannelMetadata(id || "")
   const [messages, setMessages] = useState<SortedMap<string, MessageType>>(
     new SortedMap<string, MessageType>([], comparator)
   )
@@ -67,35 +68,6 @@ const PublicChat = () => {
       }
     }
   }, [messages.size])
-
-  // Fetch channel metadata
-  useEffect(() => {
-    if (!id) return
-
-    const fetchChannelMetadata = async () => {
-      try {
-        // Fetch channel creation event (kind 40)
-        const channelEvent = await ndk().fetchEvent({
-          kinds: [CHANNEL_CREATE],
-          ids: [id],
-        })
-
-        if (channelEvent) {
-          try {
-            const metadata = JSON.parse(channelEvent.content)
-            setChannelMetadata(metadata)
-          } catch (e) {
-            console.error("Failed to parse channel creation content:", e)
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching channel metadata:", err)
-        setError("Failed to load channel metadata")
-      }
-    }
-
-    fetchChannelMetadata()
-  }, [id])
 
   // Set up continuous subscription for messages
   useEffect(() => {
@@ -280,7 +252,7 @@ const PublicChat = () => {
   return (
     <>
       <Helmet>
-        <title>{channelMetadata?.name || "Public Chat"}</title>
+        <title>{metadata?.name || "Public Chat"}</title>
       </Helmet>
       <PublicChatHeader channelId={id || ""} />
       <ChatContainer
