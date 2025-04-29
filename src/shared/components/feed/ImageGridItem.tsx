@@ -1,11 +1,12 @@
 import {useMemo, MutableRefObject, useState} from "react"
-import {useNavigate, Link} from "react-router"
-import {RiImageLine} from "@remixicon/react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
 import {decode} from "blurhash"
 
 import {IMAGE_REGEX, VIDEO_REGEX} from "../embed/media/MediaEmbed"
+import {isMarketListing} from "@/shared/utils/marketUtils"
+import MarketGridItem from "../market/MarketGridItem"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {localState} from "irisdb/src"
 import Icon from "../Icons/Icon"
@@ -25,54 +26,6 @@ localState.get("settings/blurNSFW").once((value) => {
   }
 })
 
-const MarketGridItem = ({event}: {event: NDKEvent}) => {
-  const title = event?.tagValue("title")
-  const priceTag = event?.tags?.find((tag) => tag[0] === "price")
-  const price = priceTag ? `${priceTag[1]} ${priceTag[2] || ""}` : null
-  const imageTag = event?.tags?.find((tag) => tag[0] === "image")
-  const imageUrl = imageTag ? imageTag[1] : null
-
-  const shouldBlur =
-    blurNSFW &&
-    (!!event.content.toLowerCase().includes("#nsfw") ||
-      event.tags.some((t) => t[0] === "content-warning"))
-
-  const width = window.innerWidth > 767 ? 314 : 150
-
-  return (
-    <Link
-      to={`/${nip19.noteEncode(event.id)}`}
-      className={`aspect-square cursor-pointer relative bg-neutral-300 hover:opacity-80 block ${shouldBlur ? "blur-xl" : ""}`}
-    >
-      {(price || title) && (
-        <div className="absolute top-0 left-0 right-0 p-4 pb-8 bg-gradient-to-b from-black/85 via-black/65 via-black/45 to-transparent text-white z-10">
-          {price && (
-            <div className="text-sm font-bold text-info drop-shadow-sm">{price}</div>
-          )}
-          {title && (
-            <div className="text-sm font-bold truncate drop-shadow-sm">{title}</div>
-          )}
-        </div>
-      )}
-      {imageUrl ? (
-        <ProxyImg
-          square={true}
-          width={width}
-          src={imageUrl}
-          alt=""
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center bg-base-200">
-          <div className="text-base-content/50 text-center p-4">
-            <RiImageLine className="w-8 h-8 mx-auto" />
-          </div>
-        </div>
-      )}
-    </Link>
-  )
-}
-
 export const ImageGridItem = ({
   event,
   index,
@@ -81,11 +34,6 @@ export const ImageGridItem = ({
 }: ImageGridItemProps) => {
   const navigate = useNavigate()
   const [loadErrors, setLoadErrors] = useState<Record<number, boolean>>({})
-
-  // If it's a market listing, use the MarketGridItem component
-  if (event.kind === 30402) {
-    return <MarketGridItem event={event} />
-  }
 
   const imageMatch = event.content.match(IMAGE_REGEX)?.[0]
   const videoMatch = event.content.match(VIDEO_REGEX)?.[0]
@@ -131,6 +79,16 @@ export const ImageGridItem = ({
       }
     })
   }, [blurhashes])
+
+  // If it's a market listing, use the MarketGridItem component
+  if (isMarketListing(event)) {
+    const shouldBlur =
+      blurNSFW &&
+      (!!event.content.toLowerCase().includes("#nsfw") ||
+        event.tags.some((t) => t[0] === "content-warning"))
+
+    return <MarketGridItem event={event} shouldBlur={shouldBlur} width={width} />
+  }
 
   if (!imageMatch && !videoMatch) return null
 

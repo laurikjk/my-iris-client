@@ -124,7 +124,10 @@ const HyperText = memo(
       } else {
         if (currentGroup.length > 0) {
           groupedChildren.push(
-            <div key={`inline-group-${groupCounter++}`} className={textPadding ? "px-4" : ""}>
+            <div
+              key={`inline-group-${groupCounter++}`}
+              className={textPadding ? "px-4" : ""}
+            >
               {currentGroup}
             </div>
           )

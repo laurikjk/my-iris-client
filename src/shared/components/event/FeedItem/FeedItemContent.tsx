@@ -1,4 +1,4 @@
-import MarketListing from "../MarketListing.tsx"
+import MarketListing from "../../market/MarketListing"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ZapReceipt from "../ZapReceipt.tsx"
 import Zapraiser from "../Zapraiser.tsx"
