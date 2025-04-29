@@ -167,7 +167,7 @@ function UserPage({pubKey}: {pubKey: string}) {
         <div className="flex flex-1 flex-col items-center justify-center h-full">
           <ProfileHeader pubKey={pubKey} key={pubKey} />
           <div className="flex w-full flex-1 mt-2 flex flex-col gap-4">
-            <div className="px-4 flex gap-2 overflow-x-auto">
+            <div className="px-4 flex gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
               {visibleTabs.map((tab) => (
                 <NavLink
                   key={tab.path}
