@@ -1,7 +1,7 @@
+import MediaModal from "../../media/MediaModal"
 import {useState, MouseEvent} from "react"
 import ProxyImg from "../../ProxyImg"
 import {localState} from "irisdb/src"
-
 import classNames from "classnames"
 
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -21,6 +21,7 @@ function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps
   })
 
   const [hasError, setHasError] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const [blur, setBlur] = useState(
     blurNSFW &&
       (!!event?.content.toLowerCase().includes("#nsfw") ||
@@ -31,36 +32,49 @@ function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps
     if (blur) {
       setBlur(false)
       event.stopPropagation()
+    } else {
+      setShowModal(true)
     }
   }
 
   const urls = match.trim().split(/\s+/)
 
   return (
-    <div className="flex flex-wrap justify-start items-center gap-2">
-      {urls.map((url, index) => (
-        <div key={index} className="flex justify-start items-center">
-          {hasError ? (
-            <div className="my-2 text-sm break-all">{url}</div>
-          ) : (
-            <ProxyImg
-              square={true}
-              width={size}
-              onError={() => setHasError(true)}
-              onClick={onClick}
-              className={classNames(
-                "mt-2 rounded cursor-pointer aspect-square object-cover",
-                {
-                  "blur-xl": blur,
-                }
-              )}
-              style={{width: size, height: size}}
-              src={url}
-            />
-          )}
-        </div>
-      ))}
-    </div>
+    <>
+      <div className="flex flex-wrap justify-start items-center gap-2">
+        {urls.map((url, index) => (
+          <div key={index} className="flex justify-start items-center">
+            {hasError ? (
+              <div className="my-2 text-sm break-all">{url}</div>
+            ) : (
+              <ProxyImg
+                square={true}
+                width={size}
+                onError={() => setHasError(true)}
+                onClick={onClick}
+                className={classNames(
+                  "mt-2 rounded cursor-pointer aspect-square object-cover",
+                  {
+                    "blur-xl": blur,
+                  }
+                )}
+                style={{width: size, height: size}}
+                src={url}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      {showModal && (
+        <MediaModal
+          onClose={() => setShowModal(false)}
+          mediaUrl={urls[0]}
+          mediaType="image"
+          showFeedItem={false}
+          event={event}
+        />
+      )}
+    </>
   )
 }
 
