@@ -29,9 +29,7 @@ const MarketGridItem = ({
       {(price || title) && (
         <div className="absolute top-0 left-0 right-0 p-4 pb-8 bg-gradient-to-b from-black/85 via-black/65 via-black/45 to-transparent text-white z-10">
           {price && <div className="text-lg font-bold drop-shadow-sm">{price}</div>}
-          {title && (
-            <div className="text-sm truncate drop-shadow-sm">{title}</div>
-          )}
+          {title && <div className="text-sm truncate drop-shadow-sm">{title}</div>}
         </div>
       )}
       {imageUrl ? (

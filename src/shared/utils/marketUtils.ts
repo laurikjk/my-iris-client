@@ -1,6 +1,18 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {formatAmount} from "@/utils/utils"
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  JPY: "¥",
+  CNY: "¥",
+  INR: "₹",
+  RUB: "₽",
+  KRW: "₩",
+  BTC: "₿",
+}
+
 /**
  * Extracts market listing data from an NDKEvent
  */
@@ -10,9 +22,18 @@ export const extractMarketData = (event: NDKEvent) => {
   const price = priceTag
     ? (() => {
         const parsedPrice = parseInt(priceTag[1])
-        return !isNaN(parsedPrice)
-          ? `${formatAmount(parsedPrice)}${priceTag[2] || ""}`
-          : `${priceTag[1]} ${priceTag[2] || ""}`
+        const currency = priceTag[2]?.toUpperCase() || ""
+        const symbol = CURRENCY_SYMBOLS[currency]
+
+        if (!isNaN(parsedPrice)) {
+          if (currency === "SATS" || currency === "SAT") {
+            return `${formatAmount(parsedPrice)} sats`
+          }
+          return symbol
+            ? `${symbol}${formatAmount(parsedPrice)}`
+            : `${formatAmount(parsedPrice)} ${currency}`
+        }
+        return `${priceTag[1]} ${currency}`
       })()
     : null
   const imageTag = event?.tags?.find((tag) => tag[0] === "image")

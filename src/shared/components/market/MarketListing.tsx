@@ -23,11 +23,9 @@ function TruncatedMarketListing({event}: {event: NDKEvent}) {
         <div className="flex gap-4">
           <MarketImage event={event} imageUrl={imageUrl} className="w-40" />
           <div className="flex-1">
-            {price && <div className="text-lg font-bold text-info mb-2">{price}</div>}
+            {price && <div className="text-lg font-bold mb-2">{price}</div>}
             {(title || summary) && (
-              <div className="text-lg font-bold text-base-content mb-4">
-                {title || summary}
-              </div>
+              <div className="text-md text-base-content mb-4">{title || summary}</div>
             )}
           </div>
         </div>
@@ -46,12 +44,15 @@ function FullMarketListing({event}: {event: NDKEvent}) {
     <ErrorBoundary>
       <div className="px-4">
         <div className="flex gap-4">
-          <MarketImage event={event} imageUrl={imageUrl} className="w-40" />
+          <div className="flex flex-col gap-2">
+            <MarketImage event={event} imageUrl={imageUrl} className="w-40" />
+            {price && <div className="text-2xl font-bold mb-2 text-center">{price}</div>}
+          </div>
           <div className="flex-1">
-            {price && <div className="text-lg font-bold text-info mb-2">{price}</div>}
             {title && (
               <div className="text-lg font-bold text-base-content mb-4">{title}</div>
             )}
+
             <HyperText event={event} textPadding={false}>
               {content}
             </HyperText>
