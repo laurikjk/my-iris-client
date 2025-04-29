@@ -1,4 +1,5 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {formatAmount} from "@/utils/utils"
 
 /**
  * Extracts market listing data from an NDKEvent
@@ -6,7 +7,14 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 export const extractMarketData = (event: NDKEvent) => {
   const title = event?.tagValue("title")
   const priceTag = event?.tags?.find((tag) => tag[0] === "price")
-  const price = priceTag ? `${priceTag[1]} ${priceTag[2] || ""}` : null
+  const price = priceTag
+    ? (() => {
+        const parsedPrice = parseInt(priceTag[1])
+        return !isNaN(parsedPrice)
+          ? `${formatAmount(parsedPrice)}${priceTag[2] || ""}`
+          : `${priceTag[1]} ${priceTag[2] || ""}`
+      })()
+    : null
   const imageTag = event?.tags?.find((tag) => tag[0] === "image")
   const imageUrl = imageTag ? imageTag[1] : null
   const summary = event?.tagValue("summary") || event?.content || ""
