@@ -8,15 +8,13 @@ import {Avatar} from "@/shared/components/user/Avatar"
 import {useEffect, useState, useContext} from "react"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {Name} from "@/shared/components/user/Name"
+import {CHANNEL_MESSAGE} from "../utils/constants"
 import {useLocation, NavLink} from "react-router"
 import {MessageType} from "../message/Message"
 import {RiEarthLine} from "@remixicon/react"
 import {localState} from "irisdb/src"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
-
-// NIP-28 event kinds
-const CHANNEL_MESSAGE = 42
 
 interface ChatListItemProps {
   id: string

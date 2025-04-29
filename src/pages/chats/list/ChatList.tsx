@@ -1,7 +1,8 @@
+import {CHANNEL_CREATE, CHANNEL_MESSAGE} from "../utils/constants"
 import {PublicChatContext} from "../public/PublicChatContext"
 import Header from "@/shared/components/header/Header"
 import ChatListItem from "./ChatListItem"
-import {useEffect, useState} from "react"
+import {useState, useEffect} from "react"
 import {localState} from "irisdb/src"
 import {NavLink} from "react-router"
 import classNames from "classnames"
@@ -20,18 +21,13 @@ type Session = {
   }
 }
 
-// NIP-28 event kinds
-const CHANNEL_CREATE = 40
-const CHANNEL_MESSAGE = 42
-
 type PublicChat = {
   id: string
   name: string
-  picture?: string
-  latestMessage?: {
-    content: string
-    created_at: number
-  }
+  about: string
+  picture: string
+  lastMessage?: string
+  lastMessageAt?: number
 }
 
 const ChatList = ({className}: ChatListProps) => {
@@ -106,19 +102,24 @@ const ChatList = ({className}: ChatListProps) => {
                 chats.push({
                   id: channelId,
                   name: metadata.name || `Channel ${channelId.slice(0, 8)}...`,
-                  picture: metadata.picture,
+                  about: metadata.about || "",
+                  picture: metadata.picture || "",
                 })
               } catch (e) {
                 console.error("Failed to parse channel creation content:", e)
                 chats.push({
                   id: channelId,
                   name: `Channel ${channelId.slice(0, 8)}...`,
+                  about: "",
+                  picture: "",
                 })
               }
             } else {
               chats.push({
                 id: channelId,
                 name: `Channel ${channelId.slice(0, 8)}...`,
+                about: "",
+                picture: "",
               })
             }
           } catch (err) {
@@ -126,6 +127,8 @@ const ChatList = ({className}: ChatListProps) => {
             chats.push({
               id: channelId,
               name: `Channel ${channelId.slice(0, 8)}...`,
+              about: "",
+              picture: "",
             })
           }
         }

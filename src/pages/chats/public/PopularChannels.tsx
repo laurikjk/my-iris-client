@@ -2,9 +2,7 @@ import {useState, useEffect} from "react"
 import {ndk} from "@/utils/ndk"
 import socialGraph from "@/utils/socialGraph"
 import PopularChannelItem from "./PopularChannelItem"
-
-// Channel kind for NIP-28
-const CHANNEL_MESSAGE = 42
+import {CHANNEL_MESSAGE} from "../utils/constants"
 
 type PopularChannel = {
   id: string

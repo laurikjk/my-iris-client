@@ -12,19 +12,8 @@ import {localState} from "irisdb/src"
 import {MessageType} from "../message/Message"
 import {Helmet} from "react-helmet"
 import {ndk} from "@/utils/ndk"
-import {useChannelMetadata} from "./hooks/useChannelMetadata"
-
-// NIP-28 event kinds
-const CHANNEL_CREATE = 40
-const CHANNEL_MESSAGE = 42
-const REACTION_KIND = 7
-
-type ChannelMetadata = {
-  name: string
-  about: string
-  picture: string
-  relays: string[]
-}
+import {fetchChannelMetadata, ChannelMetadata} from "../utils/channelMetadata"
+import {CHANNEL_MESSAGE, REACTION_KIND} from "../utils/constants"
 
 let publicKey = ""
 localState.get("user/publicKey").on((k) => (publicKey = k as string))
@@ -32,7 +21,7 @@ localState.get("user/publicKey").on((k) => (publicKey = k as string))
 const PublicChat = () => {
   const {id} = useParams<{id: string}>()
   const navigate = useNavigate()
-  const {metadata} = useChannelMetadata(id || "")
+  const [metadata, setMetadata] = useState<ChannelMetadata | null>(null)
   const [messages, setMessages] = useState<SortedMap<string, MessageType>>(
     new SortedMap<string, MessageType>([], comparator)
   )
@@ -44,6 +33,22 @@ const PublicChat = () => {
   const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [showNoMessages, setShowNoMessages] = useState(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Fetch channel metadata
+  useEffect(() => {
+    if (!id) return
+
+    const getMetadata = async () => {
+      try {
+        const data = await fetchChannelMetadata(id)
+        setMetadata(data)
+      } catch (err) {
+        console.error("Error fetching channel metadata:", err)
+      }
+    }
+
+    getMetadata()
+  }, [id])
 
   // Set up timeout to show "No messages yet" after 2 seconds
   useEffect(() => {

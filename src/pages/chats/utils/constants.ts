@@ -1,0 +1,8 @@
+// NIP-28 event kinds
+export const CHANNEL_CREATE = 40
+export const CHANNEL_MESSAGE = 42
+export const CHANNEL_HIDE_MESSAGE = 43
+export const CHANNEL_MUTE_USER = 44
+
+// NIP-25 reactions
+export const REACTION_KIND = 7
