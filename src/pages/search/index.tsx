@@ -1,6 +1,7 @@
 import {useMemo, useState, useEffect, FormEvent, useCallback} from "react"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import Trending from "@/shared/components/feed/Trending.tsx"
+import useHistoryState from "@/shared/hooks/useHistoryState"
 import SearchBox from "@/shared/components/ui/SearchBox"
 import Header from "@/shared/components/header/Header"
 import {NDKFilter, NDKEvent} from "@nostr-dev-kit/ndk"
@@ -13,8 +14,9 @@ function SearchPage() {
   const {query} = useParams()
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState(query || "")
-  const [activeTab, setActiveTab] = useState<"people" | "posts">(
-    query ? "posts" : "people"
+  const [activeTab, setActiveTab] = useHistoryState<"people" | "posts" | "market">(
+    query ? "posts" : "people",
+    "searchTab"
   )
 
   useEffect(() => {
@@ -23,14 +25,15 @@ function SearchPage() {
 
   const filters: NDKFilter = useMemo(
     () => ({
-      kinds: [1],
+      kinds: activeTab === "market" ? [30402] : [1],
       search: query,
     }),
-    [query]
+    [query, activeTab]
   )
 
   const displayFilterFn = useCallback(
-    (event: NDKEvent) => event.content.toLowerCase().includes(searchTerm),
+    (event: NDKEvent) =>
+      (event.content + JSON.stringify(event.tags)).toLowerCase().includes(searchTerm),
     [searchTerm]
   )
 
@@ -75,13 +78,21 @@ function SearchPage() {
             >
               Posts
             </button>
+            <button
+              className={`btn btn-sm ${activeTab === "market" ? "btn-primary" : "btn-neutral"}`}
+              onClick={() => setActiveTab("market")}
+            >
+              Market
+            </button>
           </div>
           {query && (
             <Feed
+              key={`${activeTab}-${query}`}
               filters={filters}
               displayFilterFn={displayFilterFn}
               showRepliedTo={false}
               showFilters={true}
+              cacheKey={`search-${activeTab}-${query}`}
             />
           )}
           {!query && (
