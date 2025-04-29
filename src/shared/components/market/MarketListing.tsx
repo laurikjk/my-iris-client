@@ -43,10 +43,14 @@ function FullMarketListing({event}: {event: NDKEvent}) {
   return (
     <ErrorBoundary>
       <div className="px-4">
-        <div className="flex gap-4">
-          <div className="flex flex-col gap-2">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-row md:flex-col gap-2">
             <MarketImage event={event} imageUrl={imageUrl} className="w-40" />
-            {price && <div className="text-2xl font-bold mb-2 text-center">{price}</div>}
+            {price && (
+              <div className="text-2xl font-bold mb-2 flex justify-center items-center w-full">
+                {price}
+              </div>
+            )}
           </div>
           <div className="flex-1">
             {title && (

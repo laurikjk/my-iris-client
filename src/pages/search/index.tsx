@@ -18,10 +18,15 @@ function SearchPage() {
     query ? "posts" : "people",
     "searchTab"
   )
+  const [forceUpdate, setForceUpdate] = useState(0)
 
   useEffect(() => {
     setSearchTerm(query?.toLowerCase() || "")
   }, [query])
+
+  useEffect(() => {
+    setForceUpdate((prev) => prev + 1)
+  }, [activeTab])
 
   const filters: NDKFilter = useMemo(
     () => ({
@@ -93,6 +98,7 @@ function SearchPage() {
               showRepliedTo={false}
               showFilters={true}
               cacheKey={`search-${activeTab}-${query}`}
+              forceUpdate={forceUpdate}
             />
           )}
           {!query && (
