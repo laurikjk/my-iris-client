@@ -14,6 +14,7 @@ declare const CONFIG: {
   repository: string
   features: {
     analytics: boolean
+    showSubscriptionSettings: boolean
   }
   defaultSettings: {
     notificationServer: string

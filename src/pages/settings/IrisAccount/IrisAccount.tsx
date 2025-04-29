@@ -21,7 +21,6 @@ class IrisAccount extends Component {
     error: null as any,
     showChallenge: false,
     invalidUsernameMessage: null as any,
-    isSubscriber: false,
   }
 
   render() {
@@ -32,7 +31,7 @@ class IrisAccount extends Component {
       view = (
         <div className="flex flex-col gap-2">
           <AccountName name={username} />
-          {this.state.isSubscriber && <SubscriberBadge className="mt-2" />}
+          <SubscriberBadge className="mt-2" pubkey={this.state.profile?.pubkey} />
         </div>
       )
     } else if (this.state.existing && this.state.existing.confirmed) {
@@ -42,7 +41,7 @@ class IrisAccount extends Component {
             name={this.state.existing.name}
             setAsPrimary={() => this.setState({irisToActive: true})}
           />
-          {this.state.isSubscriber && <SubscriberBadge className="mt-2" />}
+          <SubscriberBadge className="mt-2" pubkey={this.state.profile?.pubkey} />
         </div>
       )
     } else if (this.state.existing) {
@@ -53,7 +52,7 @@ class IrisAccount extends Component {
             enableReserved={() => this.enableReserved()}
             declineReserved={() => this.declineReserved()}
           />
-          {this.state.isSubscriber && <SubscriberBadge className="mt-2" />}
+          <SubscriberBadge className="mt-2" pubkey={this.state.profile?.pubkey} />
         </div>
       )
     } else if (this.state.error) {
@@ -294,24 +293,6 @@ class IrisAccount extends Component {
     }
   }
 
-  async checkSubscriberStatus(username: string) {
-    if (username) {
-      try {
-        const response = await fetch(
-          `https://iris.to/.well-known/nostr.json?name=${username}`
-        )
-        if (response.ok) {
-          const data = await response.json()
-          if (data.subscription_plan_id) {
-            this.setState({isSubscriber: true})
-          }
-        }
-      } catch (error) {
-        console.error("Error checking subscriber status:", error)
-      }
-    }
-  }
-
   componentDidMount() {
     localState.get("user/publicKey").on((myPub) => {
       if (myPub && typeof myPub === "string") {
@@ -319,11 +300,6 @@ class IrisAccount extends Component {
         const irisToActive =
           profile && profile.nip05 && profile.nip05.endsWith("@iris.to")
         this.setState({profile, irisToActive})
-
-        if (profile && profile.nip05 && profile.nip05.endsWith("@iris.to")) {
-          const username = profile.nip05.split("@")[0]
-          this.checkSubscriberStatus(username)
-        }
 
         if (profile && !irisToActive) {
           this.checkExistingAccount(myPub)
@@ -341,10 +317,6 @@ class IrisAccount extends Component {
     if (res.status === 200) {
       const json = await res.json()
       this.setState({existing: json})
-
-      if (json && json.name) {
-        this.checkSubscriberStatus(json.name)
-      }
     }
   }
 }

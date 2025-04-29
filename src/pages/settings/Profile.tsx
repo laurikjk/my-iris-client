@@ -1,10 +1,10 @@
+import UploadButton from "@/shared/components/button/UploadButton"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import useProfile from "@/shared/hooks/useProfile"
 import {useEffect, useMemo, useState} from "react"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
+import {Link} from "react-router"
 import {ndk} from "@/utils/ndk"
-
-import UploadButton from "@/shared/components/button/UploadButton"
-import useProfile from "@/shared/hooks/useProfile"
 
 export function ProfileSettings() {
   const [myPubKey] = useLocalState("user/publicKey", "")
@@ -144,15 +144,31 @@ export function ProfileSettings() {
         </label>
         <label className="form-control w-full max-w-xs">
           <div className="label">
-            <span className="label-text">NIP-05 Verification</span>
+            <span className="label-text">
+              User @ domain name verification (
+              <a
+                href="https://nostr.how/en/guides/get-verified"
+                target="_blank"
+                rel="noreferrer"
+                className="link"
+              >
+                NIP-05
+              </a>
+              )
+            </span>
           </div>
           <input
             type="text"
-            placeholder="Nip-05 verification"
+            placeholder="user@example.com"
             className="input input-bordered w-full max-w-xs"
             value={newProfile?.nip05}
             onChange={(e) => setProfileField("nip05", e.target.value)}
           />
+          <div className="mt-2">
+            <Link to="/settings/iris" className="link hover:underline">
+              Get free username @ iris.to
+            </Link>
+          </div>
         </label>
         <label className="form-control w-full max-w-xs">
           <div className="label">
