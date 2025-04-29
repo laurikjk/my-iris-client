@@ -19,7 +19,8 @@ const MarketImage = ({event, imageUrl, size = 160, className = ""}: MarketImageP
         <SmallImageComponent match={imageUrl} event={event} size={size} />
       ) : (
         <div
-          className={`w-${size} h-${size} bg-base-200 rounded flex items-center justify-center`}
+          className="bg-base-200 rounded flex items-center justify-center"
+          style={{width: `${size}px`, height: `${size}px`}}
         >
           <RiImageLine className="w-8 h-8 text-base-content/50" />
         </div>
