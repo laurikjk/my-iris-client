@@ -23,6 +23,16 @@ export const extractMarketData = (event: NDKEvent) => {
 }
 
 /**
+ * Gets all image URLs from a market listing
+ */
+export const getMarketImageUrls = (event: NDKEvent) => {
+  if (!isMarketListing(event)) return []
+  return event.tags
+    .filter((tag) => tag[0] === "image")
+    .map((tag) => tag[1])
+}
+
+/**
  * Formats a tag value for display
  */
 export const formatTagValue = (tag: string[]) => {

@@ -1,5 +1,6 @@
+import {getMarketImageUrls} from "@/shared/utils/marketUtils"
 import MediaModal from "../../media/MediaModal"
-import {useState, MouseEvent} from "react"
+import {useState, MouseEvent, useEffect} from "react"
 import ProxyImg from "../../ProxyImg"
 import {localState} from "irisdb/src"
 import classNames from "classnames"
@@ -22,6 +23,7 @@ function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps
 
   const [hasError, setHasError] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [blur, setBlur] = useState(
     blurNSFW &&
       (!!event?.content.toLowerCase().includes("#nsfw") ||
@@ -29,15 +31,44 @@ function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps
   )
 
   const onClick = (event: MouseEvent) => {
+    event.stopPropagation()
     if (blur) {
       setBlur(false)
-      event.stopPropagation()
     } else {
       setShowModal(true)
+      setCurrentImageIndex(0)
     }
   }
 
   const urls = match.trim().split(/\s+/)
+
+  // Get all image URLs from tags if it's a market listing
+  const allImageUrls = event ? getMarketImageUrls(event) : urls
+
+  const handlePrev = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + allImageUrls.length) % allImageUrls.length)
+  }
+
+  const handleNext = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % allImageUrls.length)
+  }
+
+  useEffect(() => {
+    if (!showModal) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") {
+        handleNext()
+      } else if (e.key === "ArrowLeft") {
+        handlePrev()
+      } else if (e.key === "Escape") {
+        setShowModal(false)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [showModal])
 
   return (
     <>
@@ -68,10 +99,14 @@ function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps
       {showModal && (
         <MediaModal
           onClose={() => setShowModal(false)}
-          mediaUrl={urls[0]}
+          mediaUrl={allImageUrls[currentImageIndex]}
           mediaType="image"
           showFeedItem={false}
           event={event}
+          onPrev={allImageUrls.length > 1 ? handlePrev : undefined}
+          onNext={allImageUrls.length > 1 ? handleNext : undefined}
+          currentIndex={allImageUrls.length > 1 ? currentImageIndex : undefined}
+          totalCount={allImageUrls.length > 1 ? allImageUrls.length : undefined}
         />
       )}
     </>
