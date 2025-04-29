@@ -77,7 +77,7 @@ function HomeFeedEvents() {
           limit: 100,
         },
         displayFilterFn: (e: NDKEvent) =>
-          !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 2,
+          !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 3,
       },
       {
         name: "Replies",

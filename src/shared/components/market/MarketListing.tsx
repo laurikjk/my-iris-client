@@ -24,12 +24,11 @@ function TruncatedMarketListing({event}: {event: NDKEvent}) {
           <MarketImage event={event} imageUrl={imageUrl} className="w-40" />
           <div className="flex-1">
             {price && <div className="text-lg font-bold text-info mb-2">{price}</div>}
-            {title && (
-              <div className="text-lg font-bold text-base-content mb-4">{title}</div>
+            {(title || summary) && (
+              <div className="text-lg font-bold text-base-content mb-4">
+                {title || summary}
+              </div>
             )}
-            <HyperText event={event} truncate={100} small={true}>
-              {summary}
-            </HyperText>
           </div>
         </div>
       </div>
