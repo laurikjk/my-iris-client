@@ -14,12 +14,12 @@ export function SubscriberBadge({className = "", pubkey}: SubscriberBadgeProps) 
 
   const getBadgeText = () => {
     switch (tier) {
-      case "supporter":
-        return "Supporter"
-      case "premium":
-        return "Premium"
-      case "ultra":
-        return "Ultra"
+      case "patron":
+        return "Patron"
+      case "champion":
+        return "Champion"
+      case "vanguard":
+        return "Vanguard"
       default:
         return "Subscriber"
     }

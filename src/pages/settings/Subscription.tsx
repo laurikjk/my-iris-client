@@ -54,8 +54,8 @@ function Subscription() {
         <div className="card bg-base-200 shadow-xl">
           <div className="card-body flex flex-col h-full">
             <div className="flex justify-between items-start">
-              <h3 className="card-title text-xl">Supporter</h3>
-              {getSubscriptionIcon("supporter", "text-warning text-2xl")}
+              <h3 className="card-title text-xl">Patron</h3>
+              {getSubscriptionIcon("patron", "text-warning text-2xl")}
             </div>
             <div className="text-3xl font-bold my-2">
               {billingPeriod === "yearly" ? "$50" : "$5"}
@@ -70,7 +70,7 @@ function Subscription() {
               </li>
               <li className="flex items-center gap-2">
                 <RiCheckboxCircleFill className="h-5 w-5 text-success flex-shrink-0" />
-                <span>Supporter badge on profile</span>
+                <span>Patron badge on profile</span>
               </li>
               <li className="flex items-center gap-2">
                 <RiCheckboxCircleFill className="h-5 w-5 text-success flex-shrink-0" />
@@ -83,7 +83,7 @@ function Subscription() {
             </ul>
             <div className="card-actions justify-end mt-auto pt-4">
               <a
-                href={`https://iris.to/subscribe/supporter?billing=${billingPeriod}`}
+                href={`https://iris.to/subscribe/patron?billing=${billingPeriod}`}
                 className="btn btn-primary"
               >
                 Subscribe
@@ -95,8 +95,8 @@ function Subscription() {
         <div className="card bg-base-200 shadow-xl border-2 border-warning">
           <div className="card-body flex flex-col h-full">
             <div className="flex justify-between items-start">
-              <h3 className="card-title text-xl">Premium</h3>
-              {getSubscriptionIcon("premium", "text-warning text-2xl")}
+              <h3 className="card-title text-xl">Champion</h3>
+              {getSubscriptionIcon("champion", "text-warning text-2xl")}
             </div>
             <div className="text-3xl font-bold my-2">
               {billingPeriod === "yearly" ? "$200" : "$20"}
@@ -107,11 +107,11 @@ function Subscription() {
             <ul className="space-y-2 my-4">
               <li className="flex items-center gap-2">
                 <RiCheckboxCircleFill className="h-5 w-5 text-success flex-shrink-0" />
-                <span>All Supporter benefits</span>
+                <span>All Patron benefits</span>
               </li>
               <li className="flex items-center gap-2">
                 <RiCheckboxCircleFill className="h-5 w-5 text-success flex-shrink-0" />
-                <span>Premium badge on profile</span>
+                <span>Champion badge on profile</span>
               </li>
               <li className="flex items-center gap-2">
                 <RiCheckboxCircleFill className="h-5 w-5 text-success flex-shrink-0" />
@@ -128,7 +128,7 @@ function Subscription() {
             </ul>
             <div className="card-actions justify-end mt-auto pt-4">
               <a
-                href={`https://iris.to/subscribe/premium?billing=${billingPeriod}`}
+                href={`https://iris.to/subscribe/champion?billing=${billingPeriod}`}
                 className="btn btn-warning"
               >
                 Subscribe
@@ -140,8 +140,8 @@ function Subscription() {
         <div className="card bg-base-200 shadow-xl border-2 border-error">
           <div className="card-body flex flex-col h-full">
             <div className="flex justify-between items-start">
-              <h3 className="card-title text-xl">Ultra</h3>
-              {getSubscriptionIcon("ultra", "text-error text-2xl")}
+              <h3 className="card-title text-xl">Vanguard</h3>
+              {getSubscriptionIcon("vanguard", "text-error text-2xl")}
             </div>
             <div className="text-3xl font-bold my-2">
               {billingPeriod === "yearly" ? "$1000" : "$100"}
@@ -152,11 +152,11 @@ function Subscription() {
             <ul className="space-y-2 my-4">
               <li className="flex items-center gap-2">
                 <RiCheckboxCircleFill className="h-5 w-5 text-success flex-shrink-0" />
-                <span>All Premium benefits</span>
+                <span>All Champion benefits</span>
               </li>
               <li className="flex items-center gap-2">
                 <RiCheckboxCircleFill className="h-5 w-5 text-success flex-shrink-0" />
-                <span>Ultra badge on profile</span>
+                <span>Vanguard badge on profile</span>
               </li>
               <li className="flex items-center gap-2">
                 <RiCheckboxCircleFill className="h-5 w-5 text-success flex-shrink-0" />
@@ -177,7 +177,7 @@ function Subscription() {
             </ul>
             <div className="card-actions justify-end mt-auto pt-4">
               <a
-                href={`https://iris.to/subscribe/ultra?billing=${billingPeriod}`}
+                href={`https://iris.to/subscribe/vanguard?billing=${billingPeriod}`}
                 className="btn btn-error"
               >
                 Subscribe

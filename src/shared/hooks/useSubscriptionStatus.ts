@@ -8,7 +8,7 @@ import {useEffect, useState} from "react"
 export function useSubscriptionStatus(pubkey?: string) {
   const [isSubscriber, setIsSubscriber] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [tier, setTier] = useState<"supporter" | "premium" | "ultra" | undefined>(
+  const [tier, setTier] = useState<"patron" | "champion" | "vanguard" | undefined>(
     undefined
   )
 
@@ -33,12 +33,12 @@ export function useSubscriptionStatus(pubkey?: string) {
           if (hasSubscription) {
             // The plan name comes directly from the database
             const planName = data.subscription_plan.toLowerCase()
-            if (planName.includes("ultra")) {
-              setTier("ultra")
-            } else if (planName.includes("premium")) {
-              setTier("premium")
+            if (planName.includes("vanguard")) {
+              setTier("vanguard")
+            } else if (planName.includes("champion")) {
+              setTier("champion")
             } else {
-              setTier("supporter")
+              setTier("patron")
             }
           } else {
             setTier(undefined)
