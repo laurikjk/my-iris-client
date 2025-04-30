@@ -28,7 +28,6 @@ export const getChannelsByFollowed = async (): Promise<ChannelMetadata[]> => {
   }
 
   try {
-    console.log("Fetching channels by followed users")
     // Fetch latest 100 channel creation events
     const events = await ndk().fetchEvents({
       kinds: [CHANNEL_CREATE],
@@ -82,8 +81,6 @@ export const fetchChannelMetadata = async (
   }
 
   try {
-    console.log("Fetching channel metadata for ID:", channelId)
-
     // First try to fetch the channel creation event
     const channelEvent = await ndk().fetchEvent({
       kinds: [CHANNEL_CREATE],
@@ -92,7 +89,6 @@ export const fetchChannelMetadata = async (
 
     if (channelEvent) {
       try {
-        console.log("Found channel creation event:", channelEvent)
         const metadata = JSON.parse(channelEvent.content)
         const channelMetadata = {
           id: channelEvent.id,
@@ -106,8 +102,6 @@ export const fetchChannelMetadata = async (
         console.error("Failed to parse channel creation content:", e)
       }
     } else {
-      console.log("No channel creation event found for ID:", channelId)
-
       // If no channel creation event found, try to fetch the channel message event
       // This is a fallback approach since some channels might not have a creation event
       const channelMessageEvent = await ndk().fetchEvent({
@@ -116,7 +110,6 @@ export const fetchChannelMetadata = async (
       })
 
       if (channelMessageEvent) {
-        console.log("Found channel message event as fallback:", channelMessageEvent)
         // Create a basic metadata object from the message event
         const channelMetadata = {
           id: channelMessageEvent.id,
