@@ -4,6 +4,7 @@ import Header from "@/shared/components/header/Header"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {RiEarthLine} from "@remixicon/react"
 import {useEffect, useState} from "react"
+import {Link} from "react-router"
 
 interface PublicChatHeaderProps {
   channelId: string
@@ -51,15 +52,12 @@ const PublicChatHeader = ({channelId}: PublicChatHeaderProps) => {
         />
       )
     }
-    if (showPlaceholder) {
-      return <MinidenticonImg username={channelId || "unknown"} />
-    }
-    return <div className="w-8 h-8"></div>
+    return <MinidenticonImg username={channelId} width={16} />
   }
 
   return (
-    <Header showNotifications={false} scrollDown={true} slideUp={false} bold={false}>
-      <div className="flex items-center gap-2">
+    <Header title={renderTitle()} showBack showNotifications={false} scrollDown={true} slideUp={false} bold={false}>
+      <Link to={`/chats/${channelId}/details`} className="flex items-center gap-2 w-full">
         <div className="w-8 h-8 flex items-center justify-center">{renderIcon()}</div>
         <div className="flex flex-col items-start">
           <span className="font-medium flex items-center gap-1">{renderTitle()}</span>
@@ -67,7 +65,7 @@ const PublicChatHeader = ({channelId}: PublicChatHeaderProps) => {
             <RiEarthLine className="w-4 h-4" /> Public chat
           </span>
         </div>
-      </div>
+      </Link>
     </Header>
   )
 }

@@ -1,3 +1,4 @@
+import PublicChatDetails from "./public/PublicChatDetails"
 import {useLocation, Routes, Route} from "react-router"
 import PrivateChat from "./private/PrivateChat"
 import PublicChat from "./public/PublicChat"
@@ -33,6 +34,7 @@ function Messages() {
             path="chat"
             element={<PrivateChat key={location.state?.id} id={location.state?.id} />}
           />
+          <Route path=":id/details" element={<PublicChatDetails />} />
           <Route path=":id" element={<PublicChat key={location.pathname} />} />
           <Route path="/" element={<NewChat />} />
         </Routes>

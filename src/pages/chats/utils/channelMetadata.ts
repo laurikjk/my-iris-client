@@ -8,6 +8,7 @@ export type ChannelMetadata = {
   about: string
   picture: string
   relays: string[]
+  founderPubkey: string
 }
 
 /**
@@ -31,7 +32,10 @@ export const fetchChannelMetadata = async (
       try {
         console.log("Found channel creation event:", channelEvent)
         const metadata = JSON.parse(channelEvent.content)
-        return metadata
+        return {
+          ...metadata,
+          founderPubkey: channelEvent.pubkey,
+        }
       } catch (e) {
         console.error("Failed to parse channel creation content:", e)
       }
@@ -53,6 +57,7 @@ export const fetchChannelMetadata = async (
           about: "Channel information not available",
           picture: "",
           relays: [],
+          founderPubkey: channelMessageEvent.pubkey,
         }
       }
     }
