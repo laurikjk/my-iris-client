@@ -28,7 +28,7 @@ function Messages() {
         })}
       >
         <Routes>
-          <Route path="new" element={<NewChat />} />
+          <Route path="new/*" element={<NewChat />} />
           <Route
             path="chat"
             element={<PrivateChat key={location.state?.id} id={location.state?.id} />}

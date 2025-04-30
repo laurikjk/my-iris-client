@@ -1,47 +1,43 @@
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import InstallPWAPrompt from "@/shared/components/InstallPWAPrompt"
 import PrivateChatCreation from "./private/PrivateChatCreation"
+import {Link, Routes, Route, useLocation} from "react-router"
 import PublicChatCreation from "./public/PublicChatCreation"
 import Header from "@/shared/components/header/Header"
-import {useState} from "react"
 
-type TabType = "private" | "public"
+const TabSelector = () => {
+  const location = useLocation()
+  const isPublic = location.pathname === "/chats/new/public"
 
-const TabSelector = ({
-  activeTab,
-  onSelect,
-}: {
-  activeTab: TabType
-  onSelect: (tab: TabType) => void
-}) => {
-  const getClasses = (tabType: TabType) => {
+  const getClasses = (isActive: boolean) => {
     const baseClasses = "border-highlight cursor-pointer flex justify-center flex-1 p-3"
-    return activeTab === tabType
+    return isActive
       ? `${baseClasses} border-b border-1`
       : `${baseClasses} text-base-content/70 hover:text-base-content border-b border-1 border-transparent`
   }
 
   return (
     <div className="flex mb-px md:mb-1">
-      <div className={getClasses("private")} onClick={() => onSelect("private")}>
+      <Link to="/chats/new" className={getClasses(!isPublic)}>
         Private
-      </div>
-      <div className={getClasses("public")} onClick={() => onSelect("public")}>
+      </Link>
+      <Link to="/chats/new/public" className={getClasses(isPublic)}>
         Public
-      </div>
+      </Link>
     </div>
   )
 }
 
 const NewChat = () => {
-  const [activeTab, setActiveTab] = useState<TabType>("private")
-
   return (
     <>
       <Header title="New Chat" />
       <NotificationPrompt />
-      <TabSelector activeTab={activeTab} onSelect={setActiveTab} />
-      {activeTab === "private" ? <PrivateChatCreation /> : <PublicChatCreation />}
+      <TabSelector />
+      <Routes>
+        <Route path="/" element={<PrivateChatCreation />} />
+        <Route path="/public" element={<PublicChatCreation />} />
+      </Routes>
       <InstallPWAPrompt />
     </>
   )
