@@ -12,6 +12,7 @@ import {CHANNEL_MESSAGE} from "../utils/constants"
 import {useLocation, NavLink} from "react-router"
 import {MessageType} from "../message/Message"
 import {RiEarthLine} from "@remixicon/react"
+import debounce from "lodash/debounce"
 import {localState} from "irisdb/src"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
@@ -68,6 +69,20 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
   useEffect(() => {
     if (!isPublic) return
 
+    let latestMessageInMemory: {content: string; created_at: number} | null = null
+
+    const debouncedUpdate = debounce(() => {
+      if (latestMessageInMemory) {
+        setLatestMessage(latestMessageInMemory)
+        if (setPublicChatTimestamps) {
+          setPublicChatTimestamps((prev) => ({
+            ...prev,
+            [id]: latestMessageInMemory!.created_at,
+          }))
+        }
+      }
+    }, 300)
+
     // Set up subscription for latest messages
     const sub = ndk().subscribe({
       kinds: [CHANNEL_MESSAGE],
@@ -79,29 +94,22 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     sub.on("event", (event) => {
       if (!event || !event.id) return
 
-      // Only update if this message is more recent than what we already have
-      if (!latestMessage || event.created_at > latestMessage.created_at) {
-        const messageData = {
+      // Always update the in-memory latest message
+      if (!latestMessageInMemory || event.created_at > latestMessageInMemory.created_at) {
+        latestMessageInMemory = {
           content: event.content,
           created_at: event.created_at,
         }
-        setLatestMessage(messageData)
-
-        // Update the timestamp in the parent component
-        if (setPublicChatTimestamps) {
-          setPublicChatTimestamps((prev) => ({
-            ...prev,
-            [id]: event.created_at,
-          }))
-        }
+        debouncedUpdate()
       }
     })
 
     // Clean up subscription when component unmounts
     return () => {
       sub.stop()
+      debouncedUpdate.cancel()
     }
-  }, [id, isPublic, setPublicChatTimestamps, latestMessage])
+  }, [id, isPublic, setPublicChatTimestamps])
 
   useEffect(() => {
     // Set a timeout to show the placeholder after 2 seconds if metadata hasn't loaded
