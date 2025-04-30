@@ -3,6 +3,7 @@ import {
   RiMessage3Line,
   RiGithubLine,
   RiRefreshLine,
+  RiUserFollowLine,
 } from "@remixicon/react"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
@@ -87,6 +88,16 @@ export const AboutPage = () => {
               <p>
                 <a href={CONFIG.repository} className="flex items-center gap-1">
                   <RiGithubLine className="inline" /> Source code
+                </a>
+              </p>
+              <p>
+                <a
+                  href="https://following.space/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1"
+                >
+                  <RiUserFollowLine className="inline" /> Find people to follow
                 </a>
               </p>
               <div className="mt-4">
