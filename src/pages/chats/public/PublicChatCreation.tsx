@@ -1,5 +1,5 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {useState, FormEvent} from "react"
+import {useState, FormEvent, useEffect} from "react"
 import {useNavigate} from "react-router"
 import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
@@ -7,7 +7,7 @@ import PopularChannels from "./PopularChannels"
 import ProxyImg from "@/shared/components/ProxyImg"
 import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
 import { searchChannels } from "../utils/channelSearch"
-import { ChannelMetadata } from "../utils/channelMetadata"
+import { ChannelMetadata, getChannelsByFollowed } from "../utils/channelMetadata"
 
 let publicKey = ""
 localState.get("user/publicKey").on((k) => (publicKey = k as string))
@@ -20,6 +20,11 @@ const PublicChatCreation = () => {
   const [searchInput, setSearchInput] = useState("")
   const [matchingChannels, setMatchingChannels] = useState<ChannelMetadata[]>([])
   const [createError, setCreateError] = useState<string | null>(null)
+
+  // Fetch channels by followed users on mount
+  useEffect(() => {
+    getChannelsByFollowed().catch(console.error)
+  }, [])
 
   const onSearchChange = async (value: string) => {
     setSearchInput(value)
@@ -123,9 +128,9 @@ const PublicChatCreation = () => {
                   ) : (
                     <MinidenticonImg username={metadata.id} className="w-10 h-10 rounded-full" />
                   )}
-                  <div className="flex flex-col">
-                    <span className="font-medium">{metadata.name}</span>
-                    {metadata.about && <span className="text-sm opacity-70">{metadata.about}</span>}
+                  <div className="flex flex-col break-words [overflow-wrap:anywhere]">
+                    <span className="font-medium line-clamp-1">{metadata.name}</span>
+                    {metadata.about && <span className="text-sm opacity-70 line-clamp-2">{metadata.about}</span>}
                   </div>
                 </div>
               </button>

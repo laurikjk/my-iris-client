@@ -1,5 +1,6 @@
-import { updateChannelSearchIndex, getCachedChannel } from "./channelSearch"
-import { ndk } from "@/utils/ndk"
+import {updateChannelSearchIndex, getCachedChannel} from "./channelSearch"
+import {shouldHideAuthor} from "@/utils/socialGraph"
+import {ndk} from "@/utils/ndk"
 
 // NIP-28 event kinds
 export const CHANNEL_CREATE = 40
@@ -11,6 +12,59 @@ export type ChannelMetadata = {
   picture: string
   relays: string[]
   founderPubkey: string
+}
+
+// Cache for channels by followed users
+let channelsByFollowed: ChannelMetadata[] | null = null
+
+/**
+ * Fetches and caches channels created by followed users
+ * @returns A promise that resolves to the filtered channel metadata
+ */
+export const getChannelsByFollowed = async (): Promise<ChannelMetadata[]> => {
+  // Return cached result if available
+  if (channelsByFollowed) {
+    return channelsByFollowed
+  }
+
+  try {
+    console.log("Fetching channels by followed users")
+    // Fetch latest 100 channel creation events
+    const events = await ndk().fetchEvents({
+      kinds: [CHANNEL_CREATE],
+      limit: 100,
+    })
+
+    // Process and filter events
+    const channels: ChannelMetadata[] = []
+    for (const event of Array.from(events)) {
+      try {
+        // Skip if author should be hidden
+        if (shouldHideAuthor(event.pubkey)) {
+          continue
+        }
+
+        const metadata = JSON.parse(event.content)
+        const channelMetadata = {
+          id: event.id,
+          ...metadata,
+          founderPubkey: event.pubkey,
+        }
+        channels.push(channelMetadata)
+        // Update search index
+        updateChannelSearchIndex(event.id, channelMetadata)
+      } catch (e) {
+        console.error("Failed to parse channel creation content:", e)
+      }
+    }
+
+    // Cache the result
+    channelsByFollowed = channels
+    return channels
+  } catch (err) {
+    console.error("Error fetching channels by followed users:", err)
+    return []
+  }
 }
 
 /**
