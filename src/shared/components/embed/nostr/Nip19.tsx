@@ -41,7 +41,7 @@ function Naddr({naddr, data}: {naddr: string; data: nip19.AddressPointer}) {
 }
 
 const NostrUser: Embed = {
-  regex: /\bnostr:(n(?:event|profile|addr)1\w+)\b/g,
+  regex: /\b(?:nostr:)?(n(?:event|profile|addr)1[a-zA-Z0-9]{10,})\b/g,
   component: ({match}) => {
     try {
       const {type, data} = nip19.decode(match)
