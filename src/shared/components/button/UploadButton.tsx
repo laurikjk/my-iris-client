@@ -1,4 +1,4 @@
-import React, {useRef, useState} from "react"
+import React, {useRef, useState, ReactNode} from "react"
 
 import {
   calculateImageMetadata,
@@ -12,7 +12,7 @@ type Props = {
     metadata?: {width: number; height: number; blurhash: string}
   ) => void
   onError?: (error: Error) => void
-  text?: string
+  text?: ReactNode
   className?: string
   disabled?: boolean
   accept?: string
@@ -67,13 +67,17 @@ const UploadButton = ({
     }
   }
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     fileInputRef.current?.click()
   }
 
   return (
     <div className="flex flex-col items-center">
       <button
+        type="button"
+        role="button"
         className={className || "btn btn-neutral"}
         onClick={handleClick}
         disabled={disabled || uploading}

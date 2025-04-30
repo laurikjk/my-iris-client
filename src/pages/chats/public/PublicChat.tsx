@@ -279,6 +279,7 @@ const PublicChat = () => {
           replyingTo={replyingTo}
           setReplyingTo={setReplyingTo}
           onSendMessage={handleSendMessage}
+          isPublicChat={true}
         />
       )}
     </>
