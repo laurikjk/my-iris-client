@@ -1,9 +1,11 @@
-import {ndk} from "@/utils/ndk"
+import { updateChannelSearchIndex, getCachedChannel } from "./channelSearch"
+import { ndk } from "@/utils/ndk"
 
 // NIP-28 event kinds
 export const CHANNEL_CREATE = 40
 
 export type ChannelMetadata = {
+  id: string
   name: string
   about: string
   picture: string
@@ -19,6 +21,12 @@ export type ChannelMetadata = {
 export const fetchChannelMetadata = async (
   channelId: string
 ): Promise<ChannelMetadata | null> => {
+  // Check cache first
+  const cached = getCachedChannel(channelId)
+  if (cached) {
+    return cached
+  }
+
   try {
     console.log("Fetching channel metadata for ID:", channelId)
 
@@ -32,10 +40,14 @@ export const fetchChannelMetadata = async (
       try {
         console.log("Found channel creation event:", channelEvent)
         const metadata = JSON.parse(channelEvent.content)
-        return {
+        const channelMetadata = {
+          id: channelEvent.id,
           ...metadata,
           founderPubkey: channelEvent.pubkey,
         }
+        // Update search index
+        updateChannelSearchIndex(channelId, channelMetadata)
+        return channelMetadata
       } catch (e) {
         console.error("Failed to parse channel creation content:", e)
       }
@@ -52,13 +64,17 @@ export const fetchChannelMetadata = async (
       if (channelMessageEvent) {
         console.log("Found channel message event as fallback:", channelMessageEvent)
         // Create a basic metadata object from the message event
-        return {
+        const channelMetadata = {
+          id: channelMessageEvent.id,
           name: `Channel ${channelId.substring(0, 8)}...`,
           about: "Channel information not available",
           picture: "",
           relays: [],
           founderPubkey: channelMessageEvent.pubkey,
         }
+        // Update search index
+        updateChannelSearchIndex(channelId, channelMetadata)
+        return channelMetadata
       }
     }
   } catch (err) {

@@ -4,6 +4,10 @@ import {useNavigate} from "react-router"
 import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
 import PopularChannels from "./PopularChannels"
+import ProxyImg from "@/shared/components/ProxyImg"
+import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
+import { searchChannels } from "../utils/channelSearch"
+import { ChannelMetadata } from "../utils/channelMetadata"
 
 let publicKey = ""
 localState.get("user/publicKey").on((k) => (publicKey = k as string))
@@ -13,9 +17,38 @@ const PublicChatCreation = () => {
   const [channelName, setChannelName] = useState("")
   const [channelAbout, setChannelAbout] = useState("")
   const [channelPicture, setChannelPicture] = useState("")
-  const [channelId, setChannelId] = useState("")
-  const [joinError, setJoinError] = useState<string | null>(null)
+  const [searchInput, setSearchInput] = useState("")
+  const [matchingChannels, setMatchingChannels] = useState<ChannelMetadata[]>([])
   const [createError, setCreateError] = useState<string | null>(null)
+
+  const onSearchChange = async (value: string) => {
+    setSearchInput(value)
+
+    console.log("Searching for channels with term:", value)
+
+    if (!value.trim()) {
+      setMatchingChannels([])
+      return
+    }
+
+    // Check if input is a valid channel ID
+    if (/^[a-f0-9]{64}$/.test(value)) {
+      setMatchingChannels([])
+      navigate(`/chats/${value}`)
+      return
+    }
+
+    try {
+      console.log("Searching channels with term:", value)
+      // Use our local search index
+      const results = searchChannels(value)
+      console.log("Found channels:", results)
+      setMatchingChannels(results.slice(0, 5))
+    } catch (err) {
+      console.error("Error searching channels:", err)
+      setMatchingChannels([])
+    }
+  }
 
   const handleCreateChannel = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -55,54 +88,50 @@ const PublicChatCreation = () => {
     }
   }
 
-  const handleJoinChannel = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-
-    if (!channelId.trim()) {
-      setJoinError("Channel ID is required")
-      return
-    }
-
-    try {
-      setJoinError(null)
-
-      // Validate the channel ID format
-      if (!/^[a-f0-9]{64}$/.test(channelId)) {
-        setJoinError("Invalid channel ID format")
-        return
-      }
-
-      // Navigate to the channel
-      navigate(`/chats/${channelId}`)
-    } catch (err) {
-      console.error("Error joining channel:", err)
-      setJoinError("Failed to join channel")
-    }
-  }
-
   return (
     <div className="m-4 p-4 md:p-8 rounded-lg bg-base-100 flex flex-col gap-6">
       <div>
         <h2 className="text-xl font-semibold mb-4">Join a Public Channel</h2>
-        <form onSubmit={handleJoinChannel} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <div>
-            <label className="label">
-              <span className="label-text">Channel ID</span>
-            </label>
             <input
               type="text"
               className="input input-bordered w-full"
-              placeholder="Enter channel ID"
-              value={channelId}
-              onChange={(e) => setChannelId(e.target.value)}
+              placeholder="Search term or channel ID"
+              value={searchInput}
+              onChange={(e) => onSearchChange(e.target.value)}
               required
             />
           </div>
-          {joinError && <div className="text-error">{joinError}</div>}
-          <button type="submit" className="btn btn-primary">
-            Join Channel
-          </button>
-        </form>
+        </div>
+        {matchingChannels.length > 0 && (
+          <div className="mt-4 flex flex-col gap-2">
+            {matchingChannels.map((metadata) => (
+              <button
+                key={metadata.id}
+                className="btn btn-ghost justify-start text-left"
+                onClick={() => navigate(`/chats/${metadata.id}`)}
+              >
+                <div className="flex items-center gap-3">
+                  {metadata.picture ? (
+                    <ProxyImg
+                      src={metadata.picture}
+                      alt={metadata.name}
+                      className="w-10 h-10 rounded-full object-cover"
+                      square={true}
+                    />
+                  ) : (
+                    <MinidenticonImg username={metadata.id} className="w-10 h-10 rounded-full" />
+                  )}
+                  <div className="flex flex-col">
+                    <span className="font-medium">{metadata.name}</span>
+                    {metadata.about && <span className="text-sm opacity-70">{metadata.about}</span>}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="divider">OR</div>
