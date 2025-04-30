@@ -36,10 +36,11 @@ const ChatContainer = ({
   const wasAtBottomRef = useRef(true)
   const lastMessageCountRef = useRef(messages.size)
   const lastMessageIdsRef = useRef<Set<string>>(new Set())
+  const resizeObserverRef = useRef<ResizeObserver | null>(null)
 
   const messageGroups = groupMessages(messages, undefined, isPublicChat)
 
-  // Handle scroll behavior for new messages
+  // Handle scroll behavior for new messages and height changes
   useEffect(() => {
     const newMessageCount = messages.size
     const hadNewMessages = newMessageCount > lastMessageCountRef.current
@@ -69,6 +70,22 @@ const ChatContainer = ({
       lastMessageIdsRef.current = currentMessageIds
     }
   }, [messages])
+
+  // Setup ResizeObserver to monitor height changes
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      resizeObserverRef.current = new ResizeObserver(() => {
+        if (wasAtBottomRef.current) {
+          scrollToBottom()
+        }
+      })
+      resizeObserverRef.current.observe(chatContainerRef.current)
+    }
+
+    return () => {
+      resizeObserverRef.current?.disconnect()
+    }
+  }, [])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView()
