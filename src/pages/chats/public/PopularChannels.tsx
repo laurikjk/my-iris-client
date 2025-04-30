@@ -104,7 +104,7 @@ const PopularChannels = ({publicKey}: PopularChannelsProps) => {
     <div>
       <h2 className="text-xl font-semibold mb-4">Popular Public Channels</h2>
       <p className="text-base-content/70 mb-4">
-        Channels that people you follow are actively participating in:
+        Channels that people you follow have recently participated:
       </p>
 
       {isLoading && (
