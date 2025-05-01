@@ -190,7 +190,9 @@ const Message = ({
                   "whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
                 )}
               >
-                <HyperText small={true}>{message.content}</HyperText>
+                <HyperText small={true} truncate={500}>
+                  {message.content}
+                </HyperText>
               </p>
               {isLast && (
                 <p className="text-xs opacity-50 ml-2 whitespace-nowrap">

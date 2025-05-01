@@ -35,8 +35,10 @@ const MessageFormReplyPreview = ({
         <div className="text-xs text-base-content/60 mb-1 font-bold">
           {replyingTo.sender === "user" ? "You" : <Name pubKey={theirPublicKey} />}
         </div>
-        <div className="text-sm truncate border-l-2 border-primary pl-2">
-          {replyingTo.content}
+        <div className="text-sm truncate border-l-2 border-primary pl-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+          {replyingTo.content.length > 200
+            ? `${replyingTo.content.slice(0, 200)}...`
+            : replyingTo.content}
         </div>
       </div>
       <button
