@@ -108,14 +108,18 @@ const PublicChatDetails = () => {
                       </div>
                     </div>
                   )}
-                  {metadata.founderPubkey && (
-                    <div>
-                      <label className="text-sm text-base-content/70">Created by</label>
-                      <div className="mt-2">
-                        <UserRow pubKey={metadata.founderPubkey} />
-                      </div>
+                  <div>
+                    <label className="text-sm text-base-content/70">Created by</label>
+                    <div className="mt-2">
+                      <UserRow pubKey={metadata.founderPubkey} />
                     </div>
-                  )}
+                  </div>
+                  <div>
+                    <label className="text-sm text-base-content/70">Created At</label>
+                    <div className="font-mono text-sm break-all bg-base-200 p-2 rounded">
+                      {metadata?.createdAt ? new Date(metadata.createdAt * 1000).toLocaleString() : 'Unknown'}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -12,6 +12,7 @@ export type ChannelMetadata = {
   picture: string
   relays: string[]
   founderPubkey: string
+  createdAt: number
 }
 
 // Cache for channels by followed users
@@ -48,6 +49,7 @@ export const getChannelsByFollowed = async (): Promise<ChannelMetadata[]> => {
           id: event.id,
           ...metadata,
           founderPubkey: event.pubkey,
+          createdAt: event.created_at,
         }
         channels.push(channelMetadata)
         // Update search index
@@ -94,6 +96,7 @@ export const fetchChannelMetadata = async (
           id: channelEvent.id,
           ...metadata,
           founderPubkey: channelEvent.pubkey,
+          createdAt: channelEvent.created_at,
         }
         // Update search index
         updateChannelSearchIndex(channelId, channelMetadata)
@@ -118,6 +121,7 @@ export const fetchChannelMetadata = async (
           picture: "",
           relays: [],
           founderPubkey: channelMessageEvent.pubkey,
+          createdAt: channelMessageEvent.created_at,
         }
         // Update search index
         updateChannelSearchIndex(channelId, channelMetadata)
