@@ -33,7 +33,11 @@ const MessageFormReplyPreview = ({
     <div className="px-4 pt-2 flex items-center">
       <div className="flex-1 cursor-pointer" onClick={handleScrollToReply}>
         <div className="text-xs text-base-content/60 mb-1 font-bold">
-          {replyingTo.sender === "user" ? "You" : <Name pubKey={theirPublicKey} />}
+          {replyingTo.pubkey === theirPublicKey ? (
+            "You"
+          ) : (
+            <Name pubKey={replyingTo.pubkey} />
+          )}
         </div>
         <div className="text-sm truncate border-l-2 border-primary pl-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
           {replyingTo.content.length > 200
