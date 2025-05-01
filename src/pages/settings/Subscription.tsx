@@ -7,7 +7,7 @@ import {useState} from "react"
 
 function Subscription() {
   const [pubkey] = useLocalState("user/publicKey", "")
-  const {isSubscriber, isLoading} = useSubscriptionStatus(pubkey)
+  const {isSubscriber, isLoading, endDate} = useSubscriptionStatus(pubkey)
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly")
 
   return (
@@ -16,6 +16,11 @@ function Subscription() {
         <div className="flex flex-col justify-center items-center gap-2 w-full">
           <SubscriberBadge pubkey={pubkey} />
           <div>Thank you for supporting Iris!</div>
+          {endDate && (
+            <div className="text-sm text-base-content/50">
+              Your subscription is active until {new Date(endDate).toLocaleDateString()}
+            </div>
+          )}
         </div>
       )}
 
@@ -51,11 +56,11 @@ function Subscription() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card bg-base-200 shadow-xl">
+        <div className="card bg-base-200 shadow-xl border-2 border-error">
           <div className="card-body flex flex-col h-full">
             <div className="flex justify-between items-start">
               <h3 className="card-title text-xl">Patron</h3>
-              {getSubscriptionIcon("patron", "text-warning text-2xl")}
+              {getSubscriptionIcon("patron", "text-error text-2xl")}
             </div>
             <div className="text-3xl font-bold my-2">
               {billingPeriod === "yearly" ? "$50" : "$5"}
@@ -137,11 +142,11 @@ function Subscription() {
           </div>
         </div>
 
-        <div className="card bg-base-200 shadow-xl border-2 border-error">
+        <div className="card bg-base-200 shadow-xl border-2 border-primary">
           <div className="card-body flex flex-col h-full">
             <div className="flex justify-between items-start">
               <h3 className="card-title text-xl">Vanguard</h3>
-              {getSubscriptionIcon("vanguard", "text-error text-2xl")}
+              {getSubscriptionIcon("vanguard", "text-primary text-2xl")}
             </div>
             <div className="text-3xl font-bold my-2">
               {billingPeriod === "yearly" ? "$1000" : "$100"}
@@ -178,7 +183,7 @@ function Subscription() {
             <div className="card-actions justify-end mt-auto pt-4">
               <a
                 href={`https://iris.to/subscribe/vanguard?billing=${billingPeriod}`}
-                className="btn btn-error"
+                className="btn btn-info"
               >
                 Subscribe
               </a>

@@ -11,6 +11,7 @@ export function useSubscriptionStatus(pubkey?: string) {
   const [tier, setTier] = useState<"patron" | "champion" | "vanguard" | undefined>(
     undefined
   )
+  const [endDate, setEndDate] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     const checkSubscriberStatus = async () => {
@@ -28,6 +29,7 @@ export function useSubscriptionStatus(pubkey?: string) {
           const data = await response.json()
           const hasSubscription = !!data.subscription_plan
           setIsSubscriber(hasSubscription)
+          setEndDate(data.subscription_end_date)
 
           // Set the tier based on the subscription plan
           if (hasSubscription) {
@@ -55,5 +57,10 @@ export function useSubscriptionStatus(pubkey?: string) {
     checkSubscriberStatus()
   }, [pubkey])
 
-  return {isSubscriber, isLoading, tier}
+  return {
+    isSubscriber,
+    isLoading,
+    tier,
+    endDate,
+  }
 }

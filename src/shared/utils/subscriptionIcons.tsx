@@ -1,4 +1,4 @@
-import {RiVipCrownFill, RiStarFill, RiDiamondFill} from "@remixicon/react"
+import {RiHeartFill, RiTrophyFill, RiShieldFill} from "@remixicon/react"
 
 export type SubscriptionTier = "patron" | "champion" | "vanguard"
 
@@ -14,12 +14,12 @@ export const getSubscriptionIcon = (
 
   switch (tier) {
     case "patron":
-      return <RiStarFill {...iconProps} />
+      return <RiHeartFill {...iconProps} className="text-error" />
     case "champion":
-      return <RiVipCrownFill {...iconProps} />
+      return <RiTrophyFill {...iconProps} className="text-warning" />
     case "vanguard":
-      return <RiDiamondFill {...iconProps} />
+      return <RiShieldFill {...iconProps} className="text-primary" />
     default:
-      return <RiVipCrownFill {...iconProps} />
+      return <RiTrophyFill {...iconProps} className="text-warning" />
   }
 }
