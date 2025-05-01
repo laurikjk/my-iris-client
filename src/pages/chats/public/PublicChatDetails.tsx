@@ -5,6 +5,7 @@ import {useEffect, useState} from "react"
 import {fetchChannelMetadata, ChannelMetadata} from "../utils/channelMetadata"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {UserRow} from "@/shared/components/user/UserRow"
+import {nip19} from "nostr-tools"
 
 const PublicChatDetails = () => {
   const {id} = useParams()
@@ -68,6 +69,12 @@ const PublicChatDetails = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm text-base-content/70">Channel ID</label>
+                    <div className="font-mono text-sm break-all bg-base-200 p-2 rounded">
+                      {id ? nip19.noteEncode(id) : ''}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm text-base-content/70">Channel ID (Hex)</label>
                     <div className="font-mono text-sm break-all bg-base-200 p-2 rounded">
                       {id}
                     </div>

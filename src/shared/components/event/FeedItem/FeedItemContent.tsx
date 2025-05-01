@@ -1,4 +1,5 @@
 import MarketListing from "../../market/MarketListing"
+import ChannelCreation from "../ChannelCreation.tsx"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ZapReceipt from "../ZapReceipt.tsx"
 import Zapraiser from "../Zapraiser.tsx"
@@ -35,6 +36,8 @@ const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentPr
         truncate={truncate}
       />
     )
+  } else if (event.kind === 40) {
+    return <ChannelCreation event={event} />
   } else {
     return <TextNote event={event} truncate={truncate} />
   }

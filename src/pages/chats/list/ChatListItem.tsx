@@ -6,6 +6,7 @@ import {PublicChatContext} from "../public/PublicChatContext"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {Avatar} from "@/shared/components/user/Avatar"
 import {useEffect, useState, useContext} from "react"
+import {shouldHideAuthor} from "@/utils/socialGraph"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {Name} from "@/shared/components/user/Name"
 import {CHANNEL_MESSAGE} from "../utils/constants"
@@ -93,6 +94,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     // Handle new messages
     sub.on("event", (event) => {
       if (!event || !event.id) return
+      if (shouldHideAuthor(event.pubkey)) return
 
       // Always update the in-memory latest message
       if (!latestMessageInMemory || event.created_at > latestMessageInMemory.created_at) {

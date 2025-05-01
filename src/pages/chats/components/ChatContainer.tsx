@@ -37,6 +37,7 @@ const ChatContainer = ({
   const lastMessageCountRef = useRef(messages.size)
   const lastMessageIdsRef = useRef<Set<string>>(new Set())
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
+  const lastHeightRef = useRef(0)
 
   const messageGroups = groupMessages(messages, undefined, isPublicChat)
 
@@ -74,10 +75,13 @@ const ChatContainer = ({
   // Setup ResizeObserver to monitor height changes
   useEffect(() => {
     if (chatContainerRef.current) {
-      resizeObserverRef.current = new ResizeObserver(() => {
-        if (wasAtBottomRef.current) {
+      resizeObserverRef.current = new ResizeObserver((entries) => {
+        const newHeight = entries[0].contentRect.height
+        // Only scroll to bottom if height increased and user was at bottom
+        if (newHeight > lastHeightRef.current && wasAtBottomRef.current) {
           scrollToBottom()
         }
+        lastHeightRef.current = newHeight
       })
       resizeObserverRef.current.observe(chatContainerRef.current)
     }
@@ -156,17 +160,10 @@ const ChatContainer = ({
       </div>
       {showScrollDown && (
         <button
-          className="btn btn-circle btn-primary fixed bottom-20 right-4"
+          className="absolute bottom-4 right-4 btn btn-circle btn-sm"
           onClick={scrollToBottom}
         >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 14l-7 7m0 0l-7-7m7 7V3"
-            />
-          </svg>
+          ↓
         </button>
       )}
     </>
