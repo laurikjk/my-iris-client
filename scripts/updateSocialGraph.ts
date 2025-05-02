@@ -10,7 +10,10 @@ const DATA_DIR = path.resolve(process.cwd(), "node_modules/nostr-social-graph/da
 const SOCIAL_GRAPH_FILE = "socialGraph.json"
 const PROFILE_DATA_FILE = "profileData.json"
 
-async function downloadAndValidate(url: string, targetSize: number): Promise<string | null> {
+async function downloadAndValidate(
+  url: string,
+  targetSize: number
+): Promise<string | null> {
   try {
     console.log(`Attempting to download data from ${url}...`)
     const response = await fetch(url)
@@ -60,7 +63,9 @@ async function updateSocialGraph() {
     if (socialGraphData) {
       const filePath = path.join(DATA_DIR, SOCIAL_GRAPH_FILE)
       fs.writeFileSync(filePath, socialGraphData)
-      console.log(`Successfully updated social graph data (${Buffer.byteLength(socialGraphData, "utf8")} bytes)`)
+      console.log(
+        `Successfully updated social graph data (${Buffer.byteLength(socialGraphData, "utf8")} bytes)`
+      )
     }
 
     // Download and update profile data
@@ -68,7 +73,9 @@ async function updateSocialGraph() {
     if (profileData) {
       const filePath = path.join(DATA_DIR, PROFILE_DATA_FILE)
       fs.writeFileSync(filePath, profileData)
-      console.log(`Successfully updated profile data (${Buffer.byteLength(profileData, "utf8")} bytes)`)
+      console.log(
+        `Successfully updated profile data (${Buffer.byteLength(profileData, "utf8")} bytes)`
+      )
     }
   } catch (error) {
     console.log("Error updating data:", error)
