@@ -35,19 +35,11 @@ export const Avatar = ({
     }
   }, [pubKey])
 
-  const profile = useProfile(pubKeyHex, false)
+  const profile = useProfile(pubKeyHex, true)
   const [image, setImage] = useState(String(profile?.picture || ""))
 
   useEffect(() => {
-    const fetchImage = async () => {
-      if (profile?.picture) {
-        setImage(String(profile.picture))
-      } else {
-        setImage("")
-      }
-    }
-
-    fetchImage()
+    setImage(profile?.picture ? String(profile.picture) : "")
   }, [profile])
 
   const handleImageError = () => {
