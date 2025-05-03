@@ -4,7 +4,7 @@ import fs from "fs"
 
 const TARGET_SIZE = 2 * 1000 * 1000
 const SOCIAL_GRAPH_URL = `https://graph-api.iris.to/social-graph?maxBytes=${TARGET_SIZE}`
-const PROFILE_DATA_URL = `https://graph-api.iris.to/profile-data?maxBytes=${TARGET_SIZE}`
+const PROFILE_DATA_URL = `https://graph-api.iris.to/profile-data?maxBytes=${TARGET_SIZE}&noPictures=true`
 const SIZE_TOLERANCE = 0.1 // 10% tolerance
 const DATA_DIR = path.resolve(process.cwd(), "node_modules/nostr-social-graph/data")
 const SOCIAL_GRAPH_FILE = "socialGraph.json"
