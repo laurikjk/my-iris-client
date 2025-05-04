@@ -99,6 +99,7 @@ let searchIndex: Fuse<SearchResult> = new Fuse<SearchResult>([], {
 
 async function initializeSearchIndex() {
   console.time("fuse init")
+  // TODO load from localForage?
   const {default: profileJson} = await import("nostr-social-graph/data/profileData.json")
   const processedData = [] as SearchResult[]
   profileJson.forEach((v) => {

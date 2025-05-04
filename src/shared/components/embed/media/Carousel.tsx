@@ -55,16 +55,69 @@ function Carousel({media, event}: CarouselProps) {
   }: {
     images: MediaItem[]
     currentIndex: number
-  }) => (
-    <div className="flex space-x-2 mt-2">
-      {images.map((_, index) => (
-        <span
-          key={index}
-          className={`h-2 w-2 rounded-full ${index === currentIndex ? "bg-primary" : "bg-gray-300"}`}
-        />
-      ))}
-    </div>
-  )
+  }) => {
+    const MAX_INDICATORS = 10
+    const totalImages = images.length
+
+    if (totalImages <= MAX_INDICATORS) {
+      return (
+        <div className="flex space-x-2 mt-2">
+          {images.map((_, index) => (
+            <span
+              key={index}
+              className={`h-2 w-2 rounded-full ${index === currentIndex ? "bg-primary" : "bg-gray-300"}`}
+            />
+          ))}
+        </div>
+      )
+    }
+
+    // Calculate the window of indicators to show
+    const windowSize = MAX_INDICATORS - 2 // Reserve 2 spots for ellipsis
+    const halfWindow = Math.floor(windowSize / 2)
+    let startIndex = currentIndex - halfWindow
+    let endIndex = currentIndex + halfWindow
+
+    // Adjust window if near the start or end
+    if (startIndex < 0) {
+      startIndex = 0
+      endIndex = windowSize
+    } else if (endIndex >= totalImages) {
+      endIndex = totalImages - 1
+      startIndex = endIndex - windowSize
+    }
+
+    return (
+      <div className="flex items-center space-x-2 mt-2">
+        {startIndex > 0 && (
+          <>
+            <span className="h-2 w-2 rounded-full bg-gray-300" />
+            <span className="text-gray-400">...</span>
+          </>
+        )}
+        {Array.from({length: endIndex - startIndex + 1}).map((_, i) => {
+          const index = startIndex + i
+          return (
+            <span
+              key={index}
+              className={`h-2 w-2 rounded-full ${
+                index === currentIndex ? "bg-primary" : "bg-gray-300"
+              }`}
+            />
+          )
+        })}
+        {endIndex < totalImages - 1 && (
+          <>
+            <span className="text-gray-400">...</span>
+            <span className="h-2 w-2 rounded-full bg-gray-300" />
+          </>
+        )}
+        <span className="text-sm text-gray-500 ml-2">
+          {currentIndex + 1} / {totalImages}
+        </span>
+      </div>
+    )
+  }
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [blur, setBlur] = useState(
