@@ -1,9 +1,9 @@
 import {Session, getMillisecondTimestamp} from "nostr-double-ratchet/src"
+import {useLayoutEffect, useRef, useState, useEffect} from "react"
 import ErrorBoundary from "@/shared/components/ui/ErrorBoundary"
 import Message, {MessageType} from "../message/Message"
 import {groupMessages} from "../utils/messageGrouping"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {useEffect, useRef, useState} from "react"
 
 interface ChatContainerProps {
   messages: SortedMap<string, MessageType>
@@ -17,6 +17,8 @@ interface ChatContainerProps {
   onSendReaction?: (messageId: string, emoji: string) => Promise<void>
   reactions?: Record<string, Record<string, string>>
 }
+
+const root = document.documentElement
 
 const ChatContainer = ({
   messages,
@@ -40,6 +42,25 @@ const ChatContainer = ({
   const lastHeightRef = useRef(0)
 
   const messageGroups = groupMessages(messages, undefined, isPublicChat)
+
+  const handleScroll = () => {
+    const isBottom = root.scrollTop + root.clientHeight >= root.scrollHeight - 1
+    setShowScrollDown(!isBottom)
+    wasAtBottomRef.current = isBottom
+  }
+
+  const scrollToBottom = () => {
+    root.scrollTop = root.scrollHeight
+  }
+
+  useLayoutEffect(() => {
+    if (wasAtBottomRef.current) scrollToBottom()
+  }, [messages.size])
+
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
   // Handle scroll behavior for new messages and height changes
   useEffect(() => {
@@ -91,25 +112,11 @@ const ChatContainer = ({
     }
   }, [])
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView()
-  }
-
-  const handleScroll = () => {
-    if (chatContainerRef.current) {
-      const {scrollTop, scrollHeight, clientHeight} = chatContainerRef.current
-      const isBottom = scrollTop + clientHeight >= scrollHeight - 10
-      setShowScrollDown(!isBottom)
-      wasAtBottomRef.current = isBottom
-    }
-  }
-
   return (
     <>
       <div
         ref={chatContainerRef}
-        className="flex flex-col justify-end flex-1 overflow-y-auto space-y-4 p-4 relative"
-        onScroll={handleScroll}
+        className="flex flex-col justify-end flex-1 space-y-4 p-4 relative"
       >
         {messages.size === 0 ? (
           <div className="text-center text-base-content/70 my-8">
@@ -160,7 +167,7 @@ const ChatContainer = ({
       </div>
       {showScrollDown && (
         <button
-          className="absolute bottom-4 right-4 btn btn-circle btn-sm"
+          className="fixed bottom-32 right-4 btn btn-circle btn-neutral btn-sm"
           onClick={scrollToBottom}
         >
           ↓
