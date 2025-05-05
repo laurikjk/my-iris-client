@@ -7,7 +7,7 @@ import {
   useState,
   useCallback,
 } from "react"
-import {searchIndex, SearchResult} from "@/utils/socialGraph"
+import {searchIndex, SearchResult} from "@/utils/profileSearch"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {UserRow} from "../user/UserRow"
 import {nip19} from "nostr-tools"

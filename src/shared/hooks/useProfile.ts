@@ -1,6 +1,6 @@
 import {NDKEvent, NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
-import {handleProfile} from "@/utils/socialGraph.ts"
+import {handleProfile} from "@/utils/profileSearch"
 import {useEffect, useMemo, useState} from "react"
 import {profileCache} from "@/utils/memcache"
 import {ndk} from "@/utils/ndk"

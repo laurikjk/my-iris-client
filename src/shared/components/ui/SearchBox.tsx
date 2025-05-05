@@ -2,17 +2,13 @@ import {MouseEvent as ReactMouseEvent, useEffect, useRef, useState} from "react"
 import {useNavigate} from "react-router"
 import classNames from "classnames"
 import {nip19} from "nostr-tools"
-
-import socialGraph, {
-  searchIndex,
-  SearchResult,
-  shouldHideAuthor,
-} from "@/utils/socialGraph"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {UserRow} from "@/shared/components/user/UserRow"
 import Icon from "../Icons/Icon"
 import {JsonValue} from "irisdb"
 import {ndk} from "@/utils/ndk"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import socialGraph, {shouldHideAuthor} from "@/utils/socialGraph"
+import {searchIndex, SearchResult} from "@/utils/profileSearch"
 
 const NOSTR_REGEX = /(npub|note|nevent|naddr)1[a-zA-Z0-9]{58,300}/gi
 const HEX_REGEX = /[0-9a-fA-F]{64}/gi
@@ -27,7 +23,7 @@ const FUSE_MULTIPLIER = 5 // Multiplier to emphasize text match
 const PREFIX_MATCH_BOOST = 1
 const SELF_PENALTY = 100 // Penalty for self in search results
 
-interface CustomSearchResult extends SearchResult {
+type CustomSearchResult = SearchResult & {
   query?: string
 }
 
