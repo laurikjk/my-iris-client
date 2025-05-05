@@ -11,7 +11,7 @@ import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
 import Icon from "../../Icons/Icon"
 
-import {shouldHideAuthor} from "@/utils/socialGraph"
+import {shouldHideAuthor} from "@/utils/visibility"
 import {localState} from "irisdb/src"
 
 interface FeedItemRepostProps {

@@ -1,6 +1,6 @@
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import Fuse from "fuse.js"
 import {profileCache} from "./memcache"
+import Fuse from "fuse.js"
 
 export type SearchResult = {
   name: string
@@ -62,4 +62,4 @@ export function handleProfile(pubKey: string, profile: NDKUserProfile) {
       }
     }
   })
-} 
+}

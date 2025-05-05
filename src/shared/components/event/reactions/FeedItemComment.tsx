@@ -1,5 +1,5 @@
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
-import {shouldHideAuthor} from "@/utils/socialGraph"
+import {shouldHideAuthor} from "@/utils/visibility"
 import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"

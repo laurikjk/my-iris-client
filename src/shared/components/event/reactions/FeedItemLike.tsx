@@ -6,7 +6,7 @@ import {
   useRef,
 } from "react"
 import {FloatingEmojiPicker} from "@/shared/components/emoji/FloatingEmojiPicker"
-import {shouldHideAuthor} from "@/utils/socialGraph"
+import {shouldHideAuthor} from "@/utils/visibility"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
 import {NDKEvent} from "@nostr-dev-kit/ndk"

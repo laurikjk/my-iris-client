@@ -1,5 +1,5 @@
 import {updateChannelSearchIndex, getCachedChannel} from "./channelSearch"
-import {shouldHideAuthor} from "@/utils/socialGraph"
+import {shouldHideAuthor} from "@/utils/visibility"
 import {ndk} from "@/utils/ndk"
 
 // NIP-28 event kinds

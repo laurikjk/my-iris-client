@@ -1,14 +1,15 @@
 import {MouseEvent as ReactMouseEvent, useEffect, useRef, useState} from "react"
+import {searchIndex, SearchResult} from "@/utils/profileSearch"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import {UserRow} from "@/shared/components/user/UserRow"
+import {shouldHideAuthor} from "@/utils/visibility"
+import socialGraph from "@/utils/socialGraph"
 import {useNavigate} from "react-router"
 import classNames from "classnames"
 import {nip19} from "nostr-tools"
-import {UserRow} from "@/shared/components/user/UserRow"
 import Icon from "../Icons/Icon"
 import {JsonValue} from "irisdb"
 import {ndk} from "@/utils/ndk"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import socialGraph, {shouldHideAuthor} from "@/utils/socialGraph"
-import {searchIndex, SearchResult} from "@/utils/profileSearch"
 
 const NOSTR_REGEX = /(npub|note|nevent|naddr)1[a-zA-Z0-9]{58,300}/gi
 const HEX_REGEX = /[0-9a-fA-F]{64}/gi

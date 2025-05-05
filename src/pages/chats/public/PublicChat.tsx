@@ -1,7 +1,7 @@
 import PublicChatHeader from "./PublicChatHeader"
 import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {shouldHideAuthor} from "@/utils/socialGraph"
+import {shouldHideAuthor} from "@/utils/visibility"
 import {useNavigate, useParams} from "react-router"
 import {comparator} from "../utils/messageGrouping"
 import {useEffect, useState, useRef} from "react"

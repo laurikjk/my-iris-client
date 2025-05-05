@@ -1,5 +1,6 @@
-import socialGraph, {shouldHideAuthor} from "@/utils/socialGraph.ts"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
+import {shouldHideAuthor} from "@/utils/visibility"
+import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import {ndk} from "@/utils/ndk"
