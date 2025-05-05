@@ -42,12 +42,14 @@ const MessageReactions = ({rawReactions, isUser}: MessageReactionsProps) => {
     const usersByEmoji: Record<string, string[]> = {}
 
     Object.entries(rawReactions).forEach(([userId, emoji]) => {
-      reactionCounts[emoji] = (reactionCounts[emoji] || 0) + 1
+      // Convert "+" to heart emoji
+      const displayEmoji = emoji === "+" ? "❤️" : emoji
+      reactionCounts[displayEmoji] = (reactionCounts[displayEmoji] || 0) + 1
 
-      if (!usersByEmoji[emoji]) {
-        usersByEmoji[emoji] = []
+      if (!usersByEmoji[displayEmoji]) {
+        usersByEmoji[displayEmoji] = []
       }
-      usersByEmoji[emoji].push(userId)
+      usersByEmoji[displayEmoji].push(userId)
     })
 
     return {reactionCounts, usersByEmoji}
