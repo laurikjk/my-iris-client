@@ -18,7 +18,11 @@ export default function MutedBy({pubkey}: {pubkey: string}) {
     }
   }, [pubkey])
 
-  const isOverMuted = totalMutedBy > 0 && shouldHideAuthor(pubkey, 3)
+  const root = socialGraph().getRoot()
+  const mutedBy = socialGraph().getUserMutedBy(pubkey)
+  const isRootMuted = mutedBy.has(root)
+
+  const showMutedWarning = (totalMutedBy > 0 && shouldHideAuthor(pubkey, 3)) || isRootMuted
 
   const [showMuterList, setShowMuterList] = useState<boolean>(false)
 
@@ -35,7 +39,7 @@ export default function MutedBy({pubkey}: {pubkey: string}) {
 
   return (
     <div className="text-base-content/50">
-      {isOverMuted && totalMutedBy > 0 && (
+      {showMutedWarning && totalMutedBy > 0 && (
         <div className="flex items-center gap-1 text-warning">
           <span role="img" aria-label="warning" className="text-warning">
             ⚠️
