@@ -22,7 +22,8 @@ export default function MutedBy({pubkey}: {pubkey: string}) {
   const mutedBy = socialGraph().getUserMutedBy(pubkey)
   const isRootMuted = mutedBy.has(root)
 
-  const showMutedWarning = (totalMutedBy > 0 && shouldHideAuthor(pubkey, 3)) || isRootMuted
+  const showMutedWarning =
+    (totalMutedBy > 0 && shouldHideAuthor(pubkey, 3)) || isRootMuted
 
   const [showMuterList, setShowMuterList] = useState<boolean>(false)
 

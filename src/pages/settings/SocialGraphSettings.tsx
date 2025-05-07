@@ -6,9 +6,10 @@ import socialGraph, {
   downloadLargeGraph,
 } from "@/utils/socialGraph"
 import {UserRow} from "@/shared/components/user/UserRow"
+import {useIsMobile} from "@/shared/hooks/useIsMobile"
 import {useState, useEffect} from "react"
 
-const N = 20
+const TOP_USERS_LIMIT = 20
 
 function SocialGraphSettings() {
   const [socialGraphSize, setSocialGraphSize] = useState(socialGraph().size())
@@ -18,6 +19,8 @@ function SocialGraphSettings() {
   const [topMutedUsers, setTopMutedUsers] = useState<
     Array<{user: string; count: number}>
   >([])
+  const isMobile = useIsMobile()
+  const [maxSizeMB, setMaxSizeMB] = useState<number>(isMobile ? 10 : 50)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -54,11 +57,11 @@ function SocialGraphSettings() {
   }
 
   const handleFindTopNMostFollowedUsers = () => {
-    setTopFollowedUsers(getTopNMostFollowedUsers(N))
+    setTopFollowedUsers(getTopNMostFollowedUsers(TOP_USERS_LIMIT))
   }
 
   const handleFindTopNMostMutedUsers = () => {
-    setTopMutedUsers(getTopNMostMutedUsers(N))
+    setTopMutedUsers(getTopNMostMutedUsers(TOP_USERS_LIMIT))
   }
 
   const handleRecalculateFollowDistances = () => {
@@ -66,6 +69,11 @@ function SocialGraphSettings() {
     const removed = socialGraph().removeMutedNotFollowedUsers()
     console.log("Removed", removed, "muted not followed users")
     setSocialGraphSize(socialGraph().size())
+  }
+
+  const handleDownloadGraph = async () => {
+    const maxBytes = maxSizeMB * 1024 * 1024 // Convert MB to bytes
+    downloadLargeGraph(maxBytes)
   }
 
   return (
@@ -108,10 +116,20 @@ function SocialGraphSettings() {
         >
           Recalculate Follow Distances (fast, no bandwith usage)
         </button>
-        <button className="btn btn-neutral" onClick={() => downloadLargeGraph()}>
-          Download pre-crawled large graph (46.8 MB — fast operation on desktop, but might
-          crash mobile)
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min="1"
+            max="1000"
+            value={maxSizeMB}
+            onChange={(e) => setMaxSizeMB(Number(e.target.value))}
+            className="input input-sm input-bordered w-24"
+          />
+          <span className="text-sm">MB</span>
+          <button className="btn btn-neutral btn-sm" onClick={handleDownloadGraph}>
+            Download graph up to {maxSizeMB}MB
+          </button>
+        </div>
         <button
           onClick={() => getFollowLists(socialGraph().getRoot(), false, 2)}
           className="btn btn-neutral btn-sm"
@@ -121,12 +139,12 @@ function SocialGraphSettings() {
       </div>
 
       <div className="mt-4">
-        <h3 className="mb-4">Top {N} Most Followed Users</h3>
+        <h3 className="mb-4">Top {TOP_USERS_LIMIT} Most Followed Users</h3>
         <button
           className="btn btn-neutral btn-sm mb-2"
           onClick={handleFindTopNMostFollowedUsers}
         >
-          Find Top {N} Most Followed Users
+          Find Top {TOP_USERS_LIMIT} Most Followed Users
         </button>
         {topFollowedUsers.map(({user, count}) => (
           <div key={user} className="flex items-center mb-2">
@@ -137,12 +155,12 @@ function SocialGraphSettings() {
       </div>
 
       <div className="mt-4">
-        <h3 className="mb-4">Top {N} Most Muted Users</h3>
+        <h3 className="mb-4">Top {TOP_USERS_LIMIT} Most Muted Users</h3>
         <button
           className="btn btn-neutral btn-sm mb-2"
           onClick={handleFindTopNMostMutedUsers}
         >
-          Find Top {N} Most Muted Users
+          Find Top {TOP_USERS_LIMIT} Most Muted Users
         </button>
         {topMutedUsers.map(({user, count}) => (
           <div key={user} className="flex items-center mb-2">

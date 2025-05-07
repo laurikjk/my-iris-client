@@ -211,8 +211,8 @@ export const loadFromFile = (merge = false) => {
   input.click()
 }
 
-export const downloadLargeGraph = () => {
-  fetch("https://files.iris.to/large_social_graph.json")
+export const downloadLargeGraph = (maxBytes: number) => {
+  fetch("https://graph-api.iris.to/social-graph?maxBytes=" + maxBytes)
     .then((response) => response.json())
     .then((data) => {
       instance = new SocialGraph(instance.getRoot(), data)
