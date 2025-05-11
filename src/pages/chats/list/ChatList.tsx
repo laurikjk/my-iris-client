@@ -12,13 +12,18 @@ interface ChatListProps {
   className?: string
 }
 
+type LatestMessage = {
+  content: string
+  id: string
+  sender: string
+  created_at: number
+}
+
 type Session = {
-  messages: string[]
   deleted?: boolean
-  latest?: {
-    time: number
-    content: string
-  }
+  lastSeen?: number
+  events?: Record<string, unknown>
+  latest?: LatestMessage
 }
 
 type PublicChat = {
@@ -168,7 +173,7 @@ const ChatList = ({className}: ChatListProps) => {
     if (a.isPublic) {
       aLatest = publicChatTimestamps[a.id] || 0
     } else {
-      aLatest = sessions[a.id]?.latest?.time || 0
+      aLatest = sessions[a.id]?.latest?.created_at || 0
     }
 
     // Get latest message time for chat B
@@ -176,7 +181,7 @@ const ChatList = ({className}: ChatListProps) => {
     if (b.isPublic) {
       bLatest = publicChatTimestamps[b.id] || 0
     } else {
-      bLatest = sessions[b.id]?.latest?.time || 0
+      bLatest = sessions[b.id]?.latest?.created_at || 0
     }
 
     // Sort in descending order (newest first)
