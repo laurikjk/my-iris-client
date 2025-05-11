@@ -45,11 +45,15 @@ const ChatList = ({className}: ChatListProps) => {
 
   useEffect(() => {
     localState.get("sessions").put({})
-    // TODO irisdb doesnt work right on initial update if we use recursion 3 param
-    const unsub = localState.get("sessions").on((sessions) => {
-      if (!sessions || typeof sessions !== "object") return
-      setSessions({...sessions} as Record<string, Session>)
-    })
+
+    const unsub = localState.get("sessions").on(
+      (sessions) => {
+        if (!sessions || typeof sessions !== "object") return
+        setSessions({...sessions} as Record<string, Session>)
+      },
+      false,
+      3
+    )
 
     // Get user's public key
     const unsubPubKey = localState.get("user/publicKey").on((key) => {
@@ -156,6 +160,10 @@ const ChatList = ({className}: ChatListProps) => {
       ...publicChats.map((chat) => ({id: chat.id, isPublic: true})),
     ].reduce(
       (acc, chat) => {
+        // If chat has empty string as id, skip it (appears on recursion depth 3 on sessions)
+        if (chat.id === "") {
+          return acc
+        }
         // If chat doesn't exist or current chat is newer, update it
         if (!acc[chat.id] || (chat.isPublic && !acc[chat.id].isPublic)) {
           acc[chat.id] = chat
