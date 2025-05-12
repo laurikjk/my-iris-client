@@ -12,13 +12,18 @@ interface ChatListProps {
   className?: string
 }
 
+type LatestMessage = {
+  content: string
+  id: string
+  sender: string
+  created_at: number
+}
+
 type Session = {
-  messages: string[]
   deleted?: boolean
-  latest?: {
-    time: number
-    content: string
-  }
+  lastSeen?: number
+  events?: Record<string, unknown>
+  latest?: LatestMessage
 }
 
 type PublicChat = {
@@ -40,11 +45,15 @@ const ChatList = ({className}: ChatListProps) => {
 
   useEffect(() => {
     localState.get("sessions").put({})
-    // TODO irisdb doesnt work right on initial update if we use recursion 3 param
-    const unsub = localState.get("sessions").on((sessions) => {
-      if (!sessions || typeof sessions !== "object") return
-      setSessions({...sessions} as Record<string, Session>)
-    })
+
+    const unsub = localState.get("sessions").on(
+      (sessions) => {
+        if (!sessions || typeof sessions !== "object") return
+        setSessions({...sessions} as Record<string, Session>)
+      },
+      false,
+      3
+    )
 
     // Get user's public key
     const unsubPubKey = localState.get("user/publicKey").on((key) => {
@@ -151,6 +160,10 @@ const ChatList = ({className}: ChatListProps) => {
       ...publicChats.map((chat) => ({id: chat.id, isPublic: true})),
     ].reduce(
       (acc, chat) => {
+        // If chat has empty string as id, skip it (appears on recursion depth 3 on sessions)
+        if (chat.id === "") {
+          return acc
+        }
         // If chat doesn't exist or current chat is newer, update it
         if (!acc[chat.id] || (chat.isPublic && !acc[chat.id].isPublic)) {
           acc[chat.id] = chat
@@ -168,7 +181,7 @@ const ChatList = ({className}: ChatListProps) => {
     if (a.isPublic) {
       aLatest = publicChatTimestamps[a.id] || 0
     } else {
-      aLatest = sessions[a.id]?.latest?.time || 0
+      aLatest = sessions[a.id]?.latest?.created_at || 0
     }
 
     // Get latest message time for chat B
@@ -176,7 +189,7 @@ const ChatList = ({className}: ChatListProps) => {
     if (b.isPublic) {
       bLatest = publicChatTimestamps[b.id] || 0
     } else {
-      bLatest = sessions[b.id]?.latest?.time || 0
+      bLatest = sessions[b.id]?.latest?.created_at || 0
     }
 
     // Sort in descending order (newest first)
