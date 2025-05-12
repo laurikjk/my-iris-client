@@ -31,6 +31,11 @@ export default function NostrLinkHandler() {
   const isAddress = cleanLink?.startsWith("naddr")
 
   useEffect(() => {
+    setLoading(true)
+    setError(undefined)
+    setPubkey(undefined)
+    setNaddrData(undefined)
+
     const resolveLink = async () => {
       if (!cleanLink) {
         setError("No link provided")
@@ -79,7 +84,7 @@ export default function NostrLinkHandler() {
     }
 
     resolveLink()
-  }, [cleanLink, isProfile, isAddress, isNote])
+  }, [cleanLink])
 
   if (loading) {
     return (
