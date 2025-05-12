@@ -41,7 +41,17 @@ export default function NostrLinkHandler() {
       try {
         if (isProfile) {
           const decoded = nip19.decode(cleanLink)
-          setPubkey(decoded.data as string)
+          if (
+            typeof decoded.data === "object" &&
+            decoded.data !== null &&
+            "pubkey" in decoded.data
+          ) {
+            setPubkey(decoded.data.pubkey)
+          } else if (typeof decoded.data === "string" && decoded.data.length === 64) {
+            setPubkey(decoded.data)
+          } else {
+            throw new Error("Invalid NPUB or NPROFILE format: " + cleanLink)
+          }
         } else if (isAddress) {
           const decoded = nip19.decode(cleanLink)
           const data = decoded.data as {pubkey: string; kind: number; identifier: string}

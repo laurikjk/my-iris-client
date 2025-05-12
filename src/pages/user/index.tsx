@@ -141,6 +141,11 @@ function useHasMarketEvents(pubKey: string) {
 }
 
 function UserPage({pubKey}: {pubKey: string}) {
+  if (typeof pubKey !== "string") {
+    throw new Error(
+      "pubKey must be a string, received: " + typeof pubKey + " " + JSON.stringify(pubKey)
+    )
+  }
   const pubKeyHex = useMemo(
     () => (pubKey ? new PublicKey(pubKey).toString() : ""),
     [pubKey]
