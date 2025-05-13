@@ -24,7 +24,7 @@ const MediaEmbed: Embed = {
     const mediaItems: MediaItem[] = urls.map((url) => {
       // Find imeta tag for this URL
       const imetaTag = event?.tags.find(
-        (tag) => tag[0] === "imeta" && tag[1].includes(url)
+        (tag) => tag[0] === "imeta" && tag[1] && tag[1].includes(url)
       )
 
       return {
