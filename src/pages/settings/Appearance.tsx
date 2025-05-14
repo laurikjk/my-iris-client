@@ -1,8 +1,8 @@
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import {useSettingsStore} from "@/stores/settings"
 import {ChangeEvent} from "react"
 
 function AppearanceSettings() {
-  const [theme, setTheme] = useLocalState("user/theme", CONFIG.defaultTheme, String)
+  const {theme, setTheme} = useSettingsStore()
 
   function handleThemeChange(e: ChangeEvent<HTMLSelectElement>) {
     setTheme(e.target.value)
