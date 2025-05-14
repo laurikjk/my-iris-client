@@ -16,9 +16,9 @@ interface SmallImageComponentProps {
 function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps) {
   const {content} = useSettingsStore()
   const [isBlurred, setIsBlurred] = useState(
-    !!event?.content.toLowerCase().includes("#nsfw") ||
-      event?.tags.some((t) => t[0] === "content-warning") ||
-      content.blurNSFW
+    content.blurNSFW && 
+    (!!event?.content.toLowerCase().includes("#nsfw") ||
+      event?.tags.some((t) => t[0] === "content-warning"))
   )
 
   const [hasError, setHasError] = useState(false)
@@ -81,7 +81,7 @@ function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps
                 className={classNames(
                   "mt-2 rounded cursor-pointer aspect-square object-cover",
                   {
-                    "blur-xl": isBlurred,
+                    "blur-md": isBlurred,
                   }
                 )}
                 style={{width: size, height: size}}
