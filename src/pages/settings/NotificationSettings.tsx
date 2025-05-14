@@ -3,11 +3,11 @@ import {
   subscribeToDMNotifications,
   subscribeToNotifications,
 } from "@/utils/notifications"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import IrisAPI, {SubscriptionResponse, PushNotifications} from "@/utils/IrisAPI"
 import {useEffect, useState, ChangeEvent} from "react"
+import {useSettingsStore} from "@/stores/settings"
 import Icon from "@/shared/components/Icons/Icon"
 import debounce from "lodash/debounce"
-import IrisAPI from "@/utils/IrisAPI"
 
 interface StatusIndicatorProps {
   status: boolean
@@ -34,6 +34,7 @@ const StatusIndicator = ({
 }
 
 const NotificationSettings = () => {
+  const {notifications, updateNotifications} = useSettingsStore()
   const [serviceWorkerReady, setServiceWorkerReady] = useState(false)
   const hasNotificationsApi = "Notification" in window
   const [notificationsAllowed, setNotificationsAllowed] = useState(
@@ -45,22 +46,17 @@ const NotificationSettings = () => {
     notificationsAllowed &&
     serviceWorkerReady
 
-  const [notificationServer, setNotificationServer] = useLocalState(
-    "notifications/server",
-    CONFIG.defaultSettings.notificationServer,
-    String
-  )
   const [isValidUrl, setIsValidUrl] = useState(true)
   const [currentEndpoint, setCurrentEndpoint] = useState<string | null>(null)
-  const [subscriptionsData, setSubscriptionsData] = useState<Record<string, any>>({})
+  const [subscriptionsData, setSubscriptionsData] = useState<SubscriptionResponse>({})
   const [showDebugData, setShowDebugData] = useState(false)
-  const [inputValue, setInputValue] = useState(CONFIG.defaultSettings.notificationServer)
+  const [inputValue, setInputValue] = useState(notifications.server)
   const [debouncedValidation] = useState(() =>
     debounce((url: string) => {
       const valid = validateUrl(url)
       setIsValidUrl(valid)
       if (valid) {
-        setNotificationServer(url)
+        updateNotifications({server: url})
       }
     }, 500)
   )
@@ -142,8 +138,8 @@ const NotificationSettings = () => {
   }
 
   useEffect(() => {
-    setInputValue(notificationServer)
-  }, [notificationServer])
+    setInputValue(notifications.server)
+  }, [notifications.server])
 
   function validateUrl(url: string): boolean {
     try {
@@ -159,7 +155,7 @@ const NotificationSettings = () => {
       try {
         const api = new IrisAPI()
         const data = await api.getSubscriptions()
-        setSubscriptionsData(data) // Store as an object
+        setSubscriptionsData(data)
       } catch (error) {
         console.error("Failed to fetch subscriptions:", error)
       }
@@ -184,7 +180,7 @@ const NotificationSettings = () => {
     }
   }
 
-  const removeNullValues = (obj: Record<string, any>) => {
+  const removeNullValues = (obj: Record<string, unknown>) => {
     return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== null))
   }
 
@@ -266,7 +262,7 @@ const NotificationSettings = () => {
             {Object.entries(subscriptionsData)
               .flatMap(([id, subscription]) =>
                 subscription.web_push_subscriptions.map(
-                  (pushSubscription: any, index: number) => {
+                  (pushSubscription: PushNotifications, index: number) => {
                     const isCurrentDevice = currentEndpoint === pushSubscription.endpoint
                     return {
                       id,

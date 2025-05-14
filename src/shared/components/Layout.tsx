@@ -8,6 +8,7 @@ import {clearNotifications} from "@/utils/notifications"
 import {socialGraphLoaded} from "@/utils/socialGraph"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import Footer from "@/shared/components/Footer.tsx"
+import {useSettingsStore} from "@/stores/settings"
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {trackEvent} from "@/utils/IrisAPI"
 import {Helmet} from "react-helmet"
@@ -26,7 +27,7 @@ interface ServiceWorkerMessage {
 
 const Layout = () => {
   const [newPostOpen, setNewPostOpen] = useLocalState("home/newPostOpen", false)
-  const [enableAnalytics] = useLocalState("settings/enableAnalytics", true)
+  const {privacy} = useSettingsStore()
   const [goToNotifications] = useLocalState("goToNotifications", 0)
   const [showLoginDialog, setShowLoginDialog] = useLocalState(
     "home/showLoginDialog",
@@ -55,7 +56,7 @@ const Layout = () => {
     const isSearchRoute = location.pathname.startsWith("/search/")
     if (
       CONFIG.features.analytics &&
-      enableAnalytics &&
+      privacy.enableAnalytics &&
       !isMessagesRoute &&
       !isSearchRoute
     ) {

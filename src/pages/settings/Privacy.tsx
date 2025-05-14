@@ -1,15 +1,11 @@
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import {useSettingsStore} from "@/stores/settings"
 import {ChangeEvent} from "react"
 
 function PrivacySettings() {
-  const [enableAnalytics, setEnableAnalytics] = useLocalState(
-    "settings/enableAnalytics",
-    true,
-    Boolean
-  )
+  const {privacy, updatePrivacy} = useSettingsStore()
 
   function handleEnableAnalyticsChange(e: ChangeEvent<HTMLInputElement>) {
-    setEnableAnalytics(e.target.checked)
+    updatePrivacy({enableAnalytics: e.target.checked})
   }
 
   return (
@@ -21,7 +17,7 @@ function PrivacySettings() {
             <input
               type="checkbox"
               className="checkbox checkbox-primary mr-2"
-              checked={enableAnalytics}
+              checked={privacy.enableAnalytics}
               onChange={handleEnableAnalyticsChange}
             />
             <span>Allow anonymous usage statistics collection</span>
