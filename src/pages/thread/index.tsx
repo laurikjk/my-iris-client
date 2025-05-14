@@ -1,11 +1,11 @@
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import Trending from "@/shared/components/feed/Trending.tsx"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import FollowList from "@/pages/user/components/FollowList"
 import Header from "@/shared/components/header/Header"
 import {Name} from "@/shared/components/user/Name"
 import Widget from "@/shared/components/ui/Widget"
+import {useSettingsStore} from "@/stores/settings"
 import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useState, useEffect} from "react"
@@ -23,11 +23,7 @@ export default function ThreadPage({
   naddrData?: nip19.AddressPointer | null
 }) {
   const [relevantPeople, setRelevantPeople] = useState(new Map<string, boolean>())
-  const [hideEventsByUnknownUsers] = useLocalState(
-    "settings/hideEventsByUnknownUsers",
-    true,
-    Boolean
-  )
+  const {content} = useSettingsStore()
   const [event, setEvent] = useState<NDKEvent | null>(null)
   const [loading, setLoading] = useState(isNaddr)
   const [threadAuthor, setThreadAuthor] = useState<string | null>(null)
@@ -70,7 +66,10 @@ export default function ThreadPage({
   }
 
   const addToThread = (event: NDKEvent) => {
-    if (hideEventsByUnknownUsers && socialGraph().getFollowDistance(event.pubkey) > 5)
+    if (
+      content.hideEventsByUnknownUsers &&
+      socialGraph().getFollowDistance(event.pubkey) > 5
+    )
       return
     if (!threadAuthor) setThreadAuthor(event.pubkey)
     addRelevantPerson(event.pubkey)

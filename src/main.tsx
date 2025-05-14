@@ -25,8 +25,8 @@ localState.get("user/publicKey").on((user) => {
 document.title = CONFIG.appName
 
 // Initialize theme from settings store
-const {theme} = useSettingsStore.getState()
-document.documentElement.setAttribute("data-theme", theme)
+const {appearance} = useSettingsStore.getState()
+document.documentElement.setAttribute("data-theme", appearance.theme)
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <RouterProvider router={router} />
@@ -34,7 +34,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 
 // Subscribe to theme changes
 useSettingsStore.subscribe((state) => {
-  if (typeof state.theme === "string") {
-    document.documentElement.setAttribute("data-theme", state.theme)
+  if (typeof state.appearance.theme === "string") {
+    document.documentElement.setAttribute("data-theme", state.appearance.theme)
   }
 })

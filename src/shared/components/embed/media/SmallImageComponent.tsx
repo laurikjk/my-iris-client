@@ -1,8 +1,8 @@
 import {getMarketImageUrls} from "@/shared/utils/marketUtils"
 import {useState, MouseEvent, useEffect} from "react"
+import {useSettingsStore} from "@/stores/settings"
 import MediaModal from "../../media/MediaModal"
 import ProxyImg from "../../ProxyImg"
-import {localState} from "irisdb/src"
 import classNames from "classnames"
 
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -14,26 +14,21 @@ interface SmallImageComponentProps {
 }
 
 function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps) {
-  let blurNSFW = true
-  localState.get("settings/blurNSFW").on((value) => {
-    if (typeof value === "boolean") {
-      blurNSFW = value
-    }
-  })
+  const {content} = useSettingsStore()
+  const [isBlurred, setIsBlurred] = useState(
+    !!event?.content.toLowerCase().includes("#nsfw") ||
+      event?.tags.some((t) => t[0] === "content-warning") ||
+      content.blurNSFW
+  )
 
   const [hasError, setHasError] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [blur, setBlur] = useState(
-    blurNSFW &&
-      (!!event?.content.toLowerCase().includes("#nsfw") ||
-        event?.tags.some((t) => t[0] === "content-warning"))
-  )
 
   const onClick = (event: MouseEvent) => {
     event.stopPropagation()
-    if (blur) {
-      setBlur(false)
+    if (isBlurred) {
+      setIsBlurred(false)
     } else {
       setShowModal(true)
       setCurrentImageIndex(0)
@@ -86,7 +81,7 @@ function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps
                 className={classNames(
                   "mt-2 rounded cursor-pointer aspect-square object-cover",
                   {
-                    "blur-xl": blur,
+                    "blur-xl": isBlurred,
                   }
                 )}
                 style={{width: size, height: size}}

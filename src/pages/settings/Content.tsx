@@ -1,25 +1,15 @@
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {UserRow} from "@/shared/components/user/UserRow"
+import {useSettingsStore} from "@/stores/settings"
 import useMutes from "@/shared/hooks/useMutes"
 import {useState} from "react"
 
 function Content() {
-  const [blurNSFW, setBlurNSFW] = useLocalState<boolean>("settings/blurNSFW", true)
-  const [hideEventsByUnknownUsers, setHideEventsByUnknownUsers] = useLocalState<boolean>(
-    "settings/hideEventsByUnknownUsers",
-    true
-  )
-  const [hidePostsByMutedMoreThanFollowed, setHidePostsByMutedMoreThanFollowed] =
-    useLocalState<boolean>("settings/hidePostsByMutedMoreThanFollowed", true)
+  const {content, updateContent} = useSettingsStore()
   const mutes = useMutes()
   const [showMutedUsers, setShowMutedUsers] = useState<boolean>(false)
-  const [autoplayVideos, setAutoplayVideos] = useLocalState<boolean>(
-    "settings/autoplayVideos",
-    true
-  )
 
-  const handleToggleChange = (setter: (value: boolean) => void, value: boolean) => {
-    setter(!value)
+  const handleToggleChange = (key: keyof typeof content) => {
+    updateContent({[key]: !content[key]})
   }
 
   return (
@@ -27,31 +17,24 @@ function Content() {
       <h1 className="text-2xl mb-4">Content</h1>
       <div className="space-y-4">
         <SettingToggle
-          checked={hideEventsByUnknownUsers}
-          onChange={() =>
-            handleToggleChange(setHideEventsByUnknownUsers, hideEventsByUnknownUsers)
-          }
+          checked={content.hideEventsByUnknownUsers}
+          onChange={() => handleToggleChange("hideEventsByUnknownUsers")}
           label="Hide posts by unknown users"
         />
         <SettingToggle
-          checked={blurNSFW}
-          onChange={() => handleToggleChange(setBlurNSFW, blurNSFW)}
+          checked={content.blurNSFW}
+          onChange={() => handleToggleChange("blurNSFW")}
           label="Blur NSFW Media"
         />
         <SettingToggle
-          checked={hidePostsByMutedMoreThanFollowed}
-          onChange={() =>
-            handleToggleChange(
-              setHidePostsByMutedMoreThanFollowed,
-              hidePostsByMutedMoreThanFollowed
-            )
-          }
+          checked={content.hidePostsByMutedMoreThanFollowed}
+          onChange={() => handleToggleChange("hidePostsByMutedMoreThanFollowed")}
           label="Hide posts by users who are muted more than followed"
         />
         <SettingToggle
-          checked={autoplayVideos}
-          onChange={() => handleToggleChange(setAutoplayVideos, autoplayVideos)}
-          label="Autoplay Videos"
+          checked={content.autoplayVideos}
+          onChange={() => handleToggleChange("autoplayVideos")}
+          label="Autoplay videos"
         />
       </div>
       <div className="mt-6">

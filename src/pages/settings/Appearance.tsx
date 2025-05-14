@@ -2,10 +2,10 @@ import {useSettingsStore} from "@/stores/settings"
 import {ChangeEvent} from "react"
 
 function AppearanceSettings() {
-  const {theme, setTheme} = useSettingsStore()
+  const {appearance, updateAppearance} = useSettingsStore()
 
   function handleThemeChange(e: ChangeEvent<HTMLSelectElement>) {
-    setTheme(e.target.value)
+    updateAppearance({theme: e.target.value})
   }
 
   return (
@@ -17,7 +17,7 @@ function AppearanceSettings() {
           <div className="mt-2">
             <select
               className="select select-primary"
-              value={theme}
+              value={appearance.theme}
               onChange={handleThemeChange}
             >
               <option value="light">Light</option>

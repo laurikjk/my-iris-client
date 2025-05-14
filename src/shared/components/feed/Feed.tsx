@@ -13,6 +13,7 @@ import {socialGraphLoaded} from "@/utils/socialGraph.ts"
 import UnknownUserEvents from "./UnknownUserEvents.tsx"
 import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
+import {useSettingsStore} from "@/stores/settings"
 import useMutes from "@/shared/hooks/useMutes.ts"
 import MediaFeed from "./MediaFeed"
 
@@ -74,12 +75,9 @@ function Feed({
   const firstFeedItemRef = useRef<HTMLDivElement>(null)
   const mutes = useMutes()
 
-  const [initialHideEventsByUnknownUsers] = useLocalState(
-    "settings/hideEventsByUnknownUsers",
-    true
-  )
+  const {content} = useSettingsStore()
   const [hideEventsByUnknownUsers, setHideEventsByUnknownUsers] = useHistoryState(
-    initialHideEventsByUnknownUsers,
+    content.hideEventsByUnknownUsers,
     "initialHideEventsByUnknownUsers"
   )
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
@@ -143,9 +141,9 @@ function Feed({
 
   useEffect(() => {
     if (history.state?.initialHideEventsByUnknownUsers === undefined) {
-      setHideEventsByUnknownUsers(initialHideEventsByUnknownUsers)
+      setHideEventsByUnknownUsers(content.hideEventsByUnknownUsers)
     }
-  }, [initialHideEventsByUnknownUsers])
+  }, [content.hideEventsByUnknownUsers])
 
   if (!isSocialGraphLoaded) {
     return null

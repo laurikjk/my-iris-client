@@ -1,9 +1,8 @@
 import {calculateDimensions, generateBlurhashUrl} from "./mediaUtils"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {useEffect, useRef, useState, useMemo} from "react"
 import {generateProxyUrl} from "../../../utils/imgproxy"
+import {useSettingsStore} from "@/stores/settings"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {localState} from "irisdb/src"
 import classNames from "classnames"
 
 interface HlsVideoComponentProps {
@@ -26,21 +25,13 @@ function HlsVideoComponent({
   isMuted = true,
   onMuteChange,
 }: HlsVideoComponentProps) {
-  let blurNSFW = true
-  localState.get("settings/blurNSFW").on((value) => {
-    if (typeof value === "boolean") {
-      blurNSFW = value
-    }
-  })
-
+  const {content} = useSettingsStore()
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [blur, setBlur] = useState(
-    blurNSFW &&
+    content.blurNSFW &&
       (!!event?.content.toLowerCase().includes("#nsfw") ||
         event?.tags.some((t) => t[0] === "content-warning"))
   )
-
-  const [autoplayVideos] = useLocalState<boolean>("settings/autoplayVideos", true)
 
   // Extract dimensions from imeta tag if available
   const dimensions = imeta?.find((tag) => tag.startsWith("dim "))?.split(" ")[1]
@@ -86,7 +77,7 @@ function HlsVideoComponent({
 
     initVideo()
 
-    if (autoplayVideos) {
+    if (content.autoplayVideos) {
       const handleIntersection = (entries: IntersectionObserverEntry[]) => {
         const entry = entries[0]
         if (entry.isIntersecting) {
@@ -110,7 +101,7 @@ function HlsVideoComponent({
         }
       }
     }
-  }, [match, autoplayVideos])
+  }, [match, content.autoplayVideos])
 
   return (
     <div
@@ -144,7 +135,7 @@ function HlsVideoComponent({
         }}
         controls
         muted={isMuted}
-        autoPlay={autoplayVideos}
+        autoPlay={content.autoplayVideos}
         playsInline
         loop
         poster={generateProxyUrl(match, {height: 638})}

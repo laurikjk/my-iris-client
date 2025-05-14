@@ -8,7 +8,7 @@ import {IMAGE_REGEX, VIDEO_REGEX} from "../embed/media/MediaEmbed"
 import {isMarketListing} from "@/shared/utils/marketUtils"
 import MarketGridItem from "../market/MarketGridItem"
 import ProxyImg from "@/shared/components/ProxyImg"
-import {localState} from "irisdb/src"
+import {useSettingsStore} from "@/stores/settings"
 import Icon from "../Icons/Icon"
 
 type ImageGridItemProps = {
@@ -18,14 +18,6 @@ type ImageGridItemProps = {
   lastElementRef?: MutableRefObject<HTMLDivElement>
 }
 
-let blurNSFW = true
-
-localState.get("settings/blurNSFW").once((value) => {
-  if (typeof value === "boolean") {
-    blurNSFW = value
-  }
-})
-
 export const ImageGridItem = ({
   event,
   index,
@@ -34,6 +26,11 @@ export const ImageGridItem = ({
 }: ImageGridItemProps) => {
   const navigate = useNavigate()
   const [loadErrors, setLoadErrors] = useState<Record<number, boolean>>({})
+  const {content} = useSettingsStore()
+  const isBlurred =
+    content.blurNSFW &&
+    (!!event?.content.toLowerCase().includes("#nsfw") ||
+      event?.tags.some((t) => t[0] === "content-warning"))
 
   const imageMatch = event.content.match(IMAGE_REGEX)?.[0]
   const videoMatch = event.content.match(VIDEO_REGEX)?.[0]
@@ -83,7 +80,7 @@ export const ImageGridItem = ({
   // If it's a market listing, use the MarketGridItem component
   if (isMarketListing(event)) {
     const shouldBlur =
-      blurNSFW &&
+      isBlurred &&
       (!!event.content.toLowerCase().includes("#nsfw") ||
         event.tags.some((t) => t[0] === "content-warning"))
 
@@ -97,7 +94,7 @@ export const ImageGridItem = ({
     const hasError = loadErrors[i]
 
     const shouldBlur =
-      blurNSFW &&
+      isBlurred &&
       (!!event.content.toLowerCase().includes("#nsfw") ||
         event.tags.some((t) => t[0] === "content-warning"))
 

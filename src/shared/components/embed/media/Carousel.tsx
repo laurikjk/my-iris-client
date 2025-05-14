@@ -1,14 +1,14 @@
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
-import PreloadImages from "@/shared/components/media/PreloadImages"
 import {useEffect, useState, MouseEvent, useCallback} from "react"
-import MediaModal from "@/shared/components/media/MediaModal"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import ImageComponent from "./ImageComponent"
-import VideoComponent from "./VideoComponent"
 import {useSwipeable} from "react-swipeable"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {localState} from "irisdb/src"
 import classNames from "classnames"
+
+import PreloadImages from "@/shared/components/media/PreloadImages"
+import MediaModal from "@/shared/components/media/MediaModal"
+import {useSettingsStore} from "@/stores/settings"
+import ImageComponent from "./ImageComponent"
+import VideoComponent from "./VideoComponent"
 
 interface MediaItem {
   url: string
@@ -21,15 +21,8 @@ interface CarouselProps {
   event?: NDKEvent
 }
 
-let blurNSFW = true
-
-localState.get("settings/blurNSFW").once((value) => {
-  if (typeof value === "boolean") {
-    blurNSFW = value
-  }
-})
-
 function Carousel({media, event}: CarouselProps) {
+  const {content} = useSettingsStore()
   const CarouselButton = ({
     direction,
     onClick,
@@ -121,13 +114,12 @@ function Carousel({media, event}: CarouselProps) {
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [blur, setBlur] = useState(
-    blurNSFW &&
+    content.blurNSFW &&
       (!!event?.content.toLowerCase().includes("#nsfw") ||
         event?.tags.some((t) => t[0] === "content-warning"))
   )
   const [showModal, setShowModal] = useState(false)
-  const [autoplayVideos] = useLocalState<boolean>("settings/autoplayVideos", true)
-  const [isMuted, setIsMuted] = useState(autoplayVideos)
+  const [isMuted, setIsMuted] = useState(content.autoplayVideos)
 
   const nextImage = (e?: MouseEvent | KeyboardEvent) => {
     e?.stopPropagation()
