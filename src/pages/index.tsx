@@ -13,7 +13,6 @@ import HomePage from "@/pages/home"
 // Lazy load components
 const ChatsPage = lazy(() => import("@/pages/chats"))
 const SettingsPage = lazy(() => import("@/pages/settings"))
-const Explorer = lazy(() => import("@/pages/explorer/Explorer"))
 
 export const router = createBrowserRouter(
   createRoutesFromElements([
@@ -34,14 +33,6 @@ export const router = createBrowserRouter(
         element={
           <Suspense fallback={<LoadingFallback />}>
             <SettingsPage />
-          </Suspense>
-        }
-      />
-      <Route
-        path="/explorer/:file?"
-        element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Explorer />
           </Suspense>
         }
       />
