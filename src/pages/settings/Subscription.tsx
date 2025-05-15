@@ -1,12 +1,25 @@
+import {getSubscriptionIcon, SubscriptionTier} from "@/shared/utils/subscriptionIcons"
 import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
 import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
-import {getSubscriptionIcon} from "@/shared/utils/subscriptionIcons"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {RiCheckboxCircleFill} from "@remixicon/react"
+import {useEffect, useState} from "react"
+import IrisAPI from "@/utils/IrisAPI"
 
 type Duration = 3 | 12
-export type PlanId = "patron" | "champion" | "vanguard"
+export type PlanId = 1 | 2 | 3
+
+const planToTier = (plan: PlanId): SubscriptionTier => {
+  switch (plan) {
+    case 1:
+      return "patron"
+    case 2:
+      return "champion"
+    case 3:
+      return "vanguard"
+  }
+}
 
 interface Plan {
   id: PlanId
@@ -18,7 +31,7 @@ interface Plan {
 
 const plans: Plan[] = [
   {
-    id: "patron",
+    id: 1,
     name: "Patron",
     colour: "error",
     price: {3: 15, 12: 50},
@@ -30,7 +43,7 @@ const plans: Plan[] = [
     ],
   },
   {
-    id: "champion",
+    id: 2,
     name: "Champion",
     colour: "warning",
     price: {3: 60, 12: 200},
@@ -42,7 +55,7 @@ const plans: Plan[] = [
     ],
   },
   {
-    id: "vanguard",
+    id: 3,
     name: "Vanguard",
     colour: "primary",
     price: {3: 300, 12: 1000},
@@ -56,16 +69,57 @@ const plans: Plan[] = [
   },
 ]
 
+interface Invoice {
+  id: number
+  amount: number
+  status: string
+}
+
 export default function Subscription() {
   const [pubkey] = useLocalState("user/publicKey", "")
   const {isSubscriber, endDate} = useSubscriptionStatus(pubkey)
 
   const [duration, setDuration] = useHistoryState<Duration>(3, "subscriptionDuration")
-  const [plan, setPlan] = useHistoryState<PlanId>("patron", "subscriptionPlan")
+  const [plan, setPlan] = useHistoryState<PlanId>(1, "subscriptionPlan")
 
   const totalPrice = (p: PlanId) =>
     plans.find((x) => x.id === p)!.price[duration as Duration]
   const monthly = (p: PlanId) => (totalPrice(p) / duration).toFixed(2)
+
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+
+  const handleSubscribe = async () => {
+    try {
+      const irisAPI = new IrisAPI()
+      const response = await irisAPI.createSubscription({
+        subscription_plan: plan,
+        pricing_option: 1,
+        currency: "USD",
+      })
+
+      console.log("Subscription created:", response)
+      // Fetch invoices after creating the subscription
+      fetchInvoices()
+    } catch (error) {
+      console.error("Error creating subscription:", error)
+    }
+  }
+
+  const fetchInvoices = async () => {
+    try {
+      const irisAPI = new IrisAPI()
+      const response = await irisAPI.getInvoices()
+      setInvoices(response)
+    } catch (error) {
+      console.error("Error fetching invoices:", error)
+    }
+  }
+
+  useEffect(() => {
+    if (pubkey) {
+      fetchInvoices()
+    }
+  }, [pubkey, plan])
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -106,7 +160,7 @@ export default function Subscription() {
               <div className="card-body flex flex-col h-full">
                 <header className="flex justify-between items-start">
                   <h3 className="card-title text-xl">{p.name}</h3>
-                  {getSubscriptionIcon(p.id, `text-${p.colour} text-2xl`)}
+                  {getSubscriptionIcon(planToTier(p.id), `text-${p.colour} text-2xl`)}
                 </header>
 
                 <ul className="space-y-2 my-4 text-sm">
@@ -130,12 +184,23 @@ export default function Subscription() {
         })}
       </div>
 
-      <a
-        href={`https://iris.to/subscribe/${plan}?duration=${duration}`}
-        className="btn btn-accent self-center"
-      >
+      <a href="#" onClick={handleSubscribe} className="btn btn-accent self-center">
         Subscribe – ${totalPrice(plan)}
       </a>
+
+      {invoices.length > 0 && (
+        <div className="mt-4">
+          <h4 className="text-lg font-semibold">Invoices</h4>
+          <ul>
+            {invoices.map((invoice) => (
+              <li key={invoice.id}>
+                Invoice ID: {invoice.id}, Amount: {invoice.amount}, Status:{" "}
+                {invoice.status}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="text-xs text-base-content/50 text-center mt-4">
         More features upcoming

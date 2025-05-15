@@ -1,4 +1,3 @@
-import {useSettingsStore} from "@/stores/settings"
 import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {Filter} from "nostr-tools"
@@ -8,6 +7,12 @@ export interface PushNotifications {
   endpoint: string
   p256dh: string
   auth: string
+}
+
+export interface Invoice {
+  id: number
+  amount: number
+  status: string
 }
 
 export interface Subscription {
@@ -36,8 +41,7 @@ export default class IrisAPI {
   #url: string
 
   constructor(url?: string) {
-    const store = useSettingsStore.getState()
-    this.#url = new URL(url ?? store.notifications.server).toString()
+    this.#url = new URL(url ?? CONFIG.defaultSettings.irisApiUrl).toString()
   }
 
   twitterImport(username: string) {
@@ -51,11 +55,23 @@ export default class IrisAPI {
   }
 
   getSubscriptions() {
-    return this.#getJsonAuthd<SubscriptionResponse>("subscriptions")
+    return this.getJsonAuthd<SubscriptionResponse>("subscriptions/")
+  }
+
+  createSubscription(subscriptionData: {
+    subscription_plan: number
+    pricing_option: number
+    currency: string
+  }) {
+    return this.getJsonAuthd<void>("subscriptions/create/", "POST", subscriptionData)
+  }
+
+  getInvoices() {
+    return this.getJsonAuthd<Invoice[]>("invoices/")
   }
 
   registerPushNotifications(web_push_subscriptions: PushNotifications[], filter: Filter) {
-    return this.#getJsonAuthd<void>(`subscriptions`, "POST", {
+    return this.getJsonAuthd<void>(`subscriptions`, "POST", {
       web_push_subscriptions,
       webhooks: [],
       filter,
@@ -63,14 +79,14 @@ export default class IrisAPI {
   }
 
   updateSubscription(id: string, subscription: Subscription) {
-    return this.#getJsonAuthd<void>(`subscriptions/${id}`, "POST", subscription)
+    return this.getJsonAuthd<void>(`subscriptions/${id}`, "POST", subscription)
   }
 
   deleteSubscription(id: string) {
-    return this.#getJsonAuthd<void>(`subscriptions/${id}`, "DELETE")
+    return this.getJsonAuthd<void>(`subscriptions/${id}`, "DELETE")
   }
 
-  async #getJsonAuthd<T>(
+  async getJsonAuthd<T>(
     path: string,
     method?: "GET" | string,
     body?: object,
@@ -79,7 +95,7 @@ export default class IrisAPI {
     const event = new NDKEvent(ndk(), {
       kind: 27235, // http authentication
       tags: [
-        ["url", `${this.#url}${path}`],
+        ["u", `${this.#url}${path}`],
         ["method", method ?? "GET"],
       ],
       content: "",
