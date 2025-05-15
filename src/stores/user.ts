@@ -33,35 +33,9 @@ interface UserState {
   reset: () => void
 }
 
-const migrateFromLocalStorage = <T>(key: string, defaultValue: T): T => {
-  try {
-    const storedValue = localStorage.getItem(`localState/${key}`)
-    if (storedValue) {
-      try {
-        const parsedValue = JSON.parse(storedValue)
-        const extractedValue =
-          parsedValue && typeof parsedValue === "object" && "value" in parsedValue
-            ? parsedValue.value
-            : parsedValue
-
-        console.log(`Migrated ${key} from localStorage:`, extractedValue)
-        // Clean up old storage after successful migration
-        localStorage.removeItem(`localState/${key}`)
-        return extractedValue
-      } catch (error) {
-        console.error(`Error parsing ${key} from localStorage:`, error)
-      }
-    }
-  } catch (error) {
-    console.error(`Error migrating ${key} from localStorage:`, error)
-  }
-  return defaultValue
-}
-
 export const useUserStore = create<UserState>()(
   persist(
     (set) => {
-      // Initialize with default values first
       const initialState = {
         publicKey: "",
         privateKey: "",
@@ -76,42 +50,6 @@ export const useUserStore = create<UserState>()(
         hasHydrated: false,
       }
 
-      // Perform migration after store is created
-      const migratedState = {
-        publicKey: migrateFromLocalStorage("user/publicKey", initialState.publicKey),
-        privateKey: migrateFromLocalStorage("user/privateKey", initialState.privateKey),
-        nip07Login: migrateFromLocalStorage("user/nip07Login", initialState.nip07Login),
-        DHTPublicKey: migrateFromLocalStorage(
-          "user/DHTPublicKey",
-          initialState.DHTPublicKey
-        ),
-        DHTPrivateKey: migrateFromLocalStorage(
-          "user/DHTPrivateKey",
-          initialState.DHTPrivateKey
-        ),
-        relays: migrateFromLocalStorage("user/relays", initialState.relays),
-        mediaserver: migrateFromLocalStorage(
-          "user/mediaserver",
-          initialState.mediaserver
-        ),
-        walletConnect: migrateFromLocalStorage(
-          "user/walletConnect",
-          initialState.walletConnect
-        ),
-        cashuEnabled: migrateFromLocalStorage(
-          "user/cashuEnabled",
-          initialState.cashuEnabled
-        ),
-        defaultZapAmount: migrateFromLocalStorage(
-          "user/defaultZapAmount",
-          initialState.defaultZapAmount
-        ),
-      }
-
-      // Set initial state with migrated values
-      set(migratedState)
-
-      // Define actions
       const actions = {
         setPublicKey: (publicKey: string) => set({publicKey}),
         setPrivateKey: (privateKey: string) => set({privateKey}),
@@ -126,10 +64,8 @@ export const useUserStore = create<UserState>()(
         reset: () => set(initialState),
       }
 
-      // Return combined state and actions
       return {
-        ...migratedState,
-        hasHydrated: false,
+        ...initialState,
         ...actions,
       }
     },
@@ -151,3 +87,4 @@ export const useRelays = () => useUserStore((state) => state.relays)
 export const useWalletConnect = () => useUserStore((state) => state.walletConnect)
 export const useCashuEnabled = () => useUserStore((state) => state.cashuEnabled)
 export const useDefaultZapAmount = () => useUserStore((state) => state.defaultZapAmount)
+export const useReset = () => useUserStore((state) => state.reset)

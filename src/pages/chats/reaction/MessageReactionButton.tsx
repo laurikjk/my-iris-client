@@ -1,8 +1,8 @@
 import {FloatingEmojiPicker} from "@/shared/components/emoji/FloatingEmojiPicker"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiHeartAddLine, RiReplyLine} from "@remixicon/react"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {Session} from "nostr-double-ratchet/src"
+import {usePublicKey} from "@/stores/user"
 import {MouseEvent, useState} from "react"
 import {localState} from "irisdb/src"
 import classNames from "classnames"
@@ -29,7 +29,7 @@ const MessageReactionButton = ({
   onReply,
   onSendReaction,
 }: MessageReactionButtonProps) => {
-  const [myPubKey] = useLocalState("user/publicKey", "")
+  const myPubKey = usePublicKey()
   const [showReactionsPicker, setShowReactionsPicker] = useState(false)
   const [pickerPosition, setPickerPosition] = useState<{clientY?: number}>({})
 

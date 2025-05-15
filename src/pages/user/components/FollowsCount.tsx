@@ -1,14 +1,11 @@
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import {useState, useMemo} from "react"
-
+import Icon from "@/shared/components/Icons/Icon.tsx"
 import useFollows from "@/shared/hooks/useFollows.ts"
+import Modal from "@/shared/components/ui/Modal"
+import socialGraph from "@/utils/socialGraph"
 import {formatAmount} from "@/utils/utils.ts"
 import FollowsList from "./FollowList.tsx"
-
-import Icon from "@/shared/components/Icons/Icon.tsx"
-import Modal from "@/shared/components/ui/Modal"
-
-import socialGraph from "@/utils/socialGraph"
+import {usePublicKey} from "@/stores/user"
+import {useState, useMemo} from "react"
 
 interface FollowsCountProps {
   pubKey: string
@@ -20,7 +17,7 @@ function FollowsCount({pubKey}: FollowsCountProps) {
     () => Array.from(socialGraph().getFollowedByUser(pubKey)),
     [pubKey, f]
   )
-  const [myPubKey] = useLocalState("user/publicKey", "")
+  const myPubKey = usePublicKey()
   const [showFollowsList, setShowFollowsList] = useState<boolean>(false)
 
   const handleFollowsClick = () => {

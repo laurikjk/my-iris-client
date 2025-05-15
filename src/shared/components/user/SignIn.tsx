@@ -1,9 +1,8 @@
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {hexToBytes, bytesToHex} from "@noble/hashes/utils"
 import {NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 import {ChangeEvent, useEffect, useState} from "react"
 import {getPublicKey, nip19} from "nostr-tools"
-import {localState} from "irisdb/src"
+import {useUserStore} from "@/stores/user"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
 
@@ -15,8 +14,7 @@ interface SignInProps {
 }
 
 export default function SignIn({onClose}: SignInProps) {
-  const [, setNip07Login] = useLocalState("user/nip07Login", false)
-  const [, setShowLoginDialog] = useLocalState("home/showLoginDialog", false)
+  const {setNip07Login, setPublicKey, setPrivateKey} = useUserStore()
   const [inputPrivateKey, setInputPrivateKey] = useState("")
 
   useEffect(() => {
@@ -33,19 +31,19 @@ export default function SignIn({onClose}: SignInProps) {
         const privateKeySigner = new NDKPrivateKeySigner(hex)
         ndk().signer = privateKeySigner
         const publicKey = getPublicKey(bytes)
-        localState.get("user/privateKey").put(hex)
-        localState.get("user/publicKey").put(publicKey)
+        setPrivateKey(hex)
+        setPublicKey(publicKey)
         localStorage.setItem("cashu.ndk.privateKeySignerPrivateKey", hex)
         localStorage.setItem("cashu.ndk.pubkey", publicKey)
-        setShowLoginDialog(false)
+        onClose()
       }
     }
-  }, [inputPrivateKey])
+  }, [inputPrivateKey, setPrivateKey, setPublicKey, onClose])
 
   function extensionLogin() {
     if (window.nostr) {
       setNip07Login(true)
-      setShowLoginDialog(false)
+      onClose()
     } else {
       window.open("https://nostrcheck.me/register/browser-extension.php", "_blank")
     }

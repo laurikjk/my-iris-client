@@ -22,7 +22,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --fix",
     "preview": "vite preview",
     "pretest": "npx playwright install --with-deps chromium",
-    "test": "playwright test",
+    "test": "playwright test --reporter=list",
     "test:ui": "playwright test --ui",
     "format": "prettier --write \"**/*.+(js|jsx|tsx|json|yml|yaml|css|md)\""
   },

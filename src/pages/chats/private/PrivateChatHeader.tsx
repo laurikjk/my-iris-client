@@ -1,6 +1,5 @@
 import {ConnectionStatus} from "@/shared/components/connection/ConnectionStatus"
 import {getPeerConnection} from "@/utils/chat/webrtc/PeerConnection"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiMoreLine, RiAttachment2} from "@remixicon/react"
 import {UserRow} from "@/shared/components/user/UserRow"
 import Header from "@/shared/components/header/Header"
@@ -10,6 +9,7 @@ import {Session} from "nostr-double-ratchet/src"
 import {getSession} from "@/utils/chat/Sessions"
 import {MessageType} from "../message/Message"
 import socialGraph from "@/utils/socialGraph"
+import {usePublicKey} from "@/stores/user"
 import {useEffect, useState} from "react"
 import {useNavigate} from "react-router"
 import {localState} from "irisdb/src"
@@ -22,7 +22,7 @@ interface PrivateChatHeaderProps {
 const PrivateChatHeader = ({id, messages}: PrivateChatHeaderProps) => {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [session, setSession] = useState<Session | undefined>(undefined)
-  const [myPubKey] = useLocalState("user/publicKey", "")
+  const myPubKey = usePublicKey()
   const navigate = useNavigate()
 
   const handleDeleteChat = () => {

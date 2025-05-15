@@ -3,10 +3,10 @@ import "@/index.css"
 import {RouterProvider} from "react-router"
 import {useUserStore} from "./stores/user"
 import ReactDOM from "react-dom/client"
-import {useEffect} from "react"
 
 import {subscribeToDMNotifications, subscribeToNotifications} from "./utils/notifications"
 import {loadSessions} from "@/utils/chat/Sessions"
+import {migrateUserState} from "./utils/migration"
 import {useSettingsStore} from "@/stores/settings"
 import {loadInvites} from "@/utils/chat/Invites"
 import {ndk} from "./utils/ndk"
@@ -14,32 +14,28 @@ import {router} from "@/pages"
 
 ndk() // init NDK & irisdb login flow
 
-// Initialize user store at app startup
-const InitializeStore = () => {
-  useEffect(() => {
-    // Initialize chat modules if we have a public key
-    const state = useUserStore.getState()
-    if (state.publicKey) {
-      console.log("Initializing chat modules with existing user data")
-      loadSessions()
-      loadInvites()
-      subscribeToNotifications()
-      subscribeToDMNotifications()
-    }
-
-    console.log("User store initialized:", useUserStore.getState())
-  }, [])
-  return null
+// Initialize chat modules if we have a public key
+const state = useUserStore.getState()
+if (state.publicKey) {
+  console.log("Initializing chat modules with existing user data")
+  loadSessions()
+  loadInvites()
+  subscribeToNotifications()
+  subscribeToDMNotifications()
 }
 
-const AppWithInitialization = () => {
-  return (
-    <>
-      <InitializeStore />
-      <RouterProvider router={router} />
-    </>
-  )
-}
+document.title = CONFIG.appName
+
+// Initialize theme from settings store
+const {appearance} = useSettingsStore.getState()
+document.documentElement.setAttribute("data-theme", appearance.theme)
+
+// Perform migration before rendering the app
+migrateUserState()
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <RouterProvider router={router} />
+)
 
 // Subscribe to public key changes from the user store
 useUserStore.subscribe((state) => {
@@ -63,14 +59,6 @@ useUserStore.subscribe((state) => {
     subscribeToDMNotifications()
   }
 })
-
-document.title = CONFIG.appName
-
-// Initialize theme from settings store
-const {appearance} = useSettingsStore.getState()
-document.documentElement.setAttribute("data-theme", appearance.theme)
-
-ReactDOM.createRoot(document.getElementById("root")!).render(<AppWithInitialization />)
 
 // Subscribe to theme changes
 useSettingsStore.subscribe((state) => {

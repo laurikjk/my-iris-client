@@ -3,47 +3,75 @@ import {useUserStore} from "@/stores/user"
 import {MouseEvent, useState} from "react"
 import {useNavigate} from "react-router"
 import localforage from "localforage"
+import {ndk} from "@/utils/ndk"
 
 function Account() {
-  const {privateKey, reset} = useUserStore()
+  const store = useUserStore()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const navigate = useNavigate()
+
+  async function cleanupNDK() {
+    const ndkInstance = ndk()
+    ndkInstance.signer = undefined
+    ndkInstance.activeUser = undefined
+    ndkInstance.pool.relays.forEach((relay) => {
+      relay.disconnect()
+    })
+    ndkInstance.pool.relays.clear()
+  }
+
+  async function cleanupStorage() {
+    try {
+      localStorage.clear()
+      await localforage.clear()
+    } catch (err) {
+      console.error("Error clearing storage:", err)
+    }
+  }
+
+  async function cleanupServiceWorker() {
+    if (!("serviceWorker" in navigator)) return
+
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const existingSub = await reg.pushManager.getSubscription()
+      if (existingSub) {
+        await existingSub.unsubscribe()
+        console.log("Unsubscribed from push notifications")
+      }
+    } catch (e) {
+      console.error("Error unsubscribing from service worker:", e)
+    }
+  }
 
   async function handleLogout(e: MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     if (
-      !privateKey ||
+      !store.privateKey ||
       confirm("Log out? Make sure you have a backup of your secret key.")
     ) {
       setIsLoggingOut(true)
+
       try {
-        await unsubscribeAll()
+        // Try to unsubscribe from notifications first, while we still have the signer
+        try {
+          await unsubscribeAll()
+        } catch (e) {
+          console.error("Error unsubscribing from push notifications:", e)
+        }
+
+        await cleanupNDK()
+        const {reset} = useUserStore.getState()
+        reset()
       } catch (e) {
-        console.error("Error unsubscribing from push notifications:", e)
+        console.error("Error during logout cleanup:", e)
+      } finally {
+        await cleanupStorage()
+        await cleanupServiceWorker()
+        navigate("/")
+        location.reload() // quick & dirty way to ensure everything is reset, especially localState
       }
-
-      reset()
-
-      localStorage.clear()
-      localforage
-        .clear()
-        .catch((err) => {
-          console.error("Error clearing localforage:", err)
-        })
-        .finally(async () => {
-          // Unsubscribe from push notifications
-          if ("serviceWorker" in navigator) {
-            const reg = await navigator.serviceWorker.ready
-            const existingSub = await reg.pushManager.getSubscription()
-            if (existingSub) {
-              await existingSub.unsubscribe()
-              console.log("Unsubscribed from push notifications")
-            }
-          }
-          navigate("/")
-          location.reload() // quick & dirty way to ensure everything is reset, especially localState
-        })
     }
   }
 

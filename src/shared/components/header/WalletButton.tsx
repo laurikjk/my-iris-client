@@ -1,15 +1,12 @@
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
-
 import Wallet from "@/pages/home/feed/components/Wallet.tsx"
 import Icon from "@/shared/components/Icons/Icon"
-
+import {usePublicKey} from "@/stores/user"
 import Modal from "../ui/Modal"
-
 import {useState} from "react"
 
 export default function WalletButton() {
   const [showWallet, setShowWallet] = useState(false)
-  const [pubKey] = useLocalState("user/publicKey", "")
+  const pubKey = usePublicKey()
 
   if (!pubKey) {
     return null

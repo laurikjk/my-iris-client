@@ -1,10 +1,10 @@
 import UnseenNotificationsBadge from "./UnseenNotificationsBadge"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
+import {usePublicKey} from "@/stores/user"
 import {NavLink} from "react-router"
 import Icon from "../Icons/Icon"
 
 export default function NotificationButton() {
-  const [myPubKey] = useLocalState("user/publicKey", "", String)
+  const myPubKey = usePublicKey()
 
   return (
     <>

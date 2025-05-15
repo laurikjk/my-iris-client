@@ -13,12 +13,9 @@ import {hasMedia} from "@/shared/components/embed"
 import useFollows from "@/shared/hooks/useFollows"
 import {getEventReplyingTo} from "@/utils/nostr"
 import socialGraph from "@/utils/socialGraph"
-import {localState} from "irisdb/src"
+import {usePublicKey} from "@/stores/user"
 
 const UNSEEN_CACHE_KEY = "unseenFeed"
-
-let myPubKey = ""
-localState.get("user/publicKey").on((v) => (myPubKey = v || ""), false, undefined, String)
 
 const EmptyPlaceholder = ({follows, myPubKey}: {follows: string[]; myPubKey?: string}) =>
   myPubKey ? (
@@ -34,8 +31,8 @@ const EmptyPlaceholder = ({follows, myPubKey}: {follows: string[]; myPubKey?: st
   ) : null
 
 function HomeFeedEvents() {
+  const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true) // to update on follows change
-  useLocalState("user/publicKey", "") // update on login
   const [refreshSignal] = useLocalState("refreshRouteSignal", 0, Number) // update on login
   const [activeTab, setActiveTab] = useHistoryState("unseen", "activeHomeTab")
   const [forceUpdate, setForceUpdate] = useState(0)

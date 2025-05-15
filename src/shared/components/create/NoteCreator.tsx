@@ -1,20 +1,18 @@
-import {ChangeEvent, DragEvent, useEffect, useState} from "react"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
-import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
-import {uploadFile} from "@/shared/upload"
-import {ndk} from "@/utils/ndk"
-
 import UploadButton from "@/shared/components/button/UploadButton.tsx"
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
-import {Avatar} from "@/shared/components/user/Avatar.tsx"
-import HyperText from "@/shared/components/HyperText.tsx"
-
+import {ChangeEvent, DragEvent, useEffect, useState} from "react"
 import EmojiButton from "@/shared/components/emoji/EmojiButton"
+import {Avatar} from "@/shared/components/user/Avatar.tsx"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
+import HyperText from "@/shared/components/HyperText.tsx"
+import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
 import {eventsByIdCache} from "@/utils/memcache"
+import {uploadFile} from "@/shared/upload"
+import {usePublicKey} from "@/stores/user"
 import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
 import Textarea from "./Textarea"
+import {ndk} from "@/utils/ndk"
 
 type handleCloseFunction = () => void
 
@@ -107,14 +105,10 @@ function addTags(event: NDKEvent, repliedEvent?: NDKEvent, quotedEvent?: NDKEven
 }
 
 function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps) {
-  const [myPubKey] = useLocalState("user/publicKey", localStorage.getItem("pubkey"))
+  const myPubKey = usePublicKey()
   const navigate = useNavigate()
 
-  const [noteContent, setNoteContent] = useLocalState(
-    repliedEvent ? "notes/replyDraft" : "notes/draft",
-    ""
-  )
-
+  const [noteContent, setNoteContent] = useState("")
   const [textarea, setTextarea] = useState<HTMLTextAreaElement | null>(null)
   const [imageMetadata, setImageMetadata] = useState<
     Record<string, {width: number; height: number; blurhash: string}>
@@ -263,7 +257,9 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
 
   return (
     <div
-      className={`rounded-lg overflow-y-auto max-h-screen md:w-[600px] ${isDraggingOver ? "bg-neutral" : ""}`}
+      className={`flex flex-col gap-4 p-4 ${
+        isDraggingOver ? "border-2 border-primary" : ""
+      }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -278,52 +274,49 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
           />
         </div>
       )}
-      <div className="p-4 md:p-8 flex flex-col gap-4">
-        <Textarea
-          value={noteContent}
-          onChange={handleContentChange}
-          onUpload={handleFileUpload}
-          onPublish={publish}
-          placeholder="What's on your mind?"
-          quotedEvent={quotedEvent}
-          onRef={setTextarea}
-        />
-        {uploading && (
-          <div className="w-full mt-2">
-            <div className="bg-neutral rounded-full h-2.5">
-              <div
-                className="bg-primary h-2.5 rounded-full"
-                style={{width: `${uploadProgress}%`}}
-              ></div>
-            </div>
-            <p className="text-sm text-center mt-1">{Math.round(uploadProgress)}%</p>
-          </div>
-        )}
-        {uploadError && <p className="text-sm text-error mt-2">{uploadError}</p>}
-        <div className="flex flex-row gap-2 items-center">
-          {myPubKey && <Avatar showBadge={false} pubKey={myPubKey} />}
-          <UploadButton
-            className="rounded-full btn btn-primary"
-            onUpload={handleUpload}
-            text="Upload file"
+      <div className="flex gap-4">
+        <Avatar pubKey={myPubKey} width={40} />
+        <div className="flex-1">
+          <Textarea
+            value={noteContent}
+            onChange={handleContentChange}
+            onRef={setTextarea}
+            onUpload={handleFileUpload}
+            onPublish={publish}
+            placeholder="What's on your mind?"
+            quotedEvent={quotedEvent}
           />
+        </div>
+      </div>
+
+      {uploading && (
+        <div className="w-full bg-base-200 rounded-full h-2.5">
+          <div
+            className="bg-primary h-2.5 rounded-full"
+            style={{width: `${uploadProgress}%`}}
+          ></div>
+        </div>
+      )}
+
+      {uploadError && <div className="text-error text-sm">{uploadError}</div>}
+
+      <div className="flex justify-between items-center">
+        <div className="flex gap-2">
+          <UploadButton onUpload={handleUpload} />
           {!isTouchDevice && <EmojiButton onEmojiSelect={handleEmojiSelect} />}
-          <div className="flex-1"></div>
-          <button className="btn btn-ghost rounded-full" onClick={handleClose}>
-            Cancel
-          </button>
-          <button
-            className="btn btn-primary rounded-full"
-            disabled={!noteContent}
-            onClick={publish}
-          >
-            Publish
-          </button>
         </div>
-        <div className="mt-4 min-h-16 max-h-96 overflow-y-scroll">
-          <div className="text-sm uppercase text-gray-500 mb-2 font-bold">Preview</div>
-          <HyperText>{noteContent}</HyperText>
-        </div>
+        <button
+          className="btn btn-primary"
+          onClick={publish}
+          disabled={!noteContent.trim()}
+        >
+          Publish
+        </button>
+      </div>
+
+      <div className="mt-4 min-h-16 max-h-96 overflow-y-scroll">
+        <div className="text-sm uppercase text-gray-500 mb-2 font-bold">Preview</div>
+        <HyperText>{noteContent}</HyperText>
       </div>
     </div>
   )
