@@ -1,10 +1,10 @@
 import {getSubscriptionIcon, SubscriptionTier} from "@/shared/utils/subscriptionIcons"
 import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
 import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {RiCheckboxCircleFill} from "@remixicon/react"
 import IrisAPI, {Invoice} from "@/utils/IrisAPI"
+import {useUserStore} from "@/stores/user"
 import {useEffect, useState} from "react"
 
 type Duration = 3 | 12
@@ -79,7 +79,7 @@ const plans: Plan[] = [
 ]
 
 export default function Subscription() {
-  const [pubkey] = useLocalState("user/publicKey", "")
+  const pubkey = useUserStore((state) => state.publicKey)
   const {isSubscriber, endDate} = useSubscriptionStatus(pubkey)
 
   const [duration, setDuration] = useHistoryState<Duration>(3, "subscriptionDuration")

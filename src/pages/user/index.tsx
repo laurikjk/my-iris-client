@@ -3,7 +3,6 @@ import {useMemo, ReactNode, useState, useEffect} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
 import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
@@ -16,6 +15,7 @@ import FollowList from "./components/FollowList"
 import {getEventReplyingTo} from "@/utils/nostr"
 import socialGraph from "@/utils/socialGraph"
 import ProfileHeader from "./ProfileHeader"
+import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
 
 type Tab = {
@@ -150,7 +150,7 @@ function UserPage({pubKey}: {pubKey: string}) {
     () => (pubKey ? new PublicKey(pubKey).toString() : ""),
     [pubKey]
   )
-  const [myPubKey] = useLocalState("user/publicKey", "")
+  const myPubKey = useUserStore((state) => state.publicKey)
   const follows = useFollows(pubKey)
   const hasMarketEvents = useHasMarketEvents(pubKeyHex)
   const filteredFollows = useMemo(() => {

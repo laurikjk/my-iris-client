@@ -7,15 +7,10 @@ import {getSessions} from "@/utils/chat/Sessions"
 import {nip19, VerifiedEvent} from "nostr-tools"
 import {getInvites} from "@/utils/chat/Invites"
 import {hexToBytes} from "@noble/hashes/utils"
+import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
 import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
-
-let myPubKey = ""
-let myPrivKey = ""
-
-localState.get("user/publicKey").on((k) => (myPubKey = k as string))
-localState.get("user/privateKey").on((k) => (myPrivKey = k as string))
 
 const PrivateChatCreation = () => {
   const navigate = useNavigate()
@@ -23,40 +18,53 @@ const PrivateChatCreation = () => {
   const [inviteInput, setInviteInput] = useState("")
   const labelInputRef = useRef<HTMLInputElement>(null)
 
+  const myPubKey = useUserStore((state) => state.publicKey)
+  const myPrivKey = useUserStore((state) => state.privateKey)
+
   useEffect(() => {
     if (getSessions().size === 0) {
       navigate("/chats/new", {replace: true})
     }
 
+    const createPrivateInviteIfNeeded = async () => {
+      try {
+        const existingInvites = getInvites()
+        if (!existingInvites.has("private") && myPubKey) {
+          console.log("Creating private invite for test")
+          const privateInvite = Invite.createNew(myPubKey, "Private Invite")
+          localState.get("invites").get("private").put(privateInvite.serialize())
+
+          const updatedInvites = new Map(existingInvites)
+          updatedInvites.set("private", privateInvite)
+          setInvites(updatedInvites)
+        } else {
+          setInvites(existingInvites)
+        }
+      } catch (error) {
+        console.error("Error creating private invite:", error)
+      }
+    }
+
+    createPrivateInviteIfNeeded()
+
     return localState.get("invites").on(() => {
       setInvites(getInvites())
     })
-  }, [navigate])
-
-  const createInvite = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (labelInputRef.current) {
-      const label = labelInputRef.current.value.trim() || "New Invite Link"
-      const newLink = Invite.createNew(myPubKey, label)
-      const id = crypto.randomUUID()
-      localState.get(`invites/${id}`).put(newLink.serialize())
-      setInvites(new Map(invites.set(id, newLink)))
-      labelInputRef.current.value = "" // Clear the input after creating
-    }
-  }
-
-  const deleteInvite = (id: string) => {
-    localState.get(`invites/${id}`).put(null)
-    invites.delete(id)
-    setInvites(new Map(invites))
-  }
+  }, [navigate, myPubKey])
 
   const handleInviteInput = async (e: ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value
     setInviteInput(input)
 
+    if (!input || !input.trim() || !myPubKey) {
+      return
+    }
+
     try {
+      console.log("Processing invite link:", input)
       const invite = Invite.fromUrl(input)
+      console.log("Invite parsed successfully")
+
       const encrypt = myPrivKey
         ? hexToBytes(myPrivKey)
         : async (plaintext: string, pubkey: string) => {
@@ -65,6 +73,8 @@ const PrivateChatCreation = () => {
             }
             throw new Error("No nostr extension or private key")
           }
+
+      console.log("Accepting invite...")
       const {session, event} = await invite.accept(
         (filter, onEvent) => {
           const sub = ndk().subscribe(filter)
@@ -74,30 +84,92 @@ const PrivateChatCreation = () => {
         myPubKey,
         encrypt
       )
+      console.log("Invite accepted successfully")
 
       // Publish the event
       const e = NDKEventFromRawEvent(event)
-      e.publish()
+      await e
+        .publish()
         .then((res) => console.log("published", res))
         .catch((e) => console.warn("Error publishing event:", e))
-      console.log("published event?", event)
+      console.log("published event", event)
 
       const sessionId = `${invite.inviter}:${session.name}`
-      // Save the session
-      localState
-        .get(`sessions/${sessionId}/state`)
-        .put(serializeSessionState(session.state))
+      console.log("Session ID:", sessionId)
 
-      // Navigate to the new chat
-      navigate("/chats/chat", {state: {id: sessionId}})
+      // Save the session
+      try {
+        localState
+          .get(`sessions/${sessionId}/state`)
+          .put(serializeSessionState(session.state))
+        console.log("Session saved to localState using direct path")
+
+        localState
+          .get("sessions")
+          .get(sessionId)
+          .get("state")
+          .put(serializeSessionState(session.state))
+        console.log("Session also saved using nested approach")
+
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        const savedSessions = getSessions()
+        console.log("Current sessions:", Array.from(savedSessions.keys()))
+
+        // Navigate to the new chat
+        console.log("Navigating to chat with session ID:", sessionId)
+        navigate("/chats/chat", {state: {id: sessionId}})
+      } catch (error) {
+        console.error("Error saving session:", error)
+      }
     } catch (error) {
       console.error("Invalid invite link:", error)
-      // Optionally, you can show an error message to the user here
     }
+  }
+
+  const createInvite = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
+    const privateInvite = Invite.createNew(myPubKey, "Private Invite")
+    localState.get("invites/private").put(privateInvite.serialize())
+
+    if (labelInputRef.current) {
+      const label = labelInputRef.current.value.trim() || "New Invite Link"
+      const newLink = Invite.createNew(myPubKey, label)
+      const id = crypto.randomUUID()
+      localState.get(`invites/${id}`).put(newLink.serialize())
+
+      const updatedInvites = new Map(invites)
+      updatedInvites.set("private", privateInvite)
+      updatedInvites.set(id, newLink)
+      setInvites(updatedInvites)
+
+      labelInputRef.current.value = "" // Clear the input after creating
+    } else {
+      const updatedInvites = new Map(invites)
+      updatedInvites.set("private", privateInvite)
+      setInvites(updatedInvites)
+    }
+  }
+
+  const deleteInvite = (id: string) => {
+    localState.get(`invites/${id}`).put(null)
+    invites.delete(id)
+    setInvites(new Map(invites))
   }
 
   const onScanSuccess = (data: string) => {
     acceptInvite(data, myPubKey, myPrivKey, navigate)
+  }
+
+  if (!myPubKey) {
+    return (
+      <div className="m-4 p-4 md:p-8 rounded-lg bg-base-100">
+        <p className="text-center text-base-content/70">
+          Please sign in to use private chats
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -147,7 +219,7 @@ const PrivateChatCreation = () => {
                 key={id}
                 className="flex flex-col md:flex-row md:items-center justify-between gap-2"
               >
-                <span>{link.label}</span>
+                <span>{id === "private" ? "Private Invite" : link.label}</span>
                 <div className="flex gap-4 items-center">
                   <QRCodeButton
                     npub={myPubKey && nip19.npubEncode(myPubKey)}

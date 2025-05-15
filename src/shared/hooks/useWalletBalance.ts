@@ -1,10 +1,10 @@
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {useWebLNProvider} from "./useWebLNProvider"
 import {WebLNProvider} from "@/types/global"
+import {useUserStore} from "@/stores/user"
 import {useState, useEffect} from "react"
 
 export const useWalletBalance = () => {
-  const [isWalletConnect] = useLocalState("user/walletConnect", false)
+  const isWalletConnect = useUserStore((state) => state.walletConnect)
   const [balance, setBalance] = useState<number | null>(null)
   const webLNProvider = useWebLNProvider()
   const [provider, setProvider] = useState<WebLNProvider | null>(null)

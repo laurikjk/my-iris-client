@@ -11,14 +11,11 @@ import Footer from "@/shared/components/Footer.tsx"
 import {useSettingsStore} from "@/stores/settings"
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {trackEvent} from "@/utils/IrisAPI"
+import {useUserStore} from "@/stores/user"
 import {Helmet} from "react-helmet"
-import {localState} from "irisdb"
 import {useEffect} from "react"
 
 const openedAt = Math.floor(Date.now() / 1000)
-
-let cashuEnabled = false
-localState.get("user/cashuEnabled").on((v) => (cashuEnabled = v as boolean))
 
 interface ServiceWorkerMessage {
   type: "NAVIGATE_REACT_ROUTER"
@@ -118,7 +115,7 @@ const Layout = () => {
         <div className="relative flex-1 min-h-screen py-16 md:py-0 overscroll-none mb-[env(safe-area-inset-bottom)]">
           <ErrorBoundary>
             <Outlet />
-            {cashuEnabled && (
+            {useUserStore.getState().cashuEnabled && (
               <iframe
                 id="cashu-wallet"
                 title="Background Cashu Wallet"

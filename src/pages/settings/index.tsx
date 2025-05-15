@@ -16,6 +16,7 @@ import Account from "@/pages/settings/Account"
 import WalletSettings from "./WalletSettings"
 import SystemSettings from "./SystemSettings"
 import Backup from "@/pages/settings/Backup"
+import {useUserStore} from "@/stores/user"
 import Subscription from "./Subscription"
 import PrivacySettings from "./Privacy"
 import {Helmet} from "react-helmet"
@@ -41,14 +42,19 @@ function Settings() {
   const {isSubscriber, isLoading, tier} = useSubscriptionStatus(pubkey)
 
   useEffect(() => {
-    // Get the user's pubkey from local storage
-    const getPubkey = async () => {
-      const storedPubkey = localStorage.getItem("user/publicKey")
-      if (storedPubkey) {
-        setPubkey(storedPubkey)
-      }
+    // Get the user's pubkey from zustand store instead of localStorage
+    const userStore = useUserStore.getState()
+    if (userStore.publicKey) {
+      setPubkey(userStore.publicKey)
     }
-    getPubkey()
+
+    const unsubscribe = useUserStore.subscribe((state, prevState) => {
+      if (state.publicKey && state.publicKey !== prevState.publicKey) {
+        setPubkey(state.publicKey)
+      }
+    })
+
+    return () => unsubscribe()
   }, [])
 
   const renderSubscriptionIcon = () => {

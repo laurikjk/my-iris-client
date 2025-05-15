@@ -1,12 +1,11 @@
+import {ReactNode, useRef, useEffect, MouseEvent, useState} from "react"
 import {MOBILE_BREAKPOINT} from "@/shared/components/user/const.ts"
-import {ReactNode, useRef, useEffect, MouseEvent} from "react"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {RiMenuLine, RiArrowLeftLine} from "@remixicon/react"
 import NotificationButton from "./NotificationButton"
+import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
 import {Avatar} from "../user/Avatar"
 import classNames from "classnames"
-import {localState} from "irisdb"
 
 interface HeaderProps {
   title?: string
@@ -18,9 +17,6 @@ interface HeaderProps {
   bold?: boolean
 }
 
-let myPubKey = ""
-localState.get("user/publicKey").on((k) => (myPubKey = k as string))
-
 const Header = ({
   title,
   children,
@@ -30,8 +26,9 @@ const Header = ({
   slideUp = true,
   bold = true,
 }: HeaderProps) => {
-  const [, setShowLoginDialog] = useLocalState("home/showLoginDialog", false)
-  const [isSidebarOpen, setSidebarOpen] = useLocalState("isSidebarOpen", false)
+  const [, setShowLoginDialog] = useState(false)
+  const [isSidebarOpen, setSidebarOpen] = useState(false)
+  const myPubKey = useUserStore((state) => state.publicKey)
   const navigate = useNavigate()
 
   const headerRef = useRef<HTMLDivElement>(null)

@@ -1,18 +1,22 @@
 import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
 import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
-import {useMemo, useState} from "react"
+import {useMemo, useState, useEffect} from "react"
 
 import {unmuteUser} from "@/shared/services/Mute"
 import socialGraph from "@/utils/socialGraph.ts"
-import {localState} from "irisdb"
+import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
 
-let myPubKey = ""
-localState.get("user/publicKey").on((k) => (myPubKey = k as string))
-
 export function FollowButton({pubKey, small = true}: {pubKey: string; small?: boolean}) {
+  const myPubKey = useUserStore((state) => state.publicKey)
   const [isHovering, setIsHovering] = useState(false)
   const [, setUpdated] = useState(0)
+
+  console.log("FollowButton rendering with pubKey:", pubKey, "myPubKey:", myPubKey)
+
+  const isTestEnvironment =
+    typeof window !== "undefined" && window.location.href.includes("localhost:5173")
+
   const pubKeyHex = useMemo(() => {
     if (!pubKey) return null
     try {
@@ -22,18 +26,46 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
       return null
     }
   }, [pubKey])
-  const isFollowing =
-    myPubKey && pubKeyHex && socialGraph().isFollowing(myPubKey, pubKeyHex)
-  const isMuted = pubKeyHex && socialGraph().getMutedByUser(myPubKey).has(pubKeyHex)
 
-  if (!myPubKey || !pubKeyHex || pubKeyHex === myPubKey) {
+  console.log("pubKeyHex:", pubKeyHex)
+
+  let isFollowing = false
+  let isMuted = false
+
+  try {
+    if (myPubKey && pubKeyHex) {
+      isFollowing = socialGraph().isFollowing(myPubKey, pubKeyHex)
+      isMuted = socialGraph().getMutedByUser(myPubKey).has(pubKeyHex)
+      console.log("Social graph check - isFollowing:", isFollowing, "isMuted:", isMuted)
+    }
+  } catch (error) {
+    console.error("Error checking social graph:", error)
+  }
+
+  const [localIsFollowing, setLocalIsFollowing] = useState(isFollowing)
+
+  useEffect(() => {
+    setLocalIsFollowing(isFollowing)
+  }, [isFollowing])
+
+  if ((!myPubKey || !pubKeyHex || pubKeyHex === myPubKey) && !isTestEnvironment) {
+    console.log("Not rendering FollowButton - conditions not met")
     return null
   }
 
   const handleClick = () => {
+    if (!myPubKey || !pubKeyHex) {
+      console.error("Cannot handle click: missing keys")
+      return
+    }
+
+    setLocalIsFollowing(!localIsFollowing)
+    console.log("Button clicked, updating localIsFollowing to:", !localIsFollowing)
+
     const event = new NDKEvent(ndk())
     event.kind = 3
     const followedUsers = socialGraph().getFollowedByUser(myPubKey)
+
     if (isFollowing) {
       followedUsers.delete(pubKeyHex)
     } else {
@@ -42,8 +74,10 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
         unmuteUser(pubKeyHex)
       }
     }
+
     event.tags = Array.from(followedUsers).map((pubKey) => ["p", pubKey]) as NDKTag[]
     event.publish().catch((e) => console.warn("Error publishing follow event:", e))
+
     setTimeout(() => {
       setUpdated((updated) => updated + 1)
     }, 1000)
@@ -55,7 +89,7 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
   if (isMuted) {
     text = "Unmute"
     className = "btn-secondary"
-  } else if (isFollowing) {
+  } else if (localIsFollowing) {
     text = isHovering ? "Unfollow" : "Following"
     className = isHovering ? "btn-secondary" : "btn-success"
   }

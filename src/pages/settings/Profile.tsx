@@ -1,15 +1,22 @@
 import UploadButton from "@/shared/components/button/UploadButton"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import useProfile from "@/shared/hooks/useProfile"
 import {useEffect, useMemo, useState} from "react"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
+import {useUserStore} from "@/stores/user"
 import {Link} from "react-router"
 import {ndk} from "@/utils/ndk"
 
 export function ProfileSettings() {
-  const [myPubKey] = useLocalState("user/publicKey", "")
+  const [publicKeyState, setPublicKeyState] = useState("")
+  const myPubKey = useUserStore((state) => state.publicKey)
 
-  const existingProfile = useProfile(myPubKey)
+  useEffect(() => {
+    if (myPubKey) {
+      setPublicKeyState(myPubKey)
+    }
+  }, [myPubKey])
+
+  const existingProfile = useProfile(publicKeyState)
 
   const user = useMemo(() => {
     if (!myPubKey) {
