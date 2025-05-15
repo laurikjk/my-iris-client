@@ -1,4 +1,3 @@
-import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {Filter} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
@@ -100,7 +99,6 @@ export default class IrisAPI {
       ],
       content: "",
       created_at: Math.floor(Date.now() / 1000),
-      pubkey: [...socialGraph().getUsersByFollowDistance(0)][0],
     })
     await event.sign()
     const nostrEvent = await event.toNostrEvent()
