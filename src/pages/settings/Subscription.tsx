@@ -4,8 +4,8 @@ import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
 import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {RiCheckboxCircleFill} from "@remixicon/react"
+import IrisAPI, {Invoice} from "@/utils/IrisAPI"
 import {useEffect, useState} from "react"
-import IrisAPI from "@/utils/IrisAPI"
 
 type Duration = 3 | 12
 export type PlanId = 1 | 2 | 3
@@ -25,7 +25,7 @@ interface Plan {
   id: PlanId
   name: string
   colour: "error" | "warning" | "primary"
-  price: Record<Duration, number>
+  price: Record<Duration, {amount: number; pricingOptionId: number}>
   benefits: string[]
 }
 
@@ -34,7 +34,10 @@ const plans: Plan[] = [
     id: 1,
     name: "Patron",
     colour: "error",
-    price: {3: 15, 12: 50},
+    price: {
+      3: {amount: 15, pricingOptionId: 3},
+      12: {amount: 50, pricingOptionId: 4},
+    },
     benefits: [
       "Support Iris development",
       "Patron badge on profile",
@@ -46,7 +49,10 @@ const plans: Plan[] = [
     id: 2,
     name: "Champion",
     colour: "warning",
-    price: {3: 60, 12: 200},
+    price: {
+      3: {amount: 60, pricingOptionId: 2},
+      12: {amount: 200, pricingOptionId: 1},
+    },
     benefits: [
       "All Patron benefits",
       "Champion badge on profile",
@@ -58,7 +64,10 @@ const plans: Plan[] = [
     id: 3,
     name: "Vanguard",
     colour: "primary",
-    price: {3: 300, 12: 1000},
+    price: {
+      3: {amount: 300, pricingOptionId: 5},
+      12: {amount: 1000, pricingOptionId: 6},
+    },
     benefits: [
       "All Champion benefits",
       "Vanguard badge on profile",
@@ -69,12 +78,6 @@ const plans: Plan[] = [
   },
 ]
 
-interface Invoice {
-  id: number
-  amount: number
-  status: string
-}
-
 export default function Subscription() {
   const [pubkey] = useLocalState("user/publicKey", "")
   const {isSubscriber, endDate} = useSubscriptionStatus(pubkey)
@@ -83,7 +86,7 @@ export default function Subscription() {
   const [plan, setPlan] = useHistoryState<PlanId>(1, "subscriptionPlan")
 
   const totalPrice = (p: PlanId) =>
-    plans.find((x) => x.id === p)!.price[duration as Duration]
+    plans.find((x) => x.id === p)!.price[duration as Duration].amount
   const monthly = (p: PlanId) => (totalPrice(p) / duration).toFixed(2)
 
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -93,7 +96,8 @@ export default function Subscription() {
       const irisAPI = new IrisAPI()
       const response = await irisAPI.createSubscription({
         subscription_plan: plan,
-        pricing_option: 1,
+        pricing_option: plans.find((x) => x.id === plan)!.price[duration as Duration]
+          .pricingOptionId,
         currency: "USD",
       })
 
@@ -191,11 +195,20 @@ export default function Subscription() {
       {invoices.length > 0 && (
         <div className="mt-4">
           <h4 className="text-lg font-semibold">Invoices</h4>
-          <ul>
+          <ul className="space-y-2">
             {invoices.map((invoice) => (
-              <li key={invoice.id}>
-                Invoice ID: {invoice.id}, Amount: {invoice.amount}, Status:{" "}
-                {invoice.status}
+              <li key={invoice.id} className="flex justify-between items-center">
+                <div>
+                  <div className="font-medium">
+                    {new Date(invoice.created_at).toLocaleDateString()}
+                  </div>
+                  <div className="text-sm text-base-content/60">
+                    Status: {invoice.status}
+                  </div>
+                </div>
+                <div className="text-right font-medium">
+                  ${(invoice.amount / 100).toFixed(2)} USD
+                </div>
               </li>
             ))}
           </ul>

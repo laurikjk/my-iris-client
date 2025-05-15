@@ -12,6 +12,16 @@ export interface Invoice {
   id: number
   amount: number
   status: string
+  created_at: string
+  currency: string
+  subscription?: number
+  payment_hash?: string | null
+  paid_at?: string | null
+  expires_at?: string | null
+  btcpayserver_invoice_id?: string | null
+  btcpayserver_invoice_url?: string | null
+  btcpayserver_payment_method?: string | null
+  payment_url?: string | null
 }
 
 export interface Subscription {
