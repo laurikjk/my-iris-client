@@ -1,9 +1,16 @@
+import {CLOUDFLARE_CSAM_FLAGGED} from "@/utils/cloudflare_banned_users"
+import {hexToBytes, bytesToHex} from "@noble/hashes/utils"
+import {useParams, Link} from "react-router"
+import {sha256} from "@noble/hashes/sha256"
 import {useEffect, useState} from "react"
 import {nip05, nip19} from "nostr-tools"
 import {Page404} from "@/pages/Page404"
 import ThreadPage from "@/pages/thread"
-import {useParams} from "react-router"
 import ProfilePage from "@/pages/user"
+
+const CLOUDFLARE_CSAM_EXPLANATION_NOTE =
+  "note1pu5kvxwfzytxsw6vkqd4eu6e0xr8znaur6sl38r4swl3klgsn6dqzlpnsl"
+const CLOUDFLARE_CSAM_MESSAGE = "Flagged as CSAM by Cloudflare. See explanation at"
 
 export default function NostrLinkHandler() {
   const {link} = useParams()
@@ -76,6 +83,19 @@ export default function NostrLinkHandler() {
     resolveLink()
   }, [link])
 
+  useEffect(() => {
+    if (pubkey) {
+      console.log(111, "pubkey", pubkey)
+      console.log(111, "hash", bytesToHex(sha256(hexToBytes(pubkey))))
+    }
+    if (
+      pubkey &&
+      CLOUDFLARE_CSAM_FLAGGED.includes(bytesToHex(sha256(hexToBytes(pubkey))))
+    ) {
+      setError(`${CLOUDFLARE_CSAM_MESSAGE} /${CLOUDFLARE_CSAM_EXPLANATION_NOTE}`)
+    }
+  }, [pubkey])
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -85,7 +105,30 @@ export default function NostrLinkHandler() {
   }
 
   if (error) {
-    return <Page404 />
+    return (
+      <section className="hero min-h-screen bg-base-200">
+        <div className="hero-content text-center">
+          <div className="max-w-md">
+            <h1 className="text-5xl font-bold text-primary mb-2">Error</h1>
+            <p className="text-xl mb-8">
+              {CLOUDFLARE_CSAM_MESSAGE}{" "}
+              <Link
+                to={`/${CLOUDFLARE_CSAM_EXPLANATION_NOTE}`}
+                className="link link-primary"
+              >
+                {CLOUDFLARE_CSAM_EXPLANATION_NOTE}
+              </Link>
+            </p>
+            <button
+              onClick={() => (window.location.href = "/")}
+              className="btn btn-primary btn-lg"
+            >
+              Go back to homepage
+            </button>
+          </div>
+        </div>
+      </section>
+    )
   }
 
   if ((isProfile || !isNote) && pubkey) {
