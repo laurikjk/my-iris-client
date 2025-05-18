@@ -29,7 +29,6 @@ interface UserState {
   setWalletConnect: (walletConnect: boolean) => void
   setCashuEnabled: (cashuEnabled: boolean) => void
   setDefaultZapAmount: (defaultZapAmount: number) => void
-
   reset: () => void
 }
 

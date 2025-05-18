@@ -1,5 +1,4 @@
 import {Invite, serializeSessionState} from "nostr-double-ratchet/src"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import {useNavigate, useLocation} from "react-router"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {hexToBytes} from "@noble/hashes/utils"
@@ -7,6 +6,8 @@ import {VerifiedEvent} from "nostr-tools"
 import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
 import {useEffect} from "react"
+import {useUserStore} from "@/stores/user"
+import {useUIStore} from "@/stores/ui"
 
 export const acceptInvite = async (
   invite: string | Invite,
@@ -64,8 +65,9 @@ export const acceptInvite = async (
 export const useInviteFromUrl = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const [myPubKey] = useLocalState("user/publicKey", "")
-  const [myPrivKey] = useLocalState("user/privateKey", "")
+  const publicKey = useUserStore((state) => state.publicKey)
+  const privateKey = useUserStore((state) => state.privateKey)
+  const setShowLoginDialog = useUIStore((state) => state.setShowLoginDialog)
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout | null = null
@@ -75,9 +77,9 @@ export const useInviteFromUrl = () => {
       return
     }
 
-    if (!myPubKey) {
+    if (!publicKey) {
       timeoutId = setTimeout(() => {
-        localState.get("home/showLoginDialog").put(true)
+        setShowLoginDialog(true)
       }, 500)
     } else {
       const acceptInviteFromUrl = async () => {
@@ -87,7 +89,7 @@ export const useInviteFromUrl = () => {
         const cleanUrl = `${window.location.origin}${location.pathname}${location.search}`
         window.history.replaceState({}, document.title, cleanUrl)
 
-        const result = await acceptInvite(fullUrl, myPubKey, myPrivKey, navigate)
+        const result = await acceptInvite(fullUrl, publicKey, privateKey, navigate)
         if (!result.success) {
           // Optionally, you can show an error message to the user here
         }
@@ -101,5 +103,5 @@ export const useInviteFromUrl = () => {
         clearTimeout(timeoutId)
       }
     }
-  }, [location, myPubKey, myPrivKey, navigate])
+  }, [location, publicKey, privateKey, navigate, setShowLoginDialog])
 }

@@ -1,7 +1,6 @@
 import {Outlet, useLocation, useNavigate, useNavigationType} from "react-router"
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import LoginDialog from "@/shared/components/user/LoginDialog"
-import {useLocalState} from "irisdb-hooks/src/useLocalState"
 import NavSideBar from "@/shared/components/nav/NavSideBar"
 import {useInviteFromUrl} from "../hooks/useInviteFromUrl"
 import {clearNotifications} from "@/utils/notifications"
@@ -12,6 +11,7 @@ import {useSettingsStore} from "@/stores/settings"
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {trackEvent} from "@/utils/IrisAPI"
 import {useUserStore} from "@/stores/user"
+import {useUIStore} from "@/stores/ui"
 import {Helmet} from "react-helmet"
 import {useEffect} from "react"
 
@@ -23,13 +23,12 @@ interface ServiceWorkerMessage {
 }
 
 const Layout = () => {
-  const [newPostOpen, setNewPostOpen] = useLocalState("home/newPostOpen", false)
+  const newPostOpen = useUIStore((state) => state.newPostOpen)
+  const setNewPostOpen = useUIStore((state) => state.setNewPostOpen)
   const {privacy} = useSettingsStore()
-  const [goToNotifications] = useLocalState("goToNotifications", 0)
-  const [showLoginDialog, setShowLoginDialog] = useLocalState(
-    "home/showLoginDialog",
-    false
-  )
+  const goToNotifications = useUIStore((state) => state.goToNotifications)
+  const showLoginDialog = useUIStore((state) => state.showLoginDialog)
+  const setShowLoginDialog = useUIStore((state) => state.setShowLoginDialog)
   const navigate = useNavigate()
   const navigationType = useNavigationType()
   const location = useLocation()
@@ -130,12 +129,12 @@ const Layout = () => {
       </div>
       <ErrorBoundary>
         {newPostOpen && (
-          <Modal onClose={() => setNewPostOpen(!newPostOpen)} hasBackground={false}>
+          <Modal onClose={() => setNewPostOpen(false)} hasBackground={false}>
             <div
               className="w-full max-w-prose rounded-2xl bg-base-100"
               onClick={(e) => e.stopPropagation()}
             >
-              <NoteCreator handleClose={() => setNewPostOpen(!newPostOpen)} />
+              <NoteCreator handleClose={() => setNewPostOpen(false)} />
             </div>
           </Modal>
         )}
@@ -145,7 +144,7 @@ const Layout = () => {
           </Modal>
         )}
       </ErrorBoundary>
-      <Footer /> {/* Add Footer component here */}
+      <Footer />
       <Helmet titleTemplate={`%s / ${CONFIG.appName}`} defaultTitle={CONFIG.appName}>
         <title>{CONFIG.appName}</title>
       </Helmet>

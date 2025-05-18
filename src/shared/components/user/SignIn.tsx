@@ -3,6 +3,7 @@ import {NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 import {ChangeEvent, useEffect, useState} from "react"
 import {getPublicKey, nip19} from "nostr-tools"
 import {useUserStore} from "@/stores/user"
+import {useUIStore} from "@/stores/ui"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
 
@@ -15,6 +16,7 @@ interface SignInProps {
 
 export default function SignIn({onClose}: SignInProps) {
   const {setNip07Login, setPublicKey, setPrivateKey} = useUserStore()
+  const setShowLoginDialog = useUIStore((state) => state.setShowLoginDialog)
   const [inputPrivateKey, setInputPrivateKey] = useState("")
 
   useEffect(() => {
@@ -35,15 +37,23 @@ export default function SignIn({onClose}: SignInProps) {
         setPublicKey(publicKey)
         localStorage.setItem("cashu.ndk.privateKeySignerPrivateKey", hex)
         localStorage.setItem("cashu.ndk.pubkey", publicKey)
+        setShowLoginDialog(false)
         onClose()
       }
     }
-  }, [inputPrivateKey, setPrivateKey, setPublicKey, onClose])
+  }, [inputPrivateKey, setPrivateKey, setPublicKey, onClose, setShowLoginDialog])
 
-  function extensionLogin() {
+  async function extensionLogin() {
     if (window.nostr) {
-      setNip07Login(true)
-      onClose()
+      try {
+        const publicKey = await window.nostr.getPublicKey()
+        setPublicKey(publicKey)
+        setNip07Login(true)
+        setShowLoginDialog(false)
+        onClose()
+      } catch (error) {
+        console.error("Error getting public key from NIP-07 extension:", error)
+      }
     } else {
       window.open("https://nostrcheck.me/register/browser-extension.php", "_blank")
     }
