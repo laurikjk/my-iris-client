@@ -136,7 +136,11 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
   const getReactionIcon = () => {
     if (!liked) return <Icon name="heart" size={16} />
     if (myReaction === "+") return <Icon name="heart-solid" size={16} />
-    return <span className="text-base leading-none">{myReaction}</span>
+    return (
+      <span className="text-base leading-none flex items-center justify-center">
+        {myReaction}
+      </span>
+    )
   }
 
   return (
