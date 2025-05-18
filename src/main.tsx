@@ -12,7 +12,7 @@ import {loadInvites} from "@/utils/chat/Invites"
 import {ndk} from "./utils/ndk"
 import {router} from "@/pages"
 
-ndk() // init NDK & irisdb login flow
+ndk()
 
 // Initialize chat modules if we have a public key
 const state = useUserStore.getState()

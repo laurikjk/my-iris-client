@@ -4,7 +4,7 @@ import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import FeedItem from "../event/FeedItem/FeedItem"
-import {localState} from "irisdb/src"
+import {useUserStore} from "@/stores/user"
 
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
 import useFeedEvents from "@/shared/hooks/useFeedEvents.ts"
@@ -38,10 +38,6 @@ interface FeedProps {
   sortLikedPosts?: boolean
 }
 
-// TODO fix useLocalState so initial state is properly set from memory, so we can use it instead of this
-let myPubKey = ""
-localState.get("user/publicKey").on((k) => (myPubKey = k as string))
-
 const DefaultEmptyPlaceholder = (
   <div className="p-8 flex flex-col gap-8 items-center justify-center text-base-content/50">
     No posts yet
@@ -74,6 +70,7 @@ function Feed({
   )
   const firstFeedItemRef = useRef<HTMLDivElement>(null)
   const mutes = useMutes()
+  const myPubKey = useUserStore((state) => state.publicKey)
 
   const {content} = useSettingsStore()
   const [hideEventsByUnknownUsers, setHideEventsByUnknownUsers] = useHistoryState(
