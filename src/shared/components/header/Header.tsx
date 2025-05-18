@@ -6,6 +6,7 @@ import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
 import {Avatar} from "../user/Avatar"
 import classNames from "classnames"
+import {useUIStore} from "@/stores/ui"
 
 interface HeaderProps {
   title?: string
@@ -27,7 +28,7 @@ const Header = ({
   bold = true,
 }: HeaderProps) => {
   const [, setShowLoginDialog] = useState(false)
-  const [isSidebarOpen, setSidebarOpen] = useState(false)
+  const {isSidebarOpen, setIsSidebarOpen} = useUIStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const navigate = useNavigate()
 
@@ -108,7 +109,7 @@ const Header = ({
         navigate("/chats")
       }
     } else {
-      setSidebarOpen(!isSidebarOpen)
+      setIsSidebarOpen(!isSidebarOpen)
     }
   }
 
