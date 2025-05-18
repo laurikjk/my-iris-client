@@ -8,9 +8,6 @@ test("can search for content", async ({page}) => {
   await searchInput.fill("bitcoin")
   await searchInput.press("Enter")
 
-  await expect(page.url()).toContain("/search")
-
-  await page.waitForLoadState("networkidle")
-
+  // Wait for navigation to complete
   await expect(page.url()).toContain("/search")
 })
