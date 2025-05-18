@@ -15,6 +15,7 @@ import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
 import {Helmet} from "react-helmet"
 import {useEffect} from "react"
+import {useLocalState} from "irisdb-hooks/src/useLocalState"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -24,9 +25,11 @@ interface ServiceWorkerMessage {
 }
 
 const Layout = () => {
-  const {newPostOpen, setNewPostOpen, showLoginDialog, setShowLoginDialog} = useUIStore()
+  const [newPostOpen, setNewPostOpen] = useLocalState("home/newPostOpen", false)
   const {privacy} = useSettingsStore()
-  const {goToNotifications} = useNotificationsStore()
+  const [goToNotifications] = useLocalState("goToNotifications", 0)
+  const showLoginDialog = useUIStore((state) => state.showLoginDialog)
+  const setShowLoginDialog = useUIStore((state) => state.setShowLoginDialog)
   const navigate = useNavigate()
   const navigationType = useNavigationType()
   const location = useLocation()
