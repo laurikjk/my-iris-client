@@ -4,9 +4,9 @@ import {RiMenuLine, RiArrowLeftLine} from "@remixicon/react"
 import NotificationButton from "./NotificationButton"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
+import {useUIStore} from "@/stores/ui"
 import {Avatar} from "../user/Avatar"
 import classNames from "classnames"
-import {useUIStore} from "@/stores/ui"
 
 interface HeaderProps {
   title?: string

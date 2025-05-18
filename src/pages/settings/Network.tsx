@@ -2,31 +2,13 @@ import {FormEvent, useEffect, useMemo, useState} from "react"
 import {RiDeleteBinLine} from "@remixicon/react"
 
 import {DEFAULT_RELAYS, ndk as getNdk} from "@/utils/ndk"
-import {persist} from "zustand/middleware"
-import {create} from "zustand"
-
-interface NetworkState {
-  relays: string[]
-  setRelays: (relays: string[]) => void
-}
-
-export const useNetworkStore = create<NetworkState>()(
-  persist(
-    (set) => ({
-      relays: DEFAULT_RELAYS,
-      setRelays: (relays: string[]) => set({relays}),
-    }),
-    {
-      name: "network-storage",
-    }
-  )
-)
+import {useUserStore} from "@/stores/user"
 
 export function Network() {
   const ndk = getNdk()
   const [ndkRelays, setNdkRelays] = useState(new Map(ndk.pool.relays))
   const [connectToRelayUrls, setConnectToRelayUrls] = useState<string[]>([])
-  const {relays, setRelays} = useNetworkStore()
+  const {relays, setRelays} = useUserStore()
 
   useEffect(() => {
     if (relays && relays.length > 0) {

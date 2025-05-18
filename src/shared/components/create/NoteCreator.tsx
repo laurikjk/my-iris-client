@@ -1,16 +1,18 @@
+import {ChangeEvent, DragEvent, useEffect, useState} from "react"
+import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
+import {useNavigate} from "react-router"
+import {nip19} from "nostr-tools"
+
 import UploadButton from "@/shared/components/button/UploadButton.tsx"
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
-import {ChangeEvent, DragEvent, useEffect, useState} from "react"
 import EmojiButton from "@/shared/components/emoji/EmojiButton"
 import {Avatar} from "@/shared/components/user/Avatar.tsx"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import HyperText from "@/shared/components/HyperText.tsx"
-import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
 import {eventsByIdCache} from "@/utils/memcache"
+import {useDraftStore} from "@/stores/draft"
 import {uploadFile} from "@/shared/upload"
 import {usePublicKey} from "@/stores/user"
-import {useNavigate} from "react-router"
-import {nip19} from "nostr-tools"
 import Textarea from "./Textarea"
 import {ndk} from "@/utils/ndk"
 
@@ -107,17 +109,18 @@ function addTags(event: NDKEvent, repliedEvent?: NDKEvent, quotedEvent?: NDKEven
 function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps) {
   const myPubKey = usePublicKey()
   const navigate = useNavigate()
+  const {
+    content: noteContent,
+    imageMetadata,
+    setContent: setNoteContent,
+    setImageMetadata,
+    reset: resetDraft,
+  } = useDraftStore()
 
-  const [noteContent, setNoteContent] = useState("")
   const [textarea, setTextarea] = useState<HTMLTextAreaElement | null>(null)
-  const [imageMetadata, setImageMetadata] = useState<
-    Record<string, {width: number; height: number; blurhash: string}>
-  >({})
-
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadError, setUploadError] = useState<string | null>(null)
-
   const [isDraggingOver, setIsDraggingOver] = useState(false)
 
   const handleContentChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -161,7 +164,7 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
 
       // Store metadata if available
       if (metadata) {
-        setImageMetadata((prev) => ({...prev, [url]: metadata}))
+        setImageMetadata({...imageMetadata, [url]: metadata})
       }
     }
   }
@@ -245,8 +248,7 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
     addTags(event, repliedEvent, quotedEvent)
     event.sign().then(() => {
       eventsByIdCache.set(event.id, event)
-      setNoteContent("")
-      setImageMetadata({})
+      resetDraft()
       handleClose()
       navigate(`/${nip19.noteEncode(event.id)}`)
     })

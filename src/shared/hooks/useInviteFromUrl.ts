@@ -2,12 +2,12 @@ import {Invite, serializeSessionState} from "nostr-double-ratchet/src"
 import {useNavigate, useLocation} from "react-router"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {hexToBytes} from "@noble/hashes/utils"
+import {useUserStore} from "@/stores/user"
 import {VerifiedEvent} from "nostr-tools"
+import {useUIStore} from "@/stores/ui"
 import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
 import {useEffect} from "react"
-import {useUserStore} from "@/stores/user"
-import {useUIStore} from "@/stores/ui"
 
 export const acceptInvite = async (
   invite: string | Invite,
