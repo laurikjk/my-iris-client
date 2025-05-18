@@ -53,30 +53,40 @@ function watchLocalSettings(instance: NDK) {
   useUserStore.subscribe((state, prevState) => {
     if (state.privateKey !== prevState.privateKey) {
       const havePrivateKey = state.privateKey && typeof state.privateKey === "string"
-      if (!privateKeySigner && havePrivateKey) {
+      if (havePrivateKey) {
         try {
           privateKeySigner = new NDKPrivateKeySigner(state.privateKey)
-          instance.signer = privateKeySigner
+          if (!state.nip07Login) {
+            instance.signer = privateKeySigner
+          }
         } catch (e) {
           console.error("Error setting private key signer:", e)
         }
-      } else if (!havePrivateKey && privateKeySigner) {
+      } else {
         privateKeySigner = undefined
-        instance.signer = undefined
+        if (!state.nip07Login) {
+          instance.signer = undefined
+        }
       }
     }
 
-    if (state.nip07Login !== prevState.nip07Login) {
-      if (state.nip07Login) {
+    if (state.nip07Login) {
+      if (!nip07Signer) {
         nip07Signer = new NDKNip07Signer()
         instance.signer = nip07Signer
-        nip07Signer.user().then((user) => {
-          useUserStore.getState().setPublicKey(user.pubkey)
-        })
-      } else if (nip07Signer) {
-        nip07Signer = undefined
-        instance.signer = privateKeySigner
+        nip07Signer
+          .user()
+          .then((user) => {
+            useUserStore.getState().setPublicKey(user.pubkey)
+          })
+          .catch((e) => {
+            console.error("Error getting NIP-07 user:", e)
+            useUserStore.getState().setNip07Login(false)
+          })
       }
+    } else {
+      nip07Signer = undefined
+      instance.signer = privateKeySigner
     }
 
     if (state.relays !== prevState.relays) {
