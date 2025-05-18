@@ -1,4 +1,4 @@
-import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
+import {PublicKey} from "@/shared/utils/PublicKey"
 import classNames from "classnames"
 import {useMemo} from "react"
 

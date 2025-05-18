@@ -1,5 +1,5 @@
-import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
 import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
+import {PublicKey} from "@/shared/utils/PublicKey"
 import {useMemo, useState, useEffect} from "react"
 
 import {unmuteUser} from "@/shared/services/Mute"

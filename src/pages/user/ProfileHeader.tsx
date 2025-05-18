@@ -1,4 +1,4 @@
-import {PublicKey} from "irisdb-nostr/src/Hex/PublicKey"
+import {PublicKey} from "@/shared/utils/PublicKey"
 import {useMemo, useState, useEffect} from "react"
 import {Link, useNavigate} from "react-router"
 import {useUserStore} from "@/stores/user"
