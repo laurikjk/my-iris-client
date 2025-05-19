@@ -8,8 +8,8 @@ import NavLink from "@/shared/components/nav/NavLink" // Adjusted import path
 import Icon from "@/shared/components/Icons/Icon" // Add this import
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {formatAmount} from "@/utils/utils"
+import {useUserStore} from "@/stores/user"
 import {useLocation} from "react-router"
-import {localState} from "irisdb"
 
 type MenuItem = {
   label?: string
@@ -22,13 +22,11 @@ type MenuItem = {
   badge?: string
 }
 
-let myPubKey = ""
-localState.get("user/publicKey").on((k) => (myPubKey = k as string))
-
 const Footer = () => {
   const readonly = false
   const location = useLocation()
   const {balance} = useWalletBalance()
+  const myPubKey = useUserStore((state) => state.publicKey)
 
   const MENU_ITEMS: MenuItem[] = [
     {link: "/", icon: "home"},
