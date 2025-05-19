@@ -3,6 +3,7 @@ import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
 import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {RiCheckboxCircleFill} from "@remixicon/react"
+import Modal from "@/shared/components/ui/Modal"
 import IrisAPI, {Invoice} from "@/utils/IrisAPI"
 import {useUserStore} from "@/stores/user"
 import {useEffect, useState} from "react"
@@ -84,6 +85,8 @@ export default function Subscription() {
 
   const [duration, setDuration] = useHistoryState<Duration>(3, "subscriptionDuration")
   const [plan, setPlan] = useHistoryState<PlanId>(1, "subscriptionPlan")
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null)
 
   const totalPrice = (p: PlanId) =>
     plans.find((x) => x.id === p)!.price[duration as Duration].amount
@@ -102,6 +105,13 @@ export default function Subscription() {
       })
 
       console.log("Subscription created:", response)
+      
+      // Show payment modal if we have a BTCPayServer URL
+      if (response.invoice?.btcpayserver_invoice_url) {
+        setPaymentUrl(response.invoice.btcpayserver_invoice_url)
+        setShowPaymentModal(true)
+      }
+      
       // Fetch invoices after creating the subscription
       fetchInvoices()
     } catch (error) {
@@ -116,6 +126,19 @@ export default function Subscription() {
       setInvoices(response)
     } catch (error) {
       console.error("Error fetching invoices:", error)
+    }
+  }
+
+  const handleGetPaymentLink = async (invoiceId: string) => {
+    try {
+      const irisAPI = new IrisAPI()
+      const data = await irisAPI.getPaymentLink(invoiceId)
+      if (data.btcpayserver_invoice_url) {
+        setPaymentUrl(data.btcpayserver_invoice_url)
+        setShowPaymentModal(true)
+      }
+    } catch (error) {
+      console.error("Error getting payment link:", error)
     }
   }
 
@@ -207,12 +230,30 @@ export default function Subscription() {
                   </div>
                 </div>
                 <div className="text-right font-medium">
-                  ${(invoice.amount / 100).toFixed(2)} USD
+                  ${invoice.amount.toFixed(2)} USD
+                  {invoice.status === "pending" && (
+                    <button
+                      onClick={() => handleGetPaymentLink(invoice.id)}
+                      className="btn btn-sm btn-primary ml-2"
+                    >
+                      Pay
+                    </button>
+                  )}
                 </div>
               </li>
             ))}
           </ul>
         </div>
+      )}
+
+      {showPaymentModal && paymentUrl && (
+        <Modal hasBackground={false} onClose={() => setShowPaymentModal(false)}>
+          <iframe
+            src={paymentUrl}
+            className="w-[600px] h-[800px] max-h-[90vh] max-w-[95vw] rounded-lg"
+            title="BTCPayServer Payment"
+          />
+        </Modal>
       )}
 
       <div className="text-xs text-base-content/50 text-center mt-4">
