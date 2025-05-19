@@ -35,7 +35,6 @@ export default function NostrLinkHandler() {
 
     const resolveLink = async () => {
       if (!link) {
-        setError("No link provided")
         setLoading(false)
         return
       }
@@ -52,7 +51,8 @@ export default function NostrLinkHandler() {
           } else if (typeof decoded.data === "string" && decoded.data.length === 64) {
             setPubkey(decoded.data)
           } else {
-            throw new Error("Invalid NPUB or NPROFILE format: " + link)
+            setLoading(false)
+            return
           }
         } else if (isAddress) {
           const decoded = nip19.decode(link)
@@ -68,14 +68,18 @@ export default function NostrLinkHandler() {
             resolved = await nip05.queryProfile(withIris)
           }
 
-          if (!resolved) throw new Error("NIP-05 address not found")
+          if (!resolved) {
+            setLoading(false)
+            return
+          }
           setPubkey(resolved.pubkey)
           setLoading(false)
           return
         }
       } catch (err) {
         console.error("Resolution error:", err)
-        setError(err instanceof Error ? err.message : "Failed to resolve link")
+        setLoading(false)
+        return
       }
       setLoading(false)
     }
@@ -84,17 +88,13 @@ export default function NostrLinkHandler() {
   }, [link])
 
   useEffect(() => {
-    if (pubkey) {
-      console.log(111, "pubkey", pubkey)
-      console.log(111, "hash", bytesToHex(sha256(hexToBytes(pubkey))))
+    if (pubkey && (isProfile || !isNote)) {
+      const hash = bytesToHex(sha256(hexToBytes(pubkey)))
+      if (CLOUDFLARE_CSAM_FLAGGED.includes(hash)) {
+        setError(`${CLOUDFLARE_CSAM_MESSAGE} /${CLOUDFLARE_CSAM_EXPLANATION_NOTE}`)
+      }
     }
-    if (
-      pubkey &&
-      CLOUDFLARE_CSAM_FLAGGED.includes(bytesToHex(sha256(hexToBytes(pubkey))))
-    ) {
-      setError(`${CLOUDFLARE_CSAM_MESSAGE} /${CLOUDFLARE_CSAM_EXPLANATION_NOTE}`)
-    }
-  }, [pubkey])
+  }, [pubkey, isProfile, isNote])
 
   if (loading) {
     return (
