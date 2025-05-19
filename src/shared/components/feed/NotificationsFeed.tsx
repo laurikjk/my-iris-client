@@ -46,8 +46,8 @@ const getNotifications = debounce((myPubKey?: string) => {
 
   let latest = 0
 
-  const hideEventsByUnknownUsers =
-    useSettingsStore.getState().content.hideEventsByUnknownUsers
+  const settings = useSettingsStore.getState()
+  const hideEventsByUnknownUsers = settings.content?.hideEventsByUnknownUsers
 
   sub.on("event", (event: NDKEvent) => {
     if (event.kind !== 9735) {
@@ -99,15 +99,22 @@ const getNotifications = debounce((myPubKey?: string) => {
 
 function NotificationsFeed() {
   const notificationsSeenAt = useNotificationsStore((state) => state.notificationsSeenAt)
+  const publicKey = useUserStore((state) => state.publicKey)
+
   useEffect(() => {
-    const unsubscribe = useUserStore.subscribe((state) => {
-      if (state.publicKey) {
+    if (publicKey) {
+      notifications.clear()
+      getNotifications(publicKey)
+    }
+
+    const unsubscribe = useUserStore.subscribe((state, prevState) => {
+      if (state.publicKey && state.publicKey !== prevState.publicKey) {
         notifications.clear()
         getNotifications(state.publicKey)
       }
     })
     return () => unsubscribe()
-  }, [])
+  }, [publicKey])
 
   const [displayCount, setDisplayCount] = useHistoryState(
     INITIAL_DISPLAY_COUNT,
