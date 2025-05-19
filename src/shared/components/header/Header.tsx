@@ -1,4 +1,4 @@
-import {ReactNode, useRef, useEffect, MouseEvent, useState} from "react"
+import {ReactNode, useRef, useEffect, MouseEvent} from "react"
 import {MOBILE_BREAKPOINT} from "@/shared/components/user/const.ts"
 import {RiMenuLine, RiArrowLeftLine} from "@remixicon/react"
 import NotificationButton from "./NotificationButton"
@@ -27,8 +27,7 @@ const Header = ({
   slideUp = true,
   bold = true,
 }: HeaderProps) => {
-  const [, setShowLoginDialog] = useState(false)
-  const {isSidebarOpen, setIsSidebarOpen} = useUIStore()
+  const {isSidebarOpen, setIsSidebarOpen, setShowLoginDialog} = useUIStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const navigate = useNavigate()
 
