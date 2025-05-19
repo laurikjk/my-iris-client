@@ -105,25 +105,42 @@ export default function Subscription() {
       })
 
       console.log("Subscription created:", response)
-      
+
       // Show payment modal if we have a BTCPayServer URL
       if (response.invoice?.btcpayserver_invoice_url) {
         setPaymentUrl(response.invoice.btcpayserver_invoice_url)
         setShowPaymentModal(true)
       }
-      
+
       // Fetch invoices after creating the subscription
-      fetchInvoices()
+      fetchInvoices(true)
     } catch (error) {
       console.error("Error creating subscription:", error)
     }
   }
 
-  const fetchInvoices = async () => {
+  const fetchInvoices = async (shouldGetPaymentUrl = false) => {
     try {
       const irisAPI = new IrisAPI()
       const response = await irisAPI.getInvoices()
       setInvoices(response)
+
+      // Only get payment URL if we just subscribed
+      if (shouldGetPaymentUrl) {
+        const pendingInvoices = response
+          .filter((invoice) => invoice.status === "pending")
+          .sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )
+        if (pendingInvoices.length > 0) {
+          const latestPendingInvoice = pendingInvoices[0]
+          const data = await irisAPI.getPaymentLink(latestPendingInvoice.id)
+          if (data.btcpayserver_invoice_url) {
+            setPaymentUrl(data.btcpayserver_invoice_url)
+            setShowPaymentModal(true)
+          }
+        }
+      }
     } catch (error) {
       console.error("Error fetching invoices:", error)
     }
@@ -144,7 +161,7 @@ export default function Subscription() {
 
   useEffect(() => {
     if (pubkey) {
-      fetchInvoices()
+      fetchInvoices(false)
     }
   }, [pubkey, plan])
 
@@ -219,29 +236,34 @@ export default function Subscription() {
         <div className="mt-4">
           <h4 className="text-lg font-semibold">Invoices</h4>
           <ul className="space-y-2">
-            {invoices.map((invoice) => (
-              <li key={invoice.id} className="flex justify-between items-center">
-                <div>
-                  <div className="font-medium">
-                    {new Date(invoice.created_at).toLocaleDateString()}
+            {invoices
+              .sort(
+                (a, b) =>
+                  new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              )
+              .map((invoice) => (
+                <li key={invoice.id} className="flex justify-between items-center">
+                  <div>
+                    <div className="font-medium">
+                      {new Date(invoice.created_at).toLocaleDateString()}
+                    </div>
+                    <div className="text-sm text-base-content/60">
+                      Status: {invoice.status}
+                    </div>
                   </div>
-                  <div className="text-sm text-base-content/60">
-                    Status: {invoice.status}
+                  <div className="text-right font-medium">
+                    ${invoice.amount.toFixed(2)} USD
+                    {invoice.status === "pending" && (
+                      <button
+                        onClick={() => handleGetPaymentLink(invoice.id)}
+                        className="btn btn-sm btn-primary ml-2"
+                      >
+                        Pay
+                      </button>
+                    )}
                   </div>
-                </div>
-                <div className="text-right font-medium">
-                  ${invoice.amount.toFixed(2)} USD
-                  {invoice.status === "pending" && (
-                    <button
-                      onClick={() => handleGetPaymentLink(invoice.id)}
-                      className="btn btn-sm btn-primary ml-2"
-                    >
-                      Pay
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
+                </li>
+              ))}
           </ul>
         </div>
       )}
