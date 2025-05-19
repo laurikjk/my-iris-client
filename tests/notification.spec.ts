@@ -13,7 +13,7 @@ test.describe("Notifications", () => {
     await page.goto("/notifications")
     
     // Check that the notifications feed is visible
-    await expect(page.locator(".notifications-feed")).toBeVisible()
+    await expect(page.locator("div.w-full.overflow-hidden").filter({ hasText: "No notifications yet" })).toBeVisible()
   })
   
   // This is a placeholder for the full test that would verify notifications when a post is liked
