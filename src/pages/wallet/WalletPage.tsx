@@ -1,17 +1,14 @@
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import Trending from "@/shared/components/feed/Trending.tsx"
 import Widget from "@/shared/components/ui/Widget"
+import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
-import {localState} from "irisdb"
 import {useEffect} from "react"
-
-let myPubKey = ""
-localState.get("user/publicKey").on((k) => (myPubKey = k as string))
-let cashuEnabled = false
-localState.get("user/cashuEnabled").on((k) => (cashuEnabled = k as boolean))
 
 export default function WalletPage() {
   const navigate = useNavigate()
+  const myPubKey = useUserStore((state) => state.publicKey)
+  const cashuEnabled = useUserStore((state) => state.cashuEnabled)
 
   useEffect(() => {
     if (!cashuEnabled) {
