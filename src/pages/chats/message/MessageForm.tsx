@@ -1,5 +1,12 @@
+import {
+  FormEvent,
+  useState,
+  useEffect,
+  ChangeEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+} from "react"
 import {CHAT_MESSAGE_KIND, serializeSessionState, Session} from "nostr-double-ratchet/src"
-import {FormEvent, useState, useEffect, ChangeEvent} from "react"
+import {useAutosizeTextarea} from "@/shared/hooks/useAutosizeTextarea"
 import UploadButton from "@/shared/components/button/UploadButton"
 import EmojiButton from "@/shared/components/emoji/EmojiButton"
 import MessageFormReplyPreview from "./MessageFormReplyPreview"
@@ -10,7 +17,6 @@ import {RiAttachment2} from "@remixicon/react"
 import EmojiType from "@/types/emoji"
 import {localState} from "irisdb/src"
 import {MessageType} from "./Message"
-import {useAutosizeTextarea} from "@/shared/hooks/useAutosizeTextarea"
 
 interface MessageFormProps {
   session: Session
@@ -42,8 +48,9 @@ const MessageForm = ({
       textareaRef.current.focus()
     }
 
-    const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && replyingTo) {
+    const handleEscKey = (event: Event) => {
+      const keyboardEvent = event as unknown as ReactKeyboardEvent
+      if (keyboardEvent.key === "Escape" && replyingTo) {
         setReplyingTo(undefined)
       }
     }
@@ -107,7 +114,7 @@ const MessageForm = ({
     setNewMessage(e.target.value)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (isTouchDevice) return
 
     if (e.key === "Enter" && !e.shiftKey) {
@@ -153,7 +160,9 @@ const MessageForm = ({
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder="Message"
-              className="flex-1 textarea leading-tight resize-none py-2.5 min-h-[2.5rem]"
+              className={`flex-1 textarea leading-tight resize-none py-2.5 min-h-[2.5rem] ${
+                newMessage.includes("\n") ? "rounded-lg" : "rounded-full"
+              }`}
               aria-label="Message input"
               rows={1}
             />

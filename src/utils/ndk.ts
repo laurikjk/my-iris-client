@@ -41,7 +41,7 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
       cacheAdapter: new NDKCacheAdapterDexie({dbName: "irisdb-nostr"}),
     }
     ndkInstance = new NDK(options)
-    
+
     // Set up initial signer if we have a private key
     if (store.privateKey && typeof store.privateKey === "string") {
       try {
@@ -53,13 +53,13 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
         console.error("Error setting initial private key signer:", e)
       }
     }
-    
+
     // Set up NIP-07 signer if enabled
     if (store.nip07Login) {
       nip07Signer = new NDKNip07Signer()
       ndkInstance.signer = nip07Signer
     }
-    
+
     watchLocalSettings(ndkInstance)
     ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
     ndkInstance.connect()

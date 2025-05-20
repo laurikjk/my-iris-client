@@ -28,8 +28,7 @@ export const useNotificationsStore = create<NotificationsState>()(
 
       const actions = {
         setLatestNotification: (latestNotification: number) => set({latestNotification}),
-        updateRefreshRouteSignal: () =>
-          set({refreshRouteSignal: Date.now()}),
+        updateRefreshRouteSignal: () => set({refreshRouteSignal: Date.now()}),
         setNotificationsDeclined: (notificationsDeclined: boolean) =>
           set({notificationsDeclined}),
         setNotificationsSeenAt: (notificationsSeenAt: number) =>

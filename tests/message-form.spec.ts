@@ -20,7 +20,6 @@ async function setupChat(page) {
 
 test.describe("Message Form - Desktop", () => {
   test.beforeEach(async ({page}) => {
-
     await signUp(page)
     await page.getByRole("link", {name: "Chats"}).click()
     await expect(page.getByRole("banner").getByText("New Chat")).toBeVisible()
@@ -64,7 +63,7 @@ test.describe("Message Form - Desktop", () => {
 
     const messageInput = page.getByPlaceholder("Message")
     await messageInput.pressSequentially("Hello, this is a test message!")
-    
+
     await messageInput.press("Shift+Enter")
     await messageInput.press("Shift+Enter")
     await messageInput.press("Shift+Enter")
@@ -73,64 +72,72 @@ test.describe("Message Form - Desktop", () => {
 
     await messageInput.press("Enter")
 
-    const expectedMessage = "Hello, this is a test message!\n\n\nThis text should appear after three newlines"
-    await expect(page.getByRole("paragraph").filter({hasText: expectedMessage})).toBeVisible()
+    const expectedMessage =
+      "Hello, this is a test message!\n\n\nThis text should appear after three newlines"
+    await expect(
+      page.getByRole("paragraph").filter({hasText: expectedMessage})
+    ).toBeVisible()
   })
 
   test("New lines are trimmed but exist in the middle of the message", async ({page}) => {
     await setupChat(page)
 
     const messageInput = page.getByPlaceholder("Message")
-    await messageInput.fill("\nHello, this is a test message!\nThis is a new line\nThis is another new line\n")
-    
+    await messageInput.fill(
+      "\nHello, this is a test message!\nThis is a new line\nThis is another new line\n"
+    )
+
     await messageInput.press("Enter")
-    
-    const expectedMessage = "Hello, this is a test message!\nThis is a new line\nThis is another new line"
-    await expect(page.getByRole("paragraph").filter({hasText: expectedMessage})).toBeVisible()
+
+    const expectedMessage =
+      "Hello, this is a test message!\nThis is a new line\nThis is another new line"
+    await expect(
+      page.getByRole("paragraph").filter({hasText: expectedMessage})
+    ).toBeVisible()
   })
 
   test("textarea resizes based on content", async ({page}) => {
     await setupChat(page)
 
     const messageInput = page.getByPlaceholder("Message")
-    
-    const initialHeight = await messageInput.evaluate(el => el.clientHeight)
-    
+
+    const initialHeight = await messageInput.evaluate((el) => el.clientHeight)
+
     // Multiple newlines
     await messageInput.pressSequentially("Line 1")
     await messageInput.press("Shift+Enter")
     await messageInput.press("Shift+Enter")
     await messageInput.pressSequentially("Line 4")
-    
-    const heightAfterNewlines = await messageInput.evaluate(el => el.clientHeight)
+
+    const heightAfterNewlines = await messageInput.evaluate((el) => el.clientHeight)
     expect(heightAfterNewlines).toBeGreaterThan(initialHeight)
-    
+
     // Clear and verify height returns to initial
     await messageInput.fill("")
-    const heightAfterClear = await messageInput.evaluate(el => el.clientHeight)
+    const heightAfterClear = await messageInput.evaluate((el) => el.clientHeight)
     expect(heightAfterClear).toBe(initialHeight)
-    
+
     // Long line that wraps
-    const longLine = "This is a very long line that should definitely wrap multiple times in the textarea because it contains a lot of text that needs to be displayed across multiple lines in the UI"
+    const longLine =
+      "This is a very long line that should definitely wrap multiple times in the textarea because it contains a lot of text that needs to be displayed across multiple lines in the UI"
     await messageInput.pressSequentially(longLine)
-    
-    const heightAfterWrapping = await messageInput.evaluate(el => el.clientHeight)
+
+    const heightAfterWrapping = await messageInput.evaluate((el) => el.clientHeight)
     expect(heightAfterWrapping).toBeGreaterThan(initialHeight)
-    
+
     // Clear again
     await messageInput.fill("")
-    expect(await messageInput.evaluate(el => el.clientHeight)).toBe(initialHeight)
-    
+    expect(await messageInput.evaluate((el) => el.clientHeight)).toBe(initialHeight)
+
     // Combined newlines and wrapping
     await messageInput.pressSequentially("First line with some text")
     await messageInput.press("Shift+Enter")
     await messageInput.pressSequentially(longLine)
     await messageInput.press("Shift+Enter")
     await messageInput.pressSequentially("Final line")
-    
-    const heightAfterCombined = await messageInput.evaluate(el => el.clientHeight)
+
+    const heightAfterCombined = await messageInput.evaluate((el) => el.clientHeight)
     expect(heightAfterCombined).toBeGreaterThan(heightAfterNewlines)
     expect(heightAfterCombined).toBeGreaterThan(heightAfterWrapping)
   })
 })
-

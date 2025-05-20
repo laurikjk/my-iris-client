@@ -1,9 +1,6 @@
-import { useLayoutEffect, useRef } from "react"
+import {useLayoutEffect, useRef} from "react"
 
-export function useAutosizeTextarea(
-  value: string,
-  { maxRows = 6 } = {}
-) {
+export function useAutosizeTextarea(value: string, {maxRows = 6} = {}) {
   const ref = useRef<HTMLTextAreaElement>(null)
 
   useLayoutEffect(() => {
@@ -16,4 +13,4 @@ export function useAutosizeTextarea(
   }, [value, maxRows])
 
   return ref
-} 
+}

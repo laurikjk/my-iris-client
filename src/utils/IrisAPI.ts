@@ -77,7 +77,11 @@ export default class IrisAPI {
     pricing_option: number
     currency: string
   }) {
-    return this.getJsonAuthd<SubscriptionCreateResponse>("subscriptions/create/", "POST", subscriptionData)
+    return this.getJsonAuthd<SubscriptionCreateResponse>(
+      "subscriptions/create/",
+      "POST",
+      subscriptionData
+    )
   }
 
   getInvoices() {
@@ -85,7 +89,10 @@ export default class IrisAPI {
   }
 
   getPaymentLink(invoiceId: string) {
-    return this.getJsonAuthd<{btcpayserver_invoice_url: string}>(`invoices/${invoiceId}/get-payment-link/`, "POST")
+    return this.getJsonAuthd<{btcpayserver_invoice_url: string}>(
+      `invoices/${invoiceId}/get-payment-link/`,
+      "POST"
+    )
   }
 
   registerPushNotifications(web_push_subscriptions: PushNotifications[], filter: Filter) {

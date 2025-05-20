@@ -22,6 +22,17 @@ const planToTier = (plan: PlanId): SubscriptionTier => {
   }
 }
 
+const getPlanNumberFromTier = (tier: SubscriptionTier): PlanId => {
+  switch (tier) {
+    case "vanguard":
+      return 3
+    case "champion":
+      return 2
+    case "patron":
+      return 1
+  }
+}
+
 interface Plan {
   id: PlanId
   name: string
@@ -81,7 +92,12 @@ const plans: Plan[] = [
 
 export default function Subscription() {
   const pubkey = useUserStore((state) => state.publicKey)
-  const {isSubscriber, endDate, refresh} = useSubscriptionStatus(pubkey)
+  const {
+    isSubscriber,
+    endDate,
+    tier: currentTier,
+    refresh,
+  } = useSubscriptionStatus(pubkey)
 
   const [duration, setDuration] = useHistoryState<Duration>(3, "subscriptionDuration")
   const [plan, setPlan] = useHistoryState<PlanId>(1, "subscriptionPlan")
@@ -93,6 +109,32 @@ export default function Subscription() {
   const monthly = (p: PlanId) => (totalPrice(p) / duration).toFixed(2)
 
   const [invoices, setInvoices] = useState<Invoice[]>([])
+
+  // Set initial plan based on current subscription
+  useEffect(() => {
+    if (!isSubscriber) {
+      setPlan(1) // Select Patron for new subscribers
+      return
+    }
+
+    const currentPlanNumber = getPlanNumberFromTier(currentTier ?? "patron")
+    const nextPlan = (currentPlanNumber + 1) as PlanId
+    setPlan(nextPlan <= 3 ? nextPlan : currentPlanNumber)
+  }, [currentTier, setPlan, isSubscriber])
+
+  // Helper to determine if a plan is selectable
+  const isPlanSelectable = (planId: PlanId) => {
+    if (!isSubscriber) return true
+    const currentPlanNumber = getPlanNumberFromTier(currentTier ?? "patron")
+    return planId > currentPlanNumber
+  }
+
+  // Helper to determine if subscribe button should be enabled
+  const isSubscribeEnabled = () => {
+    if (!isSubscriber) return true
+    const currentPlanNumber = getPlanNumberFromTier(currentTier ?? "patron")
+    return plan > currentPlanNumber
+  }
 
   const handleSubscribe = async () => {
     try {
@@ -197,19 +239,24 @@ export default function Subscription() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {plans.map((p) => {
-          const active = p.id === plan
+          const isCurrentPlan = currentTier === planToTier(p.id)
+          const selectable = isPlanSelectable(p.id)
           return (
             <article
               key={p.id}
               role="button"
-              onClick={() => setPlan(p.id)}
-              className={`card bg-base-200 shadow-xl cursor-pointer transition-transform hover:scale-[1.02] border-2 ${
-                active ? `border-${p.colour}` : "border-transparent"
-              }`}
+              onClick={() => selectable && setPlan(p.id)}
+              className={`card bg-base-200 shadow-xl cursor-pointer transition-transform hover:scale-[1.02] border-2 
+                ${p.id === plan ? `border-${p.colour}` : "border-transparent"}`}
             >
               <div className="card-body flex flex-col h-full">
                 <header className="flex justify-between items-start">
-                  <h3 className="card-title text-xl">{p.name}</h3>
+                  <h3 className="card-title text-xl">
+                    {p.name}
+                    {isCurrentPlan && (
+                      <span className="text-sm text-accent">(Current)</span>
+                    )}
+                  </h3>
                   {getSubscriptionIcon(planToTier(p.id), `text-${p.colour} text-2xl`)}
                 </header>
 
@@ -234,8 +281,12 @@ export default function Subscription() {
         })}
       </div>
 
-      <a href="#" onClick={handleSubscribe} className="btn btn-accent self-center">
-        Subscribe – ${totalPrice(plan)}
+      <a
+        href="#"
+        onClick={handleSubscribe}
+        className={`btn self-center ${isSubscribeEnabled() ? "btn-accent" : "btn-disabled"}`}
+      >
+        {isSubscriber ? "Upgrade" : "Subscribe"} – ${totalPrice(plan)}
       </a>
 
       {invoices.length > 0 && (
