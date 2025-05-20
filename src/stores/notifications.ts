@@ -9,7 +9,7 @@ interface NotificationsState {
   goToNotifications: number
 
   setLatestNotification: (timestamp: number) => void
-  incrementRefreshRouteSignal: () => void
+  updateRefreshRouteSignal: () => void
   setNotificationsDeclined: (declined: boolean) => void
   setNotificationsSeenAt: (timestamp: number) => void
   incrementGoToNotifications: () => void
@@ -28,8 +28,8 @@ export const useNotificationsStore = create<NotificationsState>()(
 
       const actions = {
         setLatestNotification: (latestNotification: number) => set({latestNotification}),
-        incrementRefreshRouteSignal: () =>
-          set({refreshRouteSignal: get().refreshRouteSignal + 1}),
+        updateRefreshRouteSignal: () =>
+          set({refreshRouteSignal: Date.now()}),
         setNotificationsDeclined: (notificationsDeclined: boolean) =>
           set({notificationsDeclined}),
         setNotificationsSeenAt: (notificationsSeenAt: number) =>

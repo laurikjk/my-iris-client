@@ -15,8 +15,8 @@ export default function NavLink(props: NavLinkProps) {
 
     if (isActive) {
       if (window.scrollY === 0) {
-        const {incrementRefreshRouteSignal} = useNotificationsStore.getState()
-        incrementRefreshRouteSignal()
+        const {updateRefreshRouteSignal} = useNotificationsStore.getState()
+        updateRefreshRouteSignal()
       } else {
         window.scrollTo({top: 0, behavior: "instant"})
       }
