@@ -81,7 +81,7 @@ const plans: Plan[] = [
 
 export default function Subscription() {
   const pubkey = useUserStore((state) => state.publicKey)
-  const {isSubscriber, endDate} = useSubscriptionStatus(pubkey)
+  const {isSubscriber, endDate, refresh} = useSubscriptionStatus(pubkey)
 
   const [duration, setDuration] = useHistoryState<Duration>(3, "subscriptionDuration")
   const [plan, setPlan] = useHistoryState<PlanId>(1, "subscriptionPlan")
@@ -157,6 +157,12 @@ export default function Subscription() {
     } catch (error) {
       console.error("Error getting payment link:", error)
     }
+  }
+
+  const handleModalClose = () => {
+    setShowPaymentModal(false)
+    fetchInvoices(false)
+    refresh()
   }
 
   useEffect(() => {
@@ -269,7 +275,7 @@ export default function Subscription() {
       )}
 
       {showPaymentModal && paymentUrl && (
-        <Modal hasBackground={false} onClose={() => setShowPaymentModal(false)}>
+        <Modal hasBackground={false} onClose={handleModalClose}>
           <iframe
             src={paymentUrl}
             className="w-[600px] h-[800px] max-h-[90vh] max-w-[95vw] rounded-lg"
