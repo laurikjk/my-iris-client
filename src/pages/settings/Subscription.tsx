@@ -113,7 +113,7 @@ export default function Subscription() {
   // Set initial plan based on current subscription
   useEffect(() => {
     if (!isSubscriber) {
-      setPlan(1) // Select Patron for new subscribers
+      setPlan(2) // Select Patron for new subscribers
       return
     }
 
