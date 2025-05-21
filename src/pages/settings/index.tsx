@@ -89,7 +89,7 @@ function Settings() {
           ? [
               {
                 icon: renderSubscriptionIcon(),
-                iconBg: "bg-warning",
+                iconBg: "bg-white",
                 message: "Subscription",
                 path: "/settings/subscription",
               },

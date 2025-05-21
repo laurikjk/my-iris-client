@@ -224,8 +224,7 @@ export default function Subscription() {
         <div className="flex flex-col items-center gap-2">
           <SubscriberBadge pubkey={pubkey} />
           <span>
-            Your subscription is active until{" "}
-            {endDate && new Date(endDate).toLocaleDateString()}
+            Active until <b>{endDate && new Date(endDate).toLocaleDateString()}</b>
           </span>
         </div>
       )}
