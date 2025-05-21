@@ -56,9 +56,43 @@ function IrisAccount() {
   }
 
   // Handle registration
-  const handleRegister = (username: string) => {
+  const handleRegister = async (username: string) => {
     setPendingUsername(username)
-    setShowChallenge(true)
+    // Skip Cloudflare verification for users with active subscriptions
+    if (subscriptionPlan) {
+      await registerDirectly(username)
+    } else {
+      setShowChallenge(true)
+    }
+  }
+
+  // Register directly without Cloudflare challenge for subscribers
+  const registerDirectly = async (username: string) => {
+    try {
+      const event = new NDKEvent(ndk())
+      event.kind = 1
+      event.content = `iris.to/${username}`
+      await event.sign()
+      const res = await fetch(`${CONFIG.defaultSettings.irisApiUrl}/user/signup`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({event: await event.toNostrEvent()}),
+      })
+      if (res.status === 200) {
+        setError(null)
+        setExisting({name: username})
+      } else {
+        try {
+          const json = await res.json()
+          setError(json.message || "Error during registration")
+        } catch {
+          setError("Error during registration")
+        }
+      }
+    } catch (err) {
+      console.error("Registration error:", err)
+      setError("Error during registration")
+    }
   }
 
   // Handle Cloudflare verification
