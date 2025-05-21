@@ -142,15 +142,13 @@ function RegisterForm({minLength, subscriptionPlan, onRegister}: RegisterFormPro
 
           {/* Error message */}
           {errorMessage && (
-            <div className="text-error font-medium border border-error p-2 rounded bg-error bg-opacity-10 mt-2">
-              {errorMessage}
-            </div>
+            <div className="text-error font-medium mt-2">{errorMessage}</div>
           )}
 
           {/* Subscription upgrade link */}
           {errorMessage && errorMessage.includes("must be") && (
             <div className="mt-2">
-              <Link to="/settings/subscription" className="text-primary">
+              <Link to="/settings/subscription" className="link">
                 Get a subscription to choose shorter usernames
               </Link>
             </div>

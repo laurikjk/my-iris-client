@@ -123,45 +123,40 @@ function IrisAccount() {
   }, [])
 
   // Render based on state
-  let content
   if (irisToActive) {
-    const username = profile?.nip05?.split("@")[0]
-    content = (
+    return (
       <div className="flex flex-col gap-2">
-        <AccountName name={username} />
+        <AccountName name={profile?.nip05?.split("@")[0]} />
         <SubscriberBadge className="mt-2" pubkey={myPubKey} />
       </div>
     )
-  } else if (existing) {
-    content = (
+  }
+
+  if (existing) {
+    return (
       <div className="flex flex-col gap-2">
         <ActiveAccount name={existing.name} setAsPrimary={() => setIrisToActive(true)} />
         <SubscriberBadge className="mt-2" pubkey={myPubKey} />
       </div>
     )
-  } else if (error) {
-    content = <div className="error">Error: {error}</div>
-  } else if (showChallenge) {
-    content = <ChallengeForm onVerify={handleVerify} />
-  } else {
-    content = (
-      <div className="flex flex-col">
-        <RegisterForm
-          minLength={minUsernameLength}
-          subscriptionPlan={subscriptionPlan}
-          onRegister={handleRegister}
-        />
-      </div>
-    )
+  }
+
+  if (error) {
+    return <div className="error">Error: {error}</div>
+  }
+
+  if (showChallenge) {
+    return <ChallengeForm onVerify={handleVerify} />
   }
 
   return (
-    <>
-      {content}
-      <p>
-        <a href="https://github.com/irislib/faq#iris-username">FAQ</a>
-      </p>
-    </>
+    <div className="flex flex-col">
+      <RegisterForm
+        minLength={minUsernameLength}
+        subscriptionPlan={subscriptionPlan}
+        onRegister={handleRegister}
+      />
+    </div>
   )
 }
 
