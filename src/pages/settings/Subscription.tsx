@@ -126,14 +126,14 @@ export default function Subscription() {
   const isPlanSelectable = (planId: PlanId) => {
     if (!isSubscriber) return true
     const currentPlanNumber = getPlanNumberFromTier(currentTier ?? "patron")
-    return planId > currentPlanNumber
+    return planId >= currentPlanNumber
   }
 
   // Helper to determine if subscribe button should be enabled
   const isSubscribeEnabled = () => {
     if (!isSubscriber) return true
     const currentPlanNumber = getPlanNumberFromTier(currentTier ?? "patron")
-    return plan > currentPlanNumber
+    return plan >= currentPlanNumber
   }
 
   const handleSubscribe = async () => {
@@ -213,6 +213,11 @@ export default function Subscription() {
     }
   }, [pubkey, plan])
 
+  const getButtonText = () => {
+    if (!isSubscriber) return "Subscribe"
+    return plan === getPlanNumberFromTier(currentTier ?? "patron") ? "Extend" : "Upgrade"
+  }
+
   return (
     <div className="flex flex-col gap-6 p-4">
       {pubkey && isSubscriber && (
@@ -286,7 +291,7 @@ export default function Subscription() {
         onClick={handleSubscribe}
         className={`btn self-center ${isSubscribeEnabled() ? "btn-accent" : "btn-disabled"}`}
       >
-        {isSubscriber ? "Upgrade" : "Subscribe"} – ${totalPrice(plan)}
+        {getButtonText()} – ${totalPrice(plan)}
       </a>
 
       {invoices.length > 0 && (
