@@ -1,7 +1,15 @@
+import {
+  searchDoubleRatchetUsers,
+  subscribeToDoubleRatchetUsers,
+  DoubleRatchetUser,
+  getDoubleRatchetUsersCount,
+} from "../utils/doubleRatchetUsers"
 import {useState, useRef, useEffect, ChangeEvent, FormEvent} from "react"
 import {Invite, serializeSessionState} from "nostr-double-ratchet/src"
 import QRCodeButton from "@/shared/components/user/QRCodeButton"
 import {acceptInvite} from "@/shared/hooks/useInviteFromUrl"
+import {UserRow} from "@/shared/components/user/UserRow"
+import {RiInformationLine} from "@remixicon/react"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {getSessions} from "@/utils/chat/Sessions"
 import {nip19, VerifiedEvent} from "nostr-tools"
@@ -11,19 +19,22 @@ import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
 import {localState} from "irisdb/src"
 import {ndk} from "@/utils/ndk"
-import {RiInformationLine} from "@remixicon/react"
 
 const PrivateChatCreation = () => {
   const navigate = useNavigate()
   const [invites, setInvites] = useState<Map<string, Invite>>(new Map())
   const [inviteInput, setInviteInput] = useState("")
   const [showPublicInfo, setShowPublicInfo] = useState(false)
+  const [searchInput, setSearchInput] = useState("")
+  const [searchResults, setSearchResults] = useState<DoubleRatchetUser[]>([])
+  const [doubleRatchetCount, setDoubleRatchetCount] = useState(0)
   const labelInputRef = useRef<HTMLInputElement>(null)
 
   const myPubKey = useUserStore((state) => state.publicKey)
   const myPrivKey = useUserStore((state) => state.privateKey)
 
   useEffect(() => {
+    subscribeToDoubleRatchetUsers()
     if (getSessions().size === 0) {
       navigate("/chats/new", {replace: true})
     }
@@ -49,10 +60,35 @@ const PrivateChatCreation = () => {
 
     createPrivateInviteIfNeeded()
 
-    return localState.get("invites").on(() => {
+    const unsubscribe = localState.get("invites").on(() => {
       setInvites(getInvites())
     })
+
+    // Update count periodically
+    const interval = setInterval(() => {
+      setDoubleRatchetCount(getDoubleRatchetUsersCount())
+    }, 1000)
+
+    return () => {
+      unsubscribe()
+      clearInterval(interval)
+    }
   }, [navigate, myPubKey])
+
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value)
+    if (!value.trim()) {
+      setSearchResults([])
+      return
+    }
+    const results = searchDoubleRatchetUsers(value)
+    setSearchResults(results.slice(0, 10))
+  }
+
+  const handleStartChat = (pubkey: string) => {
+    // Navigate to chat with the selected user
+    navigate("/chats/chat", {state: {id: `${pubkey}:${myPubKey}`}})
+  }
 
   const handleInviteInput = async (e: ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value
@@ -174,7 +210,6 @@ const PrivateChatCreation = () => {
     )
   }
 
-
   const inviteList: [string, Invite][] = Array.from(invites).sort(([idA], [idB]) => {
     if (idA === "public") return -1
     if (idB === "public") return 1
@@ -184,6 +219,39 @@ const PrivateChatCreation = () => {
   return (
     <>
       <div className="m-4 p-4 md:p-8 rounded-lg bg-base-100 flex flex-col gap-6">
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Search Users</h2>
+          <div className="flex flex-col gap-4">
+            <div>
+              <input
+                type="text"
+                className="input input-bordered w-full"
+                placeholder="Search for users"
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
+              />
+            </div>
+            <p className="text-sm text-base-content/70">
+              {doubleRatchetCount} followed users have enabled secure DMs
+            </p>
+          </div>
+          {searchResults.length > 0 && (
+            <div className="mt-4 flex flex-col gap-2">
+              {searchResults.map((user) => (
+                <button
+                  key={user.pubkey}
+                  className="btn btn-ghost justify-start text-left"
+                  onClick={() => handleStartChat(user.pubkey)}
+                >
+                  <UserRow pubKey={user.pubkey} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="divider">OR</div>
+
         <div>
           <h2 className="text-xl font-semibold mb-4">Have someone&apos;s invite link?</h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -244,8 +312,10 @@ const PrivateChatCreation = () => {
                   </div>
                   {id === "public" && showPublicInfo && (
                     <span className="text-sm text-base-content/70 pr-2">
-                      This invite is shown on your profile and lets others start a chat with you.
-                      Messages and sender identities are end-to-end encrypted. However, it's still possible to see that a chat has been initiated with you.
+                      This invite is shown on your profile and lets others start a chat
+                      with you. Messages and sender identities are end-to-end encrypted.
+                      However, it&apos;s still possible to see that a chat has been
+                      initiated with you.
                     </span>
                   )}
                 </div>
