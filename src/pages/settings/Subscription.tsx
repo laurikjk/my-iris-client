@@ -43,7 +43,7 @@ interface Plan {
 
 const plans: Plan[] = [
   {
-    id: 2,
+    id: 1,
     name: "Patron",
     colour: "error",
     price: {
@@ -58,7 +58,7 @@ const plans: Plan[] = [
     ],
   },
   {
-    id: 1,
+    id: 2,
     name: "Champion",
     colour: "warning",
     price: {
