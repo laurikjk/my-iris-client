@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
 import {profileCache} from "@/utils/memcache"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ActiveAccount from "./ActiveAccount"
 import ChallengeForm from "./ChallengeForm"
 import {useUserStore} from "@/stores/user"
 import RegisterForm from "./RegisterForm"
 import {useEffect, useState} from "react"
 import AccountName from "./AccountName"
-import {ndk} from "@/utils/ndk"
+import IrisAPI from "@/utils/IrisAPI"
 
 // Main component
 function IrisAccount() {
@@ -20,6 +19,7 @@ function IrisAccount() {
   const [pendingUsername, setPendingUsername] = useState("")
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null)
   const [minUsernameLength, setMinUsernameLength] = useState(8)
+  const [api] = useState(() => new IrisAPI())
 
   const myPubKey = useUserStore.getState().publicKey
 
@@ -69,25 +69,10 @@ function IrisAccount() {
   // Register directly without Cloudflare challenge for subscribers
   const registerDirectly = async (username: string) => {
     try {
-      const event = new NDKEvent(ndk())
-      event.kind = 1
-      event.content = `iris.to/${username}`
-      await event.sign()
-      const res = await fetch(`${CONFIG.defaultSettings.irisApiUrl}/user/signup`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({event: await event.toNostrEvent()}),
-      })
-      if (res.status === 200) {
+      const response = await api.registerUsername(username)
+      if (response.signed_up) {
         setError(null)
         setExisting({name: username})
-      } else {
-        try {
-          const json = await res.json()
-          setError(json.message || "Error during registration")
-        } catch {
-          setError("Error during registration")
-        }
       }
     } catch (err) {
       console.error("Registration error:", err)
@@ -97,28 +82,16 @@ function IrisAccount() {
 
   // Handle Cloudflare verification
   const handleVerify = async (cfToken: string) => {
-    const event = new NDKEvent(ndk())
-    event.kind = 1
-    event.content = `iris.to/${pendingUsername}`
-    await event.sign()
-
-    const res = await fetch(`${CONFIG.defaultSettings.irisApiUrl}/user/signup`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({event: await event.toNostrEvent(), cfToken}),
-    })
-
-    if (res.status === 200) {
-      setError(null)
-      setExisting({name: pendingUsername})
-      setShowChallenge(false)
-    } else {
-      try {
-        const json = await res.json()
-        setError(json.message || "Error during registration")
-      } catch {
-        setError("Error during registration")
+    try {
+      const response = await api.registerUsername(pendingUsername, cfToken)
+      if (response.signed_up) {
+        setError(null)
+        setExisting({name: pendingUsername})
+        setShowChallenge(false)
       }
+    } catch (err) {
+      console.error("Verification error:", err)
+      setError("Error during verification")
     }
   }
 

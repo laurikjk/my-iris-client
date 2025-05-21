@@ -95,6 +95,15 @@ export default class IrisAPI {
     )
   }
 
+  registerUsername(username: string, cfToken?: string) {
+    // For users with subscriptions, cfToken is optional
+    const data: {username: string; cfToken?: string} = {username}
+    if (cfToken) {
+      data.cfToken = cfToken
+    }
+    return this.getJsonAuthd<{signed_up: boolean}>("user/register", "POST", data)
+  }
+
   registerPushNotifications(web_push_subscriptions: PushNotifications[], filter: Filter) {
     return this.getJsonAuthd<void>(`subscriptions`, "POST", {
       web_push_subscriptions,
