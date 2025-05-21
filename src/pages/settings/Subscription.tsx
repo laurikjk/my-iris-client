@@ -54,7 +54,7 @@ const plans: Plan[] = [
       "Support Iris development",
       "Patron badge on profile",
       "Yearly subscriber badge",
-      "6–7 character username",
+      "6+ character username",
     ],
   },
   {
@@ -69,7 +69,7 @@ const plans: Plan[] = [
       "All Patron benefits",
       "Champion badge on profile",
       "Priority support",
-      "5–6 character username",
+      "5+ character username",
     ],
   },
   {
@@ -85,7 +85,7 @@ const plans: Plan[] = [
       "Vanguard badge on profile",
       "VIP support",
       "Honorary mention on About page",
-      "3–4 character username",
+      "3+ character username",
     ],
   },
 ]
