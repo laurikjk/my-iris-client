@@ -88,11 +88,6 @@ function IrisAccount() {
     }
   }
 
-  // Refresh subscription status
-  const refreshSubscription = () => {
-    if (myPubKey) checkExistingAccount(myPubKey)
-  }
-
   // Setup effects
   useEffect(() => {
     // User store subscription handler
@@ -115,12 +110,8 @@ function IrisAccount() {
     const unsubscribe = useUserStore.subscribe(handleUserChange)
     handleUserChange(useUserStore.getState())
 
-    // Periodic check
-    const interval = setInterval(refreshSubscription, 30000)
-
     return () => {
       unsubscribe()
-      clearInterval(interval)
     }
   }, [])
 
@@ -153,13 +144,6 @@ function IrisAccount() {
           subscriptionPlan={subscriptionPlan}
           onRegister={handleRegister}
         />
-        <button
-          className="btn btn-sm self-end mt-2"
-          onClick={refreshSubscription}
-          title="If you recently purchased a subscription, click here to refresh"
-        >
-          Refresh Subscription
-        </button>
       </div>
     )
   }
