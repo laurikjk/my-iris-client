@@ -47,8 +47,8 @@ const plans: Plan[] = [
     name: "Patron",
     colour: "error",
     price: {
-      3: {amount: 15, pricingOptionId: 3},
-      12: {amount: 50, pricingOptionId: 4},
+      3: {amount: 15, pricingOptionId: 2},
+      12: {amount: 50, pricingOptionId: 1},
     },
     benefits: [
       "Support Iris development",
@@ -62,8 +62,8 @@ const plans: Plan[] = [
     name: "Champion",
     colour: "warning",
     price: {
-      3: {amount: 60, pricingOptionId: 2},
-      12: {amount: 200, pricingOptionId: 1},
+      3: {amount: 60, pricingOptionId: 3},
+      12: {amount: 200, pricingOptionId: 4},
     },
     benefits: [
       "All Patron benefits",
