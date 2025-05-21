@@ -19,7 +19,7 @@
   "repository": "https://github.com/irislib/iris-client",
   "features": {
     "analytics": false,
-    "showSubscriptionSettings": false
+    "showSubscriptionSettings": true
   },
   "defaultSettings": {
     "notificationServer": "https://notifications.iris.to",
