@@ -12,6 +12,7 @@ import runningOstrich from "@/assets/running-ostrich.gif"
 import {getTag, getZappingUser} from "@/utils/nostr.ts"
 import {useEffect, useCallback, useState} from "react"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
+import {shouldHideAuthor} from "@/utils/visibility"
 import {useSettingsStore} from "@/stores/settings"
 import socialGraph from "@/utils/socialGraph"
 import {useUserStore} from "@/stores/user"
@@ -55,6 +56,12 @@ const getNotifications = debounce((myPubKey?: string) => {
       if (event.pubkey === myPubKey) return
       if (hideEventsByUnknownUsers && socialGraph().getFollowDistance(event.pubkey) > 5)
         return
+      // Skip notifications from authors that should be hidden
+      if (shouldHideAuthor(event.pubkey)) return
+    } else {
+      // For zap notifications, check the zapping user
+      const zappingUser = getZappingUser(event)
+      if (zappingUser && shouldHideAuthor(zappingUser)) return
     }
     const eTag = getTag("e", event.tags)
     if (eTag && event.created_at) {
