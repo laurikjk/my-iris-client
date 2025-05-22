@@ -16,7 +16,6 @@ interface UseFeedEventsProps {
   displayFilterFn?: (event: NDKEvent) => boolean
   fetchFilterFn?: (event: NDKEvent) => boolean
   hideEventsByUnknownUsers: boolean
-  mutes: string[]
   sortLikedPosts?: boolean
   sortFn?: (a: NDKEvent, b: NDKEvent) => number
 }
@@ -29,7 +28,6 @@ export default function useFeedEvents({
   fetchFilterFn,
   sortFn,
   hideEventsByUnknownUsers,
-  mutes,
   sortLikedPosts = false,
 }: UseFeedEventsProps) {
   const myPubKey = useUserStore((state) => state.publicKey)
@@ -67,7 +65,6 @@ export default function useFeedEvents({
       if (!event.created_at) return false
       if (displayFilterFn && !displayFilterFn(event)) return false
       const inAuthors = localFilter.authors?.includes(event.pubkey)
-      if (!inAuthors && mutes.includes(event.pubkey)) return false
       if (!inAuthors && shouldHideAuthor(event.pubkey, 3)) {
         return false
       }
@@ -80,7 +77,7 @@ export default function useFeedEvents({
       }
       return true
     },
-    [displayFilterFn, myPubKey, hideEventsByUnknownUsers, filters.authors, mutes]
+    [displayFilterFn, myPubKey, hideEventsByUnknownUsers, filters.authors]
   )
 
   const filteredEvents = useMemo(() => {
@@ -115,9 +112,12 @@ export default function useFeedEvents({
     return Array.from(eventsRef.current.values()).filter(
       (event) =>
         (!displayFilterFn || displayFilterFn(event)) &&
-        shouldHideAuthor(event.author.pubkey, undefined, true)
+        socialGraph().getFollowDistance(event.pubkey) >= 5 &&
+        !(filters.authors && filters.authors.includes(event.pubkey)) &&
+        // Only include events that aren't heavily muted
+        !shouldHideAuthor(event.pubkey, undefined, true)
     )
-  }, [eventsRef.current.size, displayFilterFn])
+  }, [eventsRef.current.size, displayFilterFn, hideEventsByUnknownUsers, filters.authors])
 
   useEffect(() => {
     setLocalFilter(filters)

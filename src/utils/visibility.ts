@@ -68,6 +68,7 @@ export const shouldHideAuthor = (
     return shouldHide
   }
 
+  // If we get here, no one has an opinion (no followers or muters)
   if (allowUnknown) {
     cache.set(cacheKey, false)
     return false
