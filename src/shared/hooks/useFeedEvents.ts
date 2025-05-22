@@ -114,7 +114,7 @@ export default function useFeedEvents({
     return Array.from(eventsRef.current.values()).filter(
       (event) =>
         (!displayFilterFn || displayFilterFn(event)) &&
-        shouldHideAuthor(event.author.pubkey)
+        shouldHideAuthor(event.author.pubkey, undefined, true)
     )
   }, [eventsRef.current.size, displayFilterFn])
 

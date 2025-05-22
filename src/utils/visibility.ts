@@ -4,7 +4,11 @@ import socialGraph from "./socialGraph"
 
 const cache = new LRUCache<string, boolean>({maxSize: 100})
 
-export const shouldHideAuthor = (pubKey: string, threshold = 1): boolean => {
+export const shouldHideAuthor = (
+  pubKey: string,
+  threshold = 1,
+  allowUnknown = false
+): boolean => {
   const {content} = useSettingsStore.getState()
   const instance = socialGraph()
 
@@ -15,7 +19,11 @@ export const shouldHideAuthor = (pubKey: string, threshold = 1): boolean => {
   }
 
   // Check hideEventsByUnknownUsers setting
-  if (content.hideEventsByUnknownUsers && instance.getFollowDistance(pubKey) >= 5) {
+  if (
+    !allowUnknown &&
+    content.hideEventsByUnknownUsers &&
+    instance.getFollowDistance(pubKey) >= 5
+  ) {
     cache.set(cacheKey, true)
     return true
   }
@@ -33,7 +41,7 @@ export const shouldHideAuthor = (pubKey: string, threshold = 1): boolean => {
     const mutedCount = instance.getMutedByUser(pubKey).size
     const followedCount = instance.getFollowedByUser(pubKey).size
     // Use the threshold parameter when comparing
-    if (mutedCount > followedCount * threshold) {
+    if (mutedCount * threshold > followedCount) {
       cache.set(cacheKey, true)
       return true
     }
@@ -58,6 +66,11 @@ export const shouldHideAuthor = (pubKey: string, threshold = 1): boolean => {
     const shouldHide = muters * threshold >= followers
     cache.set(cacheKey, shouldHide)
     return shouldHide
+  }
+
+  if (allowUnknown) {
+    cache.set(cacheKey, false)
+    return false
   }
 
   // If no one anywhere follows or mutes, default to hide
