@@ -38,9 +38,8 @@ export function loadInvites(): Unsubscribe {
   })
 }
 
-const seenIds = new LRUCache<string, boolean>({maxSize: 100})
-
 const nostrSubscribe = (filter: Filter, onEvent: (e: VerifiedEvent) => void) => {
+  const seenIds = new LRUCache<string, boolean>({maxSize: 100})
   const sub = ndk().subscribe(filter)
   sub.on("event", (event) => {
     if (seenIds.has(event.id)) return
