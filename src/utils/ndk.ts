@@ -21,6 +21,7 @@ let nip07Signer: NDKNip07Signer | undefined
  */
 export const DEFAULT_RELAYS = [
   "wss://temp.iris.to",
+  "wss://vault.iris.to",
   "wss://relay.damus.io",
   "wss://relay.nostr.band",
   "wss://relay.snort.social",
