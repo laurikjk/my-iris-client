@@ -20,7 +20,7 @@ let nip07Signer: NDKNip07Signer | undefined
  * Default relays to use when initializing NDK
  */
 export const DEFAULT_RELAYS = [
-  "wss://strfry.iris.to",
+  "wss://temp.iris.to",
   "wss://relay.damus.io",
   "wss://relay.nostr.band",
   "wss://relay.snort.social",
