@@ -4,6 +4,7 @@ import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
 import {localState, Unsubscribe} from "irisdb/src"
 import {Filter, VerifiedEvent} from "nostr-tools"
 import {hexToBytes} from "@noble/hashes/utils"
+import {LRUCache} from "typescript-lru-cache"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
 
@@ -37,9 +38,13 @@ export function loadInvites(): Unsubscribe {
   })
 }
 
+const seenIds = new LRUCache<string, boolean>({maxSize: 100})
+
 const nostrSubscribe = (filter: Filter, onEvent: (e: VerifiedEvent) => void) => {
   const sub = ndk().subscribe(filter)
   sub.on("event", (event) => {
+    if (seenIds.has(event.id)) return
+    seenIds.set(event.id, true)
     onEvent(event as unknown as VerifiedEvent)
   })
   return () => sub.stop()

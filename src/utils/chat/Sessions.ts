@@ -10,6 +10,7 @@ import {getPeerConnection} from "./webrtc/PeerConnection"
 import {generateProxyUrl} from "@/shared/utils/imgproxy"
 import {Filter, VerifiedEvent} from "nostr-tools"
 import {JsonObject, localState} from "irisdb/src"
+import {LRUCache} from "typescript-lru-cache"
 import {profileCache} from "@/utils/memcache"
 import AnimalName from "@/utils/AnimalName"
 import {trackEvent} from "@/utils/IrisAPI"
@@ -20,9 +21,13 @@ const sessions = new Map<string, Session | undefined>()
 
 const openedAt = Date.now()
 
+const seenIds = new LRUCache<string, boolean>({maxSize: 100})
+
 const subscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
   const sub = ndk().subscribe(filter)
   sub.on("event", (event) => {
+    if (seenIds.has(event.id)) return
+    seenIds.set(event.id, true)
     onEvent(event as unknown as VerifiedEvent)
   })
   return () => sub.stop()
