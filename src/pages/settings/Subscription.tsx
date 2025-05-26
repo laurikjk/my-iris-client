@@ -53,7 +53,6 @@ const plans: Plan[] = [
     benefits: [
       "Support Iris development",
       "Patron badge on profile",
-      "Yearly subscriber badge",
       "vault.iris.to relay write access",
       "6+ character username",
     ],
