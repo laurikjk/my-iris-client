@@ -209,7 +209,8 @@ const UploadButton = ({
         <div className="w-full mt-2">
           {currentFile && (
             <p className="text-sm text-center mb-1">
-              [{currentFileIndex}/{totalFiles}] {currentFile}
+              {totalFiles > 1 ? `[${currentFileIndex}/${totalFiles}] ` : ""}
+              {currentFile}
             </p>
           )}
           <div className="bg-neutral rounded-full h-2.5">
