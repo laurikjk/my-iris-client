@@ -1,8 +1,8 @@
-import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {useCallback} from "react"
-import {useNavigate} from "react-router"
 import {RiVerifiedBadgeLine, RiErrorWarningLine} from "@remixicon/react"
 import {useNip05Validation} from "@/shared/hooks/useNip05Validation"
+import {NDKUserProfile} from "@nostr-dev-kit/ndk"
+import {useNavigate} from "react-router"
+import {useCallback} from "react"
 
 interface ProfileNameProps {
   profile?: NDKUserProfile

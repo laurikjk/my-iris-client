@@ -351,10 +351,6 @@ export default function SubscriptionPage() {
               />
             </Modal>
           )}
-
-          <div className="text-xs text-base-content/50 text-center mt-4">
-            More features upcoming
-          </div>
         </div>
       </div>
       <Helmet>

@@ -1,9 +1,9 @@
 import {RiErrorWarningLine, RiGithubFill, RiShieldCheckFill} from "@remixicon/react"
 import {ElementType, ReactNode, useEffect, useMemo, useState} from "react"
+import {useNip05Validation} from "@/shared/hooks/useNip05Validation"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
-import {useNip05Validation} from "@/shared/hooks/useNip05Validation"
 
 import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
 import HyperText from "@/shared/components/HyperText.tsx"
@@ -105,14 +105,15 @@ function ProfileDetails({
       {displayProfile?.nip05 && (
         <div>
           {renderProfileField(
-            nip05valid === null ? RiShieldCheckFill : (nip05valid ? RiShieldCheckFill : RiErrorWarningLine),
-            nip05valid === null ? (
-              displayProfile.nip05.replace("_@", "")
-            ) : nip05valid ? (
-              displayProfile.nip05.replace("_@", "")
-            ) : (
-              <s>{displayProfile.nip05.replace("_@", "")}</s>
-            ),
+            (() => {
+              if (nip05valid === null) return RiShieldCheckFill
+              return nip05valid ? RiShieldCheckFill : RiErrorWarningLine
+            })(),
+            (() => {
+              const displayName = displayProfile.nip05.replace("_@", "")
+              if (nip05valid === null) return displayName
+              return nip05valid ? displayName : <s>{displayName}</s>
+            })(),
             "nip05"
           )}
         </div>
