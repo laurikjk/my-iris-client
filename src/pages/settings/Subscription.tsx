@@ -51,10 +51,11 @@ const plans: Plan[] = [
       12: {amount: 50, pricingOptionId: 1},
     },
     benefits: [
-      "Support Iris development",
-      "Patron badge on profile",
-      "vault.iris.to relay write access",
       "6+ character username",
+      "vault.iris.to relay write access",
+      "10 GB upload storage (blossom)",
+      "Patron badge on profile",
+      "Support Iris development",
     ],
   },
   {
@@ -67,8 +68,9 @@ const plans: Plan[] = [
     },
     benefits: [
       "All Patron benefits",
-      "Champion badge on profile",
+      "100 GB upload storage (blossom)",
       "Priority support",
+      "Champion badge on profile",
       "5+ character username",
     ],
   },
@@ -82,10 +84,10 @@ const plans: Plan[] = [
     },
     benefits: [
       "All Champion benefits",
-      "Vanguard badge on profile",
-      "VIP support",
-      "Honorary mention on About page",
       "3+ character username",
+      "VIP support",
+      "Vanguard badge on profile",
+      "Honorary mention on About page",
     ],
   },
 ]
