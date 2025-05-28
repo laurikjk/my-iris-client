@@ -102,7 +102,7 @@ export const AboutPage = () => {
                 </a>
               </p>
               <p>
-                <Link to="/settings/subscription" className="flex items-center gap-1">
+                <Link to="/subscribe" className="flex items-center gap-1">
                   <RiHeartLine className="inline" /> Subscribe to support Iris development
                 </Link>
               </p>

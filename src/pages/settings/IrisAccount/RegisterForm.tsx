@@ -148,7 +148,7 @@ function RegisterForm({minLength, subscriptionPlan, onRegister}: RegisterFormPro
           {/* Subscription upgrade link */}
           {errorMessage && errorMessage.includes("must be") && (
             <div className="mt-2">
-              <Link to="/settings/subscription" className="link">
+              <Link to="/subscribe" className="link">
                 Get a subscription to choose shorter usernames
               </Link>
             </div>

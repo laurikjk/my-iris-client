@@ -6,6 +6,7 @@ import NavLink from "./NavLink"
 import PublicKeyQRCodeButton from "../user/PublicKeyQRCodeButton"
 import {useWalletBalance} from "../../hooks/useWalletBalance"
 import {NotificationNavItem} from "./NotificationNavItem"
+import {SubscriptionNavItem} from "./SubscriptionNavItem"
 import {MessagesNavItem} from "./MessagesNavItem"
 import PublishButton from "../ui/PublishButton"
 import ErrorBoundary from "../ui/ErrorBoundary"
@@ -64,6 +65,9 @@ const NavSideBar = () => {
               }
               if (label === "Notifications") {
                 return <NotificationNavItem key={to} to={to} onClick={onClick} />
+              }
+              if (label === "Subscription") {
+                return <SubscriptionNavItem key={to} to={to} onClick={onClick} />
               }
               return (
                 <NavItem

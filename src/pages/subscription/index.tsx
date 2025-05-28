@@ -2,25 +2,16 @@ import {getSubscriptionIcon, SubscriptionTier} from "@/shared/utils/subscription
 import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
 import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
 import useHistoryState from "@/shared/hooks/useHistoryState"
+import Header from "@/shared/components/header/Header"
 import {RiCheckboxCircleFill} from "@remixicon/react"
 import Modal from "@/shared/components/ui/Modal"
 import IrisAPI, {Invoice} from "@/utils/IrisAPI"
 import {useUserStore} from "@/stores/user"
 import {useEffect, useState} from "react"
+import {Helmet} from "react-helmet"
 
 type Duration = 3 | 12
 export type PlanId = 1 | 2 | 3
-
-const planToTier = (plan: PlanId): SubscriptionTier => {
-  switch (plan) {
-    case 1:
-      return "patron"
-    case 2:
-      return "champion"
-    case 3:
-      return "vanguard"
-  }
-}
 
 const getPlanNumberFromTier = (tier: SubscriptionTier): PlanId => {
   switch (tier) {
@@ -30,6 +21,17 @@ const getPlanNumberFromTier = (tier: SubscriptionTier): PlanId => {
       return 2
     case "patron":
       return 1
+  }
+}
+
+const planToTier = (plan: PlanId): SubscriptionTier => {
+  switch (plan) {
+    case 3:
+      return "vanguard"
+    case 2:
+      return "champion"
+    case 1:
+      return "patron"
   }
 }
 
@@ -92,7 +94,7 @@ const plans: Plan[] = [
   },
 ]
 
-export default function Subscription() {
+export default function SubscriptionPage() {
   const pubkey = useUserStore((state) => state.publicKey)
   const {
     isSubscriber,
@@ -221,129 +223,137 @@ export default function Subscription() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4">
-      {pubkey && isSubscriber && (
-        <div className="flex flex-col items-center gap-2">
-          <SubscriberBadge pubkey={pubkey} />
-          <span>
-            Active until <b>{endDate && new Date(endDate).toLocaleDateString()}</b>
-          </span>
-        </div>
-      )}
+    <div className="flex flex-col flex-1">
+      <Header title="Subscription" slideUp={false} />
+      <div className="p-4 mx-4 md:p-8 rounded-lg bg-base-100 shadow">
+        <div className="flex flex-col gap-6 p-4">
+          {pubkey && isSubscriber && (
+            <div className="flex flex-col items-center gap-2">
+              <SubscriberBadge pubkey={pubkey} />
+              <span>
+                Active until <b>{endDate && new Date(endDate).toLocaleDateString()}</b>
+              </span>
+            </div>
+          )}
 
-      <div className="flex justify-center gap-2">
-        {[3, 12].map((m) => (
-          <button
-            key={m}
-            className={`btn btn-sm ${duration === m ? "btn-accent" : "btn-outline"}`}
-            onClick={() => setDuration(m as Duration)}
+          <div className="flex justify-center gap-2">
+            {[3, 12].map((m) => (
+              <button
+                key={m}
+                className={`btn btn-sm ${duration === m ? "btn-accent" : "btn-outline"}`}
+                onClick={() => setDuration(m as Duration)}
+              >
+                {m === 3 ? "3 months" : "12 months (save 16.66%)"}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {plans.map((p) => {
+              const isCurrentPlan = currentTier === planToTier(p.id)
+              const selectable = isPlanSelectable(p.id)
+              return (
+                <article
+                  key={p.id}
+                  role="button"
+                  onClick={() => selectable && setPlan(p.id)}
+                  className={`card bg-base-200 shadow-xl cursor-pointer transition-transform hover:scale-[1.02] border-2 
+                    ${p.id === plan ? `border-${p.colour}` : "border-transparent"}`}
+                >
+                  <div className="card-body flex flex-col h-full">
+                    <header className="flex justify-between items-start">
+                      <h3 className="card-title text-xl">
+                        {p.name}
+                        {isCurrentPlan && (
+                          <span className="text-sm text-accent">(Current)</span>
+                        )}
+                      </h3>
+                      {getSubscriptionIcon(planToTier(p.id), `text-${p.colour} text-2xl`)}
+                    </header>
+
+                    <ul className="space-y-2 my-4 text-sm">
+                      {p.benefits.map((b) => (
+                        <li key={b} className="flex items-center gap-2">
+                          <RiCheckboxCircleFill className="h-4 w-4 text-success flex-shrink-0" />
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <footer className="mt-auto">
+                      <div className="text-lg font-semibold">${monthly(p.id)}/month</div>
+                      <div className="text-sm text-base-content/60">
+                        ${totalPrice(p.id)} every {duration} months
+                      </div>
+                    </footer>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+
+          <a
+            href="#"
+            onClick={handleSubscribe}
+            className={`btn self-center ${isSubscribeEnabled() ? "btn-accent" : "btn-disabled"}`}
           >
-            {m === 3 ? "3 months" : "12 months (save 16.66%)"}
-          </button>
-        ))}
-      </div>
+            {getButtonText()} – ${totalPrice(plan)}
+          </a>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {plans.map((p) => {
-          const isCurrentPlan = currentTier === planToTier(p.id)
-          const selectable = isPlanSelectable(p.id)
-          return (
-            <article
-              key={p.id}
-              role="button"
-              onClick={() => selectable && setPlan(p.id)}
-              className={`card bg-base-200 shadow-xl cursor-pointer transition-transform hover:scale-[1.02] border-2 
-                ${p.id === plan ? `border-${p.colour}` : "border-transparent"}`}
-            >
-              <div className="card-body flex flex-col h-full">
-                <header className="flex justify-between items-start">
-                  <h3 className="card-title text-xl">
-                    {p.name}
-                    {isCurrentPlan && (
-                      <span className="text-sm text-accent">(Current)</span>
-                    )}
-                  </h3>
-                  {getSubscriptionIcon(planToTier(p.id), `text-${p.colour} text-2xl`)}
-                </header>
-
-                <ul className="space-y-2 my-4 text-sm">
-                  {p.benefits.map((b) => (
-                    <li key={b} className="flex items-center gap-2">
-                      <RiCheckboxCircleFill className="h-4 w-4 text-success flex-shrink-0" />
-                      <span>{b}</span>
+          {invoices.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-lg font-semibold">Invoices</h4>
+              <ul className="space-y-2">
+                {invoices
+                  .sort(
+                    (a, b) =>
+                      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                  )
+                  .map((invoice) => (
+                    <li key={invoice.id} className="flex justify-between items-center">
+                      <div>
+                        <div className="font-medium">
+                          {new Date(invoice.created_at).toLocaleDateString()}
+                        </div>
+                        <div className="text-sm text-base-content/60">
+                          Status: {invoice.status}
+                        </div>
+                      </div>
+                      <div className="text-right font-medium">
+                        ${invoice.amount.toFixed(2)} USD
+                        {invoice.status === "pending" && (
+                          <button
+                            onClick={() => handleGetPaymentLink(invoice.id)}
+                            className="btn btn-sm btn-primary ml-2"
+                          >
+                            Pay
+                          </button>
+                        )}
+                      </div>
                     </li>
                   ))}
-                </ul>
+              </ul>
+            </div>
+          )}
 
-                <footer className="mt-auto">
-                  <div className="text-lg font-semibold">${monthly(p.id)}/month</div>
-                  <div className="text-sm text-base-content/60">
-                    ${totalPrice(p.id)} every {duration} months
-                  </div>
-                </footer>
-              </div>
-            </article>
-          )
-        })}
-      </div>
+          {showPaymentModal && paymentUrl && (
+            <Modal hasBackground={false} onClose={handleModalClose}>
+              <iframe
+                src={paymentUrl}
+                className="w-[600px] h-[800px] max-h-[90vh] max-w-[95vw] rounded-lg"
+                title="BTCPayServer Payment"
+              />
+            </Modal>
+          )}
 
-      <a
-        href="#"
-        onClick={handleSubscribe}
-        className={`btn self-center ${isSubscribeEnabled() ? "btn-accent" : "btn-disabled"}`}
-      >
-        {getButtonText()} – ${totalPrice(plan)}
-      </a>
-
-      {invoices.length > 0 && (
-        <div className="mt-4">
-          <h4 className="text-lg font-semibold">Invoices</h4>
-          <ul className="space-y-2">
-            {invoices
-              .sort(
-                (a, b) =>
-                  new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-              )
-              .map((invoice) => (
-                <li key={invoice.id} className="flex justify-between items-center">
-                  <div>
-                    <div className="font-medium">
-                      {new Date(invoice.created_at).toLocaleDateString()}
-                    </div>
-                    <div className="text-sm text-base-content/60">
-                      Status: {invoice.status}
-                    </div>
-                  </div>
-                  <div className="text-right font-medium">
-                    ${invoice.amount.toFixed(2)} USD
-                    {invoice.status === "pending" && (
-                      <button
-                        onClick={() => handleGetPaymentLink(invoice.id)}
-                        className="btn btn-sm btn-primary ml-2"
-                      >
-                        Pay
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
-          </ul>
+          <div className="text-xs text-base-content/50 text-center mt-4">
+            More features upcoming
+          </div>
         </div>
-      )}
-
-      {showPaymentModal && paymentUrl && (
-        <Modal hasBackground={false} onClose={handleModalClose}>
-          <iframe
-            src={paymentUrl}
-            className="w-[600px] h-[800px] max-h-[90vh] max-w-[95vw] rounded-lg"
-            title="BTCPayServer Payment"
-          />
-        </Modal>
-      )}
-
-      <div className="text-xs text-base-content/50 text-center mt-4">
-        More features upcoming
       </div>
+      <Helmet>
+        <title>Subscription</title>
+      </Helmet>
     </div>
   )
 }
