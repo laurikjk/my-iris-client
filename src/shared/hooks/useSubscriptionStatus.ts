@@ -1,4 +1,24 @@
 import {useEffect, useState, useCallback} from "react"
+import {LRUCache} from "typescript-lru-cache"
+
+// Cache interface for subscription data
+interface SubscriptionCache {
+  data: {
+    isSubscriber: boolean
+    tier: "patron" | "champion" | "vanguard" | undefined
+    endDate: string | undefined
+  }
+}
+
+// Cache with max 100 entries
+const subscriptionCache = new LRUCache<string, SubscriptionCache>({
+  maxSize: 100,
+})
+
+// Function to invalidate cache for a specific pubkey
+export const invalidateSubscriptionCache = (pubkey: string) => {
+  subscriptionCache.delete(pubkey)
+}
 
 /**
  * Hook to check if a user is a subscriber based on their pubkey
@@ -20,6 +40,16 @@ export function useSubscriptionStatus(pubkey?: string) {
       return
     }
 
+    // Check cache first
+    const cached = subscriptionCache.get(pubkey)
+    if (cached) {
+      setIsSubscriber(cached.data.isSubscriber)
+      setTier(cached.data.tier)
+      setEndDate(cached.data.endDate)
+      setIsLoading(false)
+      return
+    }
+
     try {
       setIsLoading(true)
       // Fetch the user data to check for subscription status
@@ -33,19 +63,28 @@ export function useSubscriptionStatus(pubkey?: string) {
         setEndDate(data.subscription_end_date)
 
         // Set the tier based on the subscription plan
+        let newTier: "patron" | "champion" | "vanguard" | undefined = undefined
         if (hasSubscription) {
           // The plan name comes directly from the database
           const planName = data.subscription_plan.toLowerCase()
           if (planName.includes("vanguard")) {
-            setTier("vanguard")
+            newTier = "vanguard"
           } else if (planName.includes("champion")) {
-            setTier("champion")
+            newTier = "champion"
           } else {
-            setTier("patron")
+            newTier = "patron"
           }
-        } else {
-          setTier(undefined)
         }
+        setTier(newTier)
+
+        // Update cache
+        subscriptionCache.set(pubkey, {
+          data: {
+            isSubscriber: hasSubscription,
+            tier: newTier,
+            endDate: data.subscription_end_date,
+          },
+        })
       }
     } catch (error) {
       console.error("Error checking subscriber status:", error)
@@ -55,8 +94,11 @@ export function useSubscriptionStatus(pubkey?: string) {
   }, [pubkey])
 
   const refresh = useCallback(() => {
+    if (pubkey) {
+      invalidateSubscriptionCache(pubkey) // Use the exported function
+    }
     setRefreshCounter((c) => c + 1)
-  }, [])
+  }, [pubkey])
 
   useEffect(() => {
     checkSubscriberStatus()

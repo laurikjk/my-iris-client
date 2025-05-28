@@ -1,5 +1,8 @@
+import {
+  useSubscriptionStatus,
+  invalidateSubscriptionCache,
+} from "@/shared/hooks/useSubscriptionStatus"
 import {getSubscriptionIcon, SubscriptionTier} from "@/shared/utils/subscriptionIcons"
-import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
 import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import Header from "@/shared/components/header/Header"
@@ -207,6 +210,9 @@ export default function SubscriptionPage() {
 
   const handleModalClose = () => {
     setShowPaymentModal(false)
+    if (pubkey) {
+      invalidateSubscriptionCache(pubkey)
+    }
     fetchInvoices(false)
     refresh()
   }
