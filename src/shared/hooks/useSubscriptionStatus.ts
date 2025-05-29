@@ -1,5 +1,8 @@
 import {useEffect, useState, useCallback} from "react"
 import {LRUCache} from "typescript-lru-cache"
+import {useUserStore} from "@/stores/user"
+
+const BLOSSOM_IRIS = "https://blossom.iris.to"
 
 // Cache interface for subscription data
 interface SubscriptionCache {
@@ -85,6 +88,15 @@ export function useSubscriptionStatus(pubkey?: string) {
             endDate: data.subscription_end_date,
           },
         })
+
+        // Initialize Blossom server for subscribers
+        if (hasSubscription) {
+          const userStore = useUserStore.getState()
+          if (!userStore.blossomServers.includes(BLOSSOM_IRIS)) {
+            userStore.addBlossomServer(BLOSSOM_IRIS)
+          }
+          userStore.setDefaultBlossomServer(BLOSSOM_IRIS)
+        }
       }
     } catch (error) {
       console.error("Error checking subscriber status:", error)

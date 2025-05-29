@@ -6,7 +6,7 @@ import {ndk} from "@/utils/ndk"
 function getBlossomServerUrl(): Promise<string> {
   return new Promise((resolve) => {
     const defaultBlossomServer = useUserStore.getState().defaultBlossomServer
-    resolve(defaultBlossomServer || "https://nostr.build")
+    resolve(defaultBlossomServer || "https://blossom.nostr.build")
   })
 }
 

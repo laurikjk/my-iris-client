@@ -1,6 +1,8 @@
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
 
+const BLOSSOM_NOSTR_BUILD = "https://blossom.nostr.build"
+
 interface UserState {
   publicKey: string
   privateKey: string
@@ -49,8 +51,8 @@ export const useUserStore = create<UserState>()(
         DHTPrivateKey: "",
         relays: [],
         mediaserver: "",
-        blossomServers: ["https://nostr.build"],
-        defaultBlossomServer: "https://nostr.build",
+        blossomServers: [BLOSSOM_NOSTR_BUILD],
+        defaultBlossomServer: BLOSSOM_NOSTR_BUILD,
         walletConnect: false,
         cashuEnabled: false,
         defaultZapAmount: 21,

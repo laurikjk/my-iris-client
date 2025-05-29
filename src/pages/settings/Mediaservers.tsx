@@ -2,7 +2,9 @@ import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
 import {ChangeEvent, useState, useEffect} from "react"
 import {useUserStore} from "@/stores/user"
 
-const DEFAULT_SERVERS = ["https://nostr.build"]
+const BLOSSOM_NOSTR_BUILD = "https://blossom.nostr.build"
+const BLOSSOM_IRIS = "https://blossom.iris.to"
+const DEFAULT_SERVERS = [BLOSSOM_NOSTR_BUILD]
 
 function stripHttps(url: string) {
   return url.replace(/^https?:\/\//, "")
@@ -25,12 +27,11 @@ function MediaServers() {
   useEffect(() => {
     console.log("Subscription status:", {isSubscriber, isLoading, publicKey})
     if (!isLoading && isSubscriber) {
-      const irisServer = "https://blossom.iris.to"
-      console.log("Adding iris server:", irisServer)
-      if (!blossomServers.includes(irisServer)) {
-        addBlossomServer(irisServer)
+      console.log("Adding iris server:", BLOSSOM_IRIS)
+      if (!blossomServers.includes(BLOSSOM_IRIS)) {
+        addBlossomServer(BLOSSOM_IRIS)
       }
-      setDefaultBlossomServer(irisServer)
+      setDefaultBlossomServer(BLOSSOM_IRIS)
     }
   }, [
     isSubscriber,
@@ -58,7 +59,7 @@ function MediaServers() {
     if (defaultBlossomServer === server) {
       // Set default to first available server or nostr.build
       const remainingServers = blossomServers.filter((s) => s !== server)
-      setDefaultBlossomServer(remainingServers[0] || "https://nostr.build")
+      setDefaultBlossomServer(remainingServers[0] || BLOSSOM_NOSTR_BUILD)
     }
   }
 
