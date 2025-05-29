@@ -12,6 +12,8 @@ interface UserState {
 
   relays: string[]
   mediaserver: string
+  blossomServers: string[]
+  defaultBlossomServer: string
 
   walletConnect: boolean
   cashuEnabled: boolean
@@ -26,6 +28,10 @@ interface UserState {
   setDHTPrivateKey: (DHTPrivateKey: string) => void
   setRelays: (relays: string[]) => void
   setMediaserver: (mediaserver: string) => void
+  setBlossomServers: (servers: string[]) => void
+  setDefaultBlossomServer: (server: string) => void
+  addBlossomServer: (server: string) => void
+  removeBlossomServer: (server: string) => void
   setWalletConnect: (walletConnect: boolean) => void
   setCashuEnabled: (cashuEnabled: boolean) => void
   setDefaultZapAmount: (defaultZapAmount: number) => void
@@ -43,6 +49,8 @@ export const useUserStore = create<UserState>()(
         DHTPrivateKey: "",
         relays: [],
         mediaserver: "",
+        blossomServers: ["https://nostr.build"],
+        defaultBlossomServer: "https://nostr.build",
         walletConnect: false,
         cashuEnabled: false,
         defaultZapAmount: 21,
@@ -57,6 +65,17 @@ export const useUserStore = create<UserState>()(
         setDHTPrivateKey: (DHTPrivateKey: string) => set({DHTPrivateKey}),
         setRelays: (relays: string[]) => set({relays}),
         setMediaserver: (mediaserver: string) => set({mediaserver}),
+        setBlossomServers: (blossomServers: string[]) => set({blossomServers}),
+        setDefaultBlossomServer: (defaultBlossomServer: string) =>
+          set({defaultBlossomServer}),
+        addBlossomServer: (server: string) =>
+          set((state) => ({
+            blossomServers: [...new Set([...state.blossomServers, server])],
+          })),
+        removeBlossomServer: (server: string) =>
+          set((state) => ({
+            blossomServers: state.blossomServers.filter((s) => s !== server),
+          })),
         setWalletConnect: (walletConnect: boolean) => set({walletConnect}),
         setCashuEnabled: (cashuEnabled: boolean) => set({cashuEnabled}),
         setDefaultZapAmount: (defaultZapAmount: number) => set({defaultZapAmount}),

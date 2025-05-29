@@ -177,6 +177,10 @@ const UploadButton = ({
       setCurrentFile(null)
       setCurrentFileIndex(0)
       setTotalFiles(0)
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
     }
   }
 
