@@ -29,14 +29,16 @@ export async function uploadFile(
   const url = `${baseUrl}/upload`
 
   // Create a Nostr event for authentication
+  const currentTime = Math.floor(Date.now() / 1000)
   const event = new NDKEvent(ndk(), {
     kind: 24242, // Blossom authorization event
     tags: [
       ["t", "upload"],
       ["x", sha256], // Required: SHA256 hash of the file
+      ["expiration", (currentTime + 300).toString()], // Expires in 5 minutes
     ],
     content: file.name,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: currentTime,
     pubkey: [...socialGraph().getUsersByFollowDistance(0)][0],
   })
   await event.sign()
