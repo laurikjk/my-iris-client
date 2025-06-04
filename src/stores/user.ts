@@ -1,7 +1,7 @@
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
 
-const BLOSSOM_NOSTR_BUILD = "https://blossom.nostr.build"
+const BLOSSOM_IRIS_TO = "https://blossom.iris.to"
 
 type MediaServerProtocol = "blossom" | "nip96"
 
@@ -57,7 +57,7 @@ export const useUserStore = create<UserState>()(
       }
 
       const DEFAULT_BLOSSOM_SERVER = {
-        url: BLOSSOM_NOSTR_BUILD,
+        url: BLOSSOM_IRIS_TO,
         protocol: "blossom" as const,
         isDefault: true,
       }

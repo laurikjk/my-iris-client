@@ -2,14 +2,32 @@ import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
 import {ChangeEvent, useState, useEffect} from "react"
 import {useUserStore} from "@/stores/user"
 
-const BLOSSOM_NOSTR_BUILD = "https://blossom.nostr.build"
-const DEFAULT_SERVERS = [
-  {
-    url: BLOSSOM_NOSTR_BUILD,
-    protocol: "blossom" as const,
+const BLOSSOM_IRIS_TO = "https://blossom.iris.to"
+
+function getDefaultServers(isSubscriber: boolean) {
+  const defaults: {url: string; protocol: "blossom" | "nip96"; isDefault: boolean}[] =
+    isSubscriber
+      ? [
+          {
+            url: BLOSSOM_IRIS_TO,
+            protocol: "blossom",
+            isDefault: true,
+          },
+        ]
+      : [
+          {
+            url: "https://nostr.build/api/v2/nip96/upload",
+            protocol: "nip96",
+            isDefault: true,
+          },
+        ]
+  defaults.push({
+    url: "https://cdn.nostrcheck.me",
+    protocol: "nip96",
     isDefault: true,
-  },
-]
+  })
+  return defaults
+}
 
 function stripHttps(url: string) {
   return url.replace(/^https?:\/\//, "")
@@ -60,13 +78,14 @@ function MediaServers() {
     if (defaultMediaserver?.url === url) {
       // Set default to first available server or nostr.build
       const remainingServers = mediaservers.filter((s) => s.url !== url)
-      setDefaultMediaserver(remainingServers[0] || DEFAULT_SERVERS[0])
+      setDefaultMediaserver(remainingServers[0] || getDefaultServers(isSubscriber)[0])
     }
   }
 
   function handleRestoreDefaults() {
-    setMediaservers(DEFAULT_SERVERS)
-    setDefaultMediaserver(DEFAULT_SERVERS[0])
+    const defaults = getDefaultServers(isSubscriber)
+    setMediaservers(defaults)
+    setDefaultMediaserver(defaults[0])
   }
 
   return (
