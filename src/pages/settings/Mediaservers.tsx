@@ -3,8 +3,13 @@ import {ChangeEvent, useState, useEffect} from "react"
 import {useUserStore} from "@/stores/user"
 
 const BLOSSOM_NOSTR_BUILD = "https://blossom.nostr.build"
-const BLOSSOM_IRIS = "https://blossom.iris.to"
-const DEFAULT_SERVERS = [BLOSSOM_NOSTR_BUILD]
+const DEFAULT_SERVERS = [
+  {
+    url: BLOSSOM_NOSTR_BUILD,
+    protocol: "blossom" as const,
+    isDefault: true,
+  },
+]
 
 function stripHttps(url: string) {
   return url.replace(/^https?:\/\//, "")
@@ -12,92 +17,96 @@ function stripHttps(url: string) {
 
 function MediaServers() {
   const {
-    blossomServers,
-    defaultBlossomServer,
-    setDefaultBlossomServer,
-    addBlossomServer,
-    removeBlossomServer,
-    setBlossomServers,
+    mediaservers,
+    defaultMediaserver,
+    setDefaultMediaserver,
+    addMediaserver,
+    removeMediaserver,
+    setMediaservers,
+    ensureDefaultMediaserver,
     publicKey,
   } = useUserStore()
   const [newServer, setNewServer] = useState("")
+  const [newProtocol, setNewProtocol] = useState<"blossom" | "nip96">("blossom")
   const {isSubscriber, isLoading} = useSubscriptionStatus(publicKey)
 
-  // Set default server based on subscription status
   useEffect(() => {
-    console.log("Subscription status:", {isSubscriber, isLoading, publicKey})
-    if (!isLoading && isSubscriber) {
-      console.log("Adding iris server:", BLOSSOM_IRIS)
-      if (!blossomServers.includes(BLOSSOM_IRIS)) {
-        addBlossomServer(BLOSSOM_IRIS)
-      }
-      setDefaultBlossomServer(BLOSSOM_IRIS)
+    if (!isLoading) {
+      ensureDefaultMediaserver(isSubscriber)
     }
-  }, [
-    isSubscriber,
-    isLoading,
-    blossomServers,
-    addBlossomServer,
-    setDefaultBlossomServer,
-    publicKey,
-  ])
+  }, [isSubscriber, isLoading, ensureDefaultMediaserver])
 
   function handleDefaultServerChange(e: ChangeEvent<HTMLSelectElement>) {
-    setDefaultBlossomServer(e.target.value)
+    const selectedServer = mediaservers.find((s) => s.url === e.target.value)
+    if (selectedServer) {
+      setDefaultMediaserver(selectedServer)
+    }
   }
 
   function handleAddServer() {
-    if (newServer && !blossomServers.includes(newServer)) {
+    if (newServer && !mediaservers.some((s) => s.url === newServer)) {
       const serverUrl = newServer.startsWith("http") ? newServer : `https://${newServer}`
-      addBlossomServer(serverUrl)
+      addMediaserver({
+        url: serverUrl,
+        protocol: newProtocol,
+        isDefault: false,
+      })
       setNewServer("")
     }
   }
 
-  function handleRemoveServer(server: string) {
-    removeBlossomServer(server)
-    if (defaultBlossomServer === server) {
+  function handleRemoveServer(url: string) {
+    removeMediaserver(url)
+    if (defaultMediaserver?.url === url) {
       // Set default to first available server or nostr.build
-      const remainingServers = blossomServers.filter((s) => s !== server)
-      setDefaultBlossomServer(remainingServers[0] || BLOSSOM_NOSTR_BUILD)
+      const remainingServers = mediaservers.filter((s) => s.url !== url)
+      setDefaultMediaserver(remainingServers[0] || DEFAULT_SERVERS[0])
     }
   }
 
   function handleRestoreDefaults() {
-    setBlossomServers(DEFAULT_SERVERS)
-    setDefaultBlossomServer(DEFAULT_SERVERS[0])
+    setMediaservers(DEFAULT_SERVERS)
+    setDefaultMediaserver(DEFAULT_SERVERS[0])
   }
 
   return (
     <div>
-      <h1 className="text-2xl mb-4">Blossom Media Servers</h1>
+      <h1 className="text-2xl mb-4">Media Servers</h1>
       <div className="flex flex-col gap-4">
         <div>
-          <p>Select default Blossom server</p>
+          <p>Select default media server</p>
           <select
             aria-label="Select default server"
             className="select select-primary mt-2"
-            value={defaultBlossomServer}
+            value={defaultMediaserver?.url || ""}
             onChange={handleDefaultServerChange}
           >
-            {blossomServers.map((server) => (
-              <option key={server} value={server}>
-                {stripHttps(server)}
+            {mediaservers.map((server) => (
+              <option key={server.url} value={server.url}>
+                {stripHttps(server.url)} ({server.protocol})
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <p>Add new Blossom server</p>
+          <p>Add new media server</p>
           <div className="flex gap-2 mt-2">
             <input
               type="url"
               className="input input-bordered flex-1"
-              placeholder="blossom.example.com"
+              placeholder="server.example.com"
               value={newServer}
               onChange={(e) => setNewServer(e.target.value)}
             />
+            <select
+              className="select select-bordered"
+              value={newProtocol}
+              onChange={(e) => setNewProtocol(e.target.value as "blossom" | "nip96")}
+            >
+              <option value="blossom">Blossom</option>
+              <option value="nip96">NIP-96</option>
+            </select>
             <button
               className="btn btn-primary"
               onClick={handleAddServer}
@@ -110,25 +119,25 @@ function MediaServers() {
 
         <div>
           <div className="flex justify-between items-center mb-2">
-            <p>Configured Blossom servers</p>
+            <p>Configured media servers</p>
             <button className="btn btn-sm btn-outline" onClick={handleRestoreDefaults}>
               Restore Defaults
             </button>
           </div>
           <div className="flex flex-col gap-2 mt-2">
-            {blossomServers.map((server) => (
-              <div key={server} className="flex items-center gap-2">
+            {mediaservers.map((server) => (
+              <div key={server.url} className="flex items-center gap-2">
                 <a
-                  href={server}
+                  href={server.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 link"
                 >
-                  {stripHttps(server)}
+                  {stripHttps(server.url)} ({server.protocol})
                 </a>
                 <button
                   className="btn btn-sm btn-error"
-                  onClick={() => handleRemoveServer(server)}
+                  onClick={() => handleRemoveServer(server.url)}
                 >
                   Remove
                 </button>
@@ -148,6 +157,17 @@ function MediaServers() {
               Blossom
             </a>{" "}
             is a specification for storing content addressed files on media servers.
+          </p>
+          <p className="mt-2">
+            <a
+              href="https://github.com/nostr-protocol/nips/blob/master/96.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link"
+            >
+              NIP-96
+            </a>{" "}
+            is a Nostr protocol extension for file uploads.
           </p>
         </div>
       </div>

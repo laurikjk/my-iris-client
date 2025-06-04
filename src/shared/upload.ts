@@ -3,11 +3,12 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
 
-function getBlossomServerUrl(): Promise<string> {
-  return new Promise((resolve) => {
-    const defaultBlossomServer = useUserStore.getState().defaultBlossomServer
-    resolve(defaultBlossomServer || "https://blossom.nostr.build")
-  })
+type MediaServerProtocol = "blossom" | "nip96"
+
+interface MediaServer {
+  url: string
+  protocol: MediaServerProtocol
+  isDefault?: boolean
 }
 
 async function calculateSHA256(file: File): Promise<string> {
@@ -17,16 +18,13 @@ async function calculateSHA256(file: File): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
 }
 
-export async function uploadFile(
+async function uploadToBlossom(
   file: File,
+  server: MediaServer,
   onProgress?: (progress: number) => void
 ): Promise<string> {
-  // Calculate SHA256 hash of the file
   const sha256 = await calculateSHA256(file)
-
-  // Get the Blossom server URL
-  const baseUrl = await getBlossomServerUrl()
-  const url = `${baseUrl}/upload`
+  const url = `${server.url}/upload`
 
   // Create a Nostr event for authentication
   const currentTime = Math.floor(Date.now() / 1000)
@@ -72,7 +70,6 @@ export async function uploadFile(
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           const data = JSON.parse(xhr.responseText)
-          // Blossom returns a Blob Descriptor with url field
           if (data.url) {
             resolve(data.url.replace("blossom.iris.to", "files.iris.to"))
           } else {
@@ -88,6 +85,98 @@ export async function uploadFile(
     }
 
     xhr.onerror = () => reject(new Error(`Upload to ${url} failed`))
-    xhr.send(file) // Send the file directly, not as FormData
+    xhr.send(file)
   })
+}
+
+async function uploadToNip96(
+  file: File,
+  server: MediaServer,
+  onProgress?: (progress: number) => void
+): Promise<string> {
+  const url = server.url
+
+  // Use FormData with 'fileToUpload' and 'submit'
+  const fd = new FormData()
+  fd.append("fileToUpload", file)
+  fd.append("submit", "Upload Image")
+
+  // Create a Nostr event for authentication (NIP-94 style)
+  const currentTime = Math.floor(Date.now() / 1000)
+  const event = new NDKEvent(ndk(), {
+    kind: 27235, // HTTP authentication
+    tags: [
+      ["u", url],
+      ["method", "POST"],
+    ],
+    content: "",
+    created_at: currentTime,
+    pubkey: [...socialGraph().getUsersByFollowDistance(0)][0],
+  })
+  await event.sign()
+  const nostrEvent = await event.toNostrEvent()
+  const encodedEvent = btoa(JSON.stringify(nostrEvent))
+  const headers = {
+    accept: "application/json",
+    authorization: `Nostr ${encodedEvent}`,
+  }
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", url)
+    Object.entries(headers).forEach(([key, value]) => {
+      xhr.setRequestHeader(key, value)
+    })
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        const percentComplete = (event.loaded / event.total) * 100
+        onProgress(percentComplete)
+      }
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText)
+          const nip94Event = data.nip94_event
+          const urlTag = nip94Event.tags.find((tag: string[]) => tag[0] === "url")
+          if (urlTag && urlTag[1]) {
+            resolve(urlTag[1])
+          } else {
+            reject(new Error(`URL not found in response from ${url}`))
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          reject(new Error(`Failed to parse response from ${url}: ${errorMessage}`))
+        }
+      } else {
+        reject(new Error(`No url received from ${url}`))
+      }
+    }
+
+    xhr.onerror = () => reject(new Error(`Upload to ${url} failed`))
+    xhr.send(fd)
+  })
+}
+
+export async function uploadFile(
+  file: File,
+  onProgress?: (progress: number) => void,
+  isSubscriber: boolean = false
+): Promise<string> {
+  const userStore = useUserStore.getState()
+  let server = userStore.defaultMediaserver
+  if (!server) {
+    userStore.ensureDefaultMediaserver(isSubscriber)
+    server = useUserStore.getState().defaultMediaserver
+  }
+  if (!server) throw new Error("No default media server configured")
+  if (server.protocol === "blossom") {
+    return uploadToBlossom(file, server, onProgress)
+  } else if (server.protocol === "nip96") {
+    return uploadToNip96(file, server, onProgress)
+  } else {
+    throw new Error(`Unsupported media server protocol: ${server.protocol}`)
+  }
 }
