@@ -24,10 +24,10 @@ const NavSideBar = () => {
   const myPubKey = usePublicKey()
 
   const navItems = useMemo(() => {
-    const configItems = navItemsConfig(myPubKey)
-    return (CONFIG.navItems as Array<keyof typeof configItems>)
-      .map((key) => configItems[key])
-      .filter((item) => !("requireLogin" in item) || (item.requireLogin && myPubKey))
+    const configItems = navItemsConfig()
+    return Object.values(configItems).filter(
+      (item) => !("requireLogin" in item) || (item.requireLogin && myPubKey)
+    )
   }, [myPubKey])
 
   const logoUrl = CONFIG.navLogo
