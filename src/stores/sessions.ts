@@ -267,22 +267,27 @@ const store = create<SessionStore>()(
           lastSeen: Array.from(state.lastSeen.entries()),
         }
       },
-      merge: (persistedState: any, currentState: SessionStore) => {
-        const newSessions = persistedState.sessions.map(
+      merge: (persistedState: unknown, currentState: SessionStore) => {
+        const state = persistedState as {
+          invites: [string, string][]
+          sessions: [string, string][]
+          lastSeen: [string, number][]
+        }
+        const newSessions: [string, Session][] = state.sessions.map(
           ([id, sessionState]: [string, string]) => {
             const session = new Session(subscribe, deserializeSessionState(sessionState))
-            return [id, session]
+            return [id, session] as [string, Session]
           }
         )
-        const newInvites = persistedState.invites.map((entry: [string, string]) => {
-          const [id, invite] = entry as [string, string]
-          return [id, Invite.deserialize(invite)]
+        const newInvites: [string, Invite][] = state.invites.map((entry: [string, string]) => {
+          const [id, invite] = entry
+          return [id, Invite.deserialize(invite)] as [string, Invite]
         })
         return {
           ...currentState,
-          invites: new Map(newInvites),
-          sessions: new Map(newSessions),
-          lastSeen: new Map(persistedState.lastSeen || []),
+          invites: new Map<string, Invite>(newInvites),
+          sessions: new Map<string, Session>(newSessions),
+          lastSeen: new Map<string, number>(state.lastSeen || []),
         }
       },
     }

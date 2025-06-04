@@ -1,4 +1,3 @@
-import {npubEncode} from "nostr-tools/nip19"
 import {MouseEventHandler} from "react"
 
 export interface NavItemConfig {

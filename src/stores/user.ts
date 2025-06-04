@@ -98,16 +98,17 @@ export const useUserStore = create<UserState>()(
         setCashuEnabled: (cashuEnabled: boolean) => set({cashuEnabled}),
         setDefaultZapAmount: (defaultZapAmount: number) => set({defaultZapAmount}),
         reset: () => set(initialState),
-        ensureDefaultMediaserver: (isSubscriber: boolean) => set((state) => {
-          if (!state.defaultMediaserver) {
-            const server = isSubscriber ? DEFAULT_BLOSSOM_SERVER : DEFAULT_NIP96_SERVER;
-            return {
-              mediaservers: [server],
-              defaultMediaserver: server,
-            };
-          }
-          return {};
-        }),
+        ensureDefaultMediaserver: (isSubscriber: boolean) =>
+          set((state) => {
+            if (!state.defaultMediaserver) {
+              const server = isSubscriber ? DEFAULT_BLOSSOM_SERVER : DEFAULT_NIP96_SERVER
+              return {
+                mediaservers: [server],
+                defaultMediaserver: server,
+              }
+            }
+            return {}
+          }),
       }
 
       return {
@@ -131,7 +132,8 @@ export const usePrivateKey = () => useUserStore((state) => state.privateKey)
 export const useNip07Login = () => useUserStore((state) => state.nip07Login)
 export const useRelays = () => useUserStore((state) => state.relays)
 export const useMediaservers = () => useUserStore((state) => state.mediaservers)
-export const useDefaultMediaserver = () => useUserStore((state) => state.defaultMediaserver)
+export const useDefaultMediaserver = () =>
+  useUserStore((state) => state.defaultMediaserver)
 export const useWalletConnect = () => useUserStore((state) => state.walletConnect)
 export const useCashuEnabled = () => useUserStore((state) => state.cashuEnabled)
 export const useDefaultZapAmount = () => useUserStore((state) => state.defaultZapAmount)

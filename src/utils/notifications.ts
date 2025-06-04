@@ -1,7 +1,7 @@
 import {INVITE_RESPONSE_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
 import {NDKTag, NDKEvent, NDKUser} from "@nostr-dev-kit/ndk"
-import {useSessionsStore} from "@/stores/sessions"
 import {getZapAmount, getZappingUser} from "./nostr"
+import {useSessionsStore} from "@/stores/sessions"
 import {useSettingsStore} from "@/stores/settings"
 import {SortedMap} from "./SortedMap/SortedMap"
 import socialGraph from "@/utils/socialGraph"

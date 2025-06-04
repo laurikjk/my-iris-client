@@ -58,7 +58,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     fetchMetadata()
   }, [id, isPublic])
 
-  const [_latestId, latest] = events.get(id)?.last() ?? []
+  const [, latest] = events.get(id)?.last() ?? []
   const [lastSeenPublicTime, setLastSeenPublicTime] = useLocalState(
     `sessions/${id}/lastSeen`,
     0
