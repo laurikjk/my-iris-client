@@ -47,20 +47,19 @@ const store = create<SessionStore>()(
       invites: new Map(),
       sessions: new Map(),
       lastSeen: new Map(),
-      createDefaultInvites: () => {
+      createDefaultInvites: async () => {
         const myPubKey = useUserStore.getState().publicKey
         if (!myPubKey) {
           throw new Error("No public key")
         }
         if (!get().invites.has("public")) {
           get().createInvite("Public Invite", "public")
-          const myPrivKey = useUserStore.getState().privateKey
           const invite = get().invites.get("public")
-          if (!invite || !myPrivKey) {
+          if (!invite) {
             return
           }
           const event = invite.getEvent() as RawEvent
-          NDKEventFromRawEvent(event)
+          await NDKEventFromRawEvent(event)
             .publish()
             .then((res) => console.log("published public invite", res))
             .catch((e) => console.warn("Error publishing public invite:", e))
@@ -206,9 +205,6 @@ const store = create<SessionStore>()(
       name: "sessions",
       onRehydrateStorage: () => (state) => {
         const privateKey = useUserStore.getState().privateKey
-        if (!privateKey) {
-          throw new Error("No private key")
-        }
         const decrypt = privateKey
           ? hexToBytes(privateKey)
           : async (cipherText: string, pubkey: string) => {
@@ -279,10 +275,12 @@ const store = create<SessionStore>()(
             return [id, session] as [string, Session]
           }
         )
-        const newInvites: [string, Invite][] = state.invites.map((entry: [string, string]) => {
-          const [id, invite] = entry
-          return [id, Invite.deserialize(invite)] as [string, Invite]
-        })
+        const newInvites: [string, Invite][] = state.invites.map(
+          (entry: [string, string]) => {
+            const [id, invite] = entry
+            return [id, Invite.deserialize(invite)] as [string, Invite]
+          }
+        )
         return {
           ...currentState,
           invites: new Map<string, Invite>(newInvites),
