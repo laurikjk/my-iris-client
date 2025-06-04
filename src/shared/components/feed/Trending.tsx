@@ -6,7 +6,7 @@ import useCachedFetch from "@/shared/hooks/useCachedFetch.ts"
 import EventBorderless from "../event/EventBorderless"
 import FeedItem from "../event/FeedItem/FeedItem"
 import useMutes from "@/shared/hooks/useMutes"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKRelaySet} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 import {Link} from "react-router"
 import {ndk} from "@/utils/ndk"
@@ -94,6 +94,8 @@ export default function Trending({
           .map((a: {event: RawEvent}) => {
             const ev = a.event
             const ndkEvent = NDKEventFromRawEvent(ev)
+            // save event to local ndk storage (?)
+            ndkEvent.publish(new NDKRelaySet(new Set(), ndk()))
             if (!ndkEvent.verifySignature(true)) {
               console.error(`Event with invalid sig\n\n${ev}\n\nfrom ${trendingUrl}`)
               return undefined
