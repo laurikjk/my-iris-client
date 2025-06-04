@@ -1,4 +1,3 @@
-import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
@@ -37,7 +36,6 @@ async function uploadToBlossom(
     ],
     content: file.name,
     created_at: currentTime,
-    pubkey: [...socialGraph().getUsersByFollowDistance(0)][0],
   })
   await event.sign()
   const nostrEvent = await event.toNostrEvent()
@@ -101,17 +99,16 @@ async function uploadToNip96(
   fd.append("fileToUpload", file)
   fd.append("submit", "Upload Image")
 
-  // Create a Nostr event for authentication (NIP-94 style)
+  // Create a NIP-98 event for authentication
   const currentTime = Math.floor(Date.now() / 1000)
   const event = new NDKEvent(ndk(), {
-    kind: 27235, // HTTP authentication
+    kind: 27235, // NIP-98 HTTP authentication
     tags: [
       ["u", url],
       ["method", "POST"],
     ],
     content: "",
     created_at: currentTime,
-    pubkey: [...socialGraph().getUsersByFollowDistance(0)][0],
   })
   await event.sign()
   const nostrEvent = await event.toNostrEvent()
@@ -139,19 +136,38 @@ async function uploadToNip96(
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           const data = JSON.parse(xhr.responseText)
-          const nip94Event = data.nip94_event
-          const urlTag = nip94Event.tags.find((tag: string[]) => tag[0] === "url")
-          if (urlTag && urlTag[1]) {
-            resolve(urlTag[1])
+          // Try to find the URL in the response (may need to adjust if server format changes)
+          let urlResult = null
+          if (data.nip94_event && Array.isArray(data.nip94_event.tags)) {
+            const urlTag = data.nip94_event.tags.find((tag: string[]) => tag[0] === "url")
+            if (urlTag && urlTag[1]) {
+              urlResult = urlTag[1]
+            }
+          }
+          if (!urlResult && data.url) {
+            urlResult = data.url
+          }
+          if (urlResult) {
+            resolve(urlResult)
           } else {
-            reject(new Error(`URL not found in response from ${url}`))
+            reject(new Error(`URL not found in response: ${xhr.responseText}`))
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error)
-          reject(new Error(`Failed to parse response from ${url}: ${errorMessage}`))
+          reject(
+            new Error(
+              `Failed to parse response from ${url}: ${errorMessage} - Raw: ${xhr.responseText}`
+            )
+          )
         }
       } else {
-        reject(new Error(`No url received from ${url}`))
+        // Improved error logging for 401 and other errors
+        let errorMsg = `Upload failed with status ${xhr.status} from ${url}`
+        if (xhr.status === 401) {
+          errorMsg += " (Unauthorized). Check your authentication headers and Nostr event."
+        }
+        errorMsg += `\nResponse: ${xhr.responseText}`
+        reject(new Error(errorMsg))
       }
     }
 
