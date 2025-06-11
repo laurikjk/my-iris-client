@@ -64,7 +64,6 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     0
   )
   const lastSeenPrivateTime = lastSeen.get(id) || 0
-  const [deleted] = useLocalState(`sessions/${id}/deleted`, false)
 
   // Fetch latest message for public chats
   useEffect(() => {
@@ -139,8 +138,6 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
   }
 
   const previewText = getPreviewText()
-
-  if (deleted && !isPublic) return null
 
   return (
     <NavLink
