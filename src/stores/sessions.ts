@@ -15,6 +15,7 @@ import localforage from "localforage"
 import {useUserStore} from "./user"
 import {ndk} from "@/utils/ndk"
 import {create} from "zustand"
+import { REACTION_KIND } from "@/pages/chats/utils/constants"
 
 // Changing storage engine doesn't trigger migration. Only version difference in storage does.
 // Here's an utility function that works around it by setting a dummy entry with version 0.
@@ -47,7 +48,12 @@ interface SessionStoreActions {
   createInvite: (label: string, inviteId?: string) => void
   createDefaultInvites: () => void
   acceptInvite: (url: string) => Promise<string>
-  sendMessage: (id: string, content: string, replyingToId?: string) => Promise<void>
+  sendMessage: (
+    id: string,
+    content: string,
+    replyingToId?: string,
+    isReaction?: boolean
+  ) => Promise<void>
   updateLastSeen: (sessionId: string) => void
   deleteInvite: (id: string) => void
   deleteSession: (id: string) => void
@@ -135,14 +141,23 @@ const store = create<SessionStore>()(
         inviteListeners.set(id, unsubscribe)
         set({invites: newInvites})
       },
-      sendMessage: async (sessionId: string, content: string, replyingToId?: string) => {
+      sendMessage: async (
+        sessionId: string,
+        content: string,
+        replyingToId?: string,
+        isReaction?: boolean
+      ) => {
         const session = get().sessions.get(sessionId)
         if (!session) {
           throw new Error("Session not found")
         }
+        if (isReaction && !replyingToId) {
+          throw new Error("Cannot send a reaction without a replyingToId")
+        }
+
         const {event, innerEvent} = session.sendEvent({
           content,
-          kind: CHAT_MESSAGE_KIND,
+          kind: isReaction ? REACTION_KIND : CHAT_MESSAGE_KIND,
           tags: [
             ...(replyingToId ? [["e", replyingToId]] : []),
             ["ms", Date.now().toString()],
@@ -203,7 +218,6 @@ const store = create<SessionStore>()(
         })
         sessionListeners.set(sessionId, sessionUnsubscribe)
         set({sessions: newSessions})
-        console.log("set new sessions", get().sessions)
         return sessionId
       },
       updateLastSeen: (sessionId: string) => {
