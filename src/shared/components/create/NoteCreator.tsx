@@ -11,7 +11,7 @@ import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import HyperText from "@/shared/components/HyperText.tsx"
 import {eventsByIdCache} from "@/utils/memcache"
 import {useDraftStore} from "@/stores/draft"
-import {uploadFile} from "@/shared/upload"
+import {processFile} from "@/shared/upload"
 import {usePublicKey} from "@/stores/user"
 import Textarea from "./Textarea"
 import {ndk} from "@/utils/ndk"
@@ -183,10 +183,10 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
     setUploadProgress(0)
     setUploadError(null)
     try {
-      const url = await uploadFile(file, (progress) => {
+      const {url, metadata} = await processFile(file, (progress: number) => {
         setUploadProgress(progress)
       })
-      handleUpload(url)
+      handleUpload(url, metadata)
     } catch (error) {
       console.error("File upload failed:", error)
       setUploadError(error instanceof Error ? error.message : String(error))

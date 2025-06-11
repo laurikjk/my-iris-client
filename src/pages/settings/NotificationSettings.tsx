@@ -261,7 +261,7 @@ const NotificationSettings = () => {
           <div className="flex flex-col space-y-2 w-full">
             {Object.entries(subscriptionsData)
               .flatMap(([id, subscription]) => {
-                if (!subscription?.web_push_subscriptions) return [];
+                if (!subscription?.web_push_subscriptions) return []
                 return subscription.web_push_subscriptions.map(
                   (pushSubscription: PushNotifications, index: number) => {
                     const isCurrentDevice = currentEndpoint === pushSubscription.endpoint

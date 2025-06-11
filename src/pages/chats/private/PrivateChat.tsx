@@ -67,11 +67,7 @@ const Chat = ({id}: {id: string}) => {
   return (
     <>
       <PrivateChatHeader id={id} messages={messages} />
-      <ChatContainer
-        messages={messages}
-        sessionId={id}
-        onReply={setReplyingTo}
-      />
+      <ChatContainer messages={messages} sessionId={id} onReply={setReplyingTo} />
       <MessageForm id={id} replyingTo={replyingTo} setReplyingTo={setReplyingTo} />
     </>
   )
