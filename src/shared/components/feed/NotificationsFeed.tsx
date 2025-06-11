@@ -5,12 +5,12 @@ import {
 } from "@/utils/notifications"
 import NotificationsFeedItem from "@/pages/notifications/NotificationsFeedItem"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
+import {useEffect, useCallback, useState, Suspense} from "react"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {useNotificationsStore} from "@/stores/notifications"
 import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
 import runningOstrich from "@/assets/running-ostrich.gif"
 import {getTag, getZappingUser} from "@/utils/nostr.ts"
-import {useEffect, useCallback, useState} from "react"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {useSettingsStore} from "@/stores/settings"
@@ -203,7 +203,9 @@ function NotificationsFeed() {
         ) : (
           <div className="p-8 flex flex-col gap-8 items-center justify-center text-base-content/50">
             No notifications yet
-            <img src={runningOstrich} alt="" className="w-24" />
+            <Suspense fallback={<div>Loading...</div>}>
+              <img src={runningOstrich} alt="" className="w-24" />
+            </Suspense>
           </div>
         )}
       </InfiniteScroll>
