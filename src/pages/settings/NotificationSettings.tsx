@@ -153,7 +153,7 @@ const NotificationSettings = () => {
   useEffect(() => {
     const fetchSubscriptionsData = async () => {
       try {
-        const api = new IrisAPI()
+        const api = new IrisAPI(notifications.server)
         const data = await api.getSubscriptions()
         setSubscriptionsData(data)
       } catch (error) {
