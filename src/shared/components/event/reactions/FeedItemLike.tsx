@@ -139,7 +139,7 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
   }
 
   return (
-    <div
+    <button
       title="Like"
       data-testid="like-button"
       className={`relative min-w-[50px] md:min-w-[80px] transition-colors duration-200 ease-in-out cursor-pointer likeIcon ${
@@ -161,6 +161,6 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
         onEmojiSelect={handleEmojiSelect}
         position={pickerPosition}
       />
-    </div>
+    </button>
   )
 }

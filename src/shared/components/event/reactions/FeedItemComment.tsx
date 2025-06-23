@@ -69,14 +69,14 @@ function FeedItemComment({event}: FeedItemCommentProps) {
 
   return (
     <>
-      <div
+      <button
         title="Reply"
         className="flex flex-row items-center min-w-[50px] md:min-w-[80px] items-center gap-1 cursor-pointer hover:text-info transition-colors duration-200 ease-in-out"
         onClick={handleCommentClick}
       >
         <Icon name="reply" size={16} />
         {formatAmount(replyCount)}
-      </div>
+      </button>
 
       {isPopupOpen && (
         <Modal onClose={handlePopupClose} hasBackground={false}>

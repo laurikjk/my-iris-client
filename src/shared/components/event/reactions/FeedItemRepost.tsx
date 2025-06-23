@@ -97,7 +97,7 @@ function FeedItemRepost({event}: FeedItemRepostProps) {
           <NoteCreator handleClose={() => setShowQuoteModal(false)} quotedEvent={event} />
         </Modal>
       )}
-      <div
+      <button
         title="Repost"
         className={`${
           reposted ? "cursor-pointer text-success" : "cursor-pointer hover:text-success"
@@ -124,7 +124,7 @@ function FeedItemRepost({event}: FeedItemRepostProps) {
           )}
         </div>
         <span>{formatAmount(repostCount)}</span>
-      </div>
+      </button>
     </>
   )
 }
