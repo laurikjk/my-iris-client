@@ -69,7 +69,7 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
   }
 
   const handleMouseDown = (
-    e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>
+    e: ReactMouseEvent<HTMLButtonElement> | ReactTouchEvent<HTMLButtonElement>
   ) => {
     setIsLongPress(false)
     if ("touches" in e && e.touches.length > 0) {
