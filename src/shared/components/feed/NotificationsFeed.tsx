@@ -110,7 +110,6 @@ function NotificationsFeed() {
 
   useEffect(() => {
     if (publicKey) {
-      notifications.clear()
       getNotifications(publicKey)
     }
 
