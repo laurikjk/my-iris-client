@@ -33,9 +33,11 @@ export const MessagesNavItem = ({label, to, onClick}: MessagesNavItemProps) => {
         }
       >
         {({isActive}) => (
-          <span className="indicator flex items-center gap-2">
-            <UnseenMessagesBadge />
-            <Icon name={`mail-${isActive ? "solid" : "outline"}`} className="w-6 h-6" />
+          <span className="flex items-center gap-2">
+            <span className="indicator">
+              <UnseenMessagesBadge />
+              <Icon name={`mail-${isActive ? "solid" : "outline"}`} className="w-6 h-6" />
+            </span>
             <span className="inline md:hidden xl:inline">{label}</span>
           </span>
         )}
