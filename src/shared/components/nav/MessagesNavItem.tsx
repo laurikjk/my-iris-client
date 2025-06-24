@@ -6,11 +6,12 @@ import classNames from "classnames"
 import NavLink from "./NavLink"
 
 interface MessagesNavItemProps {
+  label: string
   to: string
   onClick?: MouseEventHandler<HTMLAnchorElement>
 }
 
-export const MessagesNavItem = ({to, onClick}: MessagesNavItemProps) => {
+export const MessagesNavItem = ({label, to, onClick}: MessagesNavItemProps) => {
   const {setIsSidebarOpen} = useUIStore()
 
   const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
@@ -21,7 +22,7 @@ export const MessagesNavItem = ({to, onClick}: MessagesNavItemProps) => {
   return (
     <li>
       <NavLink
-        title="Messages"
+        title={label}
         to={to}
         onClick={handleClick}
         className={({isActive}) =>
@@ -35,7 +36,7 @@ export const MessagesNavItem = ({to, onClick}: MessagesNavItemProps) => {
           <span className="indicator flex items-center gap-2">
             <UnseenMessagesBadge />
             <Icon name={`mail-${isActive ? "solid" : "outline"}`} className="w-6 h-6" />
-            <span className="inline md:hidden xl:inline">Messages</span>
+            <span className="inline md:hidden xl:inline">{label}</span>
           </span>
         )}
       </NavLink>

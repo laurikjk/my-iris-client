@@ -60,8 +60,10 @@ const NavSideBar = () => {
           </NavLink>
           <ul className="menu px-2 py-0 text-xl flex flex-col gap-4 md:gap-2 xl:gap-4 rounded-2xl">
             {navItems.map(({to, icon, activeIcon, inactiveIcon, label, onClick}) => {
-              if (label === "Messages") {
-                return <MessagesNavItem key={to} to={to} onClick={onClick} />
+              if (label === "Chats") {
+                return (
+                  <MessagesNavItem label={label} key={to} to={to} onClick={onClick} />
+                )
               }
               if (label === "Notifications") {
                 return <NotificationNavItem key={to} to={to} onClick={onClick} />
