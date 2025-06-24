@@ -42,6 +42,19 @@ interface SessionStoreState {
   lastSeenPublic: Map<string, number>
 }
 
+const createSessionWithLastSeen = (
+  currentSessions: Map<string, Session>,
+  currentLastSeen: Map<string, number>,
+  sessionId: string,
+  session: Session
+) => {
+  const newSessions = new Map(currentSessions)
+  newSessions.set(sessionId, session)
+  const newLastSeen = new Map(currentLastSeen)
+  newLastSeen.set(sessionId, Date.now())
+  return {sessions: newSessions, lastSeen: newLastSeen}
+}
+
 const inviteListeners = new Map<string, () => void>()
 const sessionListeners = new Map<string, () => void>()
 
@@ -132,9 +145,13 @@ const store = create<SessionStore>()(
           if (sessionListeners.has(sessionId)) {
             return
           }
-          const newSessions = new Map(store.getState().sessions)
-          newSessions.set(sessionId, session)
-          store.setState({sessions: newSessions})
+          const newState = createSessionWithLastSeen(
+            store.getState().sessions,
+            store.getState().lastSeen,
+            sessionId,
+            session
+          )
+          store.setState(newState)
           const sessionUnsubscribe = session.onEvent((event) => {
             useEventsStore.getState().upsert(sessionId, event)
             store.setState({sessions: new Map(store.getState().sessions)})
@@ -212,15 +229,19 @@ const store = create<SessionStore>()(
         if (sessionListeners.has(sessionId)) {
           return sessionId
         }
-        const newSessions = new Map(get().sessions)
-        newSessions.set(sessionId, session)
+        const newState = createSessionWithLastSeen(
+          get().sessions,
+          get().lastSeen,
+          sessionId,
+          session
+        )
         const sessionUnsubscribe = session.onEvent((event) => {
           useEventsStore.getState().upsert(sessionId, event)
           // make sure we persist session state
           set({sessions: new Map(get().sessions)})
         })
         sessionListeners.set(sessionId, sessionUnsubscribe)
-        set({sessions: newSessions})
+        set(newState)
         return sessionId
       },
       updateLastSeen: (sessionId: string) => {
@@ -269,9 +290,13 @@ const store = create<SessionStore>()(
               if (sessionListeners.has(sessionId)) {
                 return
               }
-              const newSessions = new Map(store.getState().sessions)
-              newSessions.set(sessionId, session)
-              store.setState({sessions: newSessions})
+              const newState = createSessionWithLastSeen(
+                store.getState().sessions,
+                store.getState().lastSeen,
+                sessionId,
+                session
+              )
+              store.setState(newState)
               const sessionUnsubscribe = session.onEvent((event) => {
                 useEventsStore.getState().upsert(sessionId, event)
                 store.setState({sessions: new Map(store.getState().sessions)})
@@ -284,6 +309,13 @@ const store = create<SessionStore>()(
         Array.from(state?.sessions || []).forEach(([sessionId, session]) => {
           if (sessionListeners.has(sessionId)) {
             return
+          }
+          // Ensure lastSeen entry exists for rehydrated sessions
+          const currentLastSeen = store.getState().lastSeen
+          if (!currentLastSeen.has(sessionId)) {
+            const newLastSeen = new Map(currentLastSeen)
+            newLastSeen.set(sessionId, Date.now())
+            store.setState({lastSeen: newLastSeen})
           }
           const sessionUnsubscribe = session.onEvent((event) => {
             useEventsStore.getState().upsert(sessionId, event)

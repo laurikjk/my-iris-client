@@ -16,7 +16,6 @@ export default function UnseenMessagesBadge() {
       const latestTime = getMillisecondTimestamp(latest)
       const lastSeenTime = lastSeen.get(sessionId)
 
-      // If no lastSeen exists, don't show as unread (new sessions)
       if (lastSeenTime === undefined) return false
 
       return latestTime > lastSeenTime
