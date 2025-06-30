@@ -6,6 +6,7 @@ import {useSettingsStore} from "@/stores/settings"
 import {SortedMap} from "./SortedMap/SortedMap"
 import socialGraph from "@/utils/socialGraph"
 import {profileCache} from "@/utils/memcache"
+import {useUserStore} from "@/stores/user"
 import debounce from "lodash/debounce"
 import {base64} from "@scure/base"
 import IrisAPI from "./IrisAPI"
@@ -271,6 +272,12 @@ export const subscribeToNotifications = debounce(async () => {
     return
   }
 
+  const myPubKey = useUserStore.getState().publicKey
+
+  if (!myPubKey) {
+    return
+  }
+
   try {
     const pushSubscription = await getOrCreatePushSubscription()
     if (!pushSubscription) {
@@ -279,9 +286,8 @@ export const subscribeToNotifications = debounce(async () => {
 
     const store = useSettingsStore.getState()
     const api = new IrisAPI(store.notifications.server)
-    const myKey = [...socialGraph().getUsersByFollowDistance(0)][0]
     const notificationFilter = {
-      "#p": [myKey],
+      "#p": [myPubKey],
       kinds: [1, 6, 7, 9735],
     }
 
@@ -291,7 +297,7 @@ export const subscribeToNotifications = debounce(async () => {
     // Find and delete any existing subscription with kinds [1,6,7]. remove at some point
     const oldSub = Object.entries(currentSubscriptions).find(
       ([, sub]) =>
-        sub.filter["#p"]?.includes(myKey) &&
+        sub.filter["#p"]?.includes(myPubKey) &&
         sub.filter.kinds?.length === 3 &&
         sub.filter.kinds.includes(1) &&
         sub.filter.kinds.includes(6) &&
@@ -308,7 +314,7 @@ export const subscribeToNotifications = debounce(async () => {
     // Check for existing subscription with new filter
     const existingSub = Object.entries(currentSubscriptions).find(
       ([, sub]) =>
-        sub.filter["#p"]?.includes(myKey) &&
+        sub.filter["#p"]?.includes(myPubKey) &&
         sub.filter.kinds?.length === notificationFilter.kinds.length &&
         sub.filter.kinds.every((k) => notificationFilter.kinds.includes(k)) &&
         (sub.web_push_subscriptions || []).some(
