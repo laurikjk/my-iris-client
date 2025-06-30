@@ -1,6 +1,18 @@
 import {test, expect} from "@playwright/test"
 import {signUp} from "./auth.setup"
 
+// Define the type for the window object with notifications store
+type WindowWithNotificationsStore = {
+  useNotificationsStore?: {
+    getState: () => {
+      latestNotification: number
+      notificationsSeenAt: number
+      setLatestNotification: (timestamp: number) => void
+      setNotificationsSeenAt: (timestamp: number) => void
+    }
+  }
+}
+
 test.describe("Unseen Notifications Indicator", () => {
   test("should show notification badge in desktop sidebar and mobile header when notification state indicates unseen notifications", async ({
     page,
@@ -14,7 +26,9 @@ test.describe("Unseen Notifications Indicator", () => {
       const latestNotification = now
       const notificationsSeenAt = now - 10000 // 10 seconds ago
 
-      const store = (window as any).useNotificationsStore?.getState?.()
+      const store = (
+        window as WindowWithNotificationsStore
+      ).useNotificationsStore?.getState?.()
       if (store) {
         store.setLatestNotification(latestNotification)
         store.setNotificationsSeenAt(notificationsSeenAt)
@@ -43,7 +57,9 @@ test.describe("Unseen Notifications Indicator", () => {
       console.log("❌ Desktop notification badge not found - checking store state...")
 
       const storeState = await page.evaluate(() => {
-        const store = (window as any).useNotificationsStore?.getState?.()
+        const store = (
+          window as WindowWithNotificationsStore
+        ).useNotificationsStore?.getState?.()
         return store
           ? {
               latestNotification: store.latestNotification,
@@ -55,7 +71,9 @@ test.describe("Unseen Notifications Indicator", () => {
       console.log("Current store state:", storeState)
 
       await page.evaluate(() => {
-        const store = (window as any).useNotificationsStore?.getState?.()
+        const store = (
+          window as WindowWithNotificationsStore
+        ).useNotificationsStore?.getState?.()
         if (store) {
           const now = Date.now()
           store.setLatestNotification(now)

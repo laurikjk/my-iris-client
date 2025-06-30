@@ -330,11 +330,11 @@ const store = create<SessionStore>()(
         JSON.parse(localStorage.getItem("sessions") || "null")
       ),
       version: 1,
-      migrate: async (oldData: any, version) => {
+      migrate: async (oldData: unknown, version) => {
         if (version === 0 && oldData) {
           const data = {
             version: 1,
-            state: oldData.state,
+            state: oldData as SessionStore,
           }
 
           const dataString = JSON.stringify(data)
