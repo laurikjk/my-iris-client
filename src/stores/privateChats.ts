@@ -13,7 +13,6 @@ interface PrivateChatsActions {
   removeChat: (publicKey: string) => void
   updateLastSeen: (publicKey: string, timestamp?: number) => void
   updateLastSeenPublic: (publicKey: string, timestamp?: number) => void
-  hasChat: (publicKey: string) => boolean
   clearAllChats: () => void
 }
 
@@ -60,10 +59,6 @@ const store = create<PrivateChatsStore>()(
         const newLastSeenPublic = new Map(get().lastSeenPublic)
         newLastSeenPublic.set(publicKey, timestamp || Date.now())
         set({lastSeenPublic: newLastSeenPublic})
-      },
-
-      hasChat: (publicKey: string) => {
-        return get().chatPublicKeys.has(publicKey)
       },
 
       clearAllChats: () => {

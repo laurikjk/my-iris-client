@@ -141,8 +141,8 @@ export async function initializeChat(publicKeyHex: string): Promise<void> {
   }
 
   // Add to privateChats store if not already there
-  const {hasChat, addChat} = usePrivateChatsStore.getState()
-  if (!hasChat(publicKeyHex)) {
+  const {chatPublicKeys, addChat} = usePrivateChatsStore.getState()
+  if (!chatPublicKeys.has(publicKeyHex)) {
     addChat(publicKeyHex)
   }
 
