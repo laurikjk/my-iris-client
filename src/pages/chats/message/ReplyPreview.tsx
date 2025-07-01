@@ -22,7 +22,6 @@ const ReplyPreview = ({
   const {events} = useEventsStore()
 
   // No need to find the reply tag here since we're passing it directly
-  const theirPublicKey = sessionId // sessionId is now just the public key for private chats
 
   // Function to handle scrolling to the replied message
   const handleScrollToReply = () => {
@@ -80,7 +79,7 @@ const ReplyPreview = ({
     }
 
     fetchReplyMessage()
-  }, [replyToId, sessionId, theirPublicKey, events])
+  }, [replyToId, sessionId, events])
 
   if (!repliedToMessage) return null
 
@@ -96,7 +95,7 @@ const ReplyPreview = ({
         {repliedToMessage.sender === "user" ? (
           "You"
         ) : (
-          <Name pubKey={isPrivate ? theirPublicKey : repliedToMessage.pubkey} />
+          <Name pubKey={isPrivate ? sessionId : repliedToMessage.pubkey} />
         )}{" "}
       </div>
       <div className="truncate max-w-[225px]">{repliedToMessage.content}</div>

@@ -26,7 +26,6 @@ interface ChatListItemProps {
 
 const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
   const location = useLocation()
-  const pubKey = isPublic ? "" : id // id is now just the public key for private chats
   const isActive = location.state?.id === id
   const [latestMessage, setLatestMessage] = useState<{
     content: string
@@ -169,7 +168,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
               <span className="text-lg">#</span>
             </div>
           ))}
-        {!isPublic && <Avatar pubKey={pubKey} />}
+        {!isPublic && <Avatar pubKey={id} />}
         <div className="flex flex-col flex-1">
           <div className="flex flex-row items-center justify-between gap-2">
             <span className="text-base font-semibold flex items-center gap-1">
@@ -178,7 +177,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
                 channelMetadata?.name ||
                 (showPlaceholder ? `Channel ${id.slice(0, 8)}...` : "")
               ) : (
-                <Name pubKey={pubKey} />
+                <Name pubKey={id} />
               )}
             </span>
             <div className="flex flex-col gap-2">

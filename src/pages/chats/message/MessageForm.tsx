@@ -33,7 +33,6 @@ const MessageForm = ({
 }: MessageFormProps) => {
   const [newMessage, setNewMessage] = useState("")
   const textareaRef = useAutosizeTextarea(newMessage)
-  const theirPublicKey = id // id is now just the public key
 
   useEffect(() => {
     if (!isTouchDevice && textareaRef.current) {
@@ -73,7 +72,7 @@ const MessageForm = ({
     // Private chat: use session manager
     if (!isPublicChat) {
       try {
-        await sendMessage(theirPublicKey, text, replyingTo?.id, false)
+        await sendMessage(id, text, replyingTo?.id, false)
       } catch (error) {
         // Handle error silently or show user notification
       }
@@ -110,7 +109,7 @@ const MessageForm = ({
         <MessageFormReplyPreview
           replyingTo={replyingTo}
           setReplyingTo={setReplyingTo}
-          theirPublicKey={theirPublicKey}
+          theirPublicKey={id}
         />
       )}
 

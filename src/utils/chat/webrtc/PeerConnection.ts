@@ -15,21 +15,20 @@ export function getPeerConnection(
   } = {}
 ) {
   const {ask = true, connect: _connect = false, create = true} = options
-  const pubKey = publicKey // publicKey is now passed directly
   if (
     create &&
-    socialGraph().getFollowDistance(pubKey) > 1 &&
-    socialGraph().getRoot() !== pubKey
+    socialGraph().getFollowDistance(publicKey) > 1 &&
+    socialGraph().getRoot() !== publicKey
   ) {
-    console.log("Rejected connection request from untrusted user:", pubKey)
+    console.log("Rejected connection request from untrusted user:", publicKey)
     return
   }
   if (
     !connections.has(publicKey) &&
     create &&
-    (pubKey === socialGraph().getRoot() ||
+    (publicKey === socialGraph().getRoot() ||
       !ask ||
-      confirm(`WebRTC connect with ${getCachedName(pubKey)}?`))
+      confirm(`WebRTC connect with ${getCachedName(publicKey)}?`))
   ) {
     // TODO: This WebRTC functionality needs to be updated to work with the new sessionManager
     // instead of the retired sessions store. For now, WebRTC file sharing is disabled.
