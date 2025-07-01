@@ -9,14 +9,20 @@ type ReplyPreviewProps = {
   isUser: boolean
   sessionId: string
   replyToId: string
+  isPrivate?: boolean
 }
 
-const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
+const ReplyPreview = ({
+  isUser,
+  sessionId,
+  replyToId,
+  isPrivate = true,
+}: ReplyPreviewProps) => {
   const [repliedToMessage, setRepliedToMessage] = useState<MessageType | null>(null)
   const {events} = useEventsStore()
 
   // No need to find the reply tag here since we're passing it directly
-  const theirPublicKey = sessionId.split(":")[0]
+  const theirPublicKey = sessionId // sessionId is now just the public key for private chats
 
   // Function to handle scrolling to the replied message
   const handleScrollToReply = () => {
@@ -38,8 +44,8 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
 
     const fetchReplyMessage = async () => {
       try {
-        // For private chats (sessionId contains ":")
-        if (sessionId.includes(":")) {
+        // For private chats
+        if (isPrivate) {
           const sessionEvents = events.get(sessionId)
           if (sessionEvents) {
             const replyMsg = sessionEvents.get(replyToId)
@@ -90,9 +96,7 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
         {repliedToMessage.sender === "user" ? (
           "You"
         ) : (
-          <Name
-            pubKey={sessionId.includes(":") ? theirPublicKey : repliedToMessage.pubkey}
-          />
+          <Name pubKey={isPrivate ? theirPublicKey : repliedToMessage.pubkey} />
         )}{" "}
       </div>
       <div className="truncate max-w-[225px]">{repliedToMessage.content}</div>

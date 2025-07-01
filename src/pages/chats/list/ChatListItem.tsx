@@ -3,13 +3,13 @@ import {fetchChannelMetadata, ChannelMetadata} from "../utils/channelMetadata"
 import RelativeTime from "@/shared/components/event/RelativeTime"
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import {PublicChatContext} from "../public/PublicChatContext"
+import {usePrivateChatsStore} from "@/stores/privateChats"
 import {Avatar} from "@/shared/components/user/Avatar"
 import {useEffect, useState, useContext} from "react"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {Name} from "@/shared/components/user/Name"
 import {CHANNEL_MESSAGE} from "../utils/constants"
-import {useSessionsStore} from "@/stores/sessions"
 import {useLocation, NavLink} from "react-router"
 import {MessageType} from "../message/Message"
 import {useEventsStore} from "@/stores/events"
@@ -26,7 +26,7 @@ interface ChatListItemProps {
 
 const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
   const location = useLocation()
-  const pubKey = isPublic ? "" : id.split(":").shift() || ""
+  const pubKey = isPublic ? "" : id // id is now just the public key for private chats
   const isActive = location.state?.id === id
   const [latestMessage, setLatestMessage] = useState<{
     content: string
@@ -38,7 +38,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
   const [channelMetadata, setChannelMetadata] = useState<ChannelMetadata | null>(null)
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false)
   const {events} = useEventsStore()
-  const {lastSeen, lastSeenPublic, updateLastSeenPublic} = useSessionsStore()
+  const {lastSeen, lastSeenPublic, updateLastSeenPublic} = usePrivateChatsStore()
   const myPubKey = useUserStore((state) => state.publicKey)
 
   // Fetch channel metadata for public chats
