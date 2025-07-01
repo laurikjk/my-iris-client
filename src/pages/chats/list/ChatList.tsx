@@ -25,7 +25,7 @@ type PublicChat = {
 }
 
 const ChatList = ({className}: ChatListProps) => {
-  const privateChatUsers = usePrivateChatsStore((state) => Array.from(state.chatPublicKeys))
+  const chatPublicKeys = usePrivateChatsStore((state) => state.chatPublicKeys)
   const {events} = useEventsStore()
   const [publicChats, setPublicChats] = useState<PublicChat[]>([])
   const [publicChatTimestamps, setPublicChatTimestamps] = useState<
@@ -120,7 +120,7 @@ const ChatList = ({className}: ChatListProps) => {
   // Combine private and public chats for display
   const allChats = Object.values(
     [
-      ...privateChatUsers.map((pub) => ({id: pub, isPublic: false})),
+      ...Array.from(chatPublicKeys).map((pub) => ({id: pub, isPublic: false})),
       ...publicChats.map((chat) => ({id: chat.id, isPublic: true})),
     ].reduce(
       (acc, chat) => {
