@@ -26,7 +26,6 @@ const Chat = ({id}: {id: string}) => {
     return chatMessages || new SortedMap<string, MessageType>([], comparator)
   }, [events, recipientPubKey])
 
-  console.log("recipientPubKey", recipientPubKey)
 
   if (!recipientPubKey) {
     return null

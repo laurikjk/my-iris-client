@@ -39,7 +39,6 @@ const makePublish = () => (event: any) => {
   try {
     return ndk().publish(event) as unknown as Promise<void>
   } catch (e) {
-    console.warn("Failed to publish event", e)
     return undefined
   }
 }
@@ -74,34 +73,12 @@ async function initializeManager(identityKey: Uint8Array, deviceId: string): Pro
   )
 
   // Ensure internal async init finishes
-  console.log("SessionManager: Starting init...")
   await manager.init()
-  console.log("SessionManager: Init completed")
-
-  // Test if manager has expected methods
-  console.log(
-    "SessionManager methods:",
-    Object.getOwnPropertyNames(Object.getPrototypeOf(manager))
-  )
-  console.log("Manager onEvent type:", typeof manager.onEvent)
 
   // Listen to events and handle new contacts
   // Note: SessionManager.onEvent only provides Rumor, not sender info
   // We need to track sender through session management
   manager.onEvent((rumor: any) => {
-    console.log("Received rumor from session manager:", rumor)
-
-    // The rumor.pubkey is a dummy value, we need to get sender info differently
-    // For now, log the rumor structure to understand what data we have
-    console.log("Rumor structure:", {
-      id: rumor.id,
-      content: rumor.content,
-      kind: rumor.kind,
-      created_at: rumor.created_at,
-      pubkey: rumor.pubkey,
-      tags: rumor.tags,
-    })
-
     // TODO: Need to implement proper sender tracking
     // The SessionManager doesn't provide sender info directly
     // We may need to use individual session callbacks or track sessions separately
@@ -136,7 +113,6 @@ async function ensureManager(): Promise<SessionManager | undefined> {
 export async function initializeChat(publicKeyHex: string): Promise<void> {
   const sessionManager = await ensureManager()
   if (!sessionManager) {
-    console.warn("SessionManager not available")
     return
   }
 
@@ -165,12 +141,6 @@ export async function sendMessage(
     throw new Error("SessionManager not available")
   }
 
-  console.log(
-    "SessionManager: Attempting to send message to",
-    publicKey,
-    "content:",
-    content
-  )
 
   try {
     let messageToStore: any
@@ -178,9 +148,7 @@ export async function sendMessage(
 
     // Use the library's sendText method for simple text messages
     if (!isReaction && !replyToId) {
-      console.log("SessionManager: Calling sendText with", publicKey, content)
       events = await (sessionManager as any).sendText(publicKey, content)
-      console.log("SessionManager: sendText returned events:", events)
 
       // Create a message object to store in our events
       const myPubKey = useUserStore.getState().publicKey
@@ -218,7 +186,6 @@ export async function sendMessage(
 
     // If library returned no events but didn't error, the session might not be established yet
     if (events.length === 0) {
-      console.log("SessionManager: No events returned, ensuring listening to user")
       sessionManager.listenToUser(publicKey)
     }
 
@@ -227,8 +194,6 @@ export async function sendMessage(
       await useEventsStore.getState().upsert(publicKey, messageToStore)
     }
   } catch (error) {
-    console.error("SessionManager: Failed to send message:", error)
-
     // Store the message locally even if sending failed
     const myPubKey = useUserStore.getState().publicKey
     const messageToStore = {

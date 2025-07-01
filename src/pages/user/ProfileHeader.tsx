@@ -42,7 +42,7 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
       await initializeChat(pubKeyHex)
       navigate("/chats/chat", {state: {id: pubKey}})
     } catch (error) {
-      console.error("Failed to initialize chat:", error)
+      // Handle error silently
     }
   }
 

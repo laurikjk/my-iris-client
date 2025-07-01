@@ -30,9 +30,6 @@ export const useInviteFromUrl = () => {
 
         // TODO: This invite acceptance functionality needs to be updated to work with the new sessionManager
         // instead of the retired sessions store. For now, invite URLs are disabled.
-        console.warn(
-          "Invite URL functionality temporarily disabled - needs sessionManager integration"
-        )
         navigate("/chats")
 
         // const sessionId = await useSessionsStore.getState().acceptInvite(fullUrl)

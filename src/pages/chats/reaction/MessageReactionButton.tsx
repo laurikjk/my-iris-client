@@ -40,7 +40,6 @@ const MessageReactionButton = ({
     } else {
       // For now, we'll only use reactions through the onSendReaction prop
       // since we're migrating away from the sessions store
-      console.warn("Reaction not sent - onSendReaction prop required")
     }
   }
 

@@ -33,9 +33,6 @@ export function getPeerConnection(
   ) {
     // TODO: This WebRTC functionality needs to be updated to work with the new sessionManager
     // instead of the retired sessions store. For now, WebRTC file sharing is disabled.
-    console.warn(
-      "WebRTC functionality temporarily disabled - needs sessionManager integration"
-    )
     return
 
     // const session = useSessionsStore.getState().sessions.get(sessionId)

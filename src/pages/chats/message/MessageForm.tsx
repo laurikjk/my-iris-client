@@ -73,11 +73,9 @@ const MessageForm = ({
     // Private chat: use session manager
     if (!isPublicChat) {
       try {
-        console.log("sending message to", theirPublicKey)
         await sendMessage(theirPublicKey, text, replyingTo?.id, false)
-        console.log("Message sent successfully")
       } catch (error) {
-        console.error("Failed to send message via session manager:", error)
+        // Handle error silently or show user notification
       }
       return
     }
