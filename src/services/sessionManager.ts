@@ -8,7 +8,6 @@ import {useUserStore} from "../stores/user"
 import localforage from "localforage"
 import {ndk} from "@/utils/ndk"
 
-// localforage storage adapter
 const storage: StorageAdapter = {
   get: async (key) => {
     return (await localforage.getItem(key)) ?? undefined
@@ -28,7 +27,6 @@ const storage: StorageAdapter = {
   },
 }
 
-// Nostr subscribe helper for SessionManager
 const makeSubscribe = () => (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
   const sub = ndk().subscribe(filter)
   sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
@@ -42,7 +40,6 @@ const makePublish = () => (event: any) => {
     return undefined
   }
 }
-// State management
 let manager: SessionManager | undefined
 let messageCallbacks: Array<(publicKey: string, event: any) => void> = []
 
@@ -58,12 +55,11 @@ const getDeviceId = (): string => {
  * Initialize the session manager with user's identity key and device ID
  */
 async function initializeManager(identityKey: Uint8Array, deviceId: string): Promise<void> {
-  if (manager) return // already initialized
+  if (manager) return
 
   const subscribe = makeSubscribe()
   const publish = makePublish()
 
-  // Cast to any to avoid potential type mismatches arising from duplicate nostr-tools versions
   manager = new SessionManager(
     identityKey,
     deviceId,
@@ -72,17 +68,9 @@ async function initializeManager(identityKey: Uint8Array, deviceId: string): Pro
     storage
   )
 
-  // Ensure internal async init finishes
   await manager.init()
 
-  // Listen to events and handle new contacts
-  // Note: SessionManager.onEvent only provides Rumor, not sender info
-  // We need to track sender through session management
   manager.onEvent((rumor: any) => {
-    // TODO: Need to implement proper sender tracking
-    // The SessionManager doesn't provide sender info directly
-    // We may need to use individual session callbacks or track sessions separately
-    // Notify message callbacks (without proper sender for now)
     messageCallbacks.forEach((callback) => {
       callback("unknown-sender", rumor)
     })
@@ -95,7 +83,6 @@ async function initializeManager(identityKey: Uint8Array, deviceId: string): Pro
 async function ensureManager(): Promise<SessionManager | undefined> {
   if (manager) return manager
 
-  // Try to initialize if keys are present
   const publicKey = useUserStore.getState().publicKey
   if (!publicKey) return undefined
 
@@ -116,14 +103,11 @@ export async function initializeChat(publicKeyHex: string): Promise<void> {
     return
   }
 
-  // Add to privateChats store if not already there
   const {chatPublicKeys, addChat} = usePrivateChatsStore.getState()
   if (!chatPublicKeys.has(publicKeyHex)) {
     addChat(publicKeyHex)
   }
 
-  // Start listening for invites from this user
-  // This will automatically create a session when the user publishes an invite
   sessionManager.listenToUser(publicKeyHex)
 }
 
@@ -146,11 +130,9 @@ export async function sendMessage(
     let messageToStore: any
     let events: any[] = []
 
-    // Use the library's sendText method for simple text messages
-    if (!isReaction && !replyToId) {
+      if (!isReaction && !replyToId) {
       events = await (sessionManager as any).sendText(publicKey, content)
 
-      // Create a message object to store in our events
       const myPubKey = useUserStore.getState().publicKey
       messageToStore = {
         id: crypto.randomUUID(),
@@ -158,20 +140,18 @@ export async function sendMessage(
         kind: 1059,
         created_at: Math.floor(Date.now() / 1000),
         pubkey: myPubKey || "",
-        sender: "user" as const, // Mark as sent by us
+        sender: "user" as const,
         tags: [["ms", Date.now().toString()]],
       }
     } else {
-      // For reactions or replies, use sendEvent with custom format
       const event = {
         content,
-        kind: isReaction ? 7 : 1059, // 7 for reactions, 1059 for chat messages
+        kind: isReaction ? 7 : 1059,
         tags: [...(replyToId ? [["e", replyToId]] : []), ["ms", Date.now().toString()]],
       }
 
       events = await (sessionManager as any).sendEvent(publicKey, event)
 
-      // Create a message object to store in our events
       const myPubKey = useUserStore.getState().publicKey
       messageToStore = {
         id: crypto.randomUUID(),
@@ -179,22 +159,19 @@ export async function sendMessage(
         kind: event.kind,
         created_at: Math.floor(Date.now() / 1000),
         pubkey: myPubKey || "",
-        sender: "user" as const, // Mark as sent by us
+        sender: "user" as const,
         tags: event.tags,
       }
     }
 
-    // If library returned no events but didn't error, the session might not be established yet
     if (events.length === 0) {
       sessionManager.listenToUser(publicKey)
     }
 
-    // Store our sent message in the events store so it appears in the chat
     if (messageToStore) {
       await useEventsStore.getState().upsert(publicKey, messageToStore)
     }
   } catch (error) {
-    // Store the message locally even if sending failed
     const myPubKey = useUserStore.getState().publicKey
     const messageToStore = {
       id: crypto.randomUUID(),
@@ -221,7 +198,6 @@ export async function sendMessage(
 export function onMessage(callback: (publicKey: string, event: any) => void): () => void {
   messageCallbacks.push(callback)
 
-  // Return unsubscribe function
   return () => {
     const index = messageCallbacks.indexOf(callback)
     if (index > -1) {

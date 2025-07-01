@@ -12,35 +12,32 @@ const Chat = ({id}: {id: string}) => {
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
   const events = useEventsStore((state) => state.events)
 
-  // id is the recipient's pubkey
-  const recipientPubKey = id
-
   useEffect(() => {
     // Initialize chat session
-    initializeChat(recipientPubKey)
-  }, [recipientPubKey])
+    initializeChat(id)
+  }, [id])
 
   // Get messages for this chat from events store
   const messagesMemo = useMemo(() => {
-    const chatMessages = events.get(recipientPubKey)
+    const chatMessages = events.get(id)
     return chatMessages || new SortedMap<string, MessageType>([], comparator)
-  }, [events, recipientPubKey])
+  }, [events, id])
 
 
-  if (!recipientPubKey) {
+  if (!id) {
     return null
   }
 
   return (
     <>
-      <PrivateChatHeader id={recipientPubKey} messages={messagesMemo} />
+      <PrivateChatHeader id={id} messages={messagesMemo} />
       <ChatContainer
         messages={messagesMemo}
-        sessionId={recipientPubKey}
+        sessionId={id}
         onReply={setReplyingTo}
       />
       <MessageForm
-        id={recipientPubKey}
+        id={id}
         replyingTo={replyingTo}
         setReplyingTo={setReplyingTo}
       />

@@ -31,8 +31,7 @@ export async function loadAll(): Promise<Map<string, SortedMap<string, MessageTy
 }
 
 export async function save(publicKey: string, message: MessageType): Promise<void> {
-  const msg = {session_id: publicKey, ...message} // session_id field now stores public key
-  await db.messages.put(msg, msg.id)
+  await db.messages.put({session_id: publicKey, ...message}, message.id)
 }
 
 export async function deleteBySession(publicKey: string): Promise<void> {
