@@ -171,7 +171,7 @@ export const subscribeToDMNotifications = debounce(async () => {
   }
 
   // Get chat public keys from the new privateChats store
-  const chatPublicKeys = usePrivateChatsStore.getState().getAllChats()
+  const chatPublicKeys = Array.from(usePrivateChatsStore.getState().chatPublicKeys)
 
   // For now, we'll use the chat public keys as session authors
   // In the future, this might need to be more sophisticated based on the sessionManager

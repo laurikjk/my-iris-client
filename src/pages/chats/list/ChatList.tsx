@@ -25,8 +25,7 @@ type PublicChat = {
 }
 
 const ChatList = ({className}: ChatListProps) => {
-  const {getAllChats} = usePrivateChatsStore()
-  const privateChatUsers = getAllChats()
+  const privateChatUsers = usePrivateChatsStore((state) => Array.from(state.chatPublicKeys))
   const {events} = useEventsStore()
   const [publicChats, setPublicChats] = useState<PublicChat[]>([])
   const [publicChatTimestamps, setPublicChatTimestamps] = useState<
