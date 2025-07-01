@@ -13,7 +13,6 @@ interface PrivateChatsActions {
   removeChat: (publicKey: string) => void
   updateLastSeen: (publicKey: string, timestamp?: number) => void
   updateLastSeenPublic: (publicKey: string, timestamp?: number) => void
-  clearAllChats: () => void
 }
 
 type PrivateChatsStore = PrivateChatsState & PrivateChatsActions
@@ -61,9 +60,6 @@ const store = create<PrivateChatsStore>()(
         set({lastSeenPublic: newLastSeenPublic})
       },
 
-      clearAllChats: () => {
-        set({chatPublicKeys: new Set(), lastSeen: new Map(), lastSeenPublic: new Map()})
-      },
     }),
     {
       name: "private-chats",
