@@ -1,5 +1,5 @@
 import {eventsByIdCache, addSeenEventId} from "@/utils/memcache.ts"
-import {useEffect, useMemo, useState, useRef} from "react"
+import {useEffect, useMemo, useState, useRef, memo} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 
@@ -239,6 +239,8 @@ function FeedItem({
               "hover:bg-[var(--note-hover-color)]": !standalone,
             }
           )}
+          data-testid="feed-item"
+          data-event-id={event.id}
           onClick={(e) =>
             !standalone && onClick(e, event, referredEvent, eventId, navigate)
           }
@@ -304,4 +306,4 @@ function FeedItem({
   )
 }
 
-export default FeedItem
+export default memo(FeedItem)

@@ -77,7 +77,7 @@ export default function useFeedEvents({
       }
       return true
     },
-    [displayFilterFn, myPubKey, hideEventsByUnknownUsers, filters.authors]
+    [displayFilterFn, localFilter.authors, hideEventsByUnknownUsers, filters.authors]
   )
 
   const filteredEvents = useMemo(() => {
