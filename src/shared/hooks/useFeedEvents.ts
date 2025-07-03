@@ -6,7 +6,6 @@ import {shouldHideAuthor} from "@/utils/visibility"
 import socialGraph from "@/utils/socialGraph"
 import {feedCache} from "@/utils/memcache"
 import {useUserStore} from "@/stores/user"
-import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
 
 interface UseFeedEventsProps {
@@ -144,12 +143,13 @@ export default function useFeedEvents({
       }
     }, 5000)
 
-    const markLoadDoneIfHasEvents = debounce(() => {
-      if (hasReceivedEventsRef.current && !initialLoadDoneRef.current) {
+    sub.on("eose", () => {
+      if (!initialLoadDoneRef.current) {
         initialLoadDoneRef.current = true
         setInitialLoadDoneState(true)
       }
-    }, 500)
+      clearTimeout(initialLoadTimeout)
+    })
 
     sub.on("event", (event) => {
       if (!event || !event.id) return
@@ -170,8 +170,6 @@ export default function useFeedEvents({
         if (!initialLoadDoneRef.current || isMyRecent) {
           // Before initial load is done, add directly to main feed
           eventsRef.current.set(event.id, event)
-          // Only mark initial load as done if we actually have events
-          markLoadDoneIfHasEvents()
         } else {
           // After initial load is done, add to newEvents
           setNewEvents((prev) => new Map([...prev, [event.id, event]]))
