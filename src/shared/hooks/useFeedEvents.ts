@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef, useState, useCallback} from "react"
+import {useEffect, useState, useRef, useCallback, useReducer, useMemo} from "react"
 import {eventComparator} from "../components/feed/utils"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
@@ -6,7 +6,6 @@ import {shouldHideAuthor} from "@/utils/visibility"
 import socialGraph from "@/utils/socialGraph"
 import {feedCache} from "@/utils/memcache"
 import {useUserStore} from "@/stores/user"
-import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
 
 interface UseFeedEventsProps {
@@ -20,6 +19,12 @@ interface UseFeedEventsProps {
   sortFn?: (a: NDKEvent, b: NDKEvent) => number
 }
 
+type FeedEventBuffers = {
+  feed: SortedMap<string, NDKEvent>
+  pending: Map<string, NDKEvent>
+  backfill: Map<string, NDKEvent>
+}
+
 export default function useFeedEvents({
   filters,
   cacheKey,
@@ -31,40 +36,42 @@ export default function useFeedEvents({
   sortLikedPosts = false,
 }: UseFeedEventsProps) {
   const myPubKey = useUserStore((state) => state.publicKey)
-  const [localFilter, setLocalFilter] = useState(filters)
-  const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
-  const [newEvents, setNewEvents] = useState(new Map<string, NDKEvent>())
-  const eventsRef = useRef(
-    feedCache.get(cacheKey) ||
+
+  const feedEventBuffersRef = useRef<FeedEventBuffers>({
+    feed:
+      feedCache.get(cacheKey) ||
       new SortedMap(
         [],
         sortFn
           ? ([, a]: [string, NDKEvent], [, b]: [string, NDKEvent]) => sortFn(a, b)
           : eventComparator
-      )
+      ),
+    pending: new Map(),
+    backfill: new Map(),
+  })
+  const [, forceUpdate] = useReducer((x) => x + 1, 0)
+  const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
+  const [paginationUntil, setPaginationUntil] = useState<number | undefined>(undefined)
+  const [initialLoadDone, setInitialLoadDone] = useState(
+    feedEventBuffersRef.current.feed.size > 0
   )
-  const oldestRef = useRef<number | undefined>(undefined)
-  const initialLoadDoneRef = useRef<boolean>(eventsRef.current.size > 0)
-  const [initialLoadDoneState, setInitialLoadDoneState] = useState(
-    initialLoadDoneRef.current
-  )
-  const hasReceivedEventsRef = useRef<boolean>(eventsRef.current.size > 0)
 
-  const showNewEvents = () => {
-    newEvents.forEach((event) => {
-      if (!eventsRef.current.has(event.id)) {
-        eventsRef.current.set(event.id, event)
-      }
-    })
-    setNewEvents(new Map())
-    setNewEventsFrom(new Set())
-  }
+  const newestTimestamp = useRef<number | undefined>(
+    feedEventBuffersRef.current.feed.size > 0
+      ? Math.max(
+          ...Array.from(feedEventBuffersRef.current.feed.values()).map(
+            (e) => e.created_at || 0
+          )
+        )
+      : undefined
+  )
+  const oldestTimestamp = useRef<number | undefined>(undefined)
 
   const filterEvents = useCallback(
     (event: NDKEvent) => {
       if (!event.created_at) return false
       if (displayFilterFn && !displayFilterFn(event)) return false
-      const inAuthors = localFilter.authors?.includes(event.pubkey)
+      const inAuthors = filters.authors?.includes(event.pubkey)
       if (!inAuthors && shouldHideAuthor(event.pubkey, 3)) {
         return false
       }
@@ -77,11 +84,77 @@ export default function useFeedEvents({
       }
       return true
     },
-    [displayFilterFn, localFilter.authors, hideEventsByUnknownUsers, filters.authors]
+    [displayFilterFn, hideEventsByUnknownUsers, filters.authors]
+  )
+
+  const routeEventToBuffer = useCallback(
+    (event: NDKEvent) => {
+      if (!event.created_at || feedEventBuffersRef.current.feed.has(event.id)) return
+
+      if (fetchFilterFn && !fetchFilterFn(event)) {
+        return
+      }
+
+      const isMyRecentEvent =
+        event.pubkey === myPubKey && event.created_at * 1000 > Date.now() - 10000
+
+      if ((!initialLoadDone || isMyRecentEvent) && filterEvents(event)) {
+        feedEventBuffersRef.current.feed.set(event.id, event)
+      } else {
+        const eventTimestamp = event.created_at
+        const newestFeedTimestamp = Array.from(
+          feedEventBuffersRef.current.feed.values()
+        ).reduce((maxTimestamp, e) => Math.max(maxTimestamp, e.created_at || 0), 0)
+        const oldestFeedTimestamp = Array.from(
+          feedEventBuffersRef.current.feed.values()
+        ).reduce(
+          (minTimestamp, e) => Math.min(minTimestamp, e.created_at || Infinity),
+          Infinity
+        )
+
+        if (sortLikedPosts) {
+          // For like-sorted feeds, add all events directly to main feed (no banner)
+          if (filterEvents(event)) {
+            feedEventBuffersRef.current.feed.set(event.id, event)
+          }
+        } else {
+          if (eventTimestamp > oldestFeedTimestamp) {
+            if (filterEvents(event)) {
+              feedEventBuffersRef.current.pending.set(event.id, event)
+              setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
+            }
+          } else if (eventTimestamp < oldestFeedTimestamp) {
+            if (filterEvents(event)) {
+              feedEventBuffersRef.current.backfill.set(event.id, event)
+            }
+          } else {
+            if (filterEvents(event)) {
+              feedEventBuffersRef.current.feed.set(event.id, event)
+            }
+          }
+        }
+      }
+
+      if (
+        oldestTimestamp.current === undefined ||
+        oldestTimestamp.current > event.created_at
+      ) {
+        oldestTimestamp.current = event.created_at
+      }
+      if (
+        newestTimestamp.current === undefined ||
+        newestTimestamp.current < event.created_at
+      ) {
+        newestTimestamp.current = event.created_at
+      }
+
+      forceUpdate()
+    },
+    [filterEvents, fetchFilterFn, initialLoadDone, myPubKey]
   )
 
   const filteredEvents = useMemo(() => {
-    const events = Array.from(eventsRef.current.values()).filter(filterEvents)
+    const events = Array.from(feedEventBuffersRef.current.feed.values()).filter(filterEvents)
 
     if (sortLikedPosts) {
       const likesByPostId = new Map<string, number>()
@@ -97,121 +170,109 @@ export default function useFeedEvents({
         .map(([postId]) => postId)
 
       return sortedIds.map((id) => {
-        const event = Array.from(eventsRef.current.values()).find((e) => e.id === id)
-        return event || {id}
-      })
+        return Array.from(feedEventBuffersRef.current.feed.values()).find((e) => e.id === id)
+      }).filter((event): event is NDKEvent => event !== undefined)
     }
 
     return events
-  }, [eventsRef.current.size, filterEvents, sortLikedPosts])
+  }, [feedEventBuffersRef.current.feed.size, filterEvents, sortLikedPosts])
 
-  const eventsByUnknownUsers = useMemo(() => {
-    if (!hideEventsByUnknownUsers) {
-      return []
-    }
-    return Array.from(eventsRef.current.values()).filter(
-      (event) =>
-        (!displayFilterFn || displayFilterFn(event)) &&
-        socialGraph().getFollowDistance(event.pubkey) >= 5 &&
-        !(filters.authors && filters.authors.includes(event.pubkey)) &&
-        // Only include events that aren't heavily muted
-        !shouldHideAuthor(event.pubkey, undefined, true)
-    )
-  }, [eventsRef.current.size, displayFilterFn, hideEventsByUnknownUsers, filters.authors])
+  const eventsByUnknownUsers = Array.from(
+    feedEventBuffersRef.current.feed.values()
+  ).filter(
+    (event) =>
+      (!displayFilterFn || displayFilterFn(event)) &&
+      socialGraph().getFollowDistance(event.pubkey) >= 5 &&
+      !(filters.authors && filters.authors.includes(event.pubkey)) &&
+      !shouldHideAuthor(event.pubkey, undefined, true)
+  )
 
   useEffect(() => {
-    setLocalFilter(filters)
-    oldestRef.current = undefined
+    oldestTimestamp.current = undefined
+    newestTimestamp.current = undefined
+    setPaginationUntil(undefined)
+    feedEventBuffersRef.current.pending.clear()
+    feedEventBuffersRef.current.backfill.clear()
+    setNewEventsFrom(new Set())
   }, [filters])
 
   useEffect(() => {
-    if (localFilter.authors && localFilter.authors.length === 0) {
+    if (filters.authors && filters.authors.length === 0) {
       return
     }
 
-    const sub = ndk().subscribe(localFilter)
+    const currentFilter = paginationUntil ? {...filters, until: paginationUntil} : filters
+    const sub = ndk().subscribe(currentFilter)
 
-    // Reset these flags when subscription changes
-    hasReceivedEventsRef.current = eventsRef.current.size > 0
-    initialLoadDoneRef.current = eventsRef.current.size > 0
-    setInitialLoadDoneState(eventsRef.current.size > 0)
+    setInitialLoadDone(feedEventBuffersRef.current.feed.size > 0)
 
     // Set up a timeout to mark initial load as done even if no events arrive
     const initialLoadTimeout = setTimeout(() => {
-      if (!initialLoadDoneRef.current) {
-        initialLoadDoneRef.current = true
-        setInitialLoadDoneState(true)
-      }
+      setInitialLoadDone(true)
     }, 5000)
 
-    const markLoadDoneIfHasEvents = debounce(() => {
-      if (hasReceivedEventsRef.current && !initialLoadDoneRef.current) {
-        initialLoadDoneRef.current = true
-        setInitialLoadDoneState(true)
-      }
-    }, 500)
-
-    sub.on("event", (event) => {
-      if (!event || !event.id) return
-      if (event.created_at && !eventsRef.current.has(event.id)) {
-        if (oldestRef.current === undefined || oldestRef.current > event.created_at) {
-          oldestRef.current = event.created_at
-        }
-        if (fetchFilterFn && !fetchFilterFn(event)) {
-          return
-        }
-
-        const isMyRecent =
-          event.pubkey === myPubKey && event.created_at * 1000 > Date.now() - 10000
-
-        // Mark that we've received at least one event
-        hasReceivedEventsRef.current = true
-
-        if (!initialLoadDoneRef.current || isMyRecent) {
-          // Before initial load is done, add directly to main feed
-          eventsRef.current.set(event.id, event)
-          // Only mark initial load as done if we actually have events
-          markLoadDoneIfHasEvents()
-        } else {
-          // After initial load is done, add to newEvents
-          setNewEvents((prev) => new Map([...prev, [event.id, event]]))
-          setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
-        }
-      }
+    sub.on("eose", () => {
+      setInitialLoadDone(true)
+      clearTimeout(initialLoadTimeout)
     })
+
+    sub.on("event", routeEventToBuffer)
 
     return () => {
       sub.stop()
       clearTimeout(initialLoadTimeout)
     }
-  }, [JSON.stringify(localFilter)])
+  }, [JSON.stringify(filters), paginationUntil, routeEventToBuffer])
 
   useEffect(() => {
-    eventsRef.current.size &&
+    feedEventBuffersRef.current.feed.size &&
       !feedCache.has(cacheKey) &&
-      feedCache.set(cacheKey, eventsRef.current)
-  }, [eventsRef.current.size])
+      feedCache.set(cacheKey, feedEventBuffersRef.current.feed)
+  }, [feedEventBuffersRef.current.feed.size, cacheKey])
+
+  const showNewEvents = () => {
+    feedEventBuffersRef.current.pending.forEach((event) => {
+      if (!feedEventBuffersRef.current.feed.has(event.id)) {
+        feedEventBuffersRef.current.feed.set(event.id, event)
+      }
+    })
+
+    feedEventBuffersRef.current.pending.clear()
+    setNewEventsFrom(new Set())
+    forceUpdate()
+  }
 
   const loadMoreItems = () => {
+    if (feedEventBuffersRef.current.backfill.size > 0) {
+      feedEventBuffersRef.current.backfill.forEach((event) => {
+        if (!feedEventBuffersRef.current.feed.has(event.id)) {
+          feedEventBuffersRef.current.feed.set(event.id, event)
+        }
+      })
+      feedEventBuffersRef.current.backfill.clear()
+      forceUpdate()
+    }
+
     if (filteredEvents.length > displayCount) {
       return true
-    } else if (localFilter.until !== oldestRef.current) {
-      setLocalFilter((prev) => ({
-        ...prev,
-        until: oldestRef.current,
-      }))
+    } else if (paginationUntil !== oldestTimestamp.current) {
+      setPaginationUntil(oldestTimestamp.current)
     }
     return false
   }
 
+  const eventsRef = useRef(feedEventBuffersRef.current.feed)
+  eventsRef.current = feedEventBuffersRef.current.feed
+
   return {
     events: eventsRef,
-    newEvents,
+    newEvents: feedEventBuffersRef.current.pending,
     newEventsFrom,
     filteredEvents,
     eventsByUnknownUsers,
     showNewEvents,
     loadMoreItems,
-    initialLoadDone: initialLoadDoneState,
+    initialLoadDone,
+    backfillEvents: feedEventBuffersRef.current.backfill,
   }
 }

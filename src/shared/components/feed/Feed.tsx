@@ -187,8 +187,7 @@ function Feed({
                       asReply={asReply}
                       showRepliedTo={showRepliedTo}
                       showReplies={showReplies}
-                      event={"content" in event ? event : undefined}
-                      eventId={"content" in event ? undefined : event.id}
+                      event={event}
                       onEvent={onEvent}
                       borderTop={borderTopFirst && index === 0}
                     />
