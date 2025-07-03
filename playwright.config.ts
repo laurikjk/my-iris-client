@@ -12,8 +12,8 @@ export default defineConfig({
     trace: "on-first-retry",
     video: "on-first-retry",
     launchOptions: {
-      args: ['--enable-precise-memory-info']
-    }
+      args: ["--enable-precise-memory-info"],
+    },
   },
   projects: [
     {

@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test'
+import {Page} from "@playwright/test"
 
 export interface PerformanceMetrics {
   renderTime: number
@@ -11,7 +11,7 @@ export async function measureFeedRenderTime(page: Page): Promise<number> {
   return await page.evaluate(() => {
     return new Promise<number>((resolve) => {
       const startTime = performance.now()
-      
+
       const checkForFeedItems = () => {
         const feedItems = document.querySelectorAll('[data-testid="feed-item"]')
         if (feedItems.length > 0) {
@@ -20,9 +20,9 @@ export async function measureFeedRenderTime(page: Page): Promise<number> {
           setTimeout(checkForFeedItems, 100)
         }
       }
-      
+
       checkForFeedItems()
-      
+
       setTimeout(() => {
         resolve(performance.now() - startTime)
       }, 10000)
@@ -35,7 +35,7 @@ export async function measureScrollPerformance(page: Page): Promise<number> {
     return new Promise<number>((resolve) => {
       const startTime = performance.now()
       let frameCount = 0
-      
+
       const measureFrame = () => {
         frameCount++
         if (frameCount < 60) {
@@ -46,7 +46,7 @@ export async function measureScrollPerformance(page: Page): Promise<number> {
           resolve(avgFrameTime)
         }
       }
-      
+
       window.scrollBy(0, 100)
       requestAnimationFrame(measureFrame)
     })
@@ -55,7 +55,7 @@ export async function measureScrollPerformance(page: Page): Promise<number> {
 
 export async function getMemoryUsage(page: Page): Promise<number> {
   return await page.evaluate(() => {
-    if ('memory' in performance && performance.memory) {
+    if ("memory" in performance && performance.memory) {
       const memory = performance.memory as any
       return Math.round(memory.usedJSHeapSize / 1024 / 1024)
     }

@@ -8,7 +8,6 @@ import EventBorderless from "../event/EventBorderless"
 import FeedItem from "../event/FeedItem/FeedItem"
 import useMutes from "@/shared/hooks/useMutes"
 import classNames from "classnames"
-import {Link} from "react-router"
 import {ndk} from "@/utils/ndk"
 
 class NostrBandApi {
@@ -27,10 +26,6 @@ class NostrBandApi {
     return `${this.#url}/v0/suggested/profiles/${pubkey}`
   }
 
-  trendingHashtagsUrl(lang?: string) {
-    return `${this.#url}/v0/trending/hashtags${lang && this.#supportedLangs.includes(lang) ? `?lang=${lang}` : ""}`
-  }
-
   trendingVideosUrl(lang?: string) {
     return `${this.#url}/v0/trending/videos${lang && this.#supportedLangs.includes(lang) ? `?lang=${lang}` : ""}`
   }
@@ -44,10 +39,9 @@ type TrendingData = {
   notes?: Array<{event: RawEvent}>
   videos?: Array<{event: RawEvent}>
   images?: Array<{event: RawEvent}>
-  hashtags?: Array<{hashtag: string; posts: number}>
 }
 
-type TrendingItem = RawEvent | {hashtag: string; posts: number}
+type TrendingItem = RawEvent
 
 export default function Trending({
   small = true,
@@ -55,7 +49,7 @@ export default function Trending({
   randomSort = true,
 }: {
   small?: boolean
-  contentType?: "notes" | "videos" | "images" | "hashtags"
+  contentType?: "notes" | "videos" | "images"
   randomSort?: boolean
 }) {
   const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(false)
@@ -67,8 +61,6 @@ export default function Trending({
         return api.trendingVideosUrl(lang)
       case "images":
         return api.trendingImagesUrl(lang)
-      case "hashtags":
-        return api.trendingHashtagsUrl(lang)
       default:
         return api.trendingNotesUrl(lang)
     }
@@ -86,9 +78,6 @@ export default function Trending({
     storageKey,
     useCallback(
       (data: TrendingData) => {
-        if (contentType === "hashtags") {
-          return data.hashtags || []
-        }
         const events = data.notes || data.videos || data.images || []
         return events
           .map((a: {event: RawEvent}) => {
@@ -131,47 +120,28 @@ export default function Trending({
 
   return (
     <InfiniteScroll onLoadMore={loadMore}>
-      <div
-        className={classNames(
-          "flex flex-col",
-          {"text-base-content/50": small},
-          {"gap-2": small && contentType === "hashtags"},
-          {"gap-8": small && contentType !== "hashtags"}
-        )}
-      >
+      <div className={classNames("flex flex-col gap-8", {"text-base-content/50": small})}>
         {error && !sortedData.length ? (
           <div className="px-4">Error: {`${error}`}</div>
         ) : null}
         {isLoading ? <div className="px-4">Loading...</div> : null}
-        {contentType === "hashtags"
-          ? sortedData.slice(0, displayCount).map((hashtagObj, index) =>
-              "hashtag" in hashtagObj ? (
-                <Link
-                  key={index}
-                  to={`/search/${hashtagObj.hashtag}`}
-                  className="font-bold hover:opacity-80"
-                >
-                  #{hashtagObj.hashtag}
-                </Link>
-              ) : null
-            )
-          : sortedData
-              .slice(0, displayCount)
-              .filter(
-                (e: TrendingItem): e is RawEvent =>
-                  "pubkey" in e &&
-                  !!(e && socialGraph().getFollowersByUser(e.pubkey).size > 0) &&
-                  !mutes.includes(e.pubkey)
-              )
-              .map(
-                (ev, index) =>
-                  ev &&
-                  (small ? (
-                    <EventBorderless key={index} event={ev as RawEvent} />
-                  ) : (
-                    <FeedItem key={index} event={new NDKEvent(ndk(), ev as RawEvent)} />
-                  ))
-              )}
+        {sortedData
+          .slice(0, displayCount)
+          .filter(
+            (e: TrendingItem): e is RawEvent =>
+              "pubkey" in e &&
+              !!(e && socialGraph().getFollowersByUser(e.pubkey).size > 0) &&
+              !mutes.includes(e.pubkey)
+          )
+          .map(
+            (ev, index) =>
+              ev &&
+              (small ? (
+                <EventBorderless key={index} event={ev as RawEvent} />
+              ) : (
+                <FeedItem key={index} event={new NDKEvent(ndk(), ev as RawEvent)} />
+              ))
+          )}
       </div>
     </InfiniteScroll>
   )

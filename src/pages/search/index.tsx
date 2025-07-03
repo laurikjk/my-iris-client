@@ -117,9 +117,6 @@ function SearchPage() {
             <Widget title="Trending posts">
               <Trending />
             </Widget>
-            <Widget title="Popular hashtags">
-              <Trending contentType="hashtags" />
-            </Widget>
           </>
         )}
       </RightColumn>
