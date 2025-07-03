@@ -227,10 +227,17 @@ export const loadFromFile = (merge = false) => {
 }
 
 export const downloadLargeGraph = (maxBytes: number) => {
-  fetch("https://graph-api.iris.to/social-graph?maxBytes=" + maxBytes)
-    .then((response) => response.json())
-    .then((data) => {
-      instance = new SocialGraph(instance.getRoot(), data)
+  const url = `https://graph-api.iris.to/social-graph?maxBytes=${maxBytes}&format=binary`
+
+  fetch(url)
+    .then((response) => {
+      if (!response.body) {
+        throw new Error("Response body is not available for streaming")
+      }
+      return SocialGraph.fromBinaryStream(instance.getRoot(), response.body)
+    })
+    .then((newInstance) => {
+      instance = newInstance
       throttledSave()
     })
     .catch((error) => {

@@ -127,7 +127,7 @@ function SocialGraphSettings() {
           />
           <span className="text-sm">MB</span>
           <button className="btn btn-neutral btn-sm" onClick={handleDownloadGraph}>
-            Download graph up to {maxSizeMB}MB
+            Download graph up to {maxSizeMB}MB (binary)
           </button>
         </div>
         <button

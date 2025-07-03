@@ -71,7 +71,7 @@
     "markdown-to-jsx": "^7.7.4",
     "minidenticons": "^4.2.1",
     "nostr-double-ratchet": "^0.0.29",
-    "nostr-social-graph": "1.0.17",
+    "nostr-social-graph": "^1.0.20",
     "nostr-tools": "^2.15.0",
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
