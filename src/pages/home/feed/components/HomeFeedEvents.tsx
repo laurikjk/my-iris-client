@@ -51,7 +51,7 @@ function HomeFeedEvents() {
         name: "Popular",
         path: "popular",
         filter: {
-          kinds: [6, 7],
+          kinds: [1, 6],
           since: Math.floor(Date.now() / 1000 - 60 * 60 * 24),
           limit: 300,
         },
@@ -180,7 +180,6 @@ function HomeFeedEvents() {
         showRepliedTo={activeTabItem.showRepliedTo}
         emptyPlaceholder={<EmptyPlaceholder follows={follows} myPubKey={myPubKey} />}
         forceUpdate={forceUpdate}
-        sortLikedPosts={activeTabItem.sortLikedPosts}
       />
       {follows.length <= 1 && <Trending small={false} contentType="images" />}
     </>

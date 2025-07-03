@@ -34,7 +34,6 @@ interface FeedProps {
   showDisplayAsSelector?: boolean
   showFilters?: boolean
   onDisplayAsChange?: (display: "list" | "grid") => void
-  sortLikedPosts?: boolean
 }
 
 const DefaultEmptyPlaceholder = (
@@ -61,7 +60,6 @@ function Feed({
   showDisplayAsSelector = true,
   showFilters = false,
   onDisplayAsChange,
-  sortLikedPosts = false,
 }: FeedProps) {
   const [displayCount, setDisplayCount] = useHistoryState(
     INITIAL_DISPLAY_COUNT,
@@ -101,7 +99,6 @@ function Feed({
     fetchFilterFn,
     sortFn,
     hideEventsByUnknownUsers,
-    sortLikedPosts,
   })
 
   const loadMoreItems = () => {
