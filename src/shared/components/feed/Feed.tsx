@@ -86,13 +86,15 @@ function Feed({
   }
 
   const {
-    newEvents: newEventsMap,
+    feed,
     newEventsFrom,
+    newEventsFiltered,
     filteredEvents,
     eventsByUnknownUsers,
     showNewEvents,
     loadMoreItems: hookLoadMoreItems,
     initialLoadDone,
+    hasButton,
   } = useFeedEvents({
     filters,
     cacheKey,
@@ -112,7 +114,6 @@ function Feed({
     return hasMore
   }
 
-  const newEventsFiltered = Array.from(newEventsMap.values())
 
   const [, setForceUpdateCount] = useState(0)
 
@@ -164,7 +165,7 @@ function Feed({
         </div>
       )}
 
-      {newEventsFiltered.length > 0 && (
+      {hasButton && (
         <NewEventsButton
           newEventsFiltered={newEventsFiltered}
           newEventsFrom={newEventsFrom}
@@ -199,7 +200,7 @@ function Feed({
           </InfiniteScroll>
         )}
         {filteredEvents.length === 0 &&
-          newEventsFiltered.length === 0 &&
+          !hasButton &&
           initialLoadDone &&
           emptyPlaceholder}
         {showEventsByUnknownUsersButton &&

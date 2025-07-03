@@ -32,9 +32,7 @@ export default function useFeedEvents({
 }: UseFeedEventsProps) {
   const myPubKey = useUserStore((state) => state.publicKey)
   const [localFilter, setLocalFilter] = useState(filters)
-  const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
-  const [newEvents, setNewEvents] = useState(new Map<string, NDKEvent>())
-  const eventsRef = useRef(
+  const [feed, setFeed] = useState(
     feedCache.get(cacheKey) ||
       new SortedMap(
         [],
@@ -43,21 +41,28 @@ export default function useFeedEvents({
           : eventComparator
       )
   )
+  const newEventsRef = useRef(
+    new SortedMap(
+      [],
+      sortFn
+        ? ([, a]: [string, NDKEvent], [, b]: [string, NDKEvent]) => sortFn(a, b)
+        : eventComparator
+    )
+  )
   const oldestRef = useRef<number | undefined>(undefined)
-  const initialLoadDoneRef = useRef<boolean>(eventsRef.current.size > 0)
+  const initialLoadDoneRef = useRef<boolean>(feed.size > 0)
   const [initialLoadDoneState, setInitialLoadDoneState] = useState(
     initialLoadDoneRef.current
   )
-  const hasReceivedEventsRef = useRef<boolean>(eventsRef.current.size > 0)
+  const hasReceivedEventsRef = useRef<boolean>(feed.size > 0)
 
   const showNewEvents = () => {
-    newEvents.forEach((event) => {
-      if (!eventsRef.current.has(event.id)) {
-        eventsRef.current.set(event.id, event)
-      }
-    })
-    setNewEvents(new Map())
-    setNewEventsFrom(new Set())
+    const newFeed = new SortedMap(
+      [...feed.entries(), ...newEventsRef.current.entries()],
+      feed.compareFn
+    )
+    setFeed(newFeed)
+    newEventsRef.current.clear()
   }
 
   const filterEvents = useCallback(
@@ -81,7 +86,7 @@ export default function useFeedEvents({
   )
 
   const filteredEvents = useMemo(() => {
-    const events = Array.from(eventsRef.current.values()).filter(filterEvents)
+    const events = Array.from(feed.values()).filter(filterEvents)
 
     if (sortLikedPosts) {
       const likesByPostId = new Map<string, number>()
@@ -97,19 +102,24 @@ export default function useFeedEvents({
         .map(([postId]) => postId)
 
       return sortedIds.map((id) => {
-        const event = Array.from(eventsRef.current.values()).find((e) => e.id === id)
+        const event = Array.from(feed.values()).find((e) => e.id === id)
         return event || {id}
       })
     }
 
     return events
-  }, [eventsRef.current.size, filterEvents, sortLikedPosts])
+  }, [feed.size, filterEvents, sortLikedPosts])
+
+  const newEventsFiltered = useMemo(
+    () => Array.from(newEventsRef.current.values()).filter(filterEvents),
+    [newEventsRef.current.size, filterEvents]
+  )
 
   const eventsByUnknownUsers = useMemo(() => {
     if (!hideEventsByUnknownUsers) {
       return []
     }
-    return Array.from(eventsRef.current.values()).filter(
+    return Array.from(feed.values()).filter(
       (event) =>
         (!displayFilterFn || displayFilterFn(event)) &&
         socialGraph().getFollowDistance(event.pubkey) >= 5 &&
@@ -117,7 +127,7 @@ export default function useFeedEvents({
         // Only include events that aren't heavily muted
         !shouldHideAuthor(event.pubkey, undefined, true)
     )
-  }, [eventsRef.current.size, displayFilterFn, hideEventsByUnknownUsers, filters.authors])
+  }, [feed.size, displayFilterFn, hideEventsByUnknownUsers, filters.authors])
 
   useEffect(() => {
     setLocalFilter(filters)
@@ -132,9 +142,9 @@ export default function useFeedEvents({
     const sub = ndk().subscribe(localFilter)
 
     // Reset these flags when subscription changes
-    hasReceivedEventsRef.current = eventsRef.current.size > 0
-    initialLoadDoneRef.current = eventsRef.current.size > 0
-    setInitialLoadDoneState(eventsRef.current.size > 0)
+    hasReceivedEventsRef.current = feed.size > 0
+    initialLoadDoneRef.current = feed.size > 0
+    setInitialLoadDoneState(feed.size > 0)
 
     // Set up a timeout to mark initial load as done even if no events arrive
     const initialLoadTimeout = setTimeout(() => {
@@ -153,7 +163,7 @@ export default function useFeedEvents({
 
     sub.on("event", (event) => {
       if (!event || !event.id) return
-      if (event.created_at && !eventsRef.current.has(event.id)) {
+      if (event.created_at && !feed.has(event.id) && !newEventsRef.current.has(event.id)) {
         if (oldestRef.current === undefined || oldestRef.current > event.created_at) {
           oldestRef.current = event.created_at
         }
@@ -169,13 +179,16 @@ export default function useFeedEvents({
 
         if (!initialLoadDoneRef.current || isMyRecent) {
           // Before initial load is done, add directly to main feed
-          eventsRef.current.set(event.id, event)
+          setFeed((prev) => {
+            const newFeed = new SortedMap([...prev.entries()], prev.compareFn)
+            newFeed.set(event.id, event)
+            return newFeed
+          })
           // Only mark initial load as done if we actually have events
           markLoadDoneIfHasEvents()
         } else {
           // After initial load is done, add to newEvents
-          setNewEvents((prev) => new Map([...prev, [event.id, event]]))
-          setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
+          newEventsRef.current.set(event.id, event)
         }
       }
     })
@@ -187,10 +200,10 @@ export default function useFeedEvents({
   }, [JSON.stringify(localFilter)])
 
   useEffect(() => {
-    eventsRef.current.size &&
+    feed.size &&
       !feedCache.has(cacheKey) &&
-      feedCache.set(cacheKey, eventsRef.current)
-  }, [eventsRef.current.size])
+      feedCache.set(cacheKey, feed)
+  }, [feed.size, cacheKey])
 
   const loadMoreItems = () => {
     if (filteredEvents.length > displayCount) {
@@ -204,14 +217,18 @@ export default function useFeedEvents({
     return false
   }
 
+  const hasButton = newEventsRef.current.size > 0
+  const newEventsFrom = new Set(Array.from(newEventsRef.current.values()).map(event => event.pubkey))
+
   return {
-    events: eventsRef,
-    newEvents,
-    newEventsFrom,
+    feed,
+    newEventsFiltered,
     filteredEvents,
     eventsByUnknownUsers,
     showNewEvents,
     loadMoreItems,
     initialLoadDone: initialLoadDoneState,
+    hasButton,
+    newEventsFrom,
   }
 }
