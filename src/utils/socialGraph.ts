@@ -231,10 +231,14 @@ export const downloadLargeGraph = (maxBytes: number) => {
 
   fetch(url)
     .then((response) => {
-      if (!response.body) {
-        throw new Error("Response body is not available for streaming")
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
-      return SocialGraph.fromBinaryStream(instance.getRoot(), response.body)
+      return response.arrayBuffer()
+    })
+    .then((buffer) => {
+      const uint8Array = new Uint8Array(buffer)
+      return SocialGraph.fromBinary(instance.getRoot(), uint8Array)
     })
     .then((newInstance) => {
       instance = newInstance
