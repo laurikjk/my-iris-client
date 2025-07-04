@@ -22,10 +22,9 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
   console.log("root", publicKey, publicKey.length)
   isInitialized = true
   const data = await localForage.getItem("socialGraph")
-  console.log("root", publicKey)
   if (data && typeof data === "object") {
     try {
-      instance = new SocialGraph(publicKey, data as SerializedSocialGraph)
+      instance = await SocialGraph.fromBinary(publicKey, data as Uint8Array)
     } catch (e) {
       console.error("error deserializing", e)
       await localForage.removeItem("socialGraph")
@@ -50,10 +49,9 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
   }
 }
 
-const MAX_SOCIAL_GRAPH_SERIALIZE_SIZE = 1000000
 const throttledSave = throttle(async () => {
   try {
-    const serialized = instance.serialize(MAX_SOCIAL_GRAPH_SERIALIZE_SIZE)
+    const serialized = await instance.toBinary()
     await localForage.setItem("socialGraph", serialized)
     console.log("Saved social graph of size", instance.size())
   } catch (e) {
