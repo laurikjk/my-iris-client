@@ -8,7 +8,7 @@ import {
   Rumor,
 } from "nostr-double-ratchet/src"
 import {PROFILE_AVATAR_WIDTH, EVENT_AVATAR_WIDTH} from "./shared/components/user/const"
-import {CacheFirst, StaleWhileRevalidate} from "workbox-strategies"
+import {CacheFirst, StaleWhileRevalidate, NetworkOnly} from "workbox-strategies"
 import {CacheableResponsePlugin} from "workbox-cacheable-response"
 import {precacheAndRoute, PrecacheEntry} from "workbox-precaching"
 import {generateProxyUrl} from "./shared/utils/imgproxy"
@@ -25,6 +25,9 @@ declare const self: ServiceWorkerGlobalScope & {
 
 precacheAndRoute(self.__WB_MANIFEST)
 clientsClaim()
+
+// Prevent caching of graph-api.iris.to requests
+registerRoute(({url}) => url.origin === "https://graph-api.iris.to", new NetworkOnly())
 
 registerRoute(
   ({url}) => url.pathname.endsWith("/.well-known/nostr.json"),
