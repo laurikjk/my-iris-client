@@ -13,20 +13,19 @@ const DEFAULT_SOCIAL_GRAPH_ROOT =
 let instance = new SocialGraph(DEFAULT_SOCIAL_GRAPH_ROOT)
 let isInitialized = false
 
-async function initializeInstance(publicKey?: string) {
+async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
   if (isInitialized) {
     console.log("setting root", publicKey)
-    instance.setRoot(publicKey ?? DEFAULT_SOCIAL_GRAPH_ROOT)
+    instance.setRoot(publicKey)
     return
   }
+  console.log("root", publicKey, publicKey.length)
   isInitialized = true
   const data = await localForage.getItem("socialGraph")
+  console.log("root", publicKey)
   if (data && typeof data === "object") {
     try {
-      instance = new SocialGraph(
-        publicKey ?? DEFAULT_SOCIAL_GRAPH_ROOT,
-        data as SerializedSocialGraph
-      )
+      instance = new SocialGraph(publicKey, data as SerializedSocialGraph)
     } catch (e) {
       console.error("error deserializing", e)
       await localForage.removeItem("socialGraph")
@@ -34,7 +33,7 @@ async function initializeInstance(publicKey?: string) {
         "nostr-social-graph/data/socialGraph.json"
       )
       instance = new SocialGraph(
-        publicKey ?? DEFAULT_SOCIAL_GRAPH_ROOT,
+        publicKey,
         preCrawledGraph as unknown as SerializedSocialGraph
       )
     }
@@ -45,7 +44,7 @@ async function initializeInstance(publicKey?: string) {
       "nostr-social-graph/data/socialGraph.json"
     )
     instance = new SocialGraph(
-      publicKey ?? DEFAULT_SOCIAL_GRAPH_ROOT,
+      publicKey,
       preCrawledGraph as unknown as SerializedSocialGraph
     )
   }
@@ -144,7 +143,7 @@ const throttledRecalculate = throttle(
 
 export const socialGraphLoaded = new Promise((resolve) => {
   const currentPublicKey = useUserStore.getState().publicKey
-  initializeInstance(currentPublicKey).then(() => {
+  initializeInstance(currentPublicKey || undefined).then(() => {
     resolve(true)
 
     if (currentPublicKey) {

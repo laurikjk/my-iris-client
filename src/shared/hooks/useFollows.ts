@@ -5,18 +5,25 @@ import {NostrEvent} from "nostr-social-graph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 
-const useFollows = (pubKey: string, includeSelf = false) => {
+const useFollows = (pubKey: string | null | undefined, includeSelf = false) => {
   const pubKeyHex = useMemo(
     () => (pubKey ? new PublicKey(pubKey).toString() : ""),
     [pubKey]
   )
-  const [follows, setFollows] = useState<string[]>([
-    ...socialGraph().getFollowedByUser(pubKeyHex, includeSelf),
-  ])
+  const [follows, setFollows] = useState<string[]>([])
+
+  // Initialize follows when pubKeyHex changes
+  useEffect(() => {
+    if (pubKeyHex) {
+      setFollows([...socialGraph().getFollowedByUser(pubKeyHex, includeSelf)])
+    } else {
+      setFollows([])
+    }
+  }, [pubKeyHex, includeSelf])
 
   useEffect(() => {
     try {
-      if (pubKey) {
+      if (pubKeyHex) {
         const filter = {kinds: [3], authors: [pubKeyHex]}
 
         const sub = ndk().subscribe(filter)
@@ -37,7 +44,7 @@ const useFollows = (pubKey: string, includeSelf = false) => {
                   socialGraph().getFollowDistance(a) - socialGraph().getFollowDistance(b)
                 )
               })
-            if (includeSelf) {
+            if (includeSelf && pubKey) {
               pubkeys.unshift(pubKey)
             }
             setFollows(pubkeys)
@@ -50,7 +57,7 @@ const useFollows = (pubKey: string, includeSelf = false) => {
     } catch (error) {
       console.warn(error)
     }
-  }, [pubKey, includeSelf])
+  }, [pubKeyHex, includeSelf, pubKey])
 
   return follows
 }
