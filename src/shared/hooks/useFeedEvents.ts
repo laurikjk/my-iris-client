@@ -123,6 +123,11 @@ export default function useFeedEvents({
   useEffect(() => {
     setLocalFilter(filters)
     oldestRef.current = undefined
+    newestRef.current = undefined
+    // Reset queues when switching feeds
+    setNewEvents(new Map())
+    setNewEventsFrom(new Set())
+    setBackfillEvents(new Map())
   }, [filters])
 
   useEffect(() => {
