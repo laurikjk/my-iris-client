@@ -43,6 +43,7 @@ export default function useFeedEvents({
       )
   )
   const oldestRef = useRef<number | undefined>(undefined)
+  const newestRef = useRef<number | undefined>(undefined)
   const initialLoadDoneRef = useRef<boolean>(eventsRef.current.size > 0)
   const [initialLoadDoneState, setInitialLoadDoneState] = useState(
     initialLoadDoneRef.current
@@ -157,6 +158,9 @@ export default function useFeedEvents({
         if (oldestRef.current === undefined || oldestRef.current > event.created_at) {
           oldestRef.current = event.created_at
         }
+        if (newestRef.current === undefined || newestRef.current < event.created_at) {
+          newestRef.current = event.created_at
+        }
         if (fetchFilterFn && !fetchFilterFn(event)) {
           return
         }
@@ -167,13 +171,17 @@ export default function useFeedEvents({
         // Mark that we've received at least one event
         hasReceivedEventsRef.current = true
 
-        if (!initialLoadDoneRef.current || isMyRecent) {
-          // Before initial load is done, add directly to main feed
+        const isNewEvent = newestRef.current && event.created_at > newestRef.current
+
+        if (!initialLoadDoneRef.current || isMyRecent || !isNewEvent) {
+          // Before initial load is done, my recent events, or pagination events - add directly to main feed
           eventsRef.current.set(event.id, event)
         } else {
-          // After initial load is done, add to newEvents
-          setNewEvents((prev) => new Map([...prev, [event.id, event]]))
-          setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
+          // After initial load is done, add to newEvents only if it's truly new and passes display filters
+          if (filterEvents(event)) {
+            setNewEvents((prev) => new Map([...prev, [event.id, event]]))
+            setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
+          }
         }
       }
     })
