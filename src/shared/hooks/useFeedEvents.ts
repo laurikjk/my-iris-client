@@ -30,7 +30,7 @@ export default function useFeedEvents({
   sortLikedPosts = false,
 }: UseFeedEventsProps) {
   const myPubKey = useUserStore((state) => state.publicKey)
-  const [localFilter, setLocalFilter] = useState(filters)
+  const [paginationUntil, setPaginationUntil] = useState<number | undefined>(undefined)
   const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
   const [newEvents, setNewEvents] = useState(new Map<string, NDKEvent>())
   const [backfillEvents, setBackfillEvents] = useState(new Map<string, NDKEvent>())
@@ -44,12 +44,12 @@ export default function useFeedEvents({
       )
   )
   const oldestRef = useRef<number | undefined>(undefined)
-  const newestRef = useRef<number | undefined>(undefined)
-  const initialLoadDoneRef = useRef<boolean>(eventsRef.current.size > 0)
-  const [initialLoadDoneState, setInitialLoadDoneState] = useState(
-    initialLoadDoneRef.current
+  const newestRef = useRef<number | undefined>(
+    eventsRef.current.size > 0 
+      ? Math.max(...Array.from(eventsRef.current.values()).map(e => e.created_at || 0))
+      : undefined
   )
-  const hasReceivedEventsRef = useRef<boolean>(eventsRef.current.size > 0)
+  const [initialLoadDone, setInitialLoadDone] = useState(eventsRef.current.size > 0)
 
   const showNewEvents = () => {
     newEvents.forEach((event) => {
@@ -65,7 +65,7 @@ export default function useFeedEvents({
     (event: NDKEvent) => {
       if (!event.created_at) return false
       if (displayFilterFn && !displayFilterFn(event)) return false
-      const inAuthors = localFilter.authors?.includes(event.pubkey)
+      const inAuthors = filters.authors?.includes(event.pubkey)
       if (!inAuthors && shouldHideAuthor(event.pubkey, 3)) {
         return false
       }
@@ -121,9 +121,9 @@ export default function useFeedEvents({
   }, [eventsRef.current.size, displayFilterFn, hideEventsByUnknownUsers, filters.authors])
 
   useEffect(() => {
-    setLocalFilter(filters)
     oldestRef.current = undefined
     newestRef.current = undefined
+    setPaginationUntil(undefined)
     // Reset queues when switching feeds
     setNewEvents(new Map())
     setNewEventsFrom(new Set())
@@ -131,30 +131,23 @@ export default function useFeedEvents({
   }, [filters])
 
   useEffect(() => {
-    if (localFilter.authors && localFilter.authors.length === 0) {
+    if (filters.authors && filters.authors.length === 0) {
       return
     }
 
-    const sub = ndk().subscribe(localFilter)
+    const currentFilter = paginationUntil ? { ...filters, until: paginationUntil } : filters
+    const sub = ndk().subscribe(currentFilter)
 
     // Reset these flags when subscription changes
-    hasReceivedEventsRef.current = eventsRef.current.size > 0
-    initialLoadDoneRef.current = eventsRef.current.size > 0
-    setInitialLoadDoneState(eventsRef.current.size > 0)
+    setInitialLoadDone(eventsRef.current.size > 0)
 
     // Set up a timeout to mark initial load as done even if no events arrive
     const initialLoadTimeout = setTimeout(() => {
-      if (!initialLoadDoneRef.current) {
-        initialLoadDoneRef.current = true
-        setInitialLoadDoneState(true)
-      }
+      setInitialLoadDone(true)
     }, 5000)
 
     sub.on("eose", () => {
-      if (!initialLoadDoneRef.current) {
-        initialLoadDoneRef.current = true
-        setInitialLoadDoneState(true)
-      }
+      setInitialLoadDone(true)
       clearTimeout(initialLoadTimeout)
     })
 
@@ -175,12 +168,11 @@ export default function useFeedEvents({
           event.pubkey === myPubKey && event.created_at * 1000 > Date.now() - 10000
 
         // Mark that we've received at least one event
-        hasReceivedEventsRef.current = true
 
         const isNewEvent = newestRef.current && event.created_at > newestRef.current
         const isBackfillEvent = newestRef.current && event.created_at < newestRef.current
 
-        if (!initialLoadDoneRef.current || isMyRecent) {
+        if (!initialLoadDone || isMyRecent) {
           // Before initial load is done or my recent events - add directly to main feed
           eventsRef.current.set(event.id, event)
         } else if (isNewEvent) {
@@ -202,7 +194,7 @@ export default function useFeedEvents({
       sub.stop()
       clearTimeout(initialLoadTimeout)
     }
-  }, [JSON.stringify(localFilter)])
+  }, [JSON.stringify(filters), paginationUntil])
 
   useEffect(() => {
     eventsRef.current.size &&
@@ -223,11 +215,8 @@ export default function useFeedEvents({
 
     if (filteredEvents.length > displayCount) {
       return true
-    } else if (localFilter.until !== oldestRef.current) {
-      setLocalFilter((prev) => ({
-        ...prev,
-        until: oldestRef.current,
-      }))
+    } else if (paginationUntil !== oldestRef.current) {
+      setPaginationUntil(oldestRef.current)
     }
     return false
   }
@@ -240,7 +229,7 @@ export default function useFeedEvents({
     eventsByUnknownUsers,
     showNewEvents,
     loadMoreItems,
-    initialLoadDone: initialLoadDoneState,
+    initialLoadDone,
     backfillEvents,
   }
 }
