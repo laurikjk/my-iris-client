@@ -153,13 +153,15 @@ export default function useFeedEvents({
 
     sub.on("event", (event) => {
       if (!event || !event.id) return
+      
+      console.log('NDK event received:', {
+        id: event.id.substring(0, 8),
+        kind: event.kind,
+        pubkey: event.pubkey.substring(0, 8),
+        created_at: event.created_at,
+        content: event.content?.substring(0, 30) + '...'
+      })
       if (event.created_at && !eventsRef.current.has(event.id)) {
-        if (oldestRef.current === undefined || oldestRef.current > event.created_at) {
-          oldestRef.current = event.created_at
-        }
-        if (newestRef.current === undefined || newestRef.current < event.created_at) {
-          newestRef.current = event.created_at
-        }
         if (fetchFilterFn && !fetchFilterFn(event)) {
           return
         }
@@ -167,10 +169,29 @@ export default function useFeedEvents({
         const isMyRecent =
           event.pubkey === myPubKey && event.created_at * 1000 > Date.now() - 10000
 
-        // Mark that we've received at least one event
+        // Check if this is a new event BEFORE updating refs
+        const isNewEvent = newestRef.current === undefined || event.created_at > newestRef.current
+        const isBackfillEvent = newestRef.current !== undefined && event.created_at < newestRef.current
 
-        const isNewEvent = newestRef.current && event.created_at > newestRef.current
-        const isBackfillEvent = newestRef.current && event.created_at < newestRef.current
+        console.log('Event routing decision:', {
+          eventId: event.id.substring(0, 8),
+          eventTime: event.created_at,
+          newestRefCurrent: newestRef.current,
+          initialLoadDone,
+          isMyRecent,
+          isNewEvent,
+          isBackfillEvent,
+          willPassFilterEvents: filterEvents(event)
+        })
+
+        // Update oldest/newest refs for events that pass fetchFilterFn
+        if (oldestRef.current === undefined || oldestRef.current > event.created_at) {
+          oldestRef.current = event.created_at
+        }
+        if (newestRef.current === undefined || newestRef.current < event.created_at) {
+          console.log('Updating newestRef from', newestRef.current, 'to', event.created_at)
+          newestRef.current = event.created_at
+        }
 
         if (!initialLoadDone || isMyRecent) {
           // Before initial load is done or my recent events - add directly to main feed
@@ -178,13 +199,19 @@ export default function useFeedEvents({
         } else if (isNewEvent) {
           // Future events - add to new events queue if they pass display filters
           if (filterEvents(event)) {
+            console.log('Adding to NEW EVENTS queue:', event.id.substring(0, 8))
             setNewEvents((prev) => new Map([...prev, [event.id, event]]))
             setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
+          } else {
+            console.log('New event filtered out:', event.id.substring(0, 8))
           }
         } else if (isBackfillEvent) {
           // Past events - add to backfill queue if they pass display filters
           if (filterEvents(event)) {
+            console.log('Adding to BACKFILL queue:', event.id.substring(0, 8))
             setBackfillEvents((prev) => new Map([...prev, [event.id, event]]))
+          } else {
+            console.log('Backfill event filtered out:', event.id.substring(0, 8))
           }
         }
       }
