@@ -33,6 +33,7 @@ export default function useFeedEvents({
   const [localFilter, setLocalFilter] = useState(filters)
   const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
   const [newEvents, setNewEvents] = useState(new Map<string, NDKEvent>())
+  const [backfillEvents, setBackfillEvents] = useState(new Map<string, NDKEvent>())
   const eventsRef = useRef(
     feedCache.get(cacheKey) ||
       new SortedMap(
@@ -172,15 +173,21 @@ export default function useFeedEvents({
         hasReceivedEventsRef.current = true
 
         const isNewEvent = newestRef.current && event.created_at > newestRef.current
+        const isBackfillEvent = newestRef.current && event.created_at < newestRef.current
 
-        if (!initialLoadDoneRef.current || isMyRecent || !isNewEvent) {
-          // Before initial load is done, my recent events, or pagination events - add directly to main feed
+        if (!initialLoadDoneRef.current || isMyRecent) {
+          // Before initial load is done or my recent events - add directly to main feed
           eventsRef.current.set(event.id, event)
-        } else {
-          // After initial load is done, add to newEvents only if it's truly new and passes display filters
+        } else if (isNewEvent) {
+          // Future events - add to new events queue if they pass display filters
           if (filterEvents(event)) {
             setNewEvents((prev) => new Map([...prev, [event.id, event]]))
             setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
+          }
+        } else if (isBackfillEvent) {
+          // Past events - add to backfill queue if they pass display filters
+          if (filterEvents(event)) {
+            setBackfillEvents((prev) => new Map([...prev, [event.id, event]]))
           }
         }
       }
@@ -199,6 +206,16 @@ export default function useFeedEvents({
   }, [eventsRef.current.size])
 
   const loadMoreItems = () => {
+    // First, merge any backfill events into main feed
+    if (backfillEvents.size > 0) {
+      backfillEvents.forEach((event) => {
+        if (!eventsRef.current.has(event.id)) {
+          eventsRef.current.set(event.id, event)
+        }
+      })
+      setBackfillEvents(new Map())
+    }
+
     if (filteredEvents.length > displayCount) {
       return true
     } else if (localFilter.until !== oldestRef.current) {
@@ -219,5 +236,6 @@ export default function useFeedEvents({
     showNewEvents,
     loadMoreItems,
     initialLoadDone: initialLoadDoneState,
+    backfillEvents,
   }
 }
