@@ -20,9 +20,8 @@ interface PublicChatStore {
 
   updateLastSeen: (chatId: string) => void
   updateTimestamp: (chatId: string, timestamp: number) => void
-  refreshChatMetadata: (chatId: string) => Promise<void>
   addPublicChat: (chat: PublicChat) => void
-  addPublicChatById: (chatId: string) => Promise<void>
+  addOrRefreshChatById: (chatId: string) => Promise<void>
   removePublicChat: (chatId: string) => void
 }
 
@@ -45,38 +44,16 @@ const store = create<PublicChatStore>()(
         set({timestamps: newTimestamps})
       },
 
-      refreshChatMetadata: async (chatId: string) => {
-        try {
-          const metadata = await fetchChannelMetadata(chatId)
-          const currentChats = get().publicChats
-          const existingChat = currentChats.get(chatId)
-
-          if (existingChat && metadata) {
-            const updatedChat = {
-              ...existingChat,
-              metadata,
-              name: metadata.name || existingChat.name,
-              about: metadata.about || existingChat.about,
-              picture: metadata.picture || existingChat.picture,
-            }
-
-            const newPublicChats = new Map(currentChats)
-            newPublicChats.set(chatId, updatedChat)
-            set({publicChats: newPublicChats})
-          }
-        } catch (err) {
-          console.error("Error refreshing chat metadata:", err)
-        }
-      },
-
       addPublicChat: (chat: PublicChat) => {
         const newPublicChats = new Map(get().publicChats)
         newPublicChats.set(chat.id, chat)
         set({publicChats: newPublicChats})
       },
 
-      addPublicChatById: async (chatId: string) => {
+      addOrRefreshChatById: async (chatId: string) => {
         const metadata = await fetchChannelMetadata(chatId)
+        const currentChats = get().publicChats
+        const existingChat = currentChats.get(chatId)
 
         const chat: PublicChat = {
           id: chatId,
@@ -84,6 +61,13 @@ const store = create<PublicChatStore>()(
           about: metadata?.about || "",
           picture: metadata?.picture || "",
           ...(metadata ? {metadata} : {}),
+          // Preserve existing timestamps if chat already exists
+          ...(existingChat
+            ? {
+                lastMessage: existingChat.lastMessage,
+                lastMessageAt: existingChat.lastMessageAt,
+              }
+            : {}),
         }
 
         get().addPublicChat(chat)

@@ -10,7 +10,6 @@ import MessageForm from "../message/MessageForm"
 import {MessageType} from "../message/Message"
 import {Helmet} from "react-helmet"
 import {ndk} from "@/utils/ndk"
-import {fetchChannelMetadata, ChannelMetadata} from "../utils/channelMetadata"
 import {CHANNEL_MESSAGE, REACTION_KIND} from "../utils/constants"
 import {usePublicChatsStore} from "@/stores/publicChats"
 import {useUserStore} from "@/stores/user"
@@ -21,8 +20,7 @@ useUserStore.subscribe((state) => (publicKey = state.publicKey))
 const PublicChat = () => {
   const {id} = useParams<{id: string}>()
   const navigate = useNavigate()
-  const {addPublicChatById} = usePublicChatsStore()
-  const [metadata, setMetadata] = useState<ChannelMetadata | null>(null)
+  const {publicChats, addOrRefreshChatById} = usePublicChatsStore()
   const [messages, setMessages] = useState<SortedMap<string, MessageType>>(
     new SortedMap<string, MessageType>([], comparator)
   )
@@ -33,25 +31,14 @@ const PublicChat = () => {
   const [showNoMessages, setShowNoMessages] = useState(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Fetch channel metadata and add to store
+  // Add/refresh chat metadata when navigating to it
   useEffect(() => {
     if (!id) return
+    addOrRefreshChatById(id)
+  }, [id, addOrRefreshChatById])
 
-    const getMetadata = async () => {
-      try {
-        // Add to store first
-        await addPublicChatById(id)
-
-        // Then fetch metadata for local state
-        const data = await fetchChannelMetadata(id)
-        setMetadata(data)
-      } catch (err) {
-        console.error("Error fetching channel metadata:", err)
-      }
-    }
-
-    getMetadata()
-  }, [id, addPublicChatById])
+  // Get metadata from store
+  const currentChat = publicChats.get(id || "")
 
 
   // Set up timeout to show "No messages yet" after 2 seconds
@@ -245,7 +232,7 @@ const PublicChat = () => {
   return (
     <>
       <Helmet>
-        <title>{metadata?.name || "Public Chat"}</title>
+        <title>{currentChat?.name || "Public Chat"}</title>
       </Helmet>
       <PublicChatHeader channelId={id || ""} />
       <ChatContainer
