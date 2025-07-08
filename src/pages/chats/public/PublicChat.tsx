@@ -91,8 +91,8 @@ const PublicChat = () => {
     // Handle new messages
     sub.on("event", (event) => {
       if (!event || !event.id) return
-      // Don't filter own messages
-      if (event.pubkey !== publicKey && shouldHideAuthor(event.pubkey)) return
+      // Don't filter own messages, and be more permissive for public chats
+      if (event.pubkey !== publicKey && shouldHideAuthor(event.pubkey, 1, true)) return
 
       const newMessage: MessageType = {
         id: event.id,
