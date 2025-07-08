@@ -1,5 +1,6 @@
 import {useNavigate} from "react-router"
 import {fetchChannelMetadata, ChannelMetadata} from "../utils/channelMetadata"
+import {usePublicChatsStore} from "@/stores/publicChats"
 import {useEffect, useState} from "react"
 import ProxyImg from "@/shared/components/ProxyImg"
 import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
@@ -11,6 +12,7 @@ type PopularChannelItemProps = {
 
 const PopularChannelItem = ({channelId, authorCount}: PopularChannelItemProps) => {
   const navigate = useNavigate()
+  const {addPublicChatById} = usePublicChatsStore()
   const [metadata, setMetadata] = useState<ChannelMetadata | null>(null)
 
   useEffect(() => {
@@ -26,7 +28,8 @@ const PopularChannelItem = ({channelId, authorCount}: PopularChannelItemProps) =
     fetchMetadata()
   }, [channelId])
 
-  const handleViewChannel = () => {
+  const handleViewChannel = async () => {
+    await addPublicChatById(channelId)
     navigate(`/chats/${channelId}`)
   }
 

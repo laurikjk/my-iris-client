@@ -2,9 +2,8 @@ import {ConnectionStatus} from "@/shared/components/connection/ConnectionStatus"
 import {fetchChannelMetadata, ChannelMetadata} from "../utils/channelMetadata"
 import RelativeTime from "@/shared/components/event/RelativeTime"
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
-import {PublicChatContext} from "../public/PublicChatContext"
+import {usePublicChatsStore} from "@/stores/publicChats"
 import {Avatar} from "@/shared/components/user/Avatar"
-import {useEffect, useState, useContext} from "react"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {Name} from "@/shared/components/user/Name"
@@ -15,6 +14,7 @@ import {MessageType} from "../message/Message"
 import {useEventsStore} from "@/stores/events"
 import {RiEarthLine} from "@remixicon/react"
 import {useUserStore} from "@/stores/user"
+import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
@@ -33,12 +33,16 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     created_at: number
     pubkey: string
   } | null>(null)
-  const {setPublicChatTimestamps} = useContext(PublicChatContext)
   const [showPlaceholder, setShowPlaceholder] = useState(false)
   const [channelMetadata, setChannelMetadata] = useState<ChannelMetadata | null>(null)
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false)
   const {events} = useEventsStore()
-  const {lastSeen, lastSeenPublic, updateLastSeenPublic} = useSessionsStore()
+  const {lastSeen} = useSessionsStore()
+  const {
+    lastSeen: lastSeenPublic,
+    updateLastSeen: updateLastSeenPublic,
+    updateTimestamp,
+  } = usePublicChatsStore()
   const myPubKey = useUserStore((state) => state.publicKey)
 
   // Fetch channel metadata for public chats
@@ -77,12 +81,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     const debouncedUpdate = debounce(() => {
       if (latestMessageInMemory) {
         setLatestMessage(latestMessageInMemory)
-        if (setPublicChatTimestamps) {
-          setPublicChatTimestamps((prev) => ({
-            ...prev,
-            [id]: latestMessageInMemory!.created_at,
-          }))
-        }
+        updateTimestamp(id, latestMessageInMemory!.created_at)
       }
     }, 300)
 
@@ -114,7 +113,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
       sub.stop()
       debouncedUpdate.cancel()
     }
-  }, [id, isPublic, setPublicChatTimestamps])
+  }, [id, isPublic, updateTimestamp])
 
   useEffect(() => {
     // Set a timeout to show the placeholder after 2 seconds if metadata hasn't loaded

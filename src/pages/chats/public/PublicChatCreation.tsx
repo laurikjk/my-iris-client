@@ -4,6 +4,7 @@ import {useNavigate} from "react-router"
 import {ndk} from "@/utils/ndk"
 import PopularChannels from "./PopularChannels"
 import {useUserStore} from "@/stores/user"
+import {usePublicChatsStore} from "@/stores/publicChats"
 import ProxyImg from "@/shared/components/ProxyImg"
 import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
 import { searchChannels } from "../utils/channelSearch"
@@ -16,6 +17,7 @@ useUserStore.subscribe((state) => {
 
 const PublicChatCreation = () => {
   const navigate = useNavigate()
+  const {addPublicChatById} = usePublicChatsStore()
   const [channelName, setChannelName] = useState("")
   const [channelAbout, setChannelAbout] = useState("")
   const [channelPicture, setChannelPicture] = useState("")
@@ -41,6 +43,7 @@ const PublicChatCreation = () => {
     // Check if input is a valid channel ID
     if (/^[a-f0-9]{64}$/.test(value)) {
       setMatchingChannels([])
+      await addPublicChatById(value)
       navigate(`/chats/${value}`)
       return
     }
@@ -87,7 +90,8 @@ const PublicChatCreation = () => {
       event.content = JSON.stringify(metadata)
       await event.publish()
 
-      // Navigate to the new channel
+      // Add to store and navigate to the new channel
+      await addPublicChatById(event.id!)
       navigate(`/chats/${event.id}`)
     } catch (err) {
       console.error("Error creating channel:", err)
@@ -117,7 +121,10 @@ const PublicChatCreation = () => {
               <button
                 key={metadata.id}
                 className="btn btn-ghost justify-start text-left"
-                onClick={() => navigate(`/chats/${metadata.id}`)}
+                onClick={async () => {
+                  await addPublicChatById(metadata.id)
+                  navigate(`/chats/${metadata.id}`)
+                }}
               >
                 <div className="flex items-center gap-3">
                   {metadata.picture ? (
