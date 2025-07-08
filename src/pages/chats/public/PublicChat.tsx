@@ -21,7 +21,7 @@ useUserStore.subscribe((state) => (publicKey = state.publicKey))
 const PublicChat = () => {
   const {id} = useParams<{id: string}>()
   const navigate = useNavigate()
-  const {addPublicChatById, updateLastSeen} = usePublicChatsStore()
+  const {addPublicChatById} = usePublicChatsStore()
   const [metadata, setMetadata] = useState<ChannelMetadata | null>(null)
   const [messages, setMessages] = useState<SortedMap<string, MessageType>>(
     new SortedMap<string, MessageType>([], comparator)
@@ -53,30 +53,6 @@ const PublicChat = () => {
     getMetadata()
   }, [id, addPublicChatById])
 
-  // Update last seen when viewing the chat
-  useEffect(() => {
-    if (!id) return
-
-    updateLastSeen(id)
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        updateLastSeen(id)
-      }
-    }
-
-    const handleFocus = () => {
-      updateLastSeen(id)
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    window.addEventListener("focus", handleFocus)
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-      window.removeEventListener("focus", handleFocus)
-    }
-  }, [id, updateLastSeen])
 
   // Set up timeout to show "No messages yet" after 2 seconds
   useEffect(() => {
