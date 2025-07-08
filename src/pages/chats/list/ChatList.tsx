@@ -3,11 +3,9 @@ import {usePublicChatsStore} from "@/stores/publicChats"
 import Header from "@/shared/components/header/Header"
 import {useSessionsStore} from "@/stores/sessions"
 import {useEventsStore} from "@/stores/events"
-import {useUserStore} from "@/stores/user"
 import ChatListItem from "./ChatListItem"
 import {NavLink} from "react-router"
 import classNames from "classnames"
-import {useEffect} from "react"
 
 interface ChatListProps {
   className?: string
@@ -16,14 +14,7 @@ interface ChatListProps {
 const ChatList = ({className}: ChatListProps) => {
   const {sessions} = useSessionsStore()
   const {events} = useEventsStore()
-  const {publicChats, timestamps, fetchPublicChats} = usePublicChatsStore()
-  const myPubKey = useUserStore((state) => state.publicKey)
-
-  // Refresh public chat metadata on mount
-  useEffect(() => {
-    if (!myPubKey) return
-    fetchPublicChats()
-  }, [myPubKey, fetchPublicChats])
+  const {publicChats, timestamps} = usePublicChatsStore()
 
   // Combine private and public chats for display
   const allChats = Object.values(

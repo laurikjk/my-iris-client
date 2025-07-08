@@ -1,8 +1,6 @@
 import {fetchChannelMetadata, ChannelMetadata} from "@/pages/chats/utils/channelMetadata"
 import {createJSONStorage, persist} from "zustand/middleware"
-import {CHANNEL_CREATE} from "@/pages/chats/utils/constants"
 import localforage from "localforage"
-import {ndk} from "@/utils/ndk"
 import {create} from "zustand"
 
 export interface PublicChat {
@@ -20,7 +18,6 @@ interface PublicChatStore {
   lastSeen: Map<string, number>
   timestamps: Map<string, number>
 
-  fetchPublicChats: () => Promise<void>
   updateLastSeen: (chatId: string) => void
   updateTimestamp: (chatId: string, timestamp: number) => void
   refreshChatMetadata: (chatId: string) => Promise<void>
@@ -35,14 +32,6 @@ const store = create<PublicChatStore>()(
       publicChats: new Map(),
       lastSeen: new Map(),
       timestamps: new Map(),
-
-      fetchPublicChats: async () => {
-        // Refresh metadata for all stored public chats
-        const currentChats = get().publicChats
-        for (const chatId of currentChats.keys()) {
-          await get().refreshChatMetadata(chatId)
-        }
-      },
 
       updateLastSeen: (chatId: string) => {
         const newLastSeen = new Map(get().lastSeen)
@@ -87,56 +76,17 @@ const store = create<PublicChatStore>()(
       },
 
       addPublicChatById: async (chatId: string) => {
-        try {
-          // Fetch channel creation event (kind 40)
-          const channelEvent = await ndk().fetchEvent({
-            kinds: [CHANNEL_CREATE],
-            ids: [chatId],
-          })
+        const metadata = await fetchChannelMetadata(chatId)
 
-          let chat: PublicChat
-          if (channelEvent) {
-            try {
-              const metadata = JSON.parse(channelEvent.content)
-              chat = {
-                id: chatId,
-                name: metadata.name || `Channel ${chatId.slice(0, 8)}...`,
-                about: metadata.about || "",
-                picture: metadata.picture || "",
-              }
-            } catch (e) {
-              console.error("Failed to parse channel creation content:", e)
-              chat = {
-                id: chatId,
-                name: `Channel ${chatId.slice(0, 8)}...`,
-                about: "",
-                picture: "",
-              }
-            }
-          } else {
-            chat = {
-              id: chatId,
-              name: `Channel ${chatId.slice(0, 8)}...`,
-              about: "",
-              picture: "",
-            }
-          }
-
-          // Add to store
-          get().addPublicChat(chat)
-
-          // Refresh metadata
-          await get().refreshChatMetadata(chatId)
-        } catch (err) {
-          console.error("Error adding public chat:", err)
-          // Still add with minimal info if metadata fetch fails
-          get().addPublicChat({
-            id: chatId,
-            name: `Channel ${chatId.slice(0, 8)}...`,
-            about: "",
-            picture: "",
-          })
+        const chat: PublicChat = {
+          id: chatId,
+          name: metadata?.name || `Channel ${chatId.slice(0, 8)}...`,
+          about: metadata?.about || "",
+          picture: metadata?.picture || "",
+          ...(metadata ? {metadata} : {}),
         }
+
+        get().addPublicChat(chat)
       },
 
       removePublicChat: (chatId: string) => {
