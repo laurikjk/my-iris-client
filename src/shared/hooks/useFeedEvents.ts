@@ -223,12 +223,44 @@ export default function useFeedEvents({
       feedCache.set(cacheKey, feedEventBuffersRef.current.feed)
   }, [feedEventBuffersRef.current.feed.size, cacheKey])
 
-  const showNewEvents = () => {
-    feedEventBuffersRef.current.pending.forEach((event) => {
-      if (!feedEventBuffersRef.current.feed.has(event.id)) {
-        feedEventBuffersRef.current.feed.set(event.id, event)
-      }
+  const sortEventsByEngagement = (events: NDKEvent[]): NDKEvent[] => {
+    return events.sort((a, b) => {
+      const aEngagement =
+        (a.created_at || 0) + socialGraph().getFollowDistance(a.pubkey) * -100
+      const bEngagement =
+        (b.created_at || 0) + socialGraph().getFollowDistance(b.pubkey) * -100
+      return bEngagement - aEngagement
     })
+  }
+
+  const showNewEvents = () => {
+    const pendingEvents = Array.from(feedEventBuffersRef.current.pending.values())
+
+    if (cacheKey === "popularFeed" && pendingEvents.length > 0) {
+      const sortedEvents = sortEventsByEngagement(pendingEvents)
+
+      const currentFeedEntries = Array.from(feedEventBuffersRef.current.feed.entries())
+      feedEventBuffersRef.current.feed.clear()
+
+      sortedEvents.forEach((event) => {
+        if (!feedEventBuffersRef.current.feed.has(event.id)) {
+          feedEventBuffersRef.current.feed.set(event.id, event)
+        }
+      })
+
+      currentFeedEntries.forEach(([id, event]) => {
+        if (!feedEventBuffersRef.current.feed.has(id)) {
+          feedEventBuffersRef.current.feed.set(id, event)
+        }
+      })
+    } else {
+      feedEventBuffersRef.current.pending.forEach((event) => {
+        if (!feedEventBuffersRef.current.feed.has(event.id)) {
+          feedEventBuffersRef.current.feed.set(event.id, event)
+        }
+      })
+    }
+
     feedEventBuffersRef.current.pending.clear()
     setNewEventsFrom(new Set())
     forceUpdate()
