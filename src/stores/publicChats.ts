@@ -8,8 +8,6 @@ export interface PublicChat {
   name: string
   about: string
   picture: string
-  lastMessage?: string
-  lastMessageAt?: number
   metadata?: ChannelMetadata
 }
 
@@ -20,7 +18,6 @@ interface PublicChatStore {
 
   updateLastSeen: (chatId: string) => void
   updateTimestamp: (chatId: string, timestamp: number) => void
-  addPublicChat: (chat: PublicChat) => void
   addOrRefreshChatById: (chatId: string) => Promise<void>
   removePublicChat: (chatId: string) => void
 }
@@ -44,12 +41,6 @@ const store = create<PublicChatStore>()(
         set({timestamps: newTimestamps})
       },
 
-      addPublicChat: (chat: PublicChat) => {
-        const newPublicChats = new Map(get().publicChats)
-        newPublicChats.set(chat.id, chat)
-        set({publicChats: newPublicChats})
-      },
-
       addOrRefreshChatById: async (chatId: string) => {
         const metadata = await fetchChannelMetadata(chatId)
         const currentChats = get().publicChats
@@ -61,16 +52,12 @@ const store = create<PublicChatStore>()(
           about: metadata?.about || "",
           picture: metadata?.picture || "",
           ...(metadata ? {metadata} : {}),
-          // Preserve existing timestamps if chat already exists
-          ...(existingChat
-            ? {
-                lastMessage: existingChat.lastMessage,
-                lastMessageAt: existingChat.lastMessageAt,
-              }
-            : {}),
         }
 
-        get().addPublicChat(chat)
+        // Add/update chat in store
+        const newPublicChats = new Map(currentChats)
+        newPublicChats.set(chat.id, chat)
+        set({publicChats: newPublicChats})
       },
 
       removePublicChat: (chatId: string) => {
