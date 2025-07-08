@@ -13,6 +13,7 @@ import {ndk} from "@/utils/ndk"
 import {CHANNEL_MESSAGE, REACTION_KIND} from "../utils/constants"
 import {usePublicChatsStore} from "@/stores/publicChats"
 import {useUserStore} from "@/stores/user"
+import {socialGraphFollowDataLoaded} from "@/utils/socialGraph"
 
 let publicKey = useUserStore.getState().publicKey
 useUserStore.subscribe((state) => (publicKey = state.publicKey))
@@ -30,6 +31,14 @@ const PublicChat = () => {
   const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [showNoMessages, setShowNoMessages] = useState(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [followDataReady, setFollowDataReady] = useState(false)
+
+  // Wait for follow data to be ready
+  useEffect(() => {
+    socialGraphFollowDataLoaded.then(() => {
+      setFollowDataReady(true)
+    })
+  }, [])
 
   // Add/refresh chat metadata when navigating to it
   useEffect(() => {
@@ -67,7 +76,7 @@ const PublicChat = () => {
 
   // Set up continuous subscription for messages
   useEffect(() => {
-    if (!id) return
+    if (!id || !followDataReady) return
 
     // Set up subscription for channel messages
     const sub = ndk().subscribe({
@@ -114,7 +123,7 @@ const PublicChat = () => {
     return () => {
       sub.stop()
     }
-  }, [id])
+  }, [id, followDataReady])
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !id) return
