@@ -81,23 +81,19 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     const debouncedUpdate = debounce(() => {
       if (latestMessageInMemory) {
         setLatestMessage(latestMessageInMemory)
-        updateTimestamp(id, latestMessageInMemory!.created_at)
+        updateTimestamp(id, latestMessageInMemory.created_at)
       }
     }, 300)
 
-    // Set up subscription for latest messages
     const sub = ndk().subscribe({
       kinds: [CHANNEL_MESSAGE],
       "#e": [id],
       limit: 1,
     })
 
-    // Handle new messages
     sub.on("event", (event) => {
       if (!event || !event.id) return
       if (shouldHideAuthor(event.pubkey)) return
-
-      // Always update the in-memory latest message
       if (!latestMessageInMemory || event.created_at > latestMessageInMemory.created_at) {
         latestMessageInMemory = {
           content: event.content,
@@ -108,7 +104,6 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
       }
     })
 
-    // Clean up subscription when component unmounts
     return () => {
       sub.stop()
       debouncedUpdate.cancel()
