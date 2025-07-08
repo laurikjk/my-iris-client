@@ -1,5 +1,6 @@
 import {useSettingsStore} from "@/stores/settings"
 import {LRUCache} from "typescript-lru-cache"
+import {useUserStore} from "@/stores/user"
 import socialGraph from "./socialGraph"
 
 const cache = new LRUCache<string, boolean>({maxSize: 100})
@@ -9,6 +10,12 @@ export const shouldHideAuthor = (
   threshold = 1,
   allowUnknown = false
 ): boolean => {
+  // Never hide your own messages
+  const myPubKey = useUserStore.getState().publicKey
+  if (pubKey === myPubKey) {
+    return false
+  }
+
   const {content} = useSettingsStore.getState()
   const instance = socialGraph()
 
