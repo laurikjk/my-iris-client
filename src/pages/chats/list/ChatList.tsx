@@ -29,9 +29,7 @@ const ChatList = ({className}: ChatListProps) => {
   const allChatItems = [
     ...Array.from(sessions).map(([id]) => ({id, isPublic: false})),
     ...Array.from(publicChats.keys()).map((chatId) => ({id: chatId, isPublic: true})),
-  ]
-
-  const sortedChats = allChatItems.sort((a, b) => {
+  ].sort((a, b) => {
     const aLatest = a.isPublic ? latestForPublicChat(a.id) : latestForPrivateChat(a.id)
     const bLatest = b.isPublic ? latestForPublicChat(b.id) : latestForPrivateChat(b.id)
     return bLatest - aLatest
@@ -58,7 +56,7 @@ const ChatList = ({className}: ChatListProps) => {
             <span className="text-sm text-base-content/70">Start a new conversation</span>
           </div>
         </NavLink>
-        {sortedChats.map(({id, isPublic}) => (
+        {allChatItems.map(({id, isPublic}) => (
           <ChatListItem key={id} id={id} isPublic={isPublic} />
         ))}
       </div>
