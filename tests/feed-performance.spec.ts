@@ -42,6 +42,7 @@ test.describe("Feed Performance", () => {
 
     console.log(
       `Memory usage: ${initialMemory}MB -> ${finalMemory}MB (+${memoryIncrease}MB)`
+    )
 
     expect(memoryIncrease).toBeLessThan(50)
   })
