@@ -16,28 +16,10 @@ const ChatList = ({className}: ChatListProps) => {
   const {events} = useEventsStore()
   const {publicChats, timestamps} = usePublicChatsStore()
 
-  // Combine private and public chats for display
-  const allChats = Object.values(
-    [
-      ...Array.from(sessions)
-        .filter(([, session]) => !!session) //&& !session.state.deleted)
-        .map(([id]) => ({id, isPublic: false})),
-      ...Array.from(publicChats.keys()).map((chatId) => ({id: chatId, isPublic: true})),
-    ].reduce(
-      (acc, chat) => {
-        // If chat has empty string as id, skip it (appears on recursion depth 3 on sessions)
-        if (chat.id === "") {
-          return acc
-        }
-        // If chat doesn't exist or current chat is newer, update it
-        if (!acc[chat.id] || (chat.isPublic && !acc[chat.id].isPublic)) {
-          acc[chat.id] = chat
-        }
-        return acc
-      },
-      {} as Record<string, {id: string; isPublic: boolean}>
-    )
-  )
+  const allChats = Object.values([
+    ...Array.from(sessions).map(([id]) => ({id, isPublic: false})),
+    ...Array.from(publicChats.keys()).map((chatId) => ({id: chatId, isPublic: true})),
+  ])
 
   // Sort all chats by most recent activity
   const sortedChats = allChats.sort((a, b) => {
