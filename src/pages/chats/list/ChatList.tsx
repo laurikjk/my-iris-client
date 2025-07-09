@@ -27,7 +27,7 @@ const ChatList = ({className}: ChatListProps) => {
   }
 
   const allChatItems = [
-    ...Array.from(sessions).map(([id]) => ({id, isPublic: false})),
+    ...Array.from(sessions.keys()).map((chatId) => ({id: chatId, isPublic: false})),
     ...Array.from(publicChats.keys()).map((chatId) => ({id: chatId, isPublic: true})),
   ].sort((a, b) => {
     const aLatest = a.isPublic ? latestForPublicChat(a.id) : latestForPrivateChat(a.id)
