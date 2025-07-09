@@ -21,33 +21,19 @@ const ChatList = ({className}: ChatListProps) => {
     ...Array.from(publicChats.keys()).map((chatId) => ({id: chatId, isPublic: true})),
   ])
 
-  // Sort all chats by most recent activity
+  const latestForPublicChat = (id: string) => {
+    const latest = timestamps.get(id) || 0
+    return latest * 1000
+  }
+
+  const latestForPrivateChat = (id: string) => {
+    const [, latest] = events.get(id)?.last() ?? []
+    return latest ? getMillisecondTimestamp(latest) : 0
+  }
+
   const sortedChats = allChats.sort((a, b) => {
-    // Get latest message time for chat A
-    let aLatest = 0
-    if (a.isPublic) {
-      aLatest = (timestamps.get(a.id) || 0) * 1000
-    } else {
-      aLatest = 0
-      const [, latest] = events.get(a.id)?.last() ?? []
-      if (latest) {
-        aLatest = getMillisecondTimestamp(latest)
-      }
-    }
-
-    // Get latest message time for chat B
-    let bLatest = 0
-    if (b.isPublic) {
-      bLatest = (timestamps.get(b.id) || 0) * 1000
-    } else {
-      bLatest = 0
-      const [, latest] = events.get(b.id)?.last() ?? []
-      if (latest) {
-        bLatest = getMillisecondTimestamp(latest)
-      }
-    }
-
-    // Sort in descending order (newest first)
+    const aLatest = a.isPublic ? latestForPublicChat(a.id) : latestForPrivateChat(a.id)
+    const bLatest = b.isPublic ? latestForPublicChat(b.id) : latestForPrivateChat(b.id)
     return bLatest - aLatest
   })
 
