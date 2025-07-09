@@ -33,21 +33,14 @@ const PublicChat = () => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [followDataReady, setFollowDataReady] = useState(false)
 
-  // Wait for follow data to be ready
   useEffect(() => {
-    socialGraphFollowDataLoaded.then(() => {
-      setFollowDataReady(true)
-    })
+    socialGraphFollowDataLoaded.then(() => setFollowDataReady(true))
   }, [])
 
-  // Add/refresh chat metadata when navigating to it
   useEffect(() => {
     if (!id) return
     addOrRefreshChatById(id)
   }, [id, addOrRefreshChatById])
-
-  // Get metadata from store
-  const currentChat = publicChats.get(id || "")
 
 
   // Set up timeout to show "No messages yet" after 2 seconds
@@ -236,6 +229,8 @@ const PublicChat = () => {
       </>
     )
   }
+
+  const currentChat = publicChats.get(id)
 
   return (
     <>
