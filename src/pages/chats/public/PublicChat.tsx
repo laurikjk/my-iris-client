@@ -74,7 +74,7 @@ const PublicChat = () => {
     // Handle new messages
     sub.on("event", (event) => {
       if (!event || !event.id) return
-      if (shouldHideAuthor(event.pubkey)) return
+      if (shouldHideAuthor(event.pubkey, 1, true)) return
 
       const newMessage: MessageType = {
         id: event.id,
