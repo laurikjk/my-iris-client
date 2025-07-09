@@ -190,11 +190,13 @@ function setupSubscription(publicKey: string) {
     }
     latestTime = ev.created_at
     handleSocialGraphEvent(ev as NostrEvent)
-    if (!hasLoadedFollowData) {
-      hasLoadedFollowData = true
-      followDataResolve?.(true)
-    }
-    queueMicrotask(() => getMissingFollowLists(publicKey))
+    queueMicrotask(() => {
+      getMissingFollowLists(publicKey)
+      if (!hasLoadedFollowData) {
+        hasLoadedFollowData = true
+        followDataResolve?.(true)
+      }
+    })
     throttledRecalculate()
   })
 }
