@@ -230,12 +230,10 @@ const PublicChat = () => {
     )
   }
 
-  const currentChat = publicChats.get(id)
-
   return (
     <>
       <Helmet>
-        <title>{currentChat?.name || "Public Chat"}</title>
+        <title>{publicChats.get(id)?.name || "Public Chat"}</title>
       </Helmet>
       <PublicChatHeader channelId={id || ""} />
       <ChatContainer
