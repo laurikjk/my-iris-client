@@ -16,11 +16,6 @@ const ChatList = ({className}: ChatListProps) => {
   const {events} = useEventsStore()
   const {publicChats, timestamps} = usePublicChatsStore()
 
-  const allChatItems = Object.values([
-    ...Array.from(sessions).map(([id]) => ({id, isPublic: false})),
-    ...Array.from(publicChats.keys()).map((chatId) => ({id: chatId, isPublic: true})),
-  ])
-
   const latestForPublicChat = (id: string) => {
     const latest = timestamps.get(id) || 0
     return latest * 1000
@@ -30,6 +25,11 @@ const ChatList = ({className}: ChatListProps) => {
     const [, latest] = events.get(id)?.last() ?? []
     return latest ? getMillisecondTimestamp(latest) : 0
   }
+
+  const allChatItems = [
+    ...Array.from(sessions).map(([id]) => ({id, isPublic: false})),
+    ...Array.from(publicChats.keys()).map((chatId) => ({id: chatId, isPublic: true})),
+  ]
 
   const sortedChats = allChatItems.sort((a, b) => {
     const aLatest = a.isPublic ? latestForPublicChat(a.id) : latestForPrivateChat(a.id)
