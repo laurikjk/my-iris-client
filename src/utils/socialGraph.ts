@@ -185,8 +185,8 @@ function setupSubscription(publicKey: string) {
   })
 }
 
-export const saveToFile = () => {
-  const data = instance.serialize()
+export const saveToFile = async () => {
+  const data = await instance.serialize()
   const url = URL.createObjectURL(
     new File([JSON.stringify(data)], "social_graph.json", {
       type: "text/json",
