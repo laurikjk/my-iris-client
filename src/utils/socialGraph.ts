@@ -24,7 +24,7 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
   const data = await localForage.getItem("socialGraph")
   if (data && typeof data === "object") {
     try {
-      instance = await SocialGraph.fromBinary(publicKey, data as Uint8Array)
+      instance = new SocialGraph(publicKey, data as SerializedSocialGraph)
     } catch (e) {
       console.error("error deserializing", e)
       await localForage.removeItem("socialGraph")
@@ -51,7 +51,7 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
 
 const throttledSave = throttle(async () => {
   try {
-    const serialized = await instance.toBinary()
+    const serialized = instance.serialize()
     await localForage.setItem("socialGraph", serialized)
     console.log("Saved social graph of size", instance.size())
   } catch (e) {
@@ -224,18 +224,17 @@ export const loadFromFile = (merge = false) => {
 }
 
 export const downloadLargeGraph = (maxBytes: number) => {
-  const url = `https://graph-api.iris.to/social-graph?maxBytes=${maxBytes}&format=binary`
+  const url = `https://graph-api.iris.to/social-graph?maxBytes=${maxBytes}&format=json`
 
   fetch(url)
     .then((response) => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      return response.arrayBuffer()
+      return response.json()
     })
-    .then((buffer) => {
-      const uint8Array = new Uint8Array(buffer)
-      return SocialGraph.fromBinary(instance.getRoot(), uint8Array)
+    .then((data) => {
+      return new SocialGraph(instance.getRoot(), data)
     })
     .then((newInstance) => {
       instance = newInstance
