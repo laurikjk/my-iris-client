@@ -152,34 +152,34 @@ export default function useFeedEvents({
     }, 500)
 
     sub.on("event", (event) => {
-      if (!event || !event.id) return
-      if (event.created_at && !eventsRef.current.has(event.id)) {
-        if (oldestRef.current === undefined || oldestRef.current > event.created_at) {
-          oldestRef.current = event.created_at
-        }
-        if (fetchFilterFn && !fetchFilterFn(event)) {
-          return
-        }
+      if (!event?.id || !event.created_at) return
+      if (eventsRef.current.has(event.id)) return
+      if (fetchFilterFn && !fetchFilterFn(event)) return
 
-        const isMyRecent =
-          event.pubkey === myPubKey && event.created_at * 1000 > Date.now() - 10000
+      oldestRef.current = Math.min(
+        oldestRef.current ?? event.created_at,
+        event.created_at
+      )
+      hasReceivedEventsRef.current = true
 
-        // Mark that we've received at least one event
-        hasReceivedEventsRef.current = true
-
-        if (!initialLoadDoneRef.current || isMyRecent) {
-          // Before initial load is done, add directly to main feed
-          eventsRef.current.set(event.id, event)
-          // Only mark initial load as done if we actually have events
-          markLoadDoneIfHasEvents()
-        } else {
-          // After initial load is done, add to newEvents
-          setNewEvents((prev) => new Map([...prev, [event.id, event]]))
-          setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
-        }
+      const addMain = () => eventsRef.current.set(event.id, event)
+      const addNew = () => {
+        setNewEvents((prev) => new Map([...prev, [event.id, event]]))
+        setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
       }
-    })
 
+      const isMyRecent =
+        event.pubkey === myPubKey && event.created_at * 1000 > Date.now() - 10000
+      const isNewEvent =
+        initialLoadDoneRef.current &&
+        !isMyRecent &&
+        (!sortLikedPosts || event.kind === 1)
+
+      if (isNewEvent) addNew()
+      else addMain()
+
+      markLoadDoneIfHasEvents()
+    })
     return () => {
       sub.stop()
       clearTimeout(initialLoadTimeout)
