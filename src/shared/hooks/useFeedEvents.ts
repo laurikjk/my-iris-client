@@ -22,7 +22,6 @@ interface UseFeedEventsProps {
 type FeedEventBuffers = {
   feed: SortedMap<string, NDKEvent>
   pending: Map<string, NDKEvent>
-  backfill: Map<string, NDKEvent>
 }
 
 export default function useFeedEvents({
@@ -47,7 +46,6 @@ export default function useFeedEvents({
           : eventComparator
       ),
     pending: new Map(),
-    backfill: new Map(),
   })
   const [, forceUpdate] = useReducer((x) => x + 1, 0)
   const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
@@ -102,9 +100,6 @@ export default function useFeedEvents({
         feedEventBuffersRef.current.feed.set(event.id, event)
       } else {
         const eventTimestamp = event.created_at
-        const newestFeedTimestamp = Array.from(
-          feedEventBuffersRef.current.feed.values()
-        ).reduce((maxTimestamp, e) => Math.max(maxTimestamp, e.created_at || 0), 0)
         const oldestFeedTimestamp = Array.from(
           feedEventBuffersRef.current.feed.values()
         ).reduce(
@@ -122,10 +117,6 @@ export default function useFeedEvents({
             if (filterEvents(event)) {
               feedEventBuffersRef.current.pending.set(event.id, event)
               setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
-            }
-          } else if (eventTimestamp < oldestFeedTimestamp) {
-            if (filterEvents(event)) {
-              feedEventBuffersRef.current.backfill.set(event.id, event)
             }
           } else {
             if (filterEvents(event)) {
@@ -192,7 +183,6 @@ export default function useFeedEvents({
     newestTimestamp.current = undefined
     setPaginationUntil(undefined)
     feedEventBuffersRef.current.pending.clear()
-    feedEventBuffersRef.current.backfill.clear()
     setNewEventsFrom(new Set())
   }, [filters])
 
@@ -243,16 +233,6 @@ export default function useFeedEvents({
   }
 
   const loadMoreItems = () => {
-    if (feedEventBuffersRef.current.backfill.size > 0) {
-      feedEventBuffersRef.current.backfill.forEach((event) => {
-        if (!feedEventBuffersRef.current.feed.has(event.id)) {
-          feedEventBuffersRef.current.feed.set(event.id, event)
-        }
-      })
-      feedEventBuffersRef.current.backfill.clear()
-      forceUpdate()
-    }
-
     if (filteredEvents.length > displayCount) {
       return true
     } else if (paginationUntil !== oldestTimestamp.current) {
@@ -273,6 +253,5 @@ export default function useFeedEvents({
     showNewEvents,
     loadMoreItems,
     initialLoadDone,
-    backfillEvents: feedEventBuffersRef.current.backfill,
   }
 }
