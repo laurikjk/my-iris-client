@@ -57,7 +57,7 @@ const plans: Plan[] = [
     },
     benefits: [
       "vault.iris.to relay write access",
-      "10 GB upload storage (blossom)",
+      "10 GB upload storage (blossom.iris.to)",
       "6+ character username",
       "Patron badge on profile",
       "Support Iris development",
@@ -73,7 +73,7 @@ const plans: Plan[] = [
     },
     benefits: [
       "All Patron benefits",
-      "100 GB upload storage (blossom)",
+      "100 GB upload storage (blossom.iris.to)",
       "5+ character username",
       "Priority support",
       "Champion badge on profile",
