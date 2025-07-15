@@ -10,8 +10,6 @@ interface EncryptedUrlEmbedProps {
 
 function parseImetaEncryption(event: NDKEvent, url: string) {
   try {
-    console.log("[EncryptedUrlEmbed] Looking for imeta tag for url:", url)
-    console.log("[EncryptedUrlEmbed] event.tags:", event.tags)
     // Find imeta tag for this URL (exact match after removing 'url ' prefix)
     const imetaTag = event.tags.find(
       (tag) =>
@@ -21,10 +19,8 @@ function parseImetaEncryption(event: NDKEvent, url: string) {
         tag[1].slice(4) === url
     )
     if (!imetaTag) {
-      console.log("[EncryptedUrlEmbed] No matching imeta tag found for url:", url)
       return null
     }
-    console.log("[EncryptedUrlEmbed] Found imeta tag:", imetaTag)
     // Extract encryption metadata from imeta tag
     const keyPart = imetaTag.find((part) => part.startsWith("key "))
     const namePart = imetaTag.find((part) => part.startsWith("name "))
@@ -34,13 +30,13 @@ function parseImetaEncryption(event: NDKEvent, url: string) {
     if (keyPart && namePart && sizePart) {
       return {
         key: keyPart.split(" ")[1],
-        name: namePart.split(" ")[1],
+        name: namePart.substring(5), // Remove "name " prefix to handle spaces in filename
         size: parseInt(sizePart.split(" ")[1], 10),
         encryption: encryptionPart ? encryptionPart.split(" ")[1] : "AES-GCM",
       }
     }
   } catch (e) {
-    console.log("[EncryptedUrlEmbed] Error in parseImetaEncryption:", e)
+    // Silent error handling
   }
   return null
 }
@@ -75,11 +71,8 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
     [event, url]
   )
 
-  console.log("[EncryptedUrlEmbed] url:", url, "event:", event, "meta:", meta)
-
   // For images: decrypt and display immediately
   useEffect(() => {
-    console.log("[EncryptedUrlEmbed] useEffect", meta, isImage(meta?.name))
     if (!meta || !isImage(meta.name)) return
     let revoked = false
     let currentBlobUrl: string | null = null
