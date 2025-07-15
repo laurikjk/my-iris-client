@@ -145,6 +145,8 @@ const Message = ({
     [message]
   )
 
+  console.log("message", message)
+
   return (
     <div
       className={classNames(

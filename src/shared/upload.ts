@@ -2,6 +2,7 @@ import {
   calculateImageMetadata,
   calculateVideoMetadata,
 } from "@/shared/components/embed/media/mediaUtils"
+import {bytesToHex} from "@noble/hashes/utils"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
@@ -19,6 +20,28 @@ async function calculateSHA256(file: File): Promise<string> {
   const hashBuffer = await crypto.subtle.digest("SHA-256", buffer)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+}
+
+async function encryptFileWithAesGcm(
+  file: File
+): Promise<{encryptedFile: File; key: string; iv: string}> {
+  const key = crypto.getRandomValues(new Uint8Array(32)) // 256-bit key
+  const iv = crypto.getRandomValues(new Uint8Array(12)) // 96-bit IV
+  const algo = {name: "AES-GCM", iv}
+  const cryptoKey = await crypto.subtle.importKey("raw", key, algo, false, ["encrypt"])
+  const data = await file.arrayBuffer()
+  const encrypted = await crypto.subtle.encrypt(algo, cryptoKey, data)
+  // Compose: [IV (12 bytes)] + [encrypted data]
+  const encryptedBytes = new Uint8Array(iv.length + encrypted.byteLength)
+  encryptedBytes.set(iv, 0)
+  encryptedBytes.set(new Uint8Array(encrypted), iv.length)
+  return {
+    encryptedFile: new File([encryptedBytes], file.name, {
+      type: "application/octet-stream",
+    }),
+    key: bytesToHex(key),
+    iv: bytesToHex(iv),
+  }
 }
 
 async function uploadToBlossom(
@@ -184,8 +207,24 @@ async function uploadToNip96(
 export async function uploadFile(
   file: File,
   onProgress?: (progress: number) => void,
-  isSubscriber: boolean = false
+  isSubscriber: boolean = false,
+  encrypt: boolean = false
 ): Promise<string> {
+  const realFilename = file.name
+  const originalSize = file.size
+  let encryptionMeta = null
+  if (encrypt) {
+    const {encryptedFile, key} = await encryptFileWithAesGcm(file)
+    // Hash the encrypted file for filename
+    const hash = await calculateSHA256(encryptedFile)
+    // Set filename to [hash].bin
+    file = new File([encryptedFile], `${hash}.bin`, {type: "application/octet-stream"})
+    encryptionMeta = {
+      k: key,
+      n: realFilename,
+      s: originalSize,
+    }
+  }
   const userStore = useUserStore.getState()
   let server = userStore.defaultMediaserver
   if (!server) {
@@ -193,13 +232,19 @@ export async function uploadFile(
     server = useUserStore.getState().defaultMediaserver
   }
   if (!server) throw new Error("No default media server configured")
+  let url
   if (server.protocol === "blossom") {
-    return uploadToBlossom(file, server, onProgress)
+    url = await uploadToBlossom(file, server, onProgress)
   } else if (server.protocol === "nip96") {
-    return uploadToNip96(file, server, onProgress)
+    url = await uploadToNip96(file, server, onProgress)
   } else {
     throw new Error(`Unsupported media server protocol: ${server.protocol}`)
   }
+  if (encrypt && encryptionMeta) {
+    // Append URI-encoded JSON as hash
+    url += "#" + encodeURIComponent(JSON.stringify(encryptionMeta))
+  }
+  return url
 }
 
 // --- Shared file processing logic ---
@@ -259,7 +304,8 @@ export const stripExifData = async (file: File): Promise<File> => {
 
 export async function processFile(
   file: File,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  encrypt: boolean = false
 ): Promise<{url: string; metadata?: {width: number; height: number; blurhash: string}}> {
   // Strip EXIF data if it's a JPEG
   if (file.type === "image/jpeg") {
@@ -272,6 +318,6 @@ export async function processFile(
   } else if (file.type.startsWith("video/")) {
     metadata = await calculateVideoMetadata(file)
   }
-  const url = await uploadFile(file, onProgress)
+  const url = await uploadFile(file, onProgress, false, encrypt)
   return {url, metadata: metadata || undefined}
 }

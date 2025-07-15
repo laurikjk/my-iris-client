@@ -3,6 +3,7 @@ import {ReactNode} from "react"
 
 import SpotifyPlaylist from "./spotify/SpotifyPlaylist.tsx"
 import SpotifyPodcast from "./spotify/SpotifyPodcast.tsx"
+import EncryptedUrl from "./encrypted/EncryptedUrl.tsx"
 import SmallThumbnail from "./media/SmallThumbnail.tsx"
 import TwitchChannel from "./twitch/TwitchChannel.tsx"
 import SpotifyAlbum from "./spotify/SpotifyAlbum.tsx"
@@ -44,6 +45,7 @@ type Embed = {
 
 export const allEmbeds = [
   Audio,
+  EncryptedUrl,
   MediaEmbed,
   YouTube,
   Instagram,
@@ -51,7 +53,6 @@ export const allEmbeds = [
   SpotifyTrack,
   SpotifyAlbum,
   SpotifyPodcast,
-  SpotifyPlaylist,
   AppleMusic,
   ApplePodcast,
   // disable tidal again, it centers the screen on the widget on load...
@@ -91,7 +92,10 @@ export const mediaEmbeds = [
   WavLake,
 ]
 
-export const textEmbeds = allEmbeds.filter((e) => mediaEmbeds.includes(e))
+// For textEmbeds, include EncryptedUrl even if not in mediaEmbeds
+export const textEmbeds = allEmbeds.filter(
+  (e) => mediaEmbeds.includes(e) || e === EncryptedUrl
+)
 
 export const hasMedia = (e: NDKEvent) => {
   for (const embed of mediaEmbeds) {
@@ -103,6 +107,7 @@ export const hasMedia = (e: NDKEvent) => {
 }
 
 export const smallEmbeds = [
+  EncryptedUrl,
   NostrNpub,
   Hashtag,
   SmallImage,

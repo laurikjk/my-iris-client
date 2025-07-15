@@ -113,14 +113,13 @@ const MessageForm = ({
       )}
 
       <div className="flex gap-2 p-4 relative">
-        {isPublicChat && (
-          <UploadButton
-            multiple={true}
-            onUpload={handleUpload}
-            className="btn btn-ghost btn-circle btn-sm md:btn-md"
-            text={<RiAttachment2 size={20} />}
-          />
-        )}
+        <UploadButton
+          multiple={true}
+          onUpload={handleUpload}
+          className="btn btn-ghost btn-circle btn-sm md:btn-md"
+          text={<RiAttachment2 size={20} />}
+          encrypt={!isPublicChat}
+        />
         <form onSubmit={handleSubmit} className="flex-1 flex gap-2 items-center">
           <div className="relative flex-1 flex gap-2 items-center">
             {!isTouchDevice && <EmojiButton onEmojiSelect={handleEmojiClick} />}

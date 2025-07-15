@@ -1,5 +1,6 @@
 import React, {useRef, useState, ReactNode} from "react"
 
+import {RiLock2Line} from "@remixicon/react"
 import {processFile} from "@/shared/upload"
 
 type Props = {
@@ -13,6 +14,7 @@ type Props = {
   disabled?: boolean
   accept?: string
   multiple?: boolean
+  encrypt?: boolean // NEW
 }
 
 const UploadButton = ({
@@ -23,6 +25,7 @@ const UploadButton = ({
   disabled = false,
   accept,
   multiple = false,
+  encrypt = false, // NEW
 }: Props) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -39,9 +42,13 @@ const UploadButton = ({
       setProgress(0)
       setErrorMessage(null)
 
-      const {url, metadata} = await processFile(file, (progress: number) => {
-        setProgress(progress)
-      })
+      const {url, metadata} = await processFile(
+        file,
+        (progress: number) => {
+          setProgress(progress)
+        },
+        encrypt
+      )
 
       onUpload(url, metadata)
       return url
@@ -92,15 +99,32 @@ const UploadButton = ({
   }
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center relative">
       <button
         type="button"
         role="button"
         className={className || "btn btn-neutral"}
         onClick={handleClick}
         disabled={disabled || uploading}
+        style={{position: "relative"}}
       >
         {uploading ? "Uploading..." : text || "Upload"}
+        {encrypt && (
+          <span
+            style={{
+              position: "absolute",
+              top: 2,
+              right: 2,
+              pointerEvents: "none",
+              padding: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <RiLock2Line size={14} />
+          </span>
+        )}
       </button>
       <input
         ref={fileInputRef}
