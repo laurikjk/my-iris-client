@@ -6,7 +6,8 @@ import {processFile} from "@/shared/upload"
 type Props = {
   onUpload: (
     url: string,
-    metadata?: {width: number; height: number; blurhash: string}
+    metadata?: {width: number; height: number; blurhash: string},
+    encryptionMeta?: {k: string; n: string; s: number}
   ) => void
   onError?: (error: Error) => void
   text?: ReactNode
@@ -14,7 +15,7 @@ type Props = {
   disabled?: boolean
   accept?: string
   multiple?: boolean
-  encrypt?: boolean // NEW
+  encrypt?: boolean
 }
 
 const UploadButton = ({
@@ -25,7 +26,7 @@ const UploadButton = ({
   disabled = false,
   accept,
   multiple = false,
-  encrypt = false, // NEW
+  encrypt = false,
 }: Props) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -42,7 +43,7 @@ const UploadButton = ({
       setProgress(0)
       setErrorMessage(null)
 
-      const {url, metadata} = await processFile(
+      const {url, metadata, encryptionMeta} = await processFile(
         file,
         (progress: number) => {
           setProgress(progress)
@@ -50,7 +51,7 @@ const UploadButton = ({
         encrypt
       )
 
-      onUpload(url, metadata)
+      onUpload(url, metadata, encryptionMeta)
       return url
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)

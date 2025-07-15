@@ -1,20 +1,46 @@
 import {formatSize} from "@/shared/utils/formatSize"
+import {useEffect, useState, useMemo} from "react"
 import {RiDownload2Line} from "@remixicon/react"
-import {useEffect, useState} from "react"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 interface EncryptedUrlEmbedProps {
   url: string
+  event?: NDKEvent
 }
 
-function parseHashMeta(url: string) {
+function parseImetaEncryption(event: NDKEvent, url: string) {
   try {
-    const hash = url.split("#")[1]
-    if (!hash) return null
-    const decoded = decodeURIComponent(hash)
-    const meta = JSON.parse(decoded)
-    if (meta.k && meta.n && meta.s) return meta
+    console.log("[EncryptedUrlEmbed] Looking for imeta tag for url:", url)
+    console.log("[EncryptedUrlEmbed] event.tags:", event.tags)
+    // Find imeta tag for this URL (exact match after removing 'url ' prefix)
+    const imetaTag = event.tags.find(
+      (tag) =>
+        tag[0] === "imeta" &&
+        tag[1] &&
+        tag[1].startsWith("url ") &&
+        tag[1].slice(4) === url
+    )
+    if (!imetaTag) {
+      console.log("[EncryptedUrlEmbed] No matching imeta tag found for url:", url)
+      return null
+    }
+    console.log("[EncryptedUrlEmbed] Found imeta tag:", imetaTag)
+    // Extract encryption metadata from imeta tag
+    const keyPart = imetaTag.find((part) => part.startsWith("key "))
+    const namePart = imetaTag.find((part) => part.startsWith("name "))
+    const sizePart = imetaTag.find((part) => part.startsWith("size "))
+    const encryptionPart = imetaTag.find((part) => part.startsWith("encryption "))
+
+    if (keyPart && namePart && sizePart) {
+      return {
+        key: keyPart.split(" ")[1],
+        name: namePart.split(" ")[1],
+        size: parseInt(sizePart.split(" ")[1], 10),
+        encryption: encryptionPart ? encryptionPart.split(" ")[1] : "AES-GCM",
+      }
+    }
   } catch (e) {
-    /* ignore */
+    console.log("[EncryptedUrlEmbed] Error in parseImetaEncryption:", e)
   }
   return null
 }
@@ -36,32 +62,41 @@ async function decryptAesGcm(
   return await window.crypto.subtle.decrypt({name: "AES-GCM", iv}, cryptoKey, data)
 }
 
-const isImage = (filename: string) => /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(filename)
+const isImage = (filename: string) =>
+  /\.(jpg|jpeg|png|gif|webp|bmp|svg|avif)$/i.test(filename)
 
-function EncryptedUrlEmbed({url}: EncryptedUrlEmbedProps) {
+function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState<number | null>(null)
-  const meta = parseHashMeta(url)
+  const meta = useMemo(
+    () => (event ? parseImetaEncryption(event, url) : null),
+    [event, url]
+  )
+
+  console.log("[EncryptedUrlEmbed] url:", url, "event:", event, "meta:", meta)
 
   // For images: decrypt and display immediately
   useEffect(() => {
-    if (!meta || !isImage(meta.n)) return
+    console.log("[EncryptedUrlEmbed] useEffect", meta, isImage(meta?.name))
+    if (!meta || !isImage(meta.name)) return
     let revoked = false
+    let currentBlobUrl: string | null = null
     setLoading(true)
     setError(null)
     setBlobUrl(null)
-    fetch(url.split("#")[0])
+    fetch(url)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch encrypted file")
         return res.arrayBuffer()
       })
-      .then((encrypted) => decryptAesGcm(encrypted, meta.k))
+      .then((encrypted) => decryptAesGcm(encrypted, meta.key))
       .then((decrypted) => {
         if (revoked) return
         const blob = new Blob([decrypted])
         const url = URL.createObjectURL(blob)
+        currentBlobUrl = url
         setBlobUrl(url)
         setLoading(false)
       })
@@ -71,9 +106,9 @@ function EncryptedUrlEmbed({url}: EncryptedUrlEmbedProps) {
       })
     return () => {
       revoked = true
-      if (blobUrl) URL.revokeObjectURL(blobUrl)
+      if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl)
     }
-  }, [url])
+  }, [url, meta])
 
   // For non-images: only decrypt on button click
   const handleDownload = async () => {
@@ -82,16 +117,15 @@ function EncryptedUrlEmbed({url}: EncryptedUrlEmbedProps) {
     setError(null)
     setProgress(0)
     try {
-      const fileUrl = url.split("#")[0]
-      const resp = await fetchWithProgress(fileUrl, (p) => setProgress(p))
+      const resp = await fetchWithProgress(url, (p) => setProgress(p))
       if (!resp.ok) throw new Error("Failed to fetch encrypted file")
       const encrypted = await resp.arrayBuffer()
-      const decrypted = await decryptAesGcm(encrypted, meta.k)
+      const decrypted = await decryptAesGcm(encrypted, meta.key)
       const blob = new Blob([decrypted])
       const blobUrl = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = blobUrl
-      a.download = meta.n
+      a.download = meta.name
       document.body.appendChild(a)
       a.click()
       setTimeout(() => {
@@ -133,16 +167,23 @@ function EncryptedUrlEmbed({url}: EncryptedUrlEmbedProps) {
     return resp
   }
 
-  if (!meta) return <span className="text-error">Invalid encrypted URL</span>
+  if (!meta) {
+    // If no encryption metadata found, just show the URL as a link
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="link">
+        {url}
+      </a>
+    )
+  }
 
-  if (isImage(meta.n)) {
+  if (isImage(meta.name)) {
     if (loading) return <div className="p-2 text-sm text-gray-500">Decrypting...</div>
     if (error) return <div className="p-2 text-sm text-error">{error}</div>
     if (blobUrl) {
       return (
         <img
           src={blobUrl}
-          alt={meta.n}
+          alt={meta.name}
           style={{maxWidth: "100%", maxHeight: 400, borderRadius: 8}}
         />
       )
@@ -160,9 +201,9 @@ function EncryptedUrlEmbed({url}: EncryptedUrlEmbedProps) {
           onClick={handleDownload}
         >
           <RiDownload2Line size={16} />
-          {loading ? "Decrypting..." : `Download ${meta.n}`}
+          {loading ? "Decrypting..." : `Download ${meta.name}`}
         </button>
-        <span className="text-xs">{formatSize(meta.s)}</span>
+        <span className="text-xs">{formatSize(meta.size)}</span>
       </div>
       {loading && progress !== null && (
         <div className="w-full bg-base-200 rounded h-2 mt-1">

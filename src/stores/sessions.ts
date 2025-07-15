@@ -65,7 +65,8 @@ interface SessionStoreActions {
     id: string,
     content: string,
     replyingToId?: string,
-    isReaction?: boolean
+    isReaction?: boolean,
+    imetaTags?: string[][]
   ) => Promise<void>
   updateLastSeen: (sessionId: string) => void
   deleteInvite: (id: string) => void
@@ -162,7 +163,8 @@ const store = create<SessionStore>()(
         sessionId: string,
         content: string,
         replyingToId?: string,
-        isReaction?: boolean
+        isReaction?: boolean,
+        imetaTags?: string[][]
       ) => {
         const session = get().sessions.get(sessionId)
         if (!session) {
@@ -172,13 +174,16 @@ const store = create<SessionStore>()(
           throw new Error("Cannot send a reaction without a replyingToId")
         }
 
+        const tags = [
+          ...(replyingToId ? [["e", replyingToId]] : []),
+          ["ms", Date.now().toString()],
+          ...(imetaTags || []),
+        ]
+
         const {event, innerEvent} = session.sendEvent({
           content,
           kind: isReaction ? REACTION_KIND : CHAT_MESSAGE_KIND,
-          tags: [
-            ...(replyingToId ? [["e", replyingToId]] : []),
-            ["ms", Date.now().toString()],
-          ],
+          tags,
         })
         const message: MessageType = {
           ...innerEvent,

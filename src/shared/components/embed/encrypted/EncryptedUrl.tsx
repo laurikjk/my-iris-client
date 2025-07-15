@@ -2,7 +2,7 @@ import EncryptedUrlEmbed from "./EncryptedUrlEmbed"
 import type {EmbedProps} from "../index"
 import {ReactNode} from "react"
 
-const ENCRYPTED_URL_REGEX = /(https?:\/\/[^\s]+\.bin#%7B%22k%22%3A[^\s]+)/i
+const ENCRYPTED_URL_REGEX = /\b(https?:\/\/[^\s]+\.bin)\b/i
 
 type Embed = {
   regex: RegExp
@@ -13,7 +13,9 @@ type Embed = {
 
 const EncryptedUrl: Embed = {
   regex: ENCRYPTED_URL_REGEX,
-  component: ({match}: EmbedProps) => <EncryptedUrlEmbed url={match} />,
+  component: ({match, event}: EmbedProps) => (
+    <EncryptedUrlEmbed url={match} event={event} />
+  ),
   inline: true,
 }
 

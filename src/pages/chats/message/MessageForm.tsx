@@ -33,6 +33,9 @@ const MessageForm = ({
 }: MessageFormProps) => {
   const {sendMessage} = useSessionsStore()
   const [newMessage, setNewMessage] = useState("")
+  const [encryptionMetadata, setEncryptionMetadata] = useState<
+    Map<string, {k: string; n: string; s: number}>
+  >(new Map())
   const textareaRef = useAutosizeTextarea(newMessage)
   const theirPublicKey = id.split(":")[0]
 
@@ -73,7 +76,23 @@ const MessageForm = ({
     }
 
     try {
-      await sendMessage(id, text, replyingTo?.id)
+      // Create imeta tags for encrypted files
+      const imetaTags: string[][] = []
+      encryptionMetadata.forEach((meta, url) => {
+        if (text.includes(url)) {
+          imetaTags.push([
+            "imeta",
+            `url ${url}`,
+            `key ${meta.k}`,
+            `name ${meta.n}`,
+            `size ${meta.s}`,
+            `encryption AES-GCM`,
+          ])
+        }
+      })
+
+      await sendMessage(id, text, replyingTo?.id, false, imetaTags)
+      setEncryptionMetadata(new Map()) // Clear after sending
     } catch (error) {
       console.error("Failed to send message:", error)
     }
@@ -97,8 +116,15 @@ const MessageForm = ({
     textareaRef.current?.focus()
   }
 
-  const handleUpload = (url: string) => {
+  const handleUpload = (
+    url: string,
+    metadata?: {width: number; height: number; blurhash: string},
+    encryptionMeta?: {k: string; n: string; s: number}
+  ) => {
     setNewMessage((prev) => prev + " " + url)
+    if (encryptionMeta) {
+      setEncryptionMetadata((prev) => new Map(prev).set(url, encryptionMeta))
+    }
     textareaRef.current?.focus()
   }
 

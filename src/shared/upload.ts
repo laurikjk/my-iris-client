@@ -209,10 +209,10 @@ export async function uploadFile(
   onProgress?: (progress: number) => void,
   isSubscriber: boolean = false,
   encrypt: boolean = false
-): Promise<string> {
+): Promise<{url: string; encryptionMeta?: {k: string; n: string; s: number}}> {
   const realFilename = file.name
   const originalSize = file.size
-  let encryptionMeta = null
+  let encryptionMeta: {k: string; n: string; s: number} | undefined = undefined
   if (encrypt) {
     const {encryptedFile, key} = await encryptFileWithAesGcm(file)
     // Hash the encrypted file for filename
@@ -240,11 +240,7 @@ export async function uploadFile(
   } else {
     throw new Error(`Unsupported media server protocol: ${server.protocol}`)
   }
-  if (encrypt && encryptionMeta) {
-    // Append URI-encoded JSON as hash
-    url += "#" + encodeURIComponent(JSON.stringify(encryptionMeta))
-  }
-  return url
+  return {url, encryptionMeta}
 }
 
 // --- Shared file processing logic ---
@@ -306,7 +302,11 @@ export async function processFile(
   file: File,
   onProgress?: (progress: number) => void,
   encrypt: boolean = false
-): Promise<{url: string; metadata?: {width: number; height: number; blurhash: string}}> {
+): Promise<{
+  url: string
+  metadata?: {width: number; height: number; blurhash: string}
+  encryptionMeta?: {k: string; n: string; s: number}
+}> {
   // Strip EXIF data if it's a JPEG
   if (file.type === "image/jpeg") {
     file = await stripExifData(file)
@@ -318,6 +318,6 @@ export async function processFile(
   } else if (file.type.startsWith("video/")) {
     metadata = await calculateVideoMetadata(file)
   }
-  const url = await uploadFile(file, onProgress, false, encrypt)
-  return {url, metadata: metadata || undefined}
+  const {url, encryptionMeta} = await uploadFile(file, onProgress, false, encrypt)
+  return {url, metadata: metadata || undefined, encryptionMeta}
 }

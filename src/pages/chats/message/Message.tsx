@@ -7,6 +7,7 @@ import {shouldHideAuthor} from "@/utils/visibility"
 import {Name} from "@/shared/components/user/Name"
 import {useMemo, useEffect, useState} from "react"
 import {useEventsStore} from "@/stores/events"
+import {NostrEvent} from "@nostr-dev-kit/ndk"
 import ReplyPreview from "./ReplyPreview"
 import classNames from "classnames"
 import {Link} from "react-router"
@@ -193,7 +194,7 @@ const Message = ({
                   "whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
                 )}
               >
-                <HyperText small={true} truncate={500}>
+                <HyperText small={true} truncate={500} event={message as NostrEvent}>
                   {message.content}
                 </HyperText>
               </p>
