@@ -1,13 +1,13 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {ChannelMetadata, getChannelsByFollowed} from "../utils/channelMetadata"
+import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
+import {searchChannels} from "../utils/channelSearch"
 import {useState, FormEvent, useEffect} from "react"
+import ProxyImg from "@/shared/components/ProxyImg"
+import PopularChannels from "./PopularChannels"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
 import {ndk} from "@/utils/ndk"
-import PopularChannels from "./PopularChannels"
-import {useUserStore} from "@/stores/user"
-import ProxyImg from "@/shared/components/ProxyImg"
-import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
-import { searchChannels } from "../utils/channelSearch"
-import { ChannelMetadata, getChannelsByFollowed } from "../utils/channelMetadata"
 
 let publicKey = useUserStore.getState().publicKey
 useUserStore.subscribe((state) => {
@@ -128,11 +128,18 @@ const PublicChatCreation = () => {
                       square={true}
                     />
                   ) : (
-                    <MinidenticonImg username={metadata.id} className="w-10 h-10 rounded-full" />
+                    <MinidenticonImg
+                      username={metadata.id}
+                      className="w-10 h-10 rounded-full"
+                    />
                   )}
                   <div className="flex flex-col break-words [overflow-wrap:anywhere]">
                     <span className="font-medium line-clamp-1">{metadata.name}</span>
-                    {metadata.about && <span className="text-sm opacity-70 line-clamp-2">{metadata.about}</span>}
+                    {metadata.about && (
+                      <span className="text-sm opacity-70 line-clamp-2">
+                        {metadata.about}
+                      </span>
+                    )}
                   </div>
                 </div>
               </button>

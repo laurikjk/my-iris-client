@@ -26,7 +26,9 @@
     "test:ui": "playwright test --ui",
     "test:performance": "playwright test feed-performance.spec.ts --reporter=list",
     "performance:baseline": "tsx ./scripts/performance-baseline.ts",
-    "format": "prettier --write \"**/*.+(js|jsx|tsx|json|yml|yaml|css|md)\""
+    "format": "prettier --write \"**/*.+(js|jsx|tsx|json|yml|yaml|css|md)\"",
+    "format:check": "prettier --check \"**/*.+(js|jsx|tsx|json|yml|yaml|css|md)\"",
+    "typecheck": "tsc --noEmit"
   },
   "build": {
     "extends": null,

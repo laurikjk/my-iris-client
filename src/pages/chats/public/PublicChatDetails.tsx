@@ -1,10 +1,10 @@
-import {useParams, useNavigate} from "react-router"
-import Header from "@/shared/components/header/Header"
-import {RiShareLine, RiChat1Line} from "@remixicon/react"
-import {useEffect, useState} from "react"
 import {fetchChannelMetadata, ChannelMetadata} from "../utils/channelMetadata"
-import ProxyImg from "@/shared/components/ProxyImg"
+import {RiShareLine, RiChat1Line} from "@remixicon/react"
 import {UserRow} from "@/shared/components/user/UserRow"
+import Header from "@/shared/components/header/Header"
+import ProxyImg from "@/shared/components/ProxyImg"
+import {useParams, useNavigate} from "react-router"
+import {useEffect, useState} from "react"
 import {nip19} from "nostr-tools"
 
 const PublicChatDetails = () => {
@@ -32,9 +32,7 @@ const PublicChatDetails = () => {
     <>
       <Header title="Chat Details" showBack />
       <div className="p-4">
-        {!metadata && (
-          <div className="text-center">Chat not found</div>
-        )}
+        {!metadata && <div className="text-center">Chat not found</div>}
         {metadata && (
           <div className="space-y-4">
             <div className="card bg-base-100 shadow-xl">
@@ -70,11 +68,13 @@ const PublicChatDetails = () => {
                   <div>
                     <label className="text-sm text-base-content/70">Channel ID</label>
                     <div className="font-mono text-sm break-all bg-base-200 p-2 rounded">
-                      {id ? nip19.noteEncode(id) : ''}
+                      {id ? nip19.noteEncode(id) : ""}
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm text-base-content/70">Channel ID (Hex)</label>
+                    <label className="text-sm text-base-content/70">
+                      Channel ID (Hex)
+                    </label>
                     <div className="font-mono text-sm break-all bg-base-200 p-2 rounded">
                       {id}
                     </div>
@@ -101,7 +101,10 @@ const PublicChatDetails = () => {
                       <label className="text-sm text-base-content/70">Relays</label>
                       <div className="space-y-1">
                         {metadata.relays.map((relay, index) => (
-                          <div key={index} className="font-mono text-sm break-all bg-base-200 p-2 rounded">
+                          <div
+                            key={index}
+                            className="font-mono text-sm break-all bg-base-200 p-2 rounded"
+                          >
                             {relay}
                           </div>
                         ))}
@@ -117,7 +120,9 @@ const PublicChatDetails = () => {
                   <div>
                     <label className="text-sm text-base-content/70">Created At</label>
                     <div className="font-mono text-sm break-all bg-base-200 p-2 rounded">
-                      {metadata?.createdAt ? new Date(metadata.createdAt * 1000).toLocaleString() : 'Unknown'}
+                      {metadata?.createdAt
+                        ? new Date(metadata.createdAt * 1000).toLocaleString()
+                        : "Unknown"}
                     </div>
                   </div>
                 </div>

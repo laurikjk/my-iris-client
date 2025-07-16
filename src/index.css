@@ -6,7 +6,8 @@ html {
   font-size: 15px;
 }
 
-.btn, .input {
+.btn,
+.input {
   @apply rounded-full;
 }
 
@@ -78,12 +79,12 @@ iframe {
 
 /* src/shared/styles/scrollbar.css */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* Internet Explorer 10+ */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none; /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Safari and Chrome */
+  display: none; /* Safari and Chrome */
 }
 
 /* modals */
