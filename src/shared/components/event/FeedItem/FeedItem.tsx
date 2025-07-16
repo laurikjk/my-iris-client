@@ -144,6 +144,8 @@ function FeedItem({
     }
   }, [event])
 
+  console.log("event", event)
+
   useEffect(() => {
     if (!event && eventIdHex) {
       const cached = eventsByIdCache.get(eventIdHex)

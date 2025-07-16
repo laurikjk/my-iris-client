@@ -70,13 +70,15 @@ export const getDoubleRatchetUser = (pubkey: string): DoubleRatchetUser | undefi
   return userData.get(pubkey)
 }
 
-export const subscribeToDoubleRatchetUsers = () => {
-  if (!subscribed) {
+export const subscribeToDoubleRatchetUsers = (myPubKey: string) => {
+  if (myPubKey && !subscribed) {
     console.log("Subscribing to double ratchet users")
     subscribed = true
+    const authors = Array.from(socialGraph().getUsersByFollowDistance(1))
+    authors.push(myPubKey) // sometimes we want to chat with ourselves
     const sub = ndk().subscribe({
       kinds: [30078],
-      authors: Array.from(socialGraph().getUsersByFollowDistance(1)),
+      authors,
       "#l": ["double-ratchet/invites"],
     })
     sub.on("event", (event) => {
