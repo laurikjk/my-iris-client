@@ -40,8 +40,9 @@ async function captureBaseline() {
   }
 }
 
-function extractMetric(results: any, metricName: string): number {
-  return 0
+function extractMetric(results: Record<string, unknown>, metricName: string): number {
+  const value = (results as Record<string, unknown>)[metricName]
+  return typeof value === "number" ? value : 0
 }
 
 captureBaseline().catch(console.error)

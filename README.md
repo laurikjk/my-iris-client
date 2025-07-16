@@ -8,7 +8,6 @@ Source code for [iris.to](https://iris.to)
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/irislib/iris-client)
 
-
 ## Development
 
 ```bash

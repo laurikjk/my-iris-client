@@ -1,8 +1,8 @@
-import {useNavigate} from "react-router"
 import {fetchChannelMetadata, ChannelMetadata} from "../utils/channelMetadata"
-import {useEffect, useState} from "react"
-import ProxyImg from "@/shared/components/ProxyImg"
 import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
+import ProxyImg from "@/shared/components/ProxyImg"
+import {useEffect, useState} from "react"
+import {useNavigate} from "react-router"
 
 type PopularChannelItemProps = {
   channelId: string
@@ -46,9 +46,11 @@ const PopularChannelItem = ({channelId, authorCount}: PopularChannelItemProps) =
               <MinidenticonImg username={channelId} className="w-10 h-10 rounded-full" />
             )}
             <div>
-              <h3 className="font-semibold">{metadata?.name || `Channel ${channelId.slice(0, 8)}...`}</h3>
+              <h3 className="font-semibold">
+                {metadata?.name || `Channel ${channelId.slice(0, 8)}...`}
+              </h3>
               <p className="text-xs text-base-content/70">
-                {authorCount} {authorCount === 1 ? 'person' : 'people'} you follow
+                {authorCount} {authorCount === 1 ? "person" : "people"} you follow
               </p>
             </div>
           </div>

@@ -26,9 +26,6 @@
       "@/*": ["src/*"]
     }
   },
-  "include": [
-    "custom.d.ts",
-    "src"
-  ],
+  "include": ["custom.d.ts", "src"],
   "references": [{"path": "./tsconfig.node.json"}]
 }
