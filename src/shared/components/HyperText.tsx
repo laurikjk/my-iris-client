@@ -65,9 +65,14 @@ const HyperText = memo(
         let isTruncated = false
         const truncatedChildren = result.reduce(
           (acc: Array<ReactNode | string>, child) => {
+            if (isTruncated) {
+              return acc
+            }
+
             if (typeof child === "string") {
               if (charCount + child.length > truncate) {
                 acc.push(child.substring(0, truncate - charCount))
+                charCount = truncate
                 isTruncated = true
                 return acc
               }
