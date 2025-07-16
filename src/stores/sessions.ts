@@ -177,8 +177,12 @@ const store = create<SessionStore>()(
         const tags = [
           ...(replyingToId ? [["e", replyingToId]] : []),
           ["ms", Date.now().toString()],
-          ...(imetaTags || []),
         ]
+        if (imetaTags && imetaTags.length) {
+          for (const tag of imetaTags) {
+            tags.push(tag)
+          }
+        }
 
         const {event, innerEvent} = session.sendEvent({
           content,

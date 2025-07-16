@@ -5,13 +5,13 @@ import {
   ChangeEvent,
   KeyboardEvent as ReactKeyboardEvent,
 } from "react"
+import type {EncryptionMeta as BaseEncryptionMeta} from "@/types/global"
 import {useAutosizeTextarea} from "@/shared/hooks/useAutosizeTextarea"
 import UploadButton from "@/shared/components/button/UploadButton"
 import EmojiButton from "@/shared/components/emoji/EmojiButton"
 import MessageFormReplyPreview from "./MessageFormReplyPreview"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {useSessionsStore} from "@/stores/sessions"
-import type {EncryptionMeta} from "@/types/global"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiAttachment2} from "@remixicon/react"
 import EmojiType from "@/types/emoji"
@@ -25,6 +25,11 @@ interface MessageFormProps {
   isPublicChat?: boolean
 }
 
+// Extend EncryptionMeta locally to allow imetaTag
+interface EncryptionMetaWithImeta extends BaseEncryptionMeta {
+  imetaTag?: string[]
+}
+
 const MessageForm = ({
   id,
   replyingTo,
@@ -35,7 +40,7 @@ const MessageForm = ({
   const {sendMessage} = useSessionsStore()
   const [newMessage, setNewMessage] = useState("")
   const [encryptionMetadata, setEncryptionMetadata] = useState<
-    Map<string, EncryptionMeta>
+    Map<string, EncryptionMetaWithImeta>
   >(new Map())
   const textareaRef = useAutosizeTextarea(newMessage)
   const theirPublicKey = id.split(":")[0]
@@ -80,15 +85,8 @@ const MessageForm = ({
       // Create imeta tags for encrypted files
       const imetaTags: string[][] = []
       encryptionMetadata.forEach((meta, url) => {
-        if (text.includes(url)) {
-          imetaTags.push([
-            "imeta",
-            `url ${url}`,
-            `decryption-key ${meta.decryptionKey}`,
-            `name ${meta.fileName}`,
-            `size ${meta.fileSize}`,
-            `encryption-algorithm ${meta.algorithm || "AES-GCM"}`,
-          ])
+        if (text.includes(url) && meta.imetaTag) {
+          imetaTags.push(meta.imetaTag)
         }
       })
 
@@ -120,11 +118,14 @@ const MessageForm = ({
   const handleUpload = (
     url: string,
     _metadata?: {width: number; height: number; blurhash: string},
-    encryptionMeta?: EncryptionMeta
+    encryptionMeta?: EncryptionMetaWithImeta,
+    imetaTag?: string[]
   ) => {
     setNewMessage((prev) => prev + " " + url)
     if (encryptionMeta) {
-      setEncryptionMetadata((prev) => new Map(prev).set(url, encryptionMeta))
+      setEncryptionMetadata((prev) =>
+        new Map(prev).set(url, {...encryptionMeta, imetaTag})
+      )
     }
     textareaRef.current?.focus()
   }
