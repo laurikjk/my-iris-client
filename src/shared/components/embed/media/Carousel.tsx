@@ -1,7 +1,6 @@
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import {useEffect, useState, MouseEvent, useCallback} from "react"
 import {useSwipeable} from "react-swipeable"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 
 import PreloadImages from "@/shared/components/media/PreloadImages"
@@ -9,6 +8,7 @@ import MediaModal from "@/shared/components/media/MediaModal"
 import {useSettingsStore} from "@/stores/settings"
 import ImageComponent from "./ImageComponent"
 import VideoComponent from "./VideoComponent"
+import {EmbedEvent} from "../index"
 
 interface MediaItem {
   url: string
@@ -18,7 +18,7 @@ interface MediaItem {
 
 interface CarouselProps {
   media: MediaItem[]
-  event?: NDKEvent
+  event?: EmbedEvent
 }
 
 function Carousel({media, event}: CarouselProps) {
@@ -190,7 +190,7 @@ function Carousel({media, event}: CarouselProps) {
     return (
       <VideoComponent
         match={item.url}
-        event={event}
+        event={event as EmbedEvent}
         key={item.url}
         blur={blur}
         onClick={() => setBlur(false)}

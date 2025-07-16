@@ -1,6 +1,7 @@
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import FeedItem from "../event/FeedItem/FeedItem"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {EmbedEvent} from "../embed/index"
 import ProxyImg from "../ProxyImg"
 import Icon from "../Icons/Icon"
 import Modal from "../ui/Modal"
@@ -12,9 +13,13 @@ interface MediaModalProps {
   mediaUrl: string
   mediaType: "image" | "video"
   showFeedItem?: boolean
-  event?: NDKEvent
+  event?: EmbedEvent
   currentIndex?: number
   totalCount?: number
+}
+
+function isNDKEvent(event: EmbedEvent): event is NDKEvent {
+  return event && typeof (event as NDKEvent).rawEvent !== "undefined"
 }
 
 function MediaModal({
@@ -99,8 +104,8 @@ function MediaModal({
         {showFeedItem && event && (
           <div className="w-[400px] bg-base-100 border-l flex-shrink-0 overflow-y-auto">
             <FeedItem
-              key={event.id}
-              event={event}
+              key={isNDKEvent(event) ? event.id : undefined}
+              event={isNDKEvent(event) ? event : undefined}
               asReply={false}
               showRepliedTo={true}
               showReplies={Infinity}

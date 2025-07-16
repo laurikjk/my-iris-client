@@ -1,8 +1,8 @@
 import {MouseEvent, ReactNode, useState, memo, useMemo, useCallback} from "react"
 import reactStringReplace from "react-string-replace"
 import {useSettingsStore} from "@/stores/settings"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
 
+import {Rumor} from "nostr-double-ratchet/src"
 import {allEmbeds, smallEmbeds} from "./embed"
 
 const HyperText = memo(
@@ -15,7 +15,7 @@ const HyperText = memo(
     textPadding = !small,
   }: {
     children: string
-    event?: NDKEvent
+    event?: Rumor
     small?: boolean
     truncate?: number
     expandable?: boolean

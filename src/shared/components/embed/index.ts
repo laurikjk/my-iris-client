@@ -1,4 +1,3 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {ReactNode} from "react"
 
 import SpotifyPlaylist from "./spotify/SpotifyPlaylist.tsx"
@@ -18,10 +17,12 @@ import CustomEmoji from "./nostr/CustomEmoji.tsx"
 import SmallImage from "./media/SmallImage.tsx"
 import AppleMusic from "./apple/AppleMusic.tsx"
 import MediaEmbed from "./media/MediaEmbed.tsx"
+import {Rumor} from "nostr-double-ratchet/src"
 import NostrNpub from "./nostr/NostrNpub.tsx"
 import LightningUri from "./LightningUri.tsx"
 import YouTube from "./youtube/YouTube.tsx"
 import WavLake from "./wavlake/WavLake.tsx"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 import Twitch from "./twitch/Twitch.tsx"
 import TikTok from "./tiktok/TikTok.tsx"
 import Nip19 from "./nostr/Nip19.tsx"
@@ -29,10 +30,12 @@ import Hashtag from "./Hashtag.tsx"
 import Audio from "./Audio.tsx"
 import Url from "./Url.tsx"
 
+export type EmbedEvent = NDKEvent | Rumor
+
 export type EmbedProps = {
   match: string
   index?: number
-  event?: NDKEvent
+  event?: EmbedEvent
   key: string
 }
 
@@ -97,7 +100,7 @@ export const textEmbeds = allEmbeds.filter(
   (e) => mediaEmbeds.includes(e) || e === EncryptedUrl
 )
 
-export const hasMedia = (e: NDKEvent) => {
+export const hasMedia = (e: Rumor) => {
   for (const embed of mediaEmbeds) {
     if (e.content.match(embed.regex)) {
       return true

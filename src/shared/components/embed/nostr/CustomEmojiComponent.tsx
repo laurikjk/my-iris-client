@@ -1,10 +1,10 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ProxyImg from "../../ProxyImg"
+import {EmbedEvent} from "../index"
 import {useState} from "react"
 
 interface CustomEmojiProps {
   match: string
-  event?: NDKEvent
+  event?: EmbedEvent
 }
 
 export const CustomEmojiComponent = ({match, event}: CustomEmojiProps) => {

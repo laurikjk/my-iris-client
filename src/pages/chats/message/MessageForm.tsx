@@ -118,7 +118,7 @@ const MessageForm = ({
 
   const handleUpload = (
     url: string,
-    metadata?: {width: number; height: number; blurhash: string},
+    _metadata?: {width: number; height: number; blurhash: string},
     encryptionMeta?: {k: string; n: string; s: number}
   ) => {
     setNewMessage((prev) => prev + " " + url)

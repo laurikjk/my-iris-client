@@ -1,14 +1,14 @@
 import {formatSize} from "@/shared/utils/formatSize"
 import {useEffect, useState, useMemo} from "react"
 import {RiDownload2Line} from "@remixicon/react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {EmbedEvent} from "../index"
 
 interface EncryptedUrlEmbedProps {
   url: string
-  event?: NDKEvent
+  event?: EmbedEvent
 }
 
-function parseImetaEncryption(event: NDKEvent, url: string) {
+function parseImetaEncryption(event: EmbedEvent, url: string) {
   try {
     // Find imeta tag for this URL (exact match after removing 'url ' prefix)
     const imetaTag = event.tags.find(

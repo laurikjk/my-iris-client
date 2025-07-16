@@ -1,13 +1,13 @@
 import {useSettingsStore} from "@/stores/settings"
 import {RiVideoLine} from "@remixicon/react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useState, MouseEvent} from "react"
 import ProxyImg from "../../ProxyImg"
 import classNames from "classnames"
+import {EmbedEvent} from "../index"
 
 interface SmallThumbnailComponentProps {
   match: string
-  event: NDKEvent | undefined
+  event: EmbedEvent | undefined
 }
 
 function SmallThumbnailComponent({match, event}: SmallThumbnailComponentProps) {

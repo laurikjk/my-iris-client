@@ -2,12 +2,12 @@ import {calculateDimensions, generateBlurhashUrl} from "./mediaUtils"
 import {useEffect, useRef, useState, useMemo} from "react"
 import {generateProxyUrl} from "../../../utils/imgproxy"
 import {useSettingsStore} from "@/stores/settings"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
+import {EmbedEvent} from "../index"
 
 interface HlsVideoComponentProps {
   match: string
-  event: NDKEvent | undefined
+  event: EmbedEvent | undefined
   limitHeight?: boolean
   onClick?: () => void
   blur?: boolean
