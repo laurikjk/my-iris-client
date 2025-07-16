@@ -11,6 +11,7 @@ import EmojiButton from "@/shared/components/emoji/EmojiButton"
 import MessageFormReplyPreview from "./MessageFormReplyPreview"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {useSessionsStore} from "@/stores/sessions"
+import type {EncryptionMeta} from "@/types/global"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiAttachment2} from "@remixicon/react"
 import EmojiType from "@/types/emoji"
@@ -34,7 +35,7 @@ const MessageForm = ({
   const {sendMessage} = useSessionsStore()
   const [newMessage, setNewMessage] = useState("")
   const [encryptionMetadata, setEncryptionMetadata] = useState<
-    Map<string, {k: string; n: string; s: number}>
+    Map<string, EncryptionMeta>
   >(new Map())
   const textareaRef = useAutosizeTextarea(newMessage)
   const theirPublicKey = id.split(":")[0]
@@ -83,10 +84,10 @@ const MessageForm = ({
           imetaTags.push([
             "imeta",
             `url ${url}`,
-            `key ${meta.k}`,
-            `name ${meta.n}`,
-            `size ${meta.s}`,
-            `encryption AES-GCM`,
+            `decryption-key ${meta.decryptionKey}`,
+            `name ${meta.fileName}`,
+            `size ${meta.fileSize}`,
+            `encryption-algorithm ${meta.algorithm || "AES-GCM"}`,
           ])
         }
       })
@@ -119,7 +120,7 @@ const MessageForm = ({
   const handleUpload = (
     url: string,
     _metadata?: {width: number; height: number; blurhash: string},
-    encryptionMeta?: {k: string; n: string; s: number}
+    encryptionMeta?: EncryptionMeta
   ) => {
     setNewMessage((prev) => prev + " " + url)
     if (encryptionMeta) {

@@ -2,6 +2,7 @@ import {
   calculateImageMetadata,
   calculateVideoMetadata,
 } from "@/shared/components/embed/media/mediaUtils"
+import type {EncryptionMeta} from "@/types/global"
 import {bytesToHex} from "@noble/hashes/utils"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
@@ -209,10 +210,10 @@ export async function uploadFile(
   onProgress?: (progress: number) => void,
   isSubscriber: boolean = false,
   encrypt: boolean = false
-): Promise<{url: string; encryptionMeta?: {k: string; n: string; s: number}}> {
+): Promise<{url: string; encryptionMeta?: EncryptionMeta}> {
   const realFilename = file.name
   const originalSize = file.size
-  let encryptionMeta: {k: string; n: string; s: number} | undefined = undefined
+  let encryptionMeta: EncryptionMeta | undefined = undefined
   if (encrypt) {
     const {encryptedFile, key} = await encryptFileWithAesGcm(file)
     // Hash the encrypted file for filename
@@ -220,9 +221,10 @@ export async function uploadFile(
     // Set filename to [hash].bin
     file = new File([encryptedFile], `${hash}.bin`, {type: "application/octet-stream"})
     encryptionMeta = {
-      k: key,
-      n: realFilename,
-      s: originalSize,
+      decryptionKey: key,
+      fileName: realFilename,
+      fileSize: originalSize,
+      algorithm: "AES-GCM",
     }
   }
   const userStore = useUserStore.getState()
@@ -305,7 +307,7 @@ export async function processFile(
 ): Promise<{
   url: string
   metadata?: {width: number; height: number; blurhash: string}
-  encryptionMeta?: {k: string; n: string; s: number}
+  encryptionMeta?: EncryptionMeta
 }> {
   // Strip EXIF data if it's a JPEG
   if (file.type === "image/jpeg") {

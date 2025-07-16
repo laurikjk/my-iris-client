@@ -1,5 +1,6 @@
 import React, {useRef, useState, ReactNode} from "react"
 
+import type {EncryptionMeta} from "@/types/global"
 import {RiLock2Line} from "@remixicon/react"
 import {processFile} from "@/shared/upload"
 
@@ -7,7 +8,7 @@ type Props = {
   onUpload: (
     url: string,
     metadata?: {width: number; height: number; blurhash: string},
-    encryptionMeta?: {k: string; n: string; s: number}
+    encryptionMeta?: EncryptionMeta
   ) => void
   onError?: (error: Error) => void
   text?: ReactNode

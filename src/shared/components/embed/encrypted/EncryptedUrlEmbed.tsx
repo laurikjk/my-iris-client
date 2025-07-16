@@ -22,10 +22,12 @@ function parseImetaEncryption(event: EmbedEvent, url: string) {
       return null
     }
     // Extract encryption metadata from imeta tag
-    const keyPart = imetaTag.find((part) => part.startsWith("key "))
+    const keyPart = imetaTag.find((part) => part.startsWith("decryption-key "))
     const namePart = imetaTag.find((part) => part.startsWith("name "))
     const sizePart = imetaTag.find((part) => part.startsWith("size "))
-    const encryptionPart = imetaTag.find((part) => part.startsWith("encryption "))
+    const encryptionPart = imetaTag.find((part) =>
+      part.startsWith("encryption-algorithm ")
+    )
 
     if (keyPart && namePart && sizePart) {
       return {

@@ -13,4 +13,11 @@ export interface WebLNProvider {
   off: (eventName: "accountChanged", listener: () => void) => void
 }
 
+export interface EncryptionMeta {
+  decryptionKey: string // hex string
+  fileName: string // original file name
+  fileSize: number // original file size in bytes
+  algorithm?: string // e.g., 'AES-GCM'
+}
+
 export {}
