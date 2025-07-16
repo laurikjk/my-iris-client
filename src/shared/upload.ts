@@ -76,7 +76,6 @@ async function uploadToBlossom(
     accept: "application/json",
     authorization: `Nostr ${encodedEvent}`,
     "content-type": file.type,
-    "content-length": file.size.toString(),
   }
 
   return new Promise((resolve, reject) => {
