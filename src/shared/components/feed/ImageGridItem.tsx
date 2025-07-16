@@ -1,4 +1,4 @@
-import {useMemo, MutableRefObject, useState} from "react"
+import {useMemo, MutableRefObject, useState, useEffect} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
@@ -9,31 +9,61 @@ import {isMarketListing} from "@/shared/utils/marketUtils"
 import MarketGridItem from "../market/MarketGridItem"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {useSettingsStore} from "@/stores/settings"
+import {eventsByIdCache} from "@/utils/memcache"
+import {fetchEvent} from "@/utils/nostr"
 import Icon from "../Icons/Icon"
 
 type ImageGridItemProps = {
-  event: NDKEvent
+  event: NDKEvent | {id: string}
   index: number
-  setActiveItemIndex: (url: string) => void
+  setActiveItemIndex: (event: NDKEvent, url: string) => void
+  onEventRendered?: (event: NDKEvent) => void
   lastElementRef?: MutableRefObject<HTMLDivElement>
 }
 
 export const ImageGridItem = ({
-  event,
+  event: initialEvent,
   index,
   setActiveItemIndex,
+  onEventRendered,
   lastElementRef,
 }: ImageGridItemProps) => {
   const navigate = useNavigate()
   const [loadErrors, setLoadErrors] = useState<Record<number, boolean>>({})
+  const [event, setEvent] = useState<NDKEvent | undefined>(
+    "content" in initialEvent ? initialEvent : undefined
+  )
   const {content} = useSettingsStore()
-  const isBlurred =
-    content.blurNSFW &&
-    (!!event?.content.toLowerCase().includes("#nsfw") ||
-      event?.tags.some((t) => t[0] === "content-warning"))
 
-  const imageMatch = event.content.match(IMAGE_REGEX)?.[0]
-  const videoMatch = event.content.match(VIDEO_REGEX)?.[0]
+  const eventIdHex = useMemo(() => {
+    return "content" in initialEvent ? initialEvent.id : initialEvent.id
+  }, [initialEvent])
+
+  useEffect(() => {
+    if (event) {
+      onEventRendered?.(event)
+      return
+    }
+
+    if (eventIdHex) {
+      const cached = eventsByIdCache.get(eventIdHex)
+      if (cached) {
+        setEvent(cached)
+        onEventRendered?.(cached)
+      } else {
+        fetchEvent({ids: [eventIdHex]}).then((fetched) => {
+          if (fetched) {
+            setEvent(fetched)
+            eventsByIdCache.set(eventIdHex, fetched)
+            onEventRendered?.(fetched)
+          }
+        })
+      }
+    }
+  }, [event, eventIdHex, onEventRendered])
+
+  const imageMatch = event?.content.match(IMAGE_REGEX)?.[0]
+  const videoMatch = event?.content.match(VIDEO_REGEX)?.[0]
 
   const urls = imageMatch
     ? imageMatch.trim().split(/\s+/)
@@ -41,21 +71,17 @@ export const ImageGridItem = ({
 
   const width = window.innerWidth > 767 ? 314 : 150
 
-  // Get imeta tags for all URLs
   const imetaTags = urls.map((url) => {
-    const tag = event.tags.find((tag) => tag[0] === "imeta" && tag[1].includes(url))
+    const tag = event?.tags.find((tag) => tag[0] === "imeta" && tag[1].includes(url))
     return tag
   })
 
-  // Extract blurhashes for all URLs
   const blurhashes = imetaTags.map((tag) => {
     if (!tag) return null
-    // Find the blurhash part in the imeta tag array
     const blurhashPart = tag.find((part) => part.startsWith("blurhash "))
     return blurhashPart ? blurhashPart.split(" ")[1] : null
   })
 
-  // Generate blurhash URLs for all images
   const blurhashUrls = useMemo(() => {
     return blurhashes.map((blurhash) => {
       if (!blurhash) return null
@@ -77,7 +103,23 @@ export const ImageGridItem = ({
     })
   }, [blurhashes])
 
-  // If it's a market listing, use the MarketGridItem component
+  const isBlurred =
+    content.blurNSFW &&
+    (!!event?.content.toLowerCase().includes("#nsfw") ||
+      event?.tags.some((t) => t[0] === "content-warning"))
+
+  if (!event) {
+    return <div className="aspect-square bg-neutral-300 animate-pulse" />
+  }
+
+  if (
+    event.kind !== 30402 &&
+    !IMAGE_REGEX.test(event.content) &&
+    !VIDEO_REGEX.test(event.content)
+  ) {
+    return null
+  }
+
   if (isMarketListing(event)) {
     const shouldBlur =
       isBlurred &&
@@ -86,8 +128,6 @@ export const ImageGridItem = ({
 
     return <MarketGridItem event={event} shouldBlur={shouldBlur} width={width} />
   }
-
-  if (!imageMatch && !videoMatch) return null
 
   return urls.map((url, i) => {
     const isVideo = !imageMatch
@@ -104,7 +144,7 @@ export const ImageGridItem = ({
         className={`aspect-square cursor-pointer relative bg-neutral-300 hover:opacity-80 ${shouldBlur ? "blur-xl" : ""}`}
         onClick={() => {
           if (window.innerWidth > 767) {
-            setActiveItemIndex(url)
+            setActiveItemIndex(event, url)
           } else {
             navigate(`/${nip19.noteEncode(event.id)}`)
           }

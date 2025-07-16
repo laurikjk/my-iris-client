@@ -1,7 +1,7 @@
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import {IMAGE_REGEX, VIDEO_REGEX} from "../embed/media/MediaEmbed"
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
-import {useState, useEffect, useMemo, useCallback} from "react"
+import {useState, useMemo, useCallback, useEffect} from "react"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import PreloadImages from "../media/PreloadImages"
 import MediaModal from "../media/MediaModal"
@@ -23,19 +23,11 @@ export default function MediaFeed({events}: MediaFeedProps) {
     Array<{type: "image" | "video"; url: string; event: NDKEvent}>
   >([])
 
-  const mediaEvents = useMemo(() => {
-    return events.filter((event): event is NDKEvent => {
-      if (!("content" in event)) return false
-      if (event.kind === 30402) return true
-      const hasImageUrl = IMAGE_REGEX.test(event.content)
-      const hasVideoUrl = VIDEO_REGEX.test(event.content)
-      return hasImageUrl || hasVideoUrl
-    })
-  }, [events])
+  const visibleEvents = useMemo(() => {
+    return events.slice(0, displayCount)
+  }, [events, displayCount])
 
-  const visibleMediaEvents = useMemo(() => {
-    return mediaEvents.slice(0, displayCount)
-  }, [mediaEvents, displayCount])
+  const [renderedEvents, setRenderedEvents] = useState<NDKEvent[]>([])
 
   const calculateAllMedia = useCallback((events: NDKEvent[]) => {
     const deduplicated = new Map<
@@ -117,54 +109,74 @@ export default function MediaFeed({events}: MediaFeedProps) {
   }
 
   const handleImageClick = (event: NDKEvent, clickedUrl: string) => {
-    const mediaArray = calculateAllMedia(visibleMediaEvents)
+    const eventsForModal = renderedEvents.find((e) => e.id === event.id)
+      ? renderedEvents
+      : [...renderedEvents, event]
+    const mediaArray = calculateAllMedia(eventsForModal)
     const mediaIndex = mediaArray.findIndex(
       (media) => media.event.id === event.id && media.url === clickedUrl
     )
+
+    if (mediaIndex === -1) {
+      return
+    }
+
     setModalMedia(mediaArray)
     setActiveItemIndex(mediaIndex)
     setShowModal(true)
   }
 
+  const handleEventRendered = useCallback((event: NDKEvent) => {
+    setRenderedEvents((prev) => {
+      if (prev.find((e) => e.id === event.id)) return prev
+      return [...prev, event]
+    })
+  }, [])
+
   return (
     <>
-      {showModal && activeItemIndex !== null && (
-        <>
-          <MediaModal
-            onClose={() => {
-              setShowModal(false)
-              setActiveItemIndex(null)
-              setModalMedia([])
-            }}
-            onPrev={handlePrevItem}
-            onNext={handleNextItem}
-            mediaUrl={modalMedia[activeItemIndex].url}
-            mediaType={modalMedia[activeItemIndex].type}
-            showFeedItem={true}
-            event={modalMedia[activeItemIndex].event}
-            currentIndex={activeItemIndex}
-            totalCount={modalMedia.length}
-          />
-          <PreloadImages
-            key={activeItemIndex}
-            images={modalMedia.map((m) => m.url)}
-            currentIndex={activeItemIndex}
-          />
-        </>
-      )}
+      {showModal &&
+        activeItemIndex !== null &&
+        modalMedia.length > 0 &&
+        activeItemIndex < modalMedia.length && (
+          <>
+            <MediaModal
+              onClose={() => {
+                setShowModal(false)
+                setActiveItemIndex(null)
+                setModalMedia([])
+              }}
+              onPrev={handlePrevItem}
+              onNext={handleNextItem}
+              mediaUrl={modalMedia[activeItemIndex].url}
+              mediaType={modalMedia[activeItemIndex].type}
+              showFeedItem={true}
+              event={modalMedia[activeItemIndex].event}
+              currentIndex={activeItemIndex}
+              totalCount={modalMedia.length}
+            />
+            <PreloadImages
+              key={activeItemIndex}
+              images={modalMedia.map((m) => m.url)}
+              currentIndex={activeItemIndex}
+            />
+          </>
+        )}
 
       <InfiniteScroll onLoadMore={loadMoreItems}>
         <div className="grid grid-cols-3 gap-px md:gap-1">
-          {visibleMediaEvents.map((event, index) => (
-            <ImageGridItem
-              key={event.id}
-              event={event}
-              index={index}
-              setActiveItemIndex={(clickedUrl: string) =>
-                handleImageClick(event, clickedUrl)
-              }
-            />
-          ))}
+          {visibleEvents.map((item, index) => {
+            const key = item.id
+            return (
+              <ImageGridItem
+                key={key}
+                event={item}
+                index={index}
+                setActiveItemIndex={handleImageClick}
+                onEventRendered={handleEventRendered}
+              />
+            )
+          })}
         </div>
       </InfiniteScroll>
     </>
