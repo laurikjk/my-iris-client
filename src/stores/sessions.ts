@@ -265,7 +265,9 @@ const store = create<SessionStore>()(
     }),
     {
       name: "sessions",
-      onRehydrateStorage: () => (state) => {
+      onRehydrateStorage: () => async (state) => {
+        await useUserStore.getState().awaitHydration()
+
         const privateKey = useUserStore.getState().privateKey
         const decrypt = privateKey
           ? hexToBytes(privateKey)

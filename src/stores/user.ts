@@ -44,11 +44,15 @@ interface UserState {
   setDefaultZapAmount: (defaultZapAmount: number) => void
   reset: () => void
   ensureDefaultMediaserver: (isSubscriber: boolean) => void
+  awaitHydration: () => Promise<void>
 }
+
+let hydrationPromise: Promise<void> | null = null
+let resolveHydration: (() => void) | null = null
 
 export const useUserStore = create<UserState>()(
   persist(
-    (set) => {
+    (set, get) => {
       const initialState = {
         publicKey: "",
         privateKey: "",
@@ -96,6 +100,15 @@ export const useUserStore = create<UserState>()(
             }
             return {}
           }),
+        awaitHydration: () => {
+          if (get().hasHydrated) return Promise.resolve()
+          if (!hydrationPromise) {
+            hydrationPromise = new Promise<void>((resolve) => {
+              resolveHydration = resolve
+            })
+          }
+          return hydrationPromise
+        },
       }
 
       return {
@@ -108,6 +121,11 @@ export const useUserStore = create<UserState>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true
+          if (resolveHydration) {
+            resolveHydration()
+            resolveHydration = null
+            hydrationPromise = null
+          }
         }
       },
     }
