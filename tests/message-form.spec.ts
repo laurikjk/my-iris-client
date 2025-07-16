@@ -1,32 +1,32 @@
 import {test, expect} from "@playwright/test"
 import {signUp} from "./auth.setup"
 
-async function setupChat(page) {
-  const createInviteButton = page.getByRole("button", {name: "Create Invite Link"})
-  await createInviteButton.click()
-  await page.waitForTimeout(2000) // Wait for invite creation
+async function setupChatWithSelf(page, username) {
+  // Go to chats
+  await page.getByRole("link", {name: "Chats"}).click()
+  await expect(page.getByRole("banner").getByText("New Chat")).toBeVisible()
 
-  const qrButton = page.getByRole("button", {name: "Show QR Code"}).first()
-  await qrButton.click()
-  const inviteLink = await page.getByText(/^https:\/\/iris\.to/).textContent()
-  expect(inviteLink).toBeTruthy()
-  await page.keyboard.press("Escape")
+  // Search for self by username
+  const searchInput = page.getByPlaceholder("Search for users")
+  await searchInput.fill(username)
+  await page.waitForTimeout(1000)
 
-  const inviteInput = page.getByPlaceholder("Paste invite link")
-  await inviteInput.click()
-  await page.keyboard.type(inviteLink!)
+  // Click on self in search results
+  const selfButton = page.getByRole("button", {name: username})
+  await selfButton.click()
+
+  // Wait for navigation to chat view
   await expect(page).toHaveURL(/\/chats\/chat/, {timeout: 10000})
 }
 
 test.describe("Message Form - Desktop", () => {
+  let username
   test.beforeEach(async ({page}) => {
-    await signUp(page)
-    await page.getByRole("link", {name: "Chats"}).click()
-    await expect(page.getByRole("banner").getByText("New Chat")).toBeVisible()
+    username = await signUp(page)
   })
 
   test("can send a basic text message using Enter key", async ({page}) => {
-    await setupChat(page)
+    await setupChatWithSelf(page, username)
 
     const messageInput = page.getByPlaceholder("Message")
     const testMessage = "Hello, this is a test message!"
@@ -39,7 +39,7 @@ test.describe("Message Form - Desktop", () => {
   })
 
   test("empty message cannot be sent", async ({page}) => {
-    await setupChat(page)
+    await setupChatWithSelf(page, username)
 
     const messageInput = page.getByPlaceholder("Message")
     await messageInput.fill("   ") // Just spaces
@@ -49,7 +49,7 @@ test.describe("Message Form - Desktop", () => {
   })
 
   test("shift + enter adds a new line", async ({page}) => {
-    await setupChat(page)
+    await setupChatWithSelf(page, username)
 
     const messageInput = page.getByPlaceholder("Message")
     await messageInput.fill("Hello, this is a test message!")
@@ -59,7 +59,7 @@ test.describe("Message Form - Desktop", () => {
   })
 
   test("multiple shift + enter presses add multiple new lines", async ({page}) => {
-    await setupChat(page)
+    await setupChatWithSelf(page, username)
 
     const messageInput = page.getByPlaceholder("Message")
     await messageInput.pressSequentially("Hello, this is a test message!")
@@ -80,7 +80,7 @@ test.describe("Message Form - Desktop", () => {
   })
 
   test("New lines are trimmed but exist in the middle of the message", async ({page}) => {
-    await setupChat(page)
+    await setupChatWithSelf(page, username)
 
     const messageInput = page.getByPlaceholder("Message")
     await messageInput.fill(
@@ -97,7 +97,7 @@ test.describe("Message Form - Desktop", () => {
   })
 
   test("textarea resizes based on content", async ({page}) => {
-    await setupChat(page)
+    await setupChatWithSelf(page, username)
 
     const messageInput = page.getByPlaceholder("Message")
 

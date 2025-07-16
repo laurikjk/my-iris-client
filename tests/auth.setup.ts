@@ -25,6 +25,8 @@ async function signUp(page, username = "Test User") {
   await expect(page.getByRole("heading", {name: "Sign up"})).not.toBeVisible()
   await expect(page.locator("#main-content").getByTestId("new-post-button")).toBeVisible()
   await expect(page.getByText(username, {exact: true})).toBeVisible()
+
+  return username
 }
 
 export {signUp}

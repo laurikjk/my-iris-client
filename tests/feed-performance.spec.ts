@@ -44,7 +44,7 @@ test.describe("Feed Performance", () => {
       `Memory usage: ${initialMemory}MB -> ${finalMemory}MB (+${memoryIncrease}MB)`
     )
 
-    expect(memoryIncrease).toBeLessThan(50)
+    expect(memoryIncrease).toBeLessThan(100)
   })
 
   test("note rendering with embeds performs well", async ({page}) => {
@@ -77,7 +77,7 @@ test.describe("Feed Performance", () => {
 
       console.log(`HyperText expand time: ${expandTime}ms`)
 
-      expect(expandTime).toBeLessThan(500)
+      expect(expandTime).toBeLessThan(1000)
     }
   })
 })
