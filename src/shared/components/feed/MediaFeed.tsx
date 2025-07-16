@@ -1,8 +1,10 @@
+import {useFetchMissingEvents} from "@/shared/hooks/useFetchMissingEvents"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import {IMAGE_REGEX, VIDEO_REGEX} from "../embed/media/MediaEmbed"
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
 import {useState, useEffect, useMemo, useCallback} from "react"
 import useHistoryState from "@/shared/hooks/useHistoryState"
+import MediaGridPlaceholder from "./MediaGridPlaceholder"
 import PreloadImages from "../media/PreloadImages"
 import MediaModal from "../media/MediaModal"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -23,15 +25,36 @@ export default function MediaFeed({events}: MediaFeedProps) {
     Array<{type: "image" | "video"; url: string; event: NDKEvent}>
   >([])
 
+  // Separate full events from {id} objects
+  const {fullEvents, missingIds} = useMemo(() => {
+    const fullEvents: NDKEvent[] = []
+    const missingIds: string[] = []
+
+    events.forEach((event) => {
+      if ("content" in event) {
+        fullEvents.push(event)
+      } else {
+        missingIds.push(event.id)
+      }
+    })
+
+    return {fullEvents, missingIds}
+  }, [events])
+
+  // Fetch missing events
+  const {fetchedEvents, loadingIds, errorIds, refetch} = useFetchMissingEvents(missingIds)
+
+  // Combine all events and filter for media content
   const mediaEvents = useMemo(() => {
-    return events.filter((event): event is NDKEvent => {
-      if (!("content" in event)) return false
+    const allEvents = [...fullEvents, ...Array.from(fetchedEvents.values())]
+
+    return allEvents.filter((event: NDKEvent) => {
       if (event.kind === 30402) return true
       const hasImageUrl = IMAGE_REGEX.test(event.content)
       const hasVideoUrl = VIDEO_REGEX.test(event.content)
       return hasImageUrl || hasVideoUrl
     })
-  }, [events])
+  }, [fullEvents, fetchedEvents])
 
   const visibleMediaEvents = useMemo(() => {
     return mediaEvents.slice(0, displayCount)
@@ -165,6 +188,25 @@ export default function MediaFeed({events}: MediaFeedProps) {
               }
             />
           ))}
+
+          {/* Show loading placeholders for events being fetched */}
+          {Array.from(loadingIds)
+            .slice(0, displayCount - visibleMediaEvents.length)
+            .map((eventId) => (
+              <MediaGridPlaceholder key={`loading-${eventId}`} count={1} />
+            ))}
+
+          {/* Show error placeholders for failed fetches */}
+          {Array.from(errorIds)
+            .slice(0, displayCount - visibleMediaEvents.length - loadingIds.size)
+            .map((eventId) => (
+              <MediaGridPlaceholder
+                key={`error-${eventId}`}
+                count={1}
+                showError={true}
+                onRetry={() => refetch([eventId])}
+              />
+            ))}
         </div>
       </InfiniteScroll>
     </>
