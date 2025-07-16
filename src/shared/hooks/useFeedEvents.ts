@@ -171,9 +171,7 @@ export default function useFeedEvents({
       const isMyRecent =
         event.pubkey === myPubKey && event.created_at * 1000 > Date.now() - 10000
       const isNewEvent =
-        initialLoadDoneRef.current &&
-        !isMyRecent &&
-        (!sortLikedPosts || event.kind === 1)
+        initialLoadDoneRef.current && !isMyRecent && (!sortLikedPosts || event.kind === 1)
 
       if (isNewEvent) addNew()
       else addMain()

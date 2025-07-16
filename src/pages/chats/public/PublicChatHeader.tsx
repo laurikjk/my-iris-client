@@ -1,11 +1,11 @@
 import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
-import Dropdown from "@/shared/components/ui/Dropdown"
-import Header from "@/shared/components/header/Header"
-import ProxyImg from "@/shared/components/ProxyImg"
 import {usePublicChatsStore} from "@/stores/publicChats"
 import {RiEarthLine, RiMoreLine} from "@remixicon/react"
-import {useEffect, useState} from "react"
+import Header from "@/shared/components/header/Header"
+import Dropdown from "@/shared/components/ui/Dropdown"
+import ProxyImg from "@/shared/components/ProxyImg"
 import {Link, useNavigate} from "react-router"
+import {useEffect, useState} from "react"
 
 interface PublicChatHeaderProps {
   channelId: string
@@ -17,7 +17,6 @@ const PublicChatHeader = ({channelId}: PublicChatHeaderProps) => {
   const navigate = useNavigate()
   const {publicChats, removePublicChat} = usePublicChatsStore()
   const chat = publicChats[channelId]
-
 
   useEffect(() => {
     // Set a timeout to show the placeholder after 2 seconds if metadata hasn't loaded
@@ -59,9 +58,19 @@ const PublicChatHeader = ({channelId}: PublicChatHeaderProps) => {
   }
 
   return (
-    <Header title={renderTitle()} showBack showNotifications={false} scrollDown={true} slideUp={false} bold={false}>
+    <Header
+      title={renderTitle()}
+      showBack
+      showNotifications={false}
+      scrollDown={true}
+      slideUp={false}
+      bold={false}
+    >
       <div className="flex items-center justify-between w-full">
-        <Link to={`/chats/${channelId}/details`} className="flex items-center gap-2 flex-1">
+        <Link
+          to={`/chats/${channelId}/details`}
+          className="flex items-center gap-2 flex-1"
+        >
           <div className="w-8 h-8 flex items-center justify-center">{renderIcon()}</div>
           <div className="flex flex-col items-start">
             <span className="font-medium flex items-center gap-1">{renderTitle()}</span>

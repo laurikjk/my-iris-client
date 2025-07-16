@@ -53,10 +53,14 @@ export async function measureScrollPerformance(page: Page): Promise<number> {
   })
 }
 
+interface PerfMemory {
+  usedJSHeapSize: number
+}
+
 export async function getMemoryUsage(page: Page): Promise<number> {
   return await page.evaluate(() => {
     if ("memory" in performance && performance.memory) {
-      const memory = performance.memory as any
+      const memory = performance.memory as unknown as PerfMemory
       return Math.round(memory.usedJSHeapSize / 1024 / 1024)
     }
     return 0

@@ -1,18 +1,18 @@
-import PublicChatHeader from "./PublicChatHeader"
-import ChatContainer from "../components/ChatContainer"
-import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {shouldHideAuthor} from "@/utils/visibility"
-import {useNavigate, useParams} from "react-router"
-import {comparator} from "../utils/messageGrouping"
-import {useEffect, useState, useRef} from "react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
-import MessageForm from "../message/MessageForm"
-import {MessageType} from "../message/Message"
-import {Helmet} from "react-helmet"
-import {ndk} from "@/utils/ndk"
 import {CHANNEL_MESSAGE, REACTION_KIND} from "../utils/constants"
 import {usePublicChatsStore} from "@/stores/publicChats"
+import ChatContainer from "../components/ChatContainer"
+import {SortedMap} from "@/utils/SortedMap/SortedMap"
+import {comparator} from "../utils/messageGrouping"
+import {shouldHideAuthor} from "@/utils/visibility"
+import {useNavigate, useParams} from "react-router"
+import PublicChatHeader from "./PublicChatHeader"
+import {useEffect, useState, useRef} from "react"
+import MessageForm from "../message/MessageForm"
+import {MessageType} from "../message/Message"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
+import {Helmet} from "react-helmet"
+import {ndk} from "@/utils/ndk"
 
 let publicKey = useUserStore.getState().publicKey
 useUserStore.subscribe((state) => (publicKey = state.publicKey))
@@ -35,7 +35,6 @@ const PublicChat = () => {
     if (!id) return
     addOrRefreshChatById(id)
   }, [id, addOrRefreshChatById])
-
 
   // Set up timeout to show "No messages yet" after 2 seconds
   useEffect(() => {
@@ -227,7 +226,7 @@ const PublicChat = () => {
   return (
     <>
       <Helmet>
-        <title>{id && publicChats[id]?.name || "Public Chat"}</title>
+        <title>{(id && publicChats[id]?.name) || "Public Chat"}</title>
       </Helmet>
       <PublicChatHeader channelId={id || ""} />
       <ChatContainer

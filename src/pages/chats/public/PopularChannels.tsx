@@ -1,8 +1,8 @@
-import {useState, useEffect} from "react"
-import {ndk} from "@/utils/ndk"
-import socialGraph from "@/utils/socialGraph"
 import PopularChannelItem from "./PopularChannelItem"
 import {CHANNEL_MESSAGE} from "../utils/constants"
+import socialGraph from "@/utils/socialGraph"
+import {useState, useEffect} from "react"
+import {ndk} from "@/utils/ndk"
 
 type PopularChannel = {
   id: string
@@ -51,17 +51,17 @@ const PopularChannels = ({publicKey}: PopularChannelsProps) => {
         console.log("Channel messages count:", channelMessages.size)
 
         // Process messages to identify channels and count unique authors
-        const channelMap = new Map<string, { authors: Set<string> }>()
+        const channelMap = new Map<string, {authors: Set<string>}>()
 
         for (const event of Array.from(channelMessages)) {
           // Extract channel ID from the 'e' tag
-          const channelIdTag = event.tags.find(tag => tag[0] === 'e')
+          const channelIdTag = event.tags.find((tag) => tag[0] === "e")
           if (!channelIdTag) continue
 
           const channelId = channelIdTag[1]
 
           if (!channelMap.has(channelId)) {
-            channelMap.set(channelId, { authors: new Set() })
+            channelMap.set(channelId, {authors: new Set()})
           }
 
           const channelData = channelMap.get(channelId)!
@@ -114,11 +114,7 @@ const PopularChannels = ({publicKey}: PopularChannelsProps) => {
         </div>
       )}
 
-      {error && (
-        <div className="text-center py-8 text-error">
-          {error}
-        </div>
-      )}
+      {error && <div className="text-center py-8 text-error">{error}</div>}
 
       {!isLoading && !error && popularChannels.length === 0 && (
         <div className="text-center py-8 text-base-content/70">
