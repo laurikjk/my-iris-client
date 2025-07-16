@@ -40,7 +40,28 @@ async function captureBaseline() {
   }
 }
 
-function extractMetric(results: any, metricName: string): number {
+interface TestResult {
+  title?: string
+  results?: Array<{duration: number}>
+}
+
+interface SuiteResult {
+  tests?: TestResult[]
+}
+
+interface PlaywrightResults {
+  suites?: SuiteResult[]
+}
+
+function extractMetric(results: unknown, metricName: string): number {
+  const suites = (results as PlaywrightResults)?.suites ?? []
+  for (const suite of suites) {
+    for (const test of suite.tests ?? []) {
+      if (test.title === metricName) {
+        return test.results?.[0]?.duration ?? 0
+      }
+    }
+  }
   return 0
 }
 
