@@ -1,7 +1,6 @@
+import {getDefaultServers} from "@/pages/settings/Mediaservers"
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
-
-const BLOSSOM_IRIS_TO = "https://blossom.iris.to"
 
 type MediaServerProtocol = "blossom" | "nip96"
 
@@ -50,18 +49,6 @@ interface UserState {
 export const useUserStore = create<UserState>()(
   persist(
     (set) => {
-      const DEFAULT_NIP96_SERVER = {
-        url: "https://nostr.build/api/v2/nip96/upload",
-        protocol: "nip96" as const,
-        isDefault: true,
-      }
-
-      const DEFAULT_BLOSSOM_SERVER = {
-        url: BLOSSOM_IRIS_TO,
-        protocol: "blossom" as const,
-        isDefault: true,
-      }
-
       const initialState = {
         publicKey: "",
         privateKey: "",
@@ -101,10 +88,10 @@ export const useUserStore = create<UserState>()(
         ensureDefaultMediaserver: (isSubscriber: boolean) =>
           set((state) => {
             if (!state.defaultMediaserver) {
-              const server = isSubscriber ? DEFAULT_BLOSSOM_SERVER : DEFAULT_NIP96_SERVER
+              const defaults = getDefaultServers(isSubscriber)
               return {
-                mediaservers: [server],
-                defaultMediaserver: server,
+                mediaservers: defaults,
+                defaultMediaserver: defaults[0],
               }
             }
             return {}

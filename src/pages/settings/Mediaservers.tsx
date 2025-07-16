@@ -1,8 +1,8 @@
 import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
-import {ChangeEvent, useState, useEffect} from "react"
+import {ChangeEvent, useState, useEffect, useRef} from "react"
 import {useUserStore} from "@/stores/user"
 
-const MEDIASERVERS = {
+export const MEDIASERVERS = {
   iris: {
     url: "https://blossom.iris.to",
     protocol: "blossom" as const,
@@ -21,7 +21,7 @@ const MEDIASERVERS = {
   },
 }
 
-function getDefaultServers(isSubscriber: boolean) {
+export function getDefaultServers(isSubscriber: boolean) {
   return isSubscriber
     ? [
         MEDIASERVERS.iris,
@@ -29,12 +29,7 @@ function getDefaultServers(isSubscriber: boolean) {
         MEDIASERVERS.nostr_build,
         MEDIASERVERS.nostr_check,
       ]
-    : [
-        MEDIASERVERS.f7z,
-        MEDIASERVERS.nostr_build,
-        MEDIASERVERS.nostr_check,
-        MEDIASERVERS.iris,
-      ]
+    : [MEDIASERVERS.f7z, MEDIASERVERS.nostr_build, MEDIASERVERS.nostr_check]
 }
 
 function stripHttps(url: string) {
@@ -55,12 +50,22 @@ function MediaServers() {
   const [newServer, setNewServer] = useState("")
   const [newProtocol, setNewProtocol] = useState<"blossom" | "nip96">("blossom")
   const {isSubscriber, isLoading} = useSubscriptionStatus(publicKey)
+  const prevIsSubscriber = useRef(isSubscriber)
 
   useEffect(() => {
     if (!isLoading) {
       ensureDefaultMediaserver(isSubscriber)
     }
   }, [isSubscriber, isLoading, ensureDefaultMediaserver])
+
+  useEffect(() => {
+    if (!isLoading && prevIsSubscriber.current !== isSubscriber) {
+      const defaults = getDefaultServers(isSubscriber)
+      setMediaservers(defaults)
+      setDefaultMediaserver(defaults[0])
+      prevIsSubscriber.current = isSubscriber
+    }
+  }, [isSubscriber, isLoading, setMediaservers, setDefaultMediaserver])
 
   function handleDefaultServerChange(e: ChangeEvent<HTMLSelectElement>) {
     const selectedServer = mediaservers.find((s) => s.url === e.target.value)

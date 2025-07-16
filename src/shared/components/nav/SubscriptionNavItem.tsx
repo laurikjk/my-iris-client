@@ -1,6 +1,7 @@
 import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
 import {getSubscriptionIcon} from "@/shared/utils/subscriptionIcons"
-import {MouseEventHandler, useEffect, useState} from "react"
+import {MouseEventHandler, useEffect, useState, useRef} from "react"
+import {getDefaultServers} from "@/pages/settings/Mediaservers"
 import Icon from "@/shared/components/Icons/Icon"
 import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
@@ -16,6 +17,9 @@ export const SubscriptionNavItem = ({to, onClick}: SubscriptionNavItemProps) => 
   const {setIsSidebarOpen} = useUIStore()
   const [pubkey, setPubkey] = useState<string | undefined>(undefined)
   const {isSubscriber, tier} = useSubscriptionStatus(pubkey)
+  const setMediaservers = useUserStore((state) => state.setMediaservers)
+  const setDefaultMediaserver = useUserStore((state) => state.setDefaultMediaserver)
+  const prevIsSubscriber = useRef(isSubscriber)
 
   useEffect(() => {
     // Get the user's pubkey from zustand store instead of localStorage
@@ -32,6 +36,15 @@ export const SubscriptionNavItem = ({to, onClick}: SubscriptionNavItemProps) => 
 
     return () => unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (prevIsSubscriber.current !== isSubscriber) {
+      const defaults = getDefaultServers(isSubscriber)
+      setMediaservers(defaults)
+      setDefaultMediaserver(defaults[0])
+      prevIsSubscriber.current = isSubscriber
+    }
+  }, [isSubscriber, setMediaservers, setDefaultMediaserver])
 
   const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
     setIsSidebarOpen(false)
