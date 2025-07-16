@@ -1,4 +1,4 @@
-import {useRef, useState, ReactNode, useEffect} from "react"
+import {useRef, useState, ReactNode, useEffect, useMemo} from "react"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
@@ -6,6 +6,7 @@ import useHistoryState from "@/shared/hooks/useHistoryState"
 import FeedItem from "../event/FeedItem/FeedItem"
 import {useUserStore} from "@/stores/user"
 
+import {useFetchMissingEvents} from "@/shared/hooks/useFetchMissingEvents"
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
 import useFeedEvents from "@/shared/hooks/useFeedEvents.ts"
 import {socialGraphLoaded} from "@/utils/socialGraph.ts"
@@ -104,6 +105,40 @@ function Feed({
     sortLikedPosts,
   })
 
+  // Separate full events from {id} objects for batch fetching
+  const missingIds = useMemo(() => {
+    const missingIds: string[] = []
+
+    filteredEvents.forEach((event) => {
+      if (!("content" in event)) {
+        missingIds.push(event.id)
+      }
+    })
+
+    return missingIds
+  }, [filteredEvents])
+
+  // Fetch missing events for list view
+  const {fetchedEvents, loadingIds, errorIds, refetch} = useFetchMissingEvents(
+    displayAs === "list" ? missingIds : []
+  )
+
+  // Combine all events for list view
+  const allEventsForList = useMemo(() => {
+    const combinedEvents: (NDKEvent | {id: string})[] = []
+
+    filteredEvents.forEach((event) => {
+      if ("content" in event) {
+        combinedEvents.push(event)
+      } else {
+        const fetchedEvent = fetchedEvents.get(event.id)
+        combinedEvents.push(fetchedEvent || event)
+      }
+    })
+
+    return combinedEvents
+  }, [filteredEvents, fetchedEvents])
+
   const loadMoreItems = () => {
     const hasMore = hookLoadMoreItems()
     if (hasMore) {
@@ -180,25 +215,69 @@ function Feed({
               <MediaFeed events={filteredEvents} />
             ) : (
               <>
-                {filteredEvents.slice(0, displayCount).map((event, index) => (
-                  <div key={event.id} ref={index === 0 ? firstFeedItemRef : null}>
-                    <FeedItem
-                      key={event.id}
-                      asReply={asReply}
-                      showRepliedTo={showRepliedTo}
-                      showReplies={showReplies}
-                      event={"content" in event ? event : undefined}
-                      eventId={"content" in event ? undefined : event.id}
-                      onEvent={onEvent}
-                      borderTop={borderTopFirst && index === 0}
-                    />
-                  </div>
-                ))}
+                {allEventsForList.slice(0, displayCount).map((event, index) => {
+                  const isLoading = !("content" in event) && loadingIds.has(event.id)
+                  const hasError = !("content" in event) && errorIds.has(event.id)
+
+                  if (isLoading) {
+                    return (
+                      <div
+                        key={`loading-${event.id}`}
+                        className="border-b border-base-300"
+                      >
+                        <div className="p-4 flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gray-200 rounded-full animate-pulse" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4" />
+                            <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+                            <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2" />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  if (hasError) {
+                    return (
+                      <div key={`error-${event.id}`} className="border-b border-base-300">
+                        <div className="p-4 flex items-center gap-3 text-gray-500">
+                          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                            <span className="text-gray-400">!</span>
+                          </div>
+                          <div className="flex-1">
+                            <span className="text-sm">Failed to load post</span>
+                            <button
+                              onClick={() => refetch([event.id])}
+                              className="ml-2 text-xs text-blue-500 hover:text-blue-600 underline"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div key={event.id} ref={index === 0 ? firstFeedItemRef : null}>
+                      <FeedItem
+                        key={event.id}
+                        asReply={asReply}
+                        showRepliedTo={showRepliedTo}
+                        showReplies={showReplies}
+                        event={"content" in event ? event : undefined}
+                        eventId={"content" in event ? undefined : event.id}
+                        onEvent={onEvent}
+                        borderTop={borderTopFirst && index === 0}
+                      />
+                    </div>
+                  )
+                })}
               </>
             )}
           </InfiniteScroll>
         )}
-        {filteredEvents.length === 0 &&
+        {(displayAs === "grid" ? filteredEvents.length : allEventsForList.length) === 0 &&
           newEventsFiltered.length === 0 &&
           initialLoadDone &&
           emptyPlaceholder}
