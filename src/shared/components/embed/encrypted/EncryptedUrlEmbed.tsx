@@ -66,7 +66,10 @@ async function decryptAesGcm(
 }
 
 const isImage = (filename: string) =>
-  /\.(jpg|jpeg|png|gif|webp|bmp|svg|avif)$/i.test(filename)
+  /\.(jpg|jpeg|png|gif|webp)$/i.test(filename)
+
+const isVideo = (filename: string) =>
+  /\.(mp4|webm|ogg|mov|m3u8)$/i.test(filename)
 
 // Helper: fetch and decrypt index file (if needed)
 async function fetchAndParseIndex(url: string, keyHex?: string) {
@@ -177,8 +180,8 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
 
   // Only display images inline if not chunked
   useEffect(() => {
-    if (!meta || !isImage(meta.name)) return
-    if (isChunked(meta)) return // do not auto-display chunked images
+    if (!meta || (!isImage(meta.name) && !isVideo(meta.name))) return
+    if (isChunked(meta)) return // do not auto-display chunked media
     let revoked = false
     let currentBlobUrl: string | null = null
     setLoading(true)
@@ -333,6 +336,25 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
         />
       )
     }
+    return null
+  }
+
+  // Unchunked videos: display inline
+  if (isVideo(meta.name)) {
+    if (loading) return <div className="p-2 text-sm text-gray-500">Decrypting...</div>
+    if (error) return <div className="p-2 text-sm text-error">{error}</div>
+    if (blobUrl) {
+      return (
+        <video
+          src={blobUrl}
+          controls
+          style={{maxWidth: "100%", maxHeight: 400, borderRadius: 8}}
+        >
+          Your browser does not support the video tag.
+        </video>
+      )
+    }
+    console.log("blobUrl", blobUrl)
     return null
   }
 
