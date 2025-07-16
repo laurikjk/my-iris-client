@@ -11,10 +11,7 @@ import useHistoryState from "@/shared/hooks/useHistoryState"
 
 const GroupChatCreation = () => {
   const navigate = useNavigate()
-  const [currentStep, setCurrentStep] = useHistoryState<"members" | "details">(
-    "members",
-    "groupChatStep"
-  )
+  const [currentStep, setCurrentStep] = useState<"members" | "details">("members")
   const [groupDetails, setGroupDetails] = useState<GroupDetails>({
     name: "",
     description: "",
@@ -34,6 +31,20 @@ const GroupChatCreation = () => {
     }
   }, [myPubKey])
 
+  // Handle browser back button
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state?.step === "details") {
+        setCurrentStep("details")
+      } else {
+        setCurrentStep("members")
+      }
+    }
+
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [])
+
   const handleAddMember = (user: DoubleRatchetUser) => {
     const isAlreadySelected = selectedMembers.includes(user.pubkey)
     if (!isAlreadySelected) {
@@ -52,17 +63,13 @@ const GroupChatCreation = () => {
     }
     setCreateError(null)
     setCurrentStep("details")
-    // Add new history entry for the details step
-    history.pushState(
-      {
-        groupChatStep: "details",
-        groupChatMembers: selectedMembers,
-      },
-      ""
-    )
+    // Push a new history entry for the details step
+    window.history.pushState({step: "details"}, "", window.location.pathname)
   }
 
   const handleBackToMembers = () => {
+    setCurrentStep("members")
+    // Go back in history
     window.history.back()
   }
 

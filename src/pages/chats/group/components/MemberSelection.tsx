@@ -127,10 +127,19 @@ const MemberSelection = ({
       <hr className="mx-4 my-6 border-base-300" />
       <div className="px-2">
         <p className="text-center text-sm text-base-content/70">
-          Group chats use secure encryption to keep your messages safe.
+          Iris uses Signal-style{" "}
+          <a
+            href="https://github.com/mmalmi/nostr-double-ratchet"
+            target="_blank"
+            className="link"
+            rel="noreferrer"
+          >
+            double ratchet encryption
+          </a>{" "}
+          to keep your private messages safe.
         </p>
         <p className="text-center text-sm text-base-content/70">
-          Group chat history is stored locally on this device and cleared when you log
+          Private chat history is stored locally on this device and cleared when you log
           out.
         </p>
       </div>

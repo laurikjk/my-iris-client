@@ -1,4 +1,5 @@
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
+import {RiUserLine, RiTeamLine, RiEarthLine} from "@remixicon/react"
 import InstallPWAPrompt from "@/shared/components/InstallPWAPrompt"
 import PrivateChatCreation from "./private/PrivateChatCreation"
 import {Link, Routes, Route, useLocation} from "react-router"
@@ -12,7 +13,8 @@ const TabSelector = () => {
   const isGroup = location.pathname === "/chats/new/group"
 
   const getClasses = (isActive: boolean) => {
-    const baseClasses = "border-highlight cursor-pointer flex justify-center flex-1 p-3"
+    const baseClasses =
+      "border-highlight cursor-pointer flex items-center justify-center flex-1 p-3"
     return isActive
       ? `${baseClasses} border-b border-1`
       : `${baseClasses} text-base-content/70 hover:text-base-content border-b border-1 border-transparent`
@@ -21,12 +23,15 @@ const TabSelector = () => {
   return (
     <div className="flex mb-px md:mb-1">
       <Link to="/chats/new" className={getClasses(!isPublic && !isGroup)}>
+        <RiUserLine className="mr-2 w-4 h-4" />
         Direct
       </Link>
       <Link to="/chats/new/group" className={getClasses(isGroup)}>
+        <RiTeamLine className="mr-2 w-4 h-4" />
         Group
       </Link>
       <Link to="/chats/new/public" className={getClasses(isPublic)}>
+        <RiEarthLine className="mr-2 w-4 h-4" />
         Public
       </Link>
     </div>

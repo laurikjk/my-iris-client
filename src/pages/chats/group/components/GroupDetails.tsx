@@ -46,12 +46,16 @@ const GroupDetailsStep = ({
           {/* Selected Members Summary */}
           <div>
             <h3 className="text-lg font-medium mb-3">
-              Members ({selectedMembers.length + 1})
+              Members ({selectedMembers.filter(pubkey => pubkey !== myPubKey).length + 1})
             </h3>
             <div className="flex flex-wrap gap-2">
-              {selectedMembers.map((pubkey) => (
-                <MemberChip key={pubkey} pubkey={pubkey} />
-              ))}
+              {selectedMembers.map((pubkey) => {
+                // Don't show the current user as a separate member if they're selected
+                if (pubkey === myPubKey) {
+                  return null
+                }
+                return <MemberChip key={pubkey} pubkey={pubkey} />
+              })}
               <div className="flex items-center gap-2 bg-primary/20 rounded-full px-3 py-1">
                 <Avatar pubKey={myPubKey} width={24} />
                 <span className="text-sm font-medium">You</span>
@@ -123,10 +127,19 @@ const GroupDetailsStep = ({
       <hr className="mx-4 my-6 border-base-300" />
       <div className="px-2">
         <p className="text-center text-sm text-base-content/70">
-          Group chats use secure encryption to keep your messages safe.
+          Iris uses Signal-style{" "}
+          <a
+            href="https://github.com/mmalmi/nostr-double-ratchet"
+            target="_blank"
+            className="link"
+            rel="noreferrer"
+          >
+            double ratchet encryption
+          </a>{" "}
+          to keep your private messages safe.
         </p>
         <p className="text-center text-sm text-base-content/70">
-          Group chat history is stored locally on this device and cleared when you log
+          Private chat history is stored locally on this device and cleared when you log
           out.
         </p>
       </div>
