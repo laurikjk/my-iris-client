@@ -1,8 +1,7 @@
-import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
+import {Avatar} from "@/shared/components/user/Avatar"
+import MemberChip from "./MemberChip"
 import {GroupDetails} from "../types"
 import {FormEvent} from "react"
-import MemberChip from "./MemberChip"
-import { Avatar } from "@/shared/components/user/Avatar"
 
 interface GroupDetailsProps {
   selectedMembers: string[]
@@ -46,7 +45,8 @@ const GroupDetailsStep = ({
           {/* Selected Members Summary */}
           <div>
             <h3 className="text-lg font-medium mb-3">
-              Members ({selectedMembers.filter(pubkey => pubkey !== myPubKey).length + 1})
+              Members (
+              {selectedMembers.filter((pubkey) => pubkey !== myPubKey).length + 1})
             </h3>
             <div className="flex flex-wrap gap-2">
               {selectedMembers.map((pubkey) => {

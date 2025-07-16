@@ -1,8 +1,4 @@
-import {
-  notifications,
-  Notification as IrisNotification,
-  maybeShowPushNotification,
-} from "@/utils/notifications"
+import {notifications, Notification as IrisNotification} from "@/utils/notifications"
 import NotificationsFeedItem from "@/pages/notifications/NotificationsFeedItem"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import {useEffect, useCallback, useState, Suspense} from "react"
@@ -92,7 +88,6 @@ const getNotifications = debounce((myPubKey?: string) => {
       }
 
       notifications.set(key, notification)
-      maybeShowPushNotification(event)
 
       const created_at = event.created_at * 1000
 

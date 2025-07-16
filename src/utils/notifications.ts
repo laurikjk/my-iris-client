@@ -1,11 +1,9 @@
 import {INVITE_RESPONSE_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
-import {NDKTag, NDKEvent, NDKUser} from "@nostr-dev-kit/ndk"
-import {getZapAmount, getZappingUser} from "./nostr"
 import {useSettingsStore} from "@/stores/settings"
 import {useSessionsStore} from "@/stores/sessions"
 import {SortedMap} from "./SortedMap/SortedMap"
-import {profileCache} from "@/utils/memcache"
 import {useUserStore} from "@/stores/user"
+import {NDKTag} from "@nostr-dev-kit/ndk"
 import debounce from "lodash/debounce"
 import {base64} from "@scure/base"
 import IrisAPI from "./IrisAPI"
@@ -74,41 +72,6 @@ export const showNotification = (
   } else if (nag) {
     alert("Notifications are not allowed. Please enable them first.")
   }
-}
-
-const openedAt = Math.floor(Date.now() / 1000)
-
-export async function maybeShowPushNotification(event: NDKEvent) {
-  if (event.kind !== 9735 || event.created_at! < openedAt) {
-    return
-  }
-
-  const user = getZappingUser(event)
-  const amount = await getZapAmount(event)
-  let profile = profileCache.get(user)
-
-  if (!profile) {
-    const fetchProfileWithTimeout = (user: string) => {
-      return Promise.race([
-        new NDKUser({pubkey: user}).fetchProfile(),
-        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 1000)),
-      ])
-    }
-
-    const p = await fetchProfileWithTimeout(user)
-    if (p?.name) {
-      profile = p
-    }
-  }
-
-  const name = profile?.name || profile?.username || "Someone"
-
-  showNotification(`${name} zapped you ${amount} sats!`, {
-    icon: "/favicon.png",
-    image: "/img/zap.png",
-    requireInteraction: false,
-    data: {url: "/notifications"},
-  })
 }
 
 let subscriptionPromise: Promise<PushSubscription | null> | null = null
