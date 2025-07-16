@@ -1,0 +1,137 @@
+import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
+import {GroupDetails} from "../types"
+import {FormEvent} from "react"
+import MemberChip from "./MemberChip"
+import { Avatar } from "@/shared/components/user/Avatar"
+
+interface GroupDetailsProps {
+  selectedMembers: string[]
+  groupDetails: GroupDetails
+  onGroupDetailsChange: (details: GroupDetails) => void
+  onBack: () => void
+  onSubmit: (e: FormEvent<HTMLFormElement>) => void
+  error: string | null
+  isCreating: boolean
+  myPubKey: string
+}
+
+const GroupDetailsStep = ({
+  selectedMembers,
+  groupDetails,
+  onGroupDetailsChange,
+  onBack,
+  onSubmit,
+  error,
+  isCreating,
+  myPubKey,
+}: GroupDetailsProps) => {
+  const handleInputChange = (field: keyof GroupDetails, value: string) => {
+    onGroupDetailsChange({
+      ...groupDetails,
+      [field]: value,
+    })
+  }
+
+  return (
+    <>
+      <div className="m-4 p-4 md:p-8 rounded-lg bg-base-100 flex flex-col gap-6">
+        <div className="flex items-center gap-3 mb-2">
+          <button type="button" onClick={onBack} className="btn btn-ghost btn-sm">
+            ← Back
+          </button>
+          <h2 className="text-xl font-semibold">Group Details</h2>
+        </div>
+
+        <form onSubmit={onSubmit} className="flex flex-col gap-6">
+          {/* Selected Members Summary */}
+          <div>
+            <h3 className="text-lg font-medium mb-3">
+              Members ({selectedMembers.length + 1})
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {selectedMembers.map((pubkey) => (
+                <MemberChip key={pubkey} pubkey={pubkey} />
+              ))}
+              <div className="flex items-center gap-2 bg-primary/20 rounded-full px-3 py-1">
+                <Avatar pubKey={myPubKey} width={24} />
+                <span className="text-sm font-medium">You</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Group Details Section */}
+          <div>
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="label">
+                  <span className="label-text">Group Name *</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full"
+                  placeholder="Enter group name"
+                  value={groupDetails.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">Description (optional)</span>
+                </label>
+                <textarea
+                  className="textarea textarea-bordered w-full"
+                  placeholder="Enter group description"
+                  value={groupDetails.description}
+                  onChange={(e) => handleInputChange("description", e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">Group Picture URL (optional)</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full"
+                  placeholder="Enter picture URL"
+                  value={groupDetails.picture}
+                  onChange={(e) => handleInputChange("picture", e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="alert alert-error">
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Create Button */}
+          <button
+            type="submit"
+            className={`btn btn-primary ${isCreating ? "loading" : ""}`}
+            disabled={isCreating}
+          >
+            {isCreating ? "Creating Group..." : "Create Group"}
+          </button>
+        </form>
+      </div>
+
+      <hr className="mx-4 my-6 border-base-300" />
+      <div className="px-2">
+        <p className="text-center text-sm text-base-content/70">
+          Group chats use secure encryption to keep your messages safe.
+        </p>
+        <p className="text-center text-sm text-base-content/70">
+          Group chat history is stored locally on this device and cleared when you log
+          out.
+        </p>
+      </div>
+    </>
+  )
+}
+
+export default GroupDetailsStep
