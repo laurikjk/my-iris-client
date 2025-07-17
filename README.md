@@ -24,3 +24,14 @@ yarn build
 yarn test    # Run all tests
 yarn test:ui # E2E tests with UI mode
 ```
+
+### Tauri
+```bash
+# Desktop
+yarn tauri dev
+yarn tauri build
+
+# Mobile
+yarn tauri [android|ios] init
+yarn tauri [android|ios] dev
+```
