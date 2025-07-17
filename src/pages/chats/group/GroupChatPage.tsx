@@ -3,6 +3,7 @@ import {useParams} from "react-router"
 import {useGroupsStore} from "@/stores/groups"
 import {useEventsStore} from "@/stores/events"
 import {useUserStore} from "@/stores/user"
+import {useSessionsStore} from "@/stores/sessions"
 import ChatContainer from "../components/ChatContainer"
 import MessageForm from "../message/MessageForm"
 import GroupChatHeader from "./GroupChatHeader"
@@ -17,6 +18,7 @@ const GroupChatPage = () => {
   const group = id ? groups[id] : undefined
   const {events, upsert} = useEventsStore()
   const myPubKey = useUserStore((state) => state.publicKey)
+  const {sendToUser} = useSessionsStore()
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
   if (!id || !group) {
@@ -27,8 +29,9 @@ const GroupChatPage = () => {
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !myPubKey) return
-    await upsert(id, {
-      id: crypto.randomUUID(),
+    const messageId = crypto.randomUUID()
+    const message: MessageType = {
+      id: messageId,
       content,
       created_at: Math.floor(Date.now() / 1000),
       pubkey: myPubKey,
@@ -36,7 +39,21 @@ const GroupChatPage = () => {
       reactions: {},
       tags: [],
       kind: 0,
-    })
+    }
+    // Send to all group members except self
+    await Promise.all(
+      group.members
+        .filter((pubkey: string) => pubkey !== myPubKey)
+        .map((pubkey: string) =>
+          sendToUser(pubkey, {
+            kind: 0,
+            content,
+            tags: [["#l", group.id]],
+          })
+        )
+    )
+    // Upsert locally
+    await upsert(id, message)
   }
 
   return (

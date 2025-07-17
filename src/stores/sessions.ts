@@ -5,16 +5,17 @@ import {
   deserializeSessionState,
 } from "nostr-double-ratchet/src"
 import {createJSONStorage, persist, PersistStorage} from "zustand/middleware"
+import {Filter, VerifiedEvent, UnsignedEvent} from "nostr-tools"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
 import {REACTION_KIND} from "@/pages/chats/utils/constants"
 import {MessageType} from "@/pages/chats/message/Message"
-import {Filter, VerifiedEvent, UnsignedEvent} from "nostr-tools"
 import {hexToBytes} from "@noble/hashes/utils"
 import {useEventsStore} from "./events"
 import localforage from "localforage"
 import {useUserStore} from "./user"
 import {ndk} from "@/utils/ndk"
 import {create} from "zustand"
+import {useGroupsStore} from "./groups"
 
 // Changing storage engine doesn't trigger migration. Only version difference in storage does.
 // Here's an utility function that works around it by setting a dummy entry with version 0.
@@ -145,6 +146,18 @@ const store = create<SessionStore>()(
           )
           store.setState(newState)
           const sessionUnsubscribe = session.onEvent((event) => {
+            // Handle group creation event (kind 40)
+            if (event.kind === 40 && event.content) {
+              try {
+                const group = JSON.parse(event.content)
+                const groups = useGroupsStore.getState().groups
+                if (!groups[group.id]) {
+                  useGroupsStore.getState().addGroup(group)
+                }
+              } catch (e) {
+                console.warn("Failed to parse group from kind 40 event", e)
+              }
+            }
             useEventsStore.getState().upsert(sessionId, event)
             store.setState({sessions: new Map(store.getState().sessions)})
           })
@@ -308,6 +321,18 @@ const store = create<SessionStore>()(
               )
               store.setState(newState)
               const sessionUnsubscribe = session.onEvent((event) => {
+                // Handle group creation event (kind 40)
+                if (event.kind === 40 && event.content) {
+                  try {
+                    const group = JSON.parse(event.content)
+                    const groups = useGroupsStore.getState().groups
+                    if (!groups[group.id]) {
+                      useGroupsStore.getState().addGroup(group)
+                    }
+                  } catch (e) {
+                    console.warn("Failed to parse group from kind 40 event", e)
+                  }
+                }
                 useEventsStore.getState().upsert(sessionId, event)
                 store.setState({sessions: new Map(store.getState().sessions)})
               })
@@ -328,7 +353,26 @@ const store = create<SessionStore>()(
             store.setState({lastSeen: newLastSeen})
           }
           const sessionUnsubscribe = session.onEvent((event) => {
-            useEventsStore.getState().upsert(sessionId, event)
+            // Handle group creation event (kind 40)
+            if (event.kind === 40 && event.content) {
+              try {
+                const group = JSON.parse(event.content)
+                const groups = useGroupsStore.getState().groups
+                if (!groups[group.id]) {
+                  useGroupsStore.getState().addGroup(group)
+                }
+                console.log("group created", group)
+              } catch (e) {
+                console.warn("Failed to parse group from kind 40 event", e)
+              }
+            }
+            const myPubKey = useUserStore.getState().publicKey
+            // If message has a ['#l', groupId] tag, save under groupId instead of sessionId
+            const groupLabelTag = event.tags?.find((tag) => tag[0] === "#l")
+            const targetId = groupLabelTag ? groupLabelTag[1] : sessionId
+            if (!(event.kind === 40 && event.pubkey === myPubKey)) {
+              useEventsStore.getState().upsert(targetId, event)
+            }
             store.setState({sessions: new Map(store.getState().sessions)})
           })
           sessionListeners.set(sessionId, sessionUnsubscribe)
