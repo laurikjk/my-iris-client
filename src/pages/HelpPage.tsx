@@ -5,6 +5,7 @@ import {
   RiRefreshLine,
   RiUserFollowLine,
   RiHeartLine,
+  RiShieldLine,
 } from "@remixicon/react"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
@@ -99,6 +100,16 @@ export const AboutPage = () => {
                   className="flex items-center gap-1"
                 >
                   <RiUserFollowLine className="inline" /> Find people to follow
+                </a>
+              </p>
+              <p>
+                <a
+                  href="https://github.com/irislib/iris-client/releases"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1"
+                >
+                  <RiShieldLine className="inline" /> Install Iris locally for resilience
                 </a>
               </p>
               <p>
