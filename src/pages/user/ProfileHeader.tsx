@@ -128,10 +128,10 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
                   {myPubKey && myPubKey !== pubKeyHex && (
                     <FollowButton pubKey={pubKey} small={false} />
                   )}
-                  {/* Show dropdown for all profiles except self */}
-                  {myPubKey !== pubKeyHex && <ProfileDropdownButton pubKey={pubKey} />}
                 </>
               )}
+              {/* Show dropdown for all profiles including self */}
+              <ProfileDropdownButton pubKey={pubKey} />
             </div>
           </div>
           <div className="text-2xl font-bold">
