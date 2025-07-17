@@ -4,7 +4,8 @@ import {
 } from "../utils/doubleRatchetUsers"
 import {MemberSelection, GroupDetailsStep} from "./components"
 import {useState, useEffect, FormEvent} from "react"
-import {GroupDetails} from "./types"
+import { GroupDetails } from "./types"
+import { useGroupsStore } from "@/stores/groups"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
 import useHistoryState from "@/shared/hooks/useHistoryState"
@@ -24,6 +25,7 @@ const GroupChatCreation = () => {
   const [createError, setCreateError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const myPubKey = useUserStore((state) => state.publicKey)
+  const addGroup = useGroupsStore((state) => state.addGroup)
 
   useEffect(() => {
     if (myPubKey) {
@@ -92,19 +94,18 @@ const GroupChatCreation = () => {
       setIsCreating(true)
       setCreateError(null)
 
-      // TODO: Implement actual group creation logic
-      console.log("Creating group:", {
-        ...groupDetails,
-        members: selectedMembers,
-        creator: myPubKey,
-      })
-
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Navigate to the new group chat
       const groupId = crypto.randomUUID()
-      navigate("/chats/group", {state: {id: groupId}})
+      const group = {
+        id: groupId,
+        name: groupDetails.name,
+        description: groupDetails.description,
+        picture: groupDetails.picture,
+        members: [myPubKey, ...selectedMembers],
+        createdAt: Date.now(),
+      }
+      addGroup(group)
+
+      navigate("/chats/group", { state: { id: groupId } })
     } catch (err) {
       console.error("Error creating group:", err)
       setCreateError("Failed to create group")

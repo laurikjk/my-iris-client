@@ -17,6 +17,7 @@ import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
+import { useGroupsStore } from "@/stores/groups"
 
 interface ChatListItemProps {
   id: string
@@ -42,6 +43,8 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     updateTimestamp,
   } = usePublicChatsStore()
   const myPubKey = useUserStore((state) => state.publicKey)
+  const { groups } = useGroupsStore()
+  const group = groups[id]
 
   const chat = isPublic ? publicChats[id] : null
 
@@ -118,7 +121,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
 
   return (
     <NavLink
-      to={isPublic ? `/chats/${id}` : "/chats/chat"}
+      to={group ? `/chats/group/${id}` : isPublic ? `/chats/${id}` : "/chats/chat"}
       state={{id}}
       key={id}
       onClick={() => isPublic && updateLastSeenPublic(id)}
@@ -128,8 +131,22 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
       })}
     >
       <div className="flex flex-row items-center gap-2 flex-1">
-        {isPublic &&
-          (chat?.picture ? (
+        {group ? (
+          group.picture ? (
+            <ProxyImg
+              width={18}
+              square={true}
+              src={group.picture}
+              alt="Group Icon"
+              className="rounded-full w-10 h-10"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center">
+              <span className="text-lg">👥</span>
+            </div>
+          )
+        ) : isPublic ? (
+          chat?.picture ? (
             <ProxyImg
               width={18}
               square={true}
@@ -141,14 +158,20 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
             <div className="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center">
               <span className="text-lg">#</span>
             </div>
-          ))}
-        {!isPublic && <Avatar pubKey={pubKey} />}
+          )
+        ) : (
+          <Avatar pubKey={pubKey} />
+        )}
         <div className="flex flex-col flex-1">
           <div className="flex flex-row items-center justify-between gap-2">
             <span className="text-base font-semibold flex items-center gap-1">
-              {isPublic && <RiEarthLine className="w-4 h-4" />}
-              {isPublic ? (
-                chat?.name || (showPlaceholder ? `Channel ${id.slice(0, 8)}...` : "")
+              {group ? (
+                group.name
+              ) : isPublic ? (
+                <>
+                  <RiEarthLine className="w-4 h-4" />
+                  {chat?.name || (showPlaceholder ? `Channel ${id.slice(0, 8)}...` : "")}
+                </>
               ) : (
                 <Name pubKey={pubKey} />
               )}
@@ -160,18 +183,19 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
                     from={
                       isPublic && latestMessage?.created_at
                         ? latestMessage.created_at * 1000
-                        : getMillisecondTimestamp(latest as MessageType) // TODO: we know it's not undefined, TS doesn't -> do this without type assertion
+                        : getMillisecondTimestamp(latest as MessageType)
                     }
                   />
                 </span>
               )}
-              {!isPublic && <ConnectionStatus peerId={id} />}
+              {!isPublic && !group && <ConnectionStatus peerId={id} />}
             </div>
           </div>
           <div className="flex flex-row items-center justify-between gap-2">
             <span className="text-sm text-base-content/70 min-h-[1.25rem]">
               {previewText}
             </span>
+            {/* Unread badge logic can be extended for groups if needed */}
             {(() => {
               if (isPublic) {
                 if (!latestMessage?.created_at) return null
@@ -182,7 +206,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
                     <div className="indicator-item badge badge-primary badge-xs" />
                   )
                 )
-              } else {
+              } else if (!group) {
                 if (!latest?.created_at) return null
                 if (latest.sender === "user") return null
                 const hasUnread = getMillisecondTimestamp(latest) > lastSeenPrivateTime
@@ -192,6 +216,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
                   )
                 )
               }
+              return null
             })()}
           </div>
         </div>
