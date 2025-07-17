@@ -65,11 +65,9 @@ async function decryptAesGcm(
   return await window.crypto.subtle.decrypt({name: "AES-GCM", iv}, cryptoKey, data)
 }
 
-const isImage = (filename: string) =>
-  /\.(jpg|jpeg|png|gif|webp)$/i.test(filename)
+const isImage = (filename: string) => /\.(jpg|jpeg|png|gif|webp)$/i.test(filename)
 
-const isVideo = (filename: string) =>
-  /\.(mp4|webm|ogg|mov|m3u8)$/i.test(filename)
+const isVideo = (filename: string) => /\.(mp4|webm|ogg|mov|m3u8)$/i.test(filename)
 
 // Helper: fetch and decrypt index file (if needed)
 async function fetchAndParseIndex(url: string, keyHex?: string) {
