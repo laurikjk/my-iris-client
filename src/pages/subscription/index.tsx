@@ -234,7 +234,8 @@ export default function SubscriptionPage() {
       <div className="p-4 mx-4 md:p-8 rounded-lg bg-base-100 shadow">
         <div className="flex flex-col gap-6 p-4">
           {pubkey && isSubscriber && (
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-4">
+              <div className="text-center">Thank you for supporting Iris! 💜</div>
               <SubscriberBadge pubkey={pubkey} />
               <span>
                 Active until <b>{endDate && new Date(endDate).toLocaleDateString()}</b>
