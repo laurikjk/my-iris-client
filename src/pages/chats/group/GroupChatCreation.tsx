@@ -115,7 +115,7 @@ const GroupChatCreation = () => {
             sendToUser(pubkey, {
               kind: 40,
               content: JSON.stringify(group),
-              tags: [],
+              tags: [["l", groupId]],
             })
           )
       )

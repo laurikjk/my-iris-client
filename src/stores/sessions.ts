@@ -8,7 +8,7 @@ import {createJSONStorage, persist, PersistStorage} from "zustand/middleware"
 import {Filter, VerifiedEvent, UnsignedEvent} from "nostr-tools"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
 import {REACTION_KIND} from "@/pages/chats/utils/constants"
-import {MessageType} from "@/pages/chats/message/Message"
+import type { MessageType } from "@/pages/chats/message/Message"
 import {hexToBytes} from "@noble/hashes/utils"
 import {useEventsStore} from "./events"
 import localforage from "localforage"
@@ -75,6 +75,12 @@ const subscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
   return () => sub.stop()
 }
 
+const routeEventToStore = (sessionId: string, message: MessageType) => {
+  const groupLabelTag = message.tags?.find((tag: string[]) => tag[0] === "l")
+  const targetId = groupLabelTag && groupLabelTag[1] ? groupLabelTag[1] : sessionId
+  useEventsStore.getState().upsert(targetId, message)
+}
+
 const store = create<SessionStore>()(
   persist(
     (set, get) => ({
@@ -93,9 +99,10 @@ const store = create<SessionStore>()(
             return
           }
           const event = invite.getEvent() as RawEvent
+          console.log("Publishing public invite...", event)
           await NDKEventFromRawEvent(event)
             .publish()
-            .then((res) => console.log("published public invite", res))
+            .then((res) => console.log("Published public invite", res))
             .catch((e) => console.warn("Error publishing public invite:", e))
         }
         if (!get().invites.has("private")) {
@@ -158,7 +165,7 @@ const store = create<SessionStore>()(
                 console.warn("Failed to parse group from kind 40 event", e)
               }
             }
-            useEventsStore.getState().upsert(sessionId, event)
+            routeEventToStore(sessionId, event)
             store.setState({sessions: new Map(store.getState().sessions)})
           })
           sessionListeners.set(sessionId, sessionUnsubscribe)
@@ -181,7 +188,7 @@ const store = create<SessionStore>()(
           reactions: {},
         }
         // Optimistic update
-        useEventsStore.getState().upsert(sessionId, message)
+        routeEventToStore(sessionId, message)
         try {
           const e = NDKEventFromRawEvent(publishedEvent)
           await e.publish(undefined, undefined, 0) // required relay count 0
@@ -196,12 +203,15 @@ const store = create<SessionStore>()(
         userPubKey: string,
         event: Partial<UnsignedEvent>
       ): Promise<string> => {
+        console.log("sendToUser:", {userPubKey, event})
         // First, try to find an existing session with this user
         const existingSessionId = Array.from(get().sessions.keys()).find((sessionId) =>
           sessionId.startsWith(`${userPubKey}:`)
         )
         if (existingSessionId) {
           await get().sendMessage(existingSessionId, event)
+          console.log("sendToUser existingSessionId:", existingSessionId)
+          console.log("sendToUser result:", existingSessionId)
           return existingSessionId
         }
         // No existing session, try to create one via Invite.fromUser
@@ -215,6 +225,8 @@ const store = create<SessionStore>()(
               cleanup()
               const sessionId = await get().acceptInvite(invite.getUrl())
               await get().sendMessage(sessionId, event)
+              console.log("sendToUser new sessionId:", sessionId)
+              console.log("sendToUser result:", sessionId)
               resolve(sessionId)
             } catch (error) {
               reject(error)
@@ -262,7 +274,7 @@ const store = create<SessionStore>()(
           session
         )
         const sessionUnsubscribe = session.onEvent((event) => {
-          useEventsStore.getState().upsert(sessionId, event)
+          routeEventToStore(sessionId, event)
           // make sure we persist session state
           set({sessions: new Map(get().sessions)})
         })
@@ -333,7 +345,7 @@ const store = create<SessionStore>()(
                     console.warn("Failed to parse group from kind 40 event", e)
                   }
                 }
-                useEventsStore.getState().upsert(sessionId, event)
+                routeEventToStore(sessionId, event)
                 store.setState({sessions: new Map(store.getState().sessions)})
               })
               sessionListeners.set(sessionId, sessionUnsubscribe)
@@ -366,18 +378,20 @@ const store = create<SessionStore>()(
                 console.warn("Failed to parse group from kind 40 event", e)
               }
             }
-            const myPubKey = useUserStore.getState().publicKey
-            // If message has a ['#l', groupId] tag, save under groupId instead of sessionId
-            const groupLabelTag = event.tags?.find((tag) => tag[0] === "#l")
-            const targetId = groupLabelTag ? groupLabelTag[1] : sessionId
-            if (!(event.kind === 40 && event.pubkey === myPubKey)) {
-              useEventsStore.getState().upsert(targetId, event)
+            const groupLabelTag = event.tags?.find((tag) => tag[0] === "l")
+            const targetId = groupLabelTag && groupLabelTag[1] ? groupLabelTag[1] : sessionId
+            if (groupLabelTag && groupLabelTag[1]) {
+              // Only save to group store, not session store
+              routeEventToStore(targetId, event)
+            } else {
+              // No l tag, save to session store as usual
+              routeEventToStore(sessionId, event)
             }
             store.setState({sessions: new Map(store.getState().sessions)})
           })
           sessionListeners.set(sessionId, sessionUnsubscribe)
         })
-        state?.createDefaultInvites()
+        useSessionsStore.getState().createDefaultInvites()
       },
       storage: forceMigrationOnInitialPersist(
         createJSONStorage(() => localforage),

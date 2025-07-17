@@ -48,7 +48,7 @@ const GroupChatPage = () => {
           sendToUser(pubkey, {
             kind: 0,
             content,
-            tags: [["#l", group.id]],
+            tags: [["l", group.id]],
           })
         )
     )
