@@ -8,7 +8,7 @@ import {createJSONStorage, persist, PersistStorage} from "zustand/middleware"
 import {Filter, VerifiedEvent, UnsignedEvent} from "nostr-tools"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
 import {REACTION_KIND} from "@/pages/chats/utils/constants"
-import type { MessageType } from "@/pages/chats/message/Message"
+import type {MessageType} from "@/pages/chats/message/Message"
 import {hexToBytes} from "@noble/hashes/utils"
 import {useEventsStore} from "./events"
 import localforage from "localforage"
@@ -378,15 +378,7 @@ const store = create<SessionStore>()(
                 console.warn("Failed to parse group from kind 40 event", e)
               }
             }
-            const groupLabelTag = event.tags?.find((tag) => tag[0] === "l")
-            const targetId = groupLabelTag && groupLabelTag[1] ? groupLabelTag[1] : sessionId
-            if (groupLabelTag && groupLabelTag[1]) {
-              // Only save to group store, not session store
-              routeEventToStore(targetId, event)
-            } else {
-              // No l tag, save to session store as usual
-              routeEventToStore(sessionId, event)
-            }
+            routeEventToStore(sessionId, event)
             store.setState({sessions: new Map(store.getState().sessions)})
           })
           sessionListeners.set(sessionId, sessionUnsubscribe)

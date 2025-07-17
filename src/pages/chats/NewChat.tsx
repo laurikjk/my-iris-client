@@ -6,11 +6,12 @@ import {Link, Routes, Route, useLocation} from "react-router"
 import PublicChatCreation from "./public/PublicChatCreation"
 import GroupChatCreation from "./group/GroupChatCreation"
 import Header from "@/shared/components/header/Header"
+import PublicChannelCreateStep from "./public/PublicChannelCreateStep"
 
 const TabSelector = () => {
   const location = useLocation()
-  const isPublic = location.pathname === "/chats/new/public"
-  const isGroup = location.pathname === "/chats/new/group"
+  const isPublic = location.pathname.startsWith("/chats/new/public")
+  const isGroup = location.pathname.startsWith("/chats/new/group")
 
   const getClasses = (isActive: boolean) => {
     const baseClasses =
@@ -47,6 +48,7 @@ const NewChat = () => {
       <Routes>
         <Route path="/" element={<PrivateChatCreation />} />
         <Route path="/public" element={<PublicChatCreation />} />
+        <Route path="/public/create" element={<PublicChannelCreateStep />} />
         <Route path="/group" element={<GroupChatCreation />} />
       </Routes>
       <InstallPWAPrompt />
