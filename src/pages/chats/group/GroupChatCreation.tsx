@@ -48,12 +48,14 @@ const GroupChatCreation = () => {
   const handleAddMember = (user: DoubleRatchetUser) => {
     const isAlreadySelected = selectedMembers.includes(user.pubkey)
     if (!isAlreadySelected) {
-      setSelectedMembers((prev) => [...prev, user.pubkey])
+      setSelectedMembers((prev: string[]) => [...prev, user.pubkey])
     }
   }
 
   const handleRemoveMember = (pubkey: string) => {
-    setSelectedMembers((prev) => prev.filter((member) => member !== pubkey))
+    setSelectedMembers((prev: string[]) =>
+      prev.filter((member: string) => member !== pubkey)
+    )
   }
 
   const handleNextStep = () => {
@@ -101,7 +103,7 @@ const GroupChatCreation = () => {
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // Navigate to the new group chat
-      const groupId = `group_${Date.now()}`
+      const groupId = crypto.randomUUID()
       navigate("/chats/group", {state: {id: groupId}})
     } catch (err) {
       console.error("Error creating group:", err)

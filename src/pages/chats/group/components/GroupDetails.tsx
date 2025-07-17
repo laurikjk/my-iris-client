@@ -2,6 +2,7 @@ import {Avatar} from "@/shared/components/user/Avatar"
 import MemberChip from "./MemberChip"
 import {GroupDetails} from "../types"
 import {FormEvent} from "react"
+import DoubleRatchetInfo from "./DoubleRatchetInfo"
 
 interface GroupDetailsProps {
   selectedMembers: string[]
@@ -116,32 +117,17 @@ const GroupDetailsStep = ({
           {/* Create Button */}
           <button
             type="submit"
-            className={`btn btn-primary ${isCreating ? "loading" : ""}`}
-            disabled={isCreating}
+            className="btn btn-primary"
+            disabled={isCreating || !groupDetails.name.trim()}
           >
-            {isCreating ? "Creating Group..." : "Create Group"}
+            Create Group
           </button>
         </form>
       </div>
 
       <hr className="mx-4 my-6 border-base-300" />
       <div className="px-2">
-        <p className="text-center text-sm text-base-content/70">
-          Iris uses Signal-style{" "}
-          <a
-            href="https://github.com/mmalmi/nostr-double-ratchet"
-            target="_blank"
-            className="link"
-            rel="noreferrer"
-          >
-            double ratchet encryption
-          </a>{" "}
-          to keep your private messages safe.
-        </p>
-        <p className="text-center text-sm text-base-content/70">
-          Private chat history is stored locally on this device and cleared when you log
-          out.
-        </p>
+        <DoubleRatchetInfo />
       </div>
     </>
   )

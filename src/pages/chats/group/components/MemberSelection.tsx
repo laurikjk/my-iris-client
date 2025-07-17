@@ -6,6 +6,7 @@ import {
 import {UserRow} from "@/shared/components/user/UserRow"
 import {useState, useEffect} from "react"
 import MemberChip from "./MemberChip"
+import DoubleRatchetInfo from "./DoubleRatchetInfo"
 
 interface MemberSelectionProps {
   selectedMembers: string[]
@@ -59,6 +60,7 @@ const MemberSelection = ({
     <>
       <div className="m-4 p-4 md:p-8 rounded-lg bg-base-100 flex flex-col gap-6">
         <div>
+          Under Construction 🐒
           <h2 className="text-xl font-semibold mb-4">Add Members</h2>
           <div className="flex flex-col gap-4">
             <div>
@@ -126,22 +128,7 @@ const MemberSelection = ({
 
       <hr className="mx-4 my-6 border-base-300" />
       <div className="px-2">
-        <p className="text-center text-sm text-base-content/70">
-          Iris uses Signal-style{" "}
-          <a
-            href="https://github.com/mmalmi/nostr-double-ratchet"
-            target="_blank"
-            className="link"
-            rel="noreferrer"
-          >
-            double ratchet encryption
-          </a>{" "}
-          to keep your private messages safe.
-        </p>
-        <p className="text-center text-sm text-base-content/70">
-          Private chat history is stored locally on this device and cleared when you log
-          out.
-        </p>
+        <DoubleRatchetInfo />
       </div>
     </>
   )

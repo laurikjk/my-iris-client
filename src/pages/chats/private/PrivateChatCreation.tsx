@@ -1,17 +1,19 @@
+import {useState, useEffect, useRef} from "react"
+import {useNavigate} from "react-router"
+import {VerifiedEvent} from "nostr-tools"
+import {NDKSubscription} from "@nostr-dev-kit/ndk"
+import {UserRow} from "@/shared/components/user/UserRow"
+import {useSessionsStore} from "@/stores/sessions"
+import {useUserStore} from "@/stores/user"
+import {ndk} from "@/utils/ndk"
 import {
   searchDoubleRatchetUsers,
   subscribeToDoubleRatchetUsers,
   DoubleRatchetUser,
   getDoubleRatchetUsersCount,
 } from "../utils/doubleRatchetUsers"
-import {UserRow} from "@/shared/components/user/UserRow"
-import {useSessionsStore} from "@/stores/sessions"
 import {Invite} from "nostr-double-ratchet/src"
-import {useUserStore} from "@/stores/user"
-import {VerifiedEvent} from "nostr-tools"
-import {useState, useEffect} from "react"
-import {useNavigate} from "react-router"
-import {ndk} from "@/utils/ndk"
+import DoubleRatchetInfo from "../group/components/DoubleRatchetInfo"
 
 const PrivateChatCreation = () => {
   const navigate = useNavigate()
@@ -20,6 +22,7 @@ const PrivateChatCreation = () => {
   const [searchResults, setSearchResults] = useState<DoubleRatchetUser[]>([])
   const [doubleRatchetCount, setDoubleRatchetCount] = useState(0)
   const myPubKey = useUserStore((state) => state.publicKey)
+  const subRef = useRef<NDKSubscription | null>(null)
 
   useEffect(() => {
     subscribeToDoubleRatchetUsers(myPubKey)
@@ -47,11 +50,13 @@ const PrivateChatCreation = () => {
   const handleStartChat = async (pubkey: string) => {
     if (!myPubKey) return
     // Subscribe function as in ProfileHeader
+    subRef.current?.stop()
     const sub = ndk().subscribe({
       kinds: [30078],
       authors: [pubkey],
       "#l": ["double-ratchet/invites"],
     })
+    subRef.current = sub
     let started = false
     sub.on("event", async (e) => {
       console.log("event", e)
@@ -65,6 +70,14 @@ const PrivateChatCreation = () => {
       sub.stop()
     })
   }
+
+  useEffect(() => {
+    return () => {
+      if (subRef.current) {
+        subRef.current.stop()
+      }
+    }
+  }, [])
 
   if (!myPubKey) {
     return (
@@ -112,22 +125,7 @@ const PrivateChatCreation = () => {
       </div>
       <hr className="mx-4 my-6 border-base-300" />
       <div className="px-2">
-        <p className="text-center text-sm text-base-content/70">
-          Iris uses Signal-style{" "}
-          <a
-            href="https://github.com/mmalmi/nostr-double-ratchet"
-            target="_blank"
-            className="link"
-            rel="noreferrer"
-          >
-            double ratchet encryption
-          </a>{" "}
-          to keep your private messages safe.
-        </p>
-        <p className="text-center text-sm text-base-content/70">
-          Private chat history is stored locally on this device and cleared when you log
-          out.
-        </p>
+        <DoubleRatchetInfo />
       </div>
     </>
   )
