@@ -1,4 +1,4 @@
-import {useRef, useState, ReactNode, useEffect} from "react"
+import {useRef, useState, ReactNode, useEffect, useMemo} from "react"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
@@ -14,6 +14,7 @@ import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
 import {useSettingsStore} from "@/stores/settings"
 import {useFeedStore} from "@/stores/feed"
+import {getTag} from "@/utils/nostr"
 import MediaFeed from "./MediaFeed"
 
 interface FeedProps {
@@ -114,6 +115,21 @@ function Feed({
 
   const newEventsFiltered = Array.from(newEventsMap.values())
 
+  const gridEvents = useMemo(() => {
+    if (displayAs === "grid") {
+      return filteredEvents
+        .map((event) => {
+          if ("content" in event && event.kind === 7) {
+            const eTag = getTag("e", event.tags)
+            return eTag ? {id: eTag} : null
+          }
+          return event
+        })
+        .filter((event) => event !== null)
+    }
+    return filteredEvents
+  }, [filteredEvents, displayAs])
+
   const [, setForceUpdateCount] = useState(0)
 
   const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(
@@ -177,7 +193,7 @@ function Feed({
         {filteredEvents.length > 0 && (
           <InfiniteScroll onLoadMore={loadMoreItems}>
             {displayAs === "grid" ? (
-              <MediaFeed events={filteredEvents} />
+              <MediaFeed events={gridEvents} />
             ) : (
               <>
                 {filteredEvents.slice(0, displayCount).map((event, index) => (
