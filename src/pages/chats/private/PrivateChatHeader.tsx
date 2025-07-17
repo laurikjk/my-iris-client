@@ -57,8 +57,7 @@ const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
 
   const user = id.split(":").shift()!
 
-  const showWebRtc =
-    socialGraph().getFollowedByUser(user).has(myPubKey) || user === myPubKey
+  const showWebRtc = false // socialGraph().getFollowedByUser(user).has(myPubKey) || user === myPubKey
 
   return (
     <Header showNotifications={false} scrollDown={true} slideUp={false} bold={false}>
