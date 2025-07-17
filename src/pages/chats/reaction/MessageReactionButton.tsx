@@ -40,7 +40,13 @@ const MessageReactionButton = ({
       // Use the provided onSendReaction function if available
       onSendReaction(messageId, emoji.native)
     } else {
-      sendMessage(sessionId, emoji.native, messageId, true)
+      // Construct a reaction event
+      const event = {
+        content: emoji.native,
+        kind: 7, // REACTION_KIND
+        tags: [["e", messageId]],
+      }
+      sendMessage(sessionId, event)
     }
   }
 

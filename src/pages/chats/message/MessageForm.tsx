@@ -16,6 +16,7 @@ import Icon from "@/shared/components/Icons/Icon"
 import {RiAttachment2} from "@remixicon/react"
 import EmojiType from "@/types/emoji"
 import {MessageType} from "./Message"
+import {UnsignedEvent} from "nostr-tools"
 
 interface MessageFormProps {
   id: string
@@ -90,7 +91,18 @@ const MessageForm = ({
         }
       })
 
-      await sendMessage(id, text, replyingTo?.id, false, imetaTags)
+      // Construct the event object
+      const event: Partial<UnsignedEvent> = {
+        content: text,
+        kind: replyingTo ? 4 : 4, // Replace with correct kind if needed
+        tags: [
+          ...(replyingTo?.id ? [["e", replyingTo.id]] : []),
+          ["ms", Date.now().toString()],
+          ...imetaTags,
+        ],
+      }
+
+      await sendMessage(id, event)
       setEncryptionMetadata(new Map()) // Clear after sending
     } catch (error) {
       console.error("Failed to send message:", error)

@@ -3,13 +3,12 @@ import {
   Session,
   serializeSessionState,
   deserializeSessionState,
-  CHAT_MESSAGE_KIND,
 } from "nostr-double-ratchet/src"
 import {createJSONStorage, persist, PersistStorage} from "zustand/middleware"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
 import {REACTION_KIND} from "@/pages/chats/utils/constants"
 import {MessageType} from "@/pages/chats/message/Message"
-import {Filter, VerifiedEvent} from "nostr-tools"
+import {Filter, VerifiedEvent, UnsignedEvent} from "nostr-tools"
 import {hexToBytes} from "@noble/hashes/utils"
 import {useEventsStore} from "./events"
 import localforage from "localforage"
@@ -61,13 +60,8 @@ interface SessionStoreActions {
   createInvite: (label: string, inviteId?: string) => void
   createDefaultInvites: () => void
   acceptInvite: (url: string) => Promise<string>
-  sendMessage: (
-    id: string,
-    content: string,
-    replyingToId?: string,
-    isReaction?: boolean,
-    imetaTags?: string[][]
-  ) => Promise<void>
+  sendMessage: (id: string, event: Partial<UnsignedEvent>) => Promise<void>
+  sendToUser: (userPubKey: string, event: Partial<UnsignedEvent>) => Promise<string>
   updateLastSeen: (sessionId: string) => void
   deleteInvite: (id: string) => void
   deleteSession: (id: string) => void
@@ -159,36 +153,15 @@ const store = create<SessionStore>()(
         inviteListeners.set(id, unsubscribe)
         set({invites: newInvites})
       },
-      sendMessage: async (
-        sessionId: string,
-        content: string,
-        replyingToId?: string,
-        isReaction?: boolean,
-        imetaTags?: string[][]
-      ) => {
+      sendMessage: async (sessionId: string, event: Partial<UnsignedEvent>) => {
         const session = get().sessions.get(sessionId)
         if (!session) {
           throw new Error("Session not found")
         }
-        if (isReaction && !replyingToId) {
+        if (event.kind === REACTION_KIND && !event.tags?.find((tag) => tag[0] === "e")) {
           throw new Error("Cannot send a reaction without a replyingToId")
         }
-
-        const tags = [
-          ...(replyingToId ? [["e", replyingToId]] : []),
-          ["ms", Date.now().toString()],
-        ]
-        if (imetaTags && imetaTags.length) {
-          for (const tag of imetaTags) {
-            tags.push(tag)
-          }
-        }
-
-        const {event, innerEvent} = session.sendEvent({
-          content,
-          kind: isReaction ? REACTION_KIND : CHAT_MESSAGE_KIND,
-          tags,
-        })
+        const {event: publishedEvent, innerEvent} = session.sendEvent(event)
         const message: MessageType = {
           ...innerEvent,
           sender: "user",
@@ -197,14 +170,48 @@ const store = create<SessionStore>()(
         // Optimistic update
         useEventsStore.getState().upsert(sessionId, message)
         try {
-          const e = NDKEventFromRawEvent(event)
+          const e = NDKEventFromRawEvent(publishedEvent)
           await e.publish(undefined, undefined, 0) // required relay count 0
-          console.log("published", event.id)
+          console.log("published", publishedEvent.id)
         } catch (err) {
           console.warn("Error publishing event:", err)
         }
         // make sure we persist session state
         set({sessions: new Map(get().sessions)})
+      },
+      sendToUser: async (
+        userPubKey: string,
+        event: Partial<UnsignedEvent>
+      ): Promise<string> => {
+        // First, try to find an existing session with this user
+        const existingSessionId = Array.from(get().sessions.keys()).find((sessionId) =>
+          sessionId.startsWith(`${userPubKey}:`)
+        )
+        if (existingSessionId) {
+          await get().sendMessage(existingSessionId, event)
+          return existingSessionId
+        }
+        // No existing session, try to create one via Invite.fromUser
+        return new Promise((resolve, reject) => {
+          const timeoutId: NodeJS.Timeout = setTimeout(() => {
+            cleanup()
+            reject(new Error("Timeout waiting for user invite"))
+          }, 10000) // 10 second timeout
+          const unsubscribe = Invite.fromUser(userPubKey, subscribe, async (invite) => {
+            try {
+              cleanup()
+              const sessionId = await get().acceptInvite(invite.getUrl())
+              await get().sendMessage(sessionId, event)
+              resolve(sessionId)
+            } catch (error) {
+              reject(error)
+            }
+          })
+          const cleanup = () => {
+            if (timeoutId) clearTimeout(timeoutId)
+            if (unsubscribe) unsubscribe()
+          }
+        })
       },
       acceptInvite: async (url: string): Promise<string> => {
         const invite = Invite.fromUrl(url)
