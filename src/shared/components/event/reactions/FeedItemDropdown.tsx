@@ -11,6 +11,8 @@ import ReportUser from "../ReportUser.tsx"
 import {usePublicKey} from "@/stores/user"
 import MuteUser from "../MuteUser.tsx"
 import RawJSON from "../RawJSON.tsx"
+import RelayList from "./RelayList.tsx"
+import {useNavigate} from "react-router"
 
 type FeedItemDropdownProps = {
   event: NDKEvent
@@ -19,6 +21,7 @@ type FeedItemDropdownProps = {
 
 function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
   const myPubKey = usePublicKey()
+  const navigate = useNavigate()
 
   const [showReactions, setShowReactions] = useState(false)
   const [showRawJSON, setShowRawJSON] = useState(false)
@@ -146,6 +149,9 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
               <button onClick={handleDeletionRequest}>Request deletion</button>
             </li>
           )}
+          <li onClick={() => navigate("/settings/network")}>
+            <RelayList relays={event.onRelays} />
+          </li>
         </ul>
       </Dropdown>
     </div>
