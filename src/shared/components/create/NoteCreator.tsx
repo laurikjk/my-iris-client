@@ -247,7 +247,7 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
 
   return (
     <div
-      className={`flex flex-col gap-4 p-4 ${
+      className={`flex flex-col gap-4 p-4 w-[calc(100vw-2rem)] mx-auto ${
         isDraggingOver ? "border-2 border-primary" : ""
       }`}
       onDragOver={handleDragOver}
@@ -265,7 +265,7 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
         </div>
       )}
       <div className="flex gap-4">
-        <Avatar pubKey={myPubKey} width={40} />
+        <Avatar pubKey={myPubKey} width={40} showBadge={false} />
         <div className="flex-1">
           <Textarea
             value={noteContent}
