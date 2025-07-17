@@ -111,7 +111,7 @@ const Layout = () => {
         id="main-content"
       >
         <NavSideBar />
-        <div className="relative flex-1 min-h-screen py-16 md:py-0 overscroll-none mb-[env(safe-area-inset-bottom)]">
+        <div className="relative flex-1 min-h-screen py-16 md:py-0 overscroll-none mt-[env(safe-area-inset-top)] mb-[env(safe-area-inset-bottom)]">
           <ErrorBoundary>
             <Outlet />
             {useUserStore.getState().cashuEnabled && (

@@ -33,3 +33,6 @@ test-results/
 *.sln
 *.sw?
 .claude
+
+src-tauri/gen
+src-tauri/target

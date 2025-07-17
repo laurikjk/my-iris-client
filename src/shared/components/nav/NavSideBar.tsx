@@ -44,7 +44,7 @@ const NavSideBar = () => {
       <div
         ref={ref}
         className={classNames(
-          "bg-base-200 transition-transform duration-300 fixed md:sticky md:translate-x-0 top-0 select-none w-56 md:w-20 xl:w-64 h-screen z-40 flex flex-col md:justify-between border-r border-custom overflow-y-auto",
+          "bg-base-200 transition-transform duration-300 fixed md:sticky md:translate-x-0 top-0 select-none w-56 md:w-20 xl:w-64 h-screen z-40 flex flex-col md:justify-between border-r border-custom overflow-y-auto pt-[env(safe-area-inset-top)]",
           {
             "translate-x-0": isSidebarOpen,
             "-translate-x-full": !isSidebarOpen,

@@ -139,7 +139,7 @@ const Header = ({
       ref={headerRef}
       onClick={handleHeaderClick}
       style={{transform: `translateY(0px)`}}
-      className="min-h-16 flex fixed top-0 left-0 right-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none md:sticky w-full cursor-pointer"
+      className="pt-[env(safe-area-inset-top)] min-h-16 flex fixed top-0 left-0 right-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none md:sticky w-full cursor-pointer"
     >
       <div ref={contentRef} className="flex justify-between items-center flex-1 w-full">
         <div className="flex items-center gap-2 w-full">

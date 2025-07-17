@@ -17,7 +17,7 @@
   "scripts": {
     "dev": "vite",
     "start": "vite",
-    "build": "tsx ./scripts/updateSocialGraph.ts && tsc && vite build --mode production",
+    "build": "tsc && vite build --mode production",
     "build:dev": "tsx ./scripts/updateSocialGraph.ts && tsc && vite build --mode development",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --fix",
     "preview": "vite preview",
