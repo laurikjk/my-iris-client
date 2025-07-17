@@ -101,4 +101,4 @@ function ProfileDropdown({pubKey, onClose}: ProfileDropdownProps) {
   )
 }
 
-export default ProfileDropdown 
+export default ProfileDropdown

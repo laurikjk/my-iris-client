@@ -1,5 +1,6 @@
 import classNames from "classnames"
 import React from "react"
+import {RiLockLine} from "@remixicon/react"
 
 import UnseenMessagesBadge from "@/shared/components/messages/UnseenMessagesBadge"
 import PublishButton from "@/shared/components/ui/PublishButton"
@@ -10,12 +11,14 @@ import ErrorBoundary from "./ui/ErrorBoundary"
 import {formatAmount} from "@/utils/utils"
 import {useUserStore} from "@/stores/user"
 import {useLocation} from "react-router"
+import {ndk} from "@/utils/ndk"
 
 type MenuItem = {
   label?: string
   icon?: string
   link?: string
   loggedInOnly?: boolean
+  requireSigner?: boolean
   el?: React.ReactNode
   activeIcon?: string
   inactiveIcon?: string
@@ -43,6 +46,7 @@ const Footer = () => {
         </div>
       ),
       loggedInOnly: true,
+      requireSigner: true,
     },
   ]
 
@@ -54,10 +58,17 @@ const Footer = () => {
     // -mb-[1px] because weird 1px gap under footer?
     <ErrorBoundary>
       <footer className="-mb-[1px] md:hidden fixed bottom-0 z-10 w-full bg-base-200 pb-[env(safe-area-inset-bottom)] bg-bg-color">
+        {myPubKey && !ndk().signer && (
+          <div className="flex items-center justify-center gap-1 text-error text-xs py-1 border-b border-error/20">
+            <RiLockLine className="w-3 h-3" />
+            <span>Read-only mode</span>
+          </div>
+        )}
         <div className="flex">
           {MENU_ITEMS.map(
             (item, index) =>
-              (myPubKey || !item.loggedInOnly) && (
+              (myPubKey || !item.loggedInOnly) &&
+              (!item.requireSigner || (item.requireSigner && ndk().signer)) && (
                 <FooterNavItem key={index} item={item} readonly={readonly} />
               )
           )}

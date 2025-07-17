@@ -29,4 +29,4 @@ function ProfileDropdownButton({pubKey}: ProfileDropdownButtonProps) {
   )
 }
 
-export default ProfileDropdownButton 
+export default ProfileDropdownButton

@@ -1,4 +1,4 @@
-import {RiLoginBoxLine} from "@remixicon/react"
+import {RiLoginBoxLine, RiLockLine} from "@remixicon/react"
 import {useRef, useMemo} from "react"
 import classNames from "classnames"
 import NavLink from "./NavLink"
@@ -16,6 +16,7 @@ import {navItemsConfig} from "./navConfig"
 import {UserRow} from "../user/UserRow"
 import {useUIStore} from "@/stores/ui"
 import {NavItem} from "./NavItem"
+import {ndk} from "@/utils/ndk"
 
 const NavSideBar = () => {
   const ref = useRef<HTMLDivElement>(null)
@@ -58,6 +59,12 @@ const NavSideBar = () => {
             <img className="w-8 h-8" src={logoUrl} />
             <span className="inline md:hidden xl:inline">{CONFIG.appName}</span>
           </NavLink>
+          {myPubKey && !ndk().signer && (
+            <div className="ml-4 md:ml-0 xl:ml-4 flex items-center gap-2 text-error text-sm">
+              <RiLockLine className="w-4 h-4" />
+              <span className="hidden xl:inline">Read-only mode</span>
+            </div>
+          )}
           <ul className="menu px-2 py-0 text-xl flex flex-col gap-4 md:gap-2 xl:gap-4 rounded-2xl">
             {navItems.map(({to, icon, activeIcon, inactiveIcon, label, onClick}) => {
               if (label === "Chats") {
@@ -89,7 +96,7 @@ const NavSideBar = () => {
               )
             })}
           </ul>
-          {myPubKey && (
+          {myPubKey && ndk().signer && (
             <div className="ml-2 md:ml-0 xl:ml-2 md:mt-2 xl:mt-0">
               <div className="hidden md:flex">
                 <PublishButton />
