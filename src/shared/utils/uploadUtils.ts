@@ -1,5 +1,26 @@
 import {bytesToHex} from "@noble/hashes/utils"
 
+// Fallback random generator for non-secure contexts
+function getRandomValuesFallback(array: Uint8Array): Uint8Array {
+  for (let i = 0; i < array.length; i++) {
+    array[i] = Math.floor(Math.random() * 256)
+  }
+  return array
+}
+
+// Safe wrapper for crypto.getRandomValues
+function getRandomValues(array: Uint8Array): Uint8Array {
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    try {
+      return crypto.getRandomValues(array)
+    } catch (e) {
+      // Fallback if crypto API is not available (e.g., HTTP context)
+      return getRandomValuesFallback(array)
+    }
+  }
+  return getRandomValuesFallback(array)
+}
+
 export async function calculateSHA256(file: File): Promise<string> {
   const buffer = await file.arrayBuffer()
   const hashBuffer = await crypto.subtle.digest("SHA-256", buffer)
@@ -10,8 +31,8 @@ export async function calculateSHA256(file: File): Promise<string> {
 export async function encryptFileWithAesGcm(
   file: File
 ): Promise<{encryptedFile: File; key: string; iv: string}> {
-  const key = crypto.getRandomValues(new Uint8Array(32)) // 256-bit key
-  const iv = crypto.getRandomValues(new Uint8Array(12)) // 96-bit IV
+  const key = getRandomValues(new Uint8Array(32)) // 256-bit key
+  const iv = getRandomValues(new Uint8Array(12)) // 96-bit IV
   const algo = {name: "AES-GCM", iv}
   const cryptoKey = await crypto.subtle.importKey("raw", key, algo, false, ["encrypt"])
   const data = await file.arrayBuffer()
