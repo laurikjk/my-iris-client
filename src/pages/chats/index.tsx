@@ -2,11 +2,11 @@ import PublicChatDetails from "./public/PublicChatDetails"
 import {useLocation, Routes, Route} from "react-router"
 import PrivateChat from "./private/PrivateChat"
 import PublicChat from "./public/PublicChat"
-import GroupChat from "./group/GroupChat"
 import ChatList from "./list/ChatList"
 import {Helmet} from "react-helmet"
 import classNames from "classnames"
 import NewChat from "./NewChat"
+import GroupGroupRoutes from "./group"
 
 function Messages() {
   const location = useLocation()
@@ -35,7 +35,7 @@ function Messages() {
             path="chat"
             element={<PrivateChat key={location.state?.id} id={location.state?.id} />}
           />
-          <Route path="group" element={<GroupChat key={location.state?.id} />} />
+          <Route path="group/*" element={<GroupGroupRoutes />} />
           <Route path=":id/details" element={<PublicChatDetails />} />
           <Route path=":id" element={<PublicChat key={location.pathname} />} />
           <Route path="/" element={<NewChat />} />

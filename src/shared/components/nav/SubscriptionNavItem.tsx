@@ -1,7 +1,7 @@
 import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
+import {getDefaultServers} from "@/pages/settings/mediaservers-utils"
 import {getSubscriptionIcon} from "@/shared/utils/subscriptionIcons"
 import {MouseEventHandler, useEffect, useState, useRef} from "react"
-import {getDefaultServers} from "@/pages/settings/Mediaservers"
 import Icon from "@/shared/components/Icons/Icon"
 import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"

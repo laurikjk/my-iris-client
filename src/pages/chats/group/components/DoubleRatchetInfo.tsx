@@ -1,5 +1,3 @@
-import React from "react"
-
 const DoubleRatchetInfo = () => (
   <>
     <p className="text-center text-sm text-base-content/70">
@@ -20,4 +18,4 @@ const DoubleRatchetInfo = () => (
   </>
 )
 
-export default DoubleRatchetInfo 
+export default DoubleRatchetInfo

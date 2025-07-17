@@ -1,4 +1,4 @@
-import {getDefaultServers} from "@/pages/settings/Mediaservers"
+import {getDefaultServers} from "@/pages/settings/mediaservers-utils"
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
 

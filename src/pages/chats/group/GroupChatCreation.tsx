@@ -4,8 +4,8 @@ import {
 } from "../utils/doubleRatchetUsers"
 import {MemberSelection, GroupDetailsStep} from "./components"
 import {useState, useEffect, FormEvent} from "react"
-import { GroupDetails } from "./types"
-import { useGroupsStore } from "@/stores/groups"
+import {GroupDetails} from "./types"
+import {useGroupsStore} from "@/stores/groups"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
 import useHistoryState from "@/shared/hooks/useHistoryState"
@@ -105,7 +105,7 @@ const GroupChatCreation = () => {
       }
       addGroup(group)
 
-      navigate("/chats/group", { state: { id: groupId } })
+      navigate("/chats/group", {state: {id: groupId}})
     } catch (err) {
       console.error("Error creating group:", err)
       setCreateError("Failed to create group")

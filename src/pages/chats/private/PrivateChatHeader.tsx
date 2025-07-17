@@ -7,8 +7,6 @@ import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {useSessionsStore} from "@/stores/sessions"
 import {MessageType} from "../message/Message"
-import socialGraph from "@/utils/socialGraph"
-import {usePublicKey} from "@/stores/user"
 import {useNavigate} from "react-router"
 import {useState} from "react"
 interface PrivateChatHeaderProps {
@@ -18,7 +16,6 @@ interface PrivateChatHeaderProps {
 
 const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const myPubKey = usePublicKey()
   const navigate = useNavigate()
   const {sessions, deleteSession} = useSessionsStore()
   const session = sessions.get(id)

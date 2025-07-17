@@ -53,4 +53,4 @@ const store = create<GroupsStore>()(
   )
 )
 
-export const useGroupsStore = store 
+export const useGroupsStore = store

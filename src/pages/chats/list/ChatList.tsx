@@ -7,7 +7,7 @@ import ChatListItem from "./ChatListItem"
 import {NavLink} from "react-router"
 import classNames from "classnames"
 import {useEffect} from "react"
-import { useGroupsStore } from "@/stores/groups"
+import {useGroupsStore} from "@/stores/groups"
 
 interface ChatListProps {
   className?: string
@@ -17,7 +17,7 @@ const ChatList = ({className}: ChatListProps) => {
   const {sessions} = useSessionsStore()
   const {events} = useEventsStore()
   const {publicChats, timestamps, addOrRefreshChatById} = usePublicChatsStore()
-  const { groups } = useGroupsStore()
+  const {groups} = useGroupsStore()
 
   useEffect(() => {
     Object.keys(publicChats).forEach((chatId) => {
@@ -46,23 +46,17 @@ const ChatList = ({className}: ChatListProps) => {
     return latest ? getMillisecondTimestamp(latest) : 0
   }
 
+  const getLatest = (id: string) => {
+    if (groups[id]) return latestForGroup(id)
+    if (publicChats[id]) return latestForPublicChat(id)
+    return latestForPrivateChat(id)
+  }
+
   const allChatItems = [
-    ...Object.values(groups).map((group) => ({ id: group.id, type: 'group' })),
-    ...Array.from(sessions.keys()).map((chatId) => ({ id: chatId, type: 'private' })),
-    ...Object.keys(publicChats).map((chatId) => ({ id: chatId, type: 'public' })),
-  ].sort((a, b) => {
-    const aLatest = groups[a.id]
-      ? latestForGroup(a.id)
-      : publicChats[a.id]
-      ? latestForPublicChat(a.id)
-      : latestForPrivateChat(a.id)
-    const bLatest = groups[b.id]
-      ? latestForGroup(b.id)
-      : publicChats[b.id]
-      ? latestForPublicChat(b.id)
-      : latestForPrivateChat(b.id)
-    return bLatest - aLatest
-  })
+    ...Object.values(groups).map((group) => ({id: group.id, type: "group"})),
+    ...Array.from(sessions.keys()).map((chatId) => ({id: chatId, type: "private"})),
+    ...Object.keys(publicChats).map((chatId) => ({id: chatId, type: "public"})),
+  ].sort((a, b) => getLatest(b.id) - getLatest(a.id))
 
   return (
     <nav className={className}>
@@ -86,7 +80,7 @@ const ChatList = ({className}: ChatListProps) => {
           </div>
         </NavLink>
         {allChatItems.map(({id, type}) => (
-          <ChatListItem key={id} id={id} isPublic={type === 'public'} />
+          <ChatListItem key={id} id={id} isPublic={type === "public"} />
         ))}
       </div>
     </nav>
