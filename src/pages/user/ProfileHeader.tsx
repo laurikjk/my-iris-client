@@ -4,6 +4,7 @@ import {Link, useNavigate} from "react-router"
 import {useUserStore} from "@/stores/user"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
+import ProfileDropdownButton from "@/shared/components/user/ProfileDropdownButton"
 import {FollowButton} from "@/shared/components/button/FollowButton.tsx"
 import ProfileDetails from "@/pages/user/components/ProfileDetails.tsx"
 import FollowerCount from "@/pages/user/components/FollowerCount.tsx"
@@ -122,7 +123,14 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
                   Edit profile
                 </Link>
               ) : (
-                <FollowButton pubKey={pubKey} small={false} />
+                <>
+                  {/* Show Follow button only when logged in and not self */}
+                  {myPubKey && myPubKey !== pubKeyHex && (
+                    <FollowButton pubKey={pubKey} small={false} />
+                  )}
+                  {/* Show dropdown for all profiles except self */}
+                  {myPubKey !== pubKeyHex && <ProfileDropdownButton pubKey={pubKey} />}
+                </>
               )}
             </div>
           </div>
