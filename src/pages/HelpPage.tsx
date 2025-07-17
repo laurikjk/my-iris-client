@@ -5,7 +5,7 @@ import {
   RiRefreshLine,
   RiUserFollowLine,
   RiHeartLine,
-  RiShieldLine,
+  RiDownload2Line,
 } from "@remixicon/react"
 import RightColumn from "@/shared/components/RightColumn"
 import Trending from "@/shared/components/feed/Trending"
@@ -109,7 +109,7 @@ export const AboutPage = () => {
                   rel="noreferrer"
                   className="flex items-center gap-1"
                 >
-                  <RiShieldLine className="inline" /> Install Iris locally for resilience
+                  <RiDownload2Line className="inline" /> Download Iris for desktop
                 </a>
               </p>
               <p>
