@@ -7,6 +7,7 @@ import ReactDOM from "react-dom/client"
 import {subscribeToDMNotifications, subscribeToNotifications} from "./utils/notifications"
 import {migrateUserState, migratePublicChats} from "./utils/migration"
 import {useSettingsStore} from "@/stores/settings"
+import {useSessionsStore} from "@/stores/sessions"
 import {ndk} from "./utils/ndk"
 import {router} from "@/pages"
 
@@ -19,6 +20,7 @@ if (state.publicKey) {
   subscribeToNotifications()
   subscribeToDMNotifications()
   migratePublicChats()
+  useSessionsStore.getState().createDefaultInvites()
 }
 
 document.title = CONFIG.appName
@@ -53,6 +55,7 @@ useUserStore.subscribe((state) => {
     subscribeToNotifications()
     subscribeToDMNotifications()
     migratePublicChats()
+    useSessionsStore.getState().createDefaultInvites()
   }
 })
 
