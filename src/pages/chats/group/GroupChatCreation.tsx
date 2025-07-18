@@ -98,18 +98,22 @@ const GroupChatCreation = () => {
       }
       addGroup(group)
 
+      const event = {
+        kind: GROUP_INVITE_KIND,
+        content: JSON.stringify(group),
+        created_at: Math.round(Date.now() / 1000),
+        tags: [
+          ["l", groupId],
+          ["ms", Date.now().toString()],
+        ],
+      }
+
       // Send create group message to all invited members except self
       const {sendToUser} = useSessionsStore.getState()
       await Promise.all(
         selectedMembers
           .filter((pubkey: string) => pubkey !== myPubKey)
-          .map((pubkey: string) =>
-            sendToUser(pubkey, {
-              kind: GROUP_INVITE_KIND,
-              content: JSON.stringify(group),
-              tags: [["l", groupId]],
-            })
-          )
+          .map((pubkey: string) => sendToUser(pubkey, event))
       )
 
       navigate(`/chats/group/${groupId}`)
