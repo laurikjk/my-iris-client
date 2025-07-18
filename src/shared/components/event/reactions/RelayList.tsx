@@ -18,9 +18,11 @@ export default function RelayList({relays}: {relays: NDKRelay[]}) {
   )
 
   const relaysToShow = showAll ? dedupedRelays : dedupedRelays.slice(0, maxToShow)
+
+  if (relaysToShow.length === 0) return null
+
   return (
     <div className="px-4 pb-2 pt-1 text-xs text-base-content/50 flex flex-col gap-1 items-start">
-      {relaysToShow.length > 0 && <div>From relays:</div>}
       {relaysToShow.map((relay, i) => (
         <div key={relay.url + i} className="truncate max-w-full">
           {normalizeUrl(relay.url)}
