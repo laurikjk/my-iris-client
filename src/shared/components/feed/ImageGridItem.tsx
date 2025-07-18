@@ -1,4 +1,4 @@
-import {useMemo, MutableRefObject, useState, useEffect} from "react"
+import {useMemo, MutableRefObject, useState, useEffect, useCallback, useRef} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
@@ -21,6 +21,13 @@ type ImageGridItemProps = {
   lastElementRef?: MutableRefObject<HTMLDivElement>
 }
 
+// Use smaller sizes for mobile performance
+const MOBILE_THUMB_SIZE = 120
+const DESKTOP_THUMB_SIZE = 245
+
+// Cache blurhash URLs to prevent recreation
+const blurhashCache = new Map<string, string>()
+
 export const ImageGridItem = ({
   event: initialEvent,
   index,
@@ -34,10 +41,29 @@ export const ImageGridItem = ({
     "content" in initialEvent ? initialEvent : undefined
   )
   const {content} = useSettingsStore()
+  const canvasRefs = useRef<Map<string, HTMLCanvasElement>>(new Map())
 
   const eventIdHex = useMemo(() => {
     return "content" in initialEvent ? initialEvent.id : initialEvent.id
   }, [initialEvent])
+
+  // Cleanup function for canvas elements
+  const cleanupCanvases = useCallback(() => {
+    canvasRefs.current.forEach((canvas) => {
+      const ctx = canvas.getContext("2d")
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+      }
+    })
+    canvasRefs.current.clear()
+  }, [])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupCanvases()
+    }
+  }, [cleanupCanvases])
 
   useEffect(() => {
     if (event) {
@@ -51,13 +77,17 @@ export const ImageGridItem = ({
         setEvent(cached)
         onEventFetched?.(cached)
       } else {
-        fetchEvent({ids: [eventIdHex]}).then((fetched) => {
-          if (fetched) {
-            setEvent(fetched)
-            eventsByIdCache.set(eventIdHex, fetched)
-            onEventFetched?.(fetched)
-          }
-        })
+        fetchEvent({ids: [eventIdHex]})
+          .then((fetched) => {
+            if (fetched) {
+              setEvent(fetched)
+              eventsByIdCache.set(eventIdHex, fetched)
+              onEventFetched?.(fetched)
+            }
+          })
+          .catch((error) => {
+            console.warn("Failed to fetch event:", error)
+          })
       }
     }
   }, [event, eventIdHex, onEventFetched])
@@ -69,7 +99,8 @@ export const ImageGridItem = ({
     ? imageMatch.trim().split(/\s+/)
     : videoMatch?.trim().split(/\s+/) || []
 
-  const width = window.innerWidth > 767 ? 314 : 150
+  // Use smaller sizes for better mobile performance
+  const width = window.innerWidth > 767 ? DESKTOP_THUMB_SIZE : MOBILE_THUMB_SIZE
 
   const imetaTags = urls.map((url) => {
     const tag = event?.tags.find((tag) => tag[0] === "imeta" && tag[1].includes(url))
@@ -85,19 +116,35 @@ export const ImageGridItem = ({
   const blurhashUrls = useMemo(() => {
     return blurhashes.map((blurhash) => {
       if (!blurhash) return null
+
+      // Check cache first
+      const cached = blurhashCache.get(blurhash)
+      if (cached) return cached
+
       try {
-        const pixels = decode(blurhash, 32, 32)
+        // Use smaller canvas size for better performance
+        const canvasSize = 16
+        const pixels = decode(blurhash, canvasSize, canvasSize)
         const canvas = document.createElement("canvas")
-        canvas.width = 32
-        canvas.height = 32
+        canvas.width = canvasSize
+        canvas.height = canvasSize
         const ctx = canvas.getContext("2d")
         if (!ctx) return null
-        const imageData = ctx.createImageData(32, 32)
+
+        const imageData = ctx.createImageData(canvasSize, canvasSize)
         imageData.data.set(pixels)
         ctx.putImageData(imageData, 0, 0)
-        const dataUrl = canvas.toDataURL()
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.8) // Use JPEG with compression
+
+        // Cache the result
+        blurhashCache.set(blurhash, dataUrl)
+
+        // Store canvas reference for cleanup
+        canvasRefs.current.set(blurhash, canvas)
+
         return dataUrl
       } catch (e) {
+        console.warn("Failed to decode blurhash:", e)
         return null
       }
     })
@@ -153,13 +200,15 @@ export const ImageGridItem = ({
       >
         {hasError ? (
           <div
-            className="w-full h-full"
+            className="w-full h-full flex items-center justify-center text-gray-500"
             style={{
               backgroundImage: blurhashUrls[i] ? `url(${blurhashUrls[i]})` : undefined,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
-          />
+          >
+            <Icon name="image-outline" className="w-8 h-8" />
+          </div>
         ) : (
           <ProxyImg
             square={true}
@@ -173,6 +222,7 @@ export const ImageGridItem = ({
               backgroundPosition: "center",
             }}
             onError={() => setLoadErrors((prev) => ({...prev, [i]: true}))}
+            // Loading is handled by the ProxyImg component internally
           />
         )}
         {isVideo && (

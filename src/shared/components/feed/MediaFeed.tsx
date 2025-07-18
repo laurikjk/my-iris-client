@@ -12,6 +12,10 @@ interface MediaFeedProps {
   events: (NDKEvent | {id: string})[]
 }
 
+// Limit memory usage by keeping only recent events
+const MAX_FETCHED_EVENTS = 100
+const PRELOAD_RANGE = 3 // Only preload 3 images before/after current
+
 export default function MediaFeed({events}: MediaFeedProps) {
   const [showModal, setShowModal] = useState(false)
   const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null)
@@ -23,11 +27,14 @@ export default function MediaFeed({events}: MediaFeedProps) {
     Array<{type: "image" | "video"; url: string; event: NDKEvent}>
   >([])
 
+  // Use a Map for better performance and automatic deduplication
+  const [fetchedEventsMap, setFetchedEventsMap] = useState<Map<string, NDKEvent>>(
+    new Map()
+  )
+
   const visibleEvents = useMemo(() => {
     return events.slice(0, displayCount)
   }, [events, displayCount])
-
-  const [fetchedEvents, setFetchedEvents] = useState<NDKEvent[]>([])
 
   const calculateAllMedia = useCallback((events: NDKEvent[]) => {
     const deduplicated = new Map<
@@ -109,10 +116,18 @@ export default function MediaFeed({events}: MediaFeedProps) {
   }
 
   const handleImageClick = (event: NDKEvent, clickedUrl: string) => {
-    const eventsForModal = fetchedEvents.find((e) => e.id === event.id)
-      ? fetchedEvents
-      : [...fetchedEvents, event]
-    const mediaArray = calculateAllMedia(eventsForModal)
+    // Only use currently visible events for modal to save memory
+    const currentFetchedEvents = Array.from(fetchedEventsMap.values())
+    const eventsForModal = currentFetchedEvents.find((e) => e.id === event.id)
+      ? currentFetchedEvents
+      : [...currentFetchedEvents, event]
+
+    // Only calculate media from events that are currently visible
+    const visibleFetchedEvents = eventsForModal.filter((e) =>
+      visibleEvents.some((ve) => ve.id === e.id)
+    )
+
+    const mediaArray = calculateAllMedia(visibleFetchedEvents)
     const mediaIndex = mediaArray.findIndex(
       (media) => media.event.id === event.id && media.url === clickedUrl
     )
@@ -127,17 +142,54 @@ export default function MediaFeed({events}: MediaFeedProps) {
   }
 
   const handleEventFetched = useCallback((event: NDKEvent) => {
-    setFetchedEvents((prev) => {
-      if (prev.find((e) => e.id === event.id)) return prev
-      return [...prev, event]
+    setFetchedEventsMap((prev) => {
+      if (prev.has(event.id)) return prev
+
+      const newMap = new Map(prev)
+      newMap.set(event.id, event)
+
+      // Limit memory usage by keeping only the most recent events
+      if (newMap.size > MAX_FETCHED_EVENTS) {
+        const entries = Array.from(newMap.entries())
+        // Sort by event creation time and keep only the most recent
+        entries.sort(([, a], [, b]) => (b.created_at || 0) - (a.created_at || 0))
+        const limitedEntries = entries.slice(0, MAX_FETCHED_EVENTS)
+        return new Map(limitedEntries)
+      }
+
+      return newMap
     })
   }, [])
+
+  // Clean up events that are no longer visible
+  useEffect(() => {
+    const visibleEventIds = new Set(visibleEvents.map((e) => e.id))
+    setFetchedEventsMap((prev) => {
+      const newMap = new Map()
+      for (const [id, event] of prev) {
+        if (visibleEventIds.has(id)) {
+          newMap.set(id, event)
+        }
+      }
+      return newMap
+    })
+  }, [visibleEvents])
 
   const isModalOpen = showModal
   const hasActiveItem = activeItemIndex !== null
   const hasModalMedia = modalMedia.length > 0
   const isValidIndex = activeItemIndex !== null && activeItemIndex < modalMedia.length
   const shouldShowModal = isModalOpen && hasActiveItem && hasModalMedia && isValidIndex
+
+  // Calculate preload range for better memory management
+  const preloadImages = useMemo(() => {
+    if (!shouldShowModal || activeItemIndex === null) return []
+
+    const start = Math.max(0, activeItemIndex - PRELOAD_RANGE)
+    const end = Math.min(modalMedia.length, activeItemIndex + PRELOAD_RANGE + 1)
+
+    return modalMedia.slice(start, end).map((m) => m.url)
+  }, [shouldShowModal, activeItemIndex, modalMedia])
 
   return (
     <>
@@ -160,8 +212,8 @@ export default function MediaFeed({events}: MediaFeedProps) {
           />
           <PreloadImages
             key={activeItemIndex}
-            images={modalMedia.map((m) => m.url)}
-            currentIndex={activeItemIndex}
+            images={preloadImages}
+            currentIndex={0} // Index within preload range
           />
         </>
       )}
