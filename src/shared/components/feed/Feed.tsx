@@ -1,4 +1,4 @@
-import {useRef, useState, ReactNode, useEffect, useMemo} from "react"
+import {useRef, useState, ReactNode, useEffect, useMemo, memo} from "react"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
@@ -44,7 +44,7 @@ const DefaultEmptyPlaceholder = (
   </div>
 )
 
-function Feed({
+const Feed = memo(function Feed({
   filters,
   displayFilterFn,
   fetchFilterFn,
@@ -239,6 +239,6 @@ function Feed({
       </div>
     </>
   )
-}
+})
 
 export default Feed

@@ -49,6 +49,7 @@ export default function useFeedEvents({
     initialLoadDoneRef.current
   )
   const hasReceivedEventsRef = useRef<boolean>(eventsRef.current.size > 0)
+  const [eventsVersion, setEventsVersion] = useState(0) // Version counter for filtered events
 
   const showNewEvents = () => {
     newEvents.forEach((event) => {
@@ -58,6 +59,7 @@ export default function useFeedEvents({
     })
     setNewEvents(new Map())
     setNewEventsFrom(new Set())
+    setEventsVersion((prev) => prev + 1)
   }
 
   const filterEvents = useCallback(
@@ -103,7 +105,7 @@ export default function useFeedEvents({
     }
 
     return events
-  }, [eventsRef.current.size, filterEvents, sortLikedPosts])
+  }, [eventsVersion, filterEvents, sortLikedPosts])
 
   const eventsByUnknownUsers = useMemo(() => {
     if (!hideEventsByUnknownUsers) {
@@ -117,7 +119,7 @@ export default function useFeedEvents({
         // Only include events that aren't heavily muted
         !shouldHideAuthor(event.pubkey, undefined, true)
     )
-  }, [eventsRef.current.size, displayFilterFn, hideEventsByUnknownUsers, filters.authors])
+  }, [eventsVersion, displayFilterFn, hideEventsByUnknownUsers, filters.authors])
 
   useEffect(() => {
     setLocalFilter(filters)
@@ -162,7 +164,10 @@ export default function useFeedEvents({
       )
       hasReceivedEventsRef.current = true
 
-      const addMain = () => eventsRef.current.set(event.id, event)
+      const addMain = () => {
+        eventsRef.current.set(event.id, event)
+        setEventsVersion((prev) => prev + 1)
+      }
       const addNew = () => {
         setNewEvents((prev) => new Map([...prev, [event.id, event]]))
         setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
@@ -181,6 +186,7 @@ export default function useFeedEvents({
     return () => {
       sub.stop()
       clearTimeout(initialLoadTimeout)
+      markLoadDoneIfHasEvents.cancel()
     }
   }, [JSON.stringify(localFilter)])
 
