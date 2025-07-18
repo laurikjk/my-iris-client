@@ -197,7 +197,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
       }
     }
   } else if (!group) {
-    if (latest?.created_at && latest.sender !== "user") {
+    if (latest?.created_at && latest.pubkey !== "user") {
       const hasUnread = getMillisecondTimestamp(latest) > lastSeenPrivateTime
       if (!lastSeenPrivateTime || hasUnread) {
         unreadBadge = <div className="indicator-item badge badge-primary badge-xs" />

@@ -63,7 +63,6 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
             created_at: event.created_at,
             tags: event.tags,
             kind: event.kind,
-            sender: undefined,
             reactions: {},
           }
           setRepliedToMessage(message)
@@ -87,7 +86,7 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
       onClick={handleScrollToReply}
     >
       <div className="font-semibold">
-        {repliedToMessage.sender === "user" ? (
+        {repliedToMessage.pubkey === "user" ? (
           "You"
         ) : (
           <Name

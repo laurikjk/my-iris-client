@@ -26,14 +26,14 @@ const Chat = ({id}: {id: string}) => {
     if (!sessionEvents) return
 
     Array.from(sessionEvents.entries()).forEach(([, message]) => {
-      if (!haveReply && message.sender !== "user") {
+      if (!haveReply && message.pubkey !== "user") {
         setHaveReply(true)
       }
-      if (!haveSent && message.sender === "user") {
+      if (!haveSent && message.pubkey === "user") {
         setHaveSent(true)
       }
     })
-  }, [id, session, events])
+  }, [id, session, events, haveReply, haveSent])
 
   useEffect(() => {
     if (!id) return

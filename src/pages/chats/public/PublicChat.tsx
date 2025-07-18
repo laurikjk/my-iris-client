@@ -77,12 +77,11 @@ const PublicChat = () => {
 
       const newMessage: MessageType = {
         id: event.id,
-        pubkey: event.pubkey,
+        pubkey: event.pubkey === publicKey ? "user" : event.pubkey,
         content: event.content,
         created_at: event.created_at,
         tags: event.tags,
         kind: CHANNEL_MESSAGE,
-        sender: event.pubkey === publicKey ? "user" : undefined,
         reactions: {},
       }
 
@@ -142,12 +141,11 @@ const PublicChat = () => {
       // Add message to local state
       const newMessage: MessageType = {
         id: event.id,
-        pubkey: publicKey,
+        pubkey: "user",
         content: content,
         created_at: Math.floor(Date.now() / 1000),
         tags: event.tags,
         kind: CHANNEL_MESSAGE,
-        sender: "user",
         reactions: {},
       }
 

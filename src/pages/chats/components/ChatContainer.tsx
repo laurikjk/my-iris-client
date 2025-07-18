@@ -81,7 +81,7 @@ const ChatContainer = ({
       // If there's a new message and it's from the user, scroll to bottom
       if (newMessageIds.length > 0) {
         const newMessage = messages.get(newMessageIds[0])
-        if (newMessage && newMessage.sender === "user") {
+        if (newMessage && newMessage.pubkey === "user") {
           scrollToBottom()
         } else if (wasAtBottomRef.current) {
           // If user was at bottom, keep them there

@@ -57,9 +57,7 @@ export const groupMessages = (
 
         // For public chats, we need to handle undefined sender values
         // Messages with the same pubkey should be grouped together
-        const isSameSender =
-          (message.sender || message.pubkey) ===
-          (lastMessage.sender || lastMessage.pubkey)
+        const isSameSender = message.pubkey === lastMessage.pubkey
 
         if (isSameSender && timeDiff <= timeThreshold) {
           currentGroup.push(message)

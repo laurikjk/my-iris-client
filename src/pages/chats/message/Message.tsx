@@ -16,7 +16,6 @@ import {GROUP_INVITE_KIND} from "../utils/constants"
 import {UserRow} from "@/shared/components/user/UserRow"
 
 export type MessageType = Rumor & {
-  sender?: string
   reactions?: Record<string, string>
 }
 
@@ -81,7 +80,7 @@ const Message = ({
   onSendReaction,
   reactions: propReactions,
 }: MessageProps) => {
-  const isUser = message.sender === "user"
+  const isUser = message.pubkey === "user"
   const {events} = useEventsStore()
   const [localReactions, setLocalReactions] = useState<Record<string, string>>(
     propReactions || {}

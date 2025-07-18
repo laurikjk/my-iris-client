@@ -3,7 +3,6 @@ import type {MessageType} from "@/pages/chats/message/Message"
 import * as messageRepository from "@/utils/messageRepository"
 import {REACTION_KIND} from "@/pages/chats/utils/constants"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {useUserStore} from "./user"
 import {create} from "zustand"
 
 const addToMap = (
@@ -38,10 +37,7 @@ const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
     const [, messageId] = eTag
     const oldMsg = await messageRepository.getById(messageId)
 
-    const pubKey =
-      message?.sender === "user"
-        ? useUserStore.getState().publicKey
-        : sessionId.split(":")[0]
+    const pubKey = message.pubkey || sessionId.split(":")[0]
 
     if (oldMsg) {
       return {

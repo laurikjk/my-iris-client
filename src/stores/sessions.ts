@@ -77,12 +77,8 @@ const subscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
 
 const routeEventToStore = (sessionId: string, message: MessageType) => {
   const from = sessionId.split(":")[0]
-  // Only set sender for received messages, preserve "user" for user messages
-  if (message.sender !== "user") {
-    message.sender = from
-  }
   // Set pubkey to the original message pubkey, or from if not set
-  if (!message.pubkey) {
+  if (!message.pubkey || message.pubkey !== "user") {
     message.pubkey = from
   }
   const groupLabelTag = message.tags?.find((tag: string[]) => tag[0] === "l")
@@ -193,7 +189,7 @@ const store = create<SessionStore>()(
         const {event: publishedEvent, innerEvent} = session.sendEvent(event)
         const message: MessageType = {
           ...innerEvent,
-          sender: "user",
+          pubkey: "user",
           reactions: {},
         }
         // Optimistic update
