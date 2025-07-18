@@ -63,23 +63,49 @@ const HyperText = memo(
 
       if (truncate && !isExpanded) {
         let isTruncated = false
-        const truncatedChildren = result.reduce(
-          (acc: Array<ReactNode | string>, child) => {
-            if (typeof child === "string") {
-              if (charCount + child.length > truncate) {
-                acc.push(child.substring(0, truncate - charCount))
-                isTruncated = true
-                return acc
-              }
-              charCount += child.length
-            }
-            acc.push(child)
-            return acc
-          },
-          [] as Array<ReactNode | string>
-        )
 
-        result = truncatedChildren
+        // First, find the position of the second media embed
+        let mediaEmbedCount = 0
+        let secondEmbedIndex = -1
+
+        for (let i = 0; i < result.length; i++) {
+          const child = result[i]
+          if (child && typeof child === "object" && "key" in child) {
+            const isMediaEmbed = child.key && !child.key.includes("-inline")
+            if (isMediaEmbed) {
+              mediaEmbedCount++
+              if (mediaEmbedCount === 2) {
+                secondEmbedIndex = i
+                break
+              }
+            }
+          }
+        }
+
+        // If we found a second media embed, truncate everything from that point
+        if (secondEmbedIndex !== -1) {
+          result = result.slice(0, secondEmbedIndex)
+          isTruncated = true
+        } else {
+          // No second media embed found, apply text truncation as before
+          const truncatedChildren = result.reduce(
+            (acc: Array<ReactNode | string>, child) => {
+              if (typeof child === "string") {
+                if (charCount + child.length > truncate) {
+                  acc.push(child.substring(0, truncate - charCount))
+                  isTruncated = true
+                  return acc
+                }
+                charCount += child.length
+              }
+              acc.push(child)
+              return acc
+            },
+            [] as Array<ReactNode | string>
+          )
+          result = truncatedChildren
+        }
+
         if (isTruncated && expandable) {
           result.push(
             <span key="show-more">
