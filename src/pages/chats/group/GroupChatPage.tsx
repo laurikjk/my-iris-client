@@ -48,6 +48,28 @@ const GroupChatPage = () => {
     )
   }
 
+  const handleSendReaction = async (messageId: string, emoji: string) => {
+    if (!myPubKey) return
+
+    const event = {
+      kind: 7, // REACTION_KIND
+      content: emoji,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [
+        ["e", messageId],
+        ["l", group.id],
+        ["ms", String(Date.now())],
+      ],
+    }
+
+    // Send reaction to all group members except self
+    await Promise.all(
+      group.members
+        .filter((pubkey: string) => pubkey !== myPubKey)
+        .map((pubkey: string) => sendToUser(pubkey, event))
+    )
+  }
+
   return (
     <>
       <GroupChatHeader groupId={id} />
@@ -57,13 +79,13 @@ const GroupChatPage = () => {
         onReply={setReplyingTo}
         showAuthor={true}
         isPublicChat={false}
+        onSendReaction={handleSendReaction}
       />
       <MessageForm
         id={id}
+        onSendMessage={handleSendMessage}
         replyingTo={replyingTo}
         setReplyingTo={setReplyingTo}
-        onSendMessage={handleSendMessage}
-        isPublicChat={false}
       />
     </>
   )
