@@ -17,6 +17,7 @@ import {registerRoute} from "workbox-routing"
 import {clientsClaim} from "workbox-core"
 import {VerifiedEvent} from "nostr-tools"
 import localforage from "localforage"
+import {GROUP_INVITE_KIND} from "./pages/chats/utils/constants"
 
 // eslint-disable-next-line no-undef
 declare const self: ServiceWorkerGlobalScope & {
@@ -225,6 +226,7 @@ type DecryptResult =
     }
   | {
       success: true
+      kind: number
       content: string
       sessionId: string
     }
@@ -267,6 +269,7 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
             }
           : {
               success: true,
+              kind: innerEvent.kind,
               content: innerEvent.content,
               sessionId,
             }
@@ -300,17 +303,27 @@ self.addEventListener("push", (event) => {
       if (data.event.kind === MESSAGE_EVENT_KIND) {
         const result = await tryDecryptPrivateDM(data)
         if (result.success) {
-          await self.registration.showNotification(
-            NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].title,
-            {
-              body: result.content,
+          if (result.kind === GROUP_INVITE_KIND) {
+            await self.registration.showNotification("New group invite", {
               icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
               data: {
                 url: `/chats/${encodeURIComponent(result.sessionId)}`,
                 event: data.event,
               },
-            }
-          )
+            })
+          } else {
+            await self.registration.showNotification(
+              NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].title,
+              {
+                body: result.content,
+                icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
+                data: {
+                  url: `/chats/${encodeURIComponent(result.sessionId)}`,
+                  event: data.event,
+                },
+              }
+            )
+          }
           return
         }
       }

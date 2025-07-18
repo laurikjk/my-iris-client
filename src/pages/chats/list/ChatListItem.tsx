@@ -6,7 +6,7 @@ import {Avatar} from "@/shared/components/user/Avatar"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {Name} from "@/shared/components/user/Name"
-import {CHANNEL_MESSAGE} from "../utils/constants"
+import {CHANNEL_MESSAGE, GROUP_INVITE_KIND} from "../utils/constants"
 import {useSessionsStore} from "@/stores/sessions"
 import {useLocation, NavLink} from "react-router"
 import {MessageType} from "../message/Message"
@@ -32,6 +32,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     content: string
     created_at: number
     pubkey: string
+    kind: number
   } | null>(null)
   const [showPlaceholder, setShowPlaceholder] = useState(false)
   const {events} = useEventsStore()
@@ -59,6 +60,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
       content: string
       created_at: number
       pubkey: string
+      kind: number
     } | null = null
 
     const debouncedUpdate = debounce(() => {
@@ -82,6 +84,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
           content: event.content,
           created_at: event.created_at,
           pubkey: event.pubkey,
+          kind: event.kind,
         }
         debouncedUpdate()
       }
@@ -103,13 +106,38 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     return () => clearTimeout(timer)
   }, [chat])
 
-  const getPreviewText = () => {
+  const getGroupInvitePreview = (pubkey: string, isCurrentUser: boolean) => {
+    return (
+      <span className="italic">
+        {isCurrentUser ? (
+          "You created the group"
+        ) : (
+          <>
+            <Name pubKey={pubkey} /> added you to the group
+          </>
+        )}
+      </span>
+    )
+  }
+
+  const getPreviewContent = () => {
     if (isPublic && latestMessage?.content) {
+      // Show special preview for group invite messages
+      if (latestMessage.kind === GROUP_INVITE_KIND) {
+        return getGroupInvitePreview(
+          latestMessage.pubkey,
+          latestMessage.pubkey === myPubKey
+        )
+      }
       const content = latestMessage.content
       return content.length > 30 ? content.slice(0, 30) + "..." : content
     }
 
     if (latest?.content) {
+      // Show special preview for group invite messages
+      if (latest.kind === GROUP_INVITE_KIND) {
+        return getGroupInvitePreview(latest.pubkey, latest.pubkey === "user")
+      }
       const content = latest.content
       return content.length > 30 ? content.slice(0, 30) + "..." : content
     }
@@ -117,7 +145,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     return ""
   }
 
-  const previewText = getPreviewText()
+  const previewContent = getPreviewContent()
 
   // Avatar rendering
   let avatar
@@ -252,7 +280,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
           </div>
           <div className="flex flex-row items-center justify-between gap-2">
             <span className="text-sm text-base-content/70 min-h-[1.25rem]">
-              {previewText}
+              {previewContent}
             </span>
             {unreadBadge}
           </div>
