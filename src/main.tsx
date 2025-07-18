@@ -10,6 +10,7 @@ import {useSettingsStore} from "@/stores/settings"
 import {useSessionsStore} from "@/stores/sessions"
 import {ndk} from "./utils/ndk"
 import {router} from "@/pages"
+import socialGraph from "./utils/socialGraph"
 
 ndk()
 
@@ -20,6 +21,7 @@ if (state.publicKey) {
   subscribeToNotifications()
   subscribeToDMNotifications()
   migratePublicChats()
+  socialGraph().recalculateFollowDistances()
   useSessionsStore.getState().createDefaultInvites()
 }
 

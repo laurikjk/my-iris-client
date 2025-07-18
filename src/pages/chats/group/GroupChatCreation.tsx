@@ -1,7 +1,4 @@
-import {
-  subscribeToDoubleRatchetUsers,
-  DoubleRatchetUser,
-} from "../utils/doubleRatchetUsers"
+import {DoubleRatchetUser} from "../utils/doubleRatchetUsers"
 import {MemberSelection, GroupDetailsStep} from "./components"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {useState, useEffect, FormEvent} from "react"
@@ -28,12 +25,6 @@ const GroupChatCreation = () => {
   const [isCreating, setIsCreating] = useState(false)
   const myPubKey = useUserStore((state) => state.publicKey)
   const addGroup = useGroupsStore((state) => state.addGroup)
-
-  useEffect(() => {
-    if (myPubKey) {
-      subscribeToDoubleRatchetUsers(myPubKey)
-    }
-  }, [myPubKey])
 
   // Handle browser back button
   useEffect(() => {

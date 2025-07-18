@@ -163,6 +163,7 @@ export const socialGraphLoaded = new Promise((resolve) => {
 })
 
 function setupSubscription(publicKey: string) {
+  instance.setRoot(publicKey)
   sub?.stop()
   sub = ndk().subscribe({
     kinds: [3, 10000],

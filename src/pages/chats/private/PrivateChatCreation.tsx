@@ -1,59 +1,34 @@
-import {useState, useEffect, useRef} from "react"
+import {useEffect, useRef} from "react"
 import {useNavigate} from "react-router"
 import {VerifiedEvent} from "nostr-tools"
 import {NDKSubscription} from "@nostr-dev-kit/ndk"
-import {UserRow} from "@/shared/components/user/UserRow"
 import {useSessionsStore} from "@/stores/sessions"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
-import {
-  searchDoubleRatchetUsers,
-  subscribeToDoubleRatchetUsers,
-  DoubleRatchetUser,
-  getDoubleRatchetUsersCount,
-} from "../utils/doubleRatchetUsers"
 import {Invite} from "nostr-double-ratchet/src"
 import DoubleRatchetInfo from "../group/components/DoubleRatchetInfo"
+import {DoubleRatchetUserSearch} from "../components/DoubleRatchetUserSearch"
+import {DoubleRatchetUser} from "../utils/doubleRatchetUsers"
 
 const PrivateChatCreation = () => {
   const navigate = useNavigate()
   const {sessions} = useSessionsStore()
-  const [searchInput, setSearchInput] = useState("")
-  const [searchResults, setSearchResults] = useState<DoubleRatchetUser[]>([])
-  const [doubleRatchetCount, setDoubleRatchetCount] = useState(0)
   const myPubKey = useUserStore((state) => state.publicKey)
   const subRef = useRef<NDKSubscription | null>(null)
 
   useEffect(() => {
-    subscribeToDoubleRatchetUsers(myPubKey)
     if (sessions.size === 0) {
       navigate("/chats/new", {replace: true})
     }
-    const interval = setInterval(() => {
-      setDoubleRatchetCount(getDoubleRatchetUsersCount())
-    }, 1000)
-    return () => {
-      clearInterval(interval)
-    }
-  }, [navigate, myPubKey, sessions.size])
+  }, [navigate, sessions.size])
 
-  const handleSearchChange = (value: string) => {
-    setSearchInput(value)
-    if (!value.trim()) {
-      setSearchResults([])
-      return
-    }
-    const results = searchDoubleRatchetUsers(value)
-    setSearchResults(results.slice(0, 10))
-  }
-
-  const handleStartChat = async (pubkey: string) => {
+  const handleStartChat = async (user: DoubleRatchetUser) => {
     if (!myPubKey) return
     // Subscribe function as in ProfileHeader
     subRef.current?.stop()
     const sub = ndk().subscribe({
       kinds: [30078],
-      authors: [pubkey],
+      authors: [user.pubkey],
       "#l": ["double-ratchet/invites"],
     })
     subRef.current = sub
@@ -94,33 +69,12 @@ const PrivateChatCreation = () => {
       <div className="m-4 p-4 md:p-8 rounded-lg bg-base-100 flex flex-col gap-6">
         <div>
           <h2 className="text-xl font-semibold mb-4">Search Users</h2>
-          <div className="flex flex-col gap-4">
-            <div>
-              <input
-                type="text"
-                className="input input-bordered w-full"
-                placeholder="Search for users"
-                value={searchInput}
-                onChange={(e) => handleSearchChange(e.target.value)}
-              />
-            </div>
-            <p className="text-sm text-base-content/70">
-              {doubleRatchetCount} followed users have enabled secure DMs
-            </p>
-          </div>
-          {searchResults.length > 0 && (
-            <div className="mt-4 flex flex-col gap-2">
-              {searchResults.map((user) => (
-                <button
-                  key={user.pubkey}
-                  className="btn btn-ghost justify-start text-left"
-                  onClick={() => handleStartChat(user.pubkey)}
-                >
-                  <UserRow pubKey={user.pubkey} linkToProfile={false} />
-                </button>
-              ))}
-            </div>
-          )}
+          <DoubleRatchetUserSearch
+            placeholder="Search for users"
+            onUserSelect={handleStartChat}
+            maxResults={10}
+            showCount={true}
+          />
         </div>
       </div>
       <hr className="mx-4 my-6 border-base-300" />

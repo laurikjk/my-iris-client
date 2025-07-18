@@ -1,7 +1,8 @@
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import socialGraph from "@/utils/socialGraph"
 import {profileCache} from "@/utils/memcache"
+import {handleProfile} from "@/utils/profileSearch"
 import {ndk} from "@/utils/ndk"
+import debounce from "lodash/debounce"
 import Fuse from "fuse.js"
 
 export interface DoubleRatchetUser {
@@ -14,45 +15,106 @@ let fuse: Fuse<DoubleRatchetUser> | null = null
 
 const doubleRatchetUsers: Set<string> = new Set()
 const userData: Map<string, DoubleRatchetUser> = new Map()
-let subscribed = false
 
-// Update the search index with new user data
-export const updateDoubleRatchetSearchIndex = (pubkey: string) => {
-  // Update all users' profiles in the map
-  const updatedUsers = new Map<string, DoubleRatchetUser>()
+// Subscription system for reactive updates
+const subscribers: Set<() => void> = new Set()
 
-  // First add/update the new user
-  const profile = profileCache.get(pubkey)
-  if (profile) {
-    updatedUsers.set(pubkey, {
-      pubkey,
-      profile,
-    })
+const notifySubscribers = () => {
+  subscribers.forEach((callback) => callback())
+}
+
+// Subscribe to doubleRatchetUsers changes
+export const subscribeToDoubleRatchetUsersChanges = (callback: () => void) => {
+  subscribers.add(callback)
+  return () => {
+    subscribers.delete(callback)
   }
+}
 
-  // Then update all existing users' profiles
-  for (const [key] of userData) {
-    const updatedProfile = profileCache.get(key)
-    if (updatedProfile) {
-      updatedUsers.set(key, {
-        pubkey: key,
-        profile: updatedProfile,
-      })
-    }
-  }
-
-  // Replace the old map with the updated one
-  userData.clear()
-  updatedUsers.forEach((user) => userData.set(user.pubkey, user))
-
-  // Recreate the Fuse.js index
+// Recreate the Fuse.js search index
+const recreateSearchIndex = () => {
   fuse = new Fuse(Array.from(userData.values()), {
     keys: ["profile.name", "profile.display_name", "profile.username", "profile.nip05"],
     threshold: 0.3,
     includeScore: true,
   })
+}
 
+// Update the search index with new user data (internal)
+const updateDoubleRatchetSearchIndexImmediate = () => {
+  // Update all users' profiles in the map
+  const updatedUsers = new Map<string, DoubleRatchetUser>()
+
+  // Get all users that have profiles
+  doubleRatchetUsers.forEach((userPubkey) => {
+    const profile = profileCache.get(userPubkey)
+    if (profile) {
+      updatedUsers.set(userPubkey, {
+        pubkey: userPubkey,
+        profile,
+      })
+    }
+  })
+
+  // Replace the old map with the updated one
+  userData.clear()
+  updatedUsers.forEach((user) => userData.set(user.pubkey, user))
+
+  recreateSearchIndex()
   console.log("Updated double ratchet search index", userData.size)
+
+  // If we have users without profiles, fetch them all at once
+  const usersWithoutProfiles = Array.from(doubleRatchetUsers).filter(
+    (pubkey) => !profileCache.get(pubkey)
+  )
+
+  if (usersWithoutProfiles.length > 0) {
+    console.log("Fetching profiles for", usersWithoutProfiles.length, "users")
+    const sub = ndk().subscribe(
+      {kinds: [0], authors: usersWithoutProfiles},
+      {closeOnEose: true}
+    )
+
+    sub.on("event", (event) => {
+      if (event.kind === 0) {
+        try {
+          const profile = JSON.parse(event.content)
+          profile.created_at = event.created_at
+          profileCache.set(event.pubkey, profile)
+          handleProfile(event.pubkey, profile)
+        } catch (e) {
+          console.warn("Failed to parse profile for", event.pubkey, e)
+        }
+      }
+    })
+
+    // Update search index again when profiles are loaded
+    sub.on("eose", () => {
+      updateDoubleRatchetSearchIndexImmediate()
+    })
+  }
+
+  // Notify subscribers
+  notifySubscribers()
+}
+
+// Debounced version to prevent excessive rebuilds
+const updateDoubleRatchetSearchIndex = debounce(
+  updateDoubleRatchetSearchIndexImmediate,
+  300
+)
+
+// Add a user to the doubleRatchetUsers set
+export const addDoubleRatchetUser = (pubkey: string) => {
+  doubleRatchetUsers.add(pubkey)
+  updateDoubleRatchetSearchIndex()
+}
+
+// Remove a user from the doubleRatchetUsers set
+export const removeDoubleRatchetUser = (pubkey: string) => {
+  doubleRatchetUsers.delete(pubkey)
+  userData.delete(pubkey)
+  updateDoubleRatchetSearchIndex()
 }
 
 // Search for double ratchet users using the Fuse.js index
@@ -65,37 +127,14 @@ export const searchDoubleRatchetUsers = (query: string): DoubleRatchetUser[] => 
   return results.map((result) => result.item)
 }
 
-// Get a user from the map
-export const getDoubleRatchetUser = (pubkey: string): DoubleRatchetUser | undefined => {
-  return userData.get(pubkey)
+// Get all double ratchet users
+export const getAllDoubleRatchetUsers = (): DoubleRatchetUser[] => {
+  return Array.from(userData.values())
 }
 
-export const subscribeToDoubleRatchetUsers = (myPubKey: string) => {
-  if (myPubKey && !subscribed) {
-    console.log("Subscribing to double ratchet users")
-    subscribed = true
-    const authors = Array.from(socialGraph().getUsersByFollowDistance(1))
-    authors.push(myPubKey) // sometimes we want to chat with ourselves
-    const sub = ndk().subscribe({
-      kinds: [30078],
-      authors,
-      "#l": ["double-ratchet/invites"],
-    })
-    sub.on("event", (event) => {
-      console.log("Received event", event)
-      if (event.kind !== 30078) {
-        return
-      }
-      if (event.tags.length > 0) {
-        doubleRatchetUsers.add(event.pubkey)
-        updateDoubleRatchetSearchIndex(event.pubkey)
-      } else {
-        doubleRatchetUsers.delete(event.pubkey)
-        userData.delete(event.pubkey)
-      }
-    })
-  }
-  return doubleRatchetUsers
+// Get all pubkeys from the doubleRatchetUsers Set (for cleanup)
+export const getAllDoubleRatchetUserPubkeys = (): string[] => {
+  return Array.from(doubleRatchetUsers)
 }
 
 export const getDoubleRatchetUsersCount = () => {
