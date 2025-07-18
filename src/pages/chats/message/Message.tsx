@@ -147,10 +147,20 @@ const Message = ({
 
   if (message.kind === GROUP_INVITE_KIND) {
     console.log("invite", message)
+    let content = null
+    if (message.pubkey === "user") {
+      content = "You created the group"
+    } else {
+      content = (
+        <>
+          <UserRow pubKey={message.pubkey} showBadge={true} avatarWidth={24} />
+          <span>added you to the group</span>
+        </>
+      )
+    }
     return (
-      <div className="flex items-center p-4 bg-base-200 rounded-xl my-2 justify-center">
-        <UserRow pubKey={message.pubkey} showBadge={true} avatarWidth={24} />
-        <span>added you to the group</span>
+      <div className="flex items-center p-4 bg-base-200 rounded-xl my-2 justify-center text-sm">
+        {content}
       </div>
     )
   }

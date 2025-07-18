@@ -40,17 +40,6 @@ const GroupChatPage = () => {
       ],
     }
 
-    // Add message locally with pubkey: "user" for proper grouping
-    const userMessage: MessageType = {
-      ...event,
-      id: crypto.randomUUID(), // Generate a local ID
-      pubkey: "user",
-      reactions: {},
-    }
-
-    // Add to local events store
-    useEventsStore.getState().upsert(id, userMessage)
-
     // Send to all group members except self
     await Promise.all(
       group.members
