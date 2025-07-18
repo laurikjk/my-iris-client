@@ -12,6 +12,7 @@ type Props = {
   onClick?: (ev: MouseEvent) => void
   alt?: string
   hideBroken?: boolean
+  loadOriginalIfProxyFails?: boolean
 }
 
 const safeOrigins = [
@@ -92,11 +93,18 @@ const ProxyImg = (props: Props) => {
       props.onError?.()
       if (props.hideBroken) setSrc("")
     } else {
-      // The proxy failed or timed out, so switch to the original
-      // and cache this failure for future requests
+      // The proxy failed or timed out
       imgproxyFailureCache.set(props.src, true)
-      setProxyFailed(true)
-      setSrc(props.src)
+      if (props.loadOriginalIfProxyFails === false) {
+        // Do not load from original source, treat as failure
+        setLoadFailed(true)
+        props.onError?.()
+        if (props.hideBroken) setSrc("")
+      } else {
+        // Switch to the original source
+        setProxyFailed(true)
+        setSrc(props.src)
+      }
     }
   }
 

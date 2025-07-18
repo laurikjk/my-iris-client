@@ -118,21 +118,23 @@ export default function MediaFeed({events}: MediaFeedProps) {
   const handleImageClick = (event: NDKEvent, clickedUrl: string) => {
     // Use all available events for modal, not just fetched ones
     const allFetchedEvents = Array.from(fetchedEventsMap.values())
-    
+
     // Create a combined array of all events (fetched + unfetched)
-    const allEvents = events.map(eventItem => {
-      // If we have the full event fetched, use it
-      const fetchedEvent = allFetchedEvents.find(fe => fe.id === eventItem.id)
-      if (fetchedEvent) {
-        return fetchedEvent
-      }
-      // If it's already a full event, use it
-      if ('content' in eventItem) {
-        return eventItem
-      }
-      // Skip unfetched events for now (they'll be fetched on demand)
-      return null
-    }).filter(Boolean) as NDKEvent[]
+    const allEvents = events
+      .map((eventItem) => {
+        // If we have the full event fetched, use it
+        const fetchedEvent = allFetchedEvents.find((fe) => fe.id === eventItem.id)
+        if (fetchedEvent) {
+          return fetchedEvent
+        }
+        // If it's already a full event, use it
+        if ("content" in eventItem) {
+          return eventItem
+        }
+        // Skip unfetched events for now (they'll be fetched on demand)
+        return null
+      })
+      .filter(Boolean) as NDKEvent[]
 
     // Calculate media from all available events
     const mediaArray = calculateAllMedia(allEvents)

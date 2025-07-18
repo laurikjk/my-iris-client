@@ -115,7 +115,8 @@ const ImageGridItem = memo(function ImageGridItem({
   }, [imageMatch, videoMatch])
 
   // Use smaller sizes for better mobile performance
-  const width = window.innerWidth > 767 ? DESKTOP_THUMB_SIZE : MOBILE_THUMB_SIZE
+  const isMobile = window.innerWidth <= 767
+  const width = isMobile ? MOBILE_THUMB_SIZE : DESKTOP_THUMB_SIZE
 
   const imetaTags = useMemo(() => {
     return urls.map((url) => {
@@ -131,6 +132,41 @@ const ImageGridItem = memo(function ImageGridItem({
       return blurhashPart ? blurhashPart.split(" ")[1] : null
     })
   }, [imetaTags])
+
+  // if it's not a gif and imeta indicates it's fairly small, load the original
+  // otherwise we might run out of mem and crash on mobile
+  const loadOriginalIfProxyFails = useMemo(() => {
+    return urls.map((url, i) => {
+      console.log("imeta", imetaTags[i])
+      // On desktop, always load original if proxy fails
+      if (!isMobile) return true
+
+      // On mobile, only load original for small, non-gif images
+      const tag = imetaTags[i]
+      if (!tag) return false
+
+      // Check if it's not a gif
+      const mimeType = tag.find((part) => part.startsWith("m "))?.split(" ")[1]
+      const isGif = mimeType === "image/gif" || url.toLowerCase().includes(".gif")
+      if (isGif) return false
+
+      // Check if it's fairly small (under 500KB or dimensions under 800x600)
+      const sizeStr = tag.find((part) => part.startsWith("size "))?.split(" ")[1]
+      const dimStr = tag.find((part) => part.startsWith("dim "))?.split(" ")[1]
+
+      if (sizeStr) {
+        const size = parseInt(sizeStr, 10)
+        if (size < 500000) return true // Less than 500KB
+      }
+
+      if (dimStr) {
+        const [width, height] = dimStr.split("x").map((d) => parseInt(d, 10))
+        if (width && height && width < 800 && height < 800) return true
+      }
+
+      return false
+    })
+  }, [urls, imetaTags, isMobile])
 
   const blurhashUrls = useMemo(() => {
     return blurhashes.map((blurhash) => {
@@ -216,6 +252,7 @@ const ImageGridItem = memo(function ImageGridItem({
               backgroundPosition: "center",
             }}
             onError={() => setLoadErrors((prev) => ({...prev, [i]: true}))}
+            loadOriginalIfProxyFails={loadOriginalIfProxyFails[i]}
             // Loading is handled by the ProxyImg component internally
           />
         )}
