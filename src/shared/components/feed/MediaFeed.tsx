@@ -191,6 +191,14 @@ export default function MediaFeed({events}: MediaFeedProps) {
     return modalMedia.slice(start, end).map((m) => m.url)
   }, [shouldShowModal, activeItemIndex, modalMedia])
 
+  // Calculate the current index within the preload range
+  const currentPreloadIndex = useMemo(() => {
+    if (!shouldShowModal || activeItemIndex === null) return 0
+
+    const start = Math.max(0, activeItemIndex - PRELOAD_RANGE)
+    return activeItemIndex - start
+  }, [shouldShowModal, activeItemIndex])
+
   return (
     <>
       {shouldShowModal && (
@@ -210,11 +218,7 @@ export default function MediaFeed({events}: MediaFeedProps) {
             currentIndex={activeItemIndex}
             totalCount={modalMedia.length}
           />
-          <PreloadImages
-            key={activeItemIndex}
-            images={preloadImages}
-            currentIndex={0} // Index within preload range
-          />
+          <PreloadImages images={preloadImages} currentIndex={currentPreloadIndex} />
         </>
       )}
 

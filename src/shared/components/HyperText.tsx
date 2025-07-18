@@ -1,6 +1,5 @@
 import {MouseEvent, ReactNode, useState, memo, useMemo, useCallback} from "react"
 import reactStringReplace from "react-string-replace"
-import {useSettingsStore} from "@/stores/settings"
 
 import {Rumor} from "nostr-double-ratchet/src"
 import {allEmbeds, smallEmbeds} from "./embed"
@@ -23,7 +22,6 @@ const HyperText = memo(
   }) => {
     const [isExpanded, setIsExpanded] = useState(false)
     const content = children.trim()
-    const settings = useSettingsStore()
 
     const toggleShowMore = useCallback(
       (e: MouseEvent<HTMLAnchorElement>) => {
@@ -33,11 +31,6 @@ const HyperText = memo(
       [isExpanded]
     )
 
-    // Memoize the hide setting separately to avoid unnecessary re-renders
-    const hideEventsByUnknownUsers = useMemo(() => {
-      return settings.content?.hideEventsByUnknownUsers === false
-    }, [settings.content?.hideEventsByUnknownUsers])
-
     const processedChildren = useMemo(() => {
       // Early return if no content
       if (!content) return []
@@ -45,10 +38,7 @@ const HyperText = memo(
       let result: Array<ReactNode | string> = [content]
       const embeds = small ? smallEmbeds : allEmbeds
 
-      // Process embeds only if we have content and settings allow it
       for (const embed of embeds) {
-        if (embed.settingsKey && hideEventsByUnknownUsers) continue
-
         result = reactStringReplace(result, embed.regex, (match, i) => (
           <embed.component
             match={match}
@@ -59,7 +49,7 @@ const HyperText = memo(
         ))
       }
       return result
-    }, [content, small, hideEventsByUnknownUsers, event])
+    }, [content, small, event])
 
     // Handle truncation and expansion
     const finalChildren = useMemo(() => {

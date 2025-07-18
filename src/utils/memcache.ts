@@ -12,6 +12,9 @@ export const profileCache = new LRUCache<string, NDKUserProfile>({maxSize: 10000
 // Cache for NIP-05 verification results
 export const nip05VerificationCache = new LRUCache<string, boolean>({maxSize: 1000})
 
+// Cache for imgproxy failures - track URLs that failed to load through proxy
+export const imgproxyFailureCache = new LRUCache<string, boolean>({maxSize: 100})
+
 localforage
   .getItem<string[]>("seenEventIds")
   .then((s) => {

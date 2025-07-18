@@ -1,5 +1,6 @@
 import {CSSProperties, useEffect, useState, MouseEvent, useRef} from "react"
 import {generateProxyUrl} from "../utils/imgproxy"
+import {imgproxyFailureCache} from "@/utils/memcache"
 
 type Props = {
   src: string
@@ -36,13 +37,21 @@ const ProxyImg = (props: Props) => {
 
   useEffect(() => {
     let mySrc = props.src
+
+    // Check if this URL has previously failed through imgproxy
+    const hasProxyFailed = imgproxyFailureCache.has(props.src)
+
     if (
       props.src &&
       !props.src.startsWith("data:image") &&
+      !hasProxyFailed && // Skip proxy if it previously failed for this URL
       (!shouldSkipProxy(props.src) || props.width)
     ) {
       mySrc = generateProxyUrl(props.src, {width: props.width, square: props.square})
       setSrc(mySrc)
+    } else {
+      // Use original URL if proxy previously failed or should be skipped
+      setSrc(props.src)
     }
 
     return () => {
@@ -84,6 +93,8 @@ const ProxyImg = (props: Props) => {
       if (props.hideBroken) setSrc("")
     } else {
       // The proxy failed or timed out, so switch to the original
+      // and cache this failure for future requests
+      imgproxyFailureCache.set(props.src, true)
       setProxyFailed(true)
       setSrc(props.src)
     }
