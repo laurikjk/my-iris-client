@@ -12,9 +12,11 @@ import classNames from "classnames"
 import {Link} from "react-router"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
+import {GROUP_INVITE_KIND} from "../utils/constants"
+import {UserRow} from "@/shared/components/user/UserRow"
 
 export type MessageType = Rumor & {
-  sender?: "user"
+  sender?: string
   reactions?: Record<string, string>
 }
 
@@ -30,8 +32,7 @@ type MessageProps = {
 }
 
 // Moved regex outside component to avoid recreation on each render
-const EMOJI_REGEX =
-  /^(\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}]|\p{Emoji_Component}|\u200D|[\u{E0020}-\u{E007F}])+$/u
+const EMOJI_REGEX = /^[\p{Extended_Pictographic}\p{Emoji_Presentation}]+$/u
 
 // Extracted time formatting logic
 const formatMessageTime = (timestamp: number): string => {
@@ -144,6 +145,16 @@ const Message = ({
     () => formatMessageTime(getMillisecondTimestamp(message)),
     [message]
   )
+
+  if (message.kind === GROUP_INVITE_KIND) {
+    console.log("invite", message)
+    return (
+      <div className="flex items-center p-4 bg-base-200 rounded-xl my-2 justify-center">
+        <UserRow pubKey={message.pubkey} showBadge={true} avatarWidth={24} />
+        <span>added you to the group</span>
+      </div>
+    )
+  }
 
   return (
     <div

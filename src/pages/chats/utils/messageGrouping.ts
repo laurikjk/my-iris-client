@@ -1,6 +1,7 @@
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {MessageType} from "../message/Message"
+import {GROUP_INVITE_KIND} from "./constants"
 
 export const groupingThreshold = 60 * 1000 // 60 seconds = 1 minute
 
@@ -24,10 +25,12 @@ export const groupMessages = (
       ? message.tags?.some((tag) => tag[0] === "e" && tag[3] === "reply")
       : message.tags?.some((tag) => tag[0] === "e")
 
+    const isDisplayedAsMessage = message.kind !== GROUP_INVITE_KIND
+
     const hasReactions = message.reactions && Object.keys(message.reactions).length > 0
 
     // If this message is a reply or has reactions, finish the current group
-    if (isReply || hasReactions) {
+    if (!isDisplayedAsMessage || isReply || hasReactions) {
       if (currentGroup.length > 0) {
         groups.push(currentGroup)
       }
@@ -54,12 +57,9 @@ export const groupMessages = (
 
         // For public chats, we need to handle undefined sender values
         // Messages with the same pubkey should be grouped together
-        const isSameSender = isPublicChat
-          ? message.sender === lastMessage.sender ||
-            (message.sender === undefined &&
-              lastMessage.sender === undefined &&
-              message.pubkey === lastMessage.pubkey)
-          : message.sender === lastMessage.sender
+        const isSameSender =
+          (message.sender || message.pubkey) ===
+          (lastMessage.sender || lastMessage.pubkey)
 
         if (isSameSender && timeDiff <= timeThreshold) {
           currentGroup.push(message)

@@ -76,6 +76,8 @@ const subscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
 }
 
 const routeEventToStore = (sessionId: string, message: MessageType) => {
+  const from = sessionId.split(":")[0]
+  message.pubkey = from
   const groupLabelTag = message.tags?.find((tag: string[]) => tag[0] === "l")
   const targetId = groupLabelTag && groupLabelTag[1] ? groupLabelTag[1] : sessionId
   useEventsStore.getState().upsert(targetId, message)

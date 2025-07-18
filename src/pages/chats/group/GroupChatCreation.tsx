@@ -10,6 +10,7 @@ import {useGroupsStore} from "@/stores/groups"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
 import {GroupDetails} from "./types"
+import {GROUP_INVITE_KIND} from "../utils/constants"
 
 const GroupChatCreation = () => {
   const navigate = useNavigate()
@@ -113,7 +114,7 @@ const GroupChatCreation = () => {
           .filter((pubkey: string) => pubkey !== myPubKey)
           .map((pubkey: string) =>
             sendToUser(pubkey, {
-              kind: 40,
+              kind: GROUP_INVITE_KIND,
               content: JSON.stringify(group),
               tags: [["l", groupId]],
             })

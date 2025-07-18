@@ -6,3 +6,6 @@ export const CHANNEL_MUTE_USER = 44
 
 // NIP-25 reactions
 export const REACTION_KIND = 7
+
+// Group chat invite kind
+export const GROUP_INVITE_KIND = 40

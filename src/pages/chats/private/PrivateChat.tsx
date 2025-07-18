@@ -10,6 +10,7 @@ import {useEffect, useState} from "react"
 
 const Chat = ({id}: {id: string}) => {
   const {sessions, updateLastSeen} = useSessionsStore()
+  // Fix: Use the events store with proper subscription to get reactive updates
   const {events} = useEventsStore()
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)

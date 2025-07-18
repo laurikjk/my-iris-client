@@ -36,6 +36,7 @@ const ChatContainer = ({
   const lastMessageIdsRef = useRef<Set<string>>(new Set())
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
   const lastHeightRef = useRef(0)
+  const hasInitiallyScrolledRef = useRef(false)
 
   const messageGroups = groupMessages(messages, undefined, isPublicChat)
 
@@ -46,7 +47,13 @@ const ChatContainer = ({
   }
 
   const scrollToBottom = () => {
-    root.scrollTop = root.scrollHeight
+    // Use requestAnimationFrame to ensure DOM is updated before scrolling
+    requestAnimationFrame(() => {
+      // Add a small delay to ensure all content is fully rendered
+      setTimeout(() => {
+        root.scrollTop = root.scrollHeight
+      }, 10)
+    })
   }
 
   useLayoutEffect(() => {
@@ -107,6 +114,15 @@ const ChatContainer = ({
       resizeObserverRef.current?.disconnect()
     }
   }, [])
+
+  // Add effect to handle initial scroll when messages first load
+  useEffect(() => {
+    if (messages.size > 0 && !hasInitiallyScrolledRef.current) {
+      // Scroll to bottom on initial load
+      scrollToBottom()
+      hasInitiallyScrolledRef.current = true
+    }
+  }, [messages.size])
 
   return (
     <>
