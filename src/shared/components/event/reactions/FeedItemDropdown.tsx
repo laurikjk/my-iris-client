@@ -3,6 +3,9 @@ import {useEffect, useState} from "react"
 import {nip19} from "nostr-tools"
 
 import {unmuteUser} from "@/shared/services/Mute.tsx"
+import {DoubleRatchetUserSearch} from "@/pages/chats/components/DoubleRatchetUserSearch"
+import {DoubleRatchetUser} from "@/pages/chats/utils/doubleRatchetUsers"
+import {useSessionsStore} from "@/stores/sessions"
 
 import Reactions from "@/shared/components/event/reactions/Reactions.tsx"
 import Dropdown from "@/shared/components/ui/Dropdown.tsx"
@@ -22,12 +25,14 @@ type FeedItemDropdownProps = {
 function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
   const myPubKey = usePublicKey()
   const navigate = useNavigate()
+  const {sendToUser} = useSessionsStore()
 
   const [showReactions, setShowReactions] = useState(false)
   const [showRawJSON, setShowRawJSON] = useState(false)
   const [muted, setMuted] = useState(false)
   const [muting, setMuting] = useState(false)
   const [reporting, setReporting] = useState(false)
+  const [showSendDM, setShowSendDM] = useState(false)
 
   const mutedList: string[] = []
 
@@ -81,6 +86,29 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
     setReporting(true)
   }
 
+  const handleSendDM = () => {
+    setShowSendDM(true)
+  }
+
+  const handleUserSelect = async (user: DoubleRatchetUser) => {
+    try {
+      const noteId = event.encode()
+      const shareUrl = `https://iris.to/${noteId}`
+      const message = `Check out this post: ${shareUrl}`
+      
+      await sendToUser(user.pubkey, {
+        content: message,
+        kind: 4,
+        tags: [["ms", Date.now().toString()]],
+      })
+      
+      setShowSendDM(false)
+      onClose()
+    } catch (error) {
+      console.error("Failed to send DM:", error)
+    }
+  }
+
   return (
     <div className="z-40">
       <Dropdown onClose={onClose}>
@@ -117,6 +145,21 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
             </Modal>
           </div>
         )}
+        {showSendDM && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Modal onClose={() => setShowSendDM(false)}>
+              <div className="p-6">
+                <h3 className="text-xl font-semibold mb-4">Send as DM</h3>
+                <DoubleRatchetUserSearch
+                  placeholder="Search for a user to send this post to"
+                  onUserSelect={handleUserSelect}
+                  maxResults={10}
+                  showCount={true}
+                />
+              </div>
+            </Modal>
+          </div>
+        )}
         <ul
           tabIndex={0}
           className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
@@ -140,6 +183,9 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
           </li>
           <li>
             <button onClick={handleCopyLink}>Copy Link</button>
+          </li>
+          <li>
+            <button onClick={handleSendDM}>Send as DM</button>
           </li>
           {myPubKey !== event.pubkey && event.kind !== 9735 && (
             <>
