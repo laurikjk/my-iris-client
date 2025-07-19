@@ -48,6 +48,12 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
     navigator.clipboard.writeText(event.encode())
     onClose()
   }
+  const handleCopyLink = () => {
+    const noteId = event.encode()
+    const shareUrl = `https://iris.to/${noteId}`
+    navigator.clipboard.writeText(shareUrl)
+    onClose()
+  }
   const handleMute = async () => {
     if (muted) {
       await unmuteUser(event.pubkey)
@@ -131,6 +137,9 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
           </li>
           <li>
             <button onClick={handleCopyNoteID}>Copy Event ID</button>
+          </li>
+          <li>
+            <button onClick={handleCopyLink}>Copy Link</button>
           </li>
           {myPubKey !== event.pubkey && event.kind !== 9735 && (
             <>

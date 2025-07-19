@@ -8,6 +8,10 @@ function SimpleFeedItemDropdown({eventId}: FeedItemDropdownProps) {
   const handleCopyNoteID = () => {
     navigator.clipboard.writeText(eventId)
   }
+  const handleCopyLink = () => {
+    const shareUrl = `https://iris.to/${eventId}`
+    navigator.clipboard.writeText(shareUrl)
+  }
 
   return (
     <div className="" onClick={(e) => e.stopPropagation()}>
@@ -21,6 +25,9 @@ function SimpleFeedItemDropdown({eventId}: FeedItemDropdownProps) {
         >
           <li>
             <button onClick={handleCopyNoteID}>Copy Event ID</button>
+          </li>
+          <li>
+            <button onClick={handleCopyLink}>Copy Link</button>
           </li>
         </ul>
       </div>
