@@ -144,7 +144,7 @@ export default function Popular({
 
   return (
     <InfiniteScroll onLoadMore={loadMore}>
-      <div className={classNames("flex flex-col gap-8", {"text-base-content/50": small})}>
+      <div className={classNames("flex flex-col", {"text-base-content/50 gap-8": small})}>
         {initialLoadDone && sortedData.length === 0 ? (
           <div className="px-4">No popular posts found</div>
         ) : null}
