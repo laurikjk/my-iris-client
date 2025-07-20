@@ -168,23 +168,23 @@ function HomeFeedEvents() {
         </div>
       )}
       <NotificationPrompt />
-      {follows.length <= 1 ? (
+      <Feed
+        key={activeTab === "unseen" ? "unseen" : "other"}
+        filters={filters}
+        displayFilterFn={displayFilterFn}
+        fetchFilterFn={activeTabItem.fetchFilterFn}
+        showDisplayAsSelector={follows.length > 1}
+        cacheKey={activeTabItem.cacheKey}
+        showRepliedTo={activeTabItem.showRepliedTo}
+        forceUpdate={forceUpdate}
+        sortLikedPosts={activeTabItem.sortLikedPosts}
+        emptyPlaceholder={""}
+      />
+      {follows.length <= 1 && (
         <>
           <NoFollows myPubKey={myPubKey} />
           <PopularFeed small={false} days={7} />
         </>
-      ) : (
-        <Feed
-          key={activeTab === "unseen" ? "unseen" : "other"}
-          filters={filters}
-          displayFilterFn={displayFilterFn}
-          fetchFilterFn={activeTabItem.fetchFilterFn}
-          cacheKey={activeTabItem.cacheKey}
-          showRepliedTo={activeTabItem.showRepliedTo}
-          forceUpdate={forceUpdate}
-          sortLikedPosts={activeTabItem.sortLikedPosts}
-          emptyPlaceholder={""}
-        />
       )}
     </>
   )

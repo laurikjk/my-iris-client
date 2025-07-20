@@ -247,7 +247,7 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
 
   return (
     <div
-      className={`flex flex-col gap-4 p-4 w-[calc(100vw-2rem)] mx-auto ${
+      className={`flex max-w-[500px] flex-col gap-4 p-4 w-[calc(100vw-2rem)] mx-auto ${
         isDraggingOver ? "border-2 border-primary" : ""
       }`}
       onDragOver={handleDragOver}
