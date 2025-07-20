@@ -17,14 +17,12 @@ import {useFeedStore} from "@/stores/feed"
 
 const UNSEEN_CACHE_KEY = "unseenFeed"
 
-const NoFollows = ({follows, myPubKey}: {follows: string[]; myPubKey?: string}) =>
+const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
   myPubKey ? (
     <div className="flex flex-col gap-8 items-center justify-center text-base-content/50">
       <div className="px-4 py-8 border-b border-base-300 flex flex-col gap-8 items-center w-full">
-        {follows.length <= 1 ? "Follow someone to see content from them" : "No posts yet"}
-        {myPubKey && follows.length <= 1 && (
-          <PublicKeyQRCodeButton publicKey={myPubKey} />
-        )}
+        Follow someone to see content from them
+        {myPubKey && <PublicKeyQRCodeButton publicKey={myPubKey} />}
       </div>
     </div>
   ) : null
@@ -170,7 +168,7 @@ function HomeFeedEvents() {
         </div>
       )}
       <NotificationPrompt />
-      <NoFollows follows={follows} myPubKey={myPubKey} />
+      {follows.length <= 1 && <NoFollows myPubKey={myPubKey} />}
       <Feed
         key={activeTab === "unseen" ? "unseen" : "other"}
         filters={filters}
