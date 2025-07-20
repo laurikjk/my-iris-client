@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react"
+import {useEffect, useState, useCallback} from "react"
 import {useUserStore} from "@/stores/user"
 import {useSessionsStore} from "@/stores/sessions"
 import socialGraph from "@/utils/socialGraph"
@@ -126,14 +126,13 @@ export const useDoubleRatchetUsers = () => {
       // Get all current double ratchet user pubkeys (from the Set, not just those with profiles)
       const allUserPubkeys = getAllDoubleRatchetUserPubkeys()
 
-      console.log("Cleanup check:", {
-        totalUsers: allUserPubkeys.length,
-        sessionPartners: currentPartners.size,
-        follows: currentFollows.size,
-      })
-
       // Remove users who are no longer in sessions AND not in follows
+      // But never remove the user's own public key
       allUserPubkeys.forEach((pubkey) => {
+        // Never remove the user's own public key
+        if (pubkey === myPubKey) {
+          return
+        }
         const isSessionPartner = currentPartners.has(pubkey)
         const isFollowed = currentFollows.has(pubkey)
 
@@ -182,10 +181,10 @@ export const useDoubleRatchetUsers = () => {
     }
   }, [myPubKey])
 
-  // Search function
-  const search = (query: string) => {
+  // Search function - memoized to prevent infinite loops
+  const search = useCallback((query: string) => {
     return searchDoubleRatchetUsers(query)
-  }
+  }, [])
 
   return {
     users,
