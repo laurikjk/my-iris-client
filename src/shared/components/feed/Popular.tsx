@@ -82,6 +82,11 @@ export default function Popular({
 
   // Custom sorting logic that preserves reaction counts
   const filteredEvents = useMemo(() => {
+    console.log(
+      "Popular: rawFilteredEvents",
+      rawFilteredEvents?.length,
+      rawFilteredEvents
+    )
     if (!rawFilteredEvents) return []
 
     const likesByPostId = new Map<string, number>()

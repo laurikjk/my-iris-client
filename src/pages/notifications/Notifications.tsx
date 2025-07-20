@@ -26,7 +26,7 @@ function Notifications() {
       <RightColumn>
         {() => (
           <>
-            <Widget title="Popular posts">
+            <Widget title="Popular">
               <Popular />
             </Widget>
           </>

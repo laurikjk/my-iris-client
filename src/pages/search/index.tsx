@@ -114,7 +114,7 @@ function SearchPage() {
       <RightColumn>
         {() => (
           <>
-            <Widget title="Popular posts">
+            <Widget title="Popular">
               <Popular />
             </Widget>
           </>

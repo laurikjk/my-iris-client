@@ -17,7 +17,7 @@ import {useFeedStore} from "@/stores/feed"
 
 const UNSEEN_CACHE_KEY = "unseenFeed"
 
-const EmptyPlaceholder = ({follows, myPubKey}: {follows: string[]; myPubKey?: string}) =>
+const NoFollows = ({follows, myPubKey}: {follows: string[]; myPubKey?: string}) =>
   myPubKey ? (
     <div className="flex flex-col gap-8 items-center justify-center text-base-content/50">
       <div className="px-4 py-8 border-b border-base-300 flex flex-col gap-8 items-center w-full">
@@ -26,7 +26,6 @@ const EmptyPlaceholder = ({follows, myPubKey}: {follows: string[]; myPubKey?: st
           <PublicKeyQRCodeButton publicKey={myPubKey} />
         )}
       </div>
-      Popular posts
     </div>
   ) : null
 
@@ -171,6 +170,7 @@ function HomeFeedEvents() {
         </div>
       )}
       <NotificationPrompt />
+      <NoFollows follows={follows} myPubKey={myPubKey} />
       <Feed
         key={activeTab === "unseen" ? "unseen" : "other"}
         filters={filters}
@@ -178,9 +178,9 @@ function HomeFeedEvents() {
         fetchFilterFn={activeTabItem.fetchFilterFn}
         cacheKey={activeTabItem.cacheKey}
         showRepliedTo={activeTabItem.showRepliedTo}
-        emptyPlaceholder={<EmptyPlaceholder follows={follows} myPubKey={myPubKey} />}
         forceUpdate={forceUpdate}
         sortLikedPosts={activeTabItem.sortLikedPosts}
+        emptyPlaceholder={""}
       />
       {follows.length <= 1 && <Popular small={false} randomSort={false} />}
     </>

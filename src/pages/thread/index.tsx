@@ -135,7 +135,7 @@ export default function ThreadPage({
                 />
               </Widget>
             )}
-            <Widget title="Popular posts">
+            <Widget title="Popular">
               <Popular />
             </Widget>
           </>
