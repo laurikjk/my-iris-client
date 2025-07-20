@@ -39,7 +39,7 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
     const options = opts || {
       explicitRelayUrls: DEFAULT_RELAYS,
       enableOutboxModel: true,
-      cacheAdapter: new NDKCacheAdapterDexie({dbName: "irisdb-nostr"}),
+      cacheAdapter: new NDKCacheAdapterDexie({dbName: "irisdb-nostr", saveSig: true}),
     }
     ndkInstance = new NDK(options)
 
