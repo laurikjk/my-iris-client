@@ -3,7 +3,7 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
-import Trending from "@/shared/components/feed/Trending.tsx"
+import Popular from "@/shared/components/feed/Popular.tsx"
 import {useRefreshRouteSignal} from "@/stores/notifications"
 import {seenEventIds, feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
@@ -182,7 +182,7 @@ function HomeFeedEvents() {
         forceUpdate={forceUpdate}
         sortLikedPosts={activeTabItem.sortLikedPosts}
       />
-      {follows.length <= 1 && <Trending small={false} contentType="images" />}
+      {follows.length <= 1 && <Popular small={false} randomSort={false} />}
     </>
   )
 }

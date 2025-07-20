@@ -1,6 +1,6 @@
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
 import RightColumn from "@/shared/components/RightColumn.tsx"
-import Trending from "@/shared/components/feed/Trending.tsx"
+import Popular from "@/shared/components/feed/Popular.tsx"
 import FollowList from "@/pages/user/components/FollowList"
 import Header from "@/shared/components/header/Header"
 import {Name} from "@/shared/components/user/Name"
@@ -135,8 +135,8 @@ export default function ThreadPage({
                 />
               </Widget>
             )}
-            <Widget title="Trending posts">
-              <Trending />
+            <Widget title="Popular posts">
+              <Popular />
             </Widget>
           </>
         )}

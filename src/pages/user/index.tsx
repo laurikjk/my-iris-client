@@ -4,7 +4,7 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 
 import RightColumn from "@/shared/components/RightColumn"
-import Trending from "@/shared/components/feed/Trending"
+import Popular from "@/shared/components/feed/Popular"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import {shouldHideAuthor} from "@/utils/visibility"
 import Widget from "@/shared/components/ui/Widget"
@@ -217,8 +217,8 @@ function UserPage({pubKey}: {pubKey: string}) {
               </Widget>
             )}
             {pubKeyHex === myPubKey && (
-              <Widget title="Trending posts">
-                <Trending />
+              <Widget title="Popular posts">
+                <Popular />
               </Widget>
             )}
           </>

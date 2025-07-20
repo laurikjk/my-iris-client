@@ -7,7 +7,7 @@ import throttle from "lodash/throttle"
 import localForage from "localforage"
 import {ndk} from "@/utils/ndk"
 
-const DEFAULT_SOCIAL_GRAPH_ROOT =
+export const DEFAULT_SOCIAL_GRAPH_ROOT =
   "4523be58d395b1b196a9b8c82b038b6895cb02b683d0c253a955068dba1facd0"
 
 let instance = new SocialGraph(DEFAULT_SOCIAL_GRAPH_ROOT)

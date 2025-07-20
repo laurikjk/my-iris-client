@@ -8,7 +8,7 @@ import {
   RiDownload2Line,
 } from "@remixicon/react"
 import RightColumn from "@/shared/components/RightColumn"
-import Trending from "@/shared/components/feed/Trending"
+import Popular from "@/shared/components/feed/Popular"
 import Header from "@/shared/components/header/Header"
 import Widget from "@/shared/components/ui/Widget"
 import {useState, useEffect} from "react"
@@ -142,8 +142,8 @@ export const AboutPage = () => {
       <RightColumn>
         {() => (
           <>
-            <Widget title="Trending posts">
-              <Trending />
+            <Widget title="Popular posts">
+              <Popular />
             </Widget>
           </>
         )}

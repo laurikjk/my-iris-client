@@ -1,6 +1,6 @@
 import {useMemo, useState, useEffect, FormEvent, useCallback} from "react"
 import RightColumn from "@/shared/components/RightColumn.tsx"
-import Trending from "@/shared/components/feed/Trending.tsx"
+import Popular from "@/shared/components/feed/Popular.tsx"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import SearchBox from "@/shared/components/ui/SearchBox"
 import Header from "@/shared/components/header/Header"
@@ -103,7 +103,7 @@ function SearchPage() {
           )}
           {!query && (
             <div className="mt-4">
-              <Trending small={false} />
+              <Popular small={false} />
             </div>
           )}
         </div>
@@ -114,8 +114,8 @@ function SearchPage() {
       <RightColumn>
         {() => (
           <>
-            <Widget title="Trending posts">
-              <Trending />
+            <Widget title="Popular posts">
+              <Popular />
             </Widget>
           </>
         )}
