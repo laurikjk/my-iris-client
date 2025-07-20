@@ -1,6 +1,6 @@
 import HomeFeedEvents from "@/pages/home/feed/components/HomeFeedEvents.tsx"
 import RightColumn from "@/shared/components/RightColumn.tsx"
-import Popular from "@/shared/components/feed/Popular.tsx"
+import PopularFeed from "@/shared/components/feed/PopularFeed"
 import Widget from "@/shared/components/ui/Widget.tsx"
 
 function Index() {
@@ -13,7 +13,7 @@ function Index() {
         {() => (
           <>
             <Widget title="Popular">
-              <Popular />
+              <PopularFeed />
             </Widget>
           </>
         )}

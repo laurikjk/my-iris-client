@@ -1,5 +1,5 @@
 import RightColumn from "@/shared/components/RightColumn.tsx"
-import Popular from "@/shared/components/feed/Popular.tsx"
+import PopularFeed from "@/shared/components/feed/PopularFeed"
 import Widget from "@/shared/components/ui/Widget"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
@@ -43,7 +43,7 @@ export default function WalletPage() {
         {() => (
           <>
             <Widget title="Popular">
-              <Popular />
+              <PopularFeed />
             </Widget>
           </>
         )}

@@ -3,7 +3,7 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
-import Popular from "@/shared/components/feed/Popular.tsx"
+import PopularFeed from "@/shared/components/feed/PopularFeed"
 import {useRefreshRouteSignal} from "@/stores/notifications"
 import {seenEventIds, feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
@@ -168,19 +168,24 @@ function HomeFeedEvents() {
         </div>
       )}
       <NotificationPrompt />
-      {follows.length <= 1 && <NoFollows myPubKey={myPubKey} />}
-      <Feed
-        key={activeTab === "unseen" ? "unseen" : "other"}
-        filters={filters}
-        displayFilterFn={displayFilterFn}
-        fetchFilterFn={activeTabItem.fetchFilterFn}
-        cacheKey={activeTabItem.cacheKey}
-        showRepliedTo={activeTabItem.showRepliedTo}
-        forceUpdate={forceUpdate}
-        sortLikedPosts={activeTabItem.sortLikedPosts}
-        emptyPlaceholder={""}
-      />
-      {follows.length <= 1 && <Popular small={false} randomSort={false} />}
+      {follows.length <= 1 ? (
+        <>
+          <NoFollows myPubKey={myPubKey} />
+          <PopularFeed small={false} days={7} />
+        </>
+      ) : (
+        <Feed
+          key={activeTab === "unseen" ? "unseen" : "other"}
+          filters={filters}
+          displayFilterFn={displayFilterFn}
+          fetchFilterFn={activeTabItem.fetchFilterFn}
+          cacheKey={activeTabItem.cacheKey}
+          showRepliedTo={activeTabItem.showRepliedTo}
+          forceUpdate={forceUpdate}
+          sortLikedPosts={activeTabItem.sortLikedPosts}
+          emptyPlaceholder={""}
+        />
+      )}
     </>
   )
 }
