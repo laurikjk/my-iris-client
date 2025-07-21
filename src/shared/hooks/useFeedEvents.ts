@@ -49,7 +49,6 @@ export default function useFeedEvents({
     initialLoadDoneRef.current
   )
   const hasReceivedEventsRef = useRef<boolean>(eventsRef.current.size > 0)
-  const [eventsVersion, setEventsVersion] = useState(0) // Version counter for filtered events
 
   const showNewEvents = () => {
     newEvents.forEach((event) => {
@@ -59,7 +58,6 @@ export default function useFeedEvents({
     })
     setNewEvents(new Map())
     setNewEventsFrom(new Set())
-    setEventsVersion((prev) => prev + 1)
   }
 
   const filterEvents = useCallback(
@@ -79,7 +77,7 @@ export default function useFeedEvents({
       }
       return true
     },
-    [displayFilterFn, localFilter.authors, hideEventsByUnknownUsers, filters.authors]
+    [displayFilterFn, myPubKey, hideEventsByUnknownUsers, filters.authors]
   )
 
   const filteredEvents = useMemo(() => {
@@ -105,7 +103,7 @@ export default function useFeedEvents({
     }
 
     return events
-  }, [eventsVersion, filterEvents, sortLikedPosts])
+  }, [eventsRef.current.size, filterEvents, sortLikedPosts])
 
   const eventsByUnknownUsers = useMemo(() => {
     if (!hideEventsByUnknownUsers) {
@@ -119,7 +117,7 @@ export default function useFeedEvents({
         // Only include events that aren't heavily muted
         !shouldHideAuthor(event.pubkey, undefined, true)
     )
-  }, [eventsVersion, displayFilterFn, hideEventsByUnknownUsers, filters.authors])
+  }, [eventsRef.current.size, displayFilterFn, hideEventsByUnknownUsers, filters.authors])
 
   useEffect(() => {
     setLocalFilter(filters)
@@ -133,12 +131,10 @@ export default function useFeedEvents({
 
     const sub = ndk().subscribe(localFilter)
 
-    // Reset these flags when subscription changes
     hasReceivedEventsRef.current = eventsRef.current.size > 0
     initialLoadDoneRef.current = eventsRef.current.size > 0
     setInitialLoadDoneState(eventsRef.current.size > 0)
 
-    // Set up a timeout to mark initial load as done even if no events arrive
     const initialLoadTimeout = setTimeout(() => {
       if (!initialLoadDoneRef.current) {
         initialLoadDoneRef.current = true
@@ -158,19 +154,8 @@ export default function useFeedEvents({
       if (eventsRef.current.has(event.id)) return
       if (fetchFilterFn && !fetchFilterFn(event)) return
 
-      oldestRef.current = Math.min(
-        oldestRef.current ?? event.created_at,
-        event.created_at
-      )
-      hasReceivedEventsRef.current = true
-
-      const addMain = () => {
-        eventsRef.current.set(event.id, event)
-        setEventsVersion((prev) => prev + 1)
-      }
-      const addNew = () => {
-        setNewEvents((prev) => new Map([...prev, [event.id, event]]))
-        setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
+      if (oldestRef.current === undefined || oldestRef.current > event.created_at) {
+        oldestRef.current = event.created_at
       }
 
       const isMyRecent =
@@ -178,8 +163,17 @@ export default function useFeedEvents({
       const isNewEvent =
         initialLoadDoneRef.current && !isMyRecent && (!sortLikedPosts || event.kind === 1)
 
-      if (isNewEvent) addNew()
-      else addMain()
+      hasReceivedEventsRef.current = true
+
+      if (!initialLoadDoneRef.current || isMyRecent) {
+        eventsRef.current.set(event.id, event)
+        markLoadDoneIfHasEvents()
+      } else if (isNewEvent) {
+        setNewEvents((prev) => new Map([...prev, [event.id, event]]))
+        setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
+      } else {
+        eventsRef.current.set(event.id, event)
+      }
 
       markLoadDoneIfHasEvents()
     })

@@ -3,7 +3,7 @@ export function logPerformanceMetrics(): void {
   if (process.env.NODE_ENV === "development") {
     // Memory usage
     if ("memory" in performance) {
-      const memory = (performance as any).memory as {usedJSHeapSize: number}
+      const memory = (performance as {memory?: {usedJSHeapSize: number}}).memory
       if (memory) {
         const usedMB = Math.round(memory.usedJSHeapSize / 1024 / 1024)
         console.log(`Memory usage: ${usedMB} MB`)
