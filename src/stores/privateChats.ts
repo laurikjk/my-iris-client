@@ -2,7 +2,7 @@ import {createJSONStorage, persist} from "zustand/middleware"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {MessageType} from "@/pages/chats/message/Message"
 import {comparator} from "@/pages/chats/utils/messageGrouping"
-import {useSessionsStore} from "./sessions"
+import {useUserRecordsStore} from "./userRecords"
 import {useEventsStore} from "./events"
 import localforage from "localforage"
 import {create} from "zustand"
@@ -42,7 +42,9 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
 
         const myPubKey = useUserStore.getState().publicKey
         // Always send to recipient
-        const recipientPromise = useSessionsStore.getState().sendToUser(userPubKey, event)
+        const recipientPromise = useUserRecordsStore
+          .getState()
+          .sendToUser(userPubKey, event)
         // If recipient is not self, also send to self
         if (userPubKey !== myPubKey) {
           // Add ['p', recipientPubKey] to event for self
@@ -52,7 +54,7 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
           }
           await Promise.all([
             recipientPromise,
-            useSessionsStore.getState().sendToUser(myPubKey, eventForSelf),
+            useUserRecordsStore.getState().sendToUser(myPubKey, eventForSelf),
           ])
           return userPubKey
         } else {
@@ -75,7 +77,7 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
         )
       },
       getUserSessions: (userPubKey: string): string[] => {
-        const sessions = useSessionsStore.getState().sessions
+        const sessions = useUserRecordsStore.getState().sessions
         return Array.from(sessions.keys()).filter((sessionId) =>
           sessionId.startsWith(`${userPubKey}:`)
         )
@@ -93,7 +95,7 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
         set({chats})
       },
       getChatsList: () => {
-        const sessions = useSessionsStore.getState().sessions
+        const sessions = useUserRecordsStore.getState().sessions
         const chats = get().chats
         const myPubKey = useUserStore.getState().publicKey
 
@@ -183,6 +185,6 @@ export async function subscribeToOwnDeviceInvites() {
   ownDeviceInvitesInitialized = true
 
   // Import here to avoid circular dependency at module scope
-  const {useSessionsStore} = await import("./sessions")
-  useSessionsStore.getState().listenToUserDevices(publicKey)
+  const {useUserRecordsStore} = await import("./userRecords")
+  useUserRecordsStore.getState().listenToUserDevices(publicKey)
 }

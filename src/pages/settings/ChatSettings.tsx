@@ -1,6 +1,6 @@
 import {useState, useEffect} from "react"
-import {useSessionsStore} from "@/stores/sessions"
 import {useUserStore} from "@/stores/user"
+import {useUserRecordsStore} from "@/stores/userRecords"
 import {RiDeleteBin6Line, RiRefreshLine} from "@remixicon/react"
 
 interface DeviceInfo {
@@ -24,7 +24,7 @@ const ChatSettings = () => {
     getOwnDeviceInvites,
     cleanupDuplicateSessions,
     deviceId: currentDeviceId,
-  } = useSessionsStore()
+  } = useUserRecordsStore()
   const {publicKey} = useUserStore()
   const [devices, setDevices] = useState<DeviceInfo[]>([])
 
