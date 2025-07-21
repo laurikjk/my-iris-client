@@ -26,6 +26,7 @@ yarn test:ui # E2E tests with UI mode
 ```
 
 ### Tauri
+
 ```bash
 # Desktop
 yarn tauri dev
