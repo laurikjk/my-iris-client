@@ -1,7 +1,7 @@
 import {unsubscribeAll} from "@/utils/notifications"
 import {useUserStore} from "@/stores/user"
 import {MouseEvent, useState} from "react"
-import {useNavigate} from "react-router"
+import {useNavigate, Link} from "react-router"
 import localforage from "localforage"
 import {ndk} from "@/utils/ndk"
 
@@ -84,7 +84,12 @@ function Account() {
           Your <b>Iris chats</b> and <b>Cashu wallet</b> on this device will be
           permanently deleted.
         </small>
-        <div className="mt-2">
+        <div className="mt-2 flex gap-2">
+          {store.privateKey && (
+            <Link to="/settings/backup" className="btn btn-default">
+              Backup
+            </Link>
+          )}
           <button
             className="btn btn-primary"
             onClick={handleLogout}

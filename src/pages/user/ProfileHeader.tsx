@@ -1,5 +1,5 @@
 import {PublicKey} from "@/shared/utils/PublicKey"
-import {useMemo, useState, useEffect} from "react"
+import {useMemo, useState} from "react"
 import {Link, useNavigate} from "react-router"
 import {useUserStore} from "@/stores/user"
 
@@ -17,12 +17,8 @@ import Header from "@/shared/components/header/Header"
 import {Name} from "@/shared/components/user/Name.tsx"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import Modal from "@/shared/components/ui/Modal.tsx"
-import {useSessionsStore} from "@/stores/sessions"
 import Icon from "@/shared/components/Icons/Icon"
-import {Filter, VerifiedEvent} from "nostr-tools"
-import {Invite} from "nostr-double-ratchet/src"
 import {Helmet} from "react-helmet"
-import {ndk} from "@/utils/ndk"
 
 const ProfileHeader = ({pubKey}: {pubKey: string}) => {
   const profile = useProfile(pubKey, true)
@@ -34,23 +30,16 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
 
   const [showProfilePhotoModal, setShowProfilePhotoModal] = useState(false)
   const [showBannerModal, setShowBannerModal] = useState(false)
-  const [invite, setInvite] = useState<Invite | undefined>(undefined)
 
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (myPubKey === pubKeyHex) {
-      return
-    }
-
-    const subscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
-      const sub = ndk().subscribe(filter)
-      sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
-      return () => sub.stop()
-    }
-    const unsub = Invite.fromUser(pubKeyHex, subscribe, (invite) => setInvite(invite))
-    return unsub
-  }, [myPubKey, pubKeyHex])
+  const handleStartChat = () => {
+    // Navigate directly to chat with userPubKey
+    // The chats store will handle session creation automatically
+    navigate("/chats/chat", {
+      state: {id: pubKeyHex},
+    })
+  }
 
   return (
     <>
@@ -101,19 +90,8 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
             )}
 
             <div className="flex flex-row gap-2" data-testid="profile-header-actions">
-              {invite && myPubKey && (
-                <button
-                  className="btn btn-circle btn-neutral"
-                  onClick={async () => {
-                    if (!invite) return
-                    const sessionId = await useSessionsStore
-                      .getState()
-                      .acceptInvite(invite.getUrl())
-                    navigate("/chats/chat", {
-                      state: {id: sessionId},
-                    })
-                  }}
-                >
+              {myPubKey && myPubKey !== pubKeyHex && (
+                <button className="btn btn-circle btn-neutral" onClick={handleStartChat}>
                   <Icon name="mail-outline" className="w-6 h-6" />
                 </button>
               )}

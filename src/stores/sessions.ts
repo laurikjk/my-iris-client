@@ -16,6 +16,7 @@ import {useUserStore} from "./user"
 import {ndk} from "@/utils/ndk"
 import {create} from "zustand"
 import {useGroupsStore} from "./groups"
+import {usePrivateChatsStore} from "./privateChats"
 
 // Changing storage engine doesn't trigger migration. Only version difference in storage does.
 // Here's an utility function that works around it by setting a dummy entry with version 0.
@@ -35,10 +36,22 @@ const forceMigrationOnInitialPersist = <S>(
         },
       }
 
+// Generate a persistent device ID
+const generateDeviceId = (): string => {
+  return crypto.randomUUID()
+}
+
 interface SessionStoreState {
   invites: Map<string, Invite>
   sessions: Map<string, Session>
   lastSeen: Map<string, number>
+  deviceId: string
+  userDevices: Map<string, Set<string>> // userPubKey -> Set of deviceIds
+  deviceInviteListeners: Map<string, () => void> // userPubKey -> unsubscribe function
+  messageQueue: Map<
+    string,
+    Array<{event: Partial<UnsignedEvent>; resolve: (sessionId: string) => void}>
+  >
 }
 
 const createSessionWithLastSeen = (
@@ -56,6 +69,7 @@ const createSessionWithLastSeen = (
 
 const inviteListeners = new Map<string, () => void>()
 const sessionListeners = new Map<string, () => void>()
+const pendingInvites = new Set<string>() // Track pending invite acceptances
 
 interface SessionStoreActions {
   createInvite: (label: string, inviteId?: string) => void
@@ -66,6 +80,10 @@ interface SessionStoreActions {
   updateLastSeen: (sessionId: string) => void
   deleteInvite: (id: string) => void
   deleteSession: (id: string) => void
+  listenToUserDevices: (userPubKey: string) => void
+  stopListeningToUserDevices: (userPubKey: string) => void
+  getPreferredSession: (userPubKey: string) => string | null
+  debugMultiDevice: () => void
 }
 
 type SessionStore = SessionStoreState & SessionStoreActions
@@ -81,9 +99,26 @@ const routeEventToStore = (sessionId: string, message: MessageType) => {
   if (!message.pubkey || message.pubkey !== "user") {
     message.pubkey = from
   }
+  // Check for ['p', recipientPubKey] tag, but only use for routing if authored by us
+  const pTag = message.tags?.find((tag: string[]) => tag[0] === "p")
   const groupLabelTag = message.tags?.find((tag: string[]) => tag[0] === "l")
-  const targetId = groupLabelTag && groupLabelTag[1] ? groupLabelTag[1] : sessionId
+  const myPubKey = useUserStore.getState().publicKey
+  let targetId
+  if (pTag && pTag[1] && message.pubkey === myPubKey) {
+    targetId = pTag[1]
+  } else if (groupLabelTag && groupLabelTag[1]) {
+    targetId = groupLabelTag[1]
+  } else {
+    targetId = sessionId
+  }
   useEventsStore.getState().upsert(targetId, message)
+
+  // Sync with chats store for private chats
+  if (!groupLabelTag && from) {
+    // This is a private message, ensure chat exists in chats store
+    const chatsStore = usePrivateChatsStore.getState()
+    chatsStore.addChat(from)
+  }
 }
 
 const store = create<SessionStore>()(
@@ -92,27 +127,61 @@ const store = create<SessionStore>()(
       invites: new Map(),
       sessions: new Map(),
       lastSeen: new Map(),
+      deviceId: "",
+      userDevices: new Map(),
+      deviceInviteListeners: new Map(),
+      messageQueue: new Map(),
       createDefaultInvites: async () => {
         const myPubKey = useUserStore.getState().publicKey
         if (!myPubKey) {
           throw new Error("No public key")
         }
-        if (!get().invites.has("public")) {
-          get().createInvite("Public Invite", "public")
-          const invite = get().invites.get("public")
+
+        console.log("createDefaultInvites called for user:", myPubKey)
+
+        // Get or create device ID
+        let deviceId = get().deviceId
+        if (!deviceId) {
+          const stored = await localforage.getItem<string>("deviceId")
+          if (stored) {
+            deviceId = stored
+            console.log("Using existing device ID:", deviceId)
+          } else {
+            deviceId = generateDeviceId()
+            await localforage.setItem("deviceId", deviceId)
+            console.log("Generated new device ID:", deviceId)
+          }
+          set({deviceId})
+        } else {
+          console.log("Device ID already set:", deviceId)
+        }
+
+        // Create device-specific invite instead of hardcoded "public"
+        if (!get().invites.has(deviceId)) {
+          console.log("Creating new device invite for:", deviceId)
+          get().createInvite(`Device ${deviceId.slice(0, 8)}`, deviceId)
+          const invite = get().invites.get(deviceId)
           if (!invite) {
+            console.error("Failed to create device invite")
             return
           }
           const event = invite.getEvent() as RawEvent
-          console.log("Publishing public invite...", event)
+          console.log("Publishing device invite...", {
+            deviceId,
+            eventId: event.id,
+            tags: event.tags,
+          })
           await NDKEventFromRawEvent(event)
             .publish()
-            .then((res) => console.log("Published public invite", res))
-            .catch((e) => console.warn("Error publishing public invite:", e))
+            .then((res) => console.log("Successfully published device invite", res))
+            .catch((e) => console.warn("Error publishing device invite:", e))
+        } else {
+          console.log("Device invite already exists, not republishing")
         }
-        if (!get().invites.has("private")) {
-          get().createInvite("Private Invite", "private")
-        }
+
+        // Log current invites and sessions for debugging
+        console.log("Current invites:", Array.from(get().invites.keys()))
+        console.log("Current sessions:", Array.from(get().sessions.keys()))
       },
       deleteInvite: (id: string) => {
         const currentInvites = get().invites
@@ -150,6 +219,14 @@ const store = create<SessionStore>()(
           if (sessionListeners.has(sessionId)) {
             return
           }
+
+          // Check if we already have a session with this device
+          const existingSession = store.getState().sessions.get(sessionId)
+          if (existingSession) {
+            console.log("Session already exists with this device:", sessionId)
+            return
+          }
+
           const newState = createSessionWithLastSeen(
             store.getState().sessions,
             store.getState().lastSeen,
@@ -157,6 +234,22 @@ const store = create<SessionStore>()(
             session
           )
           store.setState(newState)
+
+          // Track user device
+          if (identity) {
+            const userPubKey = identity
+            const deviceId = session.name || "unknown"
+            const userDevices = new Map(store.getState().userDevices)
+            const devices = userDevices.get(userPubKey) || new Set()
+            devices.add(deviceId)
+            userDevices.set(userPubKey, devices)
+            store.setState({userDevices})
+
+            // Sync with chats store
+            const chatsStore = usePrivateChatsStore.getState()
+            chatsStore.addChat(userPubKey)
+          }
+
           const sessionUnsubscribe = session.onEvent((event) => {
             // Handle group creation event (kind 40)
             if (event.kind === 40 && event.content) {
@@ -209,38 +302,95 @@ const store = create<SessionStore>()(
         event: Partial<UnsignedEvent>
       ): Promise<string> => {
         console.log("sendToUser:", {userPubKey, event})
-        // First, try to find an existing session with this user
-        const existingSessionId = Array.from(get().sessions.keys()).find((sessionId) =>
+
+        if (!event.created_at) {
+          event.created_at = Math.round(Date.now() / 1000)
+        }
+        if (!event.tags?.some((tag) => tag[0] === "ms")) {
+          event.tags = [["ms", Date.now().toString()]]
+        }
+
+        // Get all existing sessions with this user
+        const userSessions = Array.from(get().sessions.entries()).filter(([sessionId]) =>
           sessionId.startsWith(`${userPubKey}:`)
         )
-        if (existingSessionId) {
-          await get().sendMessage(existingSessionId, event)
-          console.log("sendToUser existingSessionId:", existingSessionId)
-          console.log("sendToUser result:", existingSessionId)
-          return existingSessionId
+
+        console.log(`Found ${userSessions.length} sessions for user`)
+
+        if (userSessions.length > 0) {
+          // Get preferred session (most recently active)
+          const preferredSessionId =
+            get().getPreferredSession(userPubKey) || userSessions[0][0]
+
+          // Send only to preferred session
+          try {
+            await get().sendMessage(preferredSessionId, event)
+            console.log(`Sent to preferred session: ${preferredSessionId}`)
+            return preferredSessionId
+          } catch (error) {
+            console.warn(
+              `Error sending to preferred session ${preferredSessionId}:`,
+              error
+            )
+            throw error
+          }
         }
-        // No existing session, try to create one via Invite.fromUser
+
+        console.log("No existing sessions, queuing message and listening for invites")
+
+        // No existing sessions, check if we have queued messages
+        // Try to create session via Invite.fromUser with timeout and queuing
         return new Promise((resolve, reject) => {
-          const timeoutId: NodeJS.Timeout = setTimeout(() => {
+          const timeoutId = setTimeout(() => {
             cleanup()
             reject(new Error("Timeout waiting for user invite"))
           }, 10000) // 10 second timeout
+
+          // Start listening for user devices
+          get().listenToUserDevices(userPubKey)
+
           const unsubscribe = Invite.fromUser(userPubKey, subscribe, async (invite) => {
             try {
               cleanup()
               const sessionId = await get().acceptInvite(invite.getUrl())
+
+              // Process any queued messages first
+              const queue = get().messageQueue.get(userPubKey) || []
+              if (queue.length > 0) {
+                for (const {event: queuedEvent, resolve: queuedResolve} of queue) {
+                  try {
+                    await get().sendMessage(sessionId, queuedEvent)
+                    queuedResolve(sessionId)
+                  } catch (error) {
+                    console.warn("Error sending queued message:", error)
+                  }
+                }
+                // Clear the queue
+                const newQueue = new Map(get().messageQueue)
+                newQueue.delete(userPubKey)
+                set({messageQueue: newQueue})
+              }
+
+              // Send the current message
               await get().sendMessage(sessionId, event)
               console.log("sendToUser new sessionId:", sessionId)
-              console.log("sendToUser result:", sessionId)
               resolve(sessionId)
             } catch (error) {
               reject(error)
             }
           })
+
           const cleanup = () => {
             if (timeoutId) clearTimeout(timeoutId)
             if (unsubscribe) unsubscribe()
           }
+
+          // Queue the message while waiting for session
+          const messageQueue = new Map(get().messageQueue)
+          const queue = messageQueue.get(userPubKey) || []
+          queue.push({event, resolve})
+          messageQueue.set(userPubKey, queue)
+          set({messageQueue})
         })
       },
       acceptInvite: async (url: string): Promise<string> => {
@@ -249,43 +399,108 @@ const store = create<SessionStore>()(
         if (!myPubKey) {
           throw new Error("No public key")
         }
-        const myPrivKey = useUserStore.getState().privateKey
-        const encrypt = myPrivKey
-          ? hexToBytes(myPrivKey)
-          : async (plaintext: string, pubkey: string) => {
-              if (window.nostr?.nip44) {
-                return window.nostr.nip44.encrypt(pubkey, plaintext)
-              }
-              throw new Error("No nostr extension or private key")
-            }
-        const {session, event} = await invite.accept(
-          (filter, onEvent) => subscribe(filter, onEvent),
-          myPubKey,
-          encrypt
-        )
-        const e = NDKEventFromRawEvent(event)
-        await e
-          .publish()
-          .then((res) => console.log("published", res))
-          .catch((e) => console.warn("Error publishing event:", e))
-        const sessionId = `${invite.inviter}:${session.name}`
-        if (sessionListeners.has(sessionId)) {
-          return sessionId
+
+        const inviteKey = `${invite.inviter}:${invite.deviceId || "unknown"}`
+
+        // Prevent concurrent invite acceptance
+        if (pendingInvites.has(inviteKey)) {
+          console.log("Invite already being processed:", inviteKey)
+          // Wait a bit and check if session was created
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          const existingSession = get().sessions.get(inviteKey)
+          if (existingSession) {
+            return inviteKey
+          }
         }
-        const newState = createSessionWithLastSeen(
-          get().sessions,
-          get().lastSeen,
-          sessionId,
-          session
-        )
-        const sessionUnsubscribe = session.onEvent((event) => {
-          routeEventToStore(sessionId, event)
-          // make sure we persist session state
-          set({sessions: new Map(get().sessions)})
-        })
-        sessionListeners.set(sessionId, sessionUnsubscribe)
-        set(newState)
-        return sessionId
+
+        pendingInvites.add(inviteKey)
+
+        try {
+          console.log("acceptInvite called:", {
+            inviter: invite.inviter,
+            deviceId: invite.deviceId,
+            url: url.slice(0, 50) + "...",
+          })
+
+          // Check if we already have ANY session with this user
+          const existingSessions = Array.from(get().sessions.keys()).filter((sessionId) =>
+            sessionId.startsWith(`${invite.inviter}:`)
+          )
+
+          console.log("Existing sessions with user:", existingSessions)
+
+          // Check if we already have a session with this specific device
+          const deviceId = invite.deviceId || "unknown"
+          const potentialSessionId = `${invite.inviter}:${deviceId}`
+          const existingSession = get().sessions.get(potentialSessionId)
+
+          if (existingSession) {
+            console.log("Session already exists with this device:", potentialSessionId)
+            return potentialSessionId
+          }
+
+          // If we have any existing session with this user, let's use the first one
+          // instead of creating a new one (for now, to prevent duplicates)
+          if (existingSessions.length > 0) {
+            console.log(
+              "Using existing session instead of creating new:",
+              existingSessions[0]
+            )
+            return existingSessions[0]
+          }
+
+          console.log("Creating new session for:", potentialSessionId)
+
+          const myPrivKey = useUserStore.getState().privateKey
+          const encrypt = myPrivKey
+            ? hexToBytes(myPrivKey)
+            : async (plaintext: string, pubkey: string) => {
+                if (window.nostr?.nip44) {
+                  return window.nostr.nip44.encrypt(pubkey, plaintext)
+                }
+                throw new Error("No nostr extension or private key")
+              }
+          const {session, event} = await invite.accept(
+            (filter, onEvent) => subscribe(filter, onEvent),
+            myPubKey,
+            encrypt
+          )
+          const e = NDKEventFromRawEvent(event)
+          await e
+            .publish()
+            .then((res) => console.log("published", res))
+            .catch((e) => console.warn("Error publishing event:", e))
+          const sessionId = `${invite.inviter}:${session.name}`
+
+          console.log("Created sessionId:", sessionId)
+
+          if (sessionListeners.has(sessionId)) {
+            return sessionId
+          }
+          const newState = createSessionWithLastSeen(
+            get().sessions,
+            get().lastSeen,
+            sessionId,
+            session
+          )
+          const sessionUnsubscribe = session.onEvent((event) => {
+            routeEventToStore(sessionId, event)
+            // make sure we persist session state
+            set({sessions: new Map(get().sessions)})
+          })
+          sessionListeners.set(sessionId, sessionUnsubscribe)
+          set(newState)
+
+          // Sync with chats store
+          const userPubKey = invite.inviter
+          const chatsStore = usePrivateChatsStore.getState()
+          chatsStore.addChat(userPubKey)
+
+          return sessionId
+        } finally {
+          // Always remove from pending set
+          pendingInvites.delete(inviteKey)
+        }
       },
       updateLastSeen: (sessionId: string) => {
         const newLastSeen = new Map(get().lastSeen)
@@ -303,11 +518,120 @@ const store = create<SessionStore>()(
         }
         useEventsStore.getState().removeSession(sessionId)
       },
+      listenToUserDevices: (userPubKey: string) => {
+        const deviceId = get().deviceId
+        if (!deviceId) {
+          console.warn("Device ID not available, cannot listen to user devices.")
+          return
+        }
+        const key = `${userPubKey}:${deviceId}`
+        if (get().deviceInviteListeners.has(key)) {
+          console.log("Already listening to user devices for:", userPubKey)
+          return
+        }
+
+        console.log("Starting to listen for device invites from user:", userPubKey)
+
+        const unsubscribe = Invite.fromUser(userPubKey, subscribe, async (invite) => {
+          try {
+            console.log("Found invite from user:", {
+              userPubKey,
+              inviteDeviceId: invite.deviceId,
+              ourDeviceId: deviceId,
+            })
+
+            const sessionId = await get().acceptInvite(invite.getUrl())
+            const session = get().sessions.get(sessionId)
+            if (session) {
+              const newDevices = new Set(get().userDevices.get(userPubKey) || [])
+              const inviteDeviceId = invite.deviceId || "unknown"
+              newDevices.add(inviteDeviceId)
+              set({userDevices: new Map(get().userDevices).set(userPubKey, newDevices)})
+              console.log(
+                "Updated user devices for",
+                userPubKey,
+                ":",
+                Array.from(newDevices)
+              )
+            }
+          } catch (error) {
+            console.warn("Error accepting user device invite:", error)
+          }
+        })
+        get().deviceInviteListeners.set(key, unsubscribe)
+        console.log("Set up device invite listener for:", key)
+      },
+      stopListeningToUserDevices: (userPubKey: string) => {
+        const deviceId = get().deviceId
+        if (!deviceId) {
+          return
+        }
+        const key = `${userPubKey}:${deviceId}`
+        const unsubscribe = get().deviceInviteListeners.get(key)
+        if (unsubscribe) {
+          unsubscribe()
+          get().deviceInviteListeners.delete(key)
+        }
+      },
+      getPreferredSession: (userPubKey: string) => {
+        const userDevices = get().userDevices.get(userPubKey) || new Set()
+        const sessions = Array.from(get().sessions.entries()).filter(([sessionId]) => {
+          const from = sessionId.split(":")[0]
+          return from === userPubKey && userDevices.has(sessionId.split(":")[1])
+        })
+        if (sessions.length === 0) {
+          return null
+        }
+        // Sort by last seen
+        sessions.sort(([id1], [id2]) => {
+          const lastSeen1 = get().lastSeen.get(id1) || 0
+          const lastSeen2 = get().lastSeen.get(id2) || 0
+          return lastSeen2 - lastSeen1
+        })
+        return sessions[0][0]
+      },
+      debugMultiDevice: () => {
+        console.log("=== MULTI-DEVICE DEBUG STATE ===")
+        console.log("Device ID:", get().deviceId)
+        console.log("Current Sessions:")
+        Array.from(get().sessions.entries()).forEach(([id, session]) => {
+          const lastSeen = get().lastSeen.get(id) || "N/A"
+          console.log(`  - ${id}: ${session.name} (Last seen: ${lastSeen})`)
+        })
+        console.log("Current Invites:")
+        Array.from(get().invites.entries()).forEach(([id, invite]) => {
+          console.log(`  - ${id}: Inviter ${invite.inviter}`)
+        })
+        console.log("Current User Devices:")
+        Array.from(get().userDevices.entries()).forEach(([userPubKey, deviceIds]) => {
+          console.log(`  - ${userPubKey}: ${Array.from(deviceIds).join(", ")}`)
+        })
+        console.log("Current Message Queue:")
+        Array.from(get().messageQueue.entries()).forEach(([userPubKey, queue]) => {
+          console.log(`  - ${userPubKey}: ${queue.length} messages`)
+        })
+        console.log("Device Invite Listeners:")
+        console.log(`  - Active listeners: ${get().deviceInviteListeners.size}`)
+        Array.from(get().deviceInviteListeners.keys()).forEach((key) => {
+          console.log(`    - ${key}`)
+        })
+        console.log("=================================")
+      },
     }),
     {
       name: "sessions",
       onRehydrateStorage: () => async (state) => {
         await useUserStore.getState().awaitHydration()
+
+        // Initialize device ID if not set
+        if (!state?.deviceId) {
+          const stored = await localforage.getItem<string>("deviceId")
+          const deviceId = stored || generateDeviceId()
+          if (!stored) {
+            await localforage.setItem("deviceId", deviceId)
+          }
+          store.setState({deviceId})
+        }
 
         const privateKey = useUserStore.getState().privateKey
         const decrypt = privateKey
@@ -318,6 +642,7 @@ const store = create<SessionStore>()(
               }
               throw new Error("No nostr extension or private key")
             }
+
         Array.from(state?.invites || []).forEach(([id, invite]) => {
           if (inviteListeners.has(id)) {
             return
@@ -337,6 +662,22 @@ const store = create<SessionStore>()(
                 session
               )
               store.setState(newState)
+
+              // Track user device
+              if (identity) {
+                const userPubKey = identity
+                const deviceId = session.name || "unknown"
+                const userDevices = new Map(store.getState().userDevices)
+                const devices = userDevices.get(userPubKey) || new Set()
+                devices.add(deviceId)
+                userDevices.set(userPubKey, devices)
+                store.setState({userDevices})
+
+                // Sync with chats store
+                const chatsStore = usePrivateChatsStore.getState()
+                chatsStore.addChat(userPubKey)
+              }
+
               const sessionUnsubscribe = session.onEvent((event) => {
                 // Handle group creation event (kind 40)
                 if (event.kind === 40 && event.content) {
@@ -358,6 +699,7 @@ const store = create<SessionStore>()(
           )
           inviteListeners.set(id, inviteUnsubscribe)
         })
+
         Array.from(state?.sessions || []).forEach(([sessionId, session]) => {
           if (sessionListeners.has(sessionId)) {
             return
@@ -369,6 +711,17 @@ const store = create<SessionStore>()(
             newLastSeen.set(sessionId, Date.now())
             store.setState({lastSeen: newLastSeen})
           }
+
+          // Track user device from session ID
+          const parts = sessionId.split(":", 2)
+          const userPubKey = parts[0]
+          const deviceId = parts[1] || "unknown"
+          const userDevices = new Map(store.getState().userDevices)
+          const devices = userDevices.get(userPubKey) || new Set()
+          devices.add(deviceId)
+          userDevices.set(userPubKey, devices)
+          store.setState({userDevices})
+
           const sessionUnsubscribe = session.onEvent((event) => {
             // Handle group creation event (kind 40)
             if (event.kind === 40 && event.content) {
@@ -387,6 +740,17 @@ const store = create<SessionStore>()(
             store.setState({sessions: new Map(store.getState().sessions)})
           })
           sessionListeners.set(sessionId, sessionUnsubscribe)
+        })
+
+        // Start listening to device invites for users we have sessions with
+        const userPubKeys = new Set<string>()
+        Array.from(state?.sessions || []).forEach(([sessionId]) => {
+          const userPubKey = sessionId.split(":")[0]
+          userPubKeys.add(userPubKey)
+        })
+
+        userPubKeys.forEach((userPubKey) => {
+          store.getState().listenToUserDevices(userPubKey)
         })
       },
       storage: forceMigrationOnInitialPersist(
@@ -419,6 +783,10 @@ const store = create<SessionStore>()(
             return [id, serializeSessionState(session.state)]
           }),
           lastSeen: Array.from(state.lastSeen.entries()),
+          deviceId: state.deviceId,
+          userDevices: Array.from(state.userDevices.entries()).map(
+            ([userPubKey, deviceIds]) => [userPubKey, Array.from(deviceIds)]
+          ),
         }
       },
       merge: (persistedState: unknown, currentState: SessionStore) => {
@@ -426,10 +794,14 @@ const store = create<SessionStore>()(
           invites: [],
           sessions: [],
           lastSeen: [],
+          deviceId: "",
+          userDevices: [],
         }) as {
           invites: [string, string][]
           sessions: [string, string][]
           lastSeen: [string, number][]
+          deviceId: string
+          userDevices: [string, string[]][]
         }
         const newSessions: [string, Session][] = state.sessions.map(
           ([id, sessionState]: [string, string]) => {
@@ -443,11 +815,24 @@ const store = create<SessionStore>()(
             return [id, Invite.deserialize(invite)] as [string, Invite]
           }
         )
+        const userDevicesMap = new Map<string, Set<string>>(
+          (state.userDevices || []).map(([userPubKey, deviceIds]) => [
+            userPubKey,
+            new Set(deviceIds),
+          ])
+        )
         return {
           ...currentState,
           invites: new Map<string, Invite>(newInvites),
           sessions: new Map<string, Session>(newSessions),
           lastSeen: new Map<string, number>(state.lastSeen || []),
+          deviceId: state.deviceId,
+          userDevices: userDevicesMap,
+          deviceInviteListeners: new Map<string, () => void>(),
+          messageQueue: new Map<
+            string,
+            Array<{event: Partial<UnsignedEvent>; resolve: (sessionId: string) => void}>
+          >(),
         }
       },
     }

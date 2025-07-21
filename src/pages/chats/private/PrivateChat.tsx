@@ -2,30 +2,31 @@ import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "../utils/messageGrouping"
 import PrivateChatHeader from "./PrivateChatHeader"
-import {useSessionsStore} from "@/stores/sessions"
+import {usePrivateChatsStore} from "@/stores/privateChats"
 import MessageForm from "../message/MessageForm"
 import {MessageType} from "../message/Message"
-import {useEventsStore} from "@/stores/events"
 import {useEffect, useState} from "react"
 
 const Chat = ({id}: {id: string}) => {
-  const {sessions, updateLastSeen} = useSessionsStore()
-  // Fix: Use the events store with proper subscription to get reactive updates
-  const {events} = useEventsStore()
+  // id is now userPubKey instead of sessionId
+  const {getMessages, updateLastSeen, getUserSessions} = usePrivateChatsStore()
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
-  const session = sessions.get(id)!
+
+  // Get all sessions for this user
+  const userSessions = getUserSessions(id)
+  const hasAnySessions = userSessions.length > 0
 
   useEffect(() => {
-    if (!(id && session)) {
+    if (!id || !hasAnySessions) {
       return
     }
 
-    const sessionEvents = events.get(id)
-    if (!sessionEvents) return
+    const messages = getMessages(id)
+    if (!messages) return
 
-    Array.from(sessionEvents.entries()).forEach(([, message]) => {
+    Array.from(messages.entries()).forEach(([, message]) => {
       if (!haveReply && message.pubkey !== "user") {
         setHaveReply(true)
       }
@@ -33,7 +34,7 @@ const Chat = ({id}: {id: string}) => {
         setHaveSent(true)
       }
     })
-  }, [id, session, events, haveReply, haveSent])
+  }, [id, getMessages, haveReply, haveSent, hasAnySessions])
 
   useEffect(() => {
     if (!id) return
@@ -59,11 +60,11 @@ const Chat = ({id}: {id: string}) => {
     }
   }, [id, updateLastSeen])
 
-  if (!id || !session) {
+  if (!id) {
     return null
   }
 
-  const messages = events.get(id) ?? new SortedMap<string, MessageType>([], comparator)
+  const messages = getMessages(id) ?? new SortedMap<string, MessageType>([], comparator)
 
   return (
     <>

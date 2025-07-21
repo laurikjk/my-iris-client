@@ -8,6 +8,7 @@ import {subscribeToDMNotifications, subscribeToNotifications} from "./utils/noti
 import {migrateUserState, migratePublicChats} from "./utils/migration"
 import {useSettingsStore} from "@/stores/settings"
 import {useSessionsStore} from "@/stores/sessions"
+import {subscribeToOwnDeviceInvites} from "@/stores/privateChats"
 import {ndk} from "./utils/ndk"
 import {router} from "@/pages"
 import socialGraph from "./utils/socialGraph"
@@ -23,6 +24,7 @@ if (state.publicKey) {
   migratePublicChats()
   socialGraph().recalculateFollowDistances()
   useSessionsStore.getState().createDefaultInvites()
+  subscribeToOwnDeviceInvites().catch(console.error)
 }
 
 document.title = CONFIG.appName
@@ -58,6 +60,7 @@ useUserStore.subscribe((state) => {
     subscribeToDMNotifications()
     migratePublicChats()
     useSessionsStore.getState().createDefaultInvites()
+    subscribeToOwnDeviceInvites().catch(console.error)
   }
 })
 
