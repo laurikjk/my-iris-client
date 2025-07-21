@@ -9,8 +9,15 @@ test("can search for self and start a private chat via user search", async ({pag
   await page.getByRole("link", {name: "Chats"}).click()
   await expect(page.getByRole("banner").getByText("New Chat")).toBeVisible()
 
-  // Search for self by username
+  // Click the New Chat link to go to /chats/new
+  await page.getByRole("link", {name: /New Chat/}).click()
+  await expect(page).toHaveURL(/\/chats\/new/)
+
+  // Wait for the search input to be visible
   const searchInput = page.getByPlaceholder("Search for users")
+  await expect(searchInput).toBeVisible()
+
+  // Search for self by username
   await searchInput.fill(username)
   await page.waitForTimeout(1000) // Wait for search results to update
 

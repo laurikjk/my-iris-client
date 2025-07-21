@@ -8,7 +8,7 @@ test("can view trending content", async ({page}) => {
 
   await page.waitForSelector("#main-content", {state: "visible"})
 
-  await expect(page.getByRole("heading", {name: "Trending posts"})).toBeVisible({
+  await expect(page.getByRole("heading", {name: "Popular"})).toBeVisible({
     timeout: 10000,
   })
 })

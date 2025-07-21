@@ -6,13 +6,18 @@ async function setupChatWithSelf(page, username) {
   await page.getByRole("link", {name: "Chats"}).click()
   await expect(page.getByRole("banner").getByText("New Chat")).toBeVisible()
 
+  // Click the New Chat link to go to /chats/new
+  await page.getByRole("link", {name: /New Chat/}).click()
+  await expect(page).toHaveURL(/\/chats\/new/)
+
   // Search for self by username
   const searchInput = page.getByPlaceholder("Search for users")
+  await expect(searchInput).toBeVisible()
   await searchInput.fill(username)
   await page.waitForTimeout(1000)
 
-  // Click on self in search results
-  const selfButton = page.getByRole("button", {name: username})
+  // Click the first user result in the search results
+  const selfButton = page.locator("button[aria-label] >> nth=0")
   await selfButton.click()
 
   // Wait for navigation to chat view
