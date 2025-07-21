@@ -21,8 +21,15 @@ test("can search for self and start a private chat via user search", async ({pag
   await searchInput.fill(username)
   await page.waitForTimeout(1000) // Wait for search results to update
 
-  // Click on self in search results
-  const selfButton = page.getByRole("button", {name: username})
+  // Wait for the self user result button to be visible and click it
+  const selfButton = page.locator(`button[aria-label="${username}"]`).first()
+  try {
+    await expect(selfButton).toBeVisible({timeout: 5000})
+  } catch (e) {
+    const allLabels = await page.locator("button[aria-label]").allTextContents()
+    console.error("User result buttons found:", allLabels)
+    throw e
+  }
   await selfButton.click()
 
   // Wait for navigation to chat view

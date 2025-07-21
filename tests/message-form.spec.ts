@@ -16,8 +16,15 @@ async function setupChatWithSelf(page, username) {
   await searchInput.fill(username)
   await page.waitForTimeout(1000)
 
-  // Click the first user result in the search results
-  const selfButton = page.locator("button[aria-label] >> nth=0")
+  // Wait for the self user result button to be visible and click it
+  const selfButton = page.locator(`button[aria-label="${username}"]`).first()
+  try {
+    await expect(selfButton).toBeVisible({timeout: 5000})
+  } catch (e) {
+    const allLabels = await page.locator("button[aria-label]").allTextContents()
+    console.error("User result buttons found:", allLabels)
+    throw e
+  }
   await selfButton.click()
 
   // Wait for navigation to chat view
