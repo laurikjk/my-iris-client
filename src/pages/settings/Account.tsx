@@ -5,6 +5,16 @@ import {useNavigate, Link} from "react-router"
 import localforage from "localforage"
 import {ndk} from "@/utils/ndk"
 
+// Helper function to add timeout to any promise
+const withTimeout = (promise: Promise<unknown>, ms: number): Promise<unknown> => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Operation timeout after ${ms}ms`)), ms),
+    ),
+  ])
+}
+
 function Account() {
   const store = useUserStore()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -56,21 +66,29 @@ function Account() {
       try {
         // Try to unsubscribe from notifications first, while we still have the signer
         try {
-          await unsubscribeAll()
+          await withTimeout(unsubscribeAll(), 3000)
         } catch (e) {
           console.error("Error unsubscribing from push notifications:", e)
         }
 
-        await cleanupNDK()
+        await withTimeout(cleanupNDK(), 3000)
         const {reset} = useUserStore.getState()
         reset()
       } catch (e) {
         console.error("Error during logout cleanup:", e)
       } finally {
-        await cleanupStorage()
-        await cleanupServiceWorker()
-        navigate("/")
-        location.reload() // quick & dirty way to ensure everything is reset, especially localState
+        try {
+          await withTimeout(
+            Promise.all([cleanupStorage(), cleanupServiceWorker()]), 5000
+          )
+        } catch (e) {
+          console.error("Error during final cleanup:", e)
+        } finally {
+          // Ensure spinner always stops and navigation happens
+          setIsLoggingOut(false)
+          navigate("/")
+          location.reload()
+        }
       }
     }
   }

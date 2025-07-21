@@ -3,13 +3,14 @@ import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "../utils/messageGrouping"
 import PrivateChatHeader from "./PrivateChatHeader"
 import {usePrivateChatsStore} from "@/stores/privateChats"
+import {useEventsStore} from "@/stores/events"
 import MessageForm from "../message/MessageForm"
 import {MessageType} from "../message/Message"
 import {useEffect, useState} from "react"
 
 const Chat = ({id}: {id: string}) => {
   // id is now userPubKey instead of sessionId
-  const {getMessages, updateLastSeen, getUserSessions} = usePrivateChatsStore()
+  const {updateLastSeen, getUserSessions} = usePrivateChatsStore()
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
@@ -18,12 +19,15 @@ const Chat = ({id}: {id: string}) => {
   const userSessions = getUserSessions(id)
   const hasAnySessions = userSessions.length > 0
 
+  // Get messages reactively from events store - this will update when new messages are added
+  const eventsMap = useEventsStore((state) => state.events)
+  const messages = eventsMap.get(id) ?? new SortedMap<string, MessageType>([], comparator)
+
   useEffect(() => {
     if (!id || !hasAnySessions) {
       return
     }
 
-    const messages = getMessages(id)
     if (!messages) return
 
     Array.from(messages.entries()).forEach(([, message]) => {
@@ -34,7 +38,7 @@ const Chat = ({id}: {id: string}) => {
         setHaveSent(true)
       }
     })
-  }, [id, getMessages, haveReply, haveSent, hasAnySessions])
+  }, [id, messages, haveReply, haveSent, hasAnySessions])
 
   useEffect(() => {
     if (!id) return
@@ -63,8 +67,6 @@ const Chat = ({id}: {id: string}) => {
   if (!id) {
     return null
   }
-
-  const messages = getMessages(id) ?? new SortedMap<string, MessageType>([], comparator)
 
   return (
     <>

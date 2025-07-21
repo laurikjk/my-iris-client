@@ -84,6 +84,10 @@ interface SessionStoreActions {
   stopListeningToUserDevices: (userPubKey: string) => void
   getPreferredSession: (userPubKey: string) => string | null
   debugMultiDevice: () => void
+  manualDeviceDiscovery: () => void
+  cleanupInvites: () => void
+  getOwnDeviceInvites: () => Map<string, Invite>
+  cleanupDuplicateSessions: () => void
 }
 
 type SessionStore = SessionStoreState & SessionStoreActions
@@ -104,13 +108,22 @@ const routeEventToStore = (sessionId: string, message: MessageType) => {
   const groupLabelTag = message.tags?.find((tag: string[]) => tag[0] === "l")
   const myPubKey = useUserStore.getState().publicKey
   let targetId
-  if (pTag && pTag[1] && message.pubkey === myPubKey) {
-    targetId = pTag[1]
-  } else if (groupLabelTag && groupLabelTag[1]) {
+
+  if (groupLabelTag && groupLabelTag[1]) {
+    // Group message - store by group ID
     targetId = groupLabelTag[1]
+  } else if (
+    pTag &&
+    pTag[1] &&
+    (message.pubkey === myPubKey || message.pubkey === "user")
+  ) {
+    // Message sent by us with recipient tag - store by recipient pubkey
+    targetId = pTag[1]
   } else {
-    targetId = sessionId
+    // Private message - always store by the other user's pubkey, not sessionId
+    targetId = from
   }
+
   useEventsStore.getState().upsert(targetId, message)
 
   // Sync with chats store for private chats
@@ -310,12 +323,65 @@ const store = create<SessionStore>()(
           event.tags = [["ms", Date.now().toString()]]
         }
 
+        const myPubKey = useUserStore.getState().publicKey
+        const myDeviceId = get().deviceId
+
         // Get all existing sessions with this user
         const userSessions = Array.from(get().sessions.entries()).filter(([sessionId]) =>
           sessionId.startsWith(`${userPubKey}:`)
         )
 
         console.log(`Found ${userSessions.length} sessions for user`)
+
+        // If sending to ourselves, handle differently
+        if (userPubKey === myPubKey) {
+          console.log("Sending to self, filtering out own device")
+
+          // Filter out our own device ID to avoid "not the initiator" error
+          const otherDeviceSessions = userSessions.filter(([sessionId]) => {
+            const deviceId = sessionId.split(":")[1]
+            return deviceId !== myDeviceId
+          })
+
+          console.log(`Found ${otherDeviceSessions.length} other device sessions`)
+
+          // Send to other devices if they exist
+          if (otherDeviceSessions.length > 0) {
+            // Send to the most recently active other device
+            const sortedSessions = otherDeviceSessions.sort(([id1], [id2]) => {
+              const lastSeen1 = get().lastSeen.get(id1) || 0
+              const lastSeen2 = get().lastSeen.get(id2) || 0
+              return lastSeen2 - lastSeen1
+            })
+
+            const preferredOtherSession = sortedSessions[0][0]
+            try {
+              await get().sendMessage(preferredOtherSession, event)
+              console.log(`Sent to other device session: ${preferredOtherSession}`)
+            } catch (error) {
+              console.warn(
+                `Error sending to other device session ${preferredOtherSession}:`,
+                error
+              )
+              // Don't throw here, we still want to store locally
+            }
+          }
+
+          // Always store locally when sending to self
+          const message: MessageType = {
+            ...event,
+            id: crypto.randomUUID(),
+            pubkey: "user",
+            reactions: {},
+            created_at: event.created_at || Math.round(Date.now() / 1000),
+            tags: event.tags || [],
+          } as MessageType
+
+          // Store locally by routing to the user's pubkey
+          routeEventToStore(`${userPubKey}:local`, message)
+
+          return `${userPubKey}:self`
+        }
 
         if (userSessions.length > 0) {
           // Get preferred session (most recently active)
@@ -351,6 +417,15 @@ const store = create<SessionStore>()(
 
           const unsubscribe = Invite.fromUser(userPubKey, subscribe, async (invite) => {
             try {
+              // Security check: verify the invite is actually from the expected user
+              if (invite.inviter !== userPubKey) {
+                console.warn("Received invite from unexpected user:", {
+                  expected: userPubKey,
+                  actual: invite.inviter,
+                })
+                return
+              }
+
               cleanup()
               const sessionId = await get().acceptInvite(invite.getUrl())
 
@@ -422,13 +497,6 @@ const store = create<SessionStore>()(
             url: url.slice(0, 50) + "...",
           })
 
-          // Check if we already have ANY session with this user
-          const existingSessions = Array.from(get().sessions.keys()).filter((sessionId) =>
-            sessionId.startsWith(`${invite.inviter}:`)
-          )
-
-          console.log("Existing sessions with user:", existingSessions)
-
           // Check if we already have a session with this specific device
           const deviceId = invite.deviceId || "unknown"
           const potentialSessionId = `${invite.inviter}:${deviceId}`
@@ -439,15 +507,8 @@ const store = create<SessionStore>()(
             return potentialSessionId
           }
 
-          // If we have any existing session with this user, let's use the first one
-          // instead of creating a new one (for now, to prevent duplicates)
-          if (existingSessions.length > 0) {
-            console.log(
-              "Using existing session instead of creating new:",
-              existingSessions[0]
-            )
-            return existingSessions[0]
-          }
+          // Allow multiple sessions per user (for multi-device support)
+          // Only prevent exact duplicate device sessions, which we already checked above
 
           console.log("Creating new session for:", potentialSessionId)
 
@@ -519,11 +580,20 @@ const store = create<SessionStore>()(
         useEventsStore.getState().removeSession(sessionId)
       },
       listenToUserDevices: (userPubKey: string) => {
+        const myPubKey = useUserStore.getState().publicKey
         const deviceId = get().deviceId
+        
         if (!deviceId) {
           console.warn("Device ID not available, cannot listen to user devices.")
           return
         }
+        
+        // CRITICAL: Prevent listening to our own devices in development to avoid session spam
+        if (userPubKey === myPubKey) {
+          console.log("BLOCKED: Not listening to own device invites to prevent session creation loop")
+          return
+        }
+        
         const key = `${userPubKey}:${deviceId}`
         if (get().deviceInviteListeners.has(key)) {
           console.log("Already listening to user devices for:", userPubKey)
@@ -534,11 +604,43 @@ const store = create<SessionStore>()(
 
         const unsubscribe = Invite.fromUser(userPubKey, subscribe, async (invite) => {
           try {
+            // Security check: verify the invite is actually from the expected user
+            if (invite.inviter !== userPubKey) {
+              console.warn("Received invite from unexpected user:", {
+                expected: userPubKey,
+                actual: invite.inviter,
+              })
+              return
+            }
+
             console.log("Found invite from user:", {
               userPubKey,
               inviteDeviceId: invite.deviceId,
               ourDeviceId: deviceId,
             })
+
+            // Check if we already have a session with this specific device
+            const inviteDeviceId = invite.deviceId || "unknown"
+            const potentialSessionId = `${userPubKey}:${inviteDeviceId}`
+            const existingSession = get().sessions.get(potentialSessionId)
+
+            if (existingSession) {
+              console.log(
+                "Session already exists with this device, skipping invite:",
+                potentialSessionId
+              )
+              return
+            }
+
+            // Also check if this is our own device (prevent self-sessions)
+            const ourDeviceId = get().deviceId
+            if (
+              userPubKey === useUserStore.getState().publicKey &&
+              inviteDeviceId === ourDeviceId
+            ) {
+              console.log("Skipping invite from our own device:", inviteDeviceId)
+              return
+            }
 
             const sessionId = await get().acceptInvite(invite.getUrl())
             const session = get().sessions.get(sessionId)
@@ -616,6 +718,101 @@ const store = create<SessionStore>()(
           console.log(`    - ${key}`)
         })
         console.log("=================================")
+      },
+      // Helper function to manually trigger device discovery
+      manualDeviceDiscovery: () => {
+        const myPubKey = useUserStore.getState().publicKey
+        if (!myPubKey) {
+          console.error("No public key available")
+          return
+        }
+        console.log("Manually triggering device discovery for:", myPubKey)
+        get().stopListeningToUserDevices(myPubKey)
+        get().listenToUserDevices(myPubKey)
+      },
+      // Get only invites that belong to our own devices
+      getOwnDeviceInvites: () => {
+        const myPubKey = useUserStore.getState().publicKey
+        if (!myPubKey) {
+          return new Map()
+        }
+
+        const ownInvites = new Map<string, Invite>()
+        Array.from(get().invites.entries()).forEach(([id, invite]) => {
+          // Only include invites where we are the inviter (our own device invites)
+          if (invite.inviter === myPubKey) {
+            ownInvites.set(id, invite)
+          }
+        })
+
+        return ownInvites
+      },
+      // Clean up invites to only keep our own device invites
+      cleanupInvites: () => {
+        const myPubKey = useUserStore.getState().publicKey
+        if (!myPubKey) {
+          console.error("No public key available for cleanup")
+          return
+        }
+
+        console.log("Cleaning up invites...")
+        const currentInvites = get().invites
+        const ownInvites = new Map<string, Invite>()
+        let removedCount = 0
+
+        Array.from(currentInvites.entries()).forEach(([id, invite]) => {
+          // Only keep invites where we are the inviter (our own device invites)
+          if (invite.inviter === myPubKey) {
+            ownInvites.set(id, invite)
+          } else {
+            // Clean up listeners for removed invites
+            const unsubscribe = inviteListeners.get(id)
+            if (unsubscribe) {
+              unsubscribe()
+              inviteListeners.delete(id)
+            }
+            removedCount++
+          }
+        })
+
+        console.log(
+          `Removed ${removedCount} stale invites, kept ${ownInvites.size} own device invites`
+        )
+        set({invites: ownInvites})
+      },
+      cleanupDuplicateSessions: () => {
+        const myPubKey = useUserStore.getState().publicKey
+        if (!myPubKey) {
+          console.error("No public key available for cleanup")
+          return
+        }
+
+        console.log("Cleaning up duplicate sessions...")
+        const sessionsToRemove: string[] = []
+        const userSessions = Array.from(get().sessions.entries()).filter(([sessionId]) =>
+          sessionId.startsWith(`${myPubKey}:`)
+        )
+
+        userSessions.forEach(([sessionId, session]) => {
+          const deviceId = sessionId.split(":")[1]
+          const otherSessionsWithSameDevice = userSessions.filter(
+            ([otherSessionId]) => otherSessionId !== sessionId && otherSessionId.split(":")[1] === deviceId
+          )
+
+          if (otherSessionsWithSameDevice.length > 0) {
+            console.log(
+              `Found duplicate session for device ${deviceId}: ${sessionId} and ${otherSessionsWithSameDevice[0]}`
+            )
+            sessionsToRemove.push(sessionId)
+          }
+        })
+
+        sessionsToRemove.forEach((sessionId) => {
+          get().deleteSession(sessionId)
+          console.log(`Removed duplicate session: ${sessionId}`)
+        })
+
+        console.log(`Cleaned up ${sessionsToRemove.length} duplicate sessions.`)
       },
     }),
     {

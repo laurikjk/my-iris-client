@@ -2,13 +2,11 @@ import {useState, useEffect} from "react"
 import {useSessionsStore} from "@/stores/sessions"
 import {useUserStore} from "@/stores/user"
 import {RiDeleteBin6Line, RiRefreshLine} from "@remixicon/react"
-import localforage from "localforage"
 
 interface DeviceInfo {
   id: string
   label: string
   isCurrent: boolean
-  hasInvite: boolean
   sessionCount: number
   lastSeen?: number
 }
@@ -21,51 +19,57 @@ const ChatSettings = () => {
     deleteInvite,
     createDefaultInvites,
     debugMultiDevice,
+    manualDeviceDiscovery,
+    cleanupInvites,
+    getOwnDeviceInvites,
+    cleanupDuplicateSessions,
+    deviceId: currentDeviceId,
   } = useSessionsStore()
   const {publicKey} = useUserStore()
   const [devices, setDevices] = useState<DeviceInfo[]>([])
-  const [currentDeviceId, setCurrentDeviceId] = useState<string>("")
 
   useEffect(() => {
     const loadDeviceInfo = async () => {
       if (!publicKey) return
 
-      const deviceId = await localforage.getItem<string>("deviceId")
-      setCurrentDeviceId(deviceId || "")
-
-      // Get all device invites
-      const deviceInvites = Array.from(invites.entries())
-
-      // Get session counts per device
+      // Get session counts and last seen per device for our own sessions
       const deviceSessions = new Map<string, number>()
       const deviceLastSeen = new Map<string, number>()
 
-      Array.from(sessions.keys()).forEach((sessionId) => {
-        const deviceIdFromSession = sessionId.split(":")[1] || "unknown"
-        deviceSessions.set(
-          deviceIdFromSession,
-          (deviceSessions.get(deviceIdFromSession) || 0) + 1
-        )
+      Array.from(sessions.entries()).forEach(([sessionId]) => {
+        const [userPubKey, deviceId] = sessionId.split(":", 2)
+        if (userPubKey === publicKey) {
+          // This is a session with one of our own devices
+          const actualDeviceId = deviceId || "unknown"
+          deviceSessions.set(
+            actualDeviceId,
+            (deviceSessions.get(actualDeviceId) || 0) + 1
+          )
 
-        const sessionLastSeen = lastSeen.get(sessionId)
-        if (sessionLastSeen) {
-          const currentLastSeen = deviceLastSeen.get(deviceIdFromSession) || 0
-          if (sessionLastSeen > currentLastSeen) {
-            deviceLastSeen.set(deviceIdFromSession, sessionLastSeen)
+          const sessionLastSeen = lastSeen.get(sessionId)
+          if (sessionLastSeen) {
+            const currentLastSeen = deviceLastSeen.get(actualDeviceId) || 0
+            if (sessionLastSeen > currentLastSeen) {
+              deviceLastSeen.set(actualDeviceId, sessionLastSeen)
+            }
           }
         }
       })
 
-      const deviceList: DeviceInfo[] = deviceInvites.map(([id]) => ({
-        id,
-        label: `Device ${id.slice(0, 8)}`,
-        isCurrent: id === deviceId,
-        hasInvite: true,
-        sessionCount: deviceSessions.get(id) || 0,
-        lastSeen: deviceLastSeen.get(id),
-      }))
+      // Only show devices that have local invites that belong to us
+      // These are the legitimate devices we control
+      const ownInvites = getOwnDeviceInvites()
+      const deviceList: DeviceInfo[] = Array.from(ownInvites.entries()).map(
+        ([deviceId]) => ({
+          id: deviceId,
+          label: `Device ${deviceId.slice(0, 8)}`,
+          isCurrent: deviceId === currentDeviceId,
+          sessionCount: deviceSessions.get(deviceId) || 0,
+          lastSeen: deviceLastSeen.get(deviceId),
+        })
+      )
 
-      // Sort: current device first, then by last seen
+      // Sort: current device first, then by connection status, then by last seen
       deviceList.sort((a, b) => {
         if (a.isCurrent) return -1
         if (b.isCurrent) return 1
@@ -80,7 +84,7 @@ const ChatSettings = () => {
     // Expose debug function globally for easy access
     ;(window as typeof window & {debugMultiDevice: () => void}).debugMultiDevice =
       debugMultiDevice
-  }, [invites, sessions, lastSeen, publicKey, debugMultiDevice])
+  }, [invites, sessions, lastSeen, publicKey, currentDeviceId, debugMultiDevice])
 
   const handleNullifyDevice = async (deviceId: string) => {
     if (
@@ -133,6 +137,13 @@ const ChatSettings = () => {
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium">Your Devices</h3>
           <div className="flex gap-2">
+            <button
+              onClick={cleanupInvites}
+              className="btn btn-ghost btn-sm"
+              title="Clean up stale invites"
+            >
+              <span className="text-sm">🧹</span>
+            </button>
             <button
               onClick={handleRefreshInvites}
               className="btn btn-ghost btn-sm"
@@ -197,15 +208,39 @@ const ChatSettings = () => {
         <div className="text-sm">
           <p>Current Device ID: {currentDeviceId || "Not set"}</p>
           <p>Total Invites: {invites.size}</p>
+          <p>Own Device Invites: {getOwnDeviceInvites().size}</p>
           <p>Total Sessions: {sessions.size}</p>
         </div>
-        <button
-          onClick={debugMultiDevice}
-          className="btn btn-outline btn-sm"
-          title="Print debug info to console"
-        >
-          Debug Multi-Device State
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={debugMultiDevice}
+            className="btn btn-outline btn-sm"
+            title="Print debug info to console"
+          >
+            Debug Multi-Device State
+          </button>
+          <button
+            onClick={manualDeviceDiscovery}
+            className="btn btn-primary btn-sm"
+            title="Manually trigger device discovery"
+          >
+            Discover Devices
+          </button>
+          <button
+            onClick={cleanupInvites}
+            className="btn btn-warning btn-sm"
+            title="Clean up all stale invites"
+          >
+            Cleanup Invites
+          </button>
+          <button
+            onClick={cleanupDuplicateSessions}
+            className="btn btn-error btn-sm"
+            title="EMERGENCY: Remove duplicate self-sessions"
+          >
+            🚨 Fix Self-Sessions
+          </button>
+        </div>
       </div>
     </div>
   )

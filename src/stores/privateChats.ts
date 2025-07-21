@@ -68,29 +68,11 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
         set({chats})
       },
       getMessages: (userPubKey: string): SortedMap<string, MessageType> => {
-        const sessions = get().getUserSessions(userPubKey)
         const events = useEventsStore.getState().events
-        const allMessages = new SortedMap<string, MessageType>([], comparator)
-
-        // Aggregate messages from all sessions for this user
-        sessions.forEach((sessionId) => {
-          const sessionMessages = events.get(sessionId)
-          if (sessionMessages) {
-            // Convert SortedMap to array of entries and iterate
-            Array.from(sessionMessages.entries()).forEach(([messageId, message]) => {
-              // If message has a ['p', recipientPubKey] tag, use that pubkey for the chat
-              const pTag = message.tags?.find((tag) => tag[0] === "p")
-              const chatPubKey = pTag ? pTag[1] : userPubKey
-              if (chatPubKey === userPubKey) {
-                // Ensure we don't have duplicate messages by using unique IDs
-                const uniqueId = `${sessionId}:${messageId}`
-                allMessages.set(uniqueId, message)
-              }
-            })
-          }
-        })
-
-        return allMessages
+        // Since we now store messages by userPubKey directly, just get them from events store
+        return (
+          events.get(userPubKey) ?? new SortedMap<string, MessageType>([], comparator)
+        )
       },
       getUserSessions: (userPubKey: string): string[] => {
         const sessions = useSessionsStore.getState().sessions
@@ -113,6 +95,7 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
       getChatsList: () => {
         const sessions = useSessionsStore.getState().sessions
         const chats = get().chats
+        const myPubKey = useUserStore.getState().publicKey
 
         // Get all users we have sessions with
         const userPubKeys = new Set<string>()
@@ -120,6 +103,15 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
           const userPubKey = sessionId.split(":")[0]
           userPubKeys.add(userPubKey)
         })
+
+        // Also check if we have messages stored for our own pubkey (self-chat)
+        if (myPubKey) {
+          const events = useEventsStore.getState().events
+          const myMessages = events.get(myPubKey)
+          if (myMessages && myMessages.size > 0) {
+            userPubKeys.add(myPubKey)
+          }
+        }
 
         // Convert to chat list format
         return Array.from(userPubKeys)
@@ -165,12 +157,32 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
     }
   )
 )
+
+let ownDeviceInvitesInitialized = false
+
+// Reset the initialization flag (useful when user changes)
+export function resetDeviceInvitesInitialization() {
+  ownDeviceInvitesInitialized = false
+}
+
 // Helper to subscribe to own device invites after stores are initialized
 export async function subscribeToOwnDeviceInvites() {
   const publicKey = useUserStore.getState().publicKey
-  if (publicKey) {
-    // Import here to avoid circular dependency at module scope
-    const {useSessionsStore} = await import("./sessions")
-    useSessionsStore.getState().listenToUserDevices(publicKey)
+  console.log("subscribeToOwnDeviceInvites", publicKey)
+
+  if (!publicKey) {
+    return
   }
+
+  // Prevent multiple initializations
+  if (ownDeviceInvitesInitialized) {
+    console.log("Own device invites already initialized, skipping")
+    return
+  }
+
+  ownDeviceInvitesInitialized = true
+
+  // Import here to avoid circular dependency at module scope
+  const {useSessionsStore} = await import("./sessions")
+  useSessionsStore.getState().listenToUserDevices(publicKey)
 }

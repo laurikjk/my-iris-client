@@ -8,7 +8,10 @@ import {subscribeToDMNotifications, subscribeToNotifications} from "./utils/noti
 import {migrateUserState, migratePublicChats} from "./utils/migration"
 import {useSettingsStore} from "@/stores/settings"
 import {useSessionsStore} from "@/stores/sessions"
-import {subscribeToOwnDeviceInvites} from "@/stores/privateChats"
+import {
+  subscribeToOwnDeviceInvites,
+  resetDeviceInvitesInitialization,
+} from "@/stores/privateChats"
 import {ndk} from "./utils/ndk"
 import {router} from "@/pages"
 import socialGraph from "./utils/socialGraph"
@@ -56,6 +59,7 @@ useUserStore.subscribe((state) => {
 
   if (state.publicKey && state.publicKey !== parsedPrevKey) {
     console.log("Public key changed, initializing chat modules")
+    resetDeviceInvitesInitialization() // Reset to allow re-initialization
     subscribeToNotifications()
     subscribeToDMNotifications()
     migratePublicChats()
