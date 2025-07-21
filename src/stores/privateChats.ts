@@ -1,9 +1,9 @@
 import {createJSONStorage, persist} from "zustand/middleware"
-import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {MessageType} from "@/pages/chats/message/Message"
 import {comparator} from "@/pages/chats/utils/messageGrouping"
 import {useUserRecordsStore} from "./userRecords"
 import {useEventsStore} from "./events"
+import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import localforage from "localforage"
 import {create} from "zustand"
 import {UnsignedEvent} from "nostr-tools"
@@ -16,10 +16,6 @@ interface PrivateChatsStoreState {
 interface PrivateChatsStoreActions {
   sendToUser: (userPubKey: string, event: Partial<UnsignedEvent>) => Promise<string>
   updateLastSeen: (userPubKey: string) => void
-  getMessages: (userPubKey: string) => SortedMap<string, MessageType>
-  getUserSessions: (userPubKey: string) => string[]
-  addChat: (userPubKey: string) => void
-  removeChat: (userPubKey: string) => void
   getChatsList: () => Array<{
     userPubKey: string
     lastMessage?: MessageType
@@ -35,11 +31,6 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
     (set, get) => ({
       chats: new Map(),
       sendToUser: async (userPubKey: string, event: Partial<UnsignedEvent>) => {
-        // Ensure chat exists
-        if (!get().chats.has(userPubKey)) {
-          get().addChat(userPubKey)
-        }
-
         const myPubKey = useUserStore.getState().publicKey
         // Always send to recipient
         const recipientPromise = useUserRecordsStore
@@ -69,65 +60,43 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
         chats.set(userPubKey, chat)
         set({chats})
       },
-      getMessages: (userPubKey: string): SortedMap<string, MessageType> => {
-        const events = useEventsStore.getState().events
-        // Since we now store messages by userPubKey directly, just get them from events store
-        return (
-          events.get(userPubKey) ?? new SortedMap<string, MessageType>([], comparator)
-        )
-      },
-      getUserSessions: (userPubKey: string): string[] => {
-        const sessions = useUserRecordsStore.getState().sessions
-        return Array.from(sessions.keys()).filter((sessionId) =>
-          sessionId.startsWith(`${userPubKey}:`)
-        )
-      },
-      addChat: (userPubKey: string) => {
-        const chats = new Map(get().chats)
-        if (!chats.has(userPubKey)) {
-          chats.set(userPubKey, {lastSeen: 0})
-          set({chats})
-        }
-      },
-      removeChat: (userPubKey: string) => {
-        const chats = new Map(get().chats)
-        chats.delete(userPubKey)
-        set({chats})
-      },
       getChatsList: () => {
-        const sessions = useUserRecordsStore.getState().sessions
+        const userRecords = useUserRecordsStore.getState().userRecords
         const chats = get().chats
-        const myPubKey = useUserStore.getState().publicKey
 
-        // Get all users we have sessions with
+        // Get all users we have active sessions with (from userRecords, not sessions)
         const userPubKeys = new Set<string>()
-        Array.from(sessions.keys()).forEach((sessionId) => {
-          const userPubKey = sessionId.split(":")[0]
-          userPubKeys.add(userPubKey)
-        })
 
-        // Also check if we have messages stored for our own pubkey (self-chat)
-        if (myPubKey) {
-          const events = useEventsStore.getState().events
-          const myMessages = events.get(myPubKey)
-          if (myMessages && myMessages.size > 0) {
-            userPubKeys.add(myPubKey)
+        for (const [userPubKey, userRecord] of userRecords.entries()) {
+          // Only include users with active sessions
+          if (userRecord.hasActiveSessions()) {
+            userPubKeys.add(userPubKey)
           }
+        }
+
+        // Also include users we have in the chats store (for persistence)
+        for (const userPubKey of chats.keys()) {
+          userPubKeys.add(userPubKey)
         }
 
         // Convert to chat list format
         return Array.from(userPubKeys)
           .map((userPubKey) => {
-            const messages = get().getMessages(userPubKey)
+            // Get messages directly from events store
+            const events = useEventsStore.getState().events
+            const messages =
+              events.get(userPubKey) ?? new SortedMap<string, MessageType>([], comparator)
             const lastMessage = messages.last()?.[1]
             const chatData = chats.get(userPubKey) || {lastSeen: 0}
 
             // Calculate unread count
-            const unreadCount = Array.from(messages.values()).filter((msg) => {
-              if (msg.pubkey === "user") return false // Don't count our own messages
-              const msgTime = msg.created_at ? msg.created_at * 1000 : 0
-              return msgTime > chatData.lastSeen
-            }).length
+            const unreadCount = Array.from(messages.values()).filter(
+              (msg: MessageType) => {
+                if (msg.pubkey === "user") return false // Don't count our own messages
+                const msgTime = msg.created_at ? msg.created_at * 1000 : 0
+                return msgTime > chatData.lastSeen
+              }
+            ).length
 
             return {
               userPubKey,
@@ -190,8 +159,11 @@ export async function subscribeToOwnDeviceInvites() {
   // Clean up old invites first (keep only current device's invite)
   useUserRecordsStore.getState().ensureOnlyCurrentDeviceInvite()
   
-  // Initialize listener for current device's invite  
+  // Initialize listeners for current device's invite  
   useUserRecordsStore.getState().initializeListeners()
+  
+  // Initialize event listeners for all deserialized sessions
+  useUserRecordsStore.getState().initializeSessionListeners()
   
   // Then start listening for new device invites from other devices
   useUserRecordsStore.getState().listenToUserDevices(publicKey)

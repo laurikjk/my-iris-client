@@ -6,6 +6,9 @@ import {NavLink} from "react-router"
 import classNames from "classnames"
 import {useEffect} from "react"
 import {useGroupsStore} from "@/stores/groups"
+import {useEventsStore} from "@/stores/events"
+import {SortedMap} from "@/utils/SortedMap/SortedMap"
+import {comparator} from "@/pages/chats/utils/messageGrouping"
 
 interface ChatListProps {
   className?: string
@@ -26,8 +29,8 @@ const ChatList = ({className}: ChatListProps) => {
   }, [publicChats, addOrRefreshChatById])
 
   const latestForGroup = (id: string) => {
-    const {getMessages} = usePrivateChatsStore.getState()
-    const messages = getMessages(id)
+    const events = useEventsStore.getState().events
+    const messages = events.get(id) ?? new SortedMap([], comparator)
     const lastMsg = messages.last()?.[1]
     if (!lastMsg) return 0
     return lastMsg.created_at ? new Date(lastMsg.created_at * 1000).getTime() : 0

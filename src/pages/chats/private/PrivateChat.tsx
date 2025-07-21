@@ -7,16 +7,20 @@ import {useEventsStore} from "@/stores/events"
 import MessageForm from "../message/MessageForm"
 import {MessageType} from "../message/Message"
 import {useEffect, useState} from "react"
+import {useUserRecordsStore} from "@/stores/userRecords"
 
 const Chat = ({id}: {id: string}) => {
   // id is now userPubKey instead of sessionId
-  const {updateLastSeen, getUserSessions} = usePrivateChatsStore()
+  const {updateLastSeen} = usePrivateChatsStore()
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
   // Get all sessions for this user
-  const userSessions = getUserSessions(id)
+  const sessions = useUserRecordsStore((state) => state.sessions)
+  const userSessions = Array.from(sessions.keys()).filter((sessionId) =>
+    sessionId.startsWith(`${id}:`)
+  )
   const hasAnySessions = userSessions.length > 0
 
   // Get messages reactively from events store - this will update when new messages are added

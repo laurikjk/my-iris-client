@@ -12,7 +12,6 @@ import {useUserStore} from "./user"
 import {ndk} from "@/utils/ndk"
 import {create} from "zustand"
 import {useGroupsStore} from "./groups"
-import {usePrivateChatsStore} from "./privateChats"
 
 const generateDeviceId = (): string => {
   return crypto.randomUUID()
@@ -36,7 +35,7 @@ interface UserRecordsStoreActions {
   createDefaultInvites: () => void
   acceptInvite: (url: string) => Promise<string>
   sendMessage: (sessionId: string, event: Partial<UnsignedEvent>) => Promise<void>
-  sendToUser: (userPubKey: string, event: Partial<UnsignedEvent>) => Promise<string>
+  sendToUser: (userPubKey: string, event: Partial<UnsignedEvent>) => Promise<void>
   updateLastSeen: (sessionId: string) => void
   deleteInvite: (id: string) => void
   deleteSession: (sessionId: string) => void
@@ -56,6 +55,7 @@ interface UserRecordsStoreActions {
   cleanupDuplicateSessions: () => void
   reset: () => void
   initializeListeners: () => void
+  initializeSessionListeners: () => void
   ensureOnlyCurrentDeviceInvite: () => void
 
   // Compatibility API (for existing components)
@@ -102,11 +102,8 @@ const routeEventToStore = (sessionId: string, message: MessageType) => {
 
   useEventsStore.getState().upsert(targetId, message)
 
-  // Sync with chats store for private chats
-  if (!groupLabelTag && userPubKey) {
-    const chatsStore = usePrivateChatsStore.getState()
-    chatsStore.addChat(userPubKey)
-  }
+  // Chats are now determined automatically from active sessions in userRecords
+  // No need to manually add chats since getChatsList() uses userRecords directly
 }
 
 // Global listeners tracking
@@ -254,9 +251,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           })
           sessionListeners.set(sessionId, sessionUnsubscribe)
 
-          // Sync with chats store
-          const chatsStore = usePrivateChatsStore.getState()
-          chatsStore.addChat(identity)
+          // Chat will appear automatically in getChatsList() via userRecords
         })
 
         inviteListeners.set(id, unsubscribe)
@@ -312,7 +307,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
       sendToUser: async (
         userPubKey: string,
         event: Partial<UnsignedEvent>
-      ): Promise<string> => {
+      ): Promise<void> => {
         console.log("sendToUser:", {userPubKey, event})
 
         if (!event.created_at) {
@@ -328,67 +323,32 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         // Get UserRecord for this user
         const userRecord = get().userRecords.get(userPubKey)
 
-        if (userPubKey === myPubKey) {
-          // Sending to self - handle specially
-          console.log("Sending to self")
-
-          if (userRecord) {
-            const otherDevices = userRecord
-              .getActiveDevices()
-              .filter((device) => device.deviceId !== myDeviceId)
-
-            if (otherDevices.length > 0) {
-              // Send to most active other device
-              const mostActiveDevice = userRecord.getMostActiveDevice()
-              if (mostActiveDevice && mostActiveDevice.activeSession) {
-                try {
-                  const sessionId = `${userPubKey}:${mostActiveDevice.deviceId}`
-                  await get().sendMessage(sessionId, event)
-                  console.log(`Sent to other device session: ${sessionId}`)
-                } catch (error) {
-                  console.warn(`Error sending to other device:`, error)
-                }
-              }
-            }
-          }
-
-          // Always store locally when sending to self
-          const message: MessageType = {
-            ...event,
-            id: crypto.randomUUID(),
-            pubkey: "user",
-            reactions: {},
-            created_at: event.created_at || Math.round(Date.now() / 1000),
-            tags: event.tags || [],
-          } as MessageType
-
-          routeEventToStore(`${userPubKey}:local`, message)
-          return `${userPubKey}:self`
-        }
-
+        // ----------------------
+        // 1. If we already have active sessions with this user, send via each device
+        // ----------------------
         if (userRecord && userRecord.hasActiveSessions()) {
-          // Send to preferred session
-          const preferredSession = userRecord.getPreferredSession()
-          if (preferredSession) {
-            const preferredDevice = userRecord.getMostActiveDevice()
-            if (preferredDevice) {
-              const sessionId = `${userPubKey}:${preferredDevice.deviceId}`
-              try {
-                await get().sendMessage(sessionId, event)
-                console.log(`Sent to preferred session: ${sessionId}`)
-                return sessionId
-              } catch (error) {
-                console.warn(`Error sending to preferred session:`, error)
-                throw error
-              }
+          let firstSuccess: string | null = null
+          for (const device of userRecord.getActiveDevices()) {
+            if (!device.activeSession) continue
+            const sessionId = `${userPubKey}:${device.deviceId}`
+            try {
+              await get().sendMessage(sessionId, event)
+              console.log(`Sent via session ${sessionId}`)
+              if (!firstSuccess) firstSuccess = sessionId
+            } catch (err) {
+              console.warn(`Failed sending via session ${sessionId}:`, err)
             }
           }
+          if (firstSuccess) {
+            return
+          }
+          // If we got here it means we have devices but none of the sessions worked – fall through to create new session
         }
 
         // No existing sessions - listen for invites and queue message
         console.log("No existing sessions, queuing message and listening for invites")
 
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
           const timeoutId = setTimeout(() => {
             cleanup()
             reject(new Error("Timeout waiting for user invite"))
@@ -427,7 +387,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
               await get().sendMessage(sessionId, event)
               console.log("sendToUser new sessionId:", sessionId)
-              resolve(sessionId)
+              resolve()
             } catch (error) {
               reject(error)
             }
@@ -535,9 +495,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             sessionListeners.set(sessionId, sessionUnsubscribe)
           }
 
-          // Sync with chats store
-          const chatsStore = usePrivateChatsStore.getState()
-          chatsStore.addChat(invite.inviter)
+          // Chat will appear automatically in getChatsList() via userRecords
 
           // After accepting invite, ensure we store the invite itself so that ChatSettings can list the device
           const invitesMap = new Map(get().invites)
@@ -700,9 +658,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
                 sessionListeners.set(sessionId, sessionUnsubscribe)
               }
 
-              // Sync with chats store
-              const chatsStore = usePrivateChatsStore.getState()
-              chatsStore.addChat(invite.inviter)
+              // Chat will appear automatically in getChatsList() via userRecords
 
               // Store the invite itself
               const invitesMap = new Map(get().invites)
@@ -990,13 +946,38 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           })
           sessionListeners.set(sessionId, sessionUnsubscribe)
 
-          // Sync with chats store
-          const chatsStore = usePrivateChatsStore.getState()
-          chatsStore.addChat(identity)
+          // Chat will appear automatically in getChatsList() via userRecords
         })
 
         inviteListeners.set(currentDeviceId, unsubscribe)
         console.log("Initialization of listener completed for device:", currentDeviceId)
+      },
+
+      initializeSessionListeners: () => {
+        console.log("Initializing event listeners for all deserialized sessions...")
+        const userRecords = get().userRecords
+        let count = 0
+        
+        for (const [userPubKey, userRecord] of userRecords.entries()) {
+          for (const device of userRecord.getActiveDevices()) {
+            if (device.activeSession) {
+              const sessionId = `${userPubKey}:${device.deviceId}`
+              
+              // Skip if already has listener
+              if (!sessionListeners.has(sessionId)) {
+                console.log("Setting up listener for session:", sessionId)
+                const sessionUnsubscribe = device.activeSession.onEvent((event) => {
+                  routeEventToStore(sessionId, event)
+                  set({userRecords: new Map(get().userRecords)})
+                })
+                sessionListeners.set(sessionId, sessionUnsubscribe)
+                count++
+              }
+            }
+          }
+        }
+        
+        console.log(`Initialized ${count} session listeners for deserialized sessions`)
       },
 
       ensureOnlyCurrentDeviceInvite: () => {
@@ -1089,3 +1070,4 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
     }
   )
 )
+

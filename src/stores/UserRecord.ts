@@ -184,16 +184,6 @@ export class UserRecord {
   }
 
   /**
-   * Gets sessions that are ready to send messages
-   */
-  public getSendableSessions(): Session[] {
-    return this.getActiveSessions().filter(
-      (session) =>
-        !!(session.state?.theirNextNostrPublicKey && session.state?.ourCurrentNostrKey)
-    )
-  }
-
-  /**
    * Gets session IDs in the format used by iris-client (userPubKey:deviceId)
    */
   public getSessionIds(): string[] {
@@ -485,15 +475,6 @@ export class UserRecord {
   } {
     const [userPubKey, deviceId] = sessionId.split(":")
     return {userPubKey, deviceId: deviceId || "unknown"}
-  }
-
-  /**
-   * Gets all session IDs that can send messages
-   */
-  public getSendableSessionIds(): string[] {
-    return this.getSendableSessions().map((session) =>
-      this.createSessionId(session.name || "unknown")
-    )
   }
 
   /**

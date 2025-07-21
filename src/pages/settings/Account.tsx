@@ -3,13 +3,11 @@ import {useUserStore} from "@/stores/user"
 import {useUserRecordsStore} from "@/stores/userRecords"
 import {useEventsStore} from "@/stores/events"
 import {useDraftStore} from "@/stores/draft"
-import {usePrivateChatsStore} from "@/stores/privateChats"
-import {useGroupsStore} from "@/stores/groups"
-import {usePublicChatsStore} from "@/stores/publicChats"
 import {MouseEvent, useState} from "react"
 import {useNavigate, Link} from "react-router"
 import localforage from "localforage"
 import {ndk} from "@/utils/ndk"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 // Helper function to add timeout to any promise
 const withTimeout = (promise: Promise<unknown>, ms: number): Promise<unknown> => {
@@ -61,6 +59,28 @@ function Account() {
     }
   }
 
+  async function publishInviteTombstones() {
+    try {
+      const invites = useUserRecordsStore.getState().getOwnDeviceInvites()
+      for (const invite of invites.values()) {
+        const deletionEvent = new NDKEvent(ndk(), {
+          kind: 30078,
+          pubkey: invite.inviter,
+          content: "",
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [["d", "double-ratchet/invites/" + invite.deviceId]],
+        })
+        try {
+          await deletionEvent.publish()
+        } catch (e) {
+          console.warn("Error publishing invite tombstone", e)
+        }
+      }
+    } catch (e) {
+      console.error("Failed to publish invite tombstones", e)
+    }
+  }
+
   async function cleanupServiceWorker() {
     if (!("serviceWorker" in navigator)) return
 
@@ -99,6 +119,10 @@ function Account() {
         } catch (e) {
           console.error("Error cleaning up stores:", e)
         }
+
+        try {
+          await publishInviteTombstones()
+        } catch {}
 
         await withTimeout(cleanupNDK(), 3000)
         const {reset} = useUserStore.getState()

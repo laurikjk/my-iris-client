@@ -18,6 +18,8 @@ import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
 import {useGroupsStore} from "@/stores/groups"
 import {usePrivateChatsStore} from "@/stores/privateChats"
+import {SortedMap} from "@/utils/SortedMap/SortedMap"
+import {comparator} from "@/pages/chats/utils/messageGrouping"
 
 interface ChatListItemProps {
   id: string
@@ -45,13 +47,14 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
   } = usePublicChatsStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const {groups} = useGroupsStore()
-  const {getMessages, getChatsList} = usePrivateChatsStore()
+  const {getChatsList} = usePrivateChatsStore()
   const group = groups[id]
 
   const chat = isPublic ? publicChats[id] : null
 
   // For private chats, get aggregated messages from all sessions
-  const privateMessages = type === "private" ? getMessages(id) : null
+  const privateMessages =
+    type === "private" ? (events.get(id) ?? new SortedMap([], comparator)) : null
   const [, latest] = privateMessages?.last() ?? []
 
   // For groups, get messages normally
