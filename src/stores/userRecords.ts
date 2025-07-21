@@ -189,8 +189,8 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           throw new Error("No public key")
         }
 
-        const invite = Invite.createNew(myPubKey, label)
         const id = inviteId || crypto.randomUUID()
+        const invite = Invite.createNew(myPubKey, id) // Pass deviceId as second parameter
         const currentInvites = get().invites
 
         const newInvites = new Map(currentInvites)
@@ -208,7 +208,9 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const unsubscribe = invite.listen(decrypt, subscribe, (session, identity) => {
           if (!identity) return
 
-          const sessionId = `${identity}:${session.name}`
+          // Use the invite's deviceId, not session.name
+          const deviceId = id // This is the deviceId we passed to createNew
+          const sessionId = `${identity}:${deviceId}`
           if (sessionListeners.has(sessionId)) {
             return
           }
@@ -221,8 +223,8 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             userRecords.set(identity, userRecord)
           }
 
-          // Add session to UserRecord
-          userRecord.upsertSession(session.name || "unknown", session)
+          // Add session to UserRecord with proper deviceId
+          userRecord.upsertSession(deviceId, session)
 
           // Update last seen
           const lastSeen = new Map(get().lastSeen)
@@ -466,12 +468,12 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         pendingInvites.add(inviteKey)
 
         try {
+          const deviceId = invite.deviceId || "unknown"
           console.log("acceptInvite called:", {
             inviter: invite.inviter,
             deviceId: invite.deviceId,
+            actualDeviceId: deviceId,
           })
-
-          const deviceId = invite.deviceId || "unknown"
           const userRecord = get().userRecords.get(invite.inviter)
           const existingSession = userRecord?.getActiveSession(deviceId)
 
@@ -502,7 +504,8 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             .then((res) => console.log("published", res))
             .catch((e) => console.warn("Error publishing event:", e))
 
-          const sessionId = `${invite.inviter}:${session.name}`
+          // Use the actual deviceId from invite, not session.name
+          const sessionId = `${invite.inviter}:${deviceId}`
 
           // Get or create UserRecord
           const userRecords = new Map(get().userRecords)
@@ -575,15 +578,8 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
       listenToUserDevices: (userPubKey: string) => {
         const myPubKey = useUserStore.getState().publicKey
-        const deviceId = get().deviceId
 
-        if (!deviceId) {
-          console.warn("Device ID not available, cannot listen to user devices.")
-          return
-        }
-
-        const key = `${userPubKey}:${deviceId}`
-        if (get().deviceInviteListeners.has(key)) {
+        if (get().deviceInviteListeners.has(userPubKey)) {
           console.log("Already listening to user devices for:", userPubKey)
           return
         }
@@ -591,6 +587,10 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         console.log("Starting to listen for device invites from user:", userPubKey)
 
         const unsubscribe = Invite.fromUser(userPubKey, subscribe, async (invite) => {
+          console.log("Received invite from user:", {
+            inviter: invite.inviter,
+            deviceId: invite.deviceId,
+          })
           try {
             if (invite.inviter !== userPubKey) {
               console.warn("Received invite from unexpected user:", {
@@ -601,7 +601,19 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             }
 
             const inviteDeviceId = invite.deviceId || "unknown"
-            const ourDeviceId = get().deviceId
+            
+            // Get device ID the same way createDefaultInvites does
+            let ourDeviceId = get().deviceId
+            if (!ourDeviceId) {
+              const stored = await localforage.getItem<string>("deviceId")
+              if (stored) {
+                ourDeviceId = stored
+                // Update the store with the device ID we found
+                set({deviceId: stored})
+              }
+            }
+
+            console.log("ourDeviceId", ourDeviceId)
 
             if (userPubKey === myPubKey && inviteDeviceId === ourDeviceId) {
               console.log(
@@ -612,22 +624,99 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             }
 
             const userRecord = get().userRecords.get(userPubKey)
+            console.log("Checking for existing session with deviceId:", inviteDeviceId)
             const existingSession = userRecord?.getActiveSession(inviteDeviceId)
 
             if (existingSession) {
-              console.log("Session already exists with this device, skipping invite")
+              console.log(
+                "Session already exists with this device, skipping invite",
+                inviteDeviceId
+              )
               return
             }
 
-            const sessionId = await get().acceptInvite(invite.getUrl())
-            console.log("Accepted invite from user device:", sessionId)
+            // Accept invite directly instead of converting to URL to preserve deviceId
+            const inviteKey = `${invite.inviter}:${inviteDeviceId}`
+
+            if (pendingInvites.has(inviteKey)) {
+              console.log("Invite already being processed:", inviteKey)
+              return
+            }
+
+            pendingInvites.add(inviteKey)
+
+            try {
+              console.log("Accepting invite directly with deviceId:", inviteDeviceId)
+
+              const myPrivKey = useUserStore.getState().privateKey
+              const encrypt = myPrivKey
+                ? hexToBytes(myPrivKey)
+                : async (plaintext: string, pubkey: string) => {
+                    if (window.nostr?.nip44) {
+                      return window.nostr.nip44.encrypt(pubkey, plaintext)
+                    }
+                    throw new Error("No nostr extension or private key")
+                  }
+
+              const {session, event} = await invite.accept(
+                (filter, onEvent) => subscribe(filter, onEvent),
+                myPubKey,
+                encrypt
+              )
+
+              const e = NDKEventFromRawEvent(event)
+              await e
+                .publish()
+                .then((res) => console.log("published", res))
+                .catch((e) => console.warn("Error publishing event:", e))
+
+              const sessionId = `${invite.inviter}:${inviteDeviceId}`
+
+              // Get or create UserRecord
+              const userRecords = new Map(get().userRecords)
+              let targetUserRecord = userRecords.get(invite.inviter)
+              if (!targetUserRecord) {
+                targetUserRecord = new UserRecord(invite.inviter, invite.inviter)
+                userRecords.set(invite.inviter, targetUserRecord)
+              }
+
+              // Add session to UserRecord
+              targetUserRecord.upsertSession(inviteDeviceId, session)
+
+              // Update last seen
+              const lastSeen = new Map(get().lastSeen)
+              lastSeen.set(sessionId, Date.now())
+
+              set({userRecords, lastSeen})
+
+              if (!sessionListeners.has(sessionId)) {
+                const sessionUnsubscribe = session.onEvent((event) => {
+                  routeEventToStore(sessionId, event)
+                  set({userRecords: new Map(get().userRecords)})
+                })
+                sessionListeners.set(sessionId, sessionUnsubscribe)
+              }
+
+              // Sync with chats store
+              const chatsStore = usePrivateChatsStore.getState()
+              chatsStore.addChat(invite.inviter)
+
+              // Store the invite itself
+              const invitesMap = new Map(get().invites)
+              invitesMap.set(inviteDeviceId, invite)
+              set({invites: invitesMap})
+
+              console.log("Accepted invite from user device:", sessionId)
+            } finally {
+              pendingInvites.delete(inviteKey)
+            }
           } catch (error) {
             console.warn("Error accepting user device invite:", error)
           }
         })
 
         const listeners = new Map(get().deviceInviteListeners)
-        listeners.set(key, unsubscribe)
+        listeners.set(userPubKey, unsubscribe)
         set({deviceInviteListeners: listeners})
       },
 
