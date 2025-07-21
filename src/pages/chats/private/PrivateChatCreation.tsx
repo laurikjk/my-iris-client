@@ -12,15 +12,8 @@ import {DoubleRatchetUser} from "../utils/doubleRatchetUsers"
 
 const PrivateChatCreation = () => {
   const navigate = useNavigate()
-  const {sessions} = useSessionsStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const subRef = useRef<NDKSubscription | null>(null)
-
-  useEffect(() => {
-    if (sessions.size === 0) {
-      navigate("/chats/new", {replace: true})
-    }
-  }, [navigate, sessions.size])
 
   const handleStartChat = async (user: DoubleRatchetUser) => {
     if (!myPubKey) return
