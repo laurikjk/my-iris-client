@@ -2,9 +2,9 @@
 
 Source code for [iris.to](https://iris.to)
 
-[![CI](https://github.com/irislib/iris-client/actions/workflows/ci.yml/badge.svg)](https://github.com/irislib/iris-client/actions/workflows/ci.yml)
-[![Build Status](https://github.com/irislib/iris-client/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/irislib/iris-client/actions/workflows/ci.yml)
-[![Tests](https://github.com/irislib/iris-client/actions/workflows/ci.yml/badge.svg?branch=main&event=push&label=tests)](https://github.com/irislib/iris-client/actions/workflows/ci.yml)
+[![Checks](https://github.com/irislib/iris-client/actions/workflows/checks.yml/badge.svg)](https://github.com/irislib/iris-client/actions/workflows/checks.yml)
+[![Tests](https://github.com/irislib/iris-client/actions/workflows/tests.yml/badge.svg)](https://github.com/irislib/iris-client/actions/workflows/tests.yml)
+[![Tauri Build](https://github.com/irislib/iris-client/actions/workflows/tauri.yml/badge.svg)](https://github.com/irislib/iris-client/actions/workflows/tauri.yml)
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/irislib/iris-client)
 
