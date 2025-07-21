@@ -160,19 +160,15 @@ export default function useFeedEvents({
 
       const isMyRecent =
         event.pubkey === myPubKey && event.created_at * 1000 > Date.now() - 10000
-      const isNewEvent =
-        initialLoadDoneRef.current && !isMyRecent && (!sortLikedPosts || event.kind === 1)
 
       hasReceivedEventsRef.current = true
 
       if (!initialLoadDoneRef.current || isMyRecent) {
         eventsRef.current.set(event.id, event)
         markLoadDoneIfHasEvents()
-      } else if (isNewEvent) {
+      } else {
         setNewEvents((prev) => new Map([...prev, [event.id, event]]))
         setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
-      } else {
-        eventsRef.current.set(event.id, event)
       }
 
       markLoadDoneIfHasEvents()
