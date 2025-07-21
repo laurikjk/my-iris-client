@@ -278,11 +278,46 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         if (!session) {
           throw new Error("Session not found")
         }
+
+        // Debug session state
+        console.log("Session state for sending:", {
+          sessionId,
+          hasTheirNextKey: !!session.state?.theirNextNostrPublicKey,
+          hasOurCurrentKey: !!session.state?.ourCurrentNostrKey,
+          canSend: !!(
+            session.state?.theirNextNostrPublicKey && session.state?.ourCurrentNostrKey
+          ),
+        })
+
+        // Check if session can send messages
+        if (
+          !session.state?.theirNextNostrPublicKey ||
+          !session.state?.ourCurrentNostrKey
+        ) {
+          console.error("Session not ready to send messages:", sessionId, {
+            theirNextKey: !!session.state?.theirNextNostrPublicKey,
+            ourCurrentKey: !!session.state?.ourCurrentNostrKey,
+          })
+          throw new Error(
+            "Session not ready to send messages - missing keys after deserialization"
+          )
+        }
+
         if (event.kind === REACTION_KIND && !event.tags?.find((tag) => tag[0] === "e")) {
           throw new Error("Cannot send a reaction without a replyingToId")
         }
 
         const {event: publishedEvent, innerEvent} = session.sendEvent(event)
+        
+        // Debug key comparison
+        console.log("Key comparison for session:", sessionId, {
+          sendingWithKey: publishedEvent.pubkey,
+          listeningForKeys: {
+            theirNext: session.state.theirNextNostrPublicKey,
+            theirCurrent: session.state.theirCurrentNostrPublicKey,
+          }
+        })
+        
         const message: MessageType = {
           ...innerEvent,
           pubkey: "user",
@@ -294,13 +329,36 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
         try {
           const e = NDKEventFromRawEvent(publishedEvent)
+          
+          // Debug NDK connection status
+          const ndkInstance = ndk()
+          console.log("NDK connected relays:", ndkInstance.pool.connectedRelays().length)
+          console.log("NDK total relays:", ndkInstance.pool.relays.size)
+          
           await e.publish(undefined, undefined, 0)
           console.log("published", publishedEvent.id)
         } catch (err) {
           console.warn("Error publishing event:", err)
         }
 
-        // Persist session state
+        // CRITICAL: Force proper persistence by triggering Zustand state detection
+        // The session state has been mutated by sendEvent(), so we need to ensure
+        // Zustand's persistence layer detects the change by creating new Map instances
+        console.log("Persisting updated session state for:", sessionId)
+        
+        // Debug: Check if session state changes are captured
+        const debugUserRecord = get().userRecords.get(userPubKey)
+        const debugSession = debugUserRecord?.getActiveSession(deviceId)
+        if (debugSession) {
+          console.log("Session state after sending:", {
+            sessionId,
+            theirNext: debugSession.state.theirNextNostrPublicKey,
+            theirCurrent: debugSession.state.theirCurrentNostrPublicKey,
+            sendingChainNumber: debugSession.state.sendingChainMessageNumber,
+            receivingChainNumber: debugSession.state.receivingChainMessageNumber,
+          })
+        }
+        
         set({userRecords: new Map(get().userRecords)})
       },
 
@@ -316,9 +374,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         if (!event.tags?.some((tag) => tag[0] === "ms")) {
           event.tags = [["ms", Date.now().toString()]]
         }
-
-        const myPubKey = useUserStore.getState().publicKey
-        const myDeviceId = get().deviceId
 
         // Get UserRecord for this user
         const userRecord = get().userRecords.get(userPubKey)
@@ -824,29 +879,29 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
       reset: () => {
         console.log("Resetting user records store...")
-        
+
         // Close all sessions and clean up user records
         const userRecords = get().userRecords
         for (const userRecord of userRecords.values()) {
           userRecord.close()
         }
-        
+
         // Clean up all invite listeners
         for (const unsubscribe of inviteListeners.values()) {
           unsubscribe()
         }
-        
-        // Clean up all session listeners  
+
+        // Clean up all session listeners
         for (const unsubscribe of sessionListeners.values()) {
           unsubscribe()
         }
-        
+
         // Clean up device invite listeners
         const deviceListeners = get().deviceInviteListeners
         for (const unsubscribe of deviceListeners.values()) {
           unsubscribe()
         }
-        
+
         // Reset state
         set({
           invites: new Map(),
@@ -856,12 +911,12 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           deviceInviteListeners: new Map(),
           messageQueue: new Map(),
         })
-        
+
         // Clear global maps
         inviteListeners.clear()
         sessionListeners.clear()
         pendingInvites.clear()
-        
+
         console.log("User records store reset completed.")
       },
 
@@ -869,20 +924,20 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const myPubKey = useUserStore.getState().publicKey
         const myPrivKey = useUserStore.getState().privateKey
         const currentDeviceId = get().deviceId
-        
+
         if (!myPubKey || !currentDeviceId) {
           console.error("No public key or device ID available for initializeListeners")
           return
         }
 
         console.log("Initializing listener for current device invite:", currentDeviceId)
-        
+
         const invite = get().invites.get(currentDeviceId)
         if (!invite || invite.inviter !== myPubKey) {
           console.log("No invite found for current device or not our invite")
           return
         }
-        
+
         // Skip if already listening
         if (inviteListeners.has(currentDeviceId)) {
           console.log("Already listening to current device invite")
@@ -905,7 +960,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
           // Use the current device ID
           const sessionId = `${identity}:${currentDeviceId}`
-          
+
           if (sessionListeners.has(sessionId)) {
             return
           }
@@ -957,27 +1012,93 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         console.log("Initializing event listeners for all deserialized sessions...")
         const userRecords = get().userRecords
         let count = 0
-        
-        for (const [userPubKey, userRecord] of userRecords.entries()) {
-          for (const device of userRecord.getActiveDevices()) {
-            if (device.activeSession) {
-              const sessionId = `${userPubKey}:${device.deviceId}`
-              
-              // Skip if already has listener
-              if (!sessionListeners.has(sessionId)) {
-                console.log("Setting up listener for session:", sessionId)
-                const sessionUnsubscribe = device.activeSession.onEvent((event) => {
-                  routeEventToStore(sessionId, event)
-                  set({userRecords: new Map(get().userRecords)})
-                })
-                sessionListeners.set(sessionId, sessionUnsubscribe)
-                count++
+
+        // Add a small delay to ensure sessions are fully reconstructed
+        setTimeout(() => {
+          for (const [userPubKey, userRecord] of userRecords.entries()) {
+            for (const device of userRecord.getActiveDevices()) {
+              if (device.activeSession) {
+                const sessionId = `${userPubKey}:${device.deviceId}`
+
+                // Skip if already has listener
+                if (!sessionListeners.has(sessionId)) {
+                  console.log("Setting up listener for deserialized session:", sessionId)
+
+                  // Debug session state after deserialization
+                  const session = device.activeSession
+                  console.log("Deserialized session state:", {
+                    sessionId,
+                    hasTheirNextKey: !!session.state?.theirNextNostrPublicKey,
+                    hasOurCurrentKey: !!session.state?.ourCurrentNostrKey,
+                    hasTheirCurrentKey: !!session.state?.theirCurrentNostrPublicKey,
+                    canSend: !!(
+                      session.state?.theirNextNostrPublicKey &&
+                      session.state?.ourCurrentNostrKey
+                    ),
+                  })
+
+                  // Verify session is ready for event handling
+                  if (typeof device.activeSession.onEvent === "function") {
+                    // Debug session subscription setup
+                    console.log("Setting up nostr subscriptions for session:", sessionId)
+                    console.log("Session will subscribe to author:", device.activeSession.state?.theirNextNostrPublicKey)
+                    console.log("Session current author:", device.activeSession.state?.theirCurrentNostrPublicKey)
+                    
+                    // Set up event listener first
+                    const sessionUnsubscribe = device.activeSession.onEvent((event) => {
+                      console.log("Received event on deserialized session:", sessionId, event.kind)
+                      routeEventToStore(sessionId, event)
+                      set({userRecords: new Map(get().userRecords)})
+                    })
+                    sessionListeners.set(sessionId, sessionUnsubscribe)
+                    count++
+
+                    // Force session to reinitialize its nostr subscriptions
+                    // This is crucial for sessions to receive new messages and key updates
+                    try {
+                      // The Session class should automatically subscribe when onEvent is called,
+                      // but let's make sure by triggering a dummy subscription
+                      const dummyUnsubscribe = device.activeSession.onEvent(() => {})
+                      dummyUnsubscribe() // Immediately unsubscribe the dummy
+                      console.log("Successfully triggered nostr subscription setup for:", sessionId)
+                    } catch (error) {
+                      console.warn(
+                        "Failed to trigger session subscription setup:",
+                        sessionId,
+                        error
+                      )
+                    }
+                  } else {
+                    console.warn("Session onEvent method not available for:", sessionId)
+                  }
+                }
               }
             }
           }
-        }
-        
-        console.log(`Initialized ${count} session listeners for deserialized sessions`)
+
+          console.log(`Initialized ${count} session listeners for deserialized sessions`)
+
+          // Additional debugging - show session states after initialization
+          setTimeout(() => {
+            console.log("=== Session States After Initialization ===")
+            for (const [userPubKey, userRecord] of userRecords.entries()) {
+              console.log(`User ${userPubKey}:`)
+              for (const device of userRecord.getActiveDevices()) {
+                if (device.activeSession) {
+                  const session = device.activeSession
+                  console.log(`  Device ${device.deviceId}:`, {
+                    hasTheirNextKey: !!session.state?.theirNextNostrPublicKey,
+                    hasOurCurrentKey: !!session.state?.ourCurrentNostrKey,
+                    canSend: !!(
+                      session.state?.theirNextNostrPublicKey &&
+                      session.state?.ourCurrentNostrKey
+                    ),
+                  })
+                }
+              }
+            }
+          }, 500)
+        }, 100) // Small delay to ensure sessions are fully ready
       },
 
       ensureOnlyCurrentDeviceInvite: () => {
@@ -1005,7 +1126,9 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           get().deleteInvite(inviteId)
         })
 
-        console.log(`Cleaned up ${inviteIdsToRemove.length} old invites, keeping current device invite: ${currentDeviceId}`)
+        console.log(
+          `Cleaned up ${inviteIdsToRemove.length} old invites, keeping current device invite: ${currentDeviceId}`
+        )
       },
     }),
     {
@@ -1067,7 +1190,15 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           messageQueue: new Map(),
         }
       },
+      onRehydrateStorage: () => (state) => {
+        // Trigger session listener initialization after rehydration
+        if (state) {
+          console.log("Storage rehydrated, scheduling session listener initialization")
+          setTimeout(() => {
+            state.initializeSessionListeners()
+          }, 100)
+        }
+      },
     }
   )
 )
-

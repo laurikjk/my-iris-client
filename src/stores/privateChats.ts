@@ -155,16 +155,19 @@ export async function subscribeToOwnDeviceInvites() {
 
   // Import here to avoid circular dependency at module scope
   const {useUserRecordsStore} = await import("./userRecords")
-  
+
   // Clean up old invites first (keep only current device's invite)
   useUserRecordsStore.getState().ensureOnlyCurrentDeviceInvite()
-  
-  // Initialize listeners for current device's invite  
+
+  // Initialize listeners for current device's invite
   useUserRecordsStore.getState().initializeListeners()
-  
-  // Initialize event listeners for all deserialized sessions
-  useUserRecordsStore.getState().initializeSessionListeners()
-  
+
+  // Initialize event listeners for all deserialized sessions with delay for timing
+  setTimeout(() => {
+    console.log("Initializing session listeners after delay")
+    useUserRecordsStore.getState().initializeSessionListeners()
+  }, 300)
+
   // Then start listening for new device invites from other devices
   useUserRecordsStore.getState().listenToUserDevices(publicKey)
 }

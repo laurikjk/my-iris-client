@@ -10,9 +10,23 @@ const sessionSubscribe = (
   filter: any,
   onEvent: (event: any) => void,
 ): (() => void) => {
+  console.log("sessionSubscribe called with filter:", filter)
   const sub = ndk().subscribe(filter)
-  sub.on("event", (e: unknown) => onEvent(e as any))
-  return () => sub.stop()
+  sub.on("event", (e: unknown) => {
+    console.log("sessionSubscribe received event:", {
+      id: (e as any)?.id,
+      kind: (e as any)?.kind,
+      pubkey: (e as any)?.pubkey,
+      authors: filter?.authors,
+      filterMatch: filter?.authors?.includes((e as any)?.pubkey),
+      kindMatch: filter?.kinds?.includes((e as any)?.kind),
+    })
+    onEvent(e as any)
+  })
+  return () => {
+    console.log("sessionSubscribe unsubscribing from filter:", filter)
+    sub.stop()
+  }
 }
 
 export interface DeviceRecord {
