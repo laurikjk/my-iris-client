@@ -7,6 +7,7 @@ import PreloadImages from "../media/PreloadImages"
 import MediaModal from "../media/MediaModal"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ImageGridItem from "./ImageGridItem"
+import {getTag} from "@/utils/nostr"
 
 interface MediaFeedProps {
   events: (NDKEvent | {id: string})[]
@@ -33,7 +34,16 @@ export default function MediaFeed({events}: MediaFeedProps) {
   )
 
   const visibleEvents = useMemo(() => {
-    return events.slice(0, displayCount)
+    return events
+      .map((event) => {
+        if ("content" in event && event.kind === 7) {
+          const eTag = getTag("e", event.tags)
+          return eTag ? {id: eTag} : null
+        }
+        return event
+      })
+      .filter((event) => event !== null)
+      .slice(0, displayCount)
   }, [events, displayCount])
 
   const calculateAllMedia = useCallback((events: NDKEvent[]) => {

@@ -31,7 +31,6 @@ function HomeFeedEvents() {
   const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true) // to update on follows change
   const refreshSignal = useRefreshRouteSignal()
-  console.log("refreshSignal", refreshSignal)
   const {activeHomeTab: activeTab, setActiveHomeTab: setActiveTab} = useFeedStore()
   const [forceUpdate, setForceUpdate] = useState(0)
 
