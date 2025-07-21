@@ -1,5 +1,11 @@
 import {unsubscribeAll} from "@/utils/notifications"
 import {useUserStore} from "@/stores/user"
+import {useUserRecordsStore} from "@/stores/userRecords"
+import {useEventsStore} from "@/stores/events"
+import {useDraftStore} from "@/stores/draft"
+import {usePrivateChatsStore} from "@/stores/privateChats"
+import {useGroupsStore} from "@/stores/groups"
+import {usePublicChatsStore} from "@/stores/publicChats"
 import {MouseEvent, useState} from "react"
 import {useNavigate, Link} from "react-router"
 import localforage from "localforage"
@@ -10,7 +16,7 @@ const withTimeout = (promise: Promise<unknown>, ms: number): Promise<unknown> =>
   return Promise.race([
     promise,
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Operation timeout after ${ms}ms`)), ms),
+      setTimeout(() => reject(new Error(`Operation timeout after ${ms}ms`)), ms)
     ),
   ])
 }
@@ -36,6 +42,22 @@ function Account() {
       await localforage.clear()
     } catch (err) {
       console.error("Error clearing storage:", err)
+    }
+  }
+
+  async function cleanupStores() {
+    try {
+      // Clear events store (clears message repository)
+      await useEventsStore.getState().clear()
+
+      // Reset stores with reset methods
+      useUserRecordsStore.getState().reset()
+      useDraftStore.getState().reset()
+
+      // For stores without reset methods, we'll rely on storage clearing
+      console.log("All stores cleaned up")
+    } catch (err) {
+      console.error("Error cleaning up stores:", err)
     }
   }
 
@@ -71,6 +93,13 @@ function Account() {
           console.error("Error unsubscribing from push notifications:", e)
         }
 
+        // Clean up stores first (while we still have access to data)
+        try {
+          await withTimeout(cleanupStores(), 3000)
+        } catch (e) {
+          console.error("Error cleaning up stores:", e)
+        }
+
         await withTimeout(cleanupNDK(), 3000)
         const {reset} = useUserStore.getState()
         reset()
@@ -78,9 +107,7 @@ function Account() {
         console.error("Error during logout cleanup:", e)
       } finally {
         try {
-          await withTimeout(
-            Promise.all([cleanupStorage(), cleanupServiceWorker()]), 5000
-          )
+          await withTimeout(Promise.all([cleanupStorage(), cleanupServiceWorker()]), 5000)
         } catch (e) {
           console.error("Error during final cleanup:", e)
         } finally {

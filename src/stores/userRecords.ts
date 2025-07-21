@@ -54,6 +54,9 @@ interface UserRecordsStoreActions {
   cleanupInvites: () => void
   getOwnDeviceInvites: () => Map<string, Invite>
   cleanupDuplicateSessions: () => void
+  reset: () => void
+  initializeListeners: () => void
+  ensureOnlyCurrentDeviceInvite: () => void
 
   // Compatibility API (for existing components)
   sessions: Map<string, Session> // Virtual getter for backward compatibility
@@ -601,7 +604,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             }
 
             const inviteDeviceId = invite.deviceId || "unknown"
-            
+
             // Get device ID the same way createDefaultInvites does
             let ourDeviceId = get().deviceId
             if (!ourDeviceId) {
@@ -861,6 +864,167 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         } else {
           console.log("No duplicate sessions found")
         }
+      },
+
+      reset: () => {
+        console.log("Resetting user records store...")
+        
+        // Close all sessions and clean up user records
+        const userRecords = get().userRecords
+        for (const userRecord of userRecords.values()) {
+          userRecord.close()
+        }
+        
+        // Clean up all invite listeners
+        for (const unsubscribe of inviteListeners.values()) {
+          unsubscribe()
+        }
+        
+        // Clean up all session listeners  
+        for (const unsubscribe of sessionListeners.values()) {
+          unsubscribe()
+        }
+        
+        // Clean up device invite listeners
+        const deviceListeners = get().deviceInviteListeners
+        for (const unsubscribe of deviceListeners.values()) {
+          unsubscribe()
+        }
+        
+        // Reset state
+        set({
+          invites: new Map(),
+          userRecords: new Map(),
+          lastSeen: new Map(),
+          deviceId: "",
+          deviceInviteListeners: new Map(),
+          messageQueue: new Map(),
+        })
+        
+        // Clear global maps
+        inviteListeners.clear()
+        sessionListeners.clear()
+        pendingInvites.clear()
+        
+        console.log("User records store reset completed.")
+      },
+
+      initializeListeners: () => {
+        const myPubKey = useUserStore.getState().publicKey
+        const myPrivKey = useUserStore.getState().privateKey
+        const currentDeviceId = get().deviceId
+        
+        if (!myPubKey || !currentDeviceId) {
+          console.error("No public key or device ID available for initializeListeners")
+          return
+        }
+
+        console.log("Initializing listener for current device invite:", currentDeviceId)
+        
+        const invite = get().invites.get(currentDeviceId)
+        if (!invite || invite.inviter !== myPubKey) {
+          console.log("No invite found for current device or not our invite")
+          return
+        }
+        
+        // Skip if already listening
+        if (inviteListeners.has(currentDeviceId)) {
+          console.log("Already listening to current device invite")
+          return
+        }
+
+        console.log("Starting listener for current device invite:", currentDeviceId)
+
+        const decrypt = myPrivKey
+          ? hexToBytes(myPrivKey)
+          : async (cipherText: string, pubkey: string) => {
+              if (window.nostr?.nip44) {
+                return window.nostr.nip44.decrypt(pubkey, cipherText)
+              }
+              throw new Error("No nostr extension or private key")
+            }
+
+        const unsubscribe = invite.listen(decrypt, subscribe, (session, identity) => {
+          if (!identity) return
+
+          // Use the current device ID
+          const sessionId = `${identity}:${currentDeviceId}`
+          
+          if (sessionListeners.has(sessionId)) {
+            return
+          }
+
+          // Get or create UserRecord
+          const userRecords = new Map(get().userRecords)
+          let userRecord = userRecords.get(identity)
+          if (!userRecord) {
+            userRecord = new UserRecord(identity, identity)
+            userRecords.set(identity, userRecord)
+          }
+
+          // Add session to UserRecord with proper deviceId
+          userRecord.upsertSession(currentDeviceId, session)
+
+          // Update last seen
+          const lastSeen = new Map(get().lastSeen)
+          lastSeen.set(sessionId, Date.now())
+
+          set({userRecords, lastSeen})
+
+          // Set up session listener
+          const sessionUnsubscribe = session.onEvent((event) => {
+            // Handle group creation event (kind 40)
+            if (event.kind === 40 && event.content) {
+              try {
+                const group = JSON.parse(event.content)
+                const groups = useGroupsStore.getState().groups
+                if (!groups[group.id]) {
+                  useGroupsStore.getState().addGroup(group)
+                }
+              } catch (e) {
+                console.warn("Failed to parse group from kind 40 event", e)
+              }
+            }
+            routeEventToStore(sessionId, event)
+            set({userRecords: new Map(get().userRecords)})
+          })
+          sessionListeners.set(sessionId, sessionUnsubscribe)
+
+          // Sync with chats store
+          const chatsStore = usePrivateChatsStore.getState()
+          chatsStore.addChat(identity)
+        })
+
+        inviteListeners.set(currentDeviceId, unsubscribe)
+        console.log("Initialization of listener completed for device:", currentDeviceId)
+      },
+
+      ensureOnlyCurrentDeviceInvite: () => {
+        const myPubKey = useUserStore.getState().publicKey
+        if (!myPubKey) {
+          console.error("No public key available for ensureOnlyCurrentDeviceInvite")
+          return
+        }
+
+        const currentDeviceId = get().deviceId
+        if (!currentDeviceId) {
+          console.error("No device ID available for ensureOnlyCurrentDeviceInvite")
+          return
+        }
+
+        const inviteIdsToRemove: string[] = []
+        get().invites.forEach((invite, id) => {
+          if (invite.inviter === myPubKey && id !== currentDeviceId) {
+            inviteIdsToRemove.push(id)
+          }
+        })
+
+        inviteIdsToRemove.forEach((inviteId) => {
+          console.log("Removing old invite:", inviteId)
+          get().deleteInvite(inviteId)
+        })
+
+        console.log(`Cleaned up ${inviteIdsToRemove.length} old invites, keeping current device invite: ${currentDeviceId}`)
       },
     }),
     {
