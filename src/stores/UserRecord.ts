@@ -1,47 +1,18 @@
-import {
-  Session,
-  serializeSessionState,
-  deserializeSessionState,
-} from "nostr-double-ratchet/src"
-import {ndk} from "@/utils/ndk"
-
-// Helper subscribe implementation for Session reconstruction
-const sessionSubscribe = (
-  filter: any,
-  onEvent: (event: any) => void,
-): (() => void) => {
-  console.log("sessionSubscribe called with filter:", filter)
-  const sub = ndk().subscribe(filter)
-  sub.on("event", (e: unknown) => {
-    console.log("sessionSubscribe received event:", {
-      id: (e as any)?.id,
-      kind: (e as any)?.kind,
-      pubkey: (e as any)?.pubkey,
-      authors: filter?.authors,
-      filterMatch: filter?.authors?.includes((e as any)?.pubkey),
-      kindMatch: filter?.kinds?.includes((e as any)?.kind),
-    })
-    onEvent(e as any)
-  })
-  return () => {
-    console.log("sessionSubscribe unsubscribing from filter:", filter)
-    sub.stop()
-  }
-}
-
+// This file now only manages user/device relationships and sessionId references
+// Actual sessions are managed by the sessions store
 export interface DeviceRecord {
   deviceId: string
-  activeSession?: Session
-  inactiveSessions: Session[]
+  activeSessionId?: string // Reference to session in sessions store
+  inactiveSessionIds: string[] // References to sessions in sessions store
   isStale: boolean
   staleTimestamp?: number
   lastActivity?: number
 }
 
 /**
- * Manages sessions for a single user across multiple devices
- * Structure: UserRecord → DeviceRecord → Sessions
- * Designed for iris-client's messaging system
+ * Manages user/device relationships and session references
+ * Actual sessions are stored in the sessions store
+ * Structure: UserRecord → DeviceRecord → sessionId references
  */
 export class UserRecord {
   private deviceRecords: Map<string, DeviceRecord> = new Map()
@@ -66,7 +37,7 @@ export class UserRecord {
     if (!record) {
       record = {
         deviceId,
-        inactiveSessions: [],
+        inactiveSessionIds: [],
         isStale: false,
         lastActivity: Date.now(),
       }
@@ -99,117 +70,117 @@ export class UserRecord {
   }
 
   /**
-   * Removes a device record and closes all its sessions
+   * Removes a device record
    */
   public removeDevice(deviceId: string): boolean {
-    const record = this.deviceRecords.get(deviceId)
-    if (!record) return false
-
-    // Close all sessions for this device
-    record.activeSession?.close()
-    record.inactiveSessions.forEach((session) => session.close())
-
     return this.deviceRecords.delete(deviceId)
   }
 
   // ============================================================================
-  // Session Management
+  // Session Reference Management
   // ============================================================================
 
   /**
-   * Adds or updates a session for a specific device
+   * Associates a sessionId with a device
    */
-  public upsertSession(deviceId: string, session: Session): void {
+  public upsertSession(deviceId: string, sessionId: string): void {
     const device = this.upsertDevice(deviceId)
 
     // If there's an active session, move it to inactive
-    if (device.activeSession) {
-      device.inactiveSessions.unshift(device.activeSession)
+    if (device.activeSessionId) {
+      device.inactiveSessionIds.unshift(device.activeSessionId)
     }
 
     // Set the new session as active
-    session.name = deviceId // Ensure session name matches deviceId
-    device.activeSession = session
+    device.activeSessionId = sessionId
     device.lastActivity = Date.now()
   }
 
   /**
-   * Gets the active session for a specific device
+   * Gets the active sessionId for a specific device
    */
-  public getActiveSession(deviceId: string): Session | undefined {
+  public getActiveSessionId(deviceId: string): string | undefined {
     const device = this.deviceRecords.get(deviceId)
-    return device?.isStale ? undefined : device?.activeSession
+    return device?.isStale ? undefined : device?.activeSessionId
   }
 
   /**
-   * Gets all sessions (active + inactive) for a specific device
+   * Gets all sessionIds (active + inactive) for a specific device
    */
-  public getDeviceSessions(deviceId: string): Session[] {
+  public getDeviceSessionIds(deviceId: string): string[] {
     const device = this.deviceRecords.get(deviceId)
     if (!device) return []
 
-    const sessions: Session[] = []
-    if (device.activeSession) {
-      sessions.push(device.activeSession)
+    const sessionIds: string[] = []
+    if (device.activeSessionId) {
+      sessionIds.push(device.activeSessionId)
     }
-    sessions.push(...device.inactiveSessions)
-    return sessions
+    sessionIds.push(...device.inactiveSessionIds)
+    return sessionIds
   }
 
   /**
-   * Gets all active sessions across all devices for this user
+   * Gets all active sessionIds across all devices for this user
    */
-  public getActiveSessions(): Session[] {
-    const sessions: Session[] = []
+  public getActiveSessionIds(): string[] {
+    const sessionIds: string[] = []
 
     for (const device of this.getActiveDevices()) {
-      if (device.activeSession) {
-        sessions.push(device.activeSession)
+      if (device.activeSessionId) {
+        sessionIds.push(device.activeSessionId)
       }
     }
 
-    // Sort by ability to send messages (prioritize ready sessions)
-    sessions.sort((a, b) => {
-      const aCanSend = !!(a.state?.theirNextNostrPublicKey && a.state?.ourCurrentNostrKey)
-      const bCanSend = !!(b.state?.theirNextNostrPublicKey && b.state?.ourCurrentNostrKey)
-
-      if (aCanSend && !bCanSend) return -1
-      if (!aCanSend && bCanSend) return 1
-      return 0
-    })
-
-    return sessions
+    return sessionIds
   }
 
   /**
-   * Gets all sessions (active + inactive) across all devices
+   * Gets all sessionIds (active + inactive) across all devices
    */
-  public getAllSessions(): Session[] {
-    const sessions: Session[] = []
+  public getAllSessionIds(): string[] {
+    const sessionIds: string[] = []
 
     for (const device of this.deviceRecords.values()) {
-      if (device.activeSession) {
-        sessions.push(device.activeSession)
+      if (device.activeSessionId) {
+        sessionIds.push(device.activeSessionId)
       }
-      sessions.push(...device.inactiveSessions)
+      sessionIds.push(...device.inactiveSessionIds)
     }
 
-    return sessions
+    return sessionIds
   }
 
   /**
-   * Gets session IDs in the format used by iris-client (userPubKey:deviceId)
+   * Gets sessionIds in the format used by iris-client (userPubKey:deviceId)
    */
   public getSessionIds(): string[] {
     const sessionIds: string[] = []
 
     for (const device of this.getActiveDevices()) {
-      if (device.activeSession) {
-        sessionIds.push(`${this.userId}:${device.deviceId}`)
+      if (device.activeSessionId) {
+        sessionIds.push(device.activeSessionId)
       }
     }
 
     return sessionIds
+  }
+
+  // ============================================================================
+  // Compatibility Methods (using sessionIds instead of Session objects)
+  // ============================================================================
+
+  /**
+   * Gets the active sessionId for a specific device (compatibility method)
+   */
+  public getActiveSession(deviceId: string): string | undefined {
+    return this.getActiveSessionId(deviceId)
+  }
+
+  /**
+   * Checks if this user has any active sessions (by checking sessionIds)
+   */
+  public hasActiveSessions(): boolean {
+    return this.getActiveSessionIds().length > 0
   }
 
   // ============================================================================
@@ -236,7 +207,7 @@ export class UserRecord {
   }
 
   /**
-   * Removes stale devices and sessions older than maxLatency
+   * Removes stale devices older than maxLatency
    */
   public pruneStaleRecords(maxLatency: number): void {
     const now = Date.now()
@@ -252,9 +223,9 @@ export class UserRecord {
       }
     }
 
-    // Remove entire user record if stale
+    // Mark entire user record for removal if stale
     if (this.isStale && this.staleTimestamp && now - this.staleTimestamp > maxLatency) {
-      this.close()
+      this.deviceRecords.clear()
     }
   }
 
@@ -277,27 +248,11 @@ export class UserRecord {
   }
 
   /**
-   * Gets the preferred session (from most active device)
-   */
-  public getPreferredSession(): Session | undefined {
-    const mostActive = this.getMostActiveDevice()
-    return mostActive?.activeSession
-  }
-
-  /**
-   * Gets the preferred session ID for iris-client routing
+   * Gets the preferred sessionId (from most active device)
    */
   public getPreferredSessionId(): string | null {
     const mostActive = this.getMostActiveDevice()
-    if (!mostActive?.activeSession) return null
-    return `${this.userId}:${mostActive.deviceId}`
-  }
-
-  /**
-   * Checks if this user has any active sessions
-   */
-  public hasActiveSessions(): boolean {
-    return this.getActiveSessions().length > 0
+    return mostActive?.activeSessionId || null
   }
 
   /**
@@ -311,7 +266,7 @@ export class UserRecord {
    * Gets total count of active sessions
    */
   public getActiveSessionCount(): number {
-    return this.getActiveSessions().length
+    return this.getActiveSessionIds().length
   }
 
   /**
@@ -325,30 +280,35 @@ export class UserRecord {
   }
 
   /**
-   * Deletes a session from a specific device
+   * Removes a session reference from a specific device
    */
   public deleteSession(deviceId: string): void {
     const device = this.deviceRecords.get(deviceId)
-    if (device && device.activeSession) {
-      device.activeSession.close()
-      device.activeSession = undefined
+    if (device && device.activeSessionId) {
+      // Move active session to inactive
+      device.inactiveSessionIds.unshift(device.activeSessionId)
+      device.activeSessionId = undefined
 
       // If there are inactive sessions, activate the most recent one
-      if (device.inactiveSessions.length > 0) {
-        device.activeSession = device.inactiveSessions.shift()
+      if (device.inactiveSessionIds.length > 1) {
+        device.activeSessionId = device.inactiveSessionIds.shift()
       }
     }
   }
 
   /**
-   * Gets total number of sessions across all devices
+   * Gets total number of session references across all devices
    */
   public getTotalSessionCount(): number {
-    return this.getAllSessions().length
+    return this.getAllSessionIds().length
   }
 
+  // ============================================================================
+  // Serialization (No session data, just device metadata and sessionId references)
+  // ============================================================================
+
   /**
-   * Serializes the UserRecord for persistence
+   * Serializes the UserRecord for persistence (excluding session data)
    */
   public serialize(): string {
     const data = {
@@ -361,21 +321,15 @@ export class UserRecord {
         isStale: device.isStale,
         staleTimestamp: device.staleTimestamp,
         lastActivity: device.lastActivity,
-        activeSession: device.activeSession
-          ? {
-              state: serializeSessionState(device.activeSession.state),
-            }
-          : null,
-        inactiveSessions: device.inactiveSessions.map((session) => ({
-          state: serializeSessionState(session.state),
-        })),
+        activeSessionId: device.activeSessionId,
+        inactiveSessionIds: device.inactiveSessionIds,
       })),
     }
     return JSON.stringify(data)
   }
 
   /**
-   * Deserializes the UserRecord from persistence, reconstructing sessions
+   * Deserializes the UserRecord from persistence (no session reconstruction)
    */
   public deserialize(serializedData: string): void {
     const data = JSON.parse(serializedData)
@@ -384,88 +338,33 @@ export class UserRecord {
 
     this.deviceRecords.clear()
 
-    data.devices?.forEach((deviceData: any) => {
-      const device: DeviceRecord = {
-        deviceId: deviceData.deviceId,
-        isStale: deviceData.isStale || false,
-        staleTimestamp: deviceData.staleTimestamp,
-        lastActivity: deviceData.lastActivity,
-        inactiveSessions: [],
-        activeSession: undefined,
-      }
-
-      // Reconstruct active session
-      if (deviceData.activeSession?.state) {
-        try {
-          const state = deserializeSessionState(deviceData.activeSession.state)
-          device.activeSession = new Session(sessionSubscribe, state)
-        } catch (e) {
-          console.warn("Failed to deserialize active session", e)
+    data.devices?.forEach(
+      (deviceData: {
+        deviceId: string
+        isStale?: boolean
+        staleTimestamp?: number
+        lastActivity?: number
+        activeSessionId?: string
+        inactiveSessionIds?: string[]
+      }) => {
+        const device: DeviceRecord = {
+          deviceId: deviceData.deviceId,
+          isStale: deviceData.isStale || false,
+          staleTimestamp: deviceData.staleTimestamp,
+          lastActivity: deviceData.lastActivity,
+          activeSessionId: deviceData.activeSessionId,
+          inactiveSessionIds: deviceData.inactiveSessionIds || [],
         }
+
+        this.deviceRecords.set(device.deviceId, device)
       }
-
-      // Reconstruct inactive sessions
-      deviceData.inactiveSessions?.forEach((s: any) => {
-        try {
-          const state = deserializeSessionState(s.state)
-          const session = new Session(sessionSubscribe, state)
-          device.inactiveSessions.push(session)
-        } catch (e) {
-          console.warn("Failed to deserialize inactive session", e)
-        }
-      })
-
-      this.deviceRecords.set(device.deviceId, device)
-    })
-  }
-
-  /**
-   * Sets up event listeners on all sessions
-   */
-  public onAllSessions(
-    callback: (event: unknown, sessionId: string) => void
-  ): () => void {
-    const unsubscribers: (() => void)[] = []
-
-    for (const device of this.deviceRecords.values()) {
-      if (device.activeSession) {
-        const sessionId = this.createSessionId(device.deviceId)
-        const unsubscribe = device.activeSession.onEvent?.((event: unknown) => {
-          callback(event, sessionId)
-        })
-        if (unsubscribe) {
-          unsubscribers.push(unsubscribe)
-        }
-      }
-    }
-
-    return () => {
-      unsubscribers.forEach((unsub) => unsub())
-    }
-  }
-
-  /**
-   * Gets a session by device ID
-   */
-  public getSession(deviceId: string): Session | undefined {
-    return this.getActiveSession(deviceId)
-  }
-
-  /**
-   * Gets the active session from the preferred device
-   */
-  public getPreferredSessionForSending(): Session | undefined {
-    return this.getPreferredSession()
+    )
   }
 
   /**
    * Cleanup when destroying the user record
    */
   public close(): void {
-    for (const device of this.deviceRecords.values()) {
-      device.activeSession?.close()
-      device.inactiveSessions.forEach((session) => session.close())
-    }
     this.deviceRecords.clear()
   }
 
@@ -491,36 +390,6 @@ export class UserRecord {
     return {userPubKey, deviceId: deviceId || "unknown"}
   }
 
-  /**
-   * Creates a new session for a device
-   */
-  public createSession(
-    deviceId: string,
-    sharedSecret: Uint8Array,
-    ourCurrentPrivateKey: Uint8Array,
-    isInitiator: boolean,
-    name?: string
-  ): Session {
-    const device = this.getDevice(deviceId)
-    if (!device) {
-      throw new Error(`No device record found for ${deviceId}`)
-    }
-
-    const session = Session.init(
-      // We'd need to pass the subscribe function here, but since this is iris-client specific,
-      // we'll handle session creation in the sessions store instead
-      () => () => {}, // placeholder subscribe function
-      this.publicKey, // Use the user's public key
-      ourCurrentPrivateKey,
-      isInitiator,
-      sharedSecret,
-      name || deviceId
-    )
-
-    this.upsertSession(deviceId, session)
-    return session
-  }
-
   // ============================================================================
   // Legacy Compatibility (for gradual migration)
   // ============================================================================
@@ -535,8 +404,8 @@ export class UserRecord {
   /**
    * Legacy method for compatibility with existing code
    */
-  public upsertSessionLegacy(sessionId: string, session: Session): void {
+  public upsertSessionLegacy(sessionId: string): void {
     const {deviceId} = UserRecord.parseSessionId(sessionId)
-    this.upsertSession(deviceId, session)
+    this.upsertSession(deviceId, sessionId)
   }
 }

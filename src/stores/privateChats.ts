@@ -162,12 +162,6 @@ export async function subscribeToOwnDeviceInvites() {
   // Initialize listeners for current device's invite
   useUserRecordsStore.getState().initializeListeners()
 
-  // Initialize event listeners for all deserialized sessions with delay for timing
-  setTimeout(() => {
-    console.log("Initializing session listeners after delay")
-    useUserRecordsStore.getState().initializeSessionListeners()
-  }, 300)
-
   // Then start listening for new device invites from other devices
   useUserRecordsStore.getState().listenToUserDevices(publicKey)
 }
