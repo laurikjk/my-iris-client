@@ -2,7 +2,7 @@ import {Invite} from "nostr-double-ratchet/src"
 import {createJSONStorage, persist} from "zustand/middleware"
 import {Filter, VerifiedEvent, UnsignedEvent} from "nostr-tools"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
-import {hexToBytes} from "@noble/hashes/utils"
+import {getEncryptFunction, getDecryptFunction} from "@/utils/nostrCrypto"
 import {useEventsStore} from "./events"
 import {useSessionsStore} from "./sessions"
 import {UserRecord} from "./UserRecord"
@@ -49,7 +49,6 @@ interface UserRecordsStoreActions {
   reset: () => void
   initializeListeners: () => void
   initializeSessionListeners: () => void
-  ensureOnlyCurrentDeviceInvite: () => void
 
   // Compatibility API (for existing components)
   sessions: Map<string, string> // Virtual getter for backward compatibility - returns sessionIds
@@ -152,14 +151,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const newInvites = new Map(currentInvites)
         newInvites.set(id, invite)
 
-        const decrypt = myPrivKey
-          ? hexToBytes(myPrivKey)
-          : async (cipherText: string, pubkey: string) => {
-              if (window.nostr?.nip44) {
-                return window.nostr.nip44.decrypt(pubkey, cipherText)
-              }
-              throw new Error("No nostr extension or private key")
-            }
+        const decrypt = getDecryptFunction(myPrivKey)
 
         const unsubscribe = invite.listen(decrypt, subscribe, (session, identity) => {
           if (!identity) return
@@ -413,14 +405,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           }
 
           const myPrivKey = useUserStore.getState().privateKey
-          const encrypt = myPrivKey
-            ? hexToBytes(myPrivKey)
-            : async (plaintext: string, pubkey: string) => {
-                if (window.nostr?.nip44) {
-                  return window.nostr.nip44.encrypt(pubkey, plaintext)
-                }
-                throw new Error("No nostr extension or private key")
-              }
+          const encrypt = getEncryptFunction(myPrivKey)
 
           const {session, event} = await invite.accept(
             (filter, onEvent) => subscribe(filter, onEvent),
@@ -683,14 +668,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
         console.log("Starting listener for current device invite:", currentDeviceId)
 
-        const decrypt = myPrivKey
-          ? hexToBytes(myPrivKey)
-          : async (cipherText: string, pubkey: string) => {
-              if (window.nostr?.nip44) {
-                return window.nostr.nip44.decrypt(pubkey, cipherText)
-              }
-              throw new Error("No nostr extension or private key")
-            }
+        const decrypt = getDecryptFunction(myPrivKey)
 
         const unsubscribe = invite.listen(decrypt, subscribe, (session, identity) => {
           if (!identity) return
@@ -735,36 +713,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           // Trigger userRecords persistence for UI updates
           set({userRecords: new Map(get().userRecords)})
         })
-      },
-
-      ensureOnlyCurrentDeviceInvite: () => {
-        const myPubKey = useUserStore.getState().publicKey
-        if (!myPubKey) {
-          console.error("No public key available for ensureOnlyCurrentDeviceInvite")
-          return
-        }
-
-        const currentDeviceId = get().deviceId
-        if (!currentDeviceId) {
-          console.error("No device ID available for ensureOnlyCurrentDeviceInvite")
-          return
-        }
-
-        const inviteIdsToRemove: string[] = []
-        get().invites.forEach((invite, id) => {
-          if (invite.inviter === myPubKey && id !== currentDeviceId) {
-            inviteIdsToRemove.push(id)
-          }
-        })
-
-        inviteIdsToRemove.forEach((inviteId) => {
-          console.log("Removing old invite:", inviteId)
-          get().deleteInvite(inviteId)
-        })
-
-        console.log(
-          `Cleaned up ${inviteIdsToRemove.length} old invites, keeping current device invite: ${currentDeviceId}`
-        )
       },
     }),
     {
