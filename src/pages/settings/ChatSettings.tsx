@@ -18,11 +18,7 @@ const ChatSettings = () => {
     lastSeen,
     deleteInvite,
     createDefaultInvites,
-    debugMultiDevice,
-    manualDeviceDiscovery,
-    cleanupInvites,
     getOwnDeviceInvites,
-    cleanupDuplicateSessions,
     deviceId: currentDeviceId,
   } = useUserRecordsStore()
   const {publicKey} = useUserStore()
@@ -81,10 +77,8 @@ const ChatSettings = () => {
 
     loadDeviceInfo()
 
-    // Expose debug function globally for easy access
-    ;(window as typeof window & {debugMultiDevice: () => void}).debugMultiDevice =
-      debugMultiDevice
-  }, [invites, sessions, lastSeen, publicKey, currentDeviceId, debugMultiDevice])
+    // Debug functions removed
+  }, [invites, sessions, lastSeen, publicKey, currentDeviceId])
 
   const handleNullifyDevice = async (deviceId: string) => {
     if (
@@ -137,13 +131,6 @@ const ChatSettings = () => {
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium">Your Devices</h3>
           <div className="flex gap-2">
-            <button
-              onClick={cleanupInvites}
-              className="btn btn-ghost btn-sm"
-              title="Clean up stale invites"
-            >
-              <span className="text-sm">🧹</span>
-            </button>
             <button
               onClick={handleRefreshInvites}
               className="btn btn-ghost btn-sm"
@@ -203,45 +190,7 @@ const ChatSettings = () => {
         )}
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium">Debug Information</h3>
-        <div className="text-sm">
-          <p>Current Device ID: {currentDeviceId || "Not set"}</p>
-          <p>Total Invites: {invites.size}</p>
-          <p>Own Device Invites: {getOwnDeviceInvites().size}</p>
-          <p>Total Sessions: {sessions.size}</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={debugMultiDevice}
-            className="btn btn-outline btn-sm"
-            title="Print debug info to console"
-          >
-            Debug Multi-Device State
-          </button>
-          <button
-            onClick={manualDeviceDiscovery}
-            className="btn btn-primary btn-sm"
-            title="Manually trigger device discovery"
-          >
-            Discover Devices
-          </button>
-          <button
-            onClick={cleanupInvites}
-            className="btn btn-warning btn-sm"
-            title="Clean up all stale invites"
-          >
-            Cleanup Invites
-          </button>
-          <button
-            onClick={cleanupDuplicateSessions}
-            className="btn btn-error btn-sm"
-            title="EMERGENCY: Remove duplicate self-sessions"
-          >
-            🚨 Fix Self-Sessions
-          </button>
-        </div>
-      </div>
+      {/* Debug section removed */}
     </div>
   )
 }

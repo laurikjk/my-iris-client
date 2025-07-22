@@ -16,6 +16,8 @@ import {create} from "zustand"
 import {useEventsStore} from "./events"
 import {useUserStore} from "./user"
 import {useGroupsStore} from "./groups"
+import {useUserRecordsStore} from "./userRecords"
+import {UserRecord} from "./UserRecord"
 import throttle from "lodash/throttle"
 
 // Parse sessionId to get user info (moved from UserRecord)
@@ -434,8 +436,45 @@ const handleSessionEvent = (
     }
   }
 
+  // Fallback: if message has an "l" tag (group id) ensure group exists
+  const groupLabel = event.tags?.find((t) => t[0] === "l")?.[1]
+  if (groupLabel && !useGroupsStore.getState().groups[groupLabel]) {
+    useGroupsStore.getState().addGroup({
+      id: groupLabel,
+      name: groupLabel, // placeholder
+      description: "",
+      picture: "",
+      members: [],
+      createdAt: Date.now(),
+    })
+  }
+
   // Route to events store
   routeEventToStore(sessionId, event)
+
+  // --- Ensure UserRecord exists and session is referenced ---
+  const {userPubKey, deviceId} = parseSessionId(sessionId)
+  const urStore = useUserRecordsStore.getState()
+  if (!urStore.userRecords.has(userPubKey)) {
+    const newRecord = new UserRecord(userPubKey, userPubKey)
+    const map = new Map(urStore.userRecords)
+    map.set(userPubKey, newRecord)
+    useUserRecordsStore.setState({userRecords: map})
+  }
+
+  // Ensure sessionId is linked to this user/device
+  const me = useUserStore.getState().publicKey
+  const myDeviceId = useUserRecordsStore.getState().deviceId
+  if (!(userPubKey === me && deviceId === myDeviceId)) {
+    const rec = useUserRecordsStore.getState().userRecords.get(userPubKey)!
+    if (rec && !rec.getActiveSessionId(deviceId)) {
+      rec.upsertSession(deviceId, sessionId)
+      // trigger persistence
+      useUserRecordsStore.setState({
+        userRecords: new Map(useUserRecordsStore.getState().userRecords),
+      })
+    }
+  }
 
   // Notify external callbacks
   for (const cb of get().eventCallbacks) {

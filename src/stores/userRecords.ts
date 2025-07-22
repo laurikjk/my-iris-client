@@ -44,13 +44,8 @@ interface UserRecordsStoreActions {
 
   // Session selection
   getPreferredSession: (userPubKey: string) => string | null
-
-  // Debug & maintenance
-  debugMultiDevice: () => void
-  manualDeviceDiscovery: () => void
-  cleanupInvites: () => void
+  // Maintenance
   getOwnDeviceInvites: () => Map<string, Invite>
-  cleanupDuplicateSessions: () => void
   reset: () => void
   initializeListeners: () => void
   initializeSessionListeners: () => void
@@ -223,6 +218,8 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
       ): Promise<void> => {
         console.log("sendToUser:", {userPubKey, event})
 
+        const myPubKey = useUserStore.getState().publicKey
+
         if (!event.created_at) {
           event.created_at = Math.round(Date.now() / 1000)
         }
@@ -230,29 +227,66 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           event.tags = [["ms", Date.now().toString()]]
         }
 
+        const ensurePTag = (ev: Partial<UnsignedEvent>) => {
+          if (!ev.tags) ev.tags = []
+          const hasP = ev.tags.some((t) => t[0] === "p")
+          if (!hasP) {
+            ev.tags.push(["p", userPubKey])
+          }
+        }
+
+        const fanOutToOwnDevices = async (sentVia: Set<string>) => {
+          if (!myPubKey) return
+          const myRecord = get().userRecords.get(myPubKey)
+          if (!myRecord) return
+
+          for (const device of myRecord.getActiveDevices()) {
+            if (!device.activeSessionId) continue
+            if (sentVia.has(device.activeSessionId)) continue
+            try {
+              const clone = JSON.parse(JSON.stringify(event)) as Partial<UnsignedEvent>
+              ensurePTag(clone)
+              await get().sendMessage(device.activeSessionId, clone)
+              console.log(`Fanned-out message to own session ${device.activeSessionId}`)
+            } catch (err) {
+              console.warn(
+                `Failed to fan-out to own session ${device.activeSessionId}:`,
+                err
+              )
+            }
+          }
+        }
+
+        // Track which sessions we've already sent through
+        const sentSessionIds = new Set<string>()
+
         // Get UserRecord for this user
         const userRecord = get().userRecords.get(userPubKey)
 
-        // ----------------------
-        // 1. If we already have active sessions with this user, send via each device
-        // ----------------------
+        // Send to all peer devices we already have sessions with (concurrently)
         if (userRecord && userRecord.hasActiveSessions()) {
-          let firstSuccess: string | null = null
-          for (const device of userRecord.getActiveDevices()) {
-            if (!device.activeSessionId) continue
-            const sessionId = device.activeSessionId
-            try {
-              await get().sendMessage(sessionId, event)
-              console.log(`Sent via session ${sessionId}`)
-              if (!firstSuccess) firstSuccess = sessionId
-            } catch (err) {
-              console.warn(`Failed sending via session ${sessionId}:`, err)
-            }
-          }
-          if (firstSuccess) {
+          await Promise.all(
+            userRecord.getActiveDevices().map(async (device) => {
+              if (!device.activeSessionId) return
+              const sessionId = device.activeSessionId
+              try {
+                await get().sendMessage(sessionId, event)
+                sentSessionIds.add(sessionId)
+                console.log(`Sent via session ${sessionId}`)
+              } catch (err) {
+                console.warn(`Failed sending via session ${sessionId}:`, err)
+              }
+            })
+          )
+
+          // Immediately fan-out to own devices
+          await fanOutToOwnDevices(sentSessionIds)
+
+          // If at least one peer session succeeded we’re done
+          if (sentSessionIds.size > 0) {
             return
           }
-          // If we got here it means we have devices but none of the sessions worked – fall through to create new session
+          // otherwise fall through to invite waiting
         }
 
         // No existing sessions - listen for invites and queue message
@@ -278,6 +312,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
               cleanup()
               const sessionId = await get().acceptInvite(invite)
+              sentSessionIds.add(sessionId)
 
               // Process any queued messages
               const queue = get().messageQueue.get(userPubKey) || []
@@ -285,6 +320,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
                 for (const {event: queuedEvent, resolve: queuedResolve} of queue) {
                   try {
                     await get().sendMessage(sessionId, queuedEvent)
+                    sentSessionIds.add(sessionId)
                     queuedResolve(sessionId)
                   } catch (error) {
                     console.warn("Error sending queued message:", error)
@@ -297,6 +333,10 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
               await get().sendMessage(sessionId, event)
               console.log("sendToUser new sessionId:", sessionId)
+
+              // Fan-out to own devices as well
+              await fanOutToOwnDevices(sentSessionIds)
+
               resolve()
             } catch (error) {
               reject(error)
@@ -525,62 +565,8 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             }
 
             pendingInvites.add(inviteKey)
-
             try {
-              console.log("Accepting invite directly with deviceId:", inviteDeviceId)
-
-              const myPrivKey = useUserStore.getState().privateKey
-              const encrypt = myPrivKey
-                ? hexToBytes(myPrivKey)
-                : async (plaintext: string, pubkey: string) => {
-                    if (window.nostr?.nip44) {
-                      return window.nostr.nip44.encrypt(pubkey, plaintext)
-                    }
-                    throw new Error("No nostr extension or private key")
-                  }
-
-              const {session, event} = await invite.accept(
-                (filter, onEvent) => subscribe(filter, onEvent),
-                myPubKey,
-                encrypt
-              )
-
-              const e = NDKEventFromRawEvent(event)
-              await e
-                .publish()
-                .then((res) => console.log("published", res))
-                .catch((e) => console.warn("Error publishing event:", e))
-
-              const sessionId = `${invite.inviter}:${inviteDeviceId}`
-
-              // Add session to sessions store
-              useSessionsStore.getState().addSession(sessionId, session)
-
-              // Get or create UserRecord
-              const userRecords = new Map(get().userRecords)
-              let targetUserRecord = userRecords.get(invite.inviter)
-              if (!targetUserRecord) {
-                targetUserRecord = new UserRecord(invite.inviter, invite.inviter)
-                userRecords.set(invite.inviter, targetUserRecord)
-              }
-
-              // Add session reference to UserRecord
-              targetUserRecord.upsertSession(inviteDeviceId, sessionId)
-
-              // Update last seen
-              const lastSeen = new Map(get().lastSeen)
-              lastSeen.set(sessionId, Date.now())
-
-              set({userRecords, lastSeen})
-
-              // Session listener is automatically set up by sessions store
-              // Chat will appear automatically in getChatsList() via userRecords
-
-              // Store the invite itself
-              const invitesMap = new Map(get().invites)
-              invitesMap.set(inviteDeviceId, invite)
-              set({invites: invitesMap})
-
+              const sessionId = await get().acceptInvite(invite)
               console.log("Accepted invite from user device:", sessionId)
             } finally {
               pendingInvites.delete(inviteKey)
@@ -615,67 +601,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         return userRecord?.getPreferredSessionId() || null
       },
 
-      debugMultiDevice: () => {
-        const myPubKey = useUserStore.getState().publicKey
-        console.log("=== Multi-Device Debug Info ===")
-        console.log("My Public Key:", myPubKey)
-        console.log("Device ID:", get().deviceId)
-
-        console.log("Current User Records:")
-        Array.from(get().userRecords.entries()).forEach(([userPubKey, userRecord]) => {
-          console.log(`  - ${userPubKey}:`)
-          console.log(`    - Devices: ${userRecord.getDeviceCount()}`)
-          console.log(`    - Active Sessions: ${userRecord.getActiveSessionCount()}`)
-          userRecord.getActiveDevices().forEach((device) => {
-            console.log(
-              `      - ${device.deviceId}: ${device.activeSessionId ? "active" : "no session"}`
-            )
-          })
-        })
-      },
-
-      manualDeviceDiscovery: () => {
-        const myPubKey = useUserStore.getState().publicKey
-        if (!myPubKey) {
-          console.error("No public key available")
-          return
-        }
-        console.log("Manually triggering device discovery for:", myPubKey)
-        get().stopListeningToUserDevices(myPubKey)
-        get().listenToUserDevices(myPubKey)
-      },
-
-      cleanupInvites: () => {
-        const myPubKey = useUserStore.getState().publicKey
-        if (!myPubKey) {
-          console.error("No public key available for cleanup")
-          return
-        }
-
-        console.log("Cleaning up invites...")
-        const currentInvites = get().invites
-        const ownInvites = new Map<string, Invite>()
-        let removedCount = 0
-
-        Array.from(currentInvites.entries()).forEach(([id, invite]) => {
-          if (invite.inviter === myPubKey) {
-            ownInvites.set(id, invite)
-          } else {
-            const unsubscribe = inviteListeners.get(id)
-            if (unsubscribe) {
-              unsubscribe()
-              inviteListeners.delete(id)
-            }
-            removedCount++
-          }
-        })
-
-        set({invites: ownInvites})
-        console.log(
-          `Cleaned up ${removedCount} foreign invites, kept ${ownInvites.size} own invites`
-        )
-      },
-
       getOwnDeviceInvites: () => {
         const myPubKey = useUserStore.getState().publicKey
         if (!myPubKey) {
@@ -690,52 +615,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         })
 
         return ownInvites
-      },
-
-      cleanupDuplicateSessions: () => {
-        console.log("Cleaning up duplicate sessions...")
-        const myPubKey = useUserStore.getState().publicKey
-        if (!myPubKey) {
-          console.error("No public key available")
-          return
-        }
-
-        const myUserRecord = get().userRecords.get(myPubKey)
-        if (!myUserRecord) {
-          console.log("No user record found for self")
-          return
-        }
-
-        // Remove duplicate devices (keep most recent)
-        const devices = myUserRecord.getAllDevices()
-        const deviceGroups = new Map<string, typeof devices>()
-
-        devices.forEach((device) => {
-          const key = device.deviceId
-          if (!deviceGroups.has(key)) {
-            deviceGroups.set(key, [])
-          }
-          deviceGroups.get(key)!.push(device)
-        })
-
-        let removedCount = 0
-        deviceGroups.forEach((deviceGroup) => {
-          if (deviceGroup.length > 1) {
-            // Keep the most recently active device
-            deviceGroup.sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0))
-            for (let i = 1; i < deviceGroup.length; i++) {
-              myUserRecord.removeDevice(deviceGroup[i].deviceId)
-              removedCount++
-            }
-          }
-        })
-
-        if (removedCount > 0) {
-          set({userRecords: new Map(get().userRecords)})
-          console.log(`Removed ${removedCount} duplicate sessions`)
-        } else {
-          console.log("No duplicate sessions found")
-        }
       },
 
       reset: () => {
