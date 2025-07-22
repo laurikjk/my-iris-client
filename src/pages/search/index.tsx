@@ -103,7 +103,7 @@ function SearchPage() {
           )}
           {!query && (
             <div className="mt-4">
-              <PopularFeed small={false} />
+              <PopularFeed small={false} randomSort={true} />
             </div>
           )}
         </div>
