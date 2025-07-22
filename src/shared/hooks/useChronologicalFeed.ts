@@ -172,7 +172,6 @@ export default function useChronologicalFeed({
   }
 
   return {
-    events: eventsRef,
     newEvents,
     newEventsFrom,
     filteredEvents,

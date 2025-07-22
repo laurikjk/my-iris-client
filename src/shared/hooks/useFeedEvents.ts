@@ -23,8 +23,6 @@ export default function useFeedEvents({
   hideEventsByUnknownUsers,
   sortLikedPosts = false,
 }: UseFeedEventsProps) {
-  // Always call both hooks to maintain consistent hook order
-  // But only enable the one we need
   const chronologicalResult = useChronologicalFeed({
     filters,
     cacheKey,
@@ -47,6 +45,5 @@ export default function useFeedEvents({
     enabled: sortLikedPosts,
   })
 
-  // Return the appropriate result based on which hook is enabled
   return sortLikedPosts ? popularResult : chronologicalResult
 }

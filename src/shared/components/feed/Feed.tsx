@@ -114,7 +114,6 @@ const Feed = memo(function Feed({
 
   const newEventsFiltered = Array.from(newEventsMap.values())
 
-  const [, setForceUpdateCount] = useState(0)
 
   const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(
     filters?.authors?.length === 1

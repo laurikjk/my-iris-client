@@ -236,7 +236,6 @@ export default function usePopularTabFeed({
   }
 
   return {
-    events: reactionsRef,
     newEvents: newPosts,
     newEventsFrom: newPostsFrom,
     filteredEvents,
