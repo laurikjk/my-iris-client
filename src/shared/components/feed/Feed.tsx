@@ -119,11 +119,6 @@ const Feed = memo(function Feed({
     filters?.authors?.length === 1
   )
 
-  useEffect(() => {
-    if (forceUpdate !== undefined) {
-      setForceUpdateCount((prev) => prev + 1)
-    }
-  }, [forceUpdate])
 
   useEffect(() => {
     socialGraphLoaded.then(() => setIsSocialGraphLoaded(true))
