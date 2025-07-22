@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useEffect, useState} from "react"
+import {useCallback, useMemo, useEffect} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
@@ -32,7 +32,6 @@ function HomeFeedEvents() {
   const follows = useFollows(myPubKey, true) // to update on follows change
   const refreshSignal = useRefreshRouteSignal()
   const {activeHomeTab: activeTab, setActiveHomeTab: setActiveTab} = useFeedStore()
-  const [forceUpdate, setForceUpdate] = useState(0)
 
   const tabs = useMemo(
     () => [
@@ -112,7 +111,6 @@ function HomeFeedEvents() {
     }
     if (activeTab === "unseen" && refreshSignal > openedAt) {
       feedCache.delete(UNSEEN_CACHE_KEY)
-      setForceUpdate((prev) => prev + 1) // Force update Feed component
     }
   }, [activeTabItem, openedAt, refreshSignal, activeTab])
 
@@ -175,7 +173,6 @@ function HomeFeedEvents() {
         showDisplayAsSelector={follows.length > 1}
         cacheKey={activeTabItem.cacheKey}
         showRepliedTo={activeTabItem.showRepliedTo}
-        forceUpdate={forceUpdate}
         sortLikedPosts={activeTabItem.sortLikedPosts}
         emptyPlaceholder={""}
       />

@@ -28,7 +28,6 @@ interface FeedProps {
   onEvent?: (event: NDKEvent) => void
   borderTopFirst?: boolean
   emptyPlaceholder?: ReactNode
-  forceUpdate?: number
   showEventsByUnknownUsersButton?: boolean
   displayAs?: "list" | "grid"
   showDisplayAsSelector?: boolean
@@ -55,7 +54,6 @@ const Feed = memo(function Feed({
   onEvent,
   borderTopFirst = true,
   emptyPlaceholder = DefaultEmptyPlaceholder,
-  forceUpdate,
   showEventsByUnknownUsersButton = true,
   displayAs: initialDisplayAs = "list",
   showDisplayAsSelector = true,
@@ -114,11 +112,9 @@ const Feed = memo(function Feed({
 
   const newEventsFiltered = Array.from(newEventsMap.values())
 
-
   const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(
     filters?.authors?.length === 1
   )
-
 
   useEffect(() => {
     socialGraphLoaded.then(() => setIsSocialGraphLoaded(true))
@@ -182,7 +178,9 @@ const Feed = memo(function Feed({
                       showRepliedTo={showRepliedTo}
                       showReplies={showReplies}
                       event={"content" in event ? event : undefined}
-                      eventId={"content" in event ? undefined : (event as any).id}
+                      eventId={
+                        "content" in event ? undefined : (event as {id: string}).id
+                      }
                       onEvent={onEvent}
                       borderTop={borderTopFirst && index === 0}
                     />

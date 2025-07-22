@@ -2,10 +2,17 @@ import {useEffect, useMemo, useRef, useState, useCallback} from "react"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {feedCache} from "@/utils/memcache"
-import {useUserStore} from "@/stores/user"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
-import {eventComparator, createEventFilter, getEventsByUnknownUsers} from "./feedUtils"
+import {
+  eventComparator,
+  createEventFilter,
+  getEventsByUnknownUsers,
+  calculateLikesByPostId,
+  sortPostsByPopularity,
+  collectPostsWithLimit,
+} from "./feedUtils"
+import usePostFetcher from "./usePostFetcher"
 
 interface UsePopularTabFeedProps {
   filters: NDKFilter
@@ -27,25 +34,18 @@ export default function usePopularTabFeed({
   hideEventsByUnknownUsers,
   enabled = true,
 }: UsePopularTabFeedProps) {
-  const myPubKey = useUserStore((state) => state.publicKey)
   const [localFilter, setLocalFilter] = useState(filters)
   const [newPosts, setNewPosts] = useState(new Map<string, NDKEvent>())
   const [newPostsFrom, setNewPostsFrom] = useState(new Set<string>())
-  
+
   // Store reactions/likes
   const reactionsRef = useRef(
     feedCache.get(cacheKey) || new SortedMap([], eventComparator)
   )
-  
+
   // Store actual posts
   const postsRef = useRef(new Map<string, NDKEvent>())
-  
-  // Track which post IDs we've already fetched
-  const fetchedPostIds = useRef(new Set<string>())
-  
-  // Track like counts
-  const likesByPostId = useRef(new Map<string, number>())
-  
+
   const oldestRef = useRef<number | undefined>(undefined)
   const initialLoadDoneRef = useRef<boolean>(reactionsRef.current.size > 0)
   const [initialLoadDoneState, setInitialLoadDoneState] = useState(
@@ -75,79 +75,44 @@ export default function usePopularTabFeed({
     [displayFilterFn, localFilter.authors, hideEventsByUnknownUsers, filters.authors]
   )
 
-  const fetchPosts = useCallback(async (postIds: string[]) => {
-    if (postIds.length === 0) return
-
-    // Mark these as fetched so we don't try again
-    postIds.forEach(id => fetchedPostIds.current.add(id))
-
-    const postFilter: NDKFilter = {
-      ids: postIds,
-      kinds: [1],
-    }
-
-    const sub = ndk().subscribe(postFilter)
-    
-    sub.on("event", (event) => {
-      if (event?.id && event.created_at) {
-        const isMyRecent =
-          event.pubkey === myPubKey && event.created_at * 1000 > Date.now() - 10000
-        const isNewPost = initialLoadDoneRef.current && !isMyRecent
-
-        if (isNewPost) {
-          setNewPosts((prev) => new Map([...prev, [event.id, event]]))
-          setNewPostsFrom((prev) => new Set([...prev, event.pubkey]))
-        } else {
-          postsRef.current.set(event.id, event)
-          setEventsVersion((prev) => prev + 1)
-        }
-      }
-    })
-
-    // Stop subscription after a timeout
-    setTimeout(() => sub.stop(), 5000)
-  }, [])
+  const {fetchPosts, fetchedPostIds} = usePostFetcher({
+    onNewPost: (event) => {
+      setNewPosts((prev) => new Map([...prev, [event.id, event]]))
+      setNewPostsFrom((prev) => new Set([...prev, event.pubkey]))
+    },
+    onExistingPost: (event) => {
+      postsRef.current.set(event.id, event)
+      setEventsVersion((prev) => prev + 1)
+    },
+    isInitialLoadDone: () => initialLoadDoneRef.current,
+  })
 
   // Calculate popular posts and fetch them if needed
   const filteredEvents = useMemo(() => {
     if (!enabled) return []
-    
-    // Recalculate likes for all posts
-    likesByPostId.current.clear()
-    
-    Array.from(reactionsRef.current.values()).forEach((reaction) => {
-      if (!reaction.tags) return
-      const postId = reaction.tags.find((t) => t[0] === "e")?.[1]
-      if (postId) {
-        likesByPostId.current.set(postId, (likesByPostId.current.get(postId) || 0) + 1)
-      }
-    })
+
+    // Calculate likes for all posts
+    const likesByPostId = calculateLikesByPostId(reactionsRef.current.values())
 
     // Sort by popularity
-    const sortedPostIds = Array.from(likesByPostId.current.entries())
-      .sort(([, likesA], [, likesB]) => likesB - likesA)
-      .map(([postId]) => postId)
+    const sortedPostIds = sortPostsByPopularity(likesByPostId)
 
-    // Get actual post events
-    const events: NDKEvent[] = []
-    const missingPostIds: string[] = []
-
-    sortedPostIds.forEach((postId) => {
-      const post = postsRef.current.get(postId)
-      if (post && filterEvents(post)) {
-        events.push(post)
-      } else if (!fetchedPostIds.current.has(postId)) {
-        missingPostIds.push(postId)
-      }
-    })
+    // Collect posts up to limit
+    const {posts, missingPostIds} = collectPostsWithLimit(
+      sortedPostIds,
+      postsRef.current,
+      filterEvents,
+      fetchedPostIds.current,
+      displayCount
+    )
 
     // Fetch missing posts
     if (missingPostIds.length > 0) {
       fetchPosts(missingPostIds)
     }
 
-    return events
-  }, [eventsVersion, filterEvents, fetchPosts, enabled])
+    return posts
+  }, [eventsVersion, filterEvents, fetchPosts, displayCount, enabled])
 
   const eventsByUnknownUsers = useMemo(() => {
     if (!enabled) return []
@@ -197,16 +162,16 @@ export default function usePopularTabFeed({
 
       // This is a reaction/like event - always add to main feed
       reactionsRef.current.set(event.id, event)
-      
+
       oldestRef.current = Math.min(
         oldestRef.current ?? event.created_at,
         event.created_at
       )
       hasReceivedEventsRef.current = true
-      
+
       // Trigger re-aggregation
       setEventsVersion((prev) => prev + 1)
-      
+
       markLoadDoneIfHasEvents()
     })
 
