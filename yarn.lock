@@ -4828,10 +4828,10 @@ nostr-double-ratchet@^0.0.29:
     nostr-tools "^2.15.0"
     react-blurhash "^0.3.0"
 
-nostr-social-graph@^1.0.28:
-  version "1.0.28"
-  resolved "https://registry.yarnpkg.com/nostr-social-graph/-/nostr-social-graph-1.0.28.tgz#a7bdefdd81159b2ce65fe00b591bcd690a207526"
-  integrity sha512-OKtspegfVKuesGnXetfVPSXNLPELgst3ZezDRDYYbvCkVX1MWnX1w71mLh3GwD/d7khrj5oUFbTkSPIImfGf/Q==
+nostr-social-graph@^1.0.29:
+  version "1.0.29"
+  resolved "https://registry.yarnpkg.com/nostr-social-graph/-/nostr-social-graph-1.0.29.tgz#24c6f228b6e16a453edaa41081fc0a72d201ec05"
+  integrity sha512-E+SdXG/xcquejX66AqZGEOBD/ltQpXDZ4aIRN79yP8pT7gxUuWPKVBt14dYR5I+j5NAvCCkbKd6jIwyeGtpaEA==
   dependencies:
     "@types/cors" "^2.8.17"
     cors "^2.8.5"

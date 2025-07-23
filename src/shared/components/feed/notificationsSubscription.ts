@@ -80,11 +80,10 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
 
       notifications.set(key, notification)
 
-      const created_at = event.created_at * 1000
 
-      if (created_at > latest) {
-        latest = created_at
-        useNotificationsStore.getState().setLatestNotification(latest)
+      if (event.created_at > latest) {
+        latest = event.created_at
+        useNotificationsStore.getState().setLatestNotification(event.created_at)
       }
     }
   })
