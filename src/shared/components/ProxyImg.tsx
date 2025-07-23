@@ -15,13 +15,7 @@ type Props = {
   loadOriginalIfProxyFails?: boolean
 }
 
-const safeOrigins = [
-  "data:image",
-  "https://imgur.com/",
-  "https://i.imgur.com/",
-  "https://imgproxy.iris.to/",
-  "https://imgproxy.coracle.social/",
-]
+const safeOrigins = ["data:image"]
 
 const shouldSkipProxy = (url: string) => {
   return safeOrigins.some((origin) => url.startsWith(origin))

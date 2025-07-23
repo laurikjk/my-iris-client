@@ -43,7 +43,7 @@ registerRoute(
   ({request, url}) => {
     return (
       request.destination === "image" &&
-      url.href.startsWith("https://imgproxy.iris.to/") &&
+      url.href.startsWith("https://imgproxy.") &&
       (url.pathname.includes(
         `rs:fill:${PROFILE_AVATAR_WIDTH * 2}:${PROFILE_AVATAR_WIDTH * 2}`
       ) ||
