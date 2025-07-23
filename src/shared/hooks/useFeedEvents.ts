@@ -69,7 +69,9 @@ export default function useFeedEvents({
       if (!event.created_at) return false
       if (displayFilterFn && !displayFilterFn(event)) return false
       const inAuthors = localFilter.authors?.includes(event.pubkey)
-      if (!inAuthors && shouldHideAuthor(event.pubkey, 3)) {
+      // Pass `allowUnknown` based on the `hideEventsByUnknownUsers` flag so that
+      // disabling the flag actually shows posts from users outside the follow graph.
+      if (!inAuthors && shouldHideAuthor(event.pubkey, 3, !hideEventsByUnknownUsers)) {
         return false
       }
       if (

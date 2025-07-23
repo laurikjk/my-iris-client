@@ -6,6 +6,7 @@ import debounce from "lodash/debounce"
 import throttle from "lodash/throttle"
 import localForage from "localforage"
 import {ndk} from "@/utils/ndk"
+import { useEffect, useState } from "react"
 
 export const DEFAULT_SOCIAL_GRAPH_ROOT =
   "4523be58d395b1b196a9b8c82b038b6895cb02b683d0c253a955068dba1facd0"
@@ -139,16 +140,18 @@ const throttledRecalculate = throttle(
   {leading: true}
 )
 
+let isLoaded = false
+
 export const socialGraphLoaded = new Promise((resolve) => {
   const currentPublicKey = useUserStore.getState().publicKey
   initializeInstance(currentPublicKey || undefined).then(() => {
-    resolve(true)
-
     if (currentPublicKey) {
       setupSubscription(currentPublicKey)
     } else {
       instance.setRoot(DEFAULT_SOCIAL_GRAPH_ROOT)
     }
+    isLoaded = true
+    resolve(true)
   })
 
   useUserStore.subscribe((state, prevState) => {
@@ -161,6 +164,16 @@ export const socialGraphLoaded = new Promise((resolve) => {
     }
   })
 })
+
+export const useSocialGraphLoaded = () => {
+  const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(isLoaded)
+  useEffect(() => {
+    socialGraphLoaded.then(() => {
+      setIsSocialGraphLoaded(true)
+    })
+  }, [])
+  return isSocialGraphLoaded
+}
 
 function setupSubscription(publicKey: string) {
   instance.setRoot(publicKey)

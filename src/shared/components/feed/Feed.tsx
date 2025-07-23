@@ -8,7 +8,7 @@ import {useUserStore} from "@/stores/user"
 
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
 import useFeedEvents from "@/shared/hooks/useFeedEvents.ts"
-import {socialGraphLoaded} from "@/utils/socialGraph.ts"
+import {useSocialGraphLoaded} from "@/utils/socialGraph.ts"
 import UnknownUserEvents from "./UnknownUserEvents.tsx"
 import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
@@ -135,19 +135,13 @@ const Feed = memo(function Feed({
 
   const [, setForceUpdateCount] = useState(0)
 
-  const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(
-    filters?.authors?.length === 1
-  )
+  const isSocialGraphLoaded = useSocialGraphLoaded()
 
   useEffect(() => {
     if (forceUpdate !== undefined) {
       setForceUpdateCount((prev) => prev + 1)
     }
   }, [forceUpdate])
-
-  useEffect(() => {
-    socialGraphLoaded.then(() => setIsSocialGraphLoaded(true))
-  }, [])
 
   useEffect(() => {
     if (history.state?.initialHideEventsByUnknownUsers === undefined) {

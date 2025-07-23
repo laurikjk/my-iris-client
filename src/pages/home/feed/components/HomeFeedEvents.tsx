@@ -11,7 +11,7 @@ import Feed from "@/shared/components/feed/Feed.tsx"
 import {hasMedia} from "@/shared/components/embed"
 import useFollows from "@/shared/hooks/useFollows"
 import {getEventReplyingTo} from "@/utils/nostr"
-import socialGraph from "@/utils/socialGraph"
+import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {usePublicKey} from "@/stores/user"
 import {useFeedStore} from "@/stores/feed"
 
@@ -34,6 +34,7 @@ function HomeFeedEvents() {
   console.log("refreshSignal", refreshSignal)
   const {activeHomeTab: activeTab, setActiveHomeTab: setActiveTab} = useFeedStore()
   const [forceUpdate, setForceUpdate] = useState(0)
+  const socialGraphLoaded = useSocialGraphLoaded()
 
   const tabs = useMemo(
     () => [
@@ -180,7 +181,7 @@ function HomeFeedEvents() {
         sortLikedPosts={activeTabItem.sortLikedPosts}
         emptyPlaceholder={""}
       />
-      {follows.length <= 1 && (
+      {socialGraphLoaded && follows.length <= 1 && (
         <>
           <NoFollows myPubKey={myPubKey} />
           <PopularFeed small={false} days={7} />

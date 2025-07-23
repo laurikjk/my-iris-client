@@ -1,10 +1,10 @@
-import {useCallback, useMemo, useState, useEffect} from "react"
+import {useCallback, useMemo, useState} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 
 import socialGraph, {
   DEFAULT_SOCIAL_GRAPH_ROOT,
-  socialGraphLoaded,
+  useSocialGraphLoaded,
 } from "@/utils/socialGraph"
 import EventBorderless from "@/shared/components/event/EventBorderless"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
@@ -22,7 +22,7 @@ export default function PopularFeed({
   randomSort?: boolean
   days?: number
 }) {
-  const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(false)
+  const isSocialGraphLoaded = useSocialGraphLoaded()
   const [displayCount, setDisplayCount] = useState(10)
   const myPubKey = useUserStore((state) => state.publicKey)
   const myFollows = useFollows(myPubKey, false)
@@ -106,12 +106,6 @@ export default function PopularFeed({
   const loadMore = useCallback(() => {
     setDisplayCount((prevCount) => Math.min(prevCount + 10, customSortedEvents.length))
   }, [customSortedEvents.length])
-
-  useEffect(() => {
-    socialGraphLoaded.then(() => {
-      setIsSocialGraphLoaded(true)
-    })
-  }, [])
 
   const isTestEnvironment =
     typeof window !== "undefined" && window.location.href.includes("localhost:5173")
