@@ -20,7 +20,7 @@ const safeOrigins = [
   "https://imgur.com/",
   "https://i.imgur.com/",
   "https://imgproxy.iris.to/",
-  "https://imgproxy.snort.social/",
+  "https://imgproxy.coracle.social/",
 ]
 
 const shouldSkipProxy = (url: string) => {
