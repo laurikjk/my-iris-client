@@ -6,7 +6,7 @@ import debounce from "lodash/debounce"
 import throttle from "lodash/throttle"
 import localForage from "localforage"
 import {ndk} from "@/utils/ndk"
-import { useEffect, useState } from "react"
+import {useEffect, useState} from "react"
 
 export const DEFAULT_SOCIAL_GRAPH_ROOT =
   "4523be58d395b1b196a9b8c82b038b6895cb02b683d0c253a955068dba1facd0"
@@ -23,9 +23,9 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
   console.log("root", publicKey, publicKey.length)
   isInitialized = true
   const data = await localForage.getItem("socialGraph")
-  if (data && typeof data === "object") {
+  if (data) {
     try {
-      instance = new SocialGraph(publicKey, data as SerializedSocialGraph)
+      instance = await SocialGraph.fromBinary(publicKey, data as Uint8Array)
     } catch (e) {
       console.error("error deserializing", e)
       await localForage.removeItem("socialGraph")
@@ -52,18 +52,20 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
 
 const throttledSave = throttle(async () => {
   try {
-    const serialized = instance.serialize()
+    const serialized = instance.toBinary()
     await localForage.setItem("socialGraph", serialized)
     console.log("Saved social graph of size", instance.size())
   } catch (e) {
     console.error("failed to serialize SocialGraph or UniqueIds", e)
     console.log("social graph size", instance.size())
   }
-}, 10000)
+}, 30000)
 
 const debouncedRemoveNonFollowed = debounce(() => {
+  /* temp removed until better perf
   const removedCount = instance.removeMutedNotFollowedUsers()
   console.log("Removing", removedCount, "muted users not followed by anyone")
+  */
   throttledSave()
 }, 11000)
 
@@ -238,17 +240,17 @@ export const loadFromFile = (merge = false) => {
 }
 
 export const downloadLargeGraph = (maxBytes: number) => {
-  const url = `https://graph-api.iris.to/social-graph?maxBytes=${maxBytes}&format=json`
+  const url = `https://graph-api.iris.to/social-graph?maxBytes=${maxBytes}&format=binary`
 
   fetch(url)
     .then((response) => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      return response.json()
+      return response.arrayBuffer()
     })
     .then((data) => {
-      return new SocialGraph(instance.getRoot(), data)
+      return SocialGraph.fromBinary(instance.getRoot(), new Uint8Array(data))
     })
     .then((newInstance) => {
       instance = newInstance
