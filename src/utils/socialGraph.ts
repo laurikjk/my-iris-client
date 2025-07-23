@@ -59,7 +59,7 @@ const throttledSave = throttle(async () => {
     console.error("failed to serialize SocialGraph or UniqueIds", e)
     console.log("social graph size", instance.size())
   }
-}, 30000)
+}, 15000)
 
 const debouncedRemoveNonFollowed = debounce(() => {
   /* temp removed until better perf
