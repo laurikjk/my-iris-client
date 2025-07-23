@@ -3,7 +3,7 @@ import {ReactNode, useRef, useEffect, MouseEvent} from "react"
 import {RiMenuLine, RiArrowLeftLine} from "@remixicon/react"
 import NotificationButton from "./NotificationButton"
 import {useUserStore} from "@/stores/user"
-import {useNavigate, useLocation} from "react-router"
+import {useNavigate} from "react-router"
 import {useUIStore} from "@/stores/ui"
 import {Avatar} from "../user/Avatar"
 import classNames from "classnames"
@@ -30,24 +30,10 @@ const Header = ({
   const {isSidebarOpen, setIsSidebarOpen, setShowLoginDialog} = useUIStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const navigate = useNavigate()
-  const location = useLocation()
 
   const headerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const lastScrollY = useRef(window.scrollY)
-
-  // Reset header position and opacity whenever the route changes to make sure the header
-  // is visible when arriving on a new page. This prevents cases where the header remains
-  // hidden after navigating from a scrolled-down position on the previous page.
-  useEffect(() => {
-    if (headerRef.current) {
-      headerRef.current.style.transform = "translateY(0px)"
-    }
-    if (contentRef.current) {
-      contentRef.current.style.opacity = "1"
-    }
-    lastScrollY.current = window.scrollY
-  }, [location.pathname])
 
   useEffect(() => {
     const MIN_TRANSLATE_Y = -80
