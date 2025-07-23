@@ -6,8 +6,8 @@ import socialGraph, {
   downloadLargeGraph,
 } from "@/utils/socialGraph"
 import {UserRow} from "@/shared/components/user/UserRow"
-import {useIsMobile} from "@/shared/hooks/useIsMobile"
 import {useState, useEffect} from "react"
+import {formatSize} from "@/shared/utils/formatSize"
 
 const TOP_USERS_LIMIT = 20
 
@@ -19,8 +19,12 @@ function SocialGraphSettings() {
   const [topMutedUsers, setTopMutedUsers] = useState<
     Array<{user: string; count: number}>
   >([])
-  const isMobile = useIsMobile()
-  const [maxSizeMB, setMaxSizeMB] = useState<number>(isMobile ? 10 : 50)
+  const [maxNodes, setMaxNodes] = useState<number>(50000)
+  const [maxEdges, setMaxEdges] = useState<number | undefined>(undefined)
+  const [maxDistance, setMaxDistance] = useState<number | undefined>(undefined)
+  const [maxEdgesPerNode, setMaxEdgesPerNode] = useState<number | undefined>(undefined)
+  const [format, setFormat] = useState<string>("binary")
+  const [downloadedBytes, setDownloadedBytes] = useState<number | null>(null)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -72,8 +76,15 @@ function SocialGraphSettings() {
   }
 
   const handleDownloadGraph = async () => {
-    const maxBytes = maxSizeMB * 1024 * 1024 // Convert MB to bytes
-    downloadLargeGraph(maxBytes)
+    setDownloadedBytes(null)
+    downloadLargeGraph({
+      maxNodes,
+      maxEdges,
+      maxDistance,
+      maxEdgesPerNode,
+      format,
+      onDownloaded: setDownloadedBytes,
+    })
   }
 
   return (
@@ -116,19 +127,64 @@ function SocialGraphSettings() {
         >
           Recalculate Follow Distances (fast, no bandwith usage)
         </button>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min="1"
-            max="1000"
-            value={maxSizeMB}
-            onChange={(e) => setMaxSizeMB(Number(e.target.value))}
-            className="input input-sm input-bordered w-24"
-          />
-          <span className="text-sm">MB</span>
-          <button className="btn btn-neutral btn-sm" onClick={handleDownloadGraph}>
-            Download graph up to {maxSizeMB}MB (binary)
-          </button>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <label className="text-sm">maxNodes</label>
+            <input
+              type="number"
+              min="1"
+              value={maxNodes}
+              onChange={(e) => setMaxNodes(Number(e.target.value))}
+              className="input input-sm input-bordered w-24"
+            />
+            <label className="text-sm">maxEdges</label>
+            <input
+              type="number"
+              min="1"
+              value={maxEdges ?? ""}
+              onChange={(e) =>
+                setMaxEdges(e.target.value ? Number(e.target.value) : undefined)
+              }
+              className="input input-sm input-bordered w-24"
+            />
+            <label className="text-sm">maxDistance</label>
+            <input
+              type="number"
+              min="1"
+              value={maxDistance ?? ""}
+              onChange={(e) =>
+                setMaxDistance(e.target.value ? Number(e.target.value) : undefined)
+              }
+              className="input input-sm input-bordered w-24"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm">maxEdgesPerNode</label>
+            <input
+              type="number"
+              min="1"
+              value={maxEdgesPerNode ?? ""}
+              onChange={(e) =>
+                setMaxEdgesPerNode(e.target.value ? Number(e.target.value) : undefined)
+              }
+              className="input input-sm input-bordered w-24"
+            />
+            <label className="text-sm">format</label>
+            <select
+              value={format}
+              onChange={(e) => setFormat(e.target.value)}
+              className="input input-sm input-bordered w-32"
+            >
+              <option value="binary">binary</option>
+              <option value="json">json</option>
+            </select>
+            <button className="btn btn-neutral btn-sm" onClick={handleDownloadGraph}>
+              Download graph
+            </button>
+            {downloadedBytes !== null && (
+              <span className="text-sm">Downloaded: {formatSize(downloadedBytes)}</span>
+            )}
+          </div>
         </div>
         <button
           onClick={() => getFollowLists(socialGraph().getRoot(), false, 2)}

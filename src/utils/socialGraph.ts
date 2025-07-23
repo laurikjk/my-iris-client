@@ -239,8 +239,33 @@ export const loadFromFile = (merge = false) => {
   input.click()
 }
 
-export const downloadLargeGraph = (maxBytes: number) => {
-  const url = `https://graph-api.iris.to/social-graph?maxBytes=${maxBytes}&format=binary`
+export interface DownloadGraphOptions {
+  maxNodes?: number
+  maxEdges?: number
+  maxDistance?: number
+  maxEdgesPerNode?: number
+  format?: string
+  onDownloaded?: (bytes: number) => void
+}
+
+export const downloadLargeGraph = (options: DownloadGraphOptions = {}) => {
+  const {
+    maxNodes = 50000,
+    maxEdges,
+    maxDistance,
+    maxEdgesPerNode,
+    format = "binary",
+    onDownloaded,
+  } = options
+
+  const params = new URLSearchParams()
+  if (maxNodes) params.append("maxNodes", String(maxNodes))
+  if (maxEdges) params.append("maxEdges", String(maxEdges))
+  if (maxDistance) params.append("maxDistance", String(maxDistance))
+  if (maxEdgesPerNode) params.append("maxEdgesPerNode", String(maxEdgesPerNode))
+  if (format) params.append("format", format)
+
+  const url = `https://graph-api.iris.to/social-graph?${params.toString()}`
 
   fetch(url)
     .then((response) => {
@@ -250,6 +275,7 @@ export const downloadLargeGraph = (maxBytes: number) => {
       return response.arrayBuffer()
     })
     .then((data) => {
+      if (onDownloaded) onDownloaded(data.byteLength)
       return SocialGraph.fromBinary(instance.getRoot(), new Uint8Array(data))
     })
     .then((newInstance) => {
