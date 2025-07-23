@@ -32,7 +32,7 @@ function SocialGraphSettings() {
     }, 2000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [socialGraph])
 
   const getTopNMostFollowedUsers = (n: number) => {
     const userFollowerCounts: Array<{user: string; count: number}> = []

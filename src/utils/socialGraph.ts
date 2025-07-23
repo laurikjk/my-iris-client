@@ -134,14 +134,6 @@ function getMissingFollowLists(myPubKey: string) {
   getFollowLists(myPubKey, true)
 }
 
-const throttledRecalculate = throttle(
-  () => {
-    instance.recalculateFollowDistances()
-  },
-  10000,
-  {leading: true}
-)
-
 let isLoaded = false
 
 export const socialGraphLoaded = new Promise((resolve) => {
@@ -177,8 +169,9 @@ export const useSocialGraphLoaded = () => {
   return isSocialGraphLoaded
 }
 
-function setupSubscription(publicKey: string) {
+async function setupSubscription(publicKey: string) {
   instance.setRoot(publicKey)
+  await instance.recalculateFollowDistances()
   sub?.stop()
   sub = ndk().subscribe({
     kinds: [3, 10000],
@@ -197,7 +190,7 @@ function setupSubscription(publicKey: string) {
     latestTime = ev.created_at
     handleSocialGraphEvent(ev as NostrEvent)
     queueMicrotask(() => getMissingFollowLists(publicKey))
-    throttledRecalculate()
+    instance.recalculateFollowDistances()
   })
 }
 
@@ -272,15 +265,58 @@ export const downloadLargeGraph = (options: DownloadGraphOptions = {}) => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      return response.arrayBuffer()
+
+      if (!response.body) {
+        throw new Error("Response body is null")
+      }
+
+      const reader = response.body.getReader()
+      const chunks: Uint8Array[] = []
+      let totalBytes = 0
+
+      return new Promise<ArrayBuffer>((resolve, reject) => {
+        function readChunk() {
+          reader
+            .read()
+            .then(({done, value}) => {
+              if (done) {
+                // Combine all chunks into a single ArrayBuffer
+                const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+                const result = new Uint8Array(totalLength)
+                let offset = 0
+                for (const chunk of chunks) {
+                  result.set(chunk, offset)
+                  offset += chunk.length
+                }
+                resolve(result.buffer)
+                return
+              }
+
+              chunks.push(value)
+              totalBytes += value.length
+              if (onDownloaded) onDownloaded(totalBytes)
+              readChunk()
+            })
+            .catch(reject)
+        }
+
+        readChunk()
+      })
     })
     .then((data) => {
-      if (onDownloaded) onDownloaded(data.byteLength)
       return SocialGraph.fromBinary(instance.getRoot(), new Uint8Array(data))
     })
-    .then((newInstance) => {
+    .then(async (newInstance) => {
       instance = newInstance
+      await instance.recalculateFollowDistances()
       throttledSave()
+
+      // Re-query our own follow list
+      setupSubscription(instance.getRoot())
+      const root = instance.getRoot()
+      if (root && root !== DEFAULT_SOCIAL_GRAPH_ROOT) {
+        getFollowLists(root, false, 1)
+      }
     })
     .catch((error) => {
       console.error("failed to load large social graph:", error)
