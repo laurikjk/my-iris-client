@@ -14,6 +14,26 @@ export const DEFAULT_SOCIAL_GRAPH_ROOT =
 let instance = new SocialGraph(DEFAULT_SOCIAL_GRAPH_ROOT)
 let isInitialized = false
 
+async function loadPreCrawledGraph(publicKey: string): Promise<SocialGraph> {
+  try {
+    // Import binary file URL and fetch it
+    const binaryUrl = (await import("nostr-social-graph/data/socialGraph.bin?url"))
+      .default
+    const response = await fetch(binaryUrl)
+    const binaryData = new Uint8Array(await response.arrayBuffer())
+    const graph = await SocialGraph.fromBinary(publicKey, binaryData)
+    console.log("loaded default binary social graph of size", graph.size())
+    return graph
+  } catch (e) {
+    console.error("failed to load binary social graph, falling back to JSON", e)
+    // Fallback to JSON if binary fails
+    const {default: preCrawledGraph} = await import(
+      "nostr-social-graph/data/socialGraph.json"
+    )
+    return new SocialGraph(publicKey, preCrawledGraph as unknown as SerializedSocialGraph)
+  }
+}
+
 async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
   if (isInitialized) {
     console.log("setting root", publicKey)
@@ -26,27 +46,16 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
   if (data) {
     try {
       instance = await SocialGraph.fromBinary(publicKey, data as Uint8Array)
+      console.log("loaded local social graph of size", instance.size())
     } catch (e) {
       console.error("error deserializing", e)
       await localForage.removeItem("socialGraph")
-      const {default: preCrawledGraph} = await import(
-        "nostr-social-graph/data/socialGraph.json"
-      )
-      instance = new SocialGraph(
-        publicKey,
-        preCrawledGraph as unknown as SerializedSocialGraph
-      )
+      instance = await loadPreCrawledGraph(publicKey)
     }
   } else {
     console.log("no social graph found")
     await localForage.removeItem("socialGraph")
-    const {default: preCrawledGraph} = await import(
-      "nostr-social-graph/data/socialGraph.json"
-    )
-    instance = new SocialGraph(
-      publicKey,
-      preCrawledGraph as unknown as SerializedSocialGraph
-    )
+    instance = await loadPreCrawledGraph(publicKey)
   }
 }
 
