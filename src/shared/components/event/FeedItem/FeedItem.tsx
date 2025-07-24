@@ -62,6 +62,7 @@ function FeedItem({
   borderTop,
 }: FeedItemProps) {
   const [expanded, setExpanded] = useState(false)
+  const [hasActualReplies, setHasActualReplies] = useState(false)
   const navigate = useNavigate()
 
   if ((!initialEvent || !initialEvent.id) && !eventId) {
@@ -233,7 +234,7 @@ function FeedItem({
             "flex flex-col border-custom pt-3 pb-0 transition-colors duration-200 ease-in-out relative",
             {
               "cursor-pointer": !standalone,
-              "border-b": !asRepliedTo && !asEmbed,
+              "border-b": !asRepliedTo && !asEmbed && !(asReply && hasActualReplies),
               "border-t":
                 !asReply &&
                 borderTop &&
@@ -249,6 +250,9 @@ function FeedItem({
           }
         >
           {asRepliedTo && (
+            <div className="h-full w-0.5 bg-base-300 absolute top-12 left-9" />
+          )}
+          {asReply && hasActualReplies && (
             <div className="h-full w-0.5 bg-base-300 absolute top-12 left-9" />
           )}
           {isRepost(event) && (
@@ -278,7 +282,11 @@ function FeedItem({
               </div>
             </div>
           </div>
-          <div className={classNames("px-4", {"pl-14": asRepliedTo})}>
+          <div
+            className={classNames("px-4", {
+              "pl-14": asRepliedTo || asReply,
+            })}
+          >
             {showActions && (
               <FeedItemActions feedItemRef={feedItemRef} event={referredEvent || event} />
             )}
@@ -293,7 +301,10 @@ function FeedItem({
             asReply={true}
             filters={{"#e": [eventIdHex], kinds: [1]}}
             displayFilterFn={(e: NDKEvent) => getEventReplyingTo(e) === event.id}
-            onEvent={onEvent}
+            onEvent={(e) => {
+              onEvent?.(e)
+              setHasActualReplies(true)
+            }}
             borderTopFirst={false}
             emptyPlaceholder={null}
             showReplies={showReplies}
