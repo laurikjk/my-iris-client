@@ -234,6 +234,17 @@ function MediaServers() {
             </a>{" "}
             is a Nostr protocol extension for file uploads.
           </p>
+          <p className="mt-2">
+            <a
+              href="https://github.com/imgproxy/imgproxy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link"
+            >
+              imgproxy
+            </a>{" "}
+            is a server for resizing and converting remote images.
+          </p>
         </div>
       </div>
     </div>

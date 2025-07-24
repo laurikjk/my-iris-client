@@ -60,6 +60,7 @@ function HomeFeedEvents() {
       {
         name: "Latest",
         path: "latest",
+        cacheKey: "latestFeed",
         showRepliedTo: false,
         displayFilterFn: (e: NDKEvent) =>
           !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 1,
@@ -67,6 +68,7 @@ function HomeFeedEvents() {
       {
         name: "Market",
         path: "market",
+        cacheKey: "marketFeed",
         showRepliedTo: false,
         filter: {
           kinds: [30402],
@@ -78,17 +80,20 @@ function HomeFeedEvents() {
       {
         name: "Replies",
         path: "replies",
+        cacheKey: "repliesFeed",
         displayFilterFn: (e: NDKEvent) => socialGraph().getFollowDistance(e.pubkey) <= 1,
       },
       {
         name: "Media",
         path: "media",
+        cacheKey: "mediaFeed",
         showRepliedTo: false,
         displayFilterFn: (e: NDKEvent) => hasMedia(e),
       },
       {
         name: "Adventure",
         path: "adventure",
+        cacheKey: "adventureFeed",
         showRepliedTo: false,
         filter: {
           kinds: [1],
@@ -170,7 +175,7 @@ function HomeFeedEvents() {
       )}
       <NotificationPrompt />
       <Feed
-        key={activeTab === "unseen" ? "unseen" : "other"}
+        key={`feed-${activeTab}`}
         filters={filters}
         displayFilterFn={displayFilterFn}
         fetchFilterFn={activeTabItem.fetchFilterFn}
