@@ -44,7 +44,7 @@ const HyperText = memo(
             match={match}
             index={i}
             event={event}
-            key={`${embed.settingsKey}-${i}${embed.inline ? "-inline" : ""}`}
+            key={`${embed.settingsKey || `embed-${embeds.indexOf(embed)}`}-${i}${embed.inline ? "-inline" : ""}`}
           />
         ))
       }
