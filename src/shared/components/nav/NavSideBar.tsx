@@ -60,8 +60,11 @@ const NavSideBar = () => {
             <span className="inline md:hidden xl:inline">{CONFIG.appName}</span>
           </NavLink>
           {myPubKey && !ndk().signer && (
-            <div className="ml-4 md:ml-0 xl:ml-4 flex items-center gap-2 text-error text-sm">
-              <RiLockLine className="w-4 h-4" />
+            <div
+              title="Read-only mode"
+              className="px-4 py-2 mx-2 md:mx-0 xl:mx-2 flex items-center gap-2 text-error text-xl"
+            >
+              <RiLockLine className="w-6 h-6" />
               <span className="hidden xl:inline">Read-only mode</span>
             </div>
           )}
