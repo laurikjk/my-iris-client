@@ -3,10 +3,15 @@ import Embed from "./index.ts"
 
 const Url: Embed = {
   regex: /(https?:\/\/[^\s,\\.]+(?:\.[^\s,.]+)*)/g,
-  component: ({match}) => {
+  component: ({match, truncated}) => {
     try {
       const url = new URL(match)
-      const displayText = match.replace(/^https?:\/\//, "").replace(/\/$/, "")
+      let displayText = match.replace(/^https?:\/\//, "").replace(/\/$/, "")
+
+      // Truncate display text if in truncated mode
+      if (truncated && displayText.length > 50) {
+        displayText = displayText.substring(0, 47) + "..."
+      }
 
       if (url.hostname === "iris.to") {
         return (

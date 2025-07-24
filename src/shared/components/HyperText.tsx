@@ -50,13 +50,14 @@ const HyperText = memo(
               match={match}
               index={i}
               event={event}
+              truncated={!!truncate && !isExpanded}
               key={`${embed.settingsKey || `embed-${embeds.indexOf(embed)}`}-${i}${embed.inline ? "-inline" : ""}`}
             />
           )
         })
       }
       return result
-    }, [content, small, event])
+    }, [content, small, event, truncate, isExpanded])
 
     // Handle truncation and expansion
     const finalChildren = useMemo(() => {

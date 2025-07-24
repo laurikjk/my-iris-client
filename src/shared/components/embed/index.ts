@@ -37,6 +37,7 @@ export type EmbedProps = {
   index?: number
   event?: EmbedEvent
   key: string
+  truncated?: boolean
 }
 
 type Embed = {
