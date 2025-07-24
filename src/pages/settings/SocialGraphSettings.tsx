@@ -4,6 +4,8 @@ import socialGraph, {
   saveToFile,
   loadAndMerge,
   downloadLargeGraph,
+  clearGraph,
+  resetGraph,
 } from "@/utils/socialGraph"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {useState, useEffect} from "react"
@@ -76,6 +78,28 @@ function SocialGraphSettings() {
     const removed = socialGraph().removeMutedNotFollowedUsers()
     console.log("Removed", removed, "muted not followed users")
     setSocialGraphSize(socialGraph().size())
+  }
+
+  const handleClearGraph = async () => {
+    if (
+      confirm(
+        "Are you sure you want to clear the entire social graph? This cannot be undone."
+      )
+    ) {
+      await clearGraph()
+      setSocialGraphSize(socialGraph().size())
+    }
+  }
+
+  const handleResetGraph = async () => {
+    if (
+      confirm(
+        "Are you sure you want to reset the social graph to default? This will replace your current graph."
+      )
+    ) {
+      await resetGraph()
+      setSocialGraphSize(socialGraph().size())
+    }
   }
 
   const handleDownloadGraph = async () => {
@@ -159,6 +183,14 @@ function SocialGraphSettings() {
           </button>
           <button className="btn btn-neutral btn-sm" onClick={() => loadAndMerge()}>
             Load & merge
+          </button>
+        </div>
+        <div className="flex flex-row gap-4">
+          <button className="btn btn-error btn-sm" onClick={handleClearGraph}>
+            Clear graph
+          </button>
+          <button className="btn btn-warning btn-sm" onClick={handleResetGraph}>
+            Reset graph
           </button>
         </div>
         <button

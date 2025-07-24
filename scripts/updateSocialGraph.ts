@@ -2,15 +2,15 @@ import fetch from "node-fetch"
 import path from "path"
 import fs from "fs"
 
-const PROFILES_TARGET_SIZE = 2 * 1000 * 1000
 const MAX_EDGES = 300_000
 const MAX_EDGES_PER_NODE = 1000
 const SOCIAL_GRAPH_URL = `https://graph-api.iris.to/social-graph?maxEdges=${MAX_EDGES}&maxEdgesPerNode=${MAX_EDGES_PER_NODE}&format=binary`
-const PROFILE_DATA_URL = `https://graph-api.iris.to/profile-data?maxBytes=${PROFILES_TARGET_SIZE}&noPictures=true`
 const SIZE_TOLERANCE = 1
 const DATA_DIR = path.resolve(process.cwd(), "node_modules/nostr-social-graph/data")
 const SOCIAL_GRAPH_FILE = "socialGraph.bin"
-const PROFILE_DATA_FILE = "profileData.json"
+//const PROFILE_DATA_FILE = "profileData.json"
+//const PROFILE_DATA_URL = `https://graph-api.iris.to/profile-data?maxBytes=${PROFILES_TARGET_SIZE}&noPictures=true`
+//const PROFILES_TARGET_SIZE = 2 * 1000 * 1000
 
 async function downloadAndValidate(
   url: string,
@@ -84,6 +84,7 @@ async function updateSocialGraph() {
     }
 
     // Download and update profile data (JSON)
+    /* disabled for now, existing dataset is better
     const profileData = await downloadAndValidate(
       PROFILE_DATA_URL,
       PROFILES_TARGET_SIZE,
@@ -96,6 +97,7 @@ async function updateSocialGraph() {
         `Successfully updated profile data (${profileData instanceof Buffer ? profileData.length : Buffer.byteLength(profileData, "utf8")} bytes)`
       )
     }
+    */
   } catch (error) {
     console.log("Error updating data:", error)
   }

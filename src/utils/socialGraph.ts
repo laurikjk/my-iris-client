@@ -59,16 +59,18 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
   }
 }
 
-const throttledSave = throttle(async () => {
+const saveToLocalForage = async () => {
   try {
-    const serialized = instance.toBinary()
+    const serialized = await instance.toBinary()
     await localForage.setItem("socialGraph", serialized)
     console.log("Saved social graph of size", instance.size())
   } catch (e) {
     console.error("failed to serialize SocialGraph or UniqueIds", e)
     console.log("social graph size", instance.size())
   }
-}, 15000)
+}
+
+const throttledSave = throttle(saveToLocalForage, 15000)
 
 const debouncedRemoveNonFollowed = debounce(() => {
   /* temp removed until better perf
@@ -204,34 +206,37 @@ async function setupSubscription(publicKey: string) {
 }
 
 export const saveToFile = async () => {
-  const data = await instance.serialize()
+  const data = await instance.toBinary()
   const url = URL.createObjectURL(
-    new File([JSON.stringify(data)], "social_graph.json", {
-      type: "text/json",
+    new File([data], "social_graph.bin", {
+      type: "application/octet-stream",
     })
   )
   const a = document.createElement("a")
   a.href = url
-  a.download = "social_graph.json"
+  a.download = "social_graph.bin"
   a.click()
 }
 
 export const loadFromFile = (merge = false) => {
   const input = document.createElement("input")
   input.type = "file"
-  input.accept = ".json"
+  input.accept = ".bin"
   input.multiple = false
   input.onchange = () => {
     if (input.files?.length) {
       const file = input.files[0]
-      file.text().then((json) => {
+      file.arrayBuffer().then((buffer) => {
         try {
-          const data = JSON.parse(json)
-          if (merge) {
-            instance.merge(new SocialGraph(instance.getRoot(), data))
-          } else {
-            instance = new SocialGraph(instance.getRoot(), data)
-          }
+          const data = new Uint8Array(buffer)
+          SocialGraph.fromBinary(instance.getRoot(), data).then(async (newInstance) => {
+            if (merge) {
+              instance.merge(newInstance)
+            } else {
+              instance = newInstance
+            }
+            await saveToLocalForage()
+          })
         } catch (e) {
           console.error("failed to load social graph from file:", e)
         }
@@ -333,5 +338,18 @@ export const downloadLargeGraph = (options: DownloadGraphOptions = {}) => {
 }
 
 export const loadAndMerge = () => loadFromFile(true)
+
+export const clearGraph = async () => {
+  instance = new SocialGraph(instance.getRoot())
+  await saveToLocalForage()
+  console.log("Cleared social graph")
+}
+
+export const resetGraph = async () => {
+  const root = instance.getRoot()
+  instance = await loadPreCrawledGraph(root)
+  await saveToLocalForage()
+  console.log("Reset social graph to default")
+}
 
 export default () => instance
