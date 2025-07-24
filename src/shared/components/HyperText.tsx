@@ -65,7 +65,7 @@ const HyperText = memo(
         if (isExpanded) {
           return [
             ...processedChildren,
-            <span key="show-less">
+            <span key="show-less-inline">
               {" "}
               <a href="#" onClick={toggleShowMore} className="text-info underline">
                 show less
@@ -125,14 +125,8 @@ const HyperText = memo(
                     truncatedText = truncatedText.substring(0, lastSpaceIndex)
                   }
 
-                  // Preserve trailing space if original had it and we're truncating
-                  if (
-                    truncatedText.trim() &&
-                    !truncatedText.endsWith(" ") &&
-                    child.charAt(truncatedText.length) === " "
-                  ) {
-                    truncatedText += " "
-                  }
+                  // Remove trailing whitespace/newlines to prevent gap before ellipsis
+                  truncatedText = truncatedText.trimEnd()
 
                   if (truncatedText.trim()) {
                     acc.push(truncatedText)
@@ -156,15 +150,45 @@ const HyperText = memo(
         result = truncatedChildren
       }
 
-      if (isTruncated && expandable) {
-        result.push(
-          <span key="show-more">
-            ...{" "}
-            <a href="#" onClick={toggleShowMore} className="text-info underline">
-              show more
-            </a>
-          </span>
-        )
+      if (isTruncated) {
+        // Find the last string element to append ellipsis inline
+        let lastStringIndex = -1
+        for (let i = result.length - 1; i >= 0; i--) {
+          if (typeof result[i] === "string") {
+            lastStringIndex = i
+            break
+          }
+        }
+
+        if (lastStringIndex >= 0) {
+          // Append ellipsis to the last string element
+          if (expandable) {
+            result[lastStringIndex] = (
+              <span key="show-more-inline">
+                {result[lastStringIndex]}...{" "}
+                <a href="#" onClick={toggleShowMore} className="text-info underline">
+                  show more
+                </a>
+              </span>
+            )
+          } else {
+            result[lastStringIndex] = result[lastStringIndex] + "..."
+          }
+        } else {
+          // No string elements found, add as separate element
+          if (expandable) {
+            result.push(
+              <span key="show-more-inline">
+                ...{" "}
+                <a href="#" onClick={toggleShowMore} className="text-info underline">
+                  show more
+                </a>
+              </span>
+            )
+          } else {
+            result.push(<span key="ellipsis-inline">...</span>)
+          }
+        }
       }
 
       return result
