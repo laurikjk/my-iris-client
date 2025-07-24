@@ -25,6 +25,9 @@ function SocialGraphSettings() {
   const [maxEdgesPerNode, setMaxEdgesPerNode] = useState<number | undefined>(undefined)
   const [format, setFormat] = useState<string>("binary")
   const [downloadedBytes, setDownloadedBytes] = useState<number | null>(null)
+  const [isDownloading, setIsDownloading] = useState<boolean>(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [downloadTimeout, setDownloadTimeout] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -77,14 +80,51 @@ function SocialGraphSettings() {
 
   const handleDownloadGraph = async () => {
     setDownloadedBytes(null)
-    downloadLargeGraph({
-      maxNodes,
-      maxEdges,
-      maxDistance,
-      maxEdgesPerNode,
-      format,
-      onDownloaded: setDownloadedBytes,
-    })
+    setIsDownloading(true)
+    setDownloadError(null)
+
+    // Clear any existing timeout
+    if (downloadTimeout) {
+      clearTimeout(downloadTimeout)
+    }
+
+    // Small delay to ensure UI updates before potentially blocking operation
+    setTimeout(async () => {
+      try {
+        await downloadLargeGraph({
+          maxNodes,
+          maxEdges,
+          maxDistance,
+          maxEdgesPerNode,
+          format,
+          onDownloaded: (bytes) => {
+            setDownloadedBytes(bytes)
+
+            // Clear existing timeout and set new one
+            if (downloadTimeout) {
+              clearTimeout(downloadTimeout)
+            }
+
+            // Set timeout to detect when download stops
+            const timeout = setTimeout(() => {
+              setIsDownloading(false)
+              setDownloadTimeout(null)
+            }, 2000) // 2 seconds of no updates = download complete
+
+            setDownloadTimeout(timeout)
+          },
+        })
+      } catch (error) {
+        console.error("Download failed:", error)
+        setDownloadError(error instanceof Error ? error.message : "Download failed")
+        setIsDownloading(false)
+        if (downloadTimeout) {
+          clearTimeout(downloadTimeout)
+          setDownloadTimeout(null)
+        }
+      }
+      // Don't set isDownloading to false here - let the timeout handle it
+    }, 10)
   }
 
   return (
@@ -127,71 +167,112 @@ function SocialGraphSettings() {
         >
           Recalculate Follow Distances (fast, no bandwith usage)
         </button>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <label className="text-sm">maxNodes</label>
-            <input
-              type="number"
-              min="1"
-              value={maxNodes}
-              onChange={(e) => setMaxNodes(Number(e.target.value))}
-              className="input input-sm input-bordered w-24"
-            />
-            <label className="text-sm">maxEdges</label>
-            <input
-              type="number"
-              min="1"
-              value={maxEdges ?? ""}
-              onChange={(e) =>
-                setMaxEdges(e.target.value ? Number(e.target.value) : undefined)
-              }
-              className="input input-sm input-bordered w-24"
-            />
-            <label className="text-sm">maxDistance</label>
-            <input
-              type="number"
-              min="1"
-              value={maxDistance ?? ""}
-              onChange={(e) =>
-                setMaxDistance(e.target.value ? Number(e.target.value) : undefined)
-              }
-              className="input input-sm input-bordered w-24"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm">maxEdgesPerNode</label>
-            <input
-              type="number"
-              min="1"
-              value={maxEdgesPerNode ?? ""}
-              onChange={(e) =>
-                setMaxEdgesPerNode(e.target.value ? Number(e.target.value) : undefined)
-              }
-              className="input input-sm input-bordered w-24"
-            />
-            <label className="text-sm">format</label>
-            <select
-              value={format}
-              onChange={(e) => setFormat(e.target.value)}
-              className="input input-sm input-bordered w-32"
-            >
-              <option value="binary">binary</option>
-              <option value="json">json</option>
-            </select>
-            <button className="btn btn-neutral btn-sm" onClick={handleDownloadGraph}>
-              Download graph
-            </button>
-            {downloadedBytes !== null && (
-              <span className="text-sm">Downloaded: {formatSize(downloadedBytes)}</span>
-            )}
-          </div>
-        </div>
         <button
           onClick={() => getFollowLists(socialGraph().getRoot(), false, 2)}
           className="btn btn-neutral btn-sm"
         >
           Recrawl follow lists (slow, bandwidth intensive)
         </button>
+
+        <div className="bg-base-200/50 border border-base-300 rounded-lg p-4 pt-0 mt-2">
+          <h3 className="text-lg font-semibold mb-4 text-base-content">
+            Download from{" "}
+            <a href="https://graph-api.iris.to" target="_blank" rel="noopener noreferrer">
+              graph-api.iris.to
+            </a>
+          </h3>
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">maxNodes</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={maxNodes}
+                  onChange={(e) => setMaxNodes(Number(e.target.value))}
+                  className="input input-sm input-bordered"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">maxEdges</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={maxEdges ?? ""}
+                  onChange={(e) =>
+                    setMaxEdges(e.target.value ? Number(e.target.value) : undefined)
+                  }
+                  className="input input-sm input-bordered"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">maxDistance</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={maxDistance ?? ""}
+                  onChange={(e) =>
+                    setMaxDistance(e.target.value ? Number(e.target.value) : undefined)
+                  }
+                  className="input input-sm input-bordered"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">maxEdgesPerNode</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={maxEdgesPerNode ?? ""}
+                  onChange={(e) =>
+                    setMaxEdgesPerNode(
+                      e.target.value ? Number(e.target.value) : undefined
+                    )
+                  }
+                  className="input input-sm input-bordered"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">format</label>
+                <select
+                  value={format}
+                  onChange={(e) => setFormat(e.target.value)}
+                  className="input input-sm input-bordered"
+                >
+                  <option value="binary">binary</option>
+                  <option value="json">json</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+              <button
+                className="btn btn-neutral btn-sm"
+                onClick={handleDownloadGraph}
+                disabled={isDownloading}
+              >
+                {isDownloading ? <>Downloading...</> : "Download graph"}
+              </button>
+              {downloadedBytes !== null && !isDownloading && !downloadError && (
+                <span className="text-sm text-success">
+                  Downloaded: {formatSize(downloadedBytes)}
+                </span>
+              )}
+              {downloadError && (
+                <span className="text-sm text-error">Error: {downloadError}</span>
+              )}
+              {isDownloading && downloadedBytes === null && (
+                <span className="text-sm text-info">Starting download...</span>
+              )}
+              {isDownloading && downloadedBytes !== null && downloadedBytes < 1024 && (
+                <span className="text-sm text-info">Starting download...</span>
+              )}
+              {isDownloading && downloadedBytes !== null && downloadedBytes >= 1024 && (
+                <span className="text-sm text-info">
+                  Downloading... {formatSize(downloadedBytes)}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="mt-4">

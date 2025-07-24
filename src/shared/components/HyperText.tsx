@@ -39,14 +39,21 @@ const HyperText = memo(
       const embeds = small ? smallEmbeds : allEmbeds
 
       for (const embed of embeds) {
-        result = reactStringReplace(result, embed.regex, (match, i) => (
-          <embed.component
-            match={match}
-            index={i}
-            event={event}
-            key={`${embed.settingsKey || `embed-${embeds.indexOf(embed)}`}-${i}${embed.inline ? "-inline" : ""}`}
-          />
-        ))
+        result = reactStringReplace(result, embed.regex, (match, i) => {
+          // Skip processing if match is empty or just whitespace
+          if (!match || !match.trim()) {
+            return match
+          }
+
+          return (
+            <embed.component
+              match={match}
+              index={i}
+              event={event}
+              key={`${embed.settingsKey || `embed-${embeds.indexOf(embed)}`}-${i}${embed.inline ? "-inline" : ""}`}
+            />
+          )
+        })
       }
       return result
     }, [content, small, event])
@@ -70,7 +77,6 @@ const HyperText = memo(
       }
 
       let result = [...processedChildren]
-      let charCount = 0
       let isTruncated = false
 
       // First, find the position of the second media embed
@@ -97,16 +103,51 @@ const HyperText = memo(
         isTruncated = true
       } else {
         // No second media embed found, apply text truncation
+        let currentCharCount = 0
+        let foundTruncationPoint = false
+
         const truncatedChildren = result.reduce(
           (acc: Array<ReactNode | string>, child) => {
+            if (foundTruncationPoint) {
+              return acc // Stop processing after truncation
+            }
+
             if (typeof child === "string") {
-              if (charCount + child.length > truncate) {
-                acc.push(child.substring(0, truncate - charCount))
+              if (currentCharCount + child.length > truncate) {
+                const remainingChars = truncate - currentCharCount
+                if (remainingChars > 0) {
+                  let truncatedText = child.substring(0, remainingChars)
+
+                  // Try to break at word boundary to avoid cutting words in half
+                  const lastSpaceIndex = truncatedText.lastIndexOf(" ")
+                  if (lastSpaceIndex > remainingChars * 0.7) {
+                    // Only if we don't lose too much text
+                    truncatedText = truncatedText.substring(0, lastSpaceIndex)
+                  }
+
+                  // Preserve trailing space if original had it and we're truncating
+                  if (
+                    truncatedText.trim() &&
+                    !truncatedText.endsWith(" ") &&
+                    child.charAt(truncatedText.length) === " "
+                  ) {
+                    truncatedText += " "
+                  }
+
+                  if (truncatedText.trim()) {
+                    acc.push(truncatedText)
+                  }
+                }
+                foundTruncationPoint = true
                 isTruncated = true
                 return acc
               }
-              charCount += child.length
+              currentCharCount += child.length
+            } else {
+              // For React components, estimate character count (assume ~10 chars for mentions)
+              currentCharCount += 10
             }
+
             acc.push(child)
             return acc
           },
