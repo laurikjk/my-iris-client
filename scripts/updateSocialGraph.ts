@@ -2,17 +2,19 @@ import fetch from "node-fetch"
 import path from "path"
 import fs from "fs"
 
-const TARGET_SIZE = 2 * 1000 * 1000
-const SOCIAL_GRAPH_URL = `https://graph-api.iris.to/social-graph?maxBytes=${TARGET_SIZE}&format=binary`
-const PROFILE_DATA_URL = `https://graph-api.iris.to/profile-data?maxBytes=${TARGET_SIZE}&noPictures=true`
-const SIZE_TOLERANCE = 0.1 // 10% tolerance
+const PROFILES_TARGET_SIZE = 2 * 1000 * 1000
+const MAX_EDGES = 300_000
+const MAX_EDGES_PER_NODE = 1000
+const SOCIAL_GRAPH_URL = `https://graph-api.iris.to/social-graph?maxEdges=${MAX_EDGES}&maxEdgesPerNode=${MAX_EDGES_PER_NODE}&format=binary`
+const PROFILE_DATA_URL = `https://graph-api.iris.to/profile-data?maxBytes=${PROFILES_TARGET_SIZE}&noPictures=true`
+const SIZE_TOLERANCE = 1
 const DATA_DIR = path.resolve(process.cwd(), "node_modules/nostr-social-graph/data")
 const SOCIAL_GRAPH_FILE = "socialGraph.bin"
 const PROFILE_DATA_FILE = "profileData.json"
 
 async function downloadAndValidate(
   url: string,
-  targetSize: number,
+  targetSize?: number,
   isBinary = false
 ): Promise<string | Buffer | null> {
   try {
@@ -45,14 +47,16 @@ async function downloadAndValidate(
       dataSize = Buffer.byteLength(data, "utf8")
     }
 
-    // Check size
-    const sizeDiff = Math.abs(dataSize - targetSize) / targetSize
+    // Check size only if targetSize is provided and it's not binary
+    if (targetSize && !isBinary) {
+      const sizeDiff = Math.abs(dataSize - targetSize) / targetSize
 
-    if (sizeDiff > SIZE_TOLERANCE) {
-      console.log(
-        `Downloaded data size (${dataSize} bytes) is not within ${SIZE_TOLERANCE * 100}% of target size (${targetSize} bytes)`
-      )
-      return null
+      if (sizeDiff > SIZE_TOLERANCE) {
+        console.log(
+          `Downloaded data size (${dataSize} bytes) is not within ${SIZE_TOLERANCE * 100}% of target size (${targetSize} bytes)`
+        )
+        return null
+      }
     }
 
     return data
@@ -70,7 +74,7 @@ async function updateSocialGraph() {
     }
 
     // Download and update social graph (binary)
-    const socialGraphData = await downloadAndValidate(SOCIAL_GRAPH_URL, TARGET_SIZE, true)
+    const socialGraphData = await downloadAndValidate(SOCIAL_GRAPH_URL, undefined, true)
     if (socialGraphData) {
       const filePath = path.join(DATA_DIR, SOCIAL_GRAPH_FILE)
       fs.writeFileSync(filePath, socialGraphData)
@@ -80,7 +84,11 @@ async function updateSocialGraph() {
     }
 
     // Download and update profile data (JSON)
-    const profileData = await downloadAndValidate(PROFILE_DATA_URL, TARGET_SIZE, false)
+    const profileData = await downloadAndValidate(
+      PROFILE_DATA_URL,
+      PROFILES_TARGET_SIZE,
+      false
+    )
     if (profileData) {
       const filePath = path.join(DATA_DIR, PROFILE_DATA_FILE)
       fs.writeFileSync(filePath, profileData)

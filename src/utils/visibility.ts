@@ -1,4 +1,5 @@
 import {useSettingsStore} from "@/stores/settings"
+import {SocialGraphUtils} from "nostr-social-graph/src/SocialGraphUtils"
 import {LRUCache} from "typescript-lru-cache"
 import socialGraph from "./socialGraph"
 
@@ -22,59 +23,17 @@ export const shouldHideAuthor = (
   if (
     !allowUnknown &&
     content.hideEventsByUnknownUsers &&
-    instance.getFollowDistance(pubKey) >= 5
+    instance.getFollowDistance(pubKey) >= 10
   ) {
     cache.set(cacheKey, true)
     return true
   }
 
-  const hasMuters = instance.getUserMutedBy(pubKey).size > 0
-
-  // for faster checks, if no one mutes, return false
-  if (!hasMuters) {
-    cache.set(cacheKey, false)
-    return false
+  if (SocialGraphUtils.isOvermuted(instance, pubKey, threshold)) {
+    cache.set(cacheKey, true)
+    return true
   }
 
-  // Check hidePostsByMutedMoreThanFollowed setting
-  if (content.hidePostsByMutedMoreThanFollowed) {
-    const mutedCount = instance.getMutedByUser(pubKey).size
-    const followedCount = instance.getFollowedByUser(pubKey).size
-    // Use the threshold parameter when comparing
-    if (mutedCount * threshold > followedCount) {
-      cache.set(cacheKey, true)
-      return true
-    }
-  }
-
-  const userStats = instance.stats(pubKey)
-
-  // Sort numeric distances ascending
-  const distances = Object.keys(userStats)
-    .map(Number)
-    .sort((a, b) => a - b)
-
-  // Look at the smallest distance that has any followers/muters
-  for (const distance of distances) {
-    const {followers, muters} = userStats[distance]
-    if (followers + muters === 0) {
-      continue // No one at this distance has an opinion; skip
-    }
-
-    // If, at the closest distance with an opinion, muters >= followers => hide
-    // Apply threshold to this comparison
-    const shouldHide = muters * threshold >= followers
-    cache.set(cacheKey, shouldHide)
-    return shouldHide
-  }
-
-  // If we get here, no one has an opinion (no followers or muters)
-  if (allowUnknown) {
-    cache.set(cacheKey, false)
-    return false
-  }
-
-  // If no one anywhere follows or mutes, default to hide
-  cache.set(cacheKey, true)
-  return true
+  cache.set(cacheKey, false)
+  return false
 }
