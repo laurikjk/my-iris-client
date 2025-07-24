@@ -79,7 +79,23 @@ const HyperText = memo(
       let result = [...processedChildren]
       let isTruncated = false
 
-      // First, find the position of the second media embed
+      // Find the first media embed to preserve it during truncation
+      let firstMediaEmbed: ReactNode | null = null
+      let firstMediaEmbedIndex = -1
+
+      for (let i = 0; i < result.length; i++) {
+        const child = result[i]
+        if (child && typeof child === "object" && "key" in child) {
+          const isMediaEmbed = child.key && !child.key.includes("-inline")
+          if (isMediaEmbed) {
+            firstMediaEmbed = child
+            firstMediaEmbedIndex = i
+            break
+          }
+        }
+      }
+
+      // Find the position of the second media embed
       let mediaEmbedCount = 0
       let secondEmbedIndex = -1
 
@@ -148,6 +164,23 @@ const HyperText = memo(
           [] as Array<ReactNode | string>
         )
         result = truncatedChildren
+      }
+
+      // If content was truncated and we have a first media embed that got cut off, preserve it
+      if (isTruncated && firstMediaEmbed && firstMediaEmbedIndex >= result.length) {
+        // Check if the first media embed is not already in the truncated result
+        const hasFirstMediaEmbed = result.some((child) => {
+          return (
+            child &&
+            typeof child === "object" &&
+            "key" in child &&
+            (child as {key?: string}).key === (firstMediaEmbed as {key?: string}).key
+          )
+        })
+
+        if (!hasFirstMediaEmbed) {
+          result.push(firstMediaEmbed)
+        }
       }
 
       if (isTruncated) {
