@@ -69,10 +69,11 @@ const ImageGridItem = memo(function ImageGridItem({
 }: ImageGridItemProps) {
   const navigate = useNavigate()
   const [loadErrors, setLoadErrors] = useState<Record<number, boolean>>({})
+  const [proxyFailed, setProxyFailed] = useState<Record<number, boolean>>({})
   const [event, setEvent] = useState<NDKEvent | undefined>(
     "content" in initialEvent ? initialEvent : undefined
   )
-  const {content} = useSettingsStore()
+  const {content, imgproxy} = useSettingsStore()
 
   const eventIdHex = useMemo(() => {
     return "content" in initialEvent ? initialEvent.id : initialEvent.id
@@ -228,16 +229,21 @@ const ImageGridItem = memo(function ImageGridItem({
         }}
         ref={i === urls.length - 1 ? lastElementRef : undefined}
       >
-        {hasError ? (
+        {hasError || (isVideo && (!imgproxy.enabled || proxyFailed[i])) ? (
           <div
-            className="w-full h-full flex items-center justify-center text-gray-500"
+            className="w-full h-full flex items-center justify-center"
             style={{
               backgroundImage: blurhashUrls[i] ? `url(${blurhashUrls[i]})` : undefined,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
           >
-            <Icon name="image-outline" className="w-8 h-8" />
+            {isVideo && (
+              <Icon
+                name="play-circle-outline"
+                className="text-white text-4xl drop-shadow-md opacity-80"
+              />
+            )}
           </div>
         ) : (
           <ProxyImg
@@ -250,13 +256,20 @@ const ImageGridItem = memo(function ImageGridItem({
               backgroundImage: blurhashUrls[i] ? `url(${blurhashUrls[i]})` : undefined,
               backgroundSize: "cover",
               backgroundPosition: "center",
+              // Hide broken image icon
+              fontSize: 0,
+              color: "transparent",
             }}
             onError={() => setLoadErrors((prev) => ({...prev, [i]: true}))}
+            onProxyFailed={() =>
+              isVideo && setProxyFailed((prev) => ({...prev, [i]: true}))
+            }
             loadOriginalIfProxyFails={loadOriginalIfProxyFails[i]}
+            hideBroken={true}
             // Loading is handled by the ProxyImg component internally
           />
         )}
-        {isVideo && (
+        {isVideo && imgproxy.enabled && !hasError && (
           <div className="absolute top-0 right-0 m-2 shadow-md shadow-gray-500">
             <Icon
               name="play-square-outline"

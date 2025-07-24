@@ -10,6 +10,7 @@ type Props = {
   width?: number
   square?: boolean
   onError?: () => void
+  onProxyFailed?: () => void
   onClick?: (ev: MouseEvent) => void
   alt?: string
   hideBroken?: boolean
@@ -101,6 +102,7 @@ const ProxyImg = (props: Props) => {
     } else {
       // The proxy failed or timed out
       imgproxyFailureCache.set(props.src, true)
+      props.onProxyFailed?.()
 
       const shouldFallback =
         props.loadOriginalIfProxyFails !== undefined
