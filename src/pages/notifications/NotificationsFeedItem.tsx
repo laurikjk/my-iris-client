@@ -48,7 +48,7 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
   return (
     <div
       className={classNames(
-        "flex flex-col p-4 md:px-8 border-b border-custom transition-colors duration-300 cursor-pointer hover:bg-[var(--note-hover-color)]",
+        "flex flex-col p-4 md:px-8 border-b border-custom transition-colors duration-1000 cursor-pointer hover:bg-[var(--note-hover-color)]",
         {"bg-info/20": highlight}
       )}
       onClick={handleNavigateToReplyEvent}
