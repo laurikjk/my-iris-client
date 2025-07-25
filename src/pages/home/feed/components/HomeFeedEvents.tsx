@@ -13,9 +13,13 @@ import useFollows from "@/shared/hooks/useFollows"
 import {getEventReplyingTo} from "@/utils/nostr"
 import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {usePublicKey} from "@/stores/user"
-import {useFeedStore} from "@/stores/feed"
-
-const UNSEEN_CACHE_KEY = "unseenFeed"
+import {
+  useFeedStore,
+  useEnabledFeedIds,
+  useTabConfigs,
+  type TabConfig,
+} from "@/stores/feed"
+import FeedTabs, {type FeedTab} from "@/shared/components/feed/FeedTabs"
 
 const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
   myPubKey ? (
@@ -27,113 +31,149 @@ const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
     </div>
   ) : null
 
+// Convert store config to FeedTab format with filter functions
+const createFeedTabFromConfig = (config: TabConfig): FeedTab => {
+  const tab: FeedTab = {
+    name: config.name,
+    id: config.id,
+    showRepliedTo: config.showRepliedTo,
+    sortLikedPosts: config.sortLikedPosts,
+  }
+
+  // Add filter if exists
+  if (config.filter) {
+    tab.filter = config.filter
+  }
+
+  // Create fetchFilterFn based on config
+  if (config.excludeSeen || config.hideReplies || config.followDistance !== undefined) {
+    tab.fetchFilterFn = (e: NDKEvent) => {
+      // Check if should exclude seen events
+      if (config.excludeSeen && seenEventIds.has(e.id)) {
+        return false
+      }
+
+      // Check reply exclusion
+      if (config.hideReplies && getEventReplyingTo(e)) {
+        return false
+      }
+
+      // Check follow distance
+      if (config.followDistance !== undefined) {
+        return socialGraph().getFollowDistance(e.pubkey) <= config.followDistance
+      }
+
+      return true
+    }
+  }
+
+  // Create displayFilterFn based on config
+  if (
+    config.requiresMedia ||
+    config.requiresReplies ||
+    config.hideReplies ||
+    config.followDistance !== undefined
+  ) {
+    tab.displayFilterFn = (e: NDKEvent) => {
+      // Check if requires media
+      if (config.requiresMedia && !hasMedia(e)) {
+        return false
+      }
+
+      // Check if requires replies
+      if (config.requiresReplies && !getEventReplyingTo(e)) {
+        return false
+      }
+
+      // Check reply exclusion for display
+      if (config.hideReplies && getEventReplyingTo(e)) {
+        return false
+      }
+
+      // Check follow distance
+      if (config.followDistance !== undefined) {
+        return socialGraph().getFollowDistance(e.pubkey) <= config.followDistance
+      }
+
+      return true
+    }
+  }
+
+  return tab
+}
+
 function HomeFeedEvents() {
   const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true) // to update on follows change
   const refreshSignal = useRefreshRouteSignal()
-  console.log("refreshSignal", refreshSignal)
-  const {activeHomeTab: activeTab, setActiveHomeTab: setActiveTab} = useFeedStore()
+  const {activeHomeTab: activeTab, getAllFeedConfigs, loadFeedConfig} = useFeedStore()
+  const enabledFeedIds = useEnabledFeedIds()
+  const tabConfigs = useTabConfigs()
   const [forceUpdate, setForceUpdate] = useState(0)
   const socialGraphLoaded = useSocialGraphLoaded()
 
-  const tabs = useMemo(
-    () => [
-      {
-        name: "Unseen",
-        path: "unseen",
-        cacheKey: UNSEEN_CACHE_KEY,
-        showRepliedTo: false,
-        fetchFilterFn: (e: NDKEvent) => !getEventReplyingTo(e) && !seenEventIds.has(e.id),
-      },
-      {
-        name: "Popular",
-        path: "popular",
-        filter: {
-          kinds: [6, 7],
-          since: Math.floor(Date.now() / 1000 - 60 * 60 * 24),
-          limit: 300,
-        },
-        displayFilterFn: (e: NDKEvent) => socialGraph().getFollowDistance(e.pubkey) <= 2,
-        cacheKey: "popularFeed",
-        sortLikedPosts: true,
-      },
-      {
-        name: "Latest",
-        path: "latest",
-        cacheKey: "latestFeed",
-        showRepliedTo: false,
-        displayFilterFn: (e: NDKEvent) =>
-          !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 1,
-      },
-      {
-        name: "Market",
-        path: "market",
-        cacheKey: "marketFeed",
-        showRepliedTo: false,
-        filter: {
-          kinds: [30402],
-          limit: 100,
-        },
-        displayFilterFn: (e: NDKEvent) =>
-          !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 3,
-      },
-      {
-        name: "Replies",
-        path: "replies",
-        cacheKey: "repliesFeed",
-        displayFilterFn: (e: NDKEvent) => socialGraph().getFollowDistance(e.pubkey) <= 1,
-      },
-      {
-        name: "Media",
-        path: "media",
-        cacheKey: "mediaFeed",
-        showRepliedTo: false,
-        displayFilterFn: (e: NDKEvent) => hasMedia(e),
-      },
-      {
-        name: "Adventure",
-        path: "adventure",
-        cacheKey: "adventureFeed",
-        showRepliedTo: false,
-        filter: {
-          kinds: [1],
-          limit: 100,
-        },
-        fetchFilterFn: (e: NDKEvent) =>
-          !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 5,
-      },
-    ],
-    [follows]
-  )
+  // Convert store configs to FeedTab format
+  const allTabs: FeedTab[] = useMemo(() => {
+    const configs = getAllFeedConfigs()
+    return configs.map((config) => createFeedTabFromConfig(config))
+  }, [getAllFeedConfigs, tabConfigs, activeTab, forceUpdate])
+
+  // Filter and order tabs based on enabled feed IDs from store
+  const tabs = useMemo(() => {
+    const tabsMap = new Map(allTabs.map((tab) => [tab.id, tab]))
+    return enabledFeedIds
+      .map((id) => tabsMap.get(id))
+      .filter((tab): tab is FeedTab => tab !== undefined)
+  }, [allTabs, enabledFeedIds])
 
   const activeTabItem = useMemo(
-    () => tabs.find((t) => t.path === activeTab) || tabs[0],
+    () => tabs.find((t) => t.id === activeTab) || tabs[0] || null,
     [activeTab, tabs]
+  )
+
+  const activeTabConfig = useMemo(
+    () => loadFeedConfig(activeTab),
+    [loadFeedConfig, activeTab]
   )
 
   const openedAt = useMemo(() => Date.now(), [])
 
   useEffect(() => {
     if (activeTab !== "unseen") {
-      feedCache.delete(UNSEEN_CACHE_KEY)
+      feedCache.delete("unseen")
     }
     if (activeTab === "unseen" && refreshSignal > openedAt) {
-      feedCache.delete(UNSEEN_CACHE_KEY)
+      feedCache.delete("unseen")
       setForceUpdate((prev) => prev + 1) // Force update Feed component
     }
   }, [activeTabItem, openedAt, refreshSignal, activeTab])
 
+  // Clear cache when tab config changes to apply new filters
+  const configString = useMemo(() => JSON.stringify(activeTabConfig), [activeTabConfig])
+  useEffect(() => {
+    feedCache.delete(activeTab)
+    setForceUpdate((prev) => prev + 1)
+  }, [configString, activeTab])
+
   const filters = useMemo(() => {
-    if (activeTabItem.filter) {
+    if (activeTabItem?.filter) {
       return activeTabItem.filter
     }
 
-    return {
-      authors: follows,
+    const baseFilter = {
       kinds: [1, 6],
       limit: 100,
     }
-  }, [follows, activeTabItem])
+
+    if (activeTabConfig?.followDistance === 1) {
+      return {
+        ...baseFilter,
+        authors: follows,
+      }
+    }
+
+    return baseFilter
+  }, [follows, activeTabItem, activeTabConfig])
 
   const displayFilterFn = useCallback(
     (event: NDKEvent) => {
@@ -144,7 +184,8 @@ function HomeFeedEvents() {
       ) {
         return false
       }
-      const tabFilter = activeTabItem.displayFilterFn
+
+      const tabFilter = activeTabItem?.displayFilterFn
       return tabFilter ? tabFilter(event) : true
     },
     [activeTabItem, activeTab, refreshSignal, openedAt]
@@ -153,37 +194,27 @@ function HomeFeedEvents() {
   const feedName =
     follows.length <= 1
       ? "Home"
-      : tabs.find((t) => t.path === activeTab)?.name || "Following"
+      : activeTabConfig?.customName || activeTabItem?.name || "Following"
 
   return (
     <>
       <Header showBack={false}>
         <span className="md:px-3 md:py-2">{feedName}</span>
       </Header>
-      {follows.length > 1 && myPubKey && (
-        <div className="px-4 pb-4 flex flex-row gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
-          {tabs.map((t) => (
-            <button
-              key={t.path}
-              className={`btn btn-sm ${activeTab === t.path ? "btn-primary" : "btn-neutral"}`}
-              onClick={() => setActiveTab(t.path)}
-            >
-              {t.name}
-            </button>
-          ))}
-        </div>
-      )}
+      {follows.length > 1 && myPubKey && <FeedTabs allTabs={allTabs} />}
       <NotificationPrompt />
       <Feed
         key={`feed-${activeTab}`}
         filters={filters}
         displayFilterFn={displayFilterFn}
-        fetchFilterFn={activeTabItem.fetchFilterFn}
+        fetchFilterFn={activeTabItem?.fetchFilterFn}
         showDisplayAsSelector={follows.length > 1}
-        cacheKey={activeTabItem.cacheKey}
-        showRepliedTo={activeTabItem.showRepliedTo}
+        cacheKey={activeTabItem?.id || activeTab}
+        showRepliedTo={
+          activeTabConfig?.showRepliedTo ?? activeTabItem?.showRepliedTo ?? true
+        }
         forceUpdate={forceUpdate}
-        sortLikedPosts={activeTabItem.sortLikedPosts}
+        sortLikedPosts={activeTabItem?.sortLikedPosts}
         emptyPlaceholder={""}
       />
       {socialGraphLoaded && follows.length <= 1 && (
