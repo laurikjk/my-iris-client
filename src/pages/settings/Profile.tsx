@@ -5,6 +5,7 @@ import {NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
 import {Link} from "react-router"
 import {ndk} from "@/utils/ndk"
+import ProxyImg from "@/shared/components/ProxyImg"
 
 export function ProfileSettings() {
   const [publicKeyState, setPublicKeyState] = useState("")
@@ -79,10 +80,12 @@ export function ProfileSettings() {
         </label>
         {newProfile?.picture && (
           <div className="flex items-center gap-4 my-4">
-            <img
+            <ProxyImg
+              width={96}
+              square={true}
               src={String(newProfile?.picture || existingProfile?.picture)}
-              className="w-24 h-24 rounded-full"
               alt="Profile picture"
+              className="w-24 h-24 rounded-full object-cover"
             />
           </div>
         )}
@@ -103,7 +106,7 @@ export function ProfileSettings() {
           />
         </label>
         {newProfile?.banner && (
-          <img
+          <ProxyImg
             src={newProfile?.banner}
             alt="Banner"
             className="w-full h-48 object-cover"
