@@ -1,4 +1,4 @@
-import {SocialGraph, NostrEvent, SerializedSocialGraph} from "nostr-social-graph/src"
+import {SocialGraph, NostrEvent} from "nostr-social-graph/src"
 import {NDKSubscription} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
 import {VerifiedEvent} from "nostr-tools"
@@ -15,23 +15,12 @@ let instance = new SocialGraph(DEFAULT_SOCIAL_GRAPH_ROOT)
 let isInitialized = false
 
 async function loadPreCrawledGraph(publicKey: string): Promise<SocialGraph> {
-  try {
-    // Import binary file URL and fetch it
-    const binaryUrl = (await import("nostr-social-graph/data/socialGraph.bin?url"))
-      .default
-    const response = await fetch(binaryUrl)
-    const binaryData = new Uint8Array(await response.arrayBuffer())
-    const graph = await SocialGraph.fromBinary(publicKey, binaryData)
-    console.log("loaded default binary social graph of size", graph.size())
-    return graph
-  } catch (e) {
-    console.error("failed to load binary social graph, falling back to JSON", e)
-    // Fallback to JSON if binary fails
-    const {default: preCrawledGraph} = await import(
-      "nostr-social-graph/data/socialGraph.json"
-    )
-    return new SocialGraph(publicKey, preCrawledGraph as unknown as SerializedSocialGraph)
-  }
+  const binaryUrl = (await import("nostr-social-graph/data/socialGraph.bin?url")).default
+  const response = await fetch(binaryUrl)
+  const binaryData = new Uint8Array(await response.arrayBuffer())
+  const graph = await SocialGraph.fromBinary(publicKey, binaryData)
+  console.log("loaded default binary social graph of size", graph.size())
+  return graph
 }
 
 async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {

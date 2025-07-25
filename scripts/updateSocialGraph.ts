@@ -4,7 +4,7 @@ import fs from "fs"
 
 const MAX_EDGES = 300_000
 const MAX_EDGES_PER_NODE = 1000
-const SOCIAL_GRAPH_URL = `https://graph-api.iris.to/social-graph?maxEdges=${MAX_EDGES}&maxEdgesPerNode=${MAX_EDGES_PER_NODE}&format=binary`
+const SOCIAL_GRAPH_URL = `https://graph-api.iris.to/social-graph?maxEdges=${MAX_EDGES}&maxEdgesPerNode=${MAX_EDGES_PER_NODE}`
 const SIZE_TOLERANCE = 1
 const DATA_DIR = path.resolve(process.cwd(), "node_modules/nostr-social-graph/data")
 const SOCIAL_GRAPH_FILE = "socialGraph.bin"
