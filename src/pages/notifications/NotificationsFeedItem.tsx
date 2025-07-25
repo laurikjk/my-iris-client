@@ -3,9 +3,10 @@ import EventBorderless from "@/shared/components/event/EventBorderless.tsx"
 import RelativeTime from "@/shared/components/event/RelativeTime.tsx"
 import {Avatar} from "@/shared/components/user/Avatar.tsx"
 import HyperText from "@/shared/components/HyperText"
+import {Navigate} from "@/shared/components/Navigate"
 import {MouseEvent, useEffect, useState} from "react"
 import {Notification} from "@/utils/notifications"
-import {Link, useNavigate} from "react-router"
+import {useNavigate} from "react-router"
 import {getTag} from "@/utils/nostr"
 import classNames from "classnames"
 import {nip19} from "nostr-tools"
@@ -90,7 +91,7 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
                   const emoji = isReaction && userInfo.content ? userInfo.content : null
 
                   return (
-                    <Link
+                    <Navigate
                       key={key}
                       className="mr-2 inline"
                       to={`/${nip19.npubEncode(key)}`}
@@ -111,7 +112,7 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
                           </span>
                         )}
                       </span>
-                    </Link>
+                    </Navigate>
                   )
                 })}
               <span className="ml-1" />
