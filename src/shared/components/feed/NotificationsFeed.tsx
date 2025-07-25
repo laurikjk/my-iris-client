@@ -42,7 +42,7 @@ function NotificationsFeed() {
         useNotificationsStore
           .getState()
           .setNotificationsSeenAt(Math.round(Date.now() / 1000))
-      }, 1000)
+      }, 10000)
     }
   }, [latestNotificationTime, notificationsSeenAt])
 
