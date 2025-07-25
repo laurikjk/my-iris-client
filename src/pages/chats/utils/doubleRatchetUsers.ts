@@ -1,5 +1,5 @@
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {profileCache} from "@/utils/memcache"
+import {profileCache, addCachedProfile} from "@/utils/memcache"
 import {handleProfile} from "@/utils/profileSearch"
 import {ndk} from "@/utils/ndk"
 import debounce from "lodash/debounce"
@@ -80,7 +80,7 @@ const updateDoubleRatchetSearchIndexImmediate = () => {
         try {
           const profile = JSON.parse(event.content)
           profile.created_at = event.created_at
-          profileCache.set(event.pubkey, profile)
+          addCachedProfile(event.pubkey, profile)
           handleProfile(event.pubkey, profile)
         } catch (e) {
           console.warn("Failed to parse profile for", event.pubkey, e)

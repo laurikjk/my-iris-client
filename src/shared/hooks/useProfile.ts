@@ -2,7 +2,7 @@ import {NDKEvent, NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {handleProfile} from "@/utils/profileSearch"
 import {PublicKey} from "@/shared/utils/PublicKey"
 import {useEffect, useMemo, useState} from "react"
-import {profileCache} from "@/utils/memcache"
+import {profileCache, addCachedProfile} from "@/utils/memcache"
 import {ndk} from "@/utils/ndk"
 
 export default function useProfile(pubKey?: string, subscribe = true) {
@@ -41,7 +41,7 @@ export default function useProfile(pubKey?: string, subscribe = true) {
         latest = event.created_at
         const profile = JSON.parse(event.content)
         profile.created_at = event.created_at
-        profileCache.set(pubKeyHex, profile)
+        addCachedProfile(pubKeyHex, profile)
         setProfile(profile)
         handleProfile(pubKeyHex, profile)
       }

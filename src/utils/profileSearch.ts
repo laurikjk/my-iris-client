@@ -1,5 +1,5 @@
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {profileCache} from "./memcache"
+import {addCachedProfile} from "./memcache"
 import Fuse from "fuse.js"
 
 export type SearchResult = {
@@ -32,7 +32,7 @@ async function initializeSearchIndex() {
       if (pictureUrl && !pictureUrl.startsWith("http://")) {
         pictureUrl = `https://${pictureUrl}`
       }
-      profileCache.set(v[0], {username: v[1], picture: pictureUrl || undefined})
+      addCachedProfile(v[0], {username: v[1], picture: pictureUrl || undefined})
     }
   })
 
