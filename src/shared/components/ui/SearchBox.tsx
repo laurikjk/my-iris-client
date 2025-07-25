@@ -158,31 +158,31 @@ function SearchBox({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!value) return
+      // Determine which list is currently being displayed
+      const displayedItems = value ? searchResults : recentSearches
+      const displayedLength = Math.min(displayedItems.length, maxResults)
+
+      if (displayedLength === 0) return
 
       if (e.key === "ArrowDown") {
         e.preventDefault()
-        setActiveResult((prev) => (prev + 1) % maxResults)
+        setActiveResult((prev) => (prev + 1) % displayedLength)
       } else if (e.key === "ArrowUp") {
         e.preventDefault()
-        setActiveResult((prev) => (prev - 1 + maxResults) % maxResults)
+        setActiveResult((prev) => (prev - 1 + displayedLength) % displayedLength)
       } else if (e.key === "Escape") {
         setValue("")
         setSearchResults([])
-      } else if (e.key === "Enter" && searchResults.length > 0) {
-        const activeItem = searchResults[activeResult]
-        if (activeItem.pubKey === "search-notes" && activeItem.query && redirect) {
-          navigate(`/search/${activeItem.query}`)
-        } else {
-          onSelect(activeItem.pubKey)
-        }
-        setValue("")
-        setSearchResults([])
+        setIsFocused(false)
+        setActiveResult(0)
+      } else if (e.key === "Enter" && displayedLength > 0) {
+        const activeItem = displayedItems[activeResult]
+        handleSelectResult(activeItem.pubKey, activeItem.query)
       }
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [searchResults, activeResult, navigate, maxResults])
+  }, [searchResults, activeResult, navigate, maxResults, value, recentSearches])
 
   // autofocus the input field when not redirecting
   useEffect(() => {
@@ -195,6 +195,7 @@ function SearchBox({
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsFocused(false)
+        setActiveResult(0)
       }
     }
 
@@ -219,27 +220,28 @@ function SearchBox({
     // Reset after a short delay
   }
 
-  const handleSearchResultClick = (pubKey: string, query?: string) => {
+  const handleSelectResult = (pubKey: string, query?: string) => {
     setValue("")
     setSearchResults([])
-    setIsFocused(false) // Hide dropdown immediately
+    setIsFocused(false) // Hide dropdown for all interactions
+    setActiveResult(0) // Reset selection to first item
+    inputRef.current?.blur() // Unfocus the input field
 
     if (pubKey === "search-notes" && query) {
       navigate(`/search/${query}`)
     } else {
-      // First check if it's a recent search being clicked
+      // Check if it's a recent search being selected
       const recentResult = recentSearches.find(
         (r: CustomSearchResult) => r.pubKey === pubKey
       )
       if (recentResult) {
-        // Use setTimeout to delay the reordering until after the dropdown is hidden
-        setTimeout(() => {
-          const filtered = recentSearches.filter(
-            (item: CustomSearchResult) => item.pubKey !== pubKey
-          )
-          setRecentSearches([recentResult, ...filtered])
-        }, 0)
+        // Reorder recent searches
+        const filtered = recentSearches.filter(
+          (item: CustomSearchResult) => item.pubKey !== pubKey
+        )
+        setRecentSearches([recentResult, ...filtered])
       } else {
+        // Add to recent searches if it's a new selection
         const selectedResult = searchResults.find((r) => r.pubKey === pubKey)
         if (selectedResult) {
           addToRecentSearches(selectedResult)
@@ -247,6 +249,10 @@ function SearchBox({
       }
       onSelect(pubKey)
     }
+  }
+
+  const handleSearchResultClick = (pubKey: string, query?: string) => {
+    handleSelectResult(pubKey, query)
   }
 
   return (
