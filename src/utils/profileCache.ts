@@ -104,11 +104,14 @@ export const loadProfileCache = (): Promise<void> => {
           typeof firstItem[1] === "string"
         ) {
           // New format: string[][]
+          let loadedCount = 0
           savedData.forEach((item: string[]) => {
             if (item.length >= 2 && item[0] && item[1]) {
               profileCache.set(item[0], arrayToProfile(item))
+              loadedCount++
             }
           })
+          console.log(`Loaded ${loadedCount} profiles from localforage cache`)
           validData = true
         } else if (
           Array.isArray(firstItem) &&
@@ -146,7 +149,9 @@ export const loadProfileCache = (): Promise<void> => {
 
 export const addCachedProfile = (pubkey: string, profile: NDKUserProfile) => {
   // Only cache profiles with names
-  const name = sanitizeName((profile.name || profile.username || "").toString())
+  const name = sanitizeName(
+    (profile.name || profile.display_name || profile.username || "").toString()
+  )
   if (name) {
     profileCache.set(pubkey, profile)
     throttledSaveProfiles()
