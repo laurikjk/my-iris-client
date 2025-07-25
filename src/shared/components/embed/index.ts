@@ -101,7 +101,7 @@ export const textEmbeds = allEmbeds.filter(
   (e) => mediaEmbeds.includes(e) || e === EncryptedUrl
 )
 
-export const hasMedia = (e: Rumor) => {
+export const hasMedia = (e: {content: string}) => {
   for (const embed of mediaEmbeds) {
     if (e.content.match(embed.regex)) {
       return true

@@ -60,7 +60,7 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
             id: event.id,
             pubkey: event.pubkey,
             content: event.content,
-            created_at: event.created_at,
+            created_at: event.created_at || Math.floor(Date.now() / 1000),
             tags: event.tags,
             kind: event.kind,
             reactions: {},

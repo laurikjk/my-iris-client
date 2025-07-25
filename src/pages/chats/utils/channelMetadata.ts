@@ -121,7 +121,7 @@ export const fetchChannelMetadata = async (
           picture: "",
           relays: [],
           founderPubkey: channelMessageEvent.pubkey,
-          createdAt: channelMessageEvent.created_at,
+          createdAt: channelMessageEvent.created_at || Math.floor(Date.now() / 1000),
         }
         // Update search index
         updateChannelSearchIndex(channelId, channelMetadata)

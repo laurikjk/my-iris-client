@@ -1,8 +1,7 @@
 import {MouseEvent, ReactNode, useState, memo, useMemo, useCallback} from "react"
 import reactStringReplace from "react-string-replace"
 
-import {Rumor} from "nostr-double-ratchet/src"
-import {allEmbeds, smallEmbeds} from "./embed"
+import {allEmbeds, smallEmbeds, EmbedEvent} from "./embed"
 
 const HyperText = memo(
   ({
@@ -14,7 +13,7 @@ const HyperText = memo(
     textPadding = !small,
   }: {
     children: string
-    event?: Rumor
+    event?: EmbedEvent
     small?: boolean
     truncate?: number
     expandable?: boolean
