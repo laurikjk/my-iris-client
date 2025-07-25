@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
-import {profileCache} from "@/utils/memcache"
+import {profileCache} from "@/utils/profileCache"
 import ActiveAccount from "./ActiveAccount"
 import ChallengeForm from "./ChallengeForm"
 import {useUserStore} from "@/stores/user"

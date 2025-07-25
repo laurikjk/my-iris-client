@@ -1,7 +1,7 @@
 import {NDKEvent, NDKFilter, NDKRelayList, NDKTag} from "@nostr-dev-kit/ndk"
 import {eventRegex} from "@/shared/components/embed/nostr/NostrNote"
 import {decode} from "light-bolt11-decoder"
-import {profileCache} from "./memcache"
+import {profileCache} from "./profileCache"
 import AnimalName from "./AnimalName"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"

@@ -1,5 +1,5 @@
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {profileCache, addCachedProfile} from "@/utils/memcache"
+import {profileCache, addCachedProfile} from "@/utils/profileCache"
 import {handleProfile} from "@/utils/profileSearch"
 import {ndk} from "@/utils/ndk"
 import debounce from "lodash/debounce"
