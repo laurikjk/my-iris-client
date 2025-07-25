@@ -58,11 +58,31 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
           {Array.from(notification.users.entries())
             .reverse()
             .slice(0, 5)
-            .map(([key]) => (
-              <Link key={key} className="mr-2 inline" to={`/${nip19.npubEncode(key)}`}>
-                <Avatar pubKey={key} width={30} showHoverCard={true} />
-              </Link>
-            ))}
+            .map(([key]) => {
+              const isReaction = notification.kind === 7
+              const emoji = isReaction ? notification.content : null
+
+              return (
+                <Link key={key} className="mr-2 inline" to={`/${nip19.npubEncode(key)}`}>
+                  <span className="relative inline-block">
+                    <Avatar pubKey={key} width={30} showHoverCard={true} />
+                    {emoji && (
+                      <span
+                        className="absolute bottom-0 right-0 transform translate-x-1/4 translate-y-1/4 bg-base-100 rounded-full border border-base-300 leading-none flex items-center justify-center"
+                        style={{
+                          width: 16,
+                          height: 16,
+                          fontSize: 10,
+                        }}
+                        title={`Reacted with ${emoji}`}
+                      >
+                        {emoji === "+" ? "❤️" : emoji}
+                      </span>
+                    )}
+                  </span>
+                </Link>
+              )
+            })}
           <span className="ml-1" />
           {notification.users.size > 5 && (
             <span className="inline font-bold">

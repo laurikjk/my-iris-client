@@ -43,8 +43,7 @@ export const NavItem = ({
         className={({isActive}) =>
           classNames(className, {
             "bg-base-100": isActive,
-            "rounded-full md:aspect-square xl:aspect-auto flex md:justify-center xl:justify-start items-center":
-              true,
+            "rounded-full md:aspect-square xl:aspect-auto flex md:justify-center xl:justify-start items-center": true,
           })
         }
       >
