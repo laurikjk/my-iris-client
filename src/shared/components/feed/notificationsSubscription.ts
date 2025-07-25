@@ -72,7 +72,10 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
       }
       const existing = notification.users.get(user)
       if (!existing || existing.time < event.created_at) {
-        notification.users.set(user, {time: event.created_at})
+        notification.users.set(user, {
+          time: event.created_at,
+          content: event.kind === 7 ? event.content : undefined,
+        })
       }
       if (event.created_at > notification.time) {
         notification.time = event.created_at

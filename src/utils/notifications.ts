@@ -10,6 +10,7 @@ import IrisAPI from "./IrisAPI"
 
 interface ReactedTime {
   time: number
+  content?: string
 }
 
 export interface Notification {

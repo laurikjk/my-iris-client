@@ -58,9 +58,9 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
           {Array.from(notification.users.entries())
             .reverse()
             .slice(0, 5)
-            .map(([key]) => {
+            .map(([key, userInfo]) => {
               const isReaction = notification.kind === 7
-              const emoji = isReaction ? notification.content : null
+              const emoji = isReaction && userInfo.content ? userInfo.content : null
 
               return (
                 <Link key={key} className="mr-2 inline" to={`/${nip19.npubEncode(key)}`}>
