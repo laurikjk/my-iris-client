@@ -29,7 +29,10 @@ function SearchPage() {
 
   useEffect(() => {
     setSearchTerm(query?.toLowerCase() || "")
-  }, [query])
+    if (query) {
+      setActiveTab("posts")
+    }
+  }, [query, setActiveTab])
 
   useEffect(() => {
     setForceUpdate((prev) => prev + 1)

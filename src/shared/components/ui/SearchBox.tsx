@@ -158,31 +158,48 @@ function SearchBox({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle keyboard events if this SearchBox input is focused
+      if (document.activeElement !== inputRef.current) return
+
       // Determine which list is currently being displayed
       const displayedItems = value ? searchResults : recentSearches
       const displayedLength = Math.min(displayedItems.length, maxResults)
 
-      if (displayedLength === 0) return
-
       if (e.key === "ArrowDown") {
         e.preventDefault()
+        if (displayedLength === 0) return
         setActiveResult((prev) => (prev + 1) % displayedLength)
       } else if (e.key === "ArrowUp") {
         e.preventDefault()
+        if (displayedLength === 0) return
         setActiveResult((prev) => (prev - 1 + displayedLength) % displayedLength)
       } else if (e.key === "Escape") {
         setValue("")
         setSearchResults([])
         setIsFocused(false)
         setActiveResult(0)
-      } else if (e.key === "Enter" && displayedLength > 0) {
-        const activeItem = displayedItems[activeResult]
-        handleSelectResult(activeItem.pubKey, activeItem.query)
+      } else if (e.key === "Enter") {
+        e.preventDefault()
+        if (searchNotes && value.trim()) {
+          // When searchNotes is true and user has typed something, always search for notes
+          handleSelectResult("search-notes", value.trim())
+        } else if (displayedLength > 0) {
+          const activeItem = displayedItems[activeResult]
+          handleSelectResult(activeItem.pubKey, activeItem.query)
+        }
       }
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [searchResults, activeResult, navigate, maxResults, value, recentSearches])
+  }, [
+    searchResults,
+    activeResult,
+    navigate,
+    maxResults,
+    value,
+    recentSearches,
+    searchNotes,
+  ])
 
   // autofocus the input field when not redirecting
   useEffect(() => {
