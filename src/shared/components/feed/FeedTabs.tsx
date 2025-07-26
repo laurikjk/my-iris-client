@@ -1,7 +1,13 @@
 import React, {useEffect, useState} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useFeedStore, useEnabledFeedIds, type TabConfig} from "@/stores/feed"
-import {RiDeleteBinLine, RiDragMove2Line, RiEqualizerFill} from "@remixicon/react"
+import {
+  RiDeleteBinLine,
+  RiArrowLeftSLine,
+  RiArrowRightSLine,
+  RiEqualizerFill,
+  RiAddLine,
+} from "@remixicon/react"
 import {feedCache} from "@/utils/memcache"
 
 interface FeedTab {
@@ -31,9 +37,9 @@ function FeedTabs({allTabs}: FeedTabsProps) {
     saveFeedConfig,
     loadFeedConfig,
     resetAllFeedsToDefaults,
+    setEnabledFeedIds,
   } = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [editMode, setEditMode] = useState(false)
   const [editingName, setEditingName] = useState("")
   const [localConfig, setLocalConfig] = useState<TabConfig | null>(null)
@@ -95,37 +101,43 @@ function FeedTabs({allTabs}: FeedTabsProps) {
     setLocalConfig((prev) => (prev ? {...prev, [field]: value} : null))
   }
 
-  // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    if (!editMode) return
-    setDraggedIndex(index)
-    e.dataTransfer.effectAllowed = "move"
-    e.dataTransfer.setData("text/html", e.currentTarget.outerHTML)
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    if (!editMode) return
-    e.preventDefault()
-    e.dataTransfer.dropEffect = "move"
-  }
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    if (!editMode) return
-    e.preventDefault()
-    if (draggedIndex !== null && draggedIndex !== dropIndex) {
-      reorderFeeds(draggedIndex, dropIndex)
+  // Move tab left or right
+  const moveTabLeft = () => {
+    const currentIndex = tabs.findIndex((t) => t.id === activeTab)
+    if (currentIndex > 0) {
+      reorderFeeds(currentIndex, currentIndex - 1)
     }
-    setDraggedIndex(null)
   }
 
-  const handleDragEnd = () => {
-    if (!editMode) return
-    setDraggedIndex(null)
+  const moveTabRight = () => {
+    const currentIndex = tabs.findIndex((t) => t.id === activeTab)
+    if (currentIndex < tabs.length - 1) {
+      reorderFeeds(currentIndex, currentIndex + 1)
+    }
+  }
+
+  const createFeed = () => {
+    const uniqueId = `feed_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const newFeedConfig = {
+      name: "New feed",
+      id: uniqueId,
+      showRepliedTo: true,
+      hideReplies: false,
+    }
+
+    // Save the new feed config
+    saveFeedConfig(uniqueId, newFeedConfig)
+
+    // Add to enabled feeds at the beginning
+    const newEnabledFeedIds = [uniqueId, ...enabledFeedIds]
+    setEnabledFeedIds(newEnabledFeedIds)
+
+    // Set as active tab
+    setActiveTab(uniqueId)
   }
 
   const toggleEditMode = () => {
     setEditMode(!editMode)
-    setDraggedIndex(null)
     setEditingName("")
   }
 
@@ -191,27 +203,57 @@ function FeedTabs({allTabs}: FeedTabsProps) {
           <RiEqualizerFill className="w-4 h-4" />
         </button>
 
-        {editMode && <RiDragMove2Line className="text-base-content/50 w-5 h-5" />}
+        {/* Create button - only visible in edit mode */}
+        {editMode && (
+          <button
+            onClick={createFeed}
+            className="btn btn-sm btn-info"
+            title="Create new feed"
+          >
+            <RiAddLine className="w-4 h-4" />
+            New
+          </button>
+        )}
 
-        {tabs.map((t, index) => (
+        {tabs.map((t) => (
           <div key={t.id} className="flex flex-col items-center gap-1">
             <button
-              draggable={editMode}
-              onDragStart={editMode ? (e) => handleDragStart(e, index) : undefined}
-              onDragOver={editMode ? handleDragOver : undefined}
-              onDrop={editMode ? (e) => handleDrop(e, index) : undefined}
-              onDragEnd={editMode ? handleDragEnd : undefined}
-              className={`btn btn-sm ${editMode ? "cursor-move" : "cursor-pointer"} ${
+              className={`btn btn-sm cursor-pointer whitespace-nowrap ${
                 activeTab === t.id ? "btn-primary" : "btn-neutral"
-              } ${draggedIndex === index ? "opacity-50" : ""}`}
+              }`}
               onClick={() => setActiveTab(t.id)}
-              title={editMode ? "Click to edit name, drag to reorder" : "Click to select"}
+              title="Click to select"
             >
               {getDisplayName(t.id, t.name)}
             </button>
           </div>
         ))}
       </div>
+
+      {/* Arrow buttons for reordering in edit mode */}
+      {editMode && (
+        <div className="flex justify-center gap-2 mt-2">
+          <button
+            onClick={moveTabLeft}
+            disabled={tabs.findIndex((t) => t.id === activeTab) === 0}
+            className="btn btn-sm btn-neutral"
+            title="Move active tab left"
+          >
+            <RiArrowLeftSLine className="w-4 h-4" />
+          </button>
+          <span className="text-sm text-base-content/70 self-center">
+            Move &quot;{getDisplayName(activeTab, tabs.find((t) => t.id === activeTab)?.name || "")}&quot;
+          </span>
+          <button
+            onClick={moveTabRight}
+            disabled={tabs.findIndex((t) => t.id === activeTab) === tabs.length - 1}
+            className="btn btn-sm btn-neutral"
+            title="Move active tab right"
+          >
+            <RiArrowRightSLine className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {editMode && localConfig && (
         <div className="flex flex-col gap-4 mt-4 p-4 border border-base-300 rounded-lg">
@@ -394,6 +436,16 @@ function FeedTabs({allTabs}: FeedTabsProps) {
                 className="checkbox checkbox-sm"
               />
               <span className="text-sm text-base-content/70">Hide seen posts</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={localConfig.showEventsByUnknownUsers ?? false}
+                onChange={(e) => updateConfig("showEventsByUnknownUsers", e.target.checked)}
+                className="checkbox checkbox-sm"
+              />
+              <span className="text-sm text-base-content/70">Show posts from unknown users</span>
             </label>
           </div>
 

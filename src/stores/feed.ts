@@ -21,6 +21,7 @@ interface TabConfig {
   requiresMedia?: boolean
   requiresReplies?: boolean
   excludeSeen?: boolean
+  showEventsByUnknownUsers?: boolean
 }
 
 interface FeedState {

@@ -223,6 +223,7 @@ function HomeFeedEvents() {
         forceUpdate={forceUpdate}
         sortLikedPosts={activeTabItem?.sortLikedPosts}
         emptyPlaceholder={""}
+        showEventsByUnknownUsers={activeTabConfig?.showEventsByUnknownUsers ?? false}
       />
       {socialGraphLoaded && follows.length <= 1 && (
         <>

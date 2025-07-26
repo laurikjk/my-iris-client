@@ -9,6 +9,7 @@ import Feed from "@/shared/components/feed/Feed.tsx"
 import {useParams, useNavigate} from "react-router"
 import Widget from "@/shared/components/ui/Widget"
 import {Helmet} from "react-helmet"
+import {useSettingsStore} from "@/stores/settings"
 
 function SearchPage() {
   const {query} = useParams()
@@ -19,6 +20,12 @@ function SearchPage() {
     "searchTab"
   )
   const [forceUpdate, setForceUpdate] = useState(0)
+
+  const {content} = useSettingsStore()
+  const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
+    !content.hideEventsByUnknownUsers,
+    "searchShowEventsByUnknownUsers"
+  )
 
   useEffect(() => {
     setSearchTerm(query?.toLowerCase() || "")
@@ -84,14 +91,27 @@ function SearchPage() {
               Market
             </button>
           </div>
+
+          {query && activeTab !== "people" && (
+            <div className="flex items-center gap-2 p-2">
+              <input
+                type="checkbox"
+                className="toggle toggle-sm"
+                checked={showEventsByUnknownUsers}
+                onChange={(e) => setShowEventsByUnknownUsers(e.target.checked)}
+              />
+              <span className="text-sm">Show posts from unknown users</span>
+            </div>
+          )}
+
           {query && (
             <Feed
               key={`${activeTab}-${query}`}
               filters={filters}
               showRepliedTo={false}
-              showFilters={true}
               cacheKey={`search-${activeTab}-${query}`}
               forceUpdate={forceUpdate}
+              showEventsByUnknownUsers={showEventsByUnknownUsers}
             />
           )}
           {!query && (

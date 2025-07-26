@@ -47,6 +47,7 @@ const tabs: Tab[] = [
         filters={{kinds: [1, 6], authors: [pubKey]}}
         displayFilterFn={displayFilterFn}
         borderTopFirst={true}
+        showEventsByUnknownUsers={true}
       />
     ),
   },
@@ -59,6 +60,7 @@ const tabs: Tab[] = [
         filters={{kinds: [30402], authors: [pubKey]}}
         borderTopFirst={true}
         showRepliedTo={true}
+        showEventsByUnknownUsers={true}
       />
     ),
   },
@@ -71,6 +73,7 @@ const tabs: Tab[] = [
         filters={{kinds: [1, 6], authors: [pubKey]}}
         showRepliedTo={true}
         borderTopFirst={true}
+        showEventsByUnknownUsers={true}
       />
     ),
   },
@@ -84,6 +87,7 @@ const tabs: Tab[] = [
         filters={{kinds: [1, 6], authors: [pubKey]}}
         displayFilterFn={displayFilterFn}
         borderTopFirst={true}
+        showEventsByUnknownUsers={true}
       />
     ),
   },
@@ -95,6 +99,7 @@ const tabs: Tab[] = [
         key={`feed-${pubKey}`}
         filters={{kinds: [7], authors: [pubKey]}}
         borderTopFirst={true}
+        showEventsByUnknownUsers={true}
       />
     ),
   },
@@ -107,6 +112,7 @@ const tabs: Tab[] = [
         filters={{kinds: [1, 6, 7], authors: [pubKey], "#p": [myPubKey]}}
         borderTopFirst={true}
         showRepliedTo={true}
+        showEventsByUnknownUsers={true}
       />
     ),
   },

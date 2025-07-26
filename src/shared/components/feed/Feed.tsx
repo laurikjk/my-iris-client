@@ -12,7 +12,6 @@ import {useSocialGraphLoaded} from "@/utils/socialGraph.ts"
 import UnknownUserEvents from "./UnknownUserEvents.tsx"
 import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
-import {useSettingsStore} from "@/stores/settings"
 import {useFeedStore} from "@/stores/feed"
 import {getTag} from "@/utils/nostr"
 import MediaFeed from "./MediaFeed"
@@ -33,10 +32,10 @@ interface FeedProps {
   showEventsByUnknownUsersButton?: boolean
   displayAs?: "list" | "grid"
   showDisplayAsSelector?: boolean
-  showFilters?: boolean
   onDisplayAsChange?: (display: "list" | "grid") => void
   sortLikedPosts?: boolean
   relayUrls?: string[]
+  showEventsByUnknownUsers?: boolean
 }
 
 const DefaultEmptyPlaceholder = (
@@ -61,10 +60,10 @@ const Feed = memo(function Feed({
   showEventsByUnknownUsersButton = true,
   displayAs: initialDisplayAs = "list",
   showDisplayAsSelector = true,
-  showFilters = false,
   onDisplayAsChange,
   sortLikedPosts = false,
   relayUrls,
+  showEventsByUnknownUsers: showEventsByUnknownUsersProp = false,
 }: FeedProps) {
   const [displayCount, setDisplayCount] = useHistoryState(
     INITIAL_DISPLAY_COUNT,
@@ -73,11 +72,6 @@ const Feed = memo(function Feed({
   const firstFeedItemRef = useRef<HTMLDivElement>(null)
   const myPubKey = useUserStore((state) => state.publicKey)
 
-  const {content} = useSettingsStore()
-  const [hideEventsByUnknownUsers, setHideEventsByUnknownUsers] = useHistoryState(
-    content.hideEventsByUnknownUsers,
-    "initialHideEventsByUnknownUsers"
-  )
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
 
   // Create combined display filter that includes search filtering if needed
@@ -125,7 +119,7 @@ const Feed = memo(function Feed({
     displayFilterFn: combinedDisplayFilterFn,
     fetchFilterFn,
     sortFn,
-    hideEventsByUnknownUsers,
+    hideEventsByUnknownUsers: !showEventsByUnknownUsersProp,
     sortLikedPosts,
     relayUrls,
   })
@@ -165,12 +159,6 @@ const Feed = memo(function Feed({
     }
   }, [forceUpdate])
 
-  useEffect(() => {
-    if (history.state?.initialHideEventsByUnknownUsers === undefined) {
-      setHideEventsByUnknownUsers(content.hideEventsByUnknownUsers)
-    }
-  }, [content.hideEventsByUnknownUsers])
-
   if (!isSocialGraphLoaded) {
     return null
   }
@@ -185,18 +173,6 @@ const Feed = memo(function Feed({
             onDisplayAsChange?.(display)
           }}
         />
-      )}
-
-      {showFilters && (
-        <div className="flex items-center gap-2 p-2">
-          <input
-            type="checkbox"
-            className="toggle toggle-sm"
-            checked={!hideEventsByUnknownUsers}
-            onChange={(e) => setHideEventsByUnknownUsers(!e.target.checked)}
-          />
-          <span className="text-sm">Show posts from unknown users</span>
-        </div>
       )}
 
       {newEventsFiltered.length > 0 && (
