@@ -230,18 +230,21 @@ function SearchBox({
     if (pubKey === "search-notes" && query) {
       navigate(`/search/${query}`)
     } else {
-      // Check if it's a recent search being selected
-      const recentResult = recentSearches.find(
-        (r: CustomSearchResult) => r.pubKey === pubKey
-      )
-      if (recentResult) {
-        // Reorder recent searches
-        const filtered = recentSearches.filter(
-          (item: CustomSearchResult) => item.pubKey !== pubKey
+      // Only check recent searches if we're actually in the recent searches mode (no search value)
+      if (!value) {
+        // Check if it's a recent search being selected
+        const recentResult = recentSearches.find(
+          (r: CustomSearchResult) => r.pubKey === pubKey
         )
-        setRecentSearches([recentResult, ...filtered])
+        if (recentResult) {
+          // Reorder recent searches
+          const filtered = recentSearches.filter(
+            (item: CustomSearchResult) => item.pubKey !== pubKey
+          )
+          setRecentSearches([recentResult, ...filtered])
+        }
       } else {
-        // Add to recent searches if it's a new selection
+        // We're selecting from search results, so add to recent searches
         const selectedResult = searchResults.find((r) => r.pubKey === pubKey)
         if (selectedResult) {
           addToRecentSearches(selectedResult)
