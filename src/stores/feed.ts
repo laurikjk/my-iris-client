@@ -5,6 +5,7 @@ interface TabFilter {
   kinds?: number[]
   since?: number
   limit?: number
+  search?: string
 }
 
 interface TabConfig {

@@ -1,10 +1,10 @@
-import {useMemo, useState, useEffect, FormEvent, useCallback} from "react"
+import {useMemo, useState, useEffect, FormEvent} from "react"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import SearchBox from "@/shared/components/ui/SearchBox"
 import Header from "@/shared/components/header/Header"
-import {NDKFilter, NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKFilter} from "@nostr-dev-kit/ndk"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import {useParams, useNavigate} from "react-router"
 import Widget from "@/shared/components/ui/Widget"
@@ -34,12 +34,6 @@ function SearchPage() {
       search: query,
     }),
     [query, activeTab]
-  )
-
-  const displayFilterFn = useCallback(
-    (event: NDKEvent) =>
-      (event.content + JSON.stringify(event.tags)).toLowerCase().includes(searchTerm),
-    [searchTerm]
   )
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -94,7 +88,6 @@ function SearchPage() {
             <Feed
               key={`${activeTab}-${query}`}
               filters={filters}
-              displayFilterFn={displayFilterFn}
               showRepliedTo={false}
               showFilters={true}
               cacheKey={`search-${activeTab}-${query}`}

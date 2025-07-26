@@ -80,6 +80,28 @@ const Feed = memo(function Feed({
   )
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
 
+  // Create combined display filter that includes search filtering if needed
+  const combinedDisplayFilterFn = useMemo(() => {
+    const searchTerm = filters.search?.toLowerCase()
+
+    return (event: NDKEvent) => {
+      // First apply custom display filter if provided
+      if (displayFilterFn && !displayFilterFn(event)) {
+        return false
+      }
+
+      // Then apply search filter if search term exists
+      if (searchTerm && searchTerm.trim() !== "") {
+        const eventText = (event.content + JSON.stringify(event.tags)).toLowerCase()
+        if (!eventText.includes(searchTerm)) {
+          return false
+        }
+      }
+
+      return true
+    }
+  }, [displayFilterFn, filters.search])
+
   const {feedDisplayAs: persistedDisplayAs, setFeedDisplayAs} = useFeedStore()
 
   // Use persisted value only when selector is shown, otherwise use initialDisplayAs
@@ -100,7 +122,7 @@ const Feed = memo(function Feed({
     filters,
     cacheKey,
     displayCount,
-    displayFilterFn,
+    displayFilterFn: combinedDisplayFilterFn,
     fetchFilterFn,
     sortFn,
     hideEventsByUnknownUsers,

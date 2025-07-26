@@ -165,6 +165,13 @@ function HomeFeedEvents() {
       limit: 100,
     }
 
+    if (activeTabConfig?.followDistance === 0) {
+      return {
+        ...baseFilter,
+        authors: myPubKey ? [myPubKey] : undefined,
+      }
+    }
+
     if (activeTabConfig?.followDistance === 1) {
       return {
         ...baseFilter,
@@ -173,7 +180,7 @@ function HomeFeedEvents() {
     }
 
     return baseFilter
-  }, [follows, activeTabItem, activeTabConfig])
+  }, [follows, activeTabItem, activeTabConfig, myPubKey])
 
   const displayFilterFn = useCallback(
     (event: NDKEvent) => {

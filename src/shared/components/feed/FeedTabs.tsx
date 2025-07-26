@@ -1,4 +1,4 @@
-import React, {useState} from "react"
+import React, {useEffect, useState} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useFeedStore, useEnabledFeedIds, type TabConfig} from "@/stores/feed"
 import {RiDeleteBinLine, RiDragMove2Line, RiEqualizerFill} from "@remixicon/react"
@@ -36,6 +36,7 @@ function FeedTabs({allTabs}: FeedTabsProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [editMode, setEditMode] = useState(false)
   const [editingName, setEditingName] = useState("")
+  const [localConfig, setLocalConfig] = useState<TabConfig | null>(null)
 
   // Filter and order tabs based on enabled feed IDs from store
   const tabs = React.useMemo(() => {
@@ -61,15 +62,38 @@ function FeedTabs({allTabs}: FeedTabsProps) {
     }
   }
 
-  // Update editing name when active tab changes in edit mode
-  React.useEffect(() => {
+  // Update editing name and local config when active tab changes
+  useEffect(() => {
     if (editMode) {
       const activeTabData = tabs.find((t) => t.id === activeTab)
       if (activeTabData) {
         setEditingName(getDisplayName(activeTab, activeTabData.name))
       }
     }
-  }, [editMode, activeTab, tabs])
+    // Initialize local config
+    if (activeTabConfig) {
+      setLocalConfig(activeTabConfig)
+    }
+  }, [editMode, activeTab, tabs, activeTabConfig])
+
+  // Debounced commit to store
+  useEffect(() => {
+    if (!localConfig || !activeTabConfig) return
+
+    const timer = setTimeout(() => {
+      // Only commit if local config differs from store config
+      if (JSON.stringify(localConfig) !== JSON.stringify(activeTabConfig)) {
+        saveFeedConfig(activeTab, localConfig)
+      }
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [localConfig, activeTab, activeTabConfig, saveFeedConfig])
+
+  // Update local config immediately
+  const updateLocalConfig = (field: keyof TabConfig, value: unknown) => {
+    setLocalConfig((prev) => (prev ? {...prev, [field]: value} : null))
+  }
 
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -143,11 +167,7 @@ function FeedTabs({allTabs}: FeedTabsProps) {
     }
   }
 
-  const updateConfig = (field: keyof TabConfig, value: unknown) => {
-    if (activeTabConfig) {
-      saveFeedConfig(activeTab, {[field]: value})
-    }
-  }
+  const updateConfig = updateLocalConfig
 
   const handleResetFeeds = () => {
     if (confirm("Reset all feeds to defaults?")) {
@@ -193,10 +213,10 @@ function FeedTabs({allTabs}: FeedTabsProps) {
         ))}
       </div>
 
-      {editMode && activeTabConfig && (
+      {editMode && localConfig && (
         <div className="flex flex-col gap-4 mt-4 p-4 border border-base-300 rounded-lg">
           <div className="text-lg font-semibold">
-            Edit &quot;{getDisplayName(activeTab, activeTabConfig.name)}&quot;
+            Edit &quot;{getDisplayName(activeTab, localConfig.name)}&quot;
           </div>
 
           {/* Basic Settings */}
@@ -208,7 +228,7 @@ function FeedTabs({allTabs}: FeedTabsProps) {
               onChange={handleNameChange}
               onKeyDown={handleKeyDown}
               className="input input-sm flex-1 text-sm"
-              placeholder={activeTabConfig.name}
+              placeholder={localConfig.name}
             />
           </div>
 
@@ -217,9 +237,9 @@ function FeedTabs({allTabs}: FeedTabsProps) {
             <span className="text-sm text-base-content/70 w-20">Follow Distance</span>
             <input
               type="number"
-              min="1"
+              min="0"
               max="10"
-              value={activeTabConfig.followDistance || ""}
+              value={localConfig.followDistance ?? ""}
               onChange={(e) =>
                 updateConfig(
                   "followDistance",
@@ -235,58 +255,99 @@ function FeedTabs({allTabs}: FeedTabsProps) {
           </div>
 
           {/* Filter Kinds */}
-          {activeTabConfig.filter && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-base-content/70 w-20">Event Kinds</span>
-              <input
-                type="text"
-                value={activeTabConfig.filter.kinds?.join(",") || ""}
-                onChange={(e) => {
-                  const kinds = e.target.value
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-base-content/70 w-20">Event Kinds</span>
+            <input
+              type="text"
+              value={localConfig.filter?.kinds?.join(",") || ""}
+              onChange={(e) => {
+                const inputValue = e.target.value.trim()
+                const currentFilter = localConfig.filter || {}
+                if (inputValue === "") {
+                  // Remove kinds property if input is empty
+                  const filterWithoutKinds = Object.fromEntries(
+                    Object.entries(currentFilter).filter(([key]) => key !== "kinds")
+                  )
+                  updateConfig(
+                    "filter",
+                    Object.keys(filterWithoutKinds).length > 0
+                      ? filterWithoutKinds
+                      : undefined
+                  )
+                } else {
+                  const kinds = inputValue
                     .split(",")
                     .map((k) => parseInt(k.trim()))
                     .filter((k) => !isNaN(k))
-                  updateConfig("filter", {...activeTabConfig.filter, kinds})
-                }}
-                className="input input-sm flex-1 text-sm"
-                placeholder="1,6,7"
-              />
-              <span className="text-xs text-base-content/50">
-                Comma-separated numbers
-              </span>
-            </div>
-          )}
+                  updateConfig("filter", {...currentFilter, kinds})
+                }
+              }}
+              className="input input-sm flex-1 text-sm"
+              placeholder="1,6,7"
+            />
+            <span className="text-xs text-base-content/50">Comma-separated numbers</span>
+          </div>
+
+          {/* Search Term */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-base-content/70 w-20">Search</span>
+            <input
+              type="text"
+              value={localConfig.filter?.search || ""}
+              onChange={(e) => {
+                const inputValue = e.target.value.trim()
+                const currentFilter = localConfig.filter || {}
+                if (inputValue === "") {
+                  // Remove search property if input is empty
+                  const filterWithoutSearch = Object.fromEntries(
+                    Object.entries(currentFilter).filter(([key]) => key !== "search")
+                  )
+                  updateConfig(
+                    "filter",
+                    Object.keys(filterWithoutSearch).length > 0
+                      ? filterWithoutSearch
+                      : undefined
+                  )
+                } else {
+                  updateConfig("filter", {...currentFilter, search: inputValue})
+                }
+              }}
+              className="input input-sm flex-1 text-sm"
+              placeholder="Search terms"
+            />
+            <span className="text-xs text-base-content/50">
+              Text to search for in posts
+            </span>
+          </div>
 
           {/* Limit */}
-          {activeTabConfig.filter && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-base-content/70 w-20">Limit</span>
-              <input
-                type="number"
-                min="10"
-                max="1000"
-                value={activeTabConfig.filter.limit || ""}
-                onChange={(e) =>
-                  updateConfig("filter", {
-                    ...activeTabConfig.filter,
-                    limit: e.target.value ? parseInt(e.target.value) : undefined,
-                  })
-                }
-                className="input input-sm w-24 text-sm"
-                placeholder="100"
-              />
-              <span className="text-xs text-base-content/50">
-                Max events to initially fetch
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-base-content/70 w-20">Limit</span>
+            <input
+              type="number"
+              min="10"
+              max="1000"
+              value={localConfig.filter?.limit || ""}
+              onChange={(e) =>
+                updateConfig("filter", {
+                  ...(localConfig.filter || {}),
+                  limit: e.target.value ? parseInt(e.target.value) : undefined,
+                })
+              }
+              className="input input-sm w-24 text-sm"
+              placeholder="100"
+            />
+            <span className="text-xs text-base-content/50">
+              Max events to initially fetch
+            </span>
+          </div>
 
           {/* Checkboxes */}
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={!(activeTabConfig.hideReplies ?? false)}
+                checked={!(localConfig.hideReplies ?? false)}
                 onChange={(e) => updateConfig("hideReplies", !e.target.checked)}
                 className="checkbox checkbox-sm"
               />
@@ -296,7 +357,7 @@ function FeedTabs({allTabs}: FeedTabsProps) {
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={activeTabConfig.showRepliedTo ?? true}
+                checked={localConfig.showRepliedTo ?? true}
                 onChange={(e) => updateConfig("showRepliedTo", e.target.checked)}
                 className="checkbox checkbox-sm"
               />
@@ -306,7 +367,7 @@ function FeedTabs({allTabs}: FeedTabsProps) {
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={activeTabConfig.requiresMedia ?? false}
+                checked={localConfig.requiresMedia ?? false}
                 onChange={(e) => updateConfig("requiresMedia", e.target.checked)}
                 className="checkbox checkbox-sm"
               />
@@ -318,7 +379,7 @@ function FeedTabs({allTabs}: FeedTabsProps) {
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={activeTabConfig.sortLikedPosts ?? false}
+                checked={localConfig.sortLikedPosts ?? false}
                 onChange={(e) => updateConfig("sortLikedPosts", e.target.checked)}
                 className="checkbox checkbox-sm"
               />
@@ -328,7 +389,7 @@ function FeedTabs({allTabs}: FeedTabsProps) {
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={activeTabConfig.excludeSeen ?? false}
+                checked={localConfig.excludeSeen ?? false}
                 onChange={(e) => updateConfig("excludeSeen", e.target.checked)}
                 className="checkbox checkbox-sm"
               />
