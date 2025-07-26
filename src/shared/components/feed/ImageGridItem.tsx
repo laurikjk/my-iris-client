@@ -138,7 +138,6 @@ const ImageGridItem = memo(function ImageGridItem({
   // otherwise we might run out of mem and crash on mobile
   const loadOriginalIfProxyFails = useMemo(() => {
     return urls.map((url, i) => {
-      console.log("imeta", imetaTags[i])
       // On desktop, always load original if proxy fails
       if (!isMobile) return true
 
