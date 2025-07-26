@@ -10,6 +10,7 @@ import Widget from "@/shared/components/ui/Widget"
 import {DEFAULT_RELAYS} from "@/utils/ndk"
 import {useSettingsStore} from "@/stores/settings"
 import {Helmet} from "react-helmet"
+import RelaySelector from "@/shared/components/ui/RelaySelector"
 
 function RelayPage() {
   const {relay} = useParams()
@@ -17,8 +18,6 @@ function RelayPage() {
   const relayDisplayName = selectedRelay.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "")
 
   const [displayedRelay, setDisplayedRelay] = useState("")
-  const [customRelay, setCustomRelay] = useState<string>("")
-  const [showCustomInput, setShowCustomInput] = useState(false)
 
   const {content} = useSettingsStore()
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
@@ -38,80 +37,18 @@ function RelayPage() {
     []
   )
 
-  const handleAddCustomRelay = () => {
-    if (customRelay.trim()) {
-      const newRelay = customRelay.startsWith("wss://")
-        ? customRelay
-        : `wss://${customRelay}`
-      window.location.href = `/relay/${encodeURIComponent(newRelay)}`
-    }
-  }
-
-  const relayOptions = [
-    ...DEFAULT_RELAYS,
-    ...(selectedRelay && !DEFAULT_RELAYS.includes(selectedRelay) ? [selectedRelay] : []),
-  ]
-
-  // Simple relay URL normalization for comparison
-  const normalizeRelay = (url: string) =>
-    url.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
-
   return (
     <div className="flex flex-row">
       <div className="flex flex-col items-center flex-1">
         <Header title={selectedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"} />
         <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4">
-          <div className="flex gap-2 flex-wrap">
-            <select
-              className="select select-bordered flex-1"
-              value={displayedRelay}
-              onChange={(e) => {
-                const newRelay = e.target.value
-                if (newRelay === "custom") {
-                  setShowCustomInput(true)
-                } else {
-                  window.location.href = `/relay/${encodeURIComponent(newRelay)}`
-                }
-              }}
-            >
-              <option value="">Select a relay</option>
-              {relayOptions.map((relay) => (
-                <option key={relay} value={relay}>
-                  {relay.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "")}
-                </option>
-              ))}
-              <option value="custom">Add custom relay...</option>
-            </select>
-          </div>
-
-          {showCustomInput && (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="wss://relay.example.com"
-                value={customRelay}
-                onChange={(e) => setCustomRelay(e.target.value)}
-                className="input input-bordered flex-1"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleAddCustomRelay()
-                  }
-                }}
-              />
-              <button onClick={handleAddCustomRelay} className="btn btn-primary">
-                Go
-              </button>
-              <button
-                onClick={() => {
-                  setShowCustomInput(false)
-                  setCustomRelay("")
-                }}
-                className="btn btn-neutral"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
+          <RelaySelector
+            selectedRelay={displayedRelay}
+            onRelaySelect={(newRelay) => {
+              window.location.href = `/relay/${encodeURIComponent(newRelay)}`
+            }}
+            placeholder="Select a relay"
+          />
 
           {selectedRelay && (
             <>
@@ -132,14 +69,6 @@ function RelayPage() {
                 cacheKey={`relay-${selectedRelay}`}
                 relayUrls={[selectedRelay]}
                 showEventsByUnknownUsers={showEventsByUnknownUsers}
-                displayFilterFn={(event) => {
-                  if (!event.onRelays || event.onRelays.length === 0) return false
-
-                  const normalizedSelectedRelay = normalizeRelay(selectedRelay)
-                  return event.onRelays.some(
-                    (relay) => normalizeRelay(relay.url) === normalizedSelectedRelay
-                  )
-                }}
               />
             </>
           )}

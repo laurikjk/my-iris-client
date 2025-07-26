@@ -22,6 +22,7 @@ interface TabConfig {
   requiresReplies?: boolean
   excludeSeen?: boolean
   showEventsByUnknownUsers?: boolean
+  relayUrls?: string[]
 }
 
 interface FeedState {

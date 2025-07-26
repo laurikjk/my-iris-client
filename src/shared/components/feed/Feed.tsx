@@ -78,10 +78,27 @@ const Feed = memo(function Feed({
   // Create combined display filter that includes follow distance filtering if needed
   const combinedDisplayFilterFn = useMemo(() => {
     console.log("DEBUG: Filter params:", {followDistance, showEventsByUnknownUsersProp})
+
+    // Simple relay URL normalization
+    const normalizeRelay = (url: string) =>
+      url.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
+
     return (event: NDKEvent) => {
       // First apply custom display filter if provided
       if (displayFilterFn && !displayFilterFn(event)) {
         return false
+      }
+
+      // Apply relay filtering if relayUrls is configured
+      if (relayUrls && relayUrls.length > 0) {
+        if (!event.onRelays || event.onRelays.length === 0) return false
+
+        const normalizedTargetRelays = relayUrls.map(normalizeRelay)
+        const eventIsOnTargetRelay = event.onRelays.some((relay) =>
+          normalizedTargetRelays.includes(normalizeRelay(relay.url))
+        )
+
+        if (!eventIsOnTargetRelay) return false
       }
 
       // Apply follow distance filter if specified and showEventsByUnknownUsers is false
@@ -98,7 +115,7 @@ const Feed = memo(function Feed({
 
       return true
     }
-  }, [displayFilterFn, followDistance, showEventsByUnknownUsersProp])
+  }, [displayFilterFn, followDistance, showEventsByUnknownUsersProp, relayUrls])
 
   const {feedDisplayAs: persistedDisplayAs, setFeedDisplayAs} = useFeedStore()
 

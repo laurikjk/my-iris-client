@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useEffect, useState} from "react"
+import {useCallback, useMemo, useEffect} from "react"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
@@ -94,14 +94,13 @@ function HomeFeedEvents() {
   const {activeHomeTab: activeTab, getAllFeedConfigs, loadFeedConfig} = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
   const tabConfigs = useTabConfigs()
-  const [forceUpdate, setForceUpdate] = useState(0)
   const socialGraphLoaded = useSocialGraphLoaded()
 
   // Convert store configs to FeedTab format
   const allTabs: FeedTab[] = useMemo(() => {
     const configs = getAllFeedConfigs()
     return configs.map((config) => createFeedTabFromConfig(config))
-  }, [getAllFeedConfigs, tabConfigs, activeTab, forceUpdate])
+  }, [getAllFeedConfigs, tabConfigs, activeTab])
 
   // Filter and order tabs based on enabled feed IDs from store
   const tabs = useMemo(() => {
@@ -129,26 +128,27 @@ function HomeFeedEvents() {
     }
     if (activeTab === "unseen" && refreshSignal > openedAt) {
       feedCache.delete("unseen")
-      setForceUpdate((prev) => prev + 1) // Force update Feed component
     }
   }, [activeTabItem, openedAt, refreshSignal, activeTab])
 
-  // Clear cache when tab config changes to apply new filters
-  const configString = useMemo(() => JSON.stringify(activeTabConfig), [activeTabConfig])
-  useEffect(() => {
-    feedCache.delete(activeTab)
-    setForceUpdate((prev) => prev + 1)
-  }, [configString, activeTab])
-
-  // Clear cache when search term changes
-  const searchTerm = activeTabConfig?.filter?.search
-  useEffect(() => {
-    if (searchTerm) {
-      const cacheKeyToDelete = `${activeTabItem?.id || activeTab}-${searchTerm}`
-      feedCache.delete(cacheKeyToDelete)
-      setForceUpdate((prev) => prev + 1)
-    }
-  }, [searchTerm, activeTab, activeTabItem?.id])
+  // Create a comprehensive key that changes when any relevant config changes
+  const feedKey = useMemo(() => {
+    const configHash = JSON.stringify({
+      tab: activeTab,
+      search: activeTabConfig?.filter?.search,
+      kinds: activeTabConfig?.filter?.kinds,
+      limit: activeTabConfig?.filter?.limit,
+      followDistance: activeTabConfig?.followDistance,
+      showEventsByUnknownUsers: activeTabConfig?.showEventsByUnknownUsers,
+      hideReplies: activeTabConfig?.hideReplies,
+      showRepliedTo: activeTabConfig?.showRepliedTo,
+      requiresMedia: activeTabConfig?.requiresMedia,
+      excludeSeen: activeTabConfig?.excludeSeen,
+      relayUrls: activeTabConfig?.relayUrls,
+      sortLikedPosts: activeTabConfig?.sortLikedPosts,
+    })
+    return `feed-${configHash}`
+  }, [activeTab, activeTabConfig])
 
   const displayFilterFn = useCallback(
     (event: NDKEvent) => {
@@ -186,7 +186,7 @@ function HomeFeedEvents() {
       {follows.length > 1 && myPubKey && <FeedTabs allTabs={allTabs} />}
       <NotificationPrompt />
       <Feed
-        key={`feed-${activeTab}-${activeTabConfig?.filter?.search || ""}`}
+        key={feedKey}
         filters={activeTabConfig.filter as unknown as NDKFilter}
         displayFilterFn={displayFilterFn}
         fetchFilterFn={activeTabItem?.fetchFilterFn}
@@ -195,11 +195,12 @@ function HomeFeedEvents() {
         showRepliedTo={
           activeTabConfig?.showRepliedTo ?? activeTabItem?.showRepliedTo ?? true
         }
-        forceUpdate={forceUpdate}
+        forceUpdate={0}
         sortLikedPosts={activeTabItem?.sortLikedPosts}
         emptyPlaceholder={""}
         showEventsByUnknownUsers={activeTabConfig?.showEventsByUnknownUsers ?? false}
         followDistance={activeTabConfig?.followDistance}
+        {...(activeTabConfig?.relayUrls && {relayUrls: activeTabConfig.relayUrls})}
       />
       {socialGraphLoaded && follows.length <= 1 && (
         <>
