@@ -77,8 +77,6 @@ const Feed = memo(function Feed({
 
   // Create combined display filter that includes follow distance filtering if needed
   const combinedDisplayFilterFn = useMemo(() => {
-    console.log("DEBUG: Filter params:", {followDistance, showEventsByUnknownUsersProp})
-
     // Simple relay URL normalization
     const normalizeRelay = (url: string) =>
       url.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
@@ -105,10 +103,6 @@ const Feed = memo(function Feed({
       if (followDistance !== undefined && !showEventsByUnknownUsersProp) {
         const eventFollowDistance = socialGraph().getFollowDistance(event.pubkey)
         if (eventFollowDistance > followDistance) {
-          console.log(
-            `DEBUG: Filtering out event from ${event.pubkey.slice(0, 8)}... ` +
-              `(distance: ${eventFollowDistance}, max: ${followDistance})`
-          )
           return false
         }
       }

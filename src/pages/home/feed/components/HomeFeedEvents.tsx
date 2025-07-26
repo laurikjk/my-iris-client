@@ -133,21 +133,7 @@ function HomeFeedEvents() {
 
   // Create a comprehensive key that changes when any relevant config changes
   const feedKey = useMemo(() => {
-    const configHash = JSON.stringify({
-      tab: activeTab,
-      search: activeTabConfig?.filter?.search,
-      kinds: activeTabConfig?.filter?.kinds,
-      limit: activeTabConfig?.filter?.limit,
-      followDistance: activeTabConfig?.followDistance,
-      showEventsByUnknownUsers: activeTabConfig?.showEventsByUnknownUsers,
-      hideReplies: activeTabConfig?.hideReplies,
-      showRepliedTo: activeTabConfig?.showRepliedTo,
-      requiresMedia: activeTabConfig?.requiresMedia,
-      excludeSeen: activeTabConfig?.excludeSeen,
-      relayUrls: activeTabConfig?.relayUrls,
-      sortLikedPosts: activeTabConfig?.sortLikedPosts,
-    })
-    return `feed-${configHash}`
+    return `feed-${JSON.stringify(activeTabConfig)}`
   }, [activeTab, activeTabConfig])
 
   const displayFilterFn = useCallback(
@@ -167,9 +153,6 @@ function HomeFeedEvents() {
   )
 
   if (!activeTabConfig?.filter) {
-    console.log("DEBUG: activeTab:", activeTab)
-    console.log("DEBUG: activeTabConfig:", activeTabConfig)
-    console.log("DEBUG: activeTabConfig?.filter:", activeTabConfig?.filter)
     return null
   }
 
