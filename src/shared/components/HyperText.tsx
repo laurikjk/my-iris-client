@@ -36,6 +36,7 @@ const HyperText = memo(
 
       let result: Array<ReactNode | string> = [content]
       const embeds = small ? smallEmbeds : allEmbeds
+      let globalMatchCounter = 0
 
       for (const embed of embeds) {
         result = reactStringReplace(result, embed.regex, (match, i) => {
@@ -44,13 +45,15 @@ const HyperText = memo(
             return match
           }
 
+          const uniqueKey = `${embed.settingsKey || `embed-${embeds.indexOf(embed)}`}-${globalMatchCounter++}${embed.inline ? "-inline" : ""}`
+
           return (
             <embed.component
               match={match}
               index={i}
               event={event}
               truncated={!!truncate && !isExpanded}
-              key={`${embed.settingsKey || `embed-${embeds.indexOf(embed)}`}-${i}${embed.inline ? "-inline" : ""}`}
+              key={uniqueKey}
             />
           )
         })

@@ -12,7 +12,7 @@ const fail = (s: string) => `#[${s}]`
 
 const InlineMention: Embed = {
   regex: /#\[([0-9]+)]/g,
-  component: ({match, index, event, key}) => {
+  component: ({match, index, event}) => {
     if (!event?.tags) {
       console.warn("no tags", event)
       return <>{fail(match)}</>
@@ -31,7 +31,7 @@ const InlineMention: Embed = {
       )
     } else if (type === "e") {
       return (
-        <div className="px-4" key={key}>
+        <div className="px-4">
           <FeedItem
             asEmbed={true}
             eventId={id}

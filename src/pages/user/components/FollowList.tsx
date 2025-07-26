@@ -39,7 +39,7 @@ function FollowList({
       <InfiniteScroll onLoadMore={loadMoreFollows}>
         <div className="flex flex-col gap-2">
           {localFollows.slice(0, displayCount).map((pubkey) => (
-            <ProfileCard key={pubKey} pubKey={pubkey} showAbout={showAbout} />
+            <ProfileCard key={pubkey} pubKey={pubkey} showAbout={showAbout} />
           ))}
         </div>
       </InfiniteScroll>

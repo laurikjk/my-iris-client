@@ -1,5 +1,6 @@
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
+import localforage from "localforage"
 
 interface SettingsState {
   // Appearance settings
@@ -85,9 +86,7 @@ export const useSettingsStore = create<SettingsState>()(
       updateImgproxy: (settings) =>
         set((state) => {
           const newImgproxy = {...state.imgproxy, ...settings}
-          import("localforage").then((localforage) => {
-            localforage.setItem("imgproxy-settings", newImgproxy)
-          })
+          localforage.setItem("imgproxy-settings", newImgproxy)
           return {imgproxy: newImgproxy}
         }),
       updateNotifications: (settings) =>
@@ -103,9 +102,7 @@ export const useSettingsStore = create<SettingsState>()(
       name: "settings-storage",
       onRehydrateStorage: () => (state) => {
         if (state?.imgproxy) {
-          import("localforage").then((localforage) => {
-            localforage.setItem("imgproxy-settings", state.imgproxy)
-          })
+          localforage.setItem("imgproxy-settings", state.imgproxy)
         }
       },
     }
