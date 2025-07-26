@@ -44,6 +44,53 @@ function FeedTabs({allTabs}: FeedTabsProps) {
   const [editingName, setEditingName] = useState("")
   const [localConfig, setLocalConfig] = useState<TabConfig | null>(null)
 
+  // Helper function for common checkboxes
+  const renderCommonCheckboxes = (
+    updateConfig: (field: keyof TabConfig, value: unknown) => void
+  ) => (
+    <>
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={!(localConfig?.hideReplies ?? false)}
+          onChange={(e) => updateConfig("hideReplies", !e.target.checked)}
+          className="checkbox checkbox-sm"
+        />
+        <span className="text-sm text-base-content/70">Show replies</span>
+      </label>
+
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={localConfig?.showRepliedTo ?? true}
+          onChange={(e) => updateConfig("showRepliedTo", e.target.checked)}
+          className="checkbox checkbox-sm"
+        />
+        <span className="text-sm text-base-content/70">Show replied-to posts</span>
+      </label>
+
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={localConfig?.requiresMedia ?? false}
+          onChange={(e) => updateConfig("requiresMedia", e.target.checked)}
+          className="checkbox checkbox-sm"
+        />
+        <span className="text-sm text-base-content/70">Only show posts with media</span>
+      </label>
+
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={localConfig?.excludeSeen ?? false}
+          onChange={(e) => updateConfig("excludeSeen", e.target.checked)}
+          className="checkbox checkbox-sm"
+        />
+        <span className="text-sm text-base-content/70">Hide seen posts</span>
+      </label>
+    </>
+  )
+
   // Filter and order tabs based on enabled feed IDs from store
   const tabs = React.useMemo(() => {
     const tabsMap = new Map(allTabs.map((tab) => [tab.id, tab]))
@@ -123,6 +170,12 @@ function FeedTabs({allTabs}: FeedTabsProps) {
       id: uniqueId,
       showRepliedTo: true,
       hideReplies: false,
+      followDistance: 1,
+      showEventsByUnknownUsers: false,
+      filter: {
+        limit: 100,
+        kinds: [1],
+      },
     }
 
     // Save the new feed config
@@ -242,7 +295,9 @@ function FeedTabs({allTabs}: FeedTabsProps) {
             <RiArrowLeftSLine className="w-4 h-4" />
           </button>
           <span className="text-sm text-base-content/70 self-center">
-            Move &quot;{getDisplayName(activeTab, tabs.find((t) => t.id === activeTab)?.name || "")}&quot;
+            Move &quot;
+            {getDisplayName(activeTab, tabs.find((t) => t.id === activeTab)?.name || "")}
+            &quot;
           </span>
           <button
             onClick={moveTabRight}
@@ -261,193 +316,152 @@ function FeedTabs({allTabs}: FeedTabsProps) {
             Edit &quot;{getDisplayName(activeTab, localConfig.name)}&quot;
           </div>
 
-          {/* Basic Settings */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-base-content/70 w-20">Name</span>
-            <input
-              type="text"
-              value={editingName}
-              onChange={handleNameChange}
-              onKeyDown={handleKeyDown}
-              className="input input-sm flex-1 text-sm"
-              placeholder={localConfig.name}
-            />
-          </div>
+          {/* Show limited options for popular feed */}
+          {activeTab === "popular" ? (
+            <div className="flex flex-col gap-2">
+              {renderCommonCheckboxes(updateConfig)}
+            </div>
+          ) : (
+            <>
+              {/* Basic Settings */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-base-content/70 w-20">Name</span>
+                <input
+                  type="text"
+                  value={editingName}
+                  onChange={handleNameChange}
+                  onKeyDown={handleKeyDown}
+                  className="input input-sm flex-1 text-sm"
+                  placeholder={localConfig.name}
+                />
+              </div>
 
-          {/* Follow Distance */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-base-content/70 w-20">Follow Distance</span>
-            <input
-              type="number"
-              min="0"
-              max="10"
-              value={localConfig.followDistance ?? ""}
-              onChange={(e) =>
-                updateConfig(
-                  "followDistance",
-                  e.target.value ? parseInt(e.target.value) : undefined
-                )
-              }
-              className="input input-sm w-20 text-sm"
-              placeholder="None"
-            />
-            <span className="text-xs text-base-content/50">
-              Max degrees of separation (1=follows only)
-            </span>
-          </div>
+              {/* Follow Distance */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-base-content/70 w-20">Follow Distance</span>
+                <input
+                  type="checkbox"
+                  checked={!(localConfig.showEventsByUnknownUsers ?? false)}
+                  onChange={(e) =>
+                    updateConfig("showEventsByUnknownUsers", !e.target.checked)
+                  }
+                  className="checkbox checkbox-sm"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  max="10"
+                  value={localConfig.followDistance ?? ""}
+                  onChange={(e) =>
+                    updateConfig(
+                      "followDistance",
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                  className="input input-sm w-20 text-sm"
+                  placeholder="None"
+                />
+                <span className="text-xs text-base-content/50">
+                  Max degrees of separation (1=follows only)
+                </span>
+              </div>
 
-          {/* Filter Kinds */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-base-content/70 w-20">Event Kinds</span>
-            <input
-              type="text"
-              value={localConfig.filter?.kinds?.join(",") || ""}
-              onChange={(e) => {
-                const inputValue = e.target.value.trim()
-                const currentFilter = localConfig.filter || {}
-                if (inputValue === "") {
-                  // Remove kinds property if input is empty
-                  const filterWithoutKinds = Object.fromEntries(
-                    Object.entries(currentFilter).filter(([key]) => key !== "kinds")
-                  )
-                  updateConfig(
-                    "filter",
-                    Object.keys(filterWithoutKinds).length > 0
-                      ? filterWithoutKinds
-                      : undefined
-                  )
-                } else {
-                  const kinds = inputValue
-                    .split(",")
-                    .map((k) => parseInt(k.trim()))
-                    .filter((k) => !isNaN(k))
-                  updateConfig("filter", {...currentFilter, kinds})
-                }
-              }}
-              className="input input-sm flex-1 text-sm"
-              placeholder="1,6,7"
-            />
-            <span className="text-xs text-base-content/50">Comma-separated numbers</span>
-          </div>
+              {/* Filter Kinds */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-base-content/70 w-20">Event Kinds</span>
+                <input
+                  type="text"
+                  value={localConfig.filter?.kinds?.join(",") || ""}
+                  onChange={(e) => {
+                    const inputValue = e.target.value.trim()
+                    const currentFilter = localConfig.filter || {}
+                    if (inputValue === "") {
+                      // Remove kinds property if input is empty
+                      const filterWithoutKinds = Object.fromEntries(
+                        Object.entries(currentFilter).filter(([key]) => key !== "kinds")
+                      )
+                      updateConfig(
+                        "filter",
+                        Object.keys(filterWithoutKinds).length > 0
+                          ? filterWithoutKinds
+                          : undefined
+                      )
+                    } else {
+                      const kinds = inputValue
+                        .split(",")
+                        .map((k) => parseInt(k.trim()))
+                        .filter((k) => !isNaN(k))
+                      updateConfig("filter", {...currentFilter, kinds})
+                    }
+                  }}
+                  className="input input-sm flex-1 text-sm"
+                  placeholder="1,6,7"
+                />
+                <span className="text-xs text-base-content/50">
+                  Comma-separated numbers
+                </span>
+              </div>
 
-          {/* Search Term */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-base-content/70 w-20">Search</span>
-            <input
-              type="text"
-              value={localConfig.filter?.search || ""}
-              onChange={(e) => {
-                const inputValue = e.target.value.trim()
-                const currentFilter = localConfig.filter || {}
-                if (inputValue === "") {
-                  // Remove search property if input is empty
-                  const filterWithoutSearch = Object.fromEntries(
-                    Object.entries(currentFilter).filter(([key]) => key !== "search")
-                  )
-                  updateConfig(
-                    "filter",
-                    Object.keys(filterWithoutSearch).length > 0
-                      ? filterWithoutSearch
-                      : undefined
-                  )
-                } else {
-                  updateConfig("filter", {...currentFilter, search: inputValue})
-                }
-              }}
-              className="input input-sm flex-1 text-sm"
-              placeholder="Search terms"
-            />
-            <span className="text-xs text-base-content/50">
-              Text to search for in posts
-            </span>
-          </div>
+              {/* Search Term */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-base-content/70 w-20">Search</span>
+                <input
+                  type="text"
+                  value={localConfig.filter?.search || ""}
+                  onChange={(e) => {
+                    const inputValue = e.target.value.trim()
+                    const currentFilter = localConfig.filter || {}
+                    if (inputValue === "") {
+                      // Remove search property if input is empty
+                      const filterWithoutSearch = Object.fromEntries(
+                        Object.entries(currentFilter).filter(([key]) => key !== "search")
+                      )
+                      updateConfig(
+                        "filter",
+                        Object.keys(filterWithoutSearch).length > 0
+                          ? filterWithoutSearch
+                          : undefined
+                      )
+                    } else {
+                      updateConfig("filter", {...currentFilter, search: inputValue})
+                    }
+                  }}
+                  className="input input-sm flex-1 text-sm"
+                  placeholder="Search terms"
+                />
+                <span className="text-xs text-base-content/50">
+                  Text to search for in posts
+                </span>
+              </div>
 
-          {/* Limit */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-base-content/70 w-20">Limit</span>
-            <input
-              type="number"
-              min="10"
-              max="1000"
-              value={localConfig.filter?.limit || ""}
-              onChange={(e) =>
-                updateConfig("filter", {
-                  ...(localConfig.filter || {}),
-                  limit: e.target.value ? parseInt(e.target.value) : undefined,
-                })
-              }
-              className="input input-sm w-24 text-sm"
-              placeholder="100"
-            />
-            <span className="text-xs text-base-content/50">
-              Max events to initially fetch
-            </span>
-          </div>
+              {/* Limit */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-base-content/70 w-20">Limit</span>
+                <input
+                  type="number"
+                  min="10"
+                  max="1000"
+                  value={localConfig.filter?.limit || ""}
+                  onChange={(e) =>
+                    updateConfig("filter", {
+                      ...(localConfig.filter || {}),
+                      limit: e.target.value ? parseInt(e.target.value) : undefined,
+                    })
+                  }
+                  className="input input-sm w-24 text-sm"
+                  placeholder="100"
+                />
+                <span className="text-xs text-base-content/50">
+                  Max events to initially fetch
+                </span>
+              </div>
 
-          {/* Checkboxes */}
-          <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={!(localConfig.hideReplies ?? false)}
-                onChange={(e) => updateConfig("hideReplies", !e.target.checked)}
-                className="checkbox checkbox-sm"
-              />
-              <span className="text-sm text-base-content/70">Show replies</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={localConfig.showRepliedTo ?? true}
-                onChange={(e) => updateConfig("showRepliedTo", e.target.checked)}
-                className="checkbox checkbox-sm"
-              />
-              <span className="text-sm text-base-content/70">Show replied-to posts</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={localConfig.requiresMedia ?? false}
-                onChange={(e) => updateConfig("requiresMedia", e.target.checked)}
-                className="checkbox checkbox-sm"
-              />
-              <span className="text-sm text-base-content/70">
-                Only show posts with media
-              </span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={localConfig.sortLikedPosts ?? false}
-                onChange={(e) => updateConfig("sortLikedPosts", e.target.checked)}
-                className="checkbox checkbox-sm"
-              />
-              <span className="text-sm text-base-content/70">Sort by popularity</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={localConfig.excludeSeen ?? false}
-                onChange={(e) => updateConfig("excludeSeen", e.target.checked)}
-                className="checkbox checkbox-sm"
-              />
-              <span className="text-sm text-base-content/70">Hide seen posts</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={localConfig.showEventsByUnknownUsers ?? false}
-                onChange={(e) => updateConfig("showEventsByUnknownUsers", e.target.checked)}
-                className="checkbox checkbox-sm"
-              />
-              <span className="text-sm text-base-content/70">Show posts from unknown users</span>
-            </label>
-          </div>
+              {/* Checkboxes */}
+              <div className="flex flex-col gap-2">
+                {renderCommonCheckboxes(updateConfig)}
+              </div>
+            </>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-between gap-2 pt-2 border-t border-base-300">

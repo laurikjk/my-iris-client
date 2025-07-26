@@ -52,6 +52,11 @@ const defaultTabConfigs: Record<string, TabConfig> = {
     showRepliedTo: false,
     excludeSeen: true,
     hideReplies: true,
+    filter: {
+      kinds: [1, 6],
+      limit: 100,
+    },
+    followDistance: 1,
   },
   popular: {
     name: "Popular",
@@ -70,6 +75,10 @@ const defaultTabConfigs: Record<string, TabConfig> = {
     showRepliedTo: false,
     followDistance: 1,
     hideReplies: true,
+    filter: {
+      kinds: [1],
+      limit: 100,
+    },
   },
   market: {
     name: "Market",
@@ -87,6 +96,10 @@ const defaultTabConfigs: Record<string, TabConfig> = {
     id: "replies",
     followDistance: 1,
     requiresReplies: true,
+    filter: {
+      kinds: [1],
+      limit: 100,
+    },
   },
   media: {
     name: "Media",
@@ -94,6 +107,10 @@ const defaultTabConfigs: Record<string, TabConfig> = {
     showRepliedTo: false,
     requiresMedia: true,
     hideReplies: true,
+    filter: {
+      kinds: [1],
+      limit: 100,
+    },
   },
   adventure: {
     name: "Adventure",

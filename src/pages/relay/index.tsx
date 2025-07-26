@@ -40,15 +40,21 @@ function RelayPage() {
 
   const handleAddCustomRelay = () => {
     if (customRelay.trim()) {
-      const newRelay = customRelay.startsWith("wss://") ? customRelay : `wss://${customRelay}`
+      const newRelay = customRelay.startsWith("wss://")
+        ? customRelay
+        : `wss://${customRelay}`
       window.location.href = `/relay/${encodeURIComponent(newRelay)}`
     }
   }
 
-  const relayOptions = [...DEFAULT_RELAYS, ...(selectedRelay && !DEFAULT_RELAYS.includes(selectedRelay) ? [selectedRelay] : [])]
+  const relayOptions = [
+    ...DEFAULT_RELAYS,
+    ...(selectedRelay && !DEFAULT_RELAYS.includes(selectedRelay) ? [selectedRelay] : []),
+  ]
 
   // Simple relay URL normalization for comparison
-  const normalizeRelay = (url: string) => url.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
+  const normalizeRelay = (url: string) =>
+    url.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
 
   return (
     <div className="flex flex-row">
@@ -149,7 +155,9 @@ function RelayPage() {
           </div>
         </div>
         <Helmet>
-          <title>{selectedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"} / Iris</title>
+          <title>
+            {selectedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"} / Iris
+          </title>
         </Helmet>
       </div>
       <RightColumn>

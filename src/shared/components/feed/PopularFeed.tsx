@@ -142,8 +142,6 @@ export default function PopularFeed({
       cacheKey="popularFeed"
       sortLikedPosts={true}
       showDisplayAsSelector={true}
-      showFilters={false}
-      showEventsByUnknownUsersButton={false}
       emptyPlaceholder={emptyPlaceholder}
       displayAs="list"
       asReply={false}

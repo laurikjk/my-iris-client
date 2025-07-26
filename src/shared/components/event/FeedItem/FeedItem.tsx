@@ -311,7 +311,6 @@ function FeedItem({
             sortFn={replySortFn}
             showDisplayAsSelector={false}
             displayAs="list"
-            showEventsByUnknownUsersButton={!!standalone}
           />
           <FeedItemTitle event={event} />
         </div>

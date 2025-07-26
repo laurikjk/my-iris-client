@@ -19,7 +19,8 @@ export const shouldHideAuthor = (
     return cache.get(cacheKey)!
   }
 
-  // Check hideEventsByUnknownUsers setting
+  // Check hideEventsByUnknownUsers setting only if allowUnknown is false
+  // When allowUnknown is true, the feed-specific setting should override the global setting
   if (
     !allowUnknown &&
     content.hideEventsByUnknownUsers &&

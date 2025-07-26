@@ -15,6 +15,7 @@ import NewEventsButton from "./NewEventsButton.tsx"
 import {useFeedStore} from "@/stores/feed"
 import {getTag} from "@/utils/nostr"
 import MediaFeed from "./MediaFeed"
+import socialGraph from "@/utils/socialGraph"
 
 interface FeedProps {
   filters: NDKFilter
@@ -29,13 +30,13 @@ interface FeedProps {
   borderTopFirst?: boolean
   emptyPlaceholder?: ReactNode
   forceUpdate?: number
-  showEventsByUnknownUsersButton?: boolean
   displayAs?: "list" | "grid"
   showDisplayAsSelector?: boolean
   onDisplayAsChange?: (display: "list" | "grid") => void
   sortLikedPosts?: boolean
   relayUrls?: string[]
   showEventsByUnknownUsers?: boolean
+  followDistance?: number
 }
 
 const DefaultEmptyPlaceholder = (
@@ -57,13 +58,13 @@ const Feed = memo(function Feed({
   borderTopFirst = true,
   emptyPlaceholder = DefaultEmptyPlaceholder,
   forceUpdate,
-  showEventsByUnknownUsersButton = true,
   displayAs: initialDisplayAs = "list",
   showDisplayAsSelector = true,
   onDisplayAsChange,
   sortLikedPosts = false,
   relayUrls,
   showEventsByUnknownUsers: showEventsByUnknownUsersProp = false,
+  followDistance,
 }: FeedProps) {
   const [displayCount, setDisplayCount] = useHistoryState(
     INITIAL_DISPLAY_COUNT,
@@ -74,27 +75,30 @@ const Feed = memo(function Feed({
 
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
 
-  // Create combined display filter that includes search filtering if needed
+  // Create combined display filter that includes follow distance filtering if needed
   const combinedDisplayFilterFn = useMemo(() => {
-    const searchTerm = filters.search?.toLowerCase()
-
+    console.log("DEBUG: Filter params:", {followDistance, showEventsByUnknownUsersProp})
     return (event: NDKEvent) => {
       // First apply custom display filter if provided
       if (displayFilterFn && !displayFilterFn(event)) {
         return false
       }
 
-      // Then apply search filter if search term exists
-      if (searchTerm && searchTerm.trim() !== "") {
-        const eventText = (event.content + JSON.stringify(event.tags)).toLowerCase()
-        if (!eventText.includes(searchTerm)) {
+      // Apply follow distance filter if specified and showEventsByUnknownUsers is false
+      if (followDistance !== undefined && !showEventsByUnknownUsersProp) {
+        const eventFollowDistance = socialGraph().getFollowDistance(event.pubkey)
+        if (eventFollowDistance > followDistance) {
+          console.log(
+            `DEBUG: Filtering out event from ${event.pubkey.slice(0, 8)}... ` +
+              `(distance: ${eventFollowDistance}, max: ${followDistance})`
+          )
           return false
         }
       }
 
       return true
     }
-  }, [displayFilterFn, filters.search])
+  }, [displayFilterFn, followDistance, showEventsByUnknownUsersProp])
 
   const {feedDisplayAs: persistedDisplayAs, setFeedDisplayAs} = useFeedStore()
 
@@ -106,7 +110,6 @@ const Feed = memo(function Feed({
 
   const {
     newEvents: newEventsMap,
-    newEventsFrom,
     filteredEvents,
     eventsByUnknownUsers,
     showNewEvents,
@@ -132,7 +135,13 @@ const Feed = memo(function Feed({
     return hasMore
   }
 
-  const newEventsFiltered = Array.from(newEventsMap.values())
+  const newEventsFiltered = useMemo(() => {
+    return Array.from(newEventsMap.values()).filter(combinedDisplayFilterFn)
+  }, [newEventsMap, combinedDisplayFilterFn])
+
+  const newEventsFromFiltered = useMemo(() => {
+    return new Set(newEventsFiltered.map((event) => event.pubkey))
+  }, [newEventsFiltered])
 
   const gridEvents = useMemo(() => {
     if (displayAs === "grid") {
@@ -178,7 +187,7 @@ const Feed = memo(function Feed({
       {newEventsFiltered.length > 0 && (
         <NewEventsButton
           newEventsFiltered={newEventsFiltered}
-          newEventsFrom={newEventsFrom}
+          newEventsFrom={newEventsFromFiltered}
           showNewEvents={showNewEvents}
           firstFeedItemRef={firstFeedItemRef}
         />
@@ -213,17 +222,15 @@ const Feed = memo(function Feed({
           newEventsFiltered.length === 0 &&
           initialLoadDone &&
           emptyPlaceholder}
-        {showEventsByUnknownUsersButton &&
-          myPubKey &&
-          eventsByUnknownUsers.length > 0 && (
-            <div
-              className="p-4 border-t border-b border-custom text-info text-center transition-colors duration-200 ease-in-out hover:underline hover:bg-[var(--note-hover-color)] cursor-pointer"
-              onClick={() => setShowEventsByUnknownUsers(!showEventsByUnknownUsers)}
-            >
-              {showEventsByUnknownUsers ? "Hide" : "Show"} {eventsByUnknownUsers.length}{" "}
-              events by unknown users
-            </div>
-          )}
+        {myPubKey && eventsByUnknownUsers.length > 0 && (
+          <div
+            className="p-4 border-t border-b border-custom text-info text-center transition-colors duration-200 ease-in-out hover:underline hover:bg-[var(--note-hover-color)] cursor-pointer"
+            onClick={() => setShowEventsByUnknownUsers(!showEventsByUnknownUsers)}
+          >
+            {showEventsByUnknownUsers ? "Hide" : "Show"} {eventsByUnknownUsers.length}{" "}
+            events by unknown users
+          </div>
+        )}
         {showEventsByUnknownUsers && eventsByUnknownUsers.length > 0 && (
           <UnknownUserEvents
             eventsByUnknownUsers={eventsByUnknownUsers}

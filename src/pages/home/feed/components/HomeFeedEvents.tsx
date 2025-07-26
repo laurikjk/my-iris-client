@@ -1,5 +1,5 @@
 import {useCallback, useMemo, useEffect, useState} from "react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
@@ -11,7 +11,7 @@ import Feed from "@/shared/components/feed/Feed.tsx"
 import {hasMedia} from "@/shared/components/embed"
 import useFollows from "@/shared/hooks/useFollows"
 import {getEventReplyingTo} from "@/utils/nostr"
-import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
+import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {usePublicKey} from "@/stores/user"
 import {
   useFeedStore,
@@ -46,7 +46,7 @@ const createFeedTabFromConfig = (config: TabConfig): FeedTab => {
   }
 
   // Create fetchFilterFn based on config
-  if (config.excludeSeen || config.hideReplies || config.followDistance !== undefined) {
+  if (config.excludeSeen || config.hideReplies) {
     tab.fetchFilterFn = (e: NDKEvent) => {
       // Check if should exclude seen events
       if (config.excludeSeen && seenEventIds.has(e.id)) {
@@ -58,22 +58,12 @@ const createFeedTabFromConfig = (config: TabConfig): FeedTab => {
         return false
       }
 
-      // Check follow distance
-      if (config.followDistance !== undefined) {
-        return socialGraph().getFollowDistance(e.pubkey) <= config.followDistance
-      }
-
       return true
     }
   }
 
   // Create displayFilterFn based on config
-  if (
-    config.requiresMedia ||
-    config.requiresReplies ||
-    config.hideReplies ||
-    config.followDistance !== undefined
-  ) {
+  if (config.requiresMedia || config.requiresReplies || config.hideReplies) {
     tab.displayFilterFn = (e: NDKEvent) => {
       // Check if requires media
       if (config.requiresMedia && !hasMedia(e)) {
@@ -88,11 +78,6 @@ const createFeedTabFromConfig = (config: TabConfig): FeedTab => {
       // Check reply exclusion for display
       if (config.hideReplies && getEventReplyingTo(e)) {
         return false
-      }
-
-      // Check follow distance
-      if (config.followDistance !== undefined) {
-        return socialGraph().getFollowDistance(e.pubkey) <= config.followDistance
       }
 
       return true
@@ -155,32 +140,15 @@ function HomeFeedEvents() {
     setForceUpdate((prev) => prev + 1)
   }, [configString, activeTab])
 
-  const filters = useMemo(() => {
-    if (activeTabItem?.filter) {
-      return activeTabItem.filter
+  // Clear cache when search term changes
+  const searchTerm = activeTabConfig?.filter?.search
+  useEffect(() => {
+    if (searchTerm) {
+      const cacheKeyToDelete = `${activeTabItem?.id || activeTab}-${searchTerm}`
+      feedCache.delete(cacheKeyToDelete)
+      setForceUpdate((prev) => prev + 1)
     }
-
-    const baseFilter = {
-      kinds: [1, 6],
-      limit: 100,
-    }
-
-    if (activeTabConfig?.followDistance === 0) {
-      return {
-        ...baseFilter,
-        authors: myPubKey ? [myPubKey] : undefined,
-      }
-    }
-
-    if (activeTabConfig?.followDistance === 1) {
-      return {
-        ...baseFilter,
-        authors: follows,
-      }
-    }
-
-    return baseFilter
-  }, [follows, activeTabItem, activeTabConfig, myPubKey])
+  }, [searchTerm, activeTab, activeTabItem?.id])
 
   const displayFilterFn = useCallback(
     (event: NDKEvent) => {
@@ -198,6 +166,13 @@ function HomeFeedEvents() {
     [activeTabItem, activeTab, refreshSignal, openedAt]
   )
 
+  if (!activeTabConfig?.filter) {
+    console.log("DEBUG: activeTab:", activeTab)
+    console.log("DEBUG: activeTabConfig:", activeTabConfig)
+    console.log("DEBUG: activeTabConfig?.filter:", activeTabConfig?.filter)
+    return null
+  }
+
   const feedName =
     follows.length <= 1
       ? "Home"
@@ -211,12 +186,12 @@ function HomeFeedEvents() {
       {follows.length > 1 && myPubKey && <FeedTabs allTabs={allTabs} />}
       <NotificationPrompt />
       <Feed
-        key={`feed-${activeTab}`}
-        filters={filters}
+        key={`feed-${activeTab}-${activeTabConfig?.filter?.search || ""}`}
+        filters={activeTabConfig.filter as unknown as NDKFilter}
         displayFilterFn={displayFilterFn}
         fetchFilterFn={activeTabItem?.fetchFilterFn}
         showDisplayAsSelector={follows.length > 1}
-        cacheKey={activeTabItem?.id || activeTab}
+        cacheKey={`${activeTabItem?.id || activeTab}-${activeTabConfig?.filter?.search || ""}`}
         showRepliedTo={
           activeTabConfig?.showRepliedTo ?? activeTabItem?.showRepliedTo ?? true
         }
@@ -224,6 +199,7 @@ function HomeFeedEvents() {
         sortLikedPosts={activeTabItem?.sortLikedPosts}
         emptyPlaceholder={""}
         showEventsByUnknownUsers={activeTabConfig?.showEventsByUnknownUsers ?? false}
+        followDistance={activeTabConfig?.followDistance}
       />
       {socialGraphLoaded && follows.length <= 1 && (
         <>
