@@ -36,12 +36,18 @@ interface SettingsState {
   privacy: {
     enableAnalytics: boolean
   }
+  // Debug settings
+  debug: {
+    enabled: boolean
+    privateKey: string | null
+  }
   // Update a specific setting group
   updateAppearance: (settings: Partial<SettingsState["appearance"]>) => void
   updateContent: (settings: Partial<SettingsState["content"]>) => void
   updateImgproxy: (settings: Partial<SettingsState["imgproxy"]>) => void
   updateNotifications: (settings: Partial<SettingsState["notifications"]>) => void
   updatePrivacy: (settings: Partial<SettingsState["privacy"]>) => void
+  updateDebug: (settings: Partial<SettingsState["debug"]>) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -75,6 +81,10 @@ export const useSettingsStore = create<SettingsState>()(
       privacy: {
         enableAnalytics: true,
       },
+      debug: {
+        enabled: false,
+        privateKey: null,
+      },
       updateAppearance: (settings) =>
         set((state) => ({
           appearance: {...state.appearance, ...settings},
@@ -96,6 +106,10 @@ export const useSettingsStore = create<SettingsState>()(
       updatePrivacy: (settings) =>
         set((state) => ({
           privacy: {...state.privacy, ...settings},
+        })),
+      updateDebug: (settings) =>
+        set((state) => ({
+          debug: {...state.debug, ...settings},
         })),
     }),
     {

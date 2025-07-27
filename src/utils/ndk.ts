@@ -64,6 +64,7 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
     watchLocalSettings(ndkInstance)
     ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
     ndkInstance.connect()
+    console.log("NDK instance initialized", ndkInstance)
   } else if (opts) {
     throw new Error("NDK instance already initialized, cannot pass options")
   }

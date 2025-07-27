@@ -11,8 +11,12 @@ import {useSessionsStore} from "@/stores/sessions"
 import {ndk} from "./utils/ndk"
 import {router} from "@/pages"
 import socialGraph from "./utils/socialGraph"
+import DebugManager from "./utils/DebugManager"
 
 ndk()
+
+// Initialize debug system
+DebugManager
 
 // Initialize chat modules if we have a public key
 const state = useUserStore.getState()

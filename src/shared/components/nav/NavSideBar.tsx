@@ -1,4 +1,4 @@
-import {RiLoginBoxLine, RiLockLine} from "@remixicon/react"
+import {RiLoginBoxLine, RiLockLine, RiBugLine} from "@remixicon/react"
 import {useRef, useMemo} from "react"
 import classNames from "classnames"
 import NavLink from "./NavLink"
@@ -12,6 +12,7 @@ import PublishButton from "../ui/PublishButton"
 import ErrorBoundary from "../ui/ErrorBoundary"
 import {formatAmount} from "@/utils/utils"
 import {usePublicKey} from "@/stores/user"
+import {useSettingsStore} from "@/stores/settings"
 import {navItemsConfig} from "./navConfig"
 import {UserRow} from "../user/UserRow"
 import {useUIStore} from "@/stores/ui"
@@ -23,6 +24,7 @@ const NavSideBar = () => {
   const {isSidebarOpen, setIsSidebarOpen, setShowLoginDialog} = useUIStore()
   const {balance} = useWalletBalance()
   const myPubKey = usePublicKey()
+  const {debug} = useSettingsStore()
 
   const navItems = useMemo(() => {
     const configItems = navItemsConfig()
@@ -67,6 +69,17 @@ const NavSideBar = () => {
               <RiLockLine className="w-6 h-6" />
               <span className="hidden xl:inline">Read-only mode</span>
             </div>
+          )}
+          {debug.enabled && (
+            <NavLink
+              to="/settings/system"
+              title="Debug mode active - Click to manage"
+              className="px-4 py-2 mx-2 md:mx-0 xl:mx-2 flex items-center gap-2 text-warning text-xl hover:bg-base-300 rounded-full"
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <RiBugLine className="w-6 h-6" />
+              <span className="hidden xl:inline">Debug mode</span>
+            </NavLink>
           )}
           <ul className="menu px-2 py-0 text-xl flex flex-col gap-4 md:gap-2 xl:gap-4 rounded-2xl">
             {navItems.map(({to, icon, activeIcon, inactiveIcon, label, onClick}) => {
