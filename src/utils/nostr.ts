@@ -1,4 +1,4 @@
-import {NDKEvent, NDKFilter, NDKRelayList, NDKTag} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKRelayList, NDKTag} from "@nostr-dev-kit/ndk"
 import {eventRegex} from "@/shared/components/embed/nostr/NostrNote"
 import {decode} from "light-bolt11-decoder"
 import {profileCache} from "./profileCache"
@@ -82,19 +82,6 @@ export function getEventReplyingTo(event: NDKEvent) {
     return replyTag[1]
   }
   return undefined
-}
-
-export async function fetchEvent(filter: NDKFilter): Promise<NDKEvent> {
-  ndk().fetchEvent(filter)
-  return new Promise<NDKEvent>((resolve) => {
-    const sub = ndk().subscribe(filter)
-    sub.on("event", (event) => {
-      if (event && event.id) {
-        sub.stop()
-        resolve(event)
-      }
-    })
-  })
 }
 
 export function isRepost(event: NDKEvent) {

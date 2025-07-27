@@ -1,8 +1,8 @@
 import socialGraph, {handleSocialGraphEvent} from "@/utils/socialGraph.ts"
 import {PublicKey} from "@/shared/utils/PublicKey"
-import {useEffect, useState, useMemo} from "react"
+import {useEffect, useState, useMemo, useRef} from "react"
 import {NostrEvent} from "nostr-social-graph"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 
 const useMutes = (pubKey?: string) => {
@@ -13,13 +13,25 @@ const useMutes = (pubKey?: string) => {
   const [mutes, setMutes] = useState<string[]>([
     ...socialGraph().getMutedByUser(pubKeyHex),
   ])
+  const subscriptionRef = useRef<NDKSubscription | null>(null)
 
   useEffect(() => {
+    // Clean up any existing subscription first
+    if (subscriptionRef.current) {
+      subscriptionRef.current.stop()
+      // Force cleanup by removing from subscription manager (NDK bug workaround)
+      if (subscriptionRef.current.ndk?.subManager) {
+        subscriptionRef.current.ndk.subManager.subscriptions.delete(subscriptionRef.current.internalId)
+      }
+      subscriptionRef.current = null
+    }
+
     try {
       if (pubKeyHex) {
         const filter = {kinds: [10000], authors: [pubKeyHex]}
 
-        const sub = ndk().subscribe(filter)
+        const sub = ndk().subscribe(filter, {closeOnEose: true})
+        subscriptionRef.current = sub
 
         let latestTimestamp = 0
 
@@ -43,12 +55,20 @@ const useMutes = (pubKey?: string) => {
             setMutes(pubkeys)
           }
         })
-        return () => {
-          sub.stop()
-        }
       }
     } catch (error) {
       console.warn(error)
+    }
+
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current.stop()
+        // Force cleanup by removing from subscription manager (NDK bug workaround)
+        if (subscriptionRef.current.ndk?.subManager) {
+          subscriptionRef.current.ndk.subManager.subscriptions.delete(subscriptionRef.current.internalId)
+        }
+        subscriptionRef.current = null
+      }
     }
   }, [pubKeyHex])
 

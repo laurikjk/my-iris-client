@@ -77,6 +77,31 @@ class DebugManager {
         // Get NDK subscription manager info
         const ndkInstance = ndk()
         const subManager = ndkInstance.subManager
+
+        // Prepare compact subscription data for debug session
+        const subscriptionsData: Record<string, {filters: unknown[]; relays: string[]}> =
+          {}
+        subManager.subscriptions.forEach((subscription, id) => {
+          // Process filters to make them more compact
+          const compactFilters = subscription.filters.map((filter: unknown) => {
+            const compactFilter = {...(filter as Record<string, unknown>)}
+            // Replace large authors arrays with count
+            if (
+              compactFilter.authors &&
+              Array.isArray(compactFilter.authors) &&
+              compactFilter.authors.length > 10
+            ) {
+              compactFilter.authors = `[${compactFilter.authors.length} authors]`
+            }
+            return compactFilter
+          })
+
+          subscriptionsData[id] = {
+            filters: compactFilters,
+            relays: Array.from(subscription.relayFilters?.keys() || []),
+          }
+        })
+
         const ndkInfo = {
           subscriptionsCount: subManager.subscriptions.size,
           seenEventsCount: subManager.seenEvents.size,
@@ -99,6 +124,14 @@ class DebugManager {
           ndkInfo,
         }
         this.debugSession.publish("data", heartbeatData)
+
+        // Send subscription data separately to avoid size limits
+        console.log(
+          "📊 Sending subscription data:",
+          Object.keys(subscriptionsData).length,
+          "subscriptions"
+        )
+        this.debugSession.publish("subscriptions", subscriptionsData)
       }
     }
 

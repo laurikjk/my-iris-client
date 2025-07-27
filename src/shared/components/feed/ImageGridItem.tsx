@@ -1,11 +1,10 @@
 import {useNavigate} from "react-router"
-import {useEffect, useState, useMemo, memo, MutableRefObject} from "react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {useEffect, useState, useMemo, memo, MutableRefObject, useRef} from "react"
+import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
 import {decode} from "blurhash"
 import {nip19} from "nostr-tools"
 
 import {eventsByIdCache} from "@/utils/memcache.ts"
-import {fetchEvent} from "@/utils/nostr.ts"
 import {IMAGE_REGEX, VIDEO_REGEX} from "@/shared/components/embed/media/MediaEmbed.tsx"
 import {useSettingsStore} from "@/stores/settings"
 import MarketGridItem from "../market/MarketGridItem"
@@ -13,6 +12,7 @@ import {isMarketListing} from "@/shared/utils/marketUtils.ts"
 import ProxyImg from "../ProxyImg"
 import Icon from "../Icons/Icon"
 import {LRUCache} from "typescript-lru-cache"
+import {ndk} from "@/utils/ndk"
 
 interface ImageGridItemProps {
   event: NDKEvent | {id: string}
@@ -74,12 +74,23 @@ const ImageGridItem = memo(function ImageGridItem({
     "content" in initialEvent ? initialEvent : undefined
   )
   const {content, imgproxy} = useSettingsStore()
+  const subscriptionRef = useRef<NDKSubscription | null>(null)
 
   const eventIdHex = useMemo(() => {
     return "content" in initialEvent ? initialEvent.id : initialEvent.id
   }, [initialEvent])
 
   useEffect(() => {
+    // Clean up any existing subscription first
+    if (subscriptionRef.current) {
+      subscriptionRef.current.stop()
+      // Force cleanup by removing from subscription manager (NDK bug workaround)
+      if (subscriptionRef.current.ndk?.subManager) {
+        subscriptionRef.current.ndk.subManager.subscriptions.delete(subscriptionRef.current.internalId)
+      }
+      subscriptionRef.current = null
+    }
+
     if (event) {
       onEventFetched?.(event)
       return
@@ -91,17 +102,27 @@ const ImageGridItem = memo(function ImageGridItem({
         setEvent(cached)
         onEventFetched?.(cached)
       } else {
-        fetchEvent({ids: [eventIdHex]})
-          .then((fetched) => {
-            if (fetched) {
-              setEvent(fetched)
-              eventsByIdCache.set(eventIdHex, fetched)
-              onEventFetched?.(fetched)
-            }
-          })
-          .catch((error) => {
-            console.warn("Failed to fetch event:", error)
-          })
+        const sub = ndk().subscribe({ids: [eventIdHex]}, {closeOnEose: true})
+        subscriptionRef.current = sub
+
+        sub.on("event", (fetchedEvent: NDKEvent) => {
+          if (fetchedEvent && fetchedEvent.id) {
+            setEvent(fetchedEvent)
+            eventsByIdCache.set(eventIdHex, fetchedEvent)
+            onEventFetched?.(fetchedEvent)
+          }
+        })
+      }
+    }
+
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current.stop()
+        // Force cleanup by removing from subscription manager (NDK bug workaround)
+        if (subscriptionRef.current.ndk?.subManager) {
+          subscriptionRef.current.ndk.subManager.subscriptions.delete(subscriptionRef.current.internalId)
+        }
+        subscriptionRef.current = null
       }
     }
   }, [event, eventIdHex, onEventFetched])

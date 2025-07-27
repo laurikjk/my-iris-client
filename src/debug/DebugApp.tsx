@@ -52,6 +52,11 @@ interface MediaFeedMemory {
   timestamp: number
 }
 
+interface SubscriptionData {
+  filters: unknown[]
+  relays: string[]
+}
+
 const DebugApp = () => {
   const [session, setSession] = useState<DebugSession | null>(null)
   const [sessionLink, setSessionLink] = useState<string>("")
@@ -66,6 +71,10 @@ const DebugApp = () => {
     MediaFeedPerformance[]
   >([])
   const [mediaFeedMemory, setMediaFeedMemory] = useState<MediaFeedMemory[]>([])
+  const [subscriptions, setSubscriptions] = useState<Record<
+    string,
+    SubscriptionData
+  > | null>(null)
   const [userAgent, setUserAgent] = useState<string>("")
   const [currentUrl, setCurrentUrl] = useState<string>("")
 
@@ -107,6 +116,11 @@ const DebugApp = () => {
       if (typeof value === "string") {
         setTestValue(value)
       }
+    })
+
+    // Subscribe to subscriptions data
+    const unsubscribeSubscriptions = debugSession.subscribe("subscriptions", (value) => {
+      setSubscriptions(value as Record<string, SubscriptionData>)
     })
 
     // Subscribe to heartbeat data to check if Iris browser is online
@@ -199,6 +213,7 @@ const DebugApp = () => {
       clearInterval(heartbeatInterval)
       unsubscribeTest()
       unsubscribeData()
+      unsubscribeSubscriptions()
       unsubscribeMediaFeedDebug()
       unsubscribeMediaFeedPerformance()
       unsubscribeMediaFeedMemory()
@@ -314,6 +329,49 @@ const DebugApp = () => {
                         </pre>
                       </div>
                     </details>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {subscriptions && <div className="divider">Active Subscriptions</div>}
+
+            {subscriptions && (
+              <div className="card bg-base-200 shadow">
+                <div className="card-body">
+                  <h3 className="card-title">
+                    Subscription Details ({Object.keys(subscriptions).length} total)
+                    <span className="badge badge-warning badge-sm">Live</span>
+                  </h3>
+                  <div className="overflow-x-auto max-h-96">
+                    <table className="table table-xs">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Filters</th>
+                          <th>Relays</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(subscriptions).map(([id, data]) => (
+                          <tr key={id}>
+                            <td className="font-mono text-xs">{id}</td>
+                            <td className="text-xs max-w-md">
+                              <pre className="whitespace-pre-wrap break-all">
+                                {JSON.stringify(data.filters, null)}
+                              </pre>
+                            </td>
+                            <td className="text-xs">
+                              {data.relays.map((relay, i) => (
+                                <div key={i} className="truncate">
+                                  {relay}
+                                </div>
+                              ))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>

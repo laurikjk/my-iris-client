@@ -1,9 +1,9 @@
 import {eventsByIdCache, addSeenEventId} from "@/utils/memcache.ts"
 import {useEffect, useMemo, useState, useRef, memo} from "react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 
-import {getEventReplyingTo, fetchEvent, getEventRoot, isRepost} from "@/utils/nostr.ts"
+import {getEventReplyingTo, getEventRoot, isRepost} from "@/utils/nostr.ts"
 import {getEventIdHex, handleEventContent} from "@/shared/components/event/utils.ts"
 import RepostHeader from "@/shared/components/event/RepostHeader.tsx"
 import FeedItemActions from "../reactions/FeedItemActions.tsx"
@@ -18,6 +18,7 @@ import FeedItemTitle from "./FeedItemTitle.tsx"
 import {Link, useNavigate} from "react-router"
 import LikeHeader from "../LikeHeader"
 import {nip19} from "nostr-tools"
+import {ndk} from "@/utils/ndk"
 
 const replySortFn = (a: NDKEvent, b: NDKEvent) => {
   const followDistanceA = socialGraph().getFollowDistance(a.pubkey)
@@ -64,6 +65,7 @@ function FeedItem({
   const [expanded, setExpanded] = useState(false)
   const [hasActualReplies, setHasActualReplies] = useState(false)
   const navigate = useNavigate()
+  const subscriptionRef = useRef<NDKSubscription | null>(null)
 
   if ((!initialEvent || !initialEvent.id) && !eventId) {
     throw new Error(
@@ -146,29 +148,58 @@ function FeedItem({
   }, [event])
 
   useEffect(() => {
+    // Clean up any existing subscription first
+    if (subscriptionRef.current) {
+      subscriptionRef.current.stop()
+      // Force cleanup by removing from subscription manager (NDK bug workaround)
+      if (subscriptionRef.current.ndk?.subManager) {
+        subscriptionRef.current.ndk.subManager.subscriptions.delete(subscriptionRef.current.internalId)
+      }
+      subscriptionRef.current = null
+    }
+
     if (!event && eventIdHex) {
       const cached = eventsByIdCache.get(eventIdHex)
       if (cached) {
         setEvent(cached)
       } else {
-        fetchEvent({ids: [eventIdHex], authors: authorHints}).then((fetched) => {
-          if (fetched) {
-            setEvent(fetched)
-            eventsByIdCache.set(eventIdHex, fetched)
+        const sub = ndk().subscribe(
+          {ids: [eventIdHex], authors: authorHints},
+          {closeOnEose: true}
+        )
+        subscriptionRef.current = sub
+
+        sub.on("event", (fetchedEvent: NDKEvent) => {
+          if (fetchedEvent && fetchedEvent.id) {
+            setEvent(fetchedEvent)
+            eventsByIdCache.set(eventIdHex, fetchedEvent)
           }
         })
+      }
+    }
+
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current.stop()
+        // Force cleanup by removing from subscription manager (NDK bug workaround)
+        if (subscriptionRef.current.ndk?.subManager) {
+          subscriptionRef.current.ndk.subManager.subscriptions.delete(subscriptionRef.current.internalId)
+        }
+        subscriptionRef.current = null
       }
     }
   }, [event, eventIdHex, authorHints])
 
   useEffect(() => {
     if (event) {
-      handleEventContent(event, (referred) => {
+      const cleanup = handleEventContent(event, (referred) => {
         setReferredEvent(referred)
         eventsByIdCache.set(eventIdHex, referred)
       })
+      
+      return cleanup
     }
-  }, [event])
+  }, [event, eventIdHex])
 
   const wrapperClasses = classNames("relative max-w-[100vw]", {
     "h-[200px] overflow-hidden": asEmbed && !expanded,
