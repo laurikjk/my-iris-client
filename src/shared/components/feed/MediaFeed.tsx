@@ -1,12 +1,13 @@
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import {IMAGE_REGEX, VIDEO_REGEX} from "../embed/media/MediaEmbed"
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
-import {useState, useMemo, useCallback, useEffect} from "react"
+import {useState, useMemo, useCallback, useEffect, useRef} from "react"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import PreloadImages from "../media/PreloadImages"
 import MediaModal from "../media/MediaModal"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ImageGridItem from "./ImageGridItem"
+import DebugManager from "@/utils/DebugManager"
 
 interface MediaFeedProps {
   events: (NDKEvent | {id: string})[]
@@ -32,52 +33,128 @@ export default function MediaFeed({events}: MediaFeedProps) {
     new Map()
   )
 
+  // Debug tracking
+  const renderCount = useRef(0)
+  const lastDebugTime = useRef(0)
+  const debugManager = DebugManager
+
+  // Debug: Track renders and send periodic debug info
+  useEffect(() => {
+    renderCount.current++
+    const now = Date.now()
+
+    // Send debug info every 5 seconds to avoid spam
+    if (now - lastDebugTime.current > 5000) {
+      lastDebugTime.current = now
+
+      if (debugManager.isDebugEnabled()) {
+        const debugSession = debugManager.getDebugSession()
+        if (debugSession) {
+          const memoryEstimate = calculateMemoryEstimate()
+          debugSession.publish("mediaFeed_debug", {
+            timestamp: now,
+            renderCount: renderCount.current,
+            eventsTotal: events.length,
+            eventsVisible: displayCount,
+            fetchedEventsMapSize: fetchedEventsMap.size,
+            modalMediaLength: modalMedia.length,
+            showModal,
+            activeItemIndex,
+            memoryEstimate,
+            userAgent: navigator.userAgent,
+          })
+        }
+      }
+    }
+  })
+
+  // Debug: Calculate rough memory estimate
+  const calculateMemoryEstimate = useCallback(() => {
+    let estimate = 0
+
+    // Estimate fetchedEventsMap memory (rough calculation)
+    for (const [id, event] of fetchedEventsMap) {
+      estimate += id.length * 2 // string chars are 2 bytes
+      estimate += (event.content?.length || 0) * 2
+      estimate += JSON.stringify(event.tags || []).length * 2
+      estimate += 200 // overhead for object structure
+    }
+
+    // Estimate modalMedia memory
+    estimate += modalMedia.length * (100 + 200) // url + object overhead
+
+    // Convert to KB
+    return Math.round(estimate / 1024)
+  }, [fetchedEventsMap, modalMedia])
+
   const visibleEvents = useMemo(() => {
     return events.slice(0, displayCount)
   }, [events, displayCount])
 
-  const calculateAllMedia = useCallback((events: NDKEvent[]) => {
-    const deduplicated = new Map<
-      string,
-      {type: "image" | "video"; url: string; event: NDKEvent}
-    >()
+  const calculateAllMedia = useCallback(
+    (events: NDKEvent[]) => {
+      const startTime = performance.now()
 
-    events.forEach((event) => {
-      const imageMatches = event.content.match(IMAGE_REGEX) || []
-      const videoMatches = event.content.match(VIDEO_REGEX) || []
+      const deduplicated = new Map<
+        string,
+        {type: "image" | "video"; url: string; event: NDKEvent}
+      >()
 
-      const imageUrls = imageMatches.flatMap((match) =>
-        match
-          .trim()
-          .split(/\s+/)
-          .map((url) => ({
-            type: "image" as const,
-            url,
-            event,
-          }))
-      )
+      events.forEach((event) => {
+        const imageMatches = event.content.match(IMAGE_REGEX) || []
+        const videoMatches = event.content.match(VIDEO_REGEX) || []
 
-      const videoUrls = videoMatches.flatMap((match) =>
-        match
-          .trim()
-          .split(/\s+/)
-          .map((url) => ({
-            type: "video" as const,
-            url,
-            event,
-          }))
-      )
+        const imageUrls = imageMatches.flatMap((match) =>
+          match
+            .trim()
+            .split(/\s+/)
+            .map((url) => ({
+              type: "image" as const,
+              url,
+              event,
+            }))
+        )
 
-      for (const item of [...imageUrls, ...videoUrls]) {
-        const uniqueId = `${event.id}_${item.url}`
-        if (!deduplicated.has(uniqueId)) {
-          deduplicated.set(uniqueId, item)
+        const videoUrls = videoMatches.flatMap((match) =>
+          match
+            .trim()
+            .split(/\s+/)
+            .map((url) => ({
+              type: "video" as const,
+              url,
+              event,
+            }))
+        )
+
+        for (const item of [...imageUrls, ...videoUrls]) {
+          const uniqueId = `${event.id}_${item.url}`
+          if (!deduplicated.has(uniqueId)) {
+            deduplicated.set(uniqueId, item)
+          }
+        }
+      })
+
+      const result = Array.from(deduplicated.values())
+      const duration = performance.now() - startTime
+
+      // Debug: Log expensive calculateAllMedia calls
+      if (duration > 10 && debugManager.isDebugEnabled()) {
+        const debugSession = debugManager.getDebugSession()
+        if (debugSession) {
+          debugSession.publish("mediaFeed_performance", {
+            operation: "calculateAllMedia",
+            duration: Math.round(duration),
+            eventsProcessed: events.length,
+            mediaItemsFound: result.length,
+            timestamp: Date.now(),
+          })
         }
       }
-    })
 
-    return Array.from(deduplicated.values())
-  }, [])
+      return result
+    },
+    [debugManager]
+  )
 
   const handlePrevItem = () => {
     if (activeItemIndex === null) return
@@ -116,6 +193,8 @@ export default function MediaFeed({events}: MediaFeedProps) {
   }
 
   const handleImageClick = (event: NDKEvent, clickedUrl: string) => {
+    const startTime = performance.now()
+
     // Use all available events for modal, not just fetched ones
     const allFetchedEvents = Array.from(fetchedEventsMap.values())
 
@@ -149,41 +228,95 @@ export default function MediaFeed({events}: MediaFeedProps) {
     setModalMedia(mediaArray)
     setActiveItemIndex(mediaIndex)
     setShowModal(true)
+
+    const duration = performance.now() - startTime
+
+    // Debug: Log modal opening performance
+    if (debugManager.isDebugEnabled()) {
+      const debugSession = debugManager.getDebugSession()
+      if (debugSession) {
+        debugSession.publish("mediaFeed_performance", {
+          operation: "handleImageClick",
+          duration: Math.round(duration),
+          allEventsCount: allEvents.length,
+          mediaArrayLength: mediaArray.length,
+          mediaIndex,
+          timestamp: Date.now(),
+        })
+      }
+    }
   }
 
-  const handleEventFetched = useCallback((event: NDKEvent) => {
-    setFetchedEventsMap((prev) => {
-      if (prev.has(event.id)) return prev
+  const handleEventFetched = useCallback(
+    (event: NDKEvent) => {
+      setFetchedEventsMap((prev) => {
+        if (prev.has(event.id)) return prev
 
-      const newMap = new Map(prev)
-      newMap.set(event.id, event)
+        const newMap = new Map(prev)
+        newMap.set(event.id, event)
 
-      // Limit memory usage by keeping only the most recent events
-      if (newMap.size > MAX_FETCHED_EVENTS) {
-        const entries = Array.from(newMap.entries())
-        // Sort by event creation time and keep only the most recent
-        entries.sort(([, a], [, b]) => (b.created_at || 0) - (a.created_at || 0))
-        const limitedEntries = entries.slice(0, MAX_FETCHED_EVENTS)
-        return new Map(limitedEntries)
-      }
+        // Limit memory usage by keeping only the most recent events
+        if (newMap.size > MAX_FETCHED_EVENTS) {
+          const entries = Array.from(newMap.entries())
+          // Sort by event creation time and keep only the most recent
+          entries.sort(([, a], [, b]) => (b.created_at || 0) - (a.created_at || 0))
+          const limitedEntries = entries.slice(0, MAX_FETCHED_EVENTS)
 
-      return newMap
-    })
-  }, [])
+          // Debug: Log when we're trimming events
+          if (debugManager.isDebugEnabled()) {
+            const debugSession = debugManager.getDebugSession()
+            if (debugSession) {
+              debugSession.publish("mediaFeed_memory", {
+                operation: "trimFetchedEvents",
+                oldSize: newMap.size,
+                newSize: MAX_FETCHED_EVENTS,
+                eventsRemoved: newMap.size - MAX_FETCHED_EVENTS,
+                timestamp: Date.now(),
+              })
+            }
+          }
+
+          return new Map(limitedEntries)
+        }
+
+        return newMap
+      })
+    },
+    [debugManager]
+  )
 
   // Clean up events that are no longer visible
   useEffect(() => {
     const visibleEventIds = new Set(visibleEvents.map((e) => e.id))
     setFetchedEventsMap((prev) => {
       const newMap = new Map()
+      let removedCount = 0
+
       for (const [id, event] of prev) {
         if (visibleEventIds.has(id)) {
           newMap.set(id, event)
+        } else {
+          removedCount++
         }
       }
+
+      // Debug: Log cleanup activity
+      if (removedCount > 0 && debugManager.isDebugEnabled()) {
+        const debugSession = debugManager.getDebugSession()
+        if (debugSession) {
+          debugSession.publish("mediaFeed_memory", {
+            operation: "cleanupInvisibleEvents",
+            eventsRemoved: removedCount,
+            remainingEvents: newMap.size,
+            visibleEventsCount: visibleEvents.length,
+            timestamp: Date.now(),
+          })
+        }
+      }
+
       return newMap
     })
-  }, [visibleEvents])
+  }, [visibleEvents, debugManager])
 
   const isModalOpen = showModal
   const hasActiveItem = activeItemIndex !== null

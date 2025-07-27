@@ -18,6 +18,40 @@ interface NdkInfo {
   connectedRelays: string[]
 }
 
+interface MediaFeedDebug {
+  timestamp: number
+  renderCount: number
+  eventsTotal: number
+  eventsVisible: number
+  fetchedEventsMapSize: number
+  modalMediaLength: number
+  showModal: boolean
+  activeItemIndex: number | null
+  memoryEstimate: number
+  userAgent: string
+}
+
+interface MediaFeedPerformance {
+  operation: string
+  duration: number
+  eventsProcessed?: number
+  mediaItemsFound?: number
+  allEventsCount?: number
+  mediaArrayLength?: number
+  mediaIndex?: number
+  timestamp: number
+}
+
+interface MediaFeedMemory {
+  operation: string
+  eventsRemoved?: number
+  remainingEvents?: number
+  visibleEventsCount?: number
+  oldSize?: number
+  newSize?: number
+  timestamp: number
+}
+
 const DebugApp = () => {
   const [session, setSession] = useState<DebugSession | null>(null)
   const [sessionLink, setSessionLink] = useState<string>("")
@@ -27,6 +61,9 @@ const DebugApp = () => {
   const [lastHeartbeatTime, setLastHeartbeatTime] = useState<number>(0)
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [ndkInfo, setNdkInfo] = useState<NdkInfo | null>(null)
+  const [mediaFeedDebug, setMediaFeedDebug] = useState<MediaFeedDebug | null>(null)
+  const [mediaFeedPerformance, setMediaFeedPerformance] = useState<MediaFeedPerformance[]>([])
+  const [mediaFeedMemory, setMediaFeedMemory] = useState<MediaFeedMemory[]>([])
 
   const TEMP_IRIS_RELAY = "wss://temp.iris.to/"
 
@@ -88,6 +125,31 @@ const DebugApp = () => {
       }
     })
 
+    // Subscribe to MediaFeed debug data
+    const unsubscribeMediaFeedDebug = debugSession.subscribe("mediaFeed_debug", (value) => {
+      setMediaFeedDebug(value as MediaFeedDebug)
+    })
+
+    // Subscribe to MediaFeed performance data
+    const unsubscribeMediaFeedPerformance = debugSession.subscribe("mediaFeed_performance", (value) => {
+      setMediaFeedPerformance(prev => {
+        const newEntry = value as MediaFeedPerformance
+        // Keep only last 20 performance entries to avoid memory buildup
+        const updated = [newEntry, ...prev].slice(0, 20)
+        return updated
+      })
+    })
+
+    // Subscribe to MediaFeed memory data
+    const unsubscribeMediaFeedMemory = debugSession.subscribe("mediaFeed_memory", (value) => {
+      setMediaFeedMemory(prev => {
+        const newEntry = value as MediaFeedMemory
+        // Keep only last 20 memory entries to avoid memory buildup
+        const updated = [newEntry, ...prev].slice(0, 20)
+        return updated
+      })
+    })
+
     // Monitor connection status periodically
     const checkConnection = () => {
       setIsConnected(debugSession.isConnectedToRelay(TEMP_IRIS_RELAY))
@@ -113,6 +175,9 @@ const DebugApp = () => {
       clearInterval(heartbeatInterval)
       unsubscribeTest()
       unsubscribeData()
+      unsubscribeMediaFeedDebug()
+      unsubscribeMediaFeedPerformance()
+      unsubscribeMediaFeedMemory()
       debugSession.close()
     }
   }, [])
@@ -173,7 +238,8 @@ const DebugApp = () => {
                       <>
                         <div>Memory Usage:</div>
                         <div>
-                          {systemInfo.memoryUsage.used}MB / {systemInfo.memoryUsage.total}MB
+                          {systemInfo.memoryUsage.used}MB / {systemInfo.memoryUsage.total}
+                          MB
                         </div>
                       </>
                     )}
@@ -212,6 +278,110 @@ const DebugApp = () => {
                         </pre>
                       </div>
                     </details>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {mediaFeedDebug && <div className="divider">MediaFeed Debug</div>}
+
+            {mediaFeedDebug && (
+              <div className="card bg-base-200 shadow">
+                <div className="card-body">
+                  <h3 className="card-title">
+                    MediaFeed Status
+                    <span className="badge badge-warning badge-sm">Live</span>
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>Render Count:</div>
+                    <div>{mediaFeedDebug.renderCount}</div>
+                    <div>Total Events:</div>
+                    <div>{mediaFeedDebug.eventsTotal}</div>
+                    <div>Visible Events:</div>
+                    <div>{mediaFeedDebug.eventsVisible}</div>
+                    <div>Fetched Events:</div>
+                    <div>{mediaFeedDebug.fetchedEventsMapSize}</div>
+                    <div>Modal Media:</div>
+                    <div>{mediaFeedDebug.modalMediaLength}</div>
+                    <div>Modal Open:</div>
+                    <div>{mediaFeedDebug.showModal ? "Yes" : "No"}</div>
+                    <div>Memory Estimate:</div>
+                    <div>{mediaFeedDebug.memoryEstimate}KB</div>
+                    <div>Last Update:</div>
+                    <div>{new Date(mediaFeedDebug.timestamp).toLocaleTimeString()}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {mediaFeedPerformance.length > 0 && (
+              <div className="card bg-base-200 shadow">
+                <div className="card-body">
+                  <h3 className="card-title">
+                    MediaFeed Performance
+                    <span className="badge badge-error badge-sm">Issues</span>
+                  </h3>
+                  <div className="overflow-x-auto max-h-60">
+                    <table className="table table-xs">
+                      <thead>
+                        <tr>
+                          <th>Time</th>
+                          <th>Operation</th>
+                          <th>Duration (ms)</th>
+                          <th>Details</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mediaFeedPerformance.map((perf, index) => (
+                          <tr key={index} className={perf.duration > 50 ? "bg-error/20" : ""}>
+                            <td>{new Date(perf.timestamp).toLocaleTimeString()}</td>
+                            <td>{perf.operation}</td>
+                            <td className={perf.duration > 50 ? "text-error" : ""}>{perf.duration}</td>
+                            <td className="text-xs">
+                              {perf.eventsProcessed && `Events: ${perf.eventsProcessed}`}
+                              {perf.mediaItemsFound && ` Media: ${perf.mediaItemsFound}`}
+                              {perf.allEventsCount && ` AllEvents: ${perf.allEventsCount}`}
+                              {perf.mediaArrayLength && ` MediaArray: ${perf.mediaArrayLength}`}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {mediaFeedMemory.length > 0 && (
+              <div className="card bg-base-200 shadow">
+                <div className="card-body">
+                  <h3 className="card-title">
+                    MediaFeed Memory
+                    <span className="badge badge-secondary badge-sm">Activity</span>
+                  </h3>
+                  <div className="overflow-x-auto max-h-60">
+                    <table className="table table-xs">
+                      <thead>
+                        <tr>
+                          <th>Time</th>
+                          <th>Operation</th>
+                          <th>Details</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mediaFeedMemory.map((mem, index) => (
+                          <tr key={index}>
+                            <td>{new Date(mem.timestamp).toLocaleTimeString()}</td>
+                            <td>{mem.operation}</td>
+                            <td className="text-xs">
+                              {mem.eventsRemoved && `Removed: ${mem.eventsRemoved}`}
+                              {mem.remainingEvents && ` Remaining: ${mem.remainingEvents}`}
+                              {mem.oldSize && mem.newSize && ` ${mem.oldSize}→${mem.newSize}`}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
