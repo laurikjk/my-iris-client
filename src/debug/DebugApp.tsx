@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react"
+import React, {useEffect, useState, useRef} from "react"
 import {DebugSession} from "./DebugSession"
 
 interface SystemInfo {
@@ -58,12 +58,16 @@ const DebugApp = () => {
   const [testValue, setTestValue] = useState<string>("")
   const [isConnected, setIsConnected] = useState<boolean>(false)
   const [isBrowserOnline, setIsBrowserOnline] = useState<boolean>(false)
-  const [lastHeartbeatTime, setLastHeartbeatTime] = useState<number>(0)
+  const lastHeartbeatTime = useRef<number>(0)
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [ndkInfo, setNdkInfo] = useState<NdkInfo | null>(null)
   const [mediaFeedDebug, setMediaFeedDebug] = useState<MediaFeedDebug | null>(null)
-  const [mediaFeedPerformance, setMediaFeedPerformance] = useState<MediaFeedPerformance[]>([])
+  const [mediaFeedPerformance, setMediaFeedPerformance] = useState<
+    MediaFeedPerformance[]
+  >([])
   const [mediaFeedMemory, setMediaFeedMemory] = useState<MediaFeedMemory[]>([])
+  const [userAgent, setUserAgent] = useState<string>("")
+  const [currentUrl, setCurrentUrl] = useState<string>("")
 
   const TEMP_IRIS_RELAY = "wss://temp.iris.to/"
 
@@ -109,46 +113,66 @@ const DebugApp = () => {
     const unsubscribeData = debugSession.subscribe("data", (value, event) => {
       const eventTime = event.created_at // Event timestamp in seconds
       if (eventTime) {
-        setLastHeartbeatTime(eventTime) // Store in seconds
+        lastHeartbeatTime.current = eventTime // Store in seconds
         const now = Math.floor(Date.now() / 1000) // Current time in seconds
         const isRecent = now - eventTime < 10 // Less than 10 seconds old
         setIsBrowserOnline(isRecent)
       }
 
       // Extract system info from heartbeat
-      const data = value as {systemInfo?: SystemInfo; ndkInfo?: NdkInfo}
+      const data = value as {
+        systemInfo?: SystemInfo
+        ndkInfo?: NdkInfo
+        userAgent?: string
+        url?: string
+      }
       if (data && data.systemInfo) {
         setSystemInfo(data.systemInfo)
       }
       if (data && data.ndkInfo) {
         setNdkInfo(data.ndkInfo)
       }
+      if (data && data.userAgent) {
+        setUserAgent(data.userAgent)
+      }
+      if (data && data.url) {
+        setCurrentUrl(data.url)
+      }
     })
 
     // Subscribe to MediaFeed debug data
-    const unsubscribeMediaFeedDebug = debugSession.subscribe("mediaFeed_debug", (value) => {
-      setMediaFeedDebug(value as MediaFeedDebug)
-    })
+    const unsubscribeMediaFeedDebug = debugSession.subscribe(
+      "mediaFeed_debug",
+      (value) => {
+        setMediaFeedDebug(value as MediaFeedDebug)
+      }
+    )
 
     // Subscribe to MediaFeed performance data
-    const unsubscribeMediaFeedPerformance = debugSession.subscribe("mediaFeed_performance", (value) => {
-      setMediaFeedPerformance(prev => {
-        const newEntry = value as MediaFeedPerformance
-        // Keep only last 20 performance entries to avoid memory buildup
-        const updated = [newEntry, ...prev].slice(0, 20)
-        return updated
-      })
-    })
+    const unsubscribeMediaFeedPerformance = debugSession.subscribe(
+      "mediaFeed_performance",
+      (value) => {
+        setMediaFeedPerformance((prev) => {
+          const newEntry = value as MediaFeedPerformance
+          // Keep only last 20 performance entries to avoid memory buildup
+          const updated = [newEntry, ...prev].slice(0, 20)
+          return updated
+        })
+      }
+    )
 
     // Subscribe to MediaFeed memory data
-    const unsubscribeMediaFeedMemory = debugSession.subscribe("mediaFeed_memory", (value) => {
-      setMediaFeedMemory(prev => {
-        const newEntry = value as MediaFeedMemory
-        // Keep only last 20 memory entries to avoid memory buildup
-        const updated = [newEntry, ...prev].slice(0, 20)
-        return updated
-      })
-    })
+    const unsubscribeMediaFeedMemory = debugSession.subscribe(
+      "mediaFeed_memory",
+      (value) => {
+        setMediaFeedMemory((prev) => {
+          const newEntry = value as MediaFeedMemory
+          // Keep only last 20 memory entries to avoid memory buildup
+          const updated = [newEntry, ...prev].slice(0, 20)
+          return updated
+        })
+      }
+    )
 
     // Monitor connection status periodically
     const checkConnection = () => {
@@ -157,9 +181,9 @@ const DebugApp = () => {
 
     // Check heartbeat freshness periodically
     const checkHeartbeatFreshness = () => {
-      if (lastHeartbeatTime > 0) {
+      if (lastHeartbeatTime.current > 0) {
         const now = Math.floor(Date.now() / 1000) // Current time in seconds
-        const isRecent = now - lastHeartbeatTime < 10 // Both in seconds
+        const isRecent = now - lastHeartbeatTime.current < 10 // Both in seconds
         setIsBrowserOnline(isRecent)
       }
     }
@@ -213,8 +237,8 @@ const DebugApp = () => {
                   {isBrowserOnline ? "Online" : "Offline"}
                 </div>
                 <div className="stat-desc text-xs opacity-70">
-                  {lastHeartbeatTime > 0
-                    ? `Last: ${new Date(lastHeartbeatTime * 1000).toLocaleTimeString()}`
+                  {lastHeartbeatTime.current > 0
+                    ? `Last: ${new Date(lastHeartbeatTime.current * 1000).toLocaleTimeString()}`
                     : "No heartbeat received"}
                 </div>
               </div>
@@ -241,6 +265,18 @@ const DebugApp = () => {
                           {systemInfo.memoryUsage.used}MB / {systemInfo.memoryUsage.total}
                           MB
                         </div>
+                      </>
+                    )}
+                    {userAgent && (
+                      <>
+                        <div>User Agent:</div>
+                        <div className="text-xs break-all">{userAgent}</div>
+                      </>
+                    )}
+                    {currentUrl && (
+                      <>
+                        <div>Current URL:</div>
+                        <div className="text-xs break-all">{currentUrl}</div>
                       </>
                     )}
                   </div>
@@ -333,15 +369,22 @@ const DebugApp = () => {
                       </thead>
                       <tbody>
                         {mediaFeedPerformance.map((perf, index) => (
-                          <tr key={index} className={perf.duration > 50 ? "bg-error/20" : ""}>
+                          <tr
+                            key={index}
+                            className={perf.duration > 50 ? "bg-error/20" : ""}
+                          >
                             <td>{new Date(perf.timestamp).toLocaleTimeString()}</td>
                             <td>{perf.operation}</td>
-                            <td className={perf.duration > 50 ? "text-error" : ""}>{perf.duration}</td>
+                            <td className={perf.duration > 50 ? "text-error" : ""}>
+                              {perf.duration}
+                            </td>
                             <td className="text-xs">
                               {perf.eventsProcessed && `Events: ${perf.eventsProcessed}`}
                               {perf.mediaItemsFound && ` Media: ${perf.mediaItemsFound}`}
-                              {perf.allEventsCount && ` AllEvents: ${perf.allEventsCount}`}
-                              {perf.mediaArrayLength && ` MediaArray: ${perf.mediaArrayLength}`}
+                              {perf.allEventsCount &&
+                                ` AllEvents: ${perf.allEventsCount}`}
+                              {perf.mediaArrayLength &&
+                                ` MediaArray: ${perf.mediaArrayLength}`}
                             </td>
                           </tr>
                         ))}
@@ -375,8 +418,11 @@ const DebugApp = () => {
                             <td>{mem.operation}</td>
                             <td className="text-xs">
                               {mem.eventsRemoved && `Removed: ${mem.eventsRemoved}`}
-                              {mem.remainingEvents && ` Remaining: ${mem.remainingEvents}`}
-                              {mem.oldSize && mem.newSize && ` ${mem.oldSize}→${mem.newSize}`}
+                              {mem.remainingEvents &&
+                                ` Remaining: ${mem.remainingEvents}`}
+                              {mem.oldSize &&
+                                mem.newSize &&
+                                ` ${mem.oldSize}→${mem.newSize}`}
                             </td>
                           </tr>
                         ))}
