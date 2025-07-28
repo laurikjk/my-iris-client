@@ -21,7 +21,7 @@ export default function useProfile(pubKey?: string, subscribe = true) {
   const [profile, setProfile] = useState<NDKUserProfile | null>(
     profileCache.get(pubKeyHex || "") || null
   )
-  
+
   const subscriptionRef = useRef<NDKSubscription | null>(null)
 
   useEffect(() => {
@@ -30,7 +30,9 @@ export default function useProfile(pubKey?: string, subscribe = true) {
       subscriptionRef.current.stop()
       // Force cleanup by removing from subscription manager (NDK bug workaround)
       if (subscriptionRef.current.ndk?.subManager) {
-        subscriptionRef.current.ndk.subManager.subscriptions.delete(subscriptionRef.current.internalId)
+        subscriptionRef.current.ndk.subManager.subscriptions.delete(
+          subscriptionRef.current.internalId
+        )
       }
       subscriptionRef.current = null
     }
@@ -38,17 +40,17 @@ export default function useProfile(pubKey?: string, subscribe = true) {
     if (!pubKeyHex) {
       return
     }
-    
+
     const newProfile = profileCache.get(pubKeyHex || "") || null
     setProfile(newProfile)
-    
+
     if (newProfile && !subscribe) {
       return
     }
-    
+
     const sub = ndk().subscribe({kinds: [0], authors: [pubKeyHex]}, {closeOnEose: true})
     subscriptionRef.current = sub
-    
+
     let latest = 0
     sub.on("event", (event: NDKEvent) => {
       if (event.pubkey === pubKeyHex && event.kind === 0) {
@@ -69,7 +71,9 @@ export default function useProfile(pubKey?: string, subscribe = true) {
         subscriptionRef.current.stop()
         // Force cleanup by removing from subscription manager (NDK bug workaround)
         if (subscriptionRef.current.ndk?.subManager) {
-          subscriptionRef.current.ndk.subManager.subscriptions.delete(subscriptionRef.current.internalId)
+          subscriptionRef.current.ndk.subManager.subscriptions.delete(
+            subscriptionRef.current.internalId
+          )
         }
         subscriptionRef.current = null
       }

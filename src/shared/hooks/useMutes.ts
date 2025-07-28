@@ -21,7 +21,9 @@ const useMutes = (pubKey?: string) => {
       subscriptionRef.current.stop()
       // Force cleanup by removing from subscription manager (NDK bug workaround)
       if (subscriptionRef.current.ndk?.subManager) {
-        subscriptionRef.current.ndk.subManager.subscriptions.delete(subscriptionRef.current.internalId)
+        subscriptionRef.current.ndk.subManager.subscriptions.delete(
+          subscriptionRef.current.internalId
+        )
       }
       subscriptionRef.current = null
     }
@@ -65,7 +67,9 @@ const useMutes = (pubKey?: string) => {
         subscriptionRef.current.stop()
         // Force cleanup by removing from subscription manager (NDK bug workaround)
         if (subscriptionRef.current.ndk?.subManager) {
-          subscriptionRef.current.ndk.subManager.subscriptions.delete(subscriptionRef.current.internalId)
+          subscriptionRef.current.ndk.subManager.subscriptions.delete(
+            subscriptionRef.current.internalId
+          )
         }
         subscriptionRef.current = null
       }

@@ -177,19 +177,40 @@ self.addEventListener("notificationclick", (event) => {
       console.debug("Found clients:", allClients.length)
 
       if (allClients.length > 0) {
-        const client = allClients[0]
-        await client.focus()
-        console.debug("Sending navigation message to client")
-        await client.postMessage({
-          type: "NAVIGATE_REACT_ROUTER",
-          url: fullUrl,
-        })
-        return
+        // Try to find a visible client first, otherwise use the first one
+        let client = allClients.find((c) => c.visibilityState === "visible")
+        if (!client) {
+          client = allClients[0]
+        }
+
+        try {
+          await client.focus()
+          console.debug("Client focused, sending navigation message")
+          // Add a small delay to ensure focus completes before navigation
+          await new Promise((resolve) => setTimeout(resolve, 100))
+          await client.postMessage({
+            type: "NAVIGATE_REACT_ROUTER",
+            url: fullUrl,
+          })
+          console.debug("Navigation message sent successfully")
+          return
+        } catch (error) {
+          console.error("Failed to focus client or send navigation message:", error)
+          // Fall through to opening new window
+        }
       }
 
-      console.debug("No clients found, opening new window")
+      console.debug("No clients found or client communication failed, opening new window")
       if (self.clients.openWindow) {
-        return self.clients.openWindow(fullUrl)
+        try {
+          const newClient = await self.clients.openWindow(fullUrl)
+          console.debug("New window opened successfully")
+          return newClient
+        } catch (error) {
+          console.error("Failed to open new window:", error)
+        }
+      } else {
+        console.error("openWindow not available")
       }
     })()
   )
