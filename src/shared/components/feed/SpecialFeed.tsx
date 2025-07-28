@@ -1,10 +1,13 @@
-import {memo} from "react"
+import {memo, useState} from "react"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import FeedItem from "../event/FeedItem/FeedItem"
+import MediaFeed from "./MediaFeed"
+import {DisplayAsSelector} from "./DisplayAsSelector"
 import useSpecialFeedEvents from "@/shared/hooks/useSpecialFeedEvents"
 
 const SpecialFeed = memo(function SpecialFeed() {
   const {events, loadMore, loading} = useSpecialFeedEvents()
+  const [displayAs, setDisplayAs] = useState<"list" | "grid">("list")
 
   if (events.length === 0 && loading) {
     return (
@@ -23,11 +26,22 @@ const SpecialFeed = memo(function SpecialFeed() {
   }
 
   return (
-    <InfiniteScroll onLoadMore={loadMore}>
-      {events.map((event) => (
-        <FeedItem key={event.id} event={event} />
-      ))}
-    </InfiniteScroll>
+    <>
+      <DisplayAsSelector
+        activeSelection={displayAs}
+        onSelect={setDisplayAs}
+      />
+
+      <InfiniteScroll onLoadMore={loadMore}>
+        {displayAs === "grid" ? (
+          <MediaFeed events={events} />
+        ) : (
+          events.map((event) => (
+            <FeedItem key={event.id} event={event} />
+          ))
+        )}
+      </InfiniteScroll>
+    </>
   )
 })
 
