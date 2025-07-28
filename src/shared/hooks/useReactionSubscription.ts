@@ -9,7 +9,13 @@ import c from "config"
 const LOW_THRESHOLD = 30
 const INITIAL_DATA_THRESHOLD = 10
 
-const cache: Record<string, any> = {}
+interface ReactionSubscriptionCache {
+  hasInitialData?: boolean
+  pendingReactionCounts?: Map<string, Set<string>>
+  showingReactionCounts?: Map<string, Set<string>>
+}
+
+const cache: ReactionSubscriptionCache = {}
 
 export default function useReactionSubscription(
   currentFilters: PopularityFilters,

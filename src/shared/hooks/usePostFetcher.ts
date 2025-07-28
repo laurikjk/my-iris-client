@@ -2,7 +2,12 @@ import {useState, useEffect, useRef} from "react"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 
-const cache: Record<string, any> = {}
+interface PostFetcherCache {
+  events?: NDKEvent[]
+  hasLoadedInitial?: boolean
+}
+
+const cache: PostFetcherCache = {}
 
 export default function usePostFetcher(
   nextMostPopular: (n: number) => {eventId: string; reactions: string[]}[],

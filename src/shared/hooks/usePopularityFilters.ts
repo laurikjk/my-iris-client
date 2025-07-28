@@ -12,7 +12,11 @@ export interface PopularityFilters {
   authors: string[] | undefined
 }
 
-const cache: Record<string, any> = {}
+interface PopularityFiltersCache {
+  filterLevel?: number
+}
+
+const cache: PopularityFiltersCache = {}
 
 function calculateFilters(level: number, baseAuthors: string[]): PopularityFilters {
   const timeMultiplier = Math.pow(2, level) // 1x, 2x, 4x, 8x days
