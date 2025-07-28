@@ -170,7 +170,9 @@ function HomeFeedEvents() {
       {follows.length > 1 && myPubKey && <FeedTabs allTabs={allTabs} />}
       <NotificationPrompt />
       {activeTab === "popular" ? (
-        <SpecialFeed />
+        socialGraphLoaded ? (
+          <SpecialFeed />
+        ) : null
       ) : (
         <Feed
           key={feedKey}
