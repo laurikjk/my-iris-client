@@ -46,7 +46,10 @@ export default function useReactionSubscription(
       }
 
       // Check if we have enough initial data
-      if (!hasInitialData && pendingReactionCounts.current.size >= INITIAL_DATA_THRESHOLD) {
+      if (
+        !hasInitialData &&
+        pendingReactionCounts.current.size >= INITIAL_DATA_THRESHOLD
+      ) {
         setHasInitialData(true)
       }
     })

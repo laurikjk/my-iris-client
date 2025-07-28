@@ -27,18 +27,13 @@ const SpecialFeed = memo(function SpecialFeed() {
 
   return (
     <>
-      <DisplayAsSelector
-        activeSelection={displayAs}
-        onSelect={setDisplayAs}
-      />
+      <DisplayAsSelector activeSelection={displayAs} onSelect={setDisplayAs} />
 
       <InfiniteScroll onLoadMore={loadMore}>
         {displayAs === "grid" ? (
           <MediaFeed events={events} />
         ) : (
-          events.map((event) => (
-            <FeedItem key={event.id} event={event} />
-          ))
+          events.map((event) => <FeedItem key={event.id} event={event} />)
         )}
       </InfiniteScroll>
     </>
