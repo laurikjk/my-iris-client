@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useEffect} from "react"
+import {useCallback, useMemo, useEffect, useState} from "react"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
@@ -21,6 +21,7 @@ import {
   type TabConfig,
 } from "@/stores/feed"
 import FeedTabs, {type FeedTab} from "@/shared/components/feed/FeedTabs"
+import FeedEditor from "@/shared/components/feed/FeedEditor"
 
 const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
   myPubKey ? (
@@ -92,10 +93,18 @@ function HomeFeedEvents() {
   const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true) // to update on follows change
   const refreshSignal = useRefreshRouteSignal()
-  const {activeHomeTab: activeTab, getAllFeedConfigs, loadFeedConfig} = useFeedStore()
+  const {
+    activeHomeTab: activeTab,
+    setActiveHomeTab: setActiveTab,
+    getAllFeedConfigs,
+    loadFeedConfig,
+    deleteFeed,
+    resetAllFeedsToDefaults,
+  } = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
   const tabConfigs = useTabConfigs()
   const socialGraphLoaded = useSocialGraphLoaded()
+  const [editMode, setEditMode] = useState(false)
 
   // Convert store configs to FeedTab format
   const allTabs: FeedTab[] = useMemo(() => {
@@ -122,6 +131,48 @@ function HomeFeedEvents() {
   )
 
   const openedAt = useMemo(() => Date.now(), [])
+
+  // Editor handler functions
+  const toggleEditMode = () => {
+    setEditMode(!editMode)
+  }
+
+  const handleDeleteFeed = (feedId: string) => {
+    if (tabs.length <= 1) {
+      return // Don't allow deleting the last tab
+    }
+
+    const getDisplayName = (feedId: string, defaultName: string) => {
+      const config = loadFeedConfig(feedId)
+      return config?.customName || defaultName
+    }
+
+    if (
+      confirm(
+        `Delete feed "${getDisplayName(feedId, tabs.find((t) => t.id === feedId)?.name || "")}"?`
+      )
+    ) {
+      // If deleting the active tab, switch to the first remaining tab
+      if (feedId === activeTab) {
+        const remainingTabs = tabs.filter((t) => t.id !== feedId)
+        if (remainingTabs.length > 0) {
+          setActiveTab(remainingTabs[0].id)
+        }
+      }
+
+      deleteFeed(feedId)
+    }
+  }
+
+  const handleResetFeeds = () => {
+    if (confirm("Reset all feeds to defaults?")) {
+      console.log("User confirmed reset")
+      setEditMode(false)
+      feedCache.clear()
+      resetAllFeedsToDefaults()
+      console.log("Reset function called")
+    }
+  }
 
   useEffect(() => {
     if (activeTab !== "unseen") {
@@ -167,7 +218,22 @@ function HomeFeedEvents() {
       <Header showBack={false}>
         <span className="md:px-3 md:py-2">{feedName}</span>
       </Header>
-      {follows.length > 1 && myPubKey && <FeedTabs allTabs={allTabs} />}
+      {follows.length > 1 && myPubKey && (
+        <FeedTabs
+          allTabs={allTabs}
+          editMode={editMode}
+          onEditModeToggle={toggleEditMode}
+        />
+      )}
+      {editMode && follows.length > 1 && myPubKey && (
+        <FeedEditor
+          activeTab={activeTab}
+          tabs={tabs}
+          onEditModeToggle={toggleEditMode}
+          onDeleteFeed={handleDeleteFeed}
+          onResetFeeds={handleResetFeeds}
+        />
+      )}
       <NotificationPrompt />
       {activeTabConfig?.feedType === "popular" ? (
         socialGraphLoaded && <PopularHomeFeed />
