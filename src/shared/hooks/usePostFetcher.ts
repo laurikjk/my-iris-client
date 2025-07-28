@@ -7,11 +7,10 @@ interface PostFetcherCache {
   hasLoadedInitial?: boolean
 }
 
-const cache: PostFetcherCache = {}
-
 export default function usePostFetcher(
   nextMostPopular: (n: number) => {eventId: string; reactions: string[]}[],
-  hasInitialData: boolean
+  hasInitialData: boolean,
+  cache: PostFetcherCache
 ) {
   const [events, setEvents] = useState<NDKEvent[]>(cache.events || [])
   const [loading, setLoading] = useState<boolean>(false)

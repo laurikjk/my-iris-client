@@ -14,6 +14,35 @@ export const nip05VerificationCache = new LRUCache<string, boolean>({maxSize: 10
 // Cache for imgproxy failures - track URLs that failed to load through proxy
 export const imgproxyFailureCache = new LRUCache<string, boolean>({maxSize: 100})
 
+// Special feed cache interfaces
+interface PostFetcherCache {
+  events?: NDKEvent[]
+  hasLoadedInitial?: boolean
+}
+
+interface ReactionSubscriptionCache {
+  hasInitialData?: boolean
+  pendingReactionCounts?: Map<string, Set<string>>
+  showingReactionCounts?: Map<string, Set<string>>
+}
+
+interface PopularityFiltersCache {
+  filterLevel?: number
+}
+
+interface SpecialFeedCache {
+  postFetcher: PostFetcherCache
+  reactionSubscription: ReactionSubscriptionCache
+  popularityFilters: PopularityFiltersCache
+}
+
+// Simple cache for special feed - no LRU needed since there's only one instance
+export const specialFeedCache: SpecialFeedCache = {
+  postFetcher: {},
+  reactionSubscription: {},
+  popularityFilters: {},
+}
+
 // Load seenEventIds from localForage
 localforage
   .getItem<string[]>("seenEventIds")

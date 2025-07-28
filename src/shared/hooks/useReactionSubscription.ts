@@ -4,7 +4,6 @@ import {ndk} from "@/utils/ndk"
 import {REACTION_KIND, REPOST_KIND} from "@/pages/chats/utils/constants"
 import {getTag} from "@/utils/nostr"
 import {PopularityFilters} from "./usePopularityFilters"
-import c from "config"
 
 const LOW_THRESHOLD = 30
 const INITIAL_DATA_THRESHOLD = 10
@@ -15,11 +14,10 @@ interface ReactionSubscriptionCache {
   showingReactionCounts?: Map<string, Set<string>>
 }
 
-const cache: ReactionSubscriptionCache = {}
-
 export default function useReactionSubscription(
   currentFilters: PopularityFilters,
-  expandFilters: () => void
+  expandFilters: () => void,
+  cache: ReactionSubscriptionCache
 ) {
   const showingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const pendingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
