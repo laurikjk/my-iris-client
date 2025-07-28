@@ -4,6 +4,7 @@ import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
+import PopularHomeFeed from "@/shared/components/feed/PopularHomeFeed"
 import {useRefreshRouteSignal} from "@/stores/notifications"
 import {seenEventIds, feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
@@ -168,23 +169,27 @@ function HomeFeedEvents() {
       </Header>
       {follows.length > 1 && myPubKey && <FeedTabs allTabs={allTabs} />}
       <NotificationPrompt />
-      <Feed
-        key={feedKey}
-        filters={activeTabConfig.filter as unknown as NDKFilter}
-        displayFilterFn={displayFilterFn}
-        fetchFilterFn={activeTabItem?.fetchFilterFn}
-        showDisplayAsSelector={follows.length > 1}
-        cacheKey={`${activeTabItem?.id || activeTab}-${activeTabConfig?.filter?.search || ""}`}
-        showRepliedTo={
-          activeTabConfig?.showRepliedTo ?? activeTabItem?.showRepliedTo ?? true
-        }
-        forceUpdate={0}
-        sortLikedPosts={activeTabItem?.sortLikedPosts}
-        emptyPlaceholder={""}
-        showEventsByUnknownUsers={activeTabConfig?.showEventsByUnknownUsers ?? false}
-        followDistance={activeTabConfig?.followDistance}
-        {...(activeTabConfig?.relayUrls && {relayUrls: activeTabConfig.relayUrls})}
-      />
+      {activeTab === "popular" ? (
+        socialGraphLoaded && <PopularHomeFeed />
+      ) : (
+        <Feed
+          key={feedKey}
+          filters={activeTabConfig.filter as unknown as NDKFilter}
+          displayFilterFn={displayFilterFn}
+          fetchFilterFn={activeTabItem?.fetchFilterFn}
+          showDisplayAsSelector={follows.length > 1}
+          cacheKey={`${activeTabItem?.id || activeTab}-${activeTabConfig?.filter?.search || ""}`}
+          showRepliedTo={
+            activeTabConfig?.showRepliedTo ?? activeTabItem?.showRepliedTo ?? true
+          }
+          forceUpdate={0}
+          sortLikedPosts={activeTabItem?.sortLikedPosts}
+          emptyPlaceholder={""}
+          showEventsByUnknownUsers={activeTabConfig?.showEventsByUnknownUsers ?? false}
+          followDistance={activeTabConfig?.followDistance}
+          {...(activeTabConfig?.relayUrls && {relayUrls: activeTabConfig.relayUrls})}
+        />
+      )}
       {socialGraphLoaded && follows.length <= 1 && (
         <>
           <NoFollows myPubKey={myPubKey} />
