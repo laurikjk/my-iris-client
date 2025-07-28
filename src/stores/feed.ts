@@ -23,6 +23,7 @@ interface TabConfig {
   excludeSeen?: boolean
   showEventsByUnknownUsers?: boolean
   relayUrls?: string[]
+  feedType?: "chronological" | "popular"
 }
 
 interface FeedState {
@@ -69,6 +70,7 @@ const defaultTabConfigs: Record<string, TabConfig> = {
     },
     followDistance: 2,
     sortLikedPosts: true,
+    feedType: "popular",
   },
   latest: {
     name: "Latest",
