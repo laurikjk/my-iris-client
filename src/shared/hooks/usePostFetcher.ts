@@ -2,13 +2,25 @@ import {useState, useEffect, useRef} from "react"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 
+const cache: Record<string, any> = {}
+
 export default function usePostFetcher(
   nextMostPopular: (n: number) => {eventId: string; reactions: string[]}[],
   hasInitialData: boolean
 ) {
-  const [events, setEvents] = useState<NDKEvent[]>([])
+  const [events, setEvents] = useState<NDKEvent[]>(cache.events || [])
   const [loading, setLoading] = useState<boolean>(false)
-  const hasLoadedInitial = useRef(false)
+  const hasLoadedInitial = useRef(cache.hasLoadedInitial || false)
+
+  // Update cache when events change
+  useEffect(() => {
+    cache.events = events
+  }, [events])
+
+  // Update cache when hasLoadedInitial changes
+  useEffect(() => {
+    cache.hasLoadedInitial = hasLoadedInitial.current
+  }, [hasLoadedInitial.current])
 
   const loadInitial = async () => {
     setLoading(true)

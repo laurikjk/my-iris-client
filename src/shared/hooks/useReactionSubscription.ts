@@ -4,9 +4,12 @@ import {ndk} from "@/utils/ndk"
 import {REACTION_KIND, REPOST_KIND} from "@/pages/chats/utils/constants"
 import {getTag} from "@/utils/nostr"
 import {PopularityFilters} from "./usePopularityFilters"
+import c from "config"
 
 const LOW_THRESHOLD = 30
 const INITIAL_DATA_THRESHOLD = 10
+
+const cache: Record<string, any> = {}
 
 export default function useReactionSubscription(
   currentFilters: PopularityFilters,
@@ -14,7 +17,17 @@ export default function useReactionSubscription(
 ) {
   const showingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const pendingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
-  const [hasInitialData, setHasInitialData] = useState(false)
+  const [hasInitialData, setHasInitialData] = useState(cache.hasInitialData || false)
+
+  // Initialize refs from cache on mount
+  useEffect(() => {
+    if (cache.pendingReactionCounts) {
+      pendingReactionCounts.current = cache.pendingReactionCounts
+    }
+    if (cache.showingReactionCounts) {
+      showingReactionCounts.current = cache.showingReactionCounts
+    }
+  }, [])
 
   useEffect(() => {
     const {timeRange, limit, authors: filterAuthors} = currentFilters
@@ -51,7 +64,10 @@ export default function useReactionSubscription(
         pendingReactionCounts.current.size >= INITIAL_DATA_THRESHOLD
       ) {
         setHasInitialData(true)
+        cache.hasInitialData = true
       }
+      cache.pendingReactionCounts = pendingReactionCounts.current
+      cache.showingReactionCounts = showingReactionCounts.current
     })
 
     return () => sub.stop()
