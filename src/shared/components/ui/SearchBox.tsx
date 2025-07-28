@@ -159,7 +159,9 @@ function SearchBox({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only handle keyboard events if this SearchBox input is focused
+      // AND the dropdown is visible (either showing search results or recent searches)
       if (document.activeElement !== inputRef.current) return
+      if (!isFocused && searchResults.length === 0 && recentSearches.length === 0) return
 
       // Determine which list is currently being displayed
       const displayedItems = value ? searchResults : recentSearches
