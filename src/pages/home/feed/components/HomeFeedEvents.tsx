@@ -179,7 +179,6 @@ function HomeFeedEvents() {
       {follows.length <= 1 && (
         <>
           <NoFollows myPubKey={myPubKey} />
-          <PopularFeed small={false} days={7} />
         </>
       )}
     </>
