@@ -1,4 +1,4 @@
-import React from "react"
+import React, {useEffect, useRef, useState} from "react"
 import {useFeedStore, useEnabledFeedIds, type FeedConfig} from "@/stores/feed"
 import {
   RiArrowLeftSLine,
@@ -23,6 +23,8 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
     setEnabledFeedIds,
   } = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [maxWidth, setMaxWidth] = useState<number | null>(null)
 
   // Filter and order feeds based on enabled feed IDs from store
   const feeds = React.useMemo(() => {
@@ -80,6 +82,23 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
     setActiveFeed(uniqueId)
   }
 
+  // Calculate max width for tab container based on available space
+  // TODO: fix layout to prevent middle column overflowing x-axis. difficult with sticky elements
+  useEffect(() => {
+    const calculateMaxWidth = () => {
+      if (containerRef.current) {
+        const parentWidth = containerRef.current.parentElement?.clientWidth || 0
+        // Reserve space for edit button (40px) + create button if in edit mode (80px) + padding (32px)
+        const reservedSpace = editMode ? 152 : 72
+        setMaxWidth(Math.max(200, parentWidth - reservedSpace))
+      }
+    }
+
+    calculateMaxWidth()
+    window.addEventListener("resize", calculateMaxWidth)
+    return () => window.removeEventListener("resize", calculateMaxWidth)
+  }, [editMode])
+
   return (
     <div className="px-4 pb-4">
       <div className="flex flex-row items-center gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
@@ -104,19 +123,25 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
           </button>
         )}
 
-        {feeds.map((f) => (
-          <div key={f.id} className="flex flex-col items-center gap-1">
-            <button
-              className={`btn btn-sm cursor-pointer whitespace-nowrap ${
-                activeFeed === f.id ? "btn-primary" : "btn-neutral"
-              }`}
-              onClick={() => setActiveFeed(f.id)}
-              title="Click to select"
-            >
-              {getDisplayName(f.id, f.name)}
-            </button>
-          </div>
-        ))}
+        <div
+          ref={containerRef}
+          className="flex flex-row gap-2 overflow-x-auto scrollbar-hide"
+          style={{maxWidth: maxWidth ? `${maxWidth}px` : undefined}}
+        >
+          {feeds.map((f) => (
+            <div key={f.id} className="flex flex-col items-center gap-1 flex-shrink-0">
+              <button
+                className={`btn btn-sm cursor-pointer whitespace-nowrap ${
+                  activeFeed === f.id ? "btn-primary" : "btn-neutral"
+                }`}
+                onClick={() => setActiveFeed(f.id)}
+                title="Click to select"
+              >
+                {getDisplayName(f.id, f.name)}
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Arrow buttons for reordering in edit mode */}
