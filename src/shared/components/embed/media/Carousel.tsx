@@ -132,7 +132,6 @@ function Carousel({media, event}: CarouselProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [targetIndex, setTargetIndex] = useState<number | null>(null)
-  const [trackKey, setTrackKey] = useState(0)
 
   // NEW: explicit direction to avoid ambiguity when media.length === 2
   const [transitionDirection, setTransitionDirection] = useState<
@@ -289,9 +288,14 @@ function Carousel({media, event}: CarouselProps) {
       if (!isTransitioning) return
 
       const committed = targetIndex !== null && targetIndex !== currentIndex
+
+      // Temporarily disable transitions before changing styles
+      if (containerRef.current) {
+        containerRef.current.style.transition = "none"
+      }
+
       if (committed) {
         setCurrentIndex(targetIndex as number)
-        setTrackKey((prev) => prev + 1) // Force remount to reset transition state
       }
 
       setDragX(0)
@@ -300,6 +304,13 @@ function Carousel({media, event}: CarouselProps) {
       setTargetIndex(null)
       dragStartX.current = null
       dragLastX.current = null
+
+      // Re-enable transitions after a brief delay
+      setTimeout(() => {
+        if (containerRef.current) {
+          containerRef.current.style.transition = ""
+        }
+      }, 50)
     },
     [isTransitioning, targetIndex, currentIndex]
   )
@@ -326,7 +337,6 @@ function Carousel({media, event}: CarouselProps) {
 
     return (
       <div
-        key={trackKey}
         ref={containerRef}
         className="flex w-full h-full select-none"
         style={{
