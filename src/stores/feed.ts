@@ -29,6 +29,8 @@ interface FeedConfig {
   repliesTo?: string
   // Sort type for events
   sortType?: "chronological" | "followDistance" | "liked"
+  // Show new events automatically without the dialog
+  autoShowNewEvents?: boolean
 }
 
 interface FeedState {

@@ -219,6 +219,13 @@ const Feed = memo(function Feed({
     return new Set(newEventsFiltered.map((event) => event.pubkey))
   }, [newEventsFiltered])
 
+  // Auto-show new events if enabled
+  useEffect(() => {
+    if (feedConfig.autoShowNewEvents && newEventsFiltered.length > 0) {
+      showNewEvents()
+    }
+  }, [feedConfig.autoShowNewEvents, newEventsFiltered.length, showNewEvents])
+
   const gridEvents = useMemo(() => {
     if (displayAs === "grid") {
       return filteredEvents
@@ -260,7 +267,7 @@ const Feed = memo(function Feed({
         />
       )}
 
-      {newEventsFiltered.length > 0 && (
+      {newEventsFiltered.length > 0 && !feedConfig.autoShowNewEvents && (
         <NewEventsButton
           newEventsFiltered={newEventsFiltered}
           newEventsFrom={newEventsFromFiltered}

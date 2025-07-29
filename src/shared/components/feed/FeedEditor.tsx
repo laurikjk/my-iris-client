@@ -97,6 +97,16 @@ function FeedEditor({
           />
           <span className="text-sm text-base-content/70">Hide seen posts</span>
         </label>
+
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={localConfig?.autoShowNewEvents ?? false}
+            onChange={(e) => updateConfig("autoShowNewEvents", e.target.checked)}
+            className="checkbox checkbox-sm"
+          />
+          <span className="text-sm text-base-content/70">Show new events automatically</span>
+        </label>
       </>
     )
   }
