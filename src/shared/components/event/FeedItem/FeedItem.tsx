@@ -33,6 +33,7 @@ type FeedItemProps = {
   asReply?: boolean
   onEvent?: (event: NDKEvent) => void
   borderTop?: boolean
+  highlightAsNew?: boolean
 }
 
 function FeedItem({
@@ -49,11 +50,29 @@ function FeedItem({
   asReply = false,
   onEvent,
   borderTop,
+  highlightAsNew = false,
 }: FeedItemProps) {
   const [expanded, setExpanded] = useState(false)
   const [hasActualReplies, setHasActualReplies] = useState(false)
   const navigate = useNavigate()
   const subscriptionRef = useRef<NDKSubscription | null>(null)
+
+  // Handle highlight animation with lightning-like flash
+  useEffect(() => {
+    if (highlightAsNew && feedItemRef.current) {
+      // Quick flash in (lightning-like)
+      feedItemRef.current.style.transition = "background-color 0.05s ease-in"
+      feedItemRef.current.style.backgroundColor = "rgba(59, 130, 246, 0.15)" // more transparent blue flash
+
+      setTimeout(() => {
+        if (feedItemRef.current) {
+          // Slower fade out
+          feedItemRef.current.style.transition = "background-color 1.5s ease-out"
+          feedItemRef.current.style.backgroundColor = ""
+        }
+      }, 200)
+    }
+  }, [highlightAsNew])
 
   if ((!initialEvent || !initialEvent.id) && !eventId) {
     throw new Error(

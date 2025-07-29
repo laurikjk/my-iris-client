@@ -105,7 +105,9 @@ function FeedEditor({
             onChange={(e) => updateConfig("autoShowNewEvents", e.target.checked)}
             className="checkbox checkbox-sm"
           />
-          <span className="text-sm text-base-content/70">Show new events automatically</span>
+          <span className="text-sm text-base-content/70">
+            Show new events automatically
+          </span>
         </label>
       </>
     )
