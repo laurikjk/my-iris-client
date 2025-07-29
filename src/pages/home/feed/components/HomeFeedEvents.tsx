@@ -1,26 +1,23 @@
-import {useCallback, useMemo, useEffect, useState} from "react"
-import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
+import {useMemo, useEffect, useState} from "react"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
 import PopularHomeFeed from "@/shared/components/feed/PopularHomeFeed"
 import {useRefreshRouteSignal} from "@/stores/notifications"
-import {seenEventIds, feedCache} from "@/utils/memcache"
+import {feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
 import Feed from "@/shared/components/feed/Feed.tsx"
-import {hasMedia} from "@/shared/components/embed"
 import useFollows from "@/shared/hooks/useFollows"
-import {getEventReplyingTo} from "@/utils/nostr"
 import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {usePublicKey} from "@/stores/user"
 import {
   useFeedStore,
   useEnabledFeedIds,
-  useTabConfigs,
-  type TabConfig,
+  useFeedConfigs,
+  type FeedConfig,
 } from "@/stores/feed"
-import FeedTabs, {type FeedTab} from "@/shared/components/feed/FeedTabs"
+import FeedTabs, {type Feed as FeedType} from "@/shared/components/feed/FeedTabs"
 import FeedEditor from "@/shared/components/feed/FeedEditor"
 
 const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
@@ -33,60 +30,15 @@ const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
     </div>
   ) : null
 
-// Convert store config to FeedTab format with filter functions
-const createFeedTabFromConfig = (config: TabConfig): FeedTab => {
-  const tab: FeedTab = {
+// Convert store config to Feed format - now much simpler since Feed component handles filter logic
+const createFeedFromConfig = (config: FeedConfig): FeedType => {
+  return {
     name: config.name,
     id: config.id,
     showRepliedTo: config.showRepliedTo,
     sortLikedPosts: config.sortLikedPosts,
+    filter: config.filter,
   }
-
-  // Add filter if exists
-  if (config.filter) {
-    tab.filter = config.filter
-  }
-
-  // Create fetchFilterFn based on config
-  if (config.excludeSeen || config.hideReplies) {
-    tab.fetchFilterFn = (e: NDKEvent) => {
-      // Check if should exclude seen events
-      if (config.excludeSeen && seenEventIds.has(e.id)) {
-        return false
-      }
-
-      // Check reply exclusion
-      if (config.hideReplies && getEventReplyingTo(e)) {
-        return false
-      }
-
-      return true
-    }
-  }
-
-  // Create displayFilterFn based on config
-  if (config.requiresMedia || config.requiresReplies || config.hideReplies) {
-    tab.displayFilterFn = (e: NDKEvent) => {
-      // Check if requires media
-      if (config.requiresMedia && !hasMedia(e)) {
-        return false
-      }
-
-      // Check if requires replies
-      if (config.requiresReplies && !getEventReplyingTo(e)) {
-        return false
-      }
-
-      // Check reply exclusion for display
-      if (config.hideReplies && getEventReplyingTo(e)) {
-        return false
-      }
-
-      return true
-    }
-  }
-
-  return tab
 }
 
 function HomeFeedEvents() {
@@ -94,40 +46,40 @@ function HomeFeedEvents() {
   const follows = useFollows(myPubKey, true) // to update on follows change
   const refreshSignal = useRefreshRouteSignal()
   const {
-    activeHomeTab: activeTab,
-    setActiveHomeTab: setActiveTab,
+    activeFeed,
+    setActiveFeed,
     getAllFeedConfigs,
     loadFeedConfig,
     deleteFeed,
     resetAllFeedsToDefaults,
   } = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
-  const tabConfigs = useTabConfigs()
+  const feedConfigs = useFeedConfigs()
   const socialGraphLoaded = useSocialGraphLoaded()
   const [editMode, setEditMode] = useState(false)
 
-  // Convert store configs to FeedTab format
-  const allTabs: FeedTab[] = useMemo(() => {
+  // Convert store configs to Feed format
+  const allFeeds: FeedType[] = useMemo(() => {
     const configs = getAllFeedConfigs()
-    return configs.map((config) => createFeedTabFromConfig(config))
-  }, [getAllFeedConfigs, tabConfigs, activeTab])
+    return configs.map((config) => createFeedFromConfig(config))
+  }, [getAllFeedConfigs, feedConfigs, activeFeed])
 
-  // Filter and order tabs based on enabled feed IDs from store
-  const tabs = useMemo(() => {
-    const tabsMap = new Map(allTabs.map((tab) => [tab.id, tab]))
+  // Filter and order feeds based on enabled feed IDs from store
+  const feeds = useMemo(() => {
+    const feedsMap = new Map(allFeeds.map((feed) => [feed.id, feed]))
     return enabledFeedIds
-      .map((id) => tabsMap.get(id))
-      .filter((tab): tab is FeedTab => tab !== undefined)
-  }, [allTabs, enabledFeedIds])
+      .map((id) => feedsMap.get(id))
+      .filter((feed): feed is FeedType => feed !== undefined)
+  }, [allFeeds, enabledFeedIds])
 
-  const activeTabItem = useMemo(
-    () => tabs.find((t) => t.id === activeTab) || tabs[0] || null,
-    [activeTab, tabs]
+  const activeFeedItem = useMemo(
+    () => feeds.find((f) => f.id === activeFeed) || feeds[0] || null,
+    [activeFeed, feeds]
   )
 
-  const activeTabConfig = useMemo(
-    () => loadFeedConfig(activeTab),
-    [loadFeedConfig, activeTab]
+  const activeFeedConfig = useMemo(
+    () => loadFeedConfig(activeFeed),
+    [loadFeedConfig, activeFeed]
   )
 
   const openedAt = useMemo(() => Date.now(), [])
@@ -138,8 +90,8 @@ function HomeFeedEvents() {
   }
 
   const handleDeleteFeed = (feedId: string) => {
-    if (tabs.length <= 1) {
-      return // Don't allow deleting the last tab
+    if (feeds.length <= 1) {
+      return // Don't allow deleting the last feed
     }
 
     const getDisplayName = (feedId: string, defaultName: string) => {
@@ -149,14 +101,14 @@ function HomeFeedEvents() {
 
     if (
       confirm(
-        `Delete feed "${getDisplayName(feedId, tabs.find((t) => t.id === feedId)?.name || "")}"?`
+        `Delete feed "${getDisplayName(feedId, feeds.find((f) => f.id === feedId)?.name || "")}"?`
       )
     ) {
-      // If deleting the active tab, switch to the first remaining tab
-      if (feedId === activeTab) {
-        const remainingTabs = tabs.filter((t) => t.id !== feedId)
-        if (remainingTabs.length > 0) {
-          setActiveTab(remainingTabs[0].id)
+      // If deleting the active feed, switch to the first remaining feed
+      if (feedId === activeFeed) {
+        const remainingFeeds = feeds.filter((f) => f.id !== feedId)
+        if (remainingFeeds.length > 0) {
+          setActiveFeed(remainingFeeds[0].id)
         }
       }
 
@@ -175,43 +127,27 @@ function HomeFeedEvents() {
   }
 
   useEffect(() => {
-    if (activeTab !== "unseen") {
+    if (activeFeed !== "unseen") {
       feedCache.delete("unseen")
     }
-    if (activeTab === "unseen" && refreshSignal > openedAt) {
+    if (activeFeed === "unseen" && refreshSignal > openedAt) {
       feedCache.delete("unseen")
     }
-  }, [activeTabItem, openedAt, refreshSignal, activeTab])
+  }, [activeFeedItem, openedAt, refreshSignal, activeFeed])
 
   // Create a comprehensive key that changes when any relevant config changes
   const feedKey = useMemo(() => {
-    return `feed-${JSON.stringify(activeTabConfig)}`
-  }, [activeTab, activeTabConfig])
+    return `feed-${JSON.stringify(activeFeedConfig)}`
+  }, [activeFeed, activeFeedConfig])
 
-  const displayFilterFn = useCallback(
-    (event: NDKEvent) => {
-      if (
-        activeTab === "unseen" &&
-        refreshSignal > openedAt &&
-        seenEventIds.has(event.id)
-      ) {
-        return false
-      }
-
-      const tabFilter = activeTabItem?.displayFilterFn
-      return tabFilter ? tabFilter(event) : true
-    },
-    [activeTabItem, activeTab, refreshSignal, openedAt]
-  )
-
-  if (!activeTabConfig?.filter) {
+  if (!activeFeedConfig?.filter) {
     return null
   }
 
   const feedName =
     follows.length <= 1
       ? "Home"
-      : activeTabConfig?.customName || activeTabItem?.name || "Following"
+      : activeFeedConfig?.customName || activeFeedItem?.name || "Following"
 
   return (
     <>
@@ -220,42 +156,30 @@ function HomeFeedEvents() {
       </Header>
       {follows.length > 1 && myPubKey && (
         <FeedTabs
-          allTabs={allTabs}
+          allTabs={allFeeds}
           editMode={editMode}
           onEditModeToggle={toggleEditMode}
         />
       )}
       {editMode && follows.length > 1 && myPubKey && (
         <FeedEditor
-          activeTab={activeTab}
-          tabs={tabs}
+          activeTab={activeFeed}
+          tabs={feeds}
           onEditModeToggle={toggleEditMode}
           onDeleteFeed={handleDeleteFeed}
           onResetFeeds={handleResetFeeds}
         />
       )}
       <NotificationPrompt />
-      {activeTabConfig?.feedType === "popular" ? (
-        socialGraphLoaded && <PopularHomeFeed />
-      ) : (
-        <Feed
-          key={feedKey}
-          filters={activeTabConfig.filter as unknown as NDKFilter}
-          displayFilterFn={displayFilterFn}
-          fetchFilterFn={activeTabItem?.fetchFilterFn}
-          showDisplayAsSelector={follows.length > 1}
-          cacheKey={`${activeTabItem?.id || activeTab}-${activeTabConfig?.filter?.search || ""}`}
-          showRepliedTo={
-            activeTabConfig?.showRepliedTo ?? activeTabItem?.showRepliedTo ?? true
-          }
-          forceUpdate={0}
-          sortLikedPosts={activeTabItem?.sortLikedPosts}
-          emptyPlaceholder={""}
-          showEventsByUnknownUsers={activeTabConfig?.showEventsByUnknownUsers ?? false}
-          followDistance={activeTabConfig?.followDistance}
-          {...(activeTabConfig?.relayUrls && {relayUrls: activeTabConfig.relayUrls})}
-        />
-      )}
+      <Feed
+        key={feedKey}
+        feedConfig={activeFeedConfig}
+        showDisplayAsSelector={follows.length > 1}
+        forceUpdate={0}
+        emptyPlaceholder={""}
+        refreshSignal={refreshSignal}
+        openedAt={openedAt}
+      />
       {socialGraphLoaded && follows.length <= 1 && (
         <>
           <NoFollows myPubKey={myPubKey} />

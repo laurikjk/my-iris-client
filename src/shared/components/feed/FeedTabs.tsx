@@ -8,7 +8,7 @@ import {
   RiAddLine,
 } from "@remixicon/react"
 
-interface FeedTab {
+interface Feed {
   name: string
   id: string
   showRepliedTo?: boolean
@@ -23,15 +23,15 @@ interface FeedTab {
 }
 
 interface FeedTabsProps {
-  allTabs: FeedTab[]
+  allTabs: Feed[]
   editMode: boolean
   onEditModeToggle: () => void
 }
 
 function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
   const {
-    activeHomeTab: activeTab,
-    setActiveHomeTab: setActiveTab,
+    activeFeed,
+    setActiveFeed,
     reorderFeeds,
     saveFeedConfig,
     loadFeedConfig,
@@ -39,12 +39,12 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
   } = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
 
-  // Filter and order tabs based on enabled feed IDs from store
-  const tabs = React.useMemo(() => {
-    const tabsMap = new Map(allTabs.map((tab) => [tab.id, tab]))
+  // Filter and order feeds based on enabled feed IDs from store
+  const feeds = React.useMemo(() => {
+    const feedsMap = new Map(allTabs.map((feed) => [feed.id, feed]))
     return enabledFeedIds
-      .map((id) => tabsMap.get(id))
-      .filter((tab): tab is FeedTab => tab !== undefined)
+      .map((id) => feedsMap.get(id))
+      .filter((feed): feed is Feed => feed !== undefined)
   }, [allTabs, enabledFeedIds])
 
   // Helper function to get display name
@@ -53,17 +53,17 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
     return config?.customName || defaultName
   }
 
-  // Move tab left or right
-  const moveTabLeft = () => {
-    const currentIndex = tabs.findIndex((t) => t.id === activeTab)
+  // Move feed left or right
+  const moveFeedLeft = () => {
+    const currentIndex = feeds.findIndex((f) => f.id === activeFeed)
     if (currentIndex > 0) {
       reorderFeeds(currentIndex, currentIndex - 1)
     }
   }
 
-  const moveTabRight = () => {
-    const currentIndex = tabs.findIndex((t) => t.id === activeTab)
-    if (currentIndex < tabs.length - 1) {
+  const moveFeedRight = () => {
+    const currentIndex = feeds.findIndex((f) => f.id === activeFeed)
+    if (currentIndex < feeds.length - 1) {
       reorderFeeds(currentIndex, currentIndex + 1)
     }
   }
@@ -91,8 +91,8 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
     const newEnabledFeedIds = [uniqueId, ...enabledFeedIds]
     setEnabledFeedIds(newEnabledFeedIds)
 
-    // Set as active tab
-    setActiveTab(uniqueId)
+    // Set as active feed
+    setActiveFeed(uniqueId)
   }
 
   return (
@@ -119,16 +119,16 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
           </button>
         )}
 
-        {tabs.map((t) => (
-          <div key={t.id} className="flex flex-col items-center gap-1">
+        {feeds.map((f) => (
+          <div key={f.id} className="flex flex-col items-center gap-1">
             <button
               className={`btn btn-sm cursor-pointer whitespace-nowrap ${
-                activeTab === t.id ? "btn-primary" : "btn-neutral"
+                activeFeed === f.id ? "btn-primary" : "btn-neutral"
               }`}
-              onClick={() => setActiveTab(t.id)}
+              onClick={() => setActiveFeed(f.id)}
               title="Click to select"
             >
-              {getDisplayName(t.id, t.name)}
+              {getDisplayName(f.id, f.name)}
             </button>
           </div>
         ))}
@@ -138,23 +138,26 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
       {editMode && (
         <div className="flex justify-center gap-2 mt-2">
           <button
-            onClick={moveTabLeft}
-            disabled={tabs.findIndex((t) => t.id === activeTab) === 0}
+            onClick={moveFeedLeft}
+            disabled={feeds.findIndex((f) => f.id === activeFeed) === 0}
             className="btn btn-sm btn-neutral"
-            title="Move active tab left"
+            title="Move active feed left"
           >
             <RiArrowLeftSLine className="w-4 h-4" />
           </button>
           <span className="text-sm text-base-content/70 self-center">
             Move &quot;
-            {getDisplayName(activeTab, tabs.find((t) => t.id === activeTab)?.name || "")}
+            {getDisplayName(
+              activeFeed,
+              feeds.find((f) => f.id === activeFeed)?.name || ""
+            )}
             &quot;
           </span>
           <button
-            onClick={moveTabRight}
-            disabled={tabs.findIndex((t) => t.id === activeTab) === tabs.length - 1}
+            onClick={moveFeedRight}
+            disabled={feeds.findIndex((f) => f.id === activeFeed) === feeds.length - 1}
             className="btn btn-sm btn-neutral"
-            title="Move active tab right"
+            title="Move active feed right"
           >
             <RiArrowRightSLine className="w-4 h-4" />
           </button>
@@ -165,4 +168,4 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
 }
 
 export default FeedTabs
-export type {FeedTab}
+export type {Feed}

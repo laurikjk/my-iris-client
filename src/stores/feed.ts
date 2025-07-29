@@ -1,20 +1,20 @@
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
 
-interface TabFilter {
+interface FeedFilter {
   kinds?: number[]
   since?: number
   limit?: number
   search?: string
 }
 
-interface TabConfig {
+interface FeedConfig {
   name: string
   id: string
   customName?: string
   showRepliedTo?: boolean
   hideReplies?: boolean
-  filter?: TabFilter
+  filter?: FeedFilter
   sortLikedPosts?: boolean
   // Store filter criteria as serializable data
   followDistance?: number
@@ -26,14 +26,15 @@ interface TabConfig {
   feedType?: "chronological" | "popular"
 }
 
+
 interface FeedState {
-  activeHomeTab: string
+  activeFeed: string
   displayCount: number
   feedDisplayAs: "list" | "grid"
   enabledFeedIds: string[]
-  tabConfigs: Record<string, TabConfig>
+  feedConfigs: Record<string, FeedConfig>
 
-  setActiveHomeTab: (tab: string) => void
+  setActiveFeed: (feedId: string) => void
   setDisplayCount: (count: number) => void
   incrementDisplayCount: (increment: number) => void
   setFeedDisplayAs: (displayAs: "list" | "grid") => void
@@ -41,13 +42,14 @@ interface FeedState {
   reorderFeeds: (startIndex: number, endIndex: number) => void
   toggleFeedEnabled: (feedId: string) => void
   deleteFeed: (feedId: string) => void
-  saveFeedConfig: (feedId: string, config: Partial<TabConfig>) => void
-  loadFeedConfig: (feedId: string) => TabConfig | undefined
-  getAllFeedConfigs: () => TabConfig[]
+  saveFeedConfig: (feedId: string, config: Partial<FeedConfig>) => void
+  loadFeedConfig: (feedId: string) => FeedConfig | undefined
+  getAllFeedConfigs: () => FeedConfig[]
   resetAllFeedsToDefaults: () => void
+
 }
 
-const defaultTabConfigs: Record<string, TabConfig> = {
+const defaultFeedConfigs: Record<string, FeedConfig> = {
   unseen: {
     name: "Unseen",
     id: "unseen",
@@ -132,7 +134,7 @@ export const useFeedStore = create<FeedState>()(
   persist(
     (set, get) => {
       const initialState = {
-        activeHomeTab: "unseen",
+        activeFeed: "unseen",
         displayCount: 20,
         feedDisplayAs: "list" as const,
         enabledFeedIds: [
@@ -144,11 +146,11 @@ export const useFeedStore = create<FeedState>()(
           "media",
           "adventure",
         ],
-        tabConfigs: defaultTabConfigs,
+        feedConfigs: defaultFeedConfigs,
       }
 
       const actions = {
-        setActiveHomeTab: (activeHomeTab: string) => set({activeHomeTab}),
+        setActiveFeed: (activeFeed: string) => set({activeFeed}),
         setDisplayCount: (displayCount: number) => set({displayCount}),
         incrementDisplayCount: (increment: number) =>
           set({displayCount: get().displayCount + increment}),
@@ -171,38 +173,38 @@ export const useFeedStore = create<FeedState>()(
           }
         },
         deleteFeed: (feedId: string) => {
-          const {enabledFeedIds, tabConfigs} = get()
-          const newTabConfigs = {...tabConfigs}
-          delete newTabConfigs[feedId]
+          const {enabledFeedIds, feedConfigs} = get()
+          const newFeedConfigs = {...feedConfigs}
+          delete newFeedConfigs[feedId]
           set({
             enabledFeedIds: enabledFeedIds.filter((id) => id !== feedId),
-            tabConfigs: newTabConfigs,
+            feedConfigs: newFeedConfigs,
           })
         },
-        saveFeedConfig: (feedId: string, config: Partial<TabConfig>) => {
-          const {tabConfigs} = get()
-          const existingConfig = tabConfigs[feedId] || defaultTabConfigs[feedId] || {}
+        saveFeedConfig: (feedId: string, config: Partial<FeedConfig>) => {
+          const {feedConfigs} = get()
+          const existingConfig = feedConfigs[feedId] || defaultFeedConfigs[feedId] || {}
           set({
-            tabConfigs: {
-              ...tabConfigs,
+            feedConfigs: {
+              ...feedConfigs,
               [feedId]: {...existingConfig, ...config},
             },
           })
         },
         loadFeedConfig: (feedId: string) => {
-          const {tabConfigs} = get()
-          return tabConfigs[feedId]
+          const {feedConfigs} = get()
+          return feedConfigs[feedId]
         },
         getAllFeedConfigs: () => {
-          const {tabConfigs, enabledFeedIds} = get()
+          const {feedConfigs, enabledFeedIds} = get()
           return enabledFeedIds
-            .map((id) => tabConfigs[id])
-            .filter((config): config is TabConfig => config !== undefined)
+            .map((id) => feedConfigs[id])
+            .filter((config): config is FeedConfig => config !== undefined)
         },
         resetAllFeedsToDefaults: () => {
           console.log("Resetting feeds to defaults")
           set({
-            tabConfigs: {...defaultTabConfigs},
+            feedConfigs: {...defaultFeedConfigs},
             enabledFeedIds: [
               "unseen",
               "popular",
@@ -214,6 +216,7 @@ export const useFeedStore = create<FeedState>()(
             ],
           })
         },
+
       }
 
       return {
@@ -223,15 +226,27 @@ export const useFeedStore = create<FeedState>()(
     },
     {
       name: "feed-storage",
+      migrate: (persistedState: any) => {
+        // Handle migration from old activeHomeTab to activeFeed
+        if (persistedState && persistedState.activeHomeTab && !persistedState.activeFeed) {
+          persistedState.activeFeed = persistedState.activeHomeTab
+        }
+        // Handle migration from old tabConfigs to feedConfigs
+        if (persistedState && persistedState.tabConfigs && !persistedState.feedConfigs) {
+          persistedState.feedConfigs = persistedState.tabConfigs
+        }
+        return persistedState
+      },
     }
   )
 )
 
-export const useActiveHomeTab = () => useFeedStore((state) => state.activeHomeTab)
+export const useActiveFeed = () => useFeedStore((state) => state.activeFeed)
 export const useDisplayCount = () => useFeedStore((state) => state.displayCount)
 export const useFeedDisplayAs = () => useFeedStore((state) => state.feedDisplayAs)
 export const useEnabledFeedIds = () => useFeedStore((state) => state.enabledFeedIds)
-export const useTabConfigs = () => useFeedStore((state) => state.tabConfigs)
+export const useFeedConfigs = () => useFeedStore((state) => state.feedConfigs)
+
 
 // Export types
-export type {TabConfig, TabFilter}
+export type {FeedConfig, FeedFilter}

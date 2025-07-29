@@ -1,12 +1,12 @@
 import React, {useEffect, useState} from "react"
 import {RiDeleteBinLine} from "@remixicon/react"
-import {useFeedStore, type TabConfig} from "@/stores/feed"
+import {useFeedStore, type FeedConfig} from "@/stores/feed"
 import RelaySelector from "@/shared/components/ui/RelaySelector"
-import type {FeedTab} from "./FeedTabs"
+import type {Feed} from "./FeedTabs"
 
 interface FeedEditorProps {
   activeTab: string
-  tabs: FeedTab[]
+  tabs: Feed[]
   onEditModeToggle: () => void
   onDeleteFeed: (feedId: string) => void
   onResetFeeds: () => void
@@ -21,7 +21,7 @@ function FeedEditor({
 }: FeedEditorProps) {
   const {saveFeedConfig, loadFeedConfig} = useFeedStore()
   const [editingName, setEditingName] = useState("")
-  const [localConfig, setLocalConfig] = useState<TabConfig | null>(null)
+  const [localConfig, setLocalConfig] = useState<FeedConfig | null>(null)
 
   const activeTabConfig = loadFeedConfig(activeTab)
 
@@ -42,7 +42,7 @@ function FeedEditor({
 
   // Helper function for common checkboxes
   const renderCommonCheckboxes = (
-    updateConfig: (field: keyof TabConfig, value: unknown) => void
+    updateConfig: (field: keyof FeedConfig, value: unknown) => void
   ) => {
     const showReplies = !(localConfig?.hideReplies ?? false)
 
@@ -129,7 +129,7 @@ function FeedEditor({
   }, [localConfig, activeTab, activeTabConfig, saveFeedConfig])
 
   // Update local config immediately
-  const updateLocalConfig = (field: keyof TabConfig, value: unknown) => {
+  const updateLocalConfig = (field: keyof FeedConfig, value: unknown) => {
     setLocalConfig((prev) => (prev ? {...prev, [field]: value} : null))
   }
 
