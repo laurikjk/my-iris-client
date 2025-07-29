@@ -30,22 +30,14 @@ const PopularFeed = memo(function PopularFeed({displayOptions = {}}: PopularFeed
   const {events, loadMore, loading} = usePopularHomeFeedEvents()
   const {feedDisplayAs: displayAs, setFeedDisplayAs: setDisplayAs} = useFeedStore()
 
-  if (events.length === 0 && loading) {
-    return (
-      <div className="p-8 flex items-center justify-center text-base-content/50">
-        Loading popular posts...
-      </div>
-    )
-  }
-
-  if (events.length === 0 && !loading) {
+  if (events.length === 0) {
     return (
       <div
         className={
           small ? "px-4" : "p-8 flex items-center justify-center text-base-content/50"
         }
       >
-        No popular posts found
+        {loading ? "Loading popular posts..." : "No popular posts found"}
       </div>
     )
   }
