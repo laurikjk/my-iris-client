@@ -39,14 +39,13 @@ const PopularFeed = memo(function PopularFeed({displayOptions = {}}: PopularFeed
   }
 
   if (events.length === 0 && !loading) {
-    const emptyMessage = small ? "No popular posts found" : "No popular posts found."
     return (
       <div
         className={
           small ? "px-4" : "p-8 flex items-center justify-center text-base-content/50"
         }
       >
-        {emptyMessage}
+        No popular posts found
       </div>
     )
   }
