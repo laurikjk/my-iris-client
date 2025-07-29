@@ -13,6 +13,7 @@ interface PopularFeedDisplayOptions {
 }
 
 interface PopularFeedProps {
+  variant?: "popular" | "for-you"
   displayOptions?: PopularFeedDisplayOptions
 }
 
@@ -21,13 +22,16 @@ const defaultDisplayOptions: PopularFeedDisplayOptions = {
   showDisplaySelector: true,
 }
 
-const PopularFeed = memo(function PopularFeed({displayOptions = {}}: PopularFeedProps) {
+const PopularFeed = memo(function PopularFeed({
+  variant = "popular",
+  displayOptions = {},
+}: PopularFeedProps) {
   const {small, showDisplaySelector} = {
     ...defaultDisplayOptions,
     ...displayOptions,
   }
 
-  const {events, loadMore, loading} = usePopularHomeFeedEvents()
+  const {events, loadMore, loading} = usePopularHomeFeedEvents(variant)
   const {feedDisplayAs: displayAs, setFeedDisplayAs: setDisplayAs} = useFeedStore()
 
   if (events.length === 0) {
