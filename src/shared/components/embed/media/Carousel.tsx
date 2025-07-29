@@ -32,7 +32,7 @@ function Carousel({media, event}: CarouselProps) {
   }) => (
     <button
       onClick={(e) => onClick(e as MouseEvent<HTMLButtonElement>)}
-      className={`absolute top-1/2 ${direction === "left" ? "left-0" : "right-0"} transform -translate-y-1/2 bg-gray-800 rounded-full opacity-50 text-white p-2`}
+      className={`absolute top-1/2 ${direction === "left" ? "left-4" : "right-4"} transform -translate-y-1/2 bg-gray-800 rounded-full opacity-50 text-white p-2`}
     >
       {direction === "left" ? (
         <RiArrowLeftSLine size={24} />
