@@ -1,5 +1,5 @@
 import React from "react"
-import {useFeedStore, useEnabledFeedIds} from "@/stores/feed"
+import {useFeedStore, useEnabledFeedIds, type FeedConfig} from "@/stores/feed"
 import {
   RiArrowLeftSLine,
   RiArrowRightSLine,
@@ -7,20 +7,8 @@ import {
   RiAddLine,
 } from "@remixicon/react"
 
-interface Feed {
-  name: string
-  id: string
-  showRepliedTo?: boolean
-  filter?: {
-    kinds?: number[]
-    since?: number
-    limit?: number
-  }
-  sortLikedPosts?: boolean
-}
-
 interface FeedTabsProps {
-  allTabs: Feed[]
+  allTabs: FeedConfig[]
   editMode: boolean
   onEditModeToggle: () => void
 }
@@ -41,7 +29,7 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
     const feedsMap = new Map(allTabs.map((feed) => [feed.id, feed]))
     return enabledFeedIds
       .map((id) => feedsMap.get(id))
-      .filter((feed): feed is Feed => feed !== undefined)
+      .filter((feed): feed is FeedConfig => feed !== undefined)
   }, [allTabs, enabledFeedIds])
 
   // Helper function to get display name
@@ -165,4 +153,3 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
 }
 
 export default FeedTabs
-export type {Feed}

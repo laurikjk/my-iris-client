@@ -17,7 +17,7 @@ import {
   useFeedConfigs,
   type FeedConfig,
 } from "@/stores/feed"
-import FeedTabs, {type Feed as FeedType} from "@/shared/components/feed/FeedTabs"
+import FeedTabs from "@/shared/components/feed/FeedTabs"
 import FeedEditor from "@/shared/components/feed/FeedEditor"
 
 const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
@@ -29,17 +29,6 @@ const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
       </div>
     </div>
   ) : null
-
-// Convert store config to Feed format - now much simpler since Feed component handles filter logic
-const createFeedFromConfig = (config: FeedConfig): FeedType => {
-  return {
-    name: config.name,
-    id: config.id,
-    showRepliedTo: config.showRepliedTo,
-    sortLikedPosts: config.sortLikedPosts,
-    filter: config.filter,
-  }
-}
 
 function HomeFeedEvents() {
   const myPubKey = usePublicKey()
@@ -58,10 +47,9 @@ function HomeFeedEvents() {
   const socialGraphLoaded = useSocialGraphLoaded()
   const [editMode, setEditMode] = useState(false)
 
-  // Convert store configs to Feed format
-  const allFeeds: FeedType[] = useMemo(() => {
-    const configs = getAllFeedConfigs()
-    return configs.map((config) => createFeedFromConfig(config))
+  // Get all feed configs from store
+  const allFeeds = useMemo(() => {
+    return getAllFeedConfigs()
   }, [getAllFeedConfigs, feedConfigs, activeFeed])
 
   // Filter and order feeds based on enabled feed IDs from store
@@ -69,7 +57,7 @@ function HomeFeedEvents() {
     const feedsMap = new Map(allFeeds.map((feed) => [feed.id, feed]))
     return enabledFeedIds
       .map((id) => feedsMap.get(id))
-      .filter((feed): feed is FeedType => feed !== undefined)
+      .filter((feed): feed is FeedConfig => feed !== undefined)
   }, [allFeeds, enabledFeedIds])
 
   const activeFeedItem = useMemo(
@@ -101,7 +89,7 @@ function HomeFeedEvents() {
 
     if (
       confirm(
-        `Delete feed "${getDisplayName(feedId, feeds.find((f) => f.id === feedId)?.name || "")}"?`
+        `Delete feed "${getDisplayName(feedId, allFeeds.find((f) => f.id === feedId)?.name || "")}"?`
       )
     ) {
       // If deleting the active feed, switch to the first remaining feed
@@ -149,6 +137,10 @@ function HomeFeedEvents() {
       ? "Home"
       : activeFeedConfig?.customName || activeFeedItem?.name || "Following"
 
+  if (!socialGraphLoaded) {
+    return <div>Loading...</div>
+  }
+
   return (
     <>
       <Header showBack={false}>
@@ -172,7 +164,7 @@ function HomeFeedEvents() {
       )}
       <NotificationPrompt />
       {activeFeedConfig?.feedType === "popular" ? (
-        socialGraphLoaded && <PopularHomeFeed />
+        <PopularHomeFeed />
       ) : (
         <Feed
           key={feedKey}
@@ -184,7 +176,7 @@ function HomeFeedEvents() {
           openedAt={openedAt}
         />
       )}
-      {socialGraphLoaded && follows.length <= 1 && (
+      {follows.length <= 1 && (
         <>
           <NoFollows myPubKey={myPubKey} />
           <PopularFeed small={false} days={7} />

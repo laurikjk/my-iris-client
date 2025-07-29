@@ -2,11 +2,10 @@ import React, {useEffect, useState} from "react"
 import {RiDeleteBinLine} from "@remixicon/react"
 import {useFeedStore, type FeedConfig} from "@/stores/feed"
 import RelaySelector from "@/shared/components/ui/RelaySelector"
-import type {Feed} from "./FeedTabs"
 
 interface FeedEditorProps {
   activeTab: string
-  tabs: Feed[]
+  tabs: FeedConfig[]
   onEditModeToggle: () => void
   onDeleteFeed: (feedId: string) => void
   onResetFeeds: () => void
