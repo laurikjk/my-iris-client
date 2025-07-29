@@ -158,12 +158,6 @@ function FeedItem({
     // Clean up any existing subscription first
     if (subscriptionRef.current) {
       subscriptionRef.current.stop()
-      // Force cleanup by removing from subscription manager (NDK bug workaround)
-      if (subscriptionRef.current.ndk?.subManager) {
-        subscriptionRef.current.ndk.subManager.subscriptions.delete(
-          subscriptionRef.current.internalId
-        )
-      }
       subscriptionRef.current = null
     }
 
@@ -190,12 +184,6 @@ function FeedItem({
     return () => {
       if (subscriptionRef.current) {
         subscriptionRef.current.stop()
-        // Force cleanup by removing from subscription manager (NDK bug workaround)
-        if (subscriptionRef.current.ndk?.subManager) {
-          subscriptionRef.current.ndk.subManager.subscriptions.delete(
-            subscriptionRef.current.internalId
-          )
-        }
         subscriptionRef.current = null
       }
     }

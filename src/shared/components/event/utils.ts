@@ -32,10 +32,6 @@ export const handleEventContent = (
 
           return () => {
             sub.stop()
-            // Force cleanup by removing from subscription manager (NDK bug workaround)
-            if (sub.ndk?.subManager) {
-              sub.ndk.subManager.subscriptions.delete(sub.internalId)
-            }
           }
         }
       }
