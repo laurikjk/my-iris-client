@@ -14,8 +14,20 @@ export const useInviteFromUrl = () => {
   useEffect(() => {
     let timeoutId: NodeJS.Timeout | null = null
 
-    // if hash not present, do nothing
+    // Check if hash is present and looks like an invite
     if (!location.hash) {
+      return
+    }
+
+    // Only treat as invite if it looks like a proper invite URL
+    // Invite URLs should contain parameters like "invite" or be nostr: protocol URLs
+    const hash = location.hash.slice(1) // Remove the #
+    const isInviteUrl =
+      hash.includes("invite") ||
+      hash.startsWith("nostr:") ||
+      decodeURIComponent(hash).includes("invite")
+
+    if (!isInviteUrl) {
       return
     }
 
