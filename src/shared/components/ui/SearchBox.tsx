@@ -182,12 +182,12 @@ function SearchBox({
         setActiveResult(0)
       } else if (e.key === "Enter") {
         e.preventDefault()
-        if (searchNotes && value.trim()) {
-          // When searchNotes is true and user has typed something, always search for notes
-          handleSelectResult("search-notes", value.trim())
-        } else if (displayedLength > 0) {
+        if (displayedLength > 0) {
           const activeItem = displayedItems[activeResult]
           handleSelectResult(activeItem.pubKey, activeItem.query)
+        } else if (searchNotes && value.trim()) {
+          // Only search for notes if no dropdown item is selected
+          handleSelectResult("search-notes", value.trim())
         }
       }
     }
