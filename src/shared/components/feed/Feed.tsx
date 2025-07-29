@@ -1,4 +1,4 @@
-import {useRef, useState, ReactNode, useEffect, useMemo, memo} from "react"
+import {useRef, useState, ReactNode, useEffect, useMemo, memo, useCallback} from "react"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
@@ -219,13 +219,6 @@ const Feed = memo(function Feed({
     return new Set(newEventsFiltered.map((event) => event.pubkey))
   }, [newEventsFiltered])
 
-  // Auto-show new events if enabled
-  useEffect(() => {
-    if (feedConfig.autoShowNewEvents && newEventsFiltered.length > 0) {
-      showNewEvents()
-    }
-  }, [feedConfig.autoShowNewEvents, newEventsFiltered.length, showNewEvents])
-
   const gridEvents = useMemo(() => {
     if (displayAs === "grid") {
       return filteredEvents
@@ -243,30 +236,27 @@ const Feed = memo(function Feed({
 
   const [, setForceUpdateCount] = useState(0)
 
-  // Track newly added events for highlighting
-  const [newlyAddedEventIds, setNewlyAddedEventIds] = useState(new Set<string>())
+  // Track events that should be highlighted (those added via showNewEvents)
+  const [eventsToHighlight, setEventsToHighlight] = useState(new Set<string>())
 
-  // Track previous filtered events to detect new additions
-  const prevFilteredEventsRef = useRef<(NDKEvent | {id: string})[]>([])
+  // Custom showNewEvents wrapper that tracks which events to highlight
+  const showNewEventsWithHighlight = useCallback(() => {
+    const eventIdsToHighlight = new Set(Array.from(newEventsMap.keys()))
+    setEventsToHighlight(eventIdsToHighlight)
+    showNewEvents()
 
-  // Detect newly added events and trigger highlight animation
+    // Clear highlight after animation
+    setTimeout(() => {
+      setEventsToHighlight(new Set())
+    }, 2000)
+  }, [newEventsMap, showNewEvents])
+
+  // Auto-show new events if enabled
   useEffect(() => {
-    if (filteredEvents.length > prevFilteredEventsRef.current.length) {
-      const prevEventIds = new Set(prevFilteredEventsRef.current.map((e) => e.id))
-      const newEvents = filteredEvents.filter((event) => !prevEventIds.has(event.id))
-
-      if (newEvents.length > 0) {
-        const newEventIds = new Set(newEvents.map((e) => e.id))
-        setNewlyAddedEventIds(newEventIds)
-
-        // Clear highlight state after animation completes
-        setTimeout(() => {
-          setNewlyAddedEventIds(new Set())
-        }, 2000) // Clear after 2s to ensure animation is done
-      }
+    if (feedConfig.autoShowNewEvents && newEventsFiltered.length > 0) {
+      showNewEventsWithHighlight()
     }
-    prevFilteredEventsRef.current = filteredEvents
-  }, [filteredEvents])
+  }, [feedConfig.autoShowNewEvents, newEventsFiltered.length, showNewEventsWithHighlight])
 
   const isSocialGraphLoaded = useSocialGraphLoaded()
 
@@ -296,7 +286,7 @@ const Feed = memo(function Feed({
         <NewEventsButton
           newEventsFiltered={newEventsFiltered}
           newEventsFrom={newEventsFromFiltered}
-          showNewEvents={showNewEvents}
+          showNewEvents={showNewEventsWithHighlight}
           firstFeedItemRef={firstFeedItemRef}
         />
       )}
@@ -319,7 +309,7 @@ const Feed = memo(function Feed({
                       eventId={"content" in event ? undefined : event.id}
                       onEvent={onEvent}
                       borderTop={borderTopFirst && index === 0}
-                      highlightAsNew={newlyAddedEventIds.has(event.id)}
+                      highlightAsNew={eventsToHighlight.has(event.id)}
                     />
                   </div>
                 ))}
