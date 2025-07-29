@@ -1,11 +1,10 @@
 import {calculateDimensions, generateBlurhashUrl} from "./mediaUtils"
-import {useState, MouseEvent, useMemo} from "react"
+import {useState, MouseEvent, useMemo, memo} from "react"
 import ProxyImg from "../../ProxyImg"
 import classNames from "classnames"
 
 interface ImageComponentProps {
   match: string
-  index: number
   onClickImage: () => void
   blur?: boolean
   limitHeight?: boolean
@@ -14,7 +13,6 @@ interface ImageComponentProps {
 
 const ImageComponent = ({
   match,
-  index,
   onClickImage,
   blur,
   limitHeight,
@@ -91,4 +89,4 @@ const ImageComponent = ({
   )
 }
 
-export default ImageComponent
+export default memo(ImageComponent)

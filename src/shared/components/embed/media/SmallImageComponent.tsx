@@ -105,7 +105,6 @@ function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps
           onPrev={allImageUrls.length > 1 ? handlePrev : undefined}
           onNext={allImageUrls.length > 1 ? handleNext : undefined}
           currentIndex={allImageUrls.length > 1 ? currentImageIndex : undefined}
-          totalCount={allImageUrls.length > 1 ? allImageUrls.length : undefined}
         />
       )}
     </>

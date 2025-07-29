@@ -359,7 +359,6 @@ export default function MediaFeed({events}: MediaFeedProps) {
             showFeedItem={true}
             event={modalMedia[activeItemIndex].event}
             currentIndex={activeItemIndex}
-            totalCount={modalMedia.length}
           />
           <PreloadImages images={preloadImages} currentIndex={currentPreloadIndex} />
         </>

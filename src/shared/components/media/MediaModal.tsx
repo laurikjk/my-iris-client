@@ -1,21 +1,23 @@
-import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
+import {useState} from "react"
 import FeedItem from "../event/FeedItem/FeedItem"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {EmbedEvent} from "../embed/index"
 import ProxyImg from "../ProxyImg"
 import Icon from "../Icons/Icon"
 import Modal from "../ui/Modal"
+import SwipableCarousel from "../ui/SwipableCarousel"
+import {SwipeItem} from "@/shared/hooks/useSwipable"
 
 interface MediaModalProps {
   onClose: () => void
   onPrev?: () => void
   onNext?: () => void
-  mediaUrl: string
-  mediaType: "image" | "video"
+  mediaUrl?: string
+  mediaType?: "image" | "video"
+  media?: SwipeItem[]
   showFeedItem?: boolean
   event?: EmbedEvent
   currentIndex?: number
-  totalCount?: number
 }
 
 function isNDKEvent(event: EmbedEvent): event is NDKEvent {
@@ -28,11 +30,50 @@ function MediaModal({
   onNext,
   mediaUrl,
   mediaType,
+  media,
   showFeedItem,
   event,
-  currentIndex,
-  totalCount,
+  currentIndex: propCurrentIndex,
 }: MediaModalProps) {
+  // Support both single media item and media array
+  const mediaItems =
+    media ||
+    (mediaUrl && mediaType
+      ? [
+          {
+            id: mediaUrl,
+            url: mediaUrl,
+            type: mediaType,
+          },
+        ]
+      : [])
+
+  const initialIndex = propCurrentIndex ?? 0
+  const [currentModalIndex, setCurrentModalIndex] = useState(initialIndex)
+
+  const renderMediaItem = (
+    item: SwipeItem,
+    _index: number,
+    wasDragged: {current: boolean}
+  ) => {
+    const handleImageClick = () => {
+      // Don't close modal if this was a drag
+      if (wasDragged.current) return
+      if (!showFeedItem) onClose()
+    }
+
+    return item.type === "video" ? (
+      <video loop autoPlay src={item.url} controls className="max-w-full max-h-full" />
+    ) : (
+      <ProxyImg
+        src={item.url}
+        className="max-w-full max-h-full object-contain"
+        onClick={handleImageClick}
+        key={item.url}
+      />
+    )
+  }
+
   return (
     <Modal hasBackground={false} onClose={onClose}>
       <div className="relative flex w-screen h-screen">
@@ -53,50 +94,31 @@ function MediaModal({
               }
             }}
           >
-            {mediaType === "video" ? (
-              <video
-                loop
-                autoPlay
-                src={mediaUrl}
-                controls
-                className="max-w-full max-h-full"
-              />
-            ) : (
-              <ProxyImg
-                src={mediaUrl}
-                className="max-w-full max-h-full object-contain"
-                onClick={showFeedItem ? undefined : onClose}
-                key={mediaUrl}
+            {mediaItems.length > 0 && (
+              <SwipableCarousel
+                items={mediaItems}
+                renderItem={renderMediaItem}
+                initialIndex={initialIndex}
+                className="w-full h-full"
+                enableKeyboardNav={true}
+                onClose={onClose}
+                showArrows={mediaItems.length > 1}
+                onIndexChange={(index) => {
+                  setCurrentModalIndex(index)
+                  // Call legacy callbacks if provided for backwards compatibility
+                  if (index > currentModalIndex) {
+                    onNext?.()
+                  } else if (index < currentModalIndex) {
+                    onPrev?.()
+                  }
+                }}
               />
             )}
           </div>
 
-          {(onPrev || onNext) && (
-            <>
-              <div className="absolute top-1/2 -translate-y-1/2 left-4 z-10">
-                <button
-                  onClick={onPrev}
-                  disabled={currentIndex === 0}
-                  className="btn btn-circle btn-ghost text-white"
-                >
-                  <RiArrowLeftSLine size={24} />
-                </button>
-              </div>
-              <div className="absolute top-1/2 -translate-y-1/2 right-4 z-10">
-                <button
-                  onClick={onNext}
-                  disabled={currentIndex === (totalCount ?? 0) - 1}
-                  className="btn btn-circle btn-ghost text-white"
-                >
-                  <RiArrowRightSLine size={24} />
-                </button>
-              </div>
-            </>
-          )}
-
-          {currentIndex !== undefined && totalCount && (
+          {mediaItems.length > 1 && (
             <div className="absolute top-2 left-2 text-white bg-black bg-opacity-50 px-2 py-1 rounded z-10">
-              {currentIndex + 1} / {totalCount}
+              {currentModalIndex + 1} / {mediaItems.length}
             </div>
           )}
         </div>
