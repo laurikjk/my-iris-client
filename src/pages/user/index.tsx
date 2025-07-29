@@ -1,7 +1,6 @@
 import {NavLink, Route, Routes, useLocation} from "react-router"
 import {useMemo, useState, useEffect} from "react"
 import classNames from "classnames"
-import {NDKFilter} from "@nostr-dev-kit/ndk"
 
 import RightColumn from "@/shared/components/RightColumn"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
@@ -172,25 +171,16 @@ function UserPage({pubKey}: {pubKey: string}) {
                   element={
                     <Feed
                       key={`feed-${pubKeyHex}-${tab.path}`}
-                      feedConfig={
-                        tab.feedConfig
-                          ? {
-                              name: tab.name,
-                              id: `${tab.name.toLowerCase()}-${pubKeyHex}`,
-                              ...tab.feedConfig,
-                              filter: {
-                                ...tab.feedConfig.filter,
-                                ...tab.filters(pubKeyHex, myPubKey),
-                              },
-                            }
-                          : undefined
-                      }
-                      filters={
-                        !tab.feedConfig
-                          ? (tab.filters(pubKeyHex, myPubKey) as NDKFilter)
-                          : undefined
-                      }
-                      showRepliedTo={tab.showRepliedTo}
+                      feedConfig={{
+                        name: tab.name,
+                        id: `${tab.name.toLowerCase()}-${pubKeyHex}`,
+                        ...tab.feedConfig,
+                        filter: {
+                          ...tab.feedConfig?.filter,
+                          ...tab.filters(pubKeyHex, myPubKey),
+                        },
+                        showRepliedTo: tab.showRepliedTo,
+                      }}
                       borderTopFirst={true}
                     />
                   }

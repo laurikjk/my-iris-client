@@ -20,11 +20,8 @@ import {hasMedia} from "@/shared/components/embed"
 import {seenEventIds} from "@/utils/memcache"
 
 interface FeedProps {
-  // Either provide filters + legacy props, or feedConfig
-  filters?: NDKFilter
-  feedConfig?: FeedConfig
+  feedConfig: FeedConfig
   asReply?: boolean
-  showRepliedTo?: boolean
   showReplies?: number
   onEvent?: (event: NDKEvent) => void
   borderTopFirst?: boolean
@@ -33,7 +30,6 @@ interface FeedProps {
   displayAs?: "list" | "grid"
   showDisplayAsSelector?: boolean
   onDisplayAsChange?: (display: "list" | "grid") => void
-  // Special props for legacy compatibility
   refreshSignal?: number
   openedAt?: number
 }
@@ -45,10 +41,8 @@ const DefaultEmptyPlaceholder = (
 )
 
 const Feed = memo(function Feed({
-  filters: propFilters,
   feedConfig,
   asReply = false,
-  showRepliedTo,
   showReplies = 0,
   onEvent,
   borderTopFirst = true,
@@ -60,31 +54,13 @@ const Feed = memo(function Feed({
   refreshSignal,
   openedAt,
 }: FeedProps) {
-  // Validation: either filters or feedConfig must be provided
-  if (!propFilters && !feedConfig?.filter) {
-    throw new Error(
-      "Feed component requires either 'filters' prop or 'feedConfig' with filter"
-    )
+  if (!feedConfig?.filter) {
+    throw new Error("Feed component requires feedConfig with filter")
   }
 
-  // Derive values from feedConfig or use props
-  const filters = useMemo(() => {
-    if (feedConfig?.filter) {
-      return feedConfig.filter as unknown as NDKFilter
-    }
-    return propFilters!
-  }, [feedConfig?.filter, propFilters])
+  const filters = feedConfig.filter as unknown as NDKFilter
 
-  const derivedShowRepliedTo = showRepliedTo ?? feedConfig?.showRepliedTo ?? true
-  const derivedSortLikedPosts = feedConfig?.sortLikedPosts ?? false
-  const derivedRelayUrls = feedConfig?.relayUrls
-  const derivedShowEventsByUnknownUsers = feedConfig?.showEventsByUnknownUsers ?? false
-  const derivedFollowDistance = feedConfig?.followDistance
-
-  // Create sort function based on sortType
   const sortFn = useMemo(() => {
-    if (!feedConfig?.sortType) return undefined
-
     switch (feedConfig.sortType) {
       case "followDistance":
         return (a: NDKEvent, b: NDKEvent) => {
@@ -93,22 +69,16 @@ const Feed = memo(function Feed({
           if (followDistanceA !== followDistanceB) {
             return followDistanceA - followDistanceB
           }
-          if (a.created_at && b.created_at) return a.created_at - b.created_at
-          return 0
+          return (a.created_at || 0) - (b.created_at || 0)
         }
       case "chronological":
-        return (a: NDKEvent, b: NDKEvent) => {
-          return (b.created_at || 0) - (a.created_at || 0)
-        }
+        return (a: NDKEvent, b: NDKEvent) => (b.created_at || 0) - (a.created_at || 0)
       default:
         return undefined
     }
-  }, [feedConfig?.sortType])
+  }, [feedConfig.sortType])
 
-  const derivedCacheKey = useMemo(() => {
-    // Use the whole feedConfig as the cache key
-    return JSON.stringify(feedConfig)
-  }, [feedConfig])
+  const cacheKey = JSON.stringify(feedConfig)
 
   const [displayCount, setDisplayCount] = useHistoryState(
     INITIAL_DISPLAY_COUNT,
@@ -119,32 +89,14 @@ const Feed = memo(function Feed({
 
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
 
-  // Create filter functions from feedConfig
-  const configBasedDisplayFilterFn = useMemo(() => {
-    if (!feedConfig) return undefined
-
+  const displayFilterFn = useMemo(() => {
     return (event: NDKEvent) => {
-      // Check if requires media
-      if (feedConfig.requiresMedia && !hasMedia(event)) {
+      if (feedConfig.requiresMedia && !hasMedia(event)) return false
+      if (feedConfig.requiresReplies && !getEventReplyingTo(event)) return false
+      if (feedConfig.hideReplies && getEventReplyingTo(event)) return false
+      if (feedConfig.repliesTo && getEventReplyingTo(event) !== feedConfig.repliesTo)
         return false
-      }
 
-      // Check if requires replies
-      if (feedConfig.requiresReplies && !getEventReplyingTo(event)) {
-        return false
-      }
-
-      // Check reply exclusion for display
-      if (feedConfig.hideReplies && getEventReplyingTo(event)) {
-        return false
-      }
-
-      // Check if should only show replies to a specific event
-      if (feedConfig.repliesTo && getEventReplyingTo(event) !== feedConfig.repliesTo) {
-        return false
-      }
-
-      // Handle excludeSeen with special logic for unseen tab
       if (feedConfig.excludeSeen) {
         if (
           feedConfig.id === "unseen" &&
@@ -163,68 +115,42 @@ const Feed = memo(function Feed({
     }
   }, [feedConfig, refreshSignal, openedAt])
 
-  const configBasedFetchFilterFn = useMemo(() => {
-    if (!feedConfig) return undefined
-
-    return (event: NDKEvent) => {
-      // Check if should exclude seen events
-      if (feedConfig.excludeSeen && seenEventIds.has(event.id)) {
-        return false
-      }
-
-      // Check reply exclusion
-      if (feedConfig.hideReplies && getEventReplyingTo(event)) {
-        return false
-      }
-
+  const fetchFilterFn = useMemo(
+    () => (event: NDKEvent) => {
+      if (feedConfig.excludeSeen && seenEventIds.has(event.id)) return false
+      if (feedConfig.hideReplies && getEventReplyingTo(event)) return false
       return true
-    }
-  }, [feedConfig])
+    },
+    [feedConfig]
+  )
 
-  // Use config-based filters
-  const finalDisplayFilterFn = configBasedDisplayFilterFn
-  const finalFetchFilterFn = configBasedFetchFilterFn
-
-  // Create combined display filter that includes follow distance filtering if needed
   const combinedDisplayFilterFn = useMemo(() => {
-    // Simple relay URL normalization
     const normalizeRelay = (url: string) =>
       url.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
 
     return (event: NDKEvent) => {
-      // First apply custom display filter if provided
-      if (finalDisplayFilterFn && !finalDisplayFilterFn(event)) {
-        return false
-      }
+      if (!displayFilterFn(event)) return false
 
-      // Apply relay filtering if relayUrls is configured
-      if (derivedRelayUrls && derivedRelayUrls.length > 0) {
-        if (!event.onRelays || event.onRelays.length === 0) return false
-
-        const normalizedTargetRelays = derivedRelayUrls.map(normalizeRelay)
+      if (feedConfig.relayUrls?.length) {
+        if (!event.onRelays?.length) return false
+        const normalizedTargetRelays = feedConfig.relayUrls.map(normalizeRelay)
         const eventIsOnTargetRelay = event.onRelays.some((relay) =>
           normalizedTargetRelays.includes(normalizeRelay(relay.url))
         )
-
         if (!eventIsOnTargetRelay) return false
       }
 
-      // Apply follow distance filter if specified and showEventsByUnknownUsers is false
-      if (derivedFollowDistance !== undefined && !derivedShowEventsByUnknownUsers) {
+      if (
+        feedConfig.followDistance !== undefined &&
+        !feedConfig.showEventsByUnknownUsers
+      ) {
         const eventFollowDistance = socialGraph().getFollowDistance(event.pubkey)
-        if (eventFollowDistance > derivedFollowDistance) {
-          return false
-        }
+        if (eventFollowDistance > feedConfig.followDistance) return false
       }
 
       return true
     }
-  }, [
-    finalDisplayFilterFn,
-    derivedFollowDistance,
-    derivedShowEventsByUnknownUsers,
-    derivedRelayUrls,
-  ])
+  }, [displayFilterFn, feedConfig])
 
   const {feedDisplayAs: persistedDisplayAs, setFeedDisplayAs} = useFeedStore()
 
@@ -243,14 +169,14 @@ const Feed = memo(function Feed({
     initialLoadDone,
   } = useFeedEvents({
     filters,
-    cacheKey: derivedCacheKey,
+    cacheKey,
     displayCount,
     displayFilterFn: combinedDisplayFilterFn,
-    fetchFilterFn: finalFetchFilterFn,
-    hideEventsByUnknownUsers: !derivedShowEventsByUnknownUsers,
-    sortLikedPosts: derivedSortLikedPosts,
+    fetchFilterFn,
+    hideEventsByUnknownUsers: !feedConfig.showEventsByUnknownUsers,
+    sortLikedPosts: feedConfig.sortLikedPosts || false,
     sortFn,
-    relayUrls: derivedRelayUrls,
+    relayUrls: feedConfig.relayUrls,
   })
 
   const loadMoreItems = () => {
@@ -331,7 +257,7 @@ const Feed = memo(function Feed({
                     <FeedItem
                       key={event.id}
                       asReply={asReply}
-                      showRepliedTo={derivedShowRepliedTo}
+                      showRepliedTo={feedConfig.showRepliedTo ?? true}
                       showReplies={showReplies}
                       event={"content" in event ? event : undefined}
                       eventId={"content" in event ? undefined : event.id}
@@ -360,7 +286,7 @@ const Feed = memo(function Feed({
         {showEventsByUnknownUsers && eventsByUnknownUsers.length > 0 && (
           <UnknownUserEvents
             eventsByUnknownUsers={eventsByUnknownUsers}
-            showRepliedTo={derivedShowRepliedTo}
+            showRepliedTo={feedConfig.showRepliedTo ?? true}
             asReply={true}
           />
         )}

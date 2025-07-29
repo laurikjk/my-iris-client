@@ -320,16 +320,15 @@ function FeedItem({
       {showReplies > 0 && (eventId || event?.id) && (
         <div className="flex flex-col justify-center">
           <Feed
-            showRepliedTo={false}
             asReply={true}
             feedConfig={{
               name: "Replies",
               id: `replies-${event.id}`,
               repliesTo: event.id,
               sortType: "followDistance",
-              filter: {kinds: [1]},
+              showRepliedTo: false,
+              filter: {kinds: [1], "#e": [eventIdHex]},
             }}
-            filters={{"#e": [eventIdHex]}}
             onEvent={(e) => {
               onEvent?.(e)
               setHasActualReplies(true)
