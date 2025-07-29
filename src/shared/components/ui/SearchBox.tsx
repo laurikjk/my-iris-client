@@ -244,7 +244,7 @@ function SearchBox({
     inputRef.current?.blur() // Unfocus the input field
 
     if (pubKey === "search-notes" && query) {
-      navigate(`/search/${query}`)
+      navigate(`/search/${encodeURIComponent(query)}`)
     } else {
       // Only check recent searches if we're actually in the recent searches mode (no search value)
       if (!value) {
