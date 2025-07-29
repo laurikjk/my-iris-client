@@ -14,6 +14,9 @@ export const nip05VerificationCache = new LRUCache<string, boolean>({maxSize: 10
 // Cache for imgproxy failures - track URLs that failed to load through proxy
 export const imgproxyFailureCache = new LRUCache<string, boolean>({maxSize: 100})
 
+// Cache for loaded images to prevent remounting and flashing
+export const loadedImageCache = new LRUCache<string, string>({maxSize: 200})
+
 // Special feed cache interfaces
 interface PostFetcherCache {
   events?: NDKEvent[]

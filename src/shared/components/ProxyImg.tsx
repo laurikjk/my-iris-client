@@ -1,6 +1,6 @@
 import {CSSProperties, useEffect, useState, MouseEvent, useRef} from "react"
 import {generateProxyUrl} from "../utils/imgproxy"
-import {imgproxyFailureCache} from "@/utils/memcache"
+import {imgproxyFailureCache, loadedImageCache} from "@/utils/memcache"
 import {useSettingsStore} from "@/stores/settings"
 
 type Props = {
@@ -34,6 +34,14 @@ const ProxyImg = (props: Props) => {
   const imgRef = useRef<HTMLImageElement | null>(null)
 
   useEffect(() => {
+    // Check if we have this image cached
+    const cacheKey = `${props.src}_${props.width}_${props.square}`
+    const cachedSrc = loadedImageCache.get(cacheKey)
+    if (cachedSrc) {
+      setSrc(cachedSrc)
+      return
+    }
+
     let mySrc = props.src
 
     // Check if this URL has previously failed through imgproxy
@@ -56,11 +64,14 @@ const ProxyImg = (props: Props) => {
           salt: imgproxy.salt,
         }
       )
-      setSrc(mySrc)
     } else {
       // Use original URL if proxy is disabled or should be skipped
-      setSrc(props.src)
+      mySrc = props.src
     }
+
+    setSrc(mySrc)
+    // Cache the resolved src
+    loadedImageCache.set(cacheKey, mySrc)
 
     return () => {
       if (timeoutRef.current) {

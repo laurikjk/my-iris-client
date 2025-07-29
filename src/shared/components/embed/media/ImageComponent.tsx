@@ -50,7 +50,6 @@ const ImageComponent = ({
 
   return (
     <div
-      key={match + index}
       className={classNames("flex justify-center items-center my-2", {
         "h-[600px]": limitHeight || !dimensions,
       })}
