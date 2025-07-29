@@ -1,4 +1,5 @@
 import {useState, useRef, useEffect} from "react"
+import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 
 export function useHoverCard(showHoverCard: boolean) {
   const [isOpen, setIsOpen] = useState(false)
@@ -8,18 +9,19 @@ export function useHoverCard(showHoverCard: boolean) {
     setIsOpen(false)
   }
 
-  const hoverProps = showHoverCard
-    ? {
-        onMouseEnter: () => {
-          if (timeoutRef.current) clearTimeout(timeoutRef.current)
-          timeoutRef.current = setTimeout(() => setIsOpen(true), 300)
-        },
-        onMouseLeave: () => {
-          if (timeoutRef.current) clearTimeout(timeoutRef.current)
-          timeoutRef.current = setTimeout(() => setIsOpen(false), 300)
-        },
-      }
-    : {}
+  const hoverProps =
+    showHoverCard && !isTouchDevice
+      ? {
+          onMouseEnter: () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current)
+            timeoutRef.current = setTimeout(() => setIsOpen(true), 300)
+          },
+          onMouseLeave: () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current)
+            timeoutRef.current = setTimeout(() => setIsOpen(false), 300)
+          },
+        }
+      : {}
 
   useEffect(() => {
     return () => {
