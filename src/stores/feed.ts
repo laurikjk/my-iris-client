@@ -26,7 +26,6 @@ interface FeedConfig {
   feedType?: "chronological" | "popular"
 }
 
-
 interface FeedState {
   activeFeed: string
   displayCount: number
@@ -46,7 +45,6 @@ interface FeedState {
   loadFeedConfig: (feedId: string) => FeedConfig | undefined
   getAllFeedConfigs: () => FeedConfig[]
   resetAllFeedsToDefaults: () => void
-
 }
 
 const defaultFeedConfigs: Record<string, FeedConfig> = {
@@ -216,7 +214,6 @@ export const useFeedStore = create<FeedState>()(
             ],
           })
         },
-
       }
 
       return {
@@ -226,16 +223,29 @@ export const useFeedStore = create<FeedState>()(
     },
     {
       name: "feed-storage",
-      migrate: (persistedState: any) => {
+      migrate: (persistedState: unknown) => {
+        // Type guard to check if persistedState is an object with expected properties
+        const state = persistedState as Record<string, any>
+
         // Handle migration from old activeHomeTab to activeFeed
-        if (persistedState && persistedState.activeHomeTab && !persistedState.activeFeed) {
-          persistedState.activeFeed = persistedState.activeHomeTab
+        if (
+          state &&
+          typeof state === "object" &&
+          state.activeHomeTab &&
+          !state.activeFeed
+        ) {
+          state.activeFeed = state.activeHomeTab
         }
         // Handle migration from old tabConfigs to feedConfigs
-        if (persistedState && persistedState.tabConfigs && !persistedState.feedConfigs) {
-          persistedState.feedConfigs = persistedState.tabConfigs
+        if (
+          state &&
+          typeof state === "object" &&
+          state.tabConfigs &&
+          !state.feedConfigs
+        ) {
+          state.feedConfigs = state.tabConfigs
         }
-        return persistedState
+        return state
       },
     }
   )
@@ -246,7 +256,6 @@ export const useDisplayCount = () => useFeedStore((state) => state.displayCount)
 export const useFeedDisplayAs = () => useFeedStore((state) => state.feedDisplayAs)
 export const useEnabledFeedIds = () => useFeedStore((state) => state.enabledFeedIds)
 export const useFeedConfigs = () => useFeedStore((state) => state.feedConfigs)
-
 
 // Export types
 export type {FeedConfig, FeedFilter}

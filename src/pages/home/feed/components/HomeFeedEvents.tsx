@@ -171,15 +171,19 @@ function HomeFeedEvents() {
         />
       )}
       <NotificationPrompt />
-      <Feed
-        key={feedKey}
-        feedConfig={activeFeedConfig}
-        showDisplayAsSelector={follows.length > 1}
-        forceUpdate={0}
-        emptyPlaceholder={""}
-        refreshSignal={refreshSignal}
-        openedAt={openedAt}
-      />
+      {activeFeedConfig?.feedType === "popular" ? (
+        socialGraphLoaded && <PopularHomeFeed />
+      ) : (
+        <Feed
+          key={feedKey}
+          feedConfig={activeFeedConfig}
+          showDisplayAsSelector={follows.length > 1}
+          forceUpdate={0}
+          emptyPlaceholder={""}
+          refreshSignal={refreshSignal}
+          openedAt={openedAt}
+        />
+      )}
       {socialGraphLoaded && follows.length <= 1 && (
         <>
           <NoFollows myPubKey={myPubKey} />

@@ -160,9 +160,31 @@ function FeedEditor({
         Edit &quot;{getDisplayName(activeTab, localConfig.name)}&quot;
       </div>
 
-      {/* Show limited options for popular feed */}
-      {activeTab === "popular" ? (
-        <div className="flex flex-col gap-2">{renderCommonCheckboxes(updateConfig)}</div>
+      {/* Feed Type Dropdown */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-base-content/70 w-20">Feed Type</span>
+        <select
+          value={
+            localConfig.feedType ||
+            (activeTab === "popular" ? "popular" : "chronological")
+          }
+          onChange={(e) => updateConfig("feedType", e.target.value)}
+          className="select select-sm select-bordered flex-1 text-sm"
+        >
+          <option value="chronological">Chronological</option>
+          <option value="popular">Popular</option>
+        </select>
+      </div>
+
+      {/* Show no options for popular feed */}
+      {localConfig.feedType === "popular" ||
+      (activeTab === "popular" && !localConfig.feedType) ? (
+        <div className="flex flex-col gap-2">
+          <div className="text-sm text-base-content/50 italic">
+            Popular feeds use a fixed algorithm to calculate the most popular posts first.
+            Editing functionality is under construction.
+          </div>
+        </div>
       ) : (
         <>
           {/* Basic Settings */}

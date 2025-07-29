@@ -13,11 +13,10 @@ import UnknownUserEvents from "./UnknownUserEvents.tsx"
 import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
 import {useFeedStore, type FeedConfig} from "@/stores/feed"
-import {getTag} from "@/utils/nostr"
+import {getTag, getEventReplyingTo} from "@/utils/nostr"
 import MediaFeed from "./MediaFeed"
 import socialGraph from "@/utils/socialGraph"
 import {hasMedia} from "@/shared/components/embed"
-import {getEventReplyingTo} from "@/utils/nostr"
 import {seenEventIds} from "@/utils/memcache"
 
 interface FeedProps {
