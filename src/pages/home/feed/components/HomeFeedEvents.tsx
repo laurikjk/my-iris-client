@@ -163,7 +163,7 @@ function HomeFeedEvents() {
       )}
       <NotificationPrompt />
       {activeFeedConfig?.feedType === "popular" ? (
-        <PopularFeed small={false} showDisplaySelector={true} />
+        <PopularFeed />
       ) : (
         <Feed
           key={feedKey}

@@ -143,7 +143,7 @@ export const AboutPage = () => {
         {() => (
           <>
             <Widget title="Popular">
-              <PopularFeed />
+              <PopularFeed displayOptions={{small: true, showDisplaySelector: false}} />
             </Widget>
           </>
         )}

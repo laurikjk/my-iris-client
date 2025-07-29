@@ -122,7 +122,7 @@ function SearchPage() {
           )}
           {!query && (
             <div className="mt-4">
-              <PopularFeed small={false} />
+              <PopularFeed displayOptions={{showDisplaySelector: false}} />
             </div>
           )}
         </div>
@@ -134,7 +134,7 @@ function SearchPage() {
         {() => (
           <>
             <Widget title="Popular">
-              <PopularFeed />
+              <PopularFeed displayOptions={{small: true, showDisplaySelector: false}} />
             </Widget>
           </>
         )}

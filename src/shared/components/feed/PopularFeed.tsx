@@ -8,15 +8,25 @@ import {DisplayAsSelector} from "./DisplayAsSelector"
 import usePopularHomeFeedEvents from "@/shared/hooks/usePopularHomeFeedEvents"
 import {useFeedStore} from "@/stores/feed"
 
-interface PopularFeedProps {
+interface PopularFeedDisplayOptions {
   small?: boolean
   showDisplaySelector?: boolean
 }
 
-const PopularFeed = memo(function PopularFeed({
-  small = true,
-  showDisplaySelector = false,
-}: PopularFeedProps) {
+interface PopularFeedProps {
+  displayOptions?: PopularFeedDisplayOptions
+}
+
+const defaultDisplayOptions: PopularFeedDisplayOptions = {
+  small: false,
+  showDisplaySelector: true,
+}
+
+const PopularFeed = memo(function PopularFeed({displayOptions = {}}: PopularFeedProps) {
+  const {small, showDisplaySelector} = {
+    ...defaultDisplayOptions,
+    ...displayOptions,
+  }
   const isSocialGraphLoaded = useSocialGraphLoaded()
   const {events, loadMore, loading} = usePopularHomeFeedEvents()
   const {feedDisplayAs: displayAs, setFeedDisplayAs: setDisplayAs} = useFeedStore()

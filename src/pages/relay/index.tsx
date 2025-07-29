@@ -96,7 +96,7 @@ function RelayPage() {
         {() => (
           <>
             <Widget title="Popular">
-              <PopularFeed />
+              <PopularFeed displayOptions={{small: true, showDisplaySelector: false}} />
             </Widget>
           </>
         )}
