@@ -4,6 +4,7 @@ import {ndk} from "@/utils/ndk"
 import {REACTION_KIND, REPOST_KIND} from "@/pages/chats/utils/constants"
 import {getTag} from "@/utils/nostr"
 import {PopularityFilters} from "./usePopularityFilters"
+import {useSocialGraphLoaded} from "@/utils/socialGraph"
 
 const LOW_THRESHOLD = 30
 const INITIAL_DATA_THRESHOLD = 10
@@ -19,6 +20,7 @@ export default function useReactionSubscription(
   expandFilters: () => void,
   cache: ReactionSubscriptionCache
 ) {
+  const isSocialGraphLoaded = useSocialGraphLoaded()
   const showingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const pendingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const [hasInitialData, setHasInitialData] = useState(cache.hasInitialData || false)
@@ -34,6 +36,10 @@ export default function useReactionSubscription(
   }, [])
 
   useEffect(() => {
+    if (!isSocialGraphLoaded) {
+      return
+    }
+
     const {timeRange, limit, authors: filterAuthors} = currentFilters
     const now = Math.floor(Date.now() / 1000)
     const since = now - timeRange
@@ -75,7 +81,7 @@ export default function useReactionSubscription(
     })
 
     return () => sub.stop()
-  }, [currentFilters, hasInitialData])
+  }, [currentFilters, hasInitialData, isSocialGraphLoaded])
 
   const getNextMostPopular = (n: number): string[] => {
     const currentPendingCount = pendingReactionCounts.current.size

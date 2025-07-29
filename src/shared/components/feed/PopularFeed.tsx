@@ -1,5 +1,4 @@
 import {memo} from "react"
-import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import EventBorderless from "@/shared/components/event/EventBorderless"
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
@@ -27,15 +26,9 @@ const PopularFeed = memo(function PopularFeed({displayOptions = {}}: PopularFeed
     ...defaultDisplayOptions,
     ...displayOptions,
   }
-  const isSocialGraphLoaded = useSocialGraphLoaded()
+
   const {events, loadMore, loading} = usePopularHomeFeedEvents()
   const {feedDisplayAs: displayAs, setFeedDisplayAs: setDisplayAs} = useFeedStore()
-
-  const isTestEnvironment =
-    typeof window !== "undefined" && window.location.href.includes("localhost:5173")
-  if (!isSocialGraphLoaded && !isTestEnvironment) {
-    return null
-  }
 
   if (events.length === 0 && loading) {
     return (
