@@ -6,8 +6,7 @@ import {useHoverCard} from "@/shared/components/user/useHoverCard"
 import {Avatar} from "@/shared/components/user/Avatar"
 import {Name} from "@/shared/components/user/Name"
 import ProfileCard from "./ProfileCard"
-
-const HEX_REGEX = /^[0-9a-fA-F]{64}$/
+import {HEX_REGEX_STRICT as HEX_REGEX} from "@/utils/validation"
 
 export function UserRow({
   pubKey,

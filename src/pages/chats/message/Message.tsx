@@ -14,6 +14,7 @@ import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 import {GROUP_INVITE_KIND} from "../utils/constants"
 import {UserRow} from "@/shared/components/user/UserRow"
+import {EMOJI_REGEX} from "@/utils/validation"
 
 export type MessageType = Rumor & {
   reactions?: Record<string, string>
@@ -29,9 +30,6 @@ type MessageProps = {
   onSendReaction?: (messageId: string, emoji: string) => Promise<void>
   reactions?: Record<string, string>
 }
-
-// Moved regex outside component to avoid recreation on each render
-const EMOJI_REGEX = /^[\p{Extended_Pictographic}\p{Emoji_Presentation}]+$/u
 
 // Extracted time formatting logic
 const formatMessageTime = (timestamp: number): string => {

@@ -5,8 +5,7 @@ import {bytesToHex} from "@noble/hashes/utils"
 import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
 import {ndk} from "@/utils/ndk"
-
-const NSEC_NPUB_REGEX = /(nsec1|npub1)[a-zA-Z0-9]{20,65}/gi
+import {NSEC_NPUB_REGEX} from "@/utils/validation"
 
 interface SignUpProps {
   onClose: () => void

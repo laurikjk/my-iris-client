@@ -9,10 +9,7 @@ import classNames from "classnames"
 import {nip19} from "nostr-tools"
 import Icon from "../Icons/Icon"
 import {ndk} from "@/utils/ndk"
-
-const NOSTR_REGEX = /(npub|note|nevent|naddr|nprofile)1[a-zA-Z0-9]{58,300}/gi
-const HEX_REGEX = /[0-9a-fA-F]{64}/gi
-const NIP05_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import {NOSTR_REGEX, HEX_REGEX, NIP05_REGEX} from "@/utils/validation"
 const MAX_RESULTS = 6
 
 // Search ranking constants
