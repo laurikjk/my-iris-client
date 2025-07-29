@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useState} from "react"
+import React from "react"
 import classNames from "classnames"
 
 import {useSocialGraphLoaded} from "@/utils/socialGraph"
@@ -9,36 +9,11 @@ import usePopularHomeFeedEvents from "@/shared/hooks/usePopularHomeFeedEvents"
 
 export default function PopularFeed({
   small = true,
-  randomSort = true,
 }: {
   small?: boolean
-  randomSort?: boolean
-  days?: number
 }) {
   const isSocialGraphLoaded = useSocialGraphLoaded()
-  const [displayCount, setDisplayCount] = useState(10)
   const {events, loadMore, loading} = usePopularHomeFeedEvents()
-
-  // Apply randomization if requested
-  const displayEvents = useMemo(() => {
-    if (!events.length) return []
-
-    if (randomSort) {
-      return [...events].sort(() => Math.random() - 0.5)
-    }
-
-    return events
-  }, [events, randomSort])
-
-  const visibleEvents = small ? displayEvents.slice(0, displayCount) : displayEvents
-
-  const customLoadMore = useCallback(() => {
-    if (small) {
-      setDisplayCount((prevCount) => prevCount + 10)
-    } else {
-      loadMore()
-    }
-  }, [small, loadMore])
 
   const isTestEnvironment =
     typeof window !== "undefined" && window.location.href.includes("localhost:5173")
@@ -50,14 +25,14 @@ export default function PopularFeed({
 
   if (small) {
     return (
-      <InfiniteScroll onLoadMore={customLoadMore}>
+      <InfiniteScroll onLoadMore={loadMore}>
         <div
           className={classNames("flex flex-col gap-4", {
             "text-base-content/50": small,
           })}
         >
-          {!loading && visibleEvents.length === 0 ? emptyPlaceholder : null}
-          {visibleEvents.map((event) => (
+          {!loading && events.length === 0 ? emptyPlaceholder : null}
+          {events.map((event) => (
             <EventBorderless key={event.id} eventId={event.id} />
           ))}
         </div>
@@ -67,10 +42,10 @@ export default function PopularFeed({
 
   // For non-small, use full FeedItem display
   return (
-    <InfiniteScroll onLoadMore={customLoadMore}>
+    <InfiniteScroll onLoadMore={loadMore}>
       <div className="flex flex-col">
-        {!loading && visibleEvents.length === 0 ? emptyPlaceholder : null}
-        {visibleEvents.map((event) => (
+        {!loading && events.length === 0 ? emptyPlaceholder : null}
+        {events.map((event) => (
           <FeedItem key={event.id} event={event} />
         ))}
       </div>
