@@ -1,6 +1,7 @@
 import SearchBox from "@/shared/components/ui/SearchBox.tsx"
 import React, {useState, useEffect} from "react"
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
+import {useSettingsStore} from "@/stores/settings"
 import ErrorBoundary from "./ui/ErrorBoundary"
 
 interface RightColumnProps {
@@ -21,7 +22,8 @@ function useWindowWidth() {
 
 function RightColumn({children}: RightColumnProps) {
   const windowWidth = useWindowWidth()
-  const [isExpanded, setIsExpanded] = useState(true)
+  const {appearance, updateAppearance} = useSettingsStore()
+  const isExpanded = appearance.showRightColumn
 
   const isTestEnvironment =
     typeof window !== "undefined" && window.location.href.includes("localhost:5173")
@@ -40,7 +42,7 @@ function RightColumn({children}: RightColumnProps) {
         }}
       >
         <button
-          onClick={() => setIsExpanded(true)}
+          onClick={() => updateAppearance({showRightColumn: true})}
           className="bg-base-100 border border-base-300 p-2 rounded-full shadow-lg hover:bg-base-200 transition-colors"
           title="Show right column"
         >
@@ -58,7 +60,7 @@ function RightColumn({children}: RightColumnProps) {
             <SearchBox searchNotes={true} />
           </div>
           <button
-            onClick={() => setIsExpanded(false)}
+            onClick={() => updateAppearance({showRightColumn: false})}
             className="p-2 hover:bg-base-200 rounded-lg transition-colors flex-shrink-0"
             title="Hide right column"
           >

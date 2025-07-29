@@ -330,7 +330,11 @@ function FeedItem({
             })}
           >
             {showActions && (
-              <FeedItemActions feedItemRef={feedItemRef} event={referredEvent || event} />
+              <FeedItemActions
+                feedItemRef={feedItemRef}
+                event={referredEvent || event}
+                standalone={standalone}
+              />
             )}
           </div>
         </div>

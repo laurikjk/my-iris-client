@@ -15,14 +15,18 @@ import debounce from "lodash/debounce"
 import EmojiType from "@/types/emoji"
 import Icon from "../../Icons/Icon"
 import {ndk} from "@/utils/ndk"
-import {useSettingsStore} from "@/stores/settings"
 
 const likeCache = new LRUCache<string, Set<string>>({
   maxSize: 100,
 })
 
-export const FeedItemLike = ({event}: {event: NDKEvent}) => {
-  const {content} = useSettingsStore()
+export const FeedItemLike = ({
+  event,
+  showReactionCounts = true,
+}: {
+  event: NDKEvent
+  showReactionCounts?: boolean
+}) => {
   const myPubKey = useUserStore((state) => state.publicKey)
   const cachedLikes = likeCache.get(event.id)
   const [likesByAuthor, setLikesByAuthor] = useState<Set<string>>(
@@ -98,7 +102,7 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
   }
 
   useEffect(() => {
-    if (!content.showReactionCounts) return
+    if (!showReactionCounts) return
 
     const filter = {
       kinds: [7],
@@ -132,7 +136,7 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
     } catch (error) {
       console.warn(error)
     }
-  }, [content.showReactionCounts])
+  }, [showReactionCounts])
 
   const liked = likesByAuthor.has(myPubKey)
 
@@ -158,7 +162,7 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
     >
       {getReactionIcon()}
       <span data-testid="like-count">
-        {content.showReactionCounts ? formatAmount(likeCount) : ""}
+        {showReactionCounts ? formatAmount(likeCount) : ""}
       </span>
 
       <FloatingEmojiPicker

@@ -48,7 +48,12 @@ function Content() {
           <SettingToggle
             checked={content.showReactionCounts}
             onChange={() => handleToggleChange("showReactionCounts")}
-            label="Show reaction counts"
+            label="Show reaction counts in feed"
+          />
+          <SettingToggle
+            checked={content.showReactionCountsInStandalone}
+            onChange={() => handleToggleChange("showReactionCountsInStandalone")}
+            label="Show reaction counts in post view"
           />
           <SettingToggle
             checked={content.showLikes}

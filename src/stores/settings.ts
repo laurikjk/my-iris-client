@@ -1,11 +1,13 @@
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
 import localforage from "localforage"
+import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 
 interface SettingsState {
   // Appearance settings
   appearance: {
     theme: string
+    showRightColumn: boolean
   }
   // Content settings
   content: {
@@ -19,6 +21,7 @@ interface SettingsState {
     showZaps: boolean
     showReactionsBar: boolean
     showReactionCounts: boolean
+    showReactionCountsInStandalone: boolean
   }
   // Imgproxy settings
   imgproxy: {
@@ -55,6 +58,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       appearance: {
         theme: CONFIG.defaultTheme,
+        showRightColumn: true,
       },
       content: {
         blurNSFW: true,
@@ -66,7 +70,8 @@ export const useSettingsStore = create<SettingsState>()(
         showReplies: true,
         showZaps: true,
         showReactionsBar: true,
-        showReactionCounts: true,
+        showReactionCounts: !isTouchDevice, // Hide in feed on mobile by default
+        showReactionCountsInStandalone: true, // Always show in post view by default
       },
       imgproxy: {
         url: "https://imgproxy.coracle.social",

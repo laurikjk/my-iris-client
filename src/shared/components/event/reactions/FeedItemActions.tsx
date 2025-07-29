@@ -11,10 +11,16 @@ import {useSettingsStore} from "@/stores/settings"
 type FeedItemActionsProps = {
   event: NDKEvent
   feedItemRef: RefObject<HTMLDivElement | null>
+  standalone?: boolean
 }
 
-function FeedItemActions({event, feedItemRef}: FeedItemActionsProps) {
+function FeedItemActions({event, feedItemRef, standalone = false}: FeedItemActionsProps) {
   const {content} = useSettingsStore()
+
+  // Determine if reaction counts should be shown based on context
+  const showReactionCounts = standalone
+    ? content.showReactionCountsInStandalone
+    : content.showReactionCounts
 
   if (!content.showReactionsBar) {
     return <div className="py-2" />
@@ -29,7 +35,9 @@ function FeedItemActions({event, feedItemRef}: FeedItemActionsProps) {
     >
       {event.kind !== 30078 && content.showReplies && <FeedItemComment event={event} />}
       {event.kind !== 30078 && content.showReposts && <FeedItemRepost event={event} />}
-      {content.showLikes && <FeedItemLike event={event} />}
+      {content.showLikes && (
+        <FeedItemLike event={event} showReactionCounts={showReactionCounts} />
+      )}
       {content.showZaps && <FeedItemZap feedItemRef={feedItemRef} event={event} />}
       <FeedItemShare event={event} />
     </div>
