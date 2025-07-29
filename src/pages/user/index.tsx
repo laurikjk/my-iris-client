@@ -19,70 +19,74 @@ import {ndk} from "@/utils/ndk"
 type Tab = {
   name: string
   path: string
-  feedConfig?: Partial<FeedConfig>
-  filters: (pubKey: string, myPubKey: string) => Record<string, unknown>
-  showRepliedTo?: boolean
+  getFeedConfig: (pubKey: string, myPubKey: string) => FeedConfig
 }
 
 const tabs: Tab[] = [
   {
     name: "Posts",
     path: "",
-    feedConfig: {
+    getFeedConfig: (pubKey) => ({
+      name: "Posts",
+      id: `posts-${pubKey}`,
       hideReplies: true,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [1, 6]},
-    },
-    filters: (pubKey) => ({authors: [pubKey]}),
+      filter: {kinds: [1, 6], authors: [pubKey]},
+    }),
   },
   {
     name: "Market",
     path: "market",
-    feedConfig: {
+    getFeedConfig: (pubKey) => ({
+      name: "Market",
+      id: `market-${pubKey}`,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [30402]},
-    },
-    filters: (pubKey) => ({authors: [pubKey]}),
-    showRepliedTo: true,
+      filter: {kinds: [30402], authors: [pubKey]},
+      showRepliedTo: true,
+    }),
   },
   {
     name: "Replies",
     path: "replies",
-    feedConfig: {
+    getFeedConfig: (pubKey) => ({
+      name: "Replies",
+      id: `replies-${pubKey}`,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [1, 6]},
-    },
-    filters: (pubKey) => ({authors: [pubKey]}),
-    showRepliedTo: true,
+      filter: {kinds: [1, 6], authors: [pubKey]},
+      showRepliedTo: true,
+    }),
   },
   {
     name: "Media",
     path: "media",
-    feedConfig: {
+    getFeedConfig: (pubKey) => ({
+      name: "Media",
+      id: `media-${pubKey}`,
       requiresMedia: true,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [1, 6]},
-    },
-    filters: (pubKey) => ({authors: [pubKey]}),
+      filter: {kinds: [1, 6], authors: [pubKey]},
+    }),
   },
   {
     name: "Likes",
     path: "likes",
-    feedConfig: {
+    getFeedConfig: (pubKey) => ({
+      name: "Likes",
+      id: `likes-${pubKey}`,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [7]},
-    },
-    filters: (pubKey) => ({authors: [pubKey]}),
+      filter: {kinds: [7], authors: [pubKey]},
+    }),
   },
   {
     name: "You",
     path: "you",
-    feedConfig: {
+    getFeedConfig: (pubKey, myPubKey) => ({
+      name: "You",
+      id: `you-${pubKey}`,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [1, 6, 7]},
-    },
-    filters: (pubKey, myPubKey) => ({authors: [pubKey], "#p": [myPubKey]}),
-    showRepliedTo: true,
+      filter: {kinds: [1, 6, 7], authors: [pubKey], "#p": [myPubKey]},
+      showRepliedTo: true,
+    }),
   },
 ]
 
@@ -125,12 +129,15 @@ function UserPage({pubKey}: {pubKey: string}) {
     [pubKey]
   )
   const myPubKey = useUserStore((state) => state.publicKey)
+  console.log("myPubKey", myPubKey)
+  console.log("pubKeyHex", pubKeyHex)
   const follows = useFollows(pubKey)
   const hasMarketEvents = useHasMarketEvents(pubKeyHex)
   const filteredFollows = useMemo(() => {
-    return follows
-      .filter((follow) => socialGraph().getFollowDistance(follow) > 1)
-      .sort(() => Math.random() - 0.5) // Randomize order
+    const filtered = myPubKey
+      ? follows.filter((follow) => socialGraph().getFollowDistance(follow) > 1)
+      : follows
+    return filtered.sort(() => Math.random() - 0.5) // Randomize order
   }, [follows])
   const location = useLocation()
   const activeProfile = location.pathname.split("/")[1] || ""
@@ -171,16 +178,7 @@ function UserPage({pubKey}: {pubKey: string}) {
                   element={
                     <Feed
                       key={`feed-${pubKeyHex}-${tab.path}`}
-                      feedConfig={{
-                        name: tab.name,
-                        id: `${tab.name.toLowerCase()}-${pubKeyHex}`,
-                        ...tab.feedConfig,
-                        filter: {
-                          ...tab.feedConfig?.filter,
-                          ...tab.filters(pubKeyHex, myPubKey),
-                        },
-                        showRepliedTo: tab.showRepliedTo,
-                      }}
+                      feedConfig={tab.getFeedConfig(pubKeyHex, myPubKey)}
                       borderTopFirst={true}
                     />
                   }
