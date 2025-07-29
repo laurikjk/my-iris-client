@@ -1,8 +1,8 @@
 import {useEffect, useMemo, useState} from "react"
 
 import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
+import {ProfileHoverCard} from "@/shared/components/user/ProfileHoverCard"
 import {useHoverCard} from "@/shared/components/user/useHoverCard"
-import ProfileCard from "@/shared/components/user/ProfileCard"
 import ProxyImg from "@/shared/components/ProxyImg.tsx"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import {Badge} from "@/shared/components/user/Badge"
@@ -87,21 +87,7 @@ export const Avatar = ({
           <MinidenticonImg username={pubKeyHex} alt="User Avatar" />
         )}
       </div>
-      {showHoverCard && (
-        <div
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-          }}
-          className={`cursor-default z-20 bg-base-100 rounded-2xl fixed md:absolute left-0 top-1/2 -translate-y-1/2 md:top-full md:translate-y-0 mt-2 w-full md:w-96 min-h-32 p-4 transition-all duration-300 ease-in-out ${
-            showCard ? "opacity-100" : "opacity-0 pointer-events-none"
-          }`}
-        >
-          {showCard && (
-            <ProfileCard pubKey={pubKey} showFollows={true} showHoverCard={false} />
-          )}
-        </div>
-      )}
+      {showHoverCard && <ProfileHoverCard pubKey={pubKey} showCard={showCard} />}
     </div>
   )
 }

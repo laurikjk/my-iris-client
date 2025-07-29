@@ -2,11 +2,12 @@ import EventBorderless from "@/shared/components/event/EventBorderless.tsx"
 
 import RelativeTime from "@/shared/components/event/RelativeTime.tsx"
 import {Avatar} from "@/shared/components/user/Avatar.tsx"
+import {ProfileHoverCard} from "@/shared/components/user/ProfileHoverCard"
+import {useHoverCard} from "@/shared/components/user/useHoverCard"
 import HyperText from "@/shared/components/HyperText"
-import {Navigate} from "@/shared/components/Navigate"
 import {MouseEvent, useEffect, useState} from "react"
 import {Notification} from "@/utils/notifications"
-import {useNavigate} from "react-router"
+import {useNavigate, Link} from "react-router"
 import {getTag} from "@/utils/nostr"
 import classNames from "classnames"
 import {nip19} from "nostr-tools"
@@ -21,6 +22,44 @@ import {
 interface NotificationsFeedItemProps {
   notification: Notification
   highlight: boolean
+}
+
+// Separate component for each avatar to avoid hooks in loops
+interface NotificationAvatarProps {
+  pubKey: string
+  emoji?: string | null
+}
+
+function NotificationAvatar({pubKey, emoji}: NotificationAvatarProps) {
+  const {hoverProps, showCard} = useHoverCard(true)
+
+  return (
+    <div className="relative inline-block mr-2" {...hoverProps}>
+      <Link
+        className="inline"
+        to={`/${nip19.npubEncode(pubKey)}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="relative inline-block">
+          <Avatar pubKey={pubKey} width={30} showHoverCard={false} />
+          {emoji && (
+            <span
+              className="absolute bottom-0 right-0 transform translate-x-1/4 translate-y-1/4 bg-base-100 rounded-full border border-base-300 leading-none flex items-center justify-center"
+              style={{
+                width: 16,
+                height: 16,
+                fontSize: 10,
+              }}
+              title={`Reacted with ${emoji}`}
+            >
+              {emoji === "+" ? "❤️" : emoji}
+            </span>
+          )}
+        </span>
+      </Link>
+      <ProfileHoverCard pubKey={pubKey} showCard={showCard} />
+    </div>
+  )
 }
 
 function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemProps) {
@@ -90,30 +129,7 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
                   const isReaction = notification.kind === 7
                   const emoji = isReaction && userInfo.content ? userInfo.content : null
 
-                  return (
-                    <Navigate
-                      key={key}
-                      className="mr-2 inline"
-                      to={`/${nip19.npubEncode(key)}`}
-                    >
-                      <span className="relative inline-block">
-                        <Avatar pubKey={key} width={30} showHoverCard={true} />
-                        {emoji && (
-                          <span
-                            className="absolute bottom-0 right-0 transform translate-x-1/4 translate-y-1/4 bg-base-100 rounded-full border border-base-300 leading-none flex items-center justify-center"
-                            style={{
-                              width: 16,
-                              height: 16,
-                              fontSize: 10,
-                            }}
-                            title={`Reacted with ${emoji}`}
-                          >
-                            {emoji === "+" ? "❤️" : emoji}
-                          </span>
-                        )}
-                      </span>
-                    </Navigate>
-                  )
+                  return <NotificationAvatar key={key} pubKey={key} emoji={emoji} />
                 })}
               <span className="ml-1" />
               {notification.users.size > 5 && (
