@@ -27,9 +27,9 @@ export default function useFeedEvents({
   displayCount,
   displayFilterFn,
   fetchFilterFn,
-  sortFn,
   hideEventsByUnknownUsers,
   sortLikedPosts = false,
+  sortFn,
   relayUrls,
 }: UseFeedEventsProps) {
   const myPubKey = useUserStore((state) => state.publicKey)
@@ -68,6 +68,16 @@ export default function useFeedEvents({
     (event: NDKEvent) => {
       if (!event.created_at) return false
       if (displayFilterFn && !displayFilterFn(event)) return false
+
+      // Client-side search validation for relays that don't support search filters
+      if (localFilter.search && event.content) {
+        const searchTerm = localFilter.search.toLowerCase()
+        const eventContent = event.content.toLowerCase()
+        if (!eventContent.includes(searchTerm)) {
+          return false
+        }
+      }
+
       const inAuthors = localFilter.authors?.includes(event.pubkey)
       // Pass `allowUnknown` based on the `hideEventsByUnknownUsers` flag so that
       // disabling the flag actually shows posts from users outside the follow graph.
@@ -83,7 +93,13 @@ export default function useFeedEvents({
       }
       return true
     },
-    [displayFilterFn, localFilter.authors, hideEventsByUnknownUsers, filters.authors]
+    [
+      displayFilterFn,
+      localFilter.authors,
+      localFilter.search,
+      hideEventsByUnknownUsers,
+      filters.authors,
+    ]
   )
 
   const filteredEvents = useMemo(() => {

@@ -79,7 +79,7 @@ function HomeFeedEvents() {
 
   const activeFeedConfig = useMemo(
     () => loadFeedConfig(activeFeed),
-    [loadFeedConfig, activeFeed]
+    [loadFeedConfig, activeFeed, feedConfigs]
   )
 
   const openedAt = useMemo(() => Date.now(), [])
@@ -138,7 +138,7 @@ function HomeFeedEvents() {
   // Create a comprehensive key that changes when any relevant config changes
   const feedKey = useMemo(() => {
     return `feed-${JSON.stringify(activeFeedConfig)}`
-  }, [activeFeed, activeFeedConfig])
+  }, [activeFeedConfig])
 
   if (!activeFeedConfig?.filter) {
     return null

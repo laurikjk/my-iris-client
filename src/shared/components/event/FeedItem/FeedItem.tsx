@@ -13,23 +13,11 @@ import Feed from "@/shared/components/feed/Feed.tsx"
 import FeedItemContent from "./FeedItemContent.tsx"
 import {onClick, TRUNCATE_LENGTH} from "./utils.ts"
 import FeedItemHeader from "./FeedItemHeader.tsx"
-import socialGraph from "@/utils/socialGraph.ts"
 import FeedItemTitle from "./FeedItemTitle.tsx"
 import {Link, useNavigate} from "react-router"
 import LikeHeader from "../LikeHeader"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
-
-const replySortFn = (a: NDKEvent, b: NDKEvent) => {
-  const followDistanceA = socialGraph().getFollowDistance(a.pubkey)
-  const followDistanceB = socialGraph().getFollowDistance(b.pubkey)
-  if (followDistanceA !== followDistanceB) {
-    return followDistanceA - followDistanceB
-  }
-  if (a.created_at && b.created_at) return a.created_at - b.created_at
-  console.warn("timestamps could not be compared:", a, b)
-  return 0
-}
 
 type FeedItemProps = {
   event?: NDKEvent
@@ -334,8 +322,14 @@ function FeedItem({
           <Feed
             showRepliedTo={false}
             asReply={true}
-            filters={{"#e": [eventIdHex], kinds: [1]}}
-            displayFilterFn={(e: NDKEvent) => getEventReplyingTo(e) === event.id}
+            feedConfig={{
+              name: "Replies",
+              id: `replies-${event.id}`,
+              repliesTo: event.id,
+              sortType: "followDistance",
+              filter: {kinds: [1]},
+            }}
+            filters={{"#e": [eventIdHex]}}
             onEvent={(e) => {
               onEvent?.(e)
               setHasActualReplies(true)
@@ -343,7 +337,6 @@ function FeedItem({
             borderTopFirst={false}
             emptyPlaceholder={null}
             showReplies={showReplies}
-            sortFn={replySortFn}
             showDisplayAsSelector={false}
             displayAs="list"
           />

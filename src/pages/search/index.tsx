@@ -110,11 +110,14 @@ function SearchPage() {
           {query && (
             <Feed
               key={`${activeTab}-${query}`}
-              filters={filters}
-              showRepliedTo={false}
-              cacheKey={`search-${activeTab}-${query}`}
+              feedConfig={{
+                name: "Search Results",
+                id: `search-${activeTab}-${query}`,
+                showRepliedTo: false,
+                showEventsByUnknownUsers: showEventsByUnknownUsers,
+                filter: filters,
+              }}
               forceUpdate={forceUpdate}
-              showEventsByUnknownUsers={showEventsByUnknownUsers}
             />
           )}
           {!query && (

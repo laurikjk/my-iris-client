@@ -64,11 +64,14 @@ function RelayPage() {
 
               <Feed
                 key={selectedRelay}
-                filters={filters}
-                showRepliedTo={false}
-                cacheKey={`relay-${selectedRelay}`}
-                relayUrls={[selectedRelay]}
-                showEventsByUnknownUsers={showEventsByUnknownUsers}
+                feedConfig={{
+                  name: "Relay Feed",
+                  id: `relay-${selectedRelay}`,
+                  showRepliedTo: false,
+                  showEventsByUnknownUsers: showEventsByUnknownUsers,
+                  relayUrls: [selectedRelay],
+                  filter: filters,
+                }}
               />
             </>
           )}

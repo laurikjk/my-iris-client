@@ -24,6 +24,10 @@ interface FeedConfig {
   showEventsByUnknownUsers?: boolean
   relayUrls?: string[]
   feedType?: "chronological" | "popular"
+  // For reply feeds - only show replies to this specific event
+  repliesTo?: string
+  // Sort type for events
+  sortType?: "chronological" | "followDistance" | "liked"
 }
 
 interface FeedState {
@@ -225,7 +229,7 @@ export const useFeedStore = create<FeedState>()(
       name: "feed-storage",
       migrate: (persistedState: unknown) => {
         // Type guard to check if persistedState is an object with expected properties
-        const state = persistedState as Record<string, any>
+        const state = persistedState as Record<string, unknown>
 
         // Handle migration from old activeHomeTab to activeFeed
         if (

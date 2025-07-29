@@ -1,5 +1,4 @@
 import React from "react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useFeedStore, useEnabledFeedIds} from "@/stores/feed"
 import {
   RiArrowLeftSLine,
@@ -12,13 +11,11 @@ interface Feed {
   name: string
   id: string
   showRepliedTo?: boolean
-  fetchFilterFn?: (e: NDKEvent) => boolean
   filter?: {
     kinds?: number[]
     since?: number
     limit?: number
   }
-  displayFilterFn?: (e: NDKEvent) => boolean
   sortLikedPosts?: boolean
 }
 
