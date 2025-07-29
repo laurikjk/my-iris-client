@@ -198,7 +198,7 @@ function UserPage({pubKey}: {pubKey: string}) {
             )}
             {pubKeyHex === myPubKey && (
               <Widget title="Popular">
-                <PopularFeed />
+                <PopularFeed displayOptions={{small: true, showDisplaySelector: false}} />
               </Widget>
             )}
           </>

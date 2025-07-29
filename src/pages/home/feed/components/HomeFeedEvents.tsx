@@ -2,7 +2,7 @@ import {useMemo, useEffect, useState} from "react"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
-import PopularHomeFeed from "@/shared/components/feed/PopularHomeFeed"
+import PopularFeed from "@/shared/components/feed/PopularFeed"
 import {useRefreshRouteSignal} from "@/stores/notifications"
 import {feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
@@ -163,7 +163,7 @@ function HomeFeedEvents() {
       )}
       <NotificationPrompt />
       {activeFeedConfig?.feedType === "popular" ? (
-        <PopularHomeFeed />
+        <PopularFeed />
       ) : (
         <Feed
           key={feedKey}
