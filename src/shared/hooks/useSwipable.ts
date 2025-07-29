@@ -9,7 +9,6 @@ import {
 } from "react"
 
 export interface SwipeItem {
-  id: string
   url: string
   type: "image" | "video"
   imeta?: string[]

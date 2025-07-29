@@ -114,7 +114,7 @@ export function SwipableCarousel({
     if (items.length === 1) {
       return (
         <div
-          key={items[0].id}
+          key={items[0].url}
           className="w-full flex-shrink-0 flex-grow-0 flex justify-center items-center"
         >
           {renderItem(items[0], 0, wasDragged)}
@@ -129,19 +129,19 @@ export function SwipableCarousel({
     return (
       <>
         <div
-          key={`prev-${navigation.getPrevIndex()}`}
+          key={prev.url === next.url ? `${prev.url}-prev` : prev.url}
           className="w-full flex-shrink-0 flex-grow-0 flex justify-center items-center"
         >
           {renderItem(prev, navigation.getPrevIndex(), wasDragged)}
         </div>
         <div
-          key={`curr-${currentIndex}`}
+          key={curr.url}
           className="w-full flex-shrink-0 flex-grow-0 flex justify-center items-center"
         >
           {renderItem(curr, currentIndex, wasDragged)}
         </div>
         <div
-          key={`next-${navigation.getNextIndex()}`}
+          key={next.url}
           className="w-full flex-shrink-0 flex-grow-0 flex justify-center items-center"
         >
           {renderItem(next, navigation.getNextIndex(), wasDragged)}
@@ -185,20 +185,12 @@ export function SwipableCarousel({
       {showArrows && items.length > 1 && (
         <>
           <div className="absolute top-1/2 -translate-y-1/2 left-4 z-10">
-            <button
-              onClick={navigation.goToPrev}
-              disabled={currentIndex === 0}
-              className={arrowClassName}
-            >
+            <button onClick={navigation.goToPrev} className={arrowClassName}>
               <RiArrowLeftSLine size={24} />
             </button>
           </div>
           <div className="absolute top-1/2 -translate-y-1/2 right-4 z-10">
-            <button
-              onClick={navigation.goToNext}
-              disabled={currentIndex === items.length - 1}
-              className={arrowClassName}
-            >
+            <button onClick={navigation.goToNext} className={arrowClassName}>
               <RiArrowRightSLine size={24} />
             </button>
           </div>

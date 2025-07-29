@@ -97,7 +97,6 @@ function Carousel({media, event}: CarouselProps) {
 
   // Convert media to SwipeItem format
   const swipeItems: SwipeItem[] = media.map((item) => ({
-    id: item.url,
     url: item.url,
     type: item.type,
     imeta: item.imeta,
