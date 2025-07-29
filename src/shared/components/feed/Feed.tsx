@@ -18,6 +18,7 @@ import MediaFeed from "./MediaFeed"
 import socialGraph from "@/utils/socialGraph"
 import {hasMedia} from "@/shared/components/embed"
 import {seenEventIds} from "@/utils/memcache"
+import useFollows from "@/shared/hooks/useFollows"
 
 interface FeedProps {
   feedConfig: FeedConfig
@@ -58,7 +59,31 @@ const Feed = memo(function Feed({
     throw new Error("Feed component requires feedConfig with filter")
   }
 
-  const filters = feedConfig.filter as unknown as NDKFilter
+  const myPubKey = useUserStore((state) => state.publicKey)
+  const follows = useFollows(myPubKey, true)
+
+  // Enhance filters with authors list for follow-distance-based feeds
+  const filters = useMemo(() => {
+    const baseFilters = feedConfig.filter as unknown as NDKFilter
+
+    // Set authors based on followDistance for better relay-level filtering
+    if (feedConfig.followDistance === 0 && myPubKey) {
+      // followDistance 0: only our own posts
+      return {
+        ...baseFilters,
+        authors: [myPubKey],
+      }
+    } else if (feedConfig.followDistance === 1 && follows.length > 0) {
+      // followDistance 1: people we follow
+      return {
+        ...baseFilters,
+        authors: follows,
+      }
+    }
+
+    // followDistance > 1 or undefined: fetch all, filter client-side
+    return baseFilters
+  }, [feedConfig.filter, feedConfig.followDistance, follows, myPubKey])
 
   const sortFn = useMemo(() => {
     switch (feedConfig.sortType) {
@@ -85,7 +110,6 @@ const Feed = memo(function Feed({
     "displayCount"
   )
   const firstFeedItemRef = useRef<HTMLDivElement>(null)
-  const myPubKey = useUserStore((state) => state.publicKey)
 
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
 
