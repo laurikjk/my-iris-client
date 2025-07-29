@@ -7,27 +7,28 @@ import {NDKFilter} from "@nostr-dev-kit/ndk"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import {useParams} from "react-router"
 import Widget from "@/shared/components/ui/Widget"
-import {DEFAULT_RELAYS} from "@/utils/ndk"
 import {useSettingsStore} from "@/stores/settings"
 import {Helmet} from "react-helmet"
 import RelaySelector from "@/shared/components/ui/RelaySelector"
 
 function RelayPage() {
-  const {relay} = useParams()
-  const selectedRelay = relay || ""
-  const relayDisplayName = selectedRelay.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "")
+  const {url} = useParams()
+  const decodedRelay = url ? decodeURIComponent(url) : ""
+  const initialRelayUrl = decodedRelay ? `wss://${decodedRelay}` : ""
+  const relayDisplayName = decodedRelay || ""
 
-  const [displayedRelay, setDisplayedRelay] = useState("")
+  const [selectedRelayUrl, setSelectedRelayUrl] = useState(initialRelayUrl)
+
+  // Update selectedRelayUrl when the URL changes
+  useEffect(() => {
+    setSelectedRelayUrl(initialRelayUrl)
+  }, [initialRelayUrl])
 
   const {content} = useSettingsStore()
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
     !content.hideEventsByUnknownUsers,
     "relayShowEventsByUnknownUsers"
   )
-
-  useEffect(() => {
-    setDisplayedRelay(selectedRelay || DEFAULT_RELAYS[0])
-  }, [selectedRelay])
 
   const filters: NDKFilter = useMemo(
     () => ({
@@ -40,17 +41,19 @@ function RelayPage() {
   return (
     <div className="flex flex-row">
       <div className="flex flex-col items-center flex-1">
-        <Header title={selectedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"} />
+        <Header title={decodedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"} />
         <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4">
           <RelaySelector
-            selectedRelay={displayedRelay}
+            selectedRelay={selectedRelayUrl}
             onRelaySelect={(newRelay) => {
-              window.location.href = `/relay/${encodeURIComponent(newRelay)}`
+              setSelectedRelayUrl(newRelay)
+              const cleanUrl = newRelay.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "")
+              window.location.href = `/relay/${encodeURIComponent(cleanUrl)}`
             }}
             placeholder="Select a relay"
           />
 
-          {selectedRelay && (
+          {selectedRelayUrl && (
             <>
               <div className="flex items-center gap-2 p-2">
                 <input
@@ -63,32 +66,29 @@ function RelayPage() {
               </div>
 
               <Feed
-                key={selectedRelay}
+                key={selectedRelayUrl}
                 feedConfig={{
                   name: "Relay Feed",
-                  id: `relay-${selectedRelay}`,
-                  showRepliedTo: false,
+                  id: `relay-${selectedRelayUrl}`,
+                  showRepliedTo: true,
                   showEventsByUnknownUsers: showEventsByUnknownUsers,
-                  relayUrls: [selectedRelay],
+                  sortType: "chronological",
+                  relayUrls: [selectedRelayUrl],
                   filter: filters,
                 }}
               />
             </>
           )}
 
-          {!selectedRelay && (
+          {!selectedRelayUrl && (
             <div className="text-center py-8 text-base-content/50">
               Select a relay to view its feed
             </div>
           )}
-
-          <div className="mt-8">
-            <PopularFeed small={false} />
-          </div>
         </div>
         <Helmet>
           <title>
-            {selectedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"} / Iris
+            {decodedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"} / Iris
           </title>
         </Helmet>
       </div>
