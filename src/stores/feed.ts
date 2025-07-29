@@ -117,6 +117,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     showRepliedTo: false,
     requiresMedia: true,
     hideReplies: true,
+    followDistance: 1,
     filter: {
       kinds: [1],
       limit: 100,
