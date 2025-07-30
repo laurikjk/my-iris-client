@@ -16,6 +16,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
+    "dev:local": "VITE_USE_LOCAL_RELAY=true vite",
+    "dev:relay": "cd dev-relay && docker compose up -d && bash quick-seed.sh 80000",
     "start": "vite",
     "build": "tsc && vite build --mode production",
     "build:dev": "tsx ./scripts/updateSocialGraph.ts && tsc && vite build --mode development",

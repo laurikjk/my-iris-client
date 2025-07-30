@@ -22,6 +22,15 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Cache wellorder dataset
+        uses: actions/cache@v4
+        with:
+          path: dev-relay/nostr-wellorder-early-500k-v1.jsonl.bz2
+          key: wellorder-dataset-v1
+
+      - name: Start and seed dev-relay
+        run: yarn dev:relay
+
       - name: Install Playwright browsers
         run: npx playwright install chromium
 
