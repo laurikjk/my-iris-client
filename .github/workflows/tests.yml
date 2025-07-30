@@ -22,11 +22,29 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Build and start dev-relay
+        run: |
+          cd dev-relay
+          docker build -t dev-relay .
+          docker run -d -p 7777:7777 --name dev-relay dev-relay
+          # Wait for relay to be ready
+          timeout 30 bash -c 'until nc -z localhost 7777; do sleep 1; done'
+
+      - name: Seed dev-relay with test data
+        run: |
+          cd dev-relay
+          # Seed with a smaller subset for faster CI (e.g., 1000 events)
+          bash quick-seed.sh 1000
+
       - name: Install Playwright browsers
         run: npx playwright install chromium
 
       - name: Run tests
         run: yarn test
+
+      - name: Stop dev-relay
+        if: always()
+        run: docker stop dev-relay && docker rm dev-relay
 
       - name: Build
         run: yarn build
