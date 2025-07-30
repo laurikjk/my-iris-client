@@ -7,6 +7,7 @@ import {
   MouseEvent,
   TransitionEvent,
 } from "react"
+import {useScrollDirection} from "./useScrollDirection"
 
 export interface SwipeItem {
   url: string
@@ -61,10 +62,16 @@ export function useSwipable({
   >("none")
 
   const dragStartX = useRef<number | null>(null)
+  const dragStartY = useRef<number | null>(null)
   const dragLastX = useRef<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const wasDragged = useRef(false)
   const touchStartTime = useRef<number | null>(null)
+  const {
+    detectDirection,
+    getCurrentDirection,
+    reset: resetScrollDirection,
+  } = useScrollDirection()
 
   // Helper to get prev/next indices (wrap around)
   const getPrevIndex = useCallback(
@@ -107,35 +114,64 @@ export function useSwipable({
     if (!("touches" in e)) {
       e.preventDefault()
     }
-    
+
     setIsDragging(true)
     wasDragged.current = false
     touchStartTime.current = Date.now()
+    resetScrollDirection()
+
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
     dragStartX.current = clientX
+    dragStartY.current = clientY
     dragLastX.current = clientX
   }, [])
 
   const onDragMove = useCallback(
     (e: TouchEvent | MouseEvent) => {
-      if (!isDragging || dragStartX.current === null) return
-
-      // Only preventDefault for mouse events, not touch events
-      if (!("touches" in e)) {
-        e.preventDefault()
-      }
+      if (!isDragging || dragStartX.current === null || dragStartY.current === null)
+        return
 
       const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
-      const newDragX = clientX - dragStartX.current
+      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
+      const deltaX = clientX - dragStartX.current
+      const deltaY = clientY - dragStartY.current
 
-      // Mark as dragged if moved more than a few pixels or enough time has passed
-      const timeSinceStart = Date.now() - (touchStartTime.current || 0)
-      if (Math.abs(newDragX) > 5 || ("touches" in e && timeSinceStart > 150)) {
-        wasDragged.current = true
+      // Detect scroll direction
+      const direction = detectDirection(deltaX, deltaY)
+
+      // If scrolling vertically, don't handle carousel movement and allow page scroll
+      if (direction === "vertical") {
+        // Don't preventDefault to allow normal page scrolling
+        setIsDragging(false)
+        wasDragged.current = false
+        return
       }
 
-      setDragX(newDragX)
-      dragLastX.current = clientX
+      // Only handle horizontal movement
+      if (direction === "horizontal") {
+        // Prevent default for horizontal movement to avoid page scroll
+        if ("touches" in e) {
+          e.preventDefault()
+        }
+
+        // Mark as dragged if moved horizontally
+        const timeSinceStart = Date.now() - (touchStartTime.current || 0)
+        if (Math.abs(deltaX) > 5 || ("touches" in e && timeSinceStart > 150)) {
+          wasDragged.current = true
+        }
+
+        setDragX(deltaX)
+        dragLastX.current = clientX
+      }
+
+      // For mouse events, always preventDefault
+      if (!("touches" in e)) {
+        e.preventDefault()
+        wasDragged.current = true
+        setDragX(deltaX)
+        dragLastX.current = clientX
+      }
     },
     [isDragging]
   )
@@ -143,6 +179,16 @@ export function useSwipable({
   const onDragEnd = useCallback(() => {
     if (!isDragging) return
     setIsDragging(false)
+
+    // If this was a vertical scroll, don't do carousel navigation
+    if (getCurrentDirection() === "vertical") {
+      setDragX(0)
+      resetScrollDirection()
+      dragStartX.current = null
+      dragStartY.current = null
+      dragLastX.current = null
+      return
+    }
 
     // Find the actual rendered content (image/video) to calculate threshold based on its width
     const container = containerRef.current
@@ -195,7 +241,9 @@ export function useSwipable({
       setIsTransitioning(false)
       setTransitionDirection("none")
       setTargetIndex(null)
+      resetScrollDirection()
       dragStartX.current = null
+      dragStartY.current = null
       dragLastX.current = null
 
       // Re-enable transitions after a brief delay

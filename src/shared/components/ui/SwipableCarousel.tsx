@@ -1,4 +1,10 @@
-import {useEffect, ReactNode, CSSProperties} from "react"
+import {
+  useEffect,
+  ReactNode,
+  CSSProperties,
+  TouchEvent as ReactTouchEvent,
+  MouseEvent as ReactMouseEvent,
+} from "react"
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import {SwipeItem, useSwipable} from "@/shared/hooks/useSwipable"
 
@@ -108,6 +114,35 @@ export function SwipableCarousel({
     }
   }, [enableKeyboardNav, navigation, onClose])
 
+  // Set up non-passive touch event listeners
+  useEffect(() => {
+    const element = containerRef.current
+    if (!element || items.length <= 1) return
+
+    const handleTouchStart = (e: TouchEvent) => {
+      handlers.onDragStart(e as unknown as ReactTouchEvent | ReactMouseEvent)
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      handlers.onDragMove(e as unknown as ReactTouchEvent | ReactMouseEvent)
+    }
+
+    const handleTouchEnd = () => {
+      handlers.onDragEnd()
+    }
+
+    // Add non-passive event listeners
+    element.addEventListener("touchstart", handleTouchStart, {passive: false})
+    element.addEventListener("touchmove", handleTouchMove, {passive: false})
+    element.addEventListener("touchend", handleTouchEnd, {passive: false})
+
+    return () => {
+      element.removeEventListener("touchstart", handleTouchStart)
+      element.removeEventListener("touchmove", handleTouchMove)
+      element.removeEventListener("touchend", handleTouchEnd)
+    }
+  }, [items.length, handlers])
+
   if (items.length === 0) return null
 
   const renderCarouselItems = () => {
@@ -153,7 +188,7 @@ export function SwipableCarousel({
   return (
     <div
       className={`relative overflow-hidden ${className}`}
-      style={{touchAction: items.length > 1 ? "pan-y" : "auto", ...style}}
+      style={{touchAction: items.length > 1 ? "pan-y pinch-zoom" : "auto", ...style}}
     >
       <div
         ref={containerRef}
@@ -174,9 +209,6 @@ export function SwipableCarousel({
         onMouseMove={isDragging ? handlers.onDragMove : undefined}
         onMouseUp={handlers.onDragEnd}
         onMouseLeave={isDragging ? handlers.onDragEnd : undefined}
-        onTouchStart={items.length > 1 ? handlers.onDragStart : undefined}
-        onTouchMove={items.length > 1 ? handlers.onDragMove : undefined}
-        onTouchEnd={items.length > 1 ? handlers.onDragEnd : undefined}
         onTransitionEnd={handlers.onTransitionEnd}
       >
         {renderCarouselItems()}
