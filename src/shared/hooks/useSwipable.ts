@@ -113,28 +113,31 @@ export function useSwipable({
   )
 
   // Mouse/touch handlers
-  const onDragStart = useCallback((e: TouchEvent | MouseEvent) => {
-    // Only preventDefault for mouse events to preserve touch click behavior
-    if (!("touches" in e)) {
-      e.preventDefault()
-    }
+  const onDragStart = useCallback(
+    (e: TouchEvent | MouseEvent) => {
+      // Only preventDefault for mouse events to preserve touch click behavior
+      if (!("touches" in e)) {
+        e.preventDefault()
+      }
 
-    setIsDragging(true)
-    wasDragged.current = false
-    touchStartTime.current = Date.now()
-    resetScrollDirection()
+      setIsDragging(true)
+      wasDragged.current = false
+      touchStartTime.current = Date.now()
+      resetScrollDirection()
 
-    // Lock scroll on touch start for touch events
-    if ("touches" in e && !unlockScrollRef.current) {
-      unlockScrollRef.current = lockScroll({touchAction: "pan-y"})
-    }
+      // Lock scroll on touch start for touch events
+      if ("touches" in e && !unlockScrollRef.current) {
+        unlockScrollRef.current = lockScroll({touchAction: "pan-y"})
+      }
 
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
-    dragStartX.current = clientX
-    dragStartY.current = clientY
-    dragLastX.current = clientX
-  }, [resetScrollDirection])
+      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
+      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
+      dragStartX.current = clientX
+      dragStartY.current = clientY
+      dragLastX.current = clientX
+    },
+    [resetScrollDirection]
+  )
 
   const onDragMove = useCallback(
     (e: TouchEvent | MouseEvent) => {

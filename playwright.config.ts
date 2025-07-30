@@ -18,7 +18,16 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: {...devices["Desktop Chrome"]},
+      use: {
+        ...devices["Desktop Chrome"],
+        // Set fixed date to 2023-01-03 so tests can see seeded events (which go until 2023-01-02)
+        // contextOptions: {
+        //   timezoneId: "UTC",
+        //   clock: {
+        //     now: new Date("2023-01-03T00:00:00Z").getTime(),
+        //   },
+        // },
+      },
     },
   ],
   webServer: {
