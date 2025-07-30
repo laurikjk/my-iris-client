@@ -185,12 +185,12 @@ export function SwipableCarousel({
       {showArrows && items.length > 1 && (
         <>
           <div className="absolute top-1/2 -translate-y-1/2 left-4 z-10">
-            <button onClick={navigation.goToPrev} className={arrowClassName}>
+            <button onClick={(e) => { e.stopPropagation(); navigation.goToPrev(); }} className={arrowClassName}>
               <RiArrowLeftSLine size={24} />
             </button>
           </div>
           <div className="absolute top-1/2 -translate-y-1/2 right-4 z-10">
-            <button onClick={navigation.goToNext} className={arrowClassName}>
+            <button onClick={(e) => { e.stopPropagation(); navigation.goToNext(); }} className={arrowClassName}>
               <RiArrowRightSLine size={24} />
             </button>
           </div>
