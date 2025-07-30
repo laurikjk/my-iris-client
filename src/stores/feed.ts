@@ -89,12 +89,23 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
   latest: {
     name: "Latest",
     id: "latest",
-    showRepliedTo: false,
+    showRepliedTo: true,
     followDistance: 1,
-    hideReplies: true,
+    hideReplies: false,
     filter: {
       kinds: [KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT],
       limit: 100,
+    },
+  },
+  articles: {
+    name: "Articles",
+    id: "articles",
+    showRepliedTo: false,
+    followDistance: 2,
+    hideReplies: true,
+    filter: {
+      kinds: [KIND_LONG_FORM_CONTENT],
+      limit: 50,
     },
   },
   market: {
@@ -107,16 +118,6 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     },
     followDistance: 3,
     hideReplies: true,
-  },
-  replies: {
-    name: "Replies",
-    id: "replies",
-    followDistance: 1,
-    requiresReplies: true,
-    filter: {
-      kinds: [KIND_TEXT_NOTE],
-      limit: 100,
-    },
   },
   media: {
     name: "Media",
@@ -153,9 +154,9 @@ export const useFeedStore = create<FeedState>()(
         enabledFeedIds: [
           "unseen",
           "popular",
+          "articles",
           "latest",
           "market",
-          "replies",
           "media",
           "adventure",
         ],
@@ -223,7 +224,7 @@ export const useFeedStore = create<FeedState>()(
               "popular",
               "latest",
               "market",
-              "replies",
+              "articles",
               "media",
               "adventure",
             ],
