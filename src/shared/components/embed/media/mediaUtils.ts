@@ -1,4 +1,7 @@
 import {decode, encode} from "blurhash"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {EmbedEvent} from "../index"
+import {SwipeItem} from "@/shared/hooks/useSwipable"
 
 export interface Dimensions {
   width: string
@@ -185,4 +188,58 @@ export async function calculateVideoMetadata(file: File): Promise<ImageMetadata 
     video.onerror = () => resolve(null)
     video.src = URL.createObjectURL(file)
   })
+}
+
+function isNDKEvent(event: EmbedEvent): event is NDKEvent {
+  return event && typeof (event as NDKEvent).rawEvent !== "undefined"
+}
+
+/**
+ * Extracts all media URLs (images and videos) from an event
+ */
+export const getAllEventMedia = (event: EmbedEvent | undefined): SwipeItem[] => {
+  if (!event || !event.content) return []
+
+  const mediaItems: SwipeItem[] = []
+  const content = event.content
+
+  // Regex patterns for images and videos
+  const imageRegex =
+    /(https?:\/\/[^\s]+?\.(?:jpg|jpeg|png|gif|webp)(?:\?[^\s#]*)?(?:#[^\s]*)?)/gi
+  const videoRegex =
+    /(https?:\/\/[^\s]+?\.(?:mp4|webm|ogg|mov|m3u8)(?:\?[^\s#]*)?(?:#[^\s]*)?)/gi
+
+  // Find all image matches
+  let match
+  while ((match = imageRegex.exec(content)) !== null) {
+    mediaItems.push({
+      url: match[1],
+      type: "image",
+    })
+  }
+
+  // Find all video matches
+  while ((match = videoRegex.exec(content)) !== null) {
+    mediaItems.push({
+      url: match[1],
+      type: "video",
+    })
+  }
+
+  // For market listings (kind 30402), also check image tags
+  if (isNDKEvent(event) && event.kind === 30402) {
+    const imageTags = event.tags.filter((tag) => tag[0] === "image")
+    imageTags.forEach((tag) => {
+      const url = tag[1]
+      // Only add if not already present
+      if (!mediaItems.some((item) => item.url === url)) {
+        mediaItems.push({
+          url: url,
+          type: "image",
+        })
+      }
+    })
+  }
+
+  return mediaItems
 }

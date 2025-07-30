@@ -4,7 +4,8 @@ import {useState, MouseEvent, useMemo} from "react"
 import ProxyImg from "../../ProxyImg"
 import classNames from "classnames"
 import {EmbedEvent} from "../index"
-import {generateBlurhashUrl, calculateDimensions} from "./mediaUtils"
+import {generateBlurhashUrl, calculateDimensions, getAllEventMedia} from "./mediaUtils"
+import MediaModal from "../../media/MediaModal"
 
 interface SmallThumbnailComponentProps {
   match: string
@@ -19,6 +20,7 @@ function SmallThumbnailComponent({match, event}: SmallThumbnailComponentProps) {
         event?.tags.some((t) => t[0] === "content-warning"))
   )
   const [error, setError] = useState(false)
+  const [showModal, setShowModal] = useState(false)
 
   // Extract imeta tag for this URL
   const imetaTag = useMemo(() => {
@@ -56,10 +58,20 @@ function SmallThumbnailComponent({match, event}: SmallThumbnailComponentProps) {
     [blurhash, blurhashDimensions]
   )
 
+  // Get all media from the event
+  const allEventMedia = useMemo(() => getAllEventMedia(event), [event])
+
+  // Find the index of the current video in all media
+  const currentIndex = useMemo(() => {
+    return allEventMedia.findIndex((item) => item.url === match)
+  }, [allEventMedia, match])
+
   const onClick = (e: MouseEvent) => {
+    e.stopPropagation()
     if (isBlurred) {
       setIsBlurred(false)
-      e.stopPropagation()
+    } else {
+      setShowModal(true)
     }
   }
 
@@ -73,8 +85,9 @@ function SmallThumbnailComponent({match, event}: SmallThumbnailComponentProps) {
     <div className="my-2">
       {error ? (
         <div
-          className="rounded bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-neutral-500 dark:text-neutral-400"
+          className="rounded bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-neutral-500 dark:text-neutral-400 cursor-pointer"
           style={containerStyle}
+          onClick={onClick}
         >
           {blurhashUrl ? (
             <div
@@ -100,7 +113,7 @@ function SmallThumbnailComponent({match, event}: SmallThumbnailComponentProps) {
         </div>
       ) : (
         <div
-          className="relative"
+          className="relative cursor-pointer"
           style={{
             width: "96px",
             height: "96px",
@@ -156,6 +169,15 @@ function SmallThumbnailComponent({match, event}: SmallThumbnailComponentProps) {
             </div>
           )}
         </div>
+      )}
+      {showModal && allEventMedia.length > 0 && (
+        <MediaModal
+          onClose={() => setShowModal(false)}
+          media={allEventMedia}
+          currentIndex={currentIndex >= 0 ? currentIndex : 0}
+          showFeedItem={false}
+          event={event}
+        />
       )}
     </div>
   )
