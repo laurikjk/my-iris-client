@@ -156,78 +156,71 @@ export default function MediaFeed({events}: MediaFeedProps) {
     [debugManager]
   )
 
-  const handlePrevItem = () => {
-    if (activeItemIndex === null) return
-    setActiveItemIndex(Math.max(0, activeItemIndex - 1))
-  }
-
-  const handleNextItem = () => {
-    if (activeItemIndex === null) return
-    setActiveItemIndex(Math.min(modalMedia.length - 1, activeItemIndex + 1))
-  }
-
-  const loadMoreItems = () => {
+  const loadMoreItems = useCallback(() => {
     if (events.length > displayCount) {
       setDisplayCount((prev: number) => prev + DISPLAY_INCREMENT)
       return true
     }
     return false
-  }
+  }, [events.length, displayCount])
 
-  const handleImageClick = (event: NDKEvent, clickedUrl: string) => {
-    const startTime = performance.now()
+  const handleImageClick = useCallback(
+    (event: NDKEvent, clickedUrl: string) => {
+      const startTime = performance.now()
 
-    // Use all available events for modal, not just fetched ones
-    const allFetchedEvents = Array.from(fetchedEventsMap.values())
+      // Use all available events for modal, not just fetched ones
+      const allFetchedEvents = Array.from(fetchedEventsMap.values())
 
-    // Create a combined array of all events (fetched + unfetched)
-    const allEvents = events
-      .map((eventItem) => {
-        // If we have the full event fetched, use it
-        const fetchedEvent = allFetchedEvents.find((fe) => fe.id === eventItem.id)
-        if (fetchedEvent) {
-          return fetchedEvent
-        }
-        // If it's already a full event, use it
-        if ("content" in eventItem) {
-          return eventItem
-        }
-        // Skip unfetched events for now (they'll be fetched on demand)
-        return null
-      })
-      .filter(Boolean) as NDKEvent[]
-
-    // Calculate media from all available events
-    const mediaArray = calculateAllMedia(allEvents)
-    const mediaIndex = mediaArray.findIndex(
-      (media) => media.event.id === event.id && media.url === clickedUrl
-    )
-
-    if (mediaIndex === -1) {
-      return
-    }
-
-    setModalMedia(mediaArray)
-    setActiveItemIndex(mediaIndex)
-    setShowModal(true)
-
-    const duration = performance.now() - startTime
-
-    // Debug: Log modal opening performance
-    if (debugManager.isDebugEnabled()) {
-      const debugSession = debugManager.getDebugSession()
-      if (debugSession) {
-        debugSession.publish("mediaFeed_performance", {
-          operation: "handleImageClick",
-          duration: Math.round(duration),
-          allEventsCount: allEvents.length,
-          mediaArrayLength: mediaArray.length,
-          mediaIndex,
-          timestamp: Date.now(),
+      // Create a combined array of all events (fetched + unfetched)
+      const allEvents = events
+        .map((eventItem) => {
+          // If we have the full event fetched, use it
+          const fetchedEvent = allFetchedEvents.find((fe) => fe.id === eventItem.id)
+          if (fetchedEvent) {
+            return fetchedEvent
+          }
+          // If it's already a full event, use it
+          if ("content" in eventItem) {
+            return eventItem
+          }
+          // Skip unfetched events for now (they'll be fetched on demand)
+          return null
         })
+        .filter(Boolean) as NDKEvent[]
+
+      // Calculate media from all available events
+      const mediaArray = calculateAllMedia(allEvents)
+      const mediaIndex = mediaArray.findIndex(
+        (media) => media.event.id === event.id && media.url === clickedUrl
+      )
+
+      if (mediaIndex === -1) {
+        return
       }
-    }
-  }
+
+      setModalMedia(mediaArray)
+      setActiveItemIndex(mediaIndex)
+      setShowModal(true)
+
+      const duration = performance.now() - startTime
+
+      // Debug: Log modal opening performance
+      if (debugManager.isDebugEnabled()) {
+        const debugSession = debugManager.getDebugSession()
+        if (debugSession) {
+          debugSession.publish("mediaFeed_performance", {
+            operation: "handleImageClick",
+            duration: Math.round(duration),
+            allEventsCount: allEvents.length,
+            mediaArrayLength: mediaArray.length,
+            mediaIndex,
+            timestamp: Date.now(),
+          })
+        }
+      }
+    },
+    [events, fetchedEventsMap, calculateAllMedia, debugManager]
+  )
 
   const handleEventFetched = useCallback(
     (event: NDKEvent) => {
@@ -306,6 +299,15 @@ export default function MediaFeed({events}: MediaFeedProps) {
   const isValidIndex = activeItemIndex !== null && activeItemIndex < modalMedia.length
   const shouldShowModal = isModalOpen && hasActiveItem && hasModalMedia && isValidIndex
 
+  // Memoize modal media array to prevent recreating on every render
+  const modalMediaArray = useMemo(() => {
+    return modalMedia.map((item) => ({
+      id: item.url,
+      url: item.url,
+      type: item.type,
+    }))
+  }, [modalMedia])
+
   // Calculate preload range for better memory management
   const preloadImages = useMemo(() => {
     if (!shouldShowModal || activeItemIndex === null) return []
@@ -334,13 +336,7 @@ export default function MediaFeed({events}: MediaFeedProps) {
               setActiveItemIndex(null)
               setModalMedia([])
             }}
-            onPrev={handlePrevItem}
-            onNext={handleNextItem}
-            media={modalMedia.map((item) => ({
-              id: item.url,
-              url: item.url,
-              type: item.type,
-            }))}
+            media={modalMediaArray}
             showFeedItem={true}
             event={modalMedia[activeItemIndex].event}
             currentIndex={activeItemIndex}
