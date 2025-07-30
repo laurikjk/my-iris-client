@@ -137,8 +137,22 @@ export function useSwipable({
     if (!isDragging) return
     setIsDragging(false)
 
-    const containerWidth = containerRef.current?.clientWidth ?? window.innerWidth
-    const currentThreshold = containerWidth * threshold
+    // Find the actual rendered content (image/video) to calculate threshold based on its width
+    const container = containerRef.current
+    let contentWidth = container?.clientWidth ?? window.innerWidth
+
+    if (container) {
+      // Look for images or videos in the current slide
+      const currentSlide = container.children[1] // Middle slide is the current one
+      if (currentSlide) {
+        const img = currentSlide.querySelector("img, video")
+        if (img) {
+          contentWidth = img.clientWidth || contentWidth
+        }
+      }
+    }
+
+    const currentThreshold = contentWidth * threshold
 
     setIsTransitioning(true)
 
