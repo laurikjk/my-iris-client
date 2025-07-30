@@ -5,6 +5,10 @@ import socialGraph from "./socialGraph"
 
 const cache = new LRUCache<string, boolean>({maxSize: 100})
 
+export const clearVisibilityCache = () => {
+  cache.clear()
+}
+
 export const shouldHideAuthor = (
   pubKey: string,
   threshold = 1,

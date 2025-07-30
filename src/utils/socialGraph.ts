@@ -30,7 +30,6 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
     instance.setRoot(publicKey)
     return
   }
-  console.log("root", publicKey, publicKey.length)
   isInitialized = true
   const data = await localForage.getItem("socialGraph")
   if (data) {

@@ -18,6 +18,7 @@ function ProfileDropdown({pubKey, onClose}: ProfileDropdownProps) {
   const myPubKey = useUserStore((state) => state.publicKey)
   const setPublicKey = useUserStore((state) => state.setPublicKey)
   const [muting, setMuting] = useState(false)
+  const [, setUpdated] = useState(0)
 
   const isLoggedIn = !!myPubKey
   const isOwnProfile = myPubKey === pubKey
@@ -30,8 +31,14 @@ function ProfileDropdown({pubKey, onClose}: ProfileDropdownProps) {
 
   const handleMute = async () => {
     if (isMuted) {
-      await unmuteUser(pubKey)
-      onClose()
+      try {
+        await unmuteUser(pubKey)
+        // Force a re-render to update the button state
+        setUpdated((updated) => updated + 1)
+        onClose()
+      } catch (error) {
+        console.error("Error unmuting user:", error)
+      }
     } else {
       setMuting(true)
     }
@@ -58,7 +65,9 @@ function ProfileDropdown({pubKey, onClose}: ProfileDropdownProps) {
                 muteState={isMuted}
                 user={pubKey}
                 setMuting={setMuting}
-                setMutedState={() => {}}
+                setMutedState={() => {
+                  setUpdated((updated) => updated + 1)
+                }}
               />
             </Modal>
           </div>

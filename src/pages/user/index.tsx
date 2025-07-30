@@ -139,8 +139,6 @@ function UserPage({pubKey}: {pubKey: string}) {
     [pubKey]
   )
   const myPubKey = useUserStore((state) => state.publicKey)
-  console.log("myPubKey", myPubKey)
-  console.log("pubKeyHex", pubKeyHex)
   const follows = useFollows(pubKey)
   const hasMarketEvents = useHasMarketEvents(pubKeyHex)
   const filteredFollows = useMemo(() => {
