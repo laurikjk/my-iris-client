@@ -20,11 +20,7 @@ let nip07Signer: NDKNip07Signer | undefined
  * Default relays to use when initializing NDK
  */
 export const DEFAULT_RELAYS = [
-  "wss://temp.iris.to",
-  "wss://vault.iris.to",
-  "wss://relay.damus.io",
-  "wss://relay.nostr.band",
-  "wss://relay.snort.social",
+  "ws://localhost:7777",
 ]
 
 /**
@@ -38,7 +34,7 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
     const store = useUserStore.getState()
     const options = opts || {
       explicitRelayUrls: DEFAULT_RELAYS,
-      enableOutboxModel: true,
+      enableOutboxModel: false,
       cacheAdapter: new NDKCacheAdapterDexie({dbName: "treelike-nostr", saveSig: true}),
     }
     ndkInstance = new NDK(options)

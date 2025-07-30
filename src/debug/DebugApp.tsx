@@ -78,7 +78,7 @@ const DebugApp = () => {
   const [userAgent, setUserAgent] = useState<string>("")
   const [currentUrl, setCurrentUrl] = useState<string>("")
 
-  const TEMP_IRIS_RELAY = "wss://temp.iris.to/"
+  const DEV_RELAY = "ws://localhost:7777"
 
   const formatBuildTime = (timestamp: string) => {
     if (timestamp === "development") return timestamp
@@ -190,7 +190,7 @@ const DebugApp = () => {
 
     // Monitor connection status periodically
     const checkConnection = () => {
-      setIsConnected(debugSession.isConnectedToRelay(TEMP_IRIS_RELAY))
+      setIsConnected(debugSession.isConnectedToRelay(DEV_RELAY))
     }
 
     // Check heartbeat freshness periodically
@@ -241,7 +241,7 @@ const DebugApp = () => {
                 >
                   {isConnected ? "Online" : "Offline"}
                 </div>
-                <div className="stat-desc text-xs opacity-70">{TEMP_IRIS_RELAY}</div>
+                <div className="stat-desc text-xs opacity-70">{DEV_RELAY}</div>
               </div>
 
               <div className="stat bg-base-200 rounded">

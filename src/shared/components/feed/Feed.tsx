@@ -164,13 +164,14 @@ const Feed = memo(function Feed({
         if (!eventIsOnTargetRelay) return false
       }
 
-      if (
-        feedConfig.followDistance !== undefined &&
-        !feedConfig.showEventsByUnknownUsers
-      ) {
-        const eventFollowDistance = socialGraph().getFollowDistance(event.pubkey)
-        if (eventFollowDistance > feedConfig.followDistance) return false
-      }
+      // Temporarily disabled for dev-relay testing
+      // if (
+      //   feedConfig.followDistance !== undefined &&
+      //   !feedConfig.showEventsByUnknownUsers
+      // ) {
+      //   const eventFollowDistance = socialGraph().getFollowDistance(event.pubkey)
+      //   if (eventFollowDistance > feedConfig.followDistance) return false
+      // }
 
       return true
     }

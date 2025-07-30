@@ -29,9 +29,9 @@ export class DebugSession {
     // Create signer
     this.signer = new NDKPrivateKeySigner(this.privateKeyHex)
 
-    // 2. Create NDK instance that connects to temp.iris.to
+    // 2. Create NDK instance that connects to local dev-relay
     this.ndk = new NDK({
-      explicitRelayUrls: ["wss://temp.iris.to"],
+      explicitRelayUrls: ["ws://localhost:7777"],
       signer: this.signer,
     })
 

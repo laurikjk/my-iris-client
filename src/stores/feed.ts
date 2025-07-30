@@ -72,7 +72,8 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     id: "popular",
     filter: {
       kinds: [6, 7],
-      since: Math.floor(Date.now() / 1000 - 60 * 60 * 24),
+      // Temporarily removed time filter for dev-relay testing
+      // since: Math.floor(Date.now() / 1000 - 60 * 60 * 24),
       limit: 300,
     },
     followDistance: 2,
