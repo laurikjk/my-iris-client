@@ -3,6 +3,7 @@ import {RiHeartAddLine, RiReplyLine} from "@remixicon/react"
 import {useSessionsStore} from "@/stores/sessions"
 import {MouseEvent, useState} from "react"
 import classNames from "classnames"
+import {KIND_REACTION} from "@/utils/constants"
 
 type MessageReactionButtonProps = {
   messageId: string
@@ -43,7 +44,7 @@ const MessageReactionButton = ({
       // Construct a reaction event
       const event = {
         content: emoji.native,
-        kind: 7, // REACTION_KIND
+        kind: KIND_REACTION,
         tags: [["e", messageId]],
       }
       sendMessage(sessionId, event)

@@ -1,5 +1,5 @@
 import PopularChannelItem from "./PopularChannelItem"
-import {CHANNEL_MESSAGE} from "../utils/constants"
+import {KIND_CHANNEL_MESSAGE} from "@/utils/constants"
 import socialGraph from "@/utils/socialGraph"
 import {useState, useEffect} from "react"
 import {ndk} from "@/utils/ndk"
@@ -39,7 +39,7 @@ const PopularChannels = ({publicKey}: PopularChannelsProps) => {
       // Fetch channel messages from followed users
       console.log("Fetching channel messages from followed users")
       const channelMessages = await ndk().fetchEvents({
-        kinds: [CHANNEL_MESSAGE],
+        kinds: [KIND_CHANNEL_MESSAGE],
         authors: Array.from(followedUsers),
         limit: 200,
       })

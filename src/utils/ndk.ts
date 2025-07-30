@@ -11,6 +11,7 @@ import {generateSecretKey, getPublicKey, nip19} from "nostr-tools"
 import NDKCacheAdapterDexie from "@nostr-dev-kit/ndk-cache-dexie"
 import {bytesToHex, hexToBytes} from "@noble/hashes/utils"
 import {useUserStore} from "@/stores/user"
+import {KIND_METADATA} from "@/utils/constants"
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
@@ -151,7 +152,7 @@ export function newUserLogin(name: string) {
   privateKeySigner = new NDKPrivateKeySigner(privateKeyHex)
   ndkInstance!.signer = privateKeySigner
   const profileEvent = new NDKEvent(ndkInstance!)
-  profileEvent.kind = 0
+  profileEvent.kind = KIND_METADATA
   profileEvent.content = JSON.stringify({name})
   profileEvent.publish()
 }

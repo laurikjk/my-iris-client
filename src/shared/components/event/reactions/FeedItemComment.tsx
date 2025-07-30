@@ -13,6 +13,7 @@ import Icon from "../../Icons/Icon"
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import {getEventReplyingTo} from "@/utils/nostr"
 import {LRUCache} from "typescript-lru-cache"
+import {KIND_TEXT_NOTE} from "@/utils/constants"
 
 interface FeedItemCommentProps {
   event: NDKEvent
@@ -43,7 +44,7 @@ function FeedItemComment({event}: FeedItemCommentProps) {
     const replies = new Set<string>()
     setReplyCount(replyCountByEventCache.get(event.id) || 0)
     const filter: NDKFilter = {
-      kinds: [1],
+      kinds: [KIND_TEXT_NOTE],
       ["#e"]: [event.id],
     }
 

@@ -1,7 +1,7 @@
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {MessageType} from "../message/Message"
-import {GROUP_INVITE_KIND} from "./constants"
+import {KIND_CHANNEL_CREATE} from "@/utils/constants"
 
 export const groupingThreshold = 60 * 1000 // 60 seconds = 1 minute
 
@@ -25,7 +25,7 @@ export const groupMessages = (
       ? message.tags?.some((tag) => tag[0] === "e" && tag[3] === "reply")
       : message.tags?.some((tag) => tag[0] === "e")
 
-    const isDisplayedAsMessage = message.kind !== GROUP_INVITE_KIND
+    const isDisplayedAsMessage = message.kind !== KIND_CHANNEL_CREATE
 
     const hasReactions = message.reactions && Object.keys(message.reactions).length > 0
 

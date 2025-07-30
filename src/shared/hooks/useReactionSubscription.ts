@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from "react"
 import {NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
-import {REACTION_KIND, REPOST_KIND} from "@/pages/chats/utils/constants"
+import {KIND_REACTION, KIND_REPOST} from "@/utils/constants"
 import {getTag} from "@/utils/nostr"
 import {PopularityFilters} from "./usePopularityFilters"
 import {useSocialGraphLoaded} from "@/utils/socialGraph"
@@ -45,7 +45,7 @@ export default function useReactionSubscription(
     const since = now - timeRange
 
     const reactionFilter: NDKFilter = {
-      kinds: [REACTION_KIND, REPOST_KIND],
+      kinds: [KIND_REACTION, KIND_REPOST],
       since,
       authors: filterAuthors,
       limit,
@@ -54,7 +54,7 @@ export default function useReactionSubscription(
     const sub = ndk().subscribe(reactionFilter)
 
     sub.on("event", (event) => {
-      if (event.kind !== REACTION_KIND) return
+      if (event.kind !== KIND_REACTION) return
 
       const originalPostId = getTag("e", event.tags)
 

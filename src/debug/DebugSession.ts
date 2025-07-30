@@ -1,6 +1,7 @@
 import NDK, {NDKEvent, NDKFilter, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 import {generateSecretKey, getPublicKey, nip44} from "nostr-tools"
 import {bytesToHex, hexToBytes} from "@noble/hashes/utils"
+import {KIND_DEBUG_DATA} from "@/utils/constants"
 
 export class DebugSession {
   private ndk: NDK
@@ -47,7 +48,7 @@ export class DebugSession {
     const content = nip44.encrypt(JSON.stringify(v), this.conversationKey)
 
     const event = new NDKEvent(this.ndk)
-    event.kind = 30000
+    event.kind = KIND_DEBUG_DATA
     event.content = content
     event.tags = [["d", k]]
     await event.publish()
@@ -61,7 +62,7 @@ export class DebugSession {
    */
   subscribe(k: string, callback: (v: unknown, event: NDKEvent) => void): () => void {
     const filter: NDKFilter = {
-      kinds: [30000],
+      kinds: [KIND_DEBUG_DATA],
       authors: [this.publicKey],
       "#d": [k],
     }

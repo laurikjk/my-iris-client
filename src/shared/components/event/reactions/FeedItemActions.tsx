@@ -7,6 +7,7 @@ import {FeedItemLike} from "./FeedItemLike.tsx"
 import FeedItemZap from "./FeedItemZap.tsx"
 import {RefObject} from "react"
 import {useSettingsStore} from "@/stores/settings"
+import {KIND_APP_DATA} from "@/utils/constants"
 
 type FeedItemActionsProps = {
   event: NDKEvent
@@ -33,8 +34,12 @@ function FeedItemActions({event, feedItemRef, standalone = false}: FeedItemActio
         "py-2 flex flex-row gap-4 z-20 items-center max-w-full select-none text-base-content/50"
       }
     >
-      {event.kind !== 30078 && content.showReplies && <FeedItemComment event={event} />}
-      {event.kind !== 30078 && content.showReposts && <FeedItemRepost event={event} />}
+      {event.kind !== KIND_APP_DATA && content.showReplies && (
+        <FeedItemComment event={event} />
+      )}
+      {event.kind !== KIND_APP_DATA && content.showReposts && (
+        <FeedItemRepost event={event} />
+      )}
       {content.showLikes && (
         <FeedItemLike event={event} showReactionCounts={showReactionCounts} />
       )}

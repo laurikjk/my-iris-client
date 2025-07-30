@@ -4,6 +4,7 @@ import {useEffect, useState, useMemo, useRef} from "react"
 import {NostrEvent} from "nostr-social-graph"
 import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
+import {KIND_MUTE_LIST} from "@/utils/constants"
 
 const useMutes = (pubKey?: string) => {
   const pubKeyHex = useMemo(
@@ -24,7 +25,7 @@ const useMutes = (pubKey?: string) => {
 
     try {
       if (pubKeyHex) {
-        const filter = {kinds: [10000], authors: [pubKeyHex]}
+        const filter = {kinds: [KIND_MUTE_LIST], authors: [pubKeyHex]}
 
         const sub = ndk().subscribe(filter, {closeOnEose: true})
         subscriptionRef.current = sub

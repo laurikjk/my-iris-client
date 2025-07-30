@@ -15,6 +15,12 @@ import socialGraph from "@/utils/socialGraph"
 import ProfileHeader from "./ProfileHeader"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
+import {
+  KIND_TEXT_NOTE,
+  KIND_REPOST,
+  KIND_REACTION,
+  KIND_CLASSIFIED,
+} from "@/utils/constants"
 
 type Tab = {
   name: string
@@ -31,7 +37,7 @@ const tabs: Tab[] = [
       id: `posts-${pubKey}`,
       hideReplies: true,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [1, 6], authors: [pubKey]},
+      filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
     }),
   },
   {
@@ -41,7 +47,7 @@ const tabs: Tab[] = [
       name: "Market",
       id: `market-${pubKey}`,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [30402], authors: [pubKey]},
+      filter: {kinds: [KIND_CLASSIFIED], authors: [pubKey]},
       showRepliedTo: true,
     }),
   },
@@ -52,7 +58,7 @@ const tabs: Tab[] = [
       name: "Replies",
       id: `replies-${pubKey}`,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [1, 6], authors: [pubKey]},
+      filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
       showRepliedTo: true,
     }),
   },
@@ -64,7 +70,7 @@ const tabs: Tab[] = [
       id: `media-${pubKey}`,
       requiresMedia: true,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [1, 6], authors: [pubKey]},
+      filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
     }),
   },
   {
@@ -74,7 +80,7 @@ const tabs: Tab[] = [
       name: "Likes",
       id: `likes-${pubKey}`,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [7], authors: [pubKey]},
+      filter: {kinds: [KIND_REACTION], authors: [pubKey]},
     }),
   },
   {
@@ -84,7 +90,11 @@ const tabs: Tab[] = [
       name: "You",
       id: `you-${pubKey}`,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [1, 6, 7], authors: [pubKey], "#p": [myPubKey]},
+      filter: {
+        kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_REACTION],
+        authors: [pubKey],
+        "#p": [myPubKey],
+      },
       showRepliedTo: true,
     }),
   },
@@ -100,7 +110,7 @@ function useHasMarketEvents(pubKey: string) {
     setHasMarketEvents(false)
 
     const sub = ndk().subscribe({
-      kinds: [30402],
+      kinds: [KIND_CLASSIFIED],
       authors: [pubKey],
       limit: 1,
     })

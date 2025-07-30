@@ -7,6 +7,12 @@ import {NDKTag} from "@nostr-dev-kit/ndk"
 import debounce from "lodash/debounce"
 import {base64} from "@scure/base"
 import IrisAPI from "./IrisAPI"
+import {
+  KIND_TEXT_NOTE,
+  KIND_REPOST,
+  KIND_REACTION,
+  KIND_ZAP_RECEIPT,
+} from "@/utils/constants"
 
 interface ReactedTime {
   time: number
@@ -251,7 +257,7 @@ export const subscribeToNotifications = debounce(async () => {
     const api = new IrisAPI(store.notifications.server)
     const notificationFilter = {
       "#p": [myPubKey],
-      kinds: [1, 6, 7, 9735],
+      kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_REACTION, KIND_ZAP_RECEIPT],
     }
 
     // Check for existing subscription on notification server

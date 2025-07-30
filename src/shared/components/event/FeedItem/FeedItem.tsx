@@ -18,6 +18,7 @@ import {Link, useNavigate} from "react-router"
 import LikeHeader from "../LikeHeader"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
+import {KIND_TEXT_NOTE, KIND_REACTION} from "@/utils/constants"
 
 type FeedItemProps = {
   event?: NDKEvent
@@ -246,7 +247,7 @@ function FeedItem({
           </Link>
         </div>
       )}
-      {event.kind === 1 && showRepliedTo && repliedToEventId && (
+      {event.kind === KIND_TEXT_NOTE && showRepliedTo && repliedToEventId && (
         <>
           <FeedItem
             borderTop={borderTop}
@@ -290,7 +291,7 @@ function FeedItem({
               <RepostHeader event={event} />
             </div>
           )}
-          {event.kind === 7 && (
+          {event.kind === KIND_REACTION && (
             <div className="flex flex-row select-none mb-2 px-4">
               <LikeHeader event={event} />
             </div>
@@ -338,7 +339,7 @@ function FeedItem({
               repliesTo: event.id,
               sortType: "followDistance",
               showRepliedTo: false,
-              filter: {kinds: [1], "#e": [eventIdHex]},
+              filter: {kinds: [KIND_TEXT_NOTE], "#e": [eventIdHex]},
             }}
             onEvent={(e) => {
               onEvent?.(e)

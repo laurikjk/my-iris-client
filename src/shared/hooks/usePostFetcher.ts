@@ -1,6 +1,7 @@
 import {useState, useEffect, useRef} from "react"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
+import {KIND_TEXT_NOTE} from "@/utils/constants"
 
 interface PostFetcherCache {
   events?: NDKEvent[]
@@ -34,7 +35,7 @@ export default function usePostFetcher(
       return
     }
     const postFilter: NDKFilter = {
-      kinds: [1],
+      kinds: [KIND_TEXT_NOTE],
       ids: nextMostPopularEventIds,
     }
     const fetchedEvents = await ndk().fetchEvents(postFilter)
@@ -46,7 +47,7 @@ export default function usePostFetcher(
     setLoading(true)
     const nextMostPopularEventIds = nextMostPopular(10)
     const postFilter: NDKFilter = {
-      kinds: [1],
+      kinds: [KIND_TEXT_NOTE],
       ids: nextMostPopularEventIds,
     }
     const fetchedEvents = await ndk().fetchEvents(postFilter)

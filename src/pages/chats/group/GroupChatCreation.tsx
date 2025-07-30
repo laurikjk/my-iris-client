@@ -7,7 +7,7 @@ import {useGroupsStore} from "@/stores/groups"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
 import {GroupDetails} from "./types"
-import {GROUP_INVITE_KIND} from "../utils/constants"
+import {KIND_CHANNEL_CREATE} from "@/utils/constants"
 
 const GroupChatCreation = () => {
   const navigate = useNavigate()
@@ -99,7 +99,7 @@ const GroupChatCreation = () => {
       addGroup(group)
 
       const event = {
-        kind: GROUP_INVITE_KIND,
+        kind: KIND_CHANNEL_CREATE,
         content: JSON.stringify(group),
         created_at: Math.round(Date.now() / 1000),
         tags: [

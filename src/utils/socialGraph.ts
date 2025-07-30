@@ -7,6 +7,7 @@ import throttle from "lodash/throttle"
 import localForage from "localforage"
 import {ndk} from "@/utils/ndk"
 import {useEffect, useState} from "react"
+import {KIND_CONTACTS, KIND_MUTE_LIST} from "@/utils/constants"
 
 export const DEFAULT_SOCIAL_GRAPH_ROOT =
   "4523be58d395b1b196a9b8c82b038b6895cb02b683d0c253a955068dba1facd0"
@@ -105,7 +106,7 @@ export function getFollowLists(myPubKey: string, missingOnly = true, upToDistanc
   const fetchBatch = (authors: string[]) => {
     const sub = ndk().subscribe(
       {
-        kinds: [3, 10000],
+        kinds: [KIND_CONTACTS, KIND_MUTE_LIST],
         authors: authors,
       },
       {closeOnEose: true}
@@ -174,13 +175,13 @@ async function setupSubscription(publicKey: string) {
   await instance.recalculateFollowDistances()
   sub?.stop()
   sub = ndk().subscribe({
-    kinds: [3, 10000],
+    kinds: [KIND_CONTACTS, KIND_MUTE_LIST],
     authors: [publicKey],
     limit: 1,
   })
   let latestTime = 0
   sub?.on("event", (ev) => {
-    if (ev.kind === 10000) {
+    if (ev.kind === KIND_MUTE_LIST) {
       handleSocialGraphEvent(ev as NostrEvent)
       return
     }

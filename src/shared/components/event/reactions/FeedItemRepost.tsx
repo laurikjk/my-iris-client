@@ -14,6 +14,7 @@ import Icon from "../../Icons/Icon"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {useUserStore} from "@/stores/user"
 import {useSettingsStore} from "@/stores/settings"
+import {KIND_REPOST} from "@/utils/constants"
 
 interface FeedItemRepostProps {
   event: NDKEvent
@@ -63,7 +64,7 @@ function FeedItemRepost({event}: FeedItemRepostProps) {
     if (!content.showReactionCounts) return
 
     const filter = {
-      kinds: [6],
+      kinds: [KIND_REPOST],
       ["#e"]: [event.id],
     }
 

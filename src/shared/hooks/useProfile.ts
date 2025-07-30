@@ -4,6 +4,7 @@ import {PublicKey} from "@/shared/utils/PublicKey"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {profileCache, addCachedProfile} from "@/utils/profileCache"
 import {ndk} from "@/utils/ndk"
+import {KIND_METADATA} from "@/utils/constants"
 
 export default function useProfile(pubKey?: string, subscribe = true) {
   const pubKeyHex = useMemo(() => {
@@ -42,12 +43,15 @@ export default function useProfile(pubKey?: string, subscribe = true) {
       return
     }
 
-    const sub = ndk().subscribe({kinds: [0], authors: [pubKeyHex]}, {closeOnEose: true})
+    const sub = ndk().subscribe(
+      {kinds: [KIND_METADATA], authors: [pubKeyHex]},
+      {closeOnEose: true}
+    )
     subscriptionRef.current = sub
 
     let latest = 0
     sub.on("event", (event: NDKEvent) => {
-      if (event.pubkey === pubKeyHex && event.kind === 0) {
+      if (event.pubkey === pubKeyHex && event.kind === KIND_METADATA) {
         if (!event.created_at || event.created_at <= latest) {
           return
         }

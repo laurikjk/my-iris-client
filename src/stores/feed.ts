@@ -1,5 +1,12 @@
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
+import {
+  KIND_TEXT_NOTE,
+  KIND_REPOST,
+  KIND_REACTION,
+  KIND_CLASSIFIED,
+  KIND_LONG_FORM_CONTENT,
+} from "@/utils/constants"
 
 interface FeedFilter {
   kinds?: number[]
@@ -62,7 +69,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     excludeSeen: true,
     hideReplies: true,
     filter: {
-      kinds: [1, 6],
+      kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_LONG_FORM_CONTENT],
       limit: 100,
     },
     followDistance: 1,
@@ -71,7 +78,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     name: "Popular",
     id: "popular",
     filter: {
-      kinds: [6, 7],
+      kinds: [KIND_REPOST, KIND_REACTION],
       since: Math.floor(Date.now() / 1000 - 60 * 60 * 24),
       limit: 300,
     },
@@ -86,7 +93,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     followDistance: 1,
     hideReplies: true,
     filter: {
-      kinds: [1],
+      kinds: [KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT],
       limit: 100,
     },
   },
@@ -95,7 +102,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     id: "market",
     showRepliedTo: false,
     filter: {
-      kinds: [30402],
+      kinds: [KIND_CLASSIFIED],
       limit: 100,
     },
     followDistance: 3,
@@ -107,7 +114,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     followDistance: 1,
     requiresReplies: true,
     filter: {
-      kinds: [1],
+      kinds: [KIND_TEXT_NOTE],
       limit: 100,
     },
   },
@@ -119,7 +126,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     hideReplies: true,
     followDistance: 1,
     filter: {
-      kinds: [1],
+      kinds: [KIND_TEXT_NOTE],
       limit: 100,
     },
   },
@@ -128,7 +135,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     id: "adventure",
     showRepliedTo: false,
     filter: {
-      kinds: [1],
+      kinds: [KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT],
       limit: 100,
     },
     followDistance: 5,

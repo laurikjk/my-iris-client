@@ -7,7 +7,7 @@ import {
 import {createJSONStorage, persist, PersistStorage} from "zustand/middleware"
 import {Filter, VerifiedEvent, UnsignedEvent} from "nostr-tools"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
-import {REACTION_KIND} from "@/pages/chats/utils/constants"
+import {KIND_REACTION} from "@/utils/constants"
 import type {MessageType} from "@/pages/chats/message/Message"
 import {hexToBytes} from "@noble/hashes/utils"
 import {useEventsStore} from "./events"
@@ -183,7 +183,7 @@ const store = create<SessionStore>()(
         if (!session) {
           throw new Error("Session not found")
         }
-        if (event.kind === REACTION_KIND && !event.tags?.find((tag) => tag[0] === "e")) {
+        if (event.kind === KIND_REACTION && !event.tags?.find((tag) => tag[0] === "e")) {
           throw new Error("Cannot send a reaction without a replyingToId")
         }
         const {event: publishedEvent, innerEvent} = session.sendEvent(event)

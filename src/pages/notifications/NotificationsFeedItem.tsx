@@ -18,6 +18,13 @@ import {
   RiFlashlightFill,
   RiNotificationFill,
 } from "@remixicon/react"
+import {
+  KIND_TEXT_NOTE,
+  KIND_REACTION,
+  KIND_REPOST,
+  KIND_ZAP_RECEIPT,
+  KIND_WALLET_CONNECT,
+} from "@/utils/constants"
 
 interface NotificationsFeedItemProps {
   notification: Notification
@@ -74,7 +81,9 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
     }
     try {
       const noteAddr = nip19.noteEncode(
-        notification.kind === 1 ? notification.id : notification.originalEventId
+        notification.kind === KIND_TEXT_NOTE
+          ? notification.id
+          : notification.originalEventId
       )
       navigate(`/${noteAddr}`)
     } catch (error) {
@@ -92,15 +101,15 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
 
   const getNotificationIcon = () => {
     switch (notification.kind) {
-      case 1:
+      case KIND_TEXT_NOTE:
         return <RiChat1Fill className="w-5 h-5 text-blue-500" />
-      case 7:
+      case KIND_REACTION:
         return <RiHeartFill className="w-5 h-5 text-pink-500" />
-      case 6:
+      case KIND_REPOST:
         return <RiRepeatFill className="w-5 h-5 text-green-500" />
-      case 9735:
+      case KIND_ZAP_RECEIPT:
         return <RiFlashlightFill className="w-5 h-5 text-yellow-500" />
-      case 6927:
+      case KIND_WALLET_CONNECT:
         return <RiNotificationFill className="w-5 h-5 text-purple-500" />
       default:
         return <RiNotificationFill className="w-5 h-5 text-gray-500" />
@@ -126,7 +135,7 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
                 .reverse()
                 .slice(0, 5)
                 .map(([key, userInfo]) => {
-                  const isReaction = notification.kind === 7
+                  const isReaction = notification.kind === KIND_REACTION
                   const emoji = isReaction && userInfo.content ? userInfo.content : null
 
                   return <NotificationAvatar key={key} pubKey={key} emoji={emoji} />
@@ -140,21 +149,21 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
               <span className="ml-1 font-bold">
                 {" "}
                 {/* TODO: get original post and say "to your post" it was yours */}
-                {notification.kind === 1 && "replied"}
-                {notification.kind === 7 && "reacted"}
-                {notification.kind === 6 && "reposted"}
-                {notification.kind === 9735 && "zapped"}
-                {notification.kind === 6927 && type && description}
+                {notification.kind === KIND_TEXT_NOTE && "replied"}
+                {notification.kind === KIND_REACTION && "reacted"}
+                {notification.kind === KIND_REPOST && "reposted"}
+                {notification.kind === KIND_ZAP_RECEIPT && "zapped"}
+                {notification.kind === KIND_WALLET_CONNECT && type && description}
               </span>
             </div>
-            {notification.kind === 1 && (
+            {notification.kind === KIND_TEXT_NOTE && (
               <div className="rounded-lg mt-1 px-3 py-4 cursor-pointer">
                 <div className="overflow-hidden text-ellipsis">
                   <HyperText>{notification.content}</HyperText>
                 </div>
               </div>
             )}
-            {notification.kind !== 1 && (
+            {notification.kind !== KIND_TEXT_NOTE && (
               <div className="py-4">
                 <EventBorderless
                   eventId={notification.originalEventId}

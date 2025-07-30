@@ -4,6 +4,7 @@ import {handleProfile} from "@/utils/profileSearch"
 import {ndk} from "@/utils/ndk"
 import debounce from "lodash/debounce"
 import Fuse from "fuse.js"
+import {KIND_METADATA} from "@/utils/constants"
 
 export interface DoubleRatchetUser {
   pubkey: string
@@ -71,12 +72,12 @@ const updateDoubleRatchetSearchIndexImmediate = () => {
   if (usersWithoutProfiles.length > 0) {
     console.log("Fetching profiles for", usersWithoutProfiles.length, "users")
     const sub = ndk().subscribe(
-      {kinds: [0], authors: usersWithoutProfiles},
+      {kinds: [KIND_METADATA], authors: usersWithoutProfiles},
       {closeOnEose: true}
     )
 
     sub.on("event", (event) => {
-      if (event.kind === 0) {
+      if (event.kind === KIND_METADATA) {
         try {
           const profile = JSON.parse(event.content)
           profile.created_at = event.created_at

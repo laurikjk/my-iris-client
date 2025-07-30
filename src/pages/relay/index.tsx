@@ -10,6 +10,7 @@ import Widget from "@/shared/components/ui/Widget"
 import {useSettingsStore} from "@/stores/settings"
 import {Helmet} from "react-helmet"
 import RelaySelector from "@/shared/components/ui/RelaySelector"
+import {KIND_TEXT_NOTE} from "@/utils/constants"
 
 function RelayPage() {
   const {url} = useParams()
@@ -32,7 +33,7 @@ function RelayPage() {
 
   const filters: NDKFilter = useMemo(
     () => ({
-      kinds: [1],
+      kinds: [KIND_TEXT_NOTE],
       limit: 100,
     }),
     []

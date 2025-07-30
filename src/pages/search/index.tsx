@@ -10,6 +10,7 @@ import {useParams, useNavigate} from "react-router"
 import Widget from "@/shared/components/ui/Widget"
 import {Helmet} from "react-helmet"
 import {useSettingsStore} from "@/stores/settings"
+import {KIND_CLASSIFIED, KIND_TEXT_NOTE} from "@/utils/constants"
 
 function SearchPage() {
   const {query} = useParams()
@@ -40,7 +41,7 @@ function SearchPage() {
 
   const filters: NDKFilter = useMemo(
     () => ({
-      kinds: activeTab === "market" ? [30402] : [1],
+      kinds: activeTab === "market" ? [KIND_CLASSIFIED] : [KIND_TEXT_NOTE],
       search: query,
     }),
     [query, activeTab]

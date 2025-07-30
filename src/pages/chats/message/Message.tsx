@@ -12,7 +12,7 @@ import classNames from "classnames"
 import {Link} from "react-router"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
-import {GROUP_INVITE_KIND} from "../utils/constants"
+import {KIND_CHANNEL_CREATE, KIND_REACTION} from "@/utils/constants"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {EMOJI_REGEX} from "@/utils/validation"
 
@@ -93,7 +93,7 @@ const Message = ({
   // Set up reaction subscription
   useEffect(() => {
     const filter = {
-      kinds: [7], // REACTION_KIND
+      kinds: [KIND_REACTION],
       "#e": [message.id],
     }
 
@@ -143,7 +143,7 @@ const Message = ({
     [message]
   )
 
-  if (message.kind === GROUP_INVITE_KIND) {
+  if (message.kind === KIND_CHANNEL_CREATE) {
     console.log("invite", message)
     let content = null
     if (message.pubkey === "user") {

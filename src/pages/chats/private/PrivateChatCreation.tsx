@@ -9,6 +9,7 @@ import {Invite} from "nostr-double-ratchet/src"
 import DoubleRatchetInfo from "../group/components/DoubleRatchetInfo"
 import {DoubleRatchetUserSearch} from "../components/DoubleRatchetUserSearch"
 import {DoubleRatchetUser} from "../utils/doubleRatchetUsers"
+import {KIND_APP_DATA} from "@/utils/constants"
 
 const PrivateChatCreation = () => {
   const navigate = useNavigate()
@@ -20,7 +21,7 @@ const PrivateChatCreation = () => {
     // Subscribe function as in ProfileHeader
     subRef.current?.stop()
     const sub = ndk().subscribe({
-      kinds: [30078],
+      kinds: [KIND_APP_DATA],
       authors: [user.pubkey],
       "#l": ["double-ratchet/invites"],
     })

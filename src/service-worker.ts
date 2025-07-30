@@ -17,7 +17,7 @@ import {registerRoute} from "workbox-routing"
 import {clientsClaim} from "workbox-core"
 import {VerifiedEvent} from "nostr-tools"
 import localforage from "localforage"
-import {GROUP_INVITE_KIND} from "./pages/chats/utils/constants"
+import {KIND_CHANNEL_CREATE} from "./utils/constants"
 
 // eslint-disable-next-line no-undef
 declare const self: ServiceWorkerGlobalScope & {
@@ -324,7 +324,7 @@ self.addEventListener("push", (event) => {
       if (data.event.kind === MESSAGE_EVENT_KIND) {
         const result = await tryDecryptPrivateDM(data)
         if (result.success) {
-          if (result.kind === GROUP_INVITE_KIND) {
+          if (result.kind === KIND_CHANNEL_CREATE) {
             await self.registration.showNotification("New group invite", {
               icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
               data: {

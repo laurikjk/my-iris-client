@@ -1,6 +1,7 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {Filter} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
+import {KIND_HTTP_AUTH} from "@/utils/constants"
 
 export interface PushNotifications {
   endpoint: string
@@ -127,7 +128,7 @@ export default class IrisAPI {
     headers?: {[key: string]: string}
   ): Promise<T> {
     const event = new NDKEvent(ndk(), {
-      kind: 27235, // http authentication
+      kind: KIND_HTTP_AUTH, // http authentication
       tags: [
         ["u", `${this.#url}${path}`],
         ["method", method ?? "GET"],

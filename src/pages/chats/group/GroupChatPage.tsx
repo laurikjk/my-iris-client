@@ -10,6 +10,7 @@ import GroupChatHeader from "./GroupChatHeader"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {MessageType} from "../message/Message"
 import {comparator} from "../utils/messageGrouping"
+import {KIND_REACTION} from "@/utils/constants"
 
 const GroupChatPage = () => {
   const params = useParams()
@@ -52,7 +53,7 @@ const GroupChatPage = () => {
     if (!myPubKey) return
 
     const event = {
-      kind: 7, // REACTION_KIND
+      kind: KIND_REACTION,
       content: emoji,
       created_at: Math.floor(Date.now() / 1000),
       tags: [

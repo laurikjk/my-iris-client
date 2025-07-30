@@ -6,6 +6,7 @@ import {
   RiEqualizerFill,
   RiAddLine,
 } from "@remixicon/react"
+import {KIND_TEXT_NOTE} from "@/utils/constants"
 
 interface FeedTabsProps {
   allTabs: FeedConfig[]
@@ -67,7 +68,7 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
       feedType: "chronological" as const,
       filter: {
         limit: 100,
-        kinds: [1],
+        kinds: [KIND_TEXT_NOTE],
       },
     }
 
