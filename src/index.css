@@ -87,6 +87,19 @@ iframe {
   display: none; /* Safari and Chrome */
 }
 
+/* Disable hover and focus effects on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  [class*="hover:bg-"]:hover {
+    background-color: inherit !important;
+  }
+  
+  /* Disable focus styles that can persist after touch */
+  *:focus {
+    outline: none !important;
+    background-color: inherit !important;
+  }
+}
+
 /* modals */
 
 .modal-box {
