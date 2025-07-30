@@ -33,7 +33,10 @@ document.title = CONFIG.appName
 
 // Initialize theme from settings store
 const {appearance} = useSettingsStore.getState()
-document.documentElement.setAttribute("data-theme", appearance.theme)
+document.documentElement.setAttribute(
+  "data-theme",
+  appearance.theme || CONFIG.defaultTheme
+)
 
 // Perform migration before rendering the app
 migrateUserState()
