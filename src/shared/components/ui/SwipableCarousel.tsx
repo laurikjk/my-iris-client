@@ -153,7 +153,7 @@ export function SwipableCarousel({
   return (
     <div
       className={`relative overflow-hidden ${className}`}
-      style={{touchAction: "pan-y", ...style}}
+      style={{touchAction: items.length > 1 ? "pan-y" : "auto", ...style}}
     >
       <div
         ref={containerRef}
@@ -175,8 +175,8 @@ export function SwipableCarousel({
         onMouseUp={handlers.onDragEnd}
         onMouseLeave={isDragging ? handlers.onDragEnd : undefined}
         onTouchStart={items.length > 1 ? handlers.onDragStart : undefined}
-        onTouchMove={handlers.onDragMove}
-        onTouchEnd={handlers.onDragEnd}
+        onTouchMove={items.length > 1 ? handlers.onDragMove : undefined}
+        onTouchEnd={items.length > 1 ? handlers.onDragEnd : undefined}
         onTransitionEnd={handlers.onTransitionEnd}
       >
         {renderCarouselItems()}

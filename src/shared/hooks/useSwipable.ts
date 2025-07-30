@@ -64,6 +64,7 @@ export function useSwipable({
   const dragLastX = useRef<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const wasDragged = useRef(false)
+  const touchStartTime = useRef<number | null>(null)
 
   // Helper to get prev/next indices (wrap around)
   const getPrevIndex = useCallback(
@@ -102,9 +103,14 @@ export function useSwipable({
 
   // Mouse/touch handlers
   const onDragStart = useCallback((e: TouchEvent | MouseEvent) => {
-    e.preventDefault()
+    // Only preventDefault for mouse events to preserve touch click behavior
+    if (!("touches" in e)) {
+      e.preventDefault()
+    }
+    
     setIsDragging(true)
     wasDragged.current = false
+    touchStartTime.current = Date.now()
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
     dragStartX.current = clientX
     dragLastX.current = clientX
@@ -122,8 +128,9 @@ export function useSwipable({
       const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
       const newDragX = clientX - dragStartX.current
 
-      // Mark as dragged if moved more than a few pixels
-      if (Math.abs(newDragX) > 5) {
+      // Mark as dragged if moved more than a few pixels or enough time has passed
+      const timeSinceStart = Date.now() - (touchStartTime.current || 0)
+      if (Math.abs(newDragX) > 5 || ("touches" in e && timeSinceStart > 150)) {
         wasDragged.current = true
       }
 
