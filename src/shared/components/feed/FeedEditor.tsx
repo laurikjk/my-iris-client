@@ -30,15 +30,6 @@ function FeedEditor({
     return config?.customName || defaultName
   }
 
-  // Helper function to set display name
-  const setDisplayName = (feedId: string, name: string) => {
-    if (name.trim()) {
-      saveFeedConfig(feedId, {customName: name.trim()})
-    } else {
-      saveFeedConfig(feedId, {customName: undefined})
-    }
-  }
-
   // Helper function for common checkboxes
   const renderCommonCheckboxes = (
     updateConfig: (field: keyof FeedConfig, value: unknown) => void
@@ -147,9 +138,8 @@ function FeedEditor({
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value
     setEditingName(newName)
-    if (activeTab) {
-      setDisplayName(activeTab, newName)
-    }
+    // Update local config instead of directly saving to store
+    updateLocalConfig("customName", newName.trim() || undefined)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
