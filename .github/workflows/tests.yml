@@ -22,29 +22,14 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Build and start dev-relay
-        run: |
-          cd dev-relay
-          docker build -t dev-relay .
-          docker run -d -p 7777:7777 --name dev-relay dev-relay
-          # Wait for relay to be ready
-          timeout 30 bash -c 'until nc -z localhost 7777; do sleep 1; done'
-
       - name: Cache wellorder dataset
         uses: actions/cache@v4
         with:
           path: dev-relay/nostr-wellorder-early-500k-v1.jsonl.bz2
           key: wellorder-dataset-v1
-          
-      - name: Seed dev-relay with test data
-        run: |
-          cd dev-relay
-          # Download dataset if not cached
-          if [ ! -f "nostr-wellorder-early-500k-v1.jsonl.bz2" ]; then
-            curl -sL "https://wellorder.xyz/nostr/nostr-wellorder-early-500k-v1.jsonl.bz2" -o nostr-wellorder-early-500k-v1.jsonl.bz2
-          fi
-          # Seed with a smaller subset for faster CI (e.g., 1000 events)
-          bzip2 -dc nostr-wellorder-early-500k-v1.jsonl.bz2 | head -n 1000 | docker exec -i dev-relay strfry import
+
+      - name: Start and seed dev-relay
+        run: yarn dev:relay
 
       - name: Install Playwright browsers
         run: npx playwright install chromium
