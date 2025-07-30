@@ -37,10 +37,6 @@ jobs:
       - name: Run tests
         run: yarn test
 
-      - name: Stop dev-relay
-        if: always()
-        run: docker stop dev-relay && docker rm dev-relay
-
       - name: Build
         run: yarn build
 
