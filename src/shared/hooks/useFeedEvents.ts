@@ -9,6 +9,11 @@ import {useUserStore} from "@/stores/user"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
 
+interface FutureEvent {
+  event: NDKEvent
+  timer: NodeJS.Timeout
+}
+
 interface UseFeedEventsProps {
   filters: NDKFilter
   cacheKey: string
@@ -45,6 +50,15 @@ export default function useFeedEvents({
           : eventComparator
       )
   )
+  // Buffer for future events (max 20 entries, sorted by timestamp)
+  const futureEventsRef = useRef(
+    new SortedMap<string, FutureEvent>(
+      [],
+      ([, a]: [string, FutureEvent], [, b]: [string, FutureEvent]) => {
+        return (a.event.created_at || 0) - (b.event.created_at || 0) // Sort by timestamp ascending
+      }
+    )
+  )
   const oldestRef = useRef<number | undefined>(undefined)
   const initialLoadDoneRef = useRef<boolean>(eventsRef.current.size > 0)
   const [initialLoadDoneState, setInitialLoadDoneState] = useState(
@@ -52,6 +66,56 @@ export default function useFeedEvents({
   )
   const hasReceivedEventsRef = useRef<boolean>(eventsRef.current.size > 0)
   const [eventsVersion, setEventsVersion] = useState(0) // Version counter for filtered events
+
+  // Apply a single future event when its time comes
+  const applyFutureEvent = useCallback((eventId: string) => {
+    const futureEvent = futureEventsRef.current.get(eventId)
+    if (futureEvent) {
+      const {event} = futureEvent
+      futureEventsRef.current.delete(eventId)
+
+      if (!eventsRef.current.has(eventId)) {
+        setNewEvents((prev) => new Map([...prev, [eventId, event]]))
+        setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
+      }
+    }
+  }, [])
+
+  // Add future event to buffer with individual timer
+  const addFutureEvent = useCallback(
+    (event: NDKEvent) => {
+      if (!event.created_at) return
+
+      const now = Math.floor(Date.now() / 1000)
+      const delay = (event.created_at - now) * 1000 // Convert to milliseconds
+
+      // Clear existing future event if any (this will cancel its timer)
+      const existingFutureEvent = futureEventsRef.current.get(event.id)
+      if (existingFutureEvent) {
+        clearTimeout(existingFutureEvent.timer)
+        futureEventsRef.current.delete(event.id)
+      }
+
+      // Set timer for this specific event
+      const timer = setTimeout(() => {
+        applyFutureEvent(event.id)
+      }, delay)
+
+      // Add to buffer
+      futureEventsRef.current.set(event.id, {event, timer})
+
+      // Keep only the 20 most recent future events (evict oldest)
+      while (futureEventsRef.current.size > 20) {
+        const firstEntry = futureEventsRef.current.entries().next().value
+        if (firstEntry) {
+          const [oldId, oldFutureEvent] = firstEntry
+          clearTimeout(oldFutureEvent.timer) // Cancel timer on evict
+          futureEventsRef.current.delete(oldId)
+        }
+      }
+    },
+    [applyFutureEvent]
+  )
 
   const showNewEvents = () => {
     newEvents.forEach((event) => {
@@ -178,6 +242,15 @@ export default function useFeedEvents({
       if (eventsRef.current.has(event.id)) return
       if (fetchFilterFn && !fetchFilterFn(event)) return
 
+      const now = Math.floor(Date.now() / 1000)
+      const isFutureEvent = event.created_at > now
+
+      // Handle future events separately
+      if (isFutureEvent) {
+        addFutureEvent(event)
+        return
+      }
+
       oldestRef.current = Math.min(
         oldestRef.current ?? event.created_at,
         event.created_at
@@ -208,7 +281,18 @@ export default function useFeedEvents({
       clearTimeout(initialLoadTimeout)
       markLoadDoneIfHasEvents.cancel()
     }
-  }, [JSON.stringify(localFilter)])
+  }, [JSON.stringify(localFilter), addFutureEvent])
+
+  // Cleanup future event timers on unmount
+  useEffect(() => {
+    return () => {
+      // Clear all future event timers
+      for (const [, futureEvent] of futureEventsRef.current.entries()) {
+        clearTimeout(futureEvent.timer)
+      }
+      futureEventsRef.current.clear()
+    }
+  }, [])
 
   useEffect(() => {
     eventsRef.current.size &&
