@@ -166,24 +166,6 @@ export default function MediaFeed({events}: MediaFeedProps) {
     setActiveItemIndex(Math.min(modalMedia.length - 1, activeItemIndex + 1))
   }
 
-  useEffect(() => {
-    if (!showModal) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") {
-        handlePrevItem()
-      } else if (e.key === "ArrowRight") {
-        handleNextItem()
-      } else if (e.key === "Escape") {
-        setShowModal(false)
-        setActiveItemIndex(null)
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [showModal, activeItemIndex])
-
   const loadMoreItems = () => {
     if (events.length > displayCount) {
       setDisplayCount((prev: number) => prev + DISPLAY_INCREMENT)
@@ -354,8 +336,11 @@ export default function MediaFeed({events}: MediaFeedProps) {
             }}
             onPrev={handlePrevItem}
             onNext={handleNextItem}
-            mediaUrl={modalMedia[activeItemIndex].url}
-            mediaType={modalMedia[activeItemIndex].type}
+            media={modalMedia.map((item) => ({
+              id: item.url,
+              url: item.url,
+              type: item.type,
+            }))}
             showFeedItem={true}
             event={modalMedia[activeItemIndex].event}
             currentIndex={activeItemIndex}

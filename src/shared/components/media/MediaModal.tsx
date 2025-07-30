@@ -35,7 +35,7 @@ function MediaModal({
   event,
   currentIndex: propCurrentIndex,
 }: MediaModalProps) {
-  // Support both single media item and media array
+  // Use full media array if provided, otherwise create single item array
   const mediaItems =
     media ||
     (mediaUrl && mediaType
