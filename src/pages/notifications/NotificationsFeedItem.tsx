@@ -9,6 +9,7 @@ import {MouseEvent, useEffect, useState} from "react"
 import {Notification} from "@/utils/notifications"
 import {useNavigate, Link} from "react-router"
 import {getTag} from "@/utils/nostr"
+import {formatAmount} from "@/utils/utils.ts"
 import classNames from "classnames"
 import {nip19} from "nostr-tools"
 import {
@@ -35,10 +36,23 @@ interface NotificationsFeedItemProps {
 interface NotificationAvatarProps {
   pubKey: string
   emoji?: string | null
+  zapAmount?: number | null
 }
 
-function NotificationAvatar({pubKey, emoji}: NotificationAvatarProps) {
+function NotificationAvatar({pubKey, emoji, zapAmount}: NotificationAvatarProps) {
   const {hoverProps, showCard} = useHoverCard(true)
+
+  const getCornerBadgeContent = () => {
+    if (zapAmount && zapAmount > 0) {
+      return formatAmount(zapAmount)
+    }
+    if (emoji) {
+      return emoji === "+" ? "❤️" : emoji
+    }
+    return null
+  }
+
+  const cornerBadgeContent = getCornerBadgeContent()
 
   return (
     <div className="relative inline-block mr-2" {...hoverProps}>
@@ -47,22 +61,23 @@ function NotificationAvatar({pubKey, emoji}: NotificationAvatarProps) {
         to={`/${nip19.npubEncode(pubKey)}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="relative inline-block">
-          <Avatar pubKey={pubKey} width={30} showHoverCard={false} />
-          {emoji && (
-            <span
-              className="absolute bottom-0 right-0 transform translate-x-1/4 translate-y-1/4 bg-base-100 rounded-full border border-base-300 leading-none flex items-center justify-center"
-              style={{
-                width: 16,
-                height: 16,
-                fontSize: 10,
-              }}
-              title={`Reacted with ${emoji}`}
-            >
-              {emoji === "+" ? "❤️" : emoji}
-            </span>
-          )}
-        </span>
+        <Avatar
+          pubKey={pubKey}
+          width={30}
+          showHoverCard={false}
+          cornerBadge={
+            cornerBadgeContent
+              ? {
+                  content: cornerBadgeContent,
+                  position: "bottom-right",
+                  className: zapAmount
+                    ? "text-yellow-600 bg-yellow-100 font-medium"
+                    : undefined,
+                  shape: zapAmount ? "rounded" : "circle",
+                }
+              : undefined
+          }
+        />
       </Link>
       <ProfileHoverCard pubKey={pubKey} showCard={showCard} />
     </div>
@@ -74,6 +89,15 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
 
   const [type, setType] = useState<string>()
   const [description, setDescription] = useState<string>()
+
+  // Calculate total zapped amount
+  const totalZappedAmount =
+    notification.kind === KIND_ZAP_RECEIPT
+      ? Array.from(notification.users.values()).reduce((total, userInfo) => {
+          const amount = userInfo.content ? parseInt(userInfo.content) || 0 : 0
+          return total + amount
+        }, 0)
+      : 0
 
   const handleNavigateToReplyEvent = (e: MouseEvent) => {
     if (e.target instanceof Element && e.target.closest("a")) {
@@ -136,9 +160,19 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
                 .slice(0, 5)
                 .map(([key, userInfo]) => {
                   const isReaction = notification.kind === KIND_REACTION
+                  const isZap = notification.kind === KIND_ZAP_RECEIPT
                   const emoji = isReaction && userInfo.content ? userInfo.content : null
+                  const zapAmount =
+                    isZap && userInfo.content ? parseInt(userInfo.content) || 0 : null
 
-                  return <NotificationAvatar key={key} pubKey={key} emoji={emoji} />
+                  return (
+                    <NotificationAvatar
+                      key={key}
+                      pubKey={key}
+                      emoji={emoji}
+                      zapAmount={zapAmount}
+                    />
+                  )
                 })}
               <span className="ml-1" />
               {notification.users.size > 5 && (
@@ -152,7 +186,16 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
                 {notification.kind === KIND_TEXT_NOTE && "replied"}
                 {notification.kind === KIND_REACTION && "reacted"}
                 {notification.kind === KIND_REPOST && "reposted"}
-                {notification.kind === KIND_ZAP_RECEIPT && "zapped"}
+                {notification.kind === KIND_ZAP_RECEIPT && (
+                  <>
+                    zapped
+                    {totalZappedAmount > 0 && (
+                      <span className="text-yellow-600 font-semibold ml-1">
+                        {formatAmount(totalZappedAmount)} sats
+                      </span>
+                    )}
+                  </>
+                )}
                 {notification.kind === KIND_WALLET_CONNECT && type && description}
               </span>
             </div>
