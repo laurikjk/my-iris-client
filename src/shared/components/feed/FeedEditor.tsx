@@ -247,7 +247,7 @@ function FeedEditor({
                 }}
               />
               <span className="text-xs text-base-content/50 mt-1 block">
-                Select event types to include in this feed
+                Select event types to include in this feed. Select none to display all.
               </span>
             </div>
           </div>
