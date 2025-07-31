@@ -2,6 +2,7 @@ import React, {useEffect, useState} from "react"
 import {RiDeleteBinLine} from "@remixicon/react"
 import {useFeedStore, type FeedConfig} from "@/stores/feed"
 import RelaySelector from "@/shared/components/ui/RelaySelector"
+import EventKindsSelector from "@/shared/components/ui/EventKindsSelector"
 
 interface FeedEditorProps {
   activeTab: string
@@ -225,14 +226,12 @@ function FeedEditor({
           <div className="flex items-start gap-2">
             <span className="text-sm text-base-content/70 w-20 pt-2">Event Kinds</span>
             <div className="flex-1">
-              <input
-                type="text"
-                value={localConfig.filter?.kinds?.join(",") || ""}
-                onChange={(e) => {
-                  const inputValue = e.target.value.trim()
+              <EventKindsSelector
+                selectedKinds={localConfig.filter?.kinds || []}
+                onKindsChange={(kinds) => {
                   const currentFilter = localConfig.filter || {}
-                  if (inputValue === "") {
-                    // Remove kinds property if input is empty
+                  if (kinds.length === 0) {
+                    // Remove kinds property if no kinds selected
                     const filterWithoutKinds = Object.fromEntries(
                       Object.entries(currentFilter).filter(([key]) => key !== "kinds")
                     )
@@ -243,18 +242,12 @@ function FeedEditor({
                         : undefined
                     )
                   } else {
-                    const kinds = inputValue
-                      .split(",")
-                      .map((k) => parseInt(k.trim()))
-                      .filter((k) => !isNaN(k))
                     updateConfig("filter", {...currentFilter, kinds})
                   }
                 }}
-                className="input input-sm w-full text-sm"
-                placeholder="1,6,7"
               />
               <span className="text-xs text-base-content/50 mt-1 block">
-                Comma-separated numbers
+                Select event types to include in this feed
               </span>
             </div>
           </div>
