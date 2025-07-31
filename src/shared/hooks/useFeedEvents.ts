@@ -4,10 +4,13 @@ import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {shouldHideAuthor} from "@/utils/visibility"
 import socialGraph from "@/utils/socialGraph"
-import {feedCache} from "@/utils/memcache"
+import {feedCache, seenEventIds} from "@/utils/memcache"
 import {useUserStore} from "@/stores/user"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
+import {getEventReplyingTo} from "@/utils/nostr"
+import {hasMedia} from "@/shared/components/embed"
+import {type FeedConfig} from "@/stores/feed"
 
 interface FutureEvent {
   event: NDKEvent
@@ -18,24 +21,26 @@ interface UseFeedEventsProps {
   filters: NDKFilter
   cacheKey: string
   displayCount: number
-  displayFilterFn?: (event: NDKEvent) => boolean
-  fetchFilterFn?: (event: NDKEvent) => boolean
+  feedConfig: FeedConfig
   hideEventsByUnknownUsers: boolean
   sortLikedPosts?: boolean
   sortFn?: (a: NDKEvent, b: NDKEvent) => number
   relayUrls?: string[]
+  refreshSignal?: number
+  openedAt?: number
 }
 
 export default function useFeedEvents({
   filters,
   cacheKey,
   displayCount,
-  displayFilterFn,
-  fetchFilterFn,
+  feedConfig,
   hideEventsByUnknownUsers,
   sortLikedPosts = false,
   sortFn,
   relayUrls,
+  refreshSignal,
+  openedAt,
 }: UseFeedEventsProps) {
   const myPubKey = useUserStore((state) => state.publicKey)
   const [localFilter, setLocalFilter] = useState(filters)
@@ -67,6 +72,88 @@ export default function useFeedEvents({
   const hasReceivedEventsRef = useRef<boolean>(eventsRef.current.size > 0)
   const [eventsVersion, setEventsVersion] = useState(0) // Version counter for filtered events
 
+  const shouldAcceptEvent = useCallback(
+    (event: NDKEvent) => {
+      if (!event.created_at) return false
+
+      // Feed-specific filtering (from fetchFilterFn)
+      if (feedConfig.excludeSeen && seenEventIds.has(event.id)) return false
+      if (feedConfig.hideReplies && getEventReplyingTo(event)) return false
+
+      // Feed-specific display filtering (from displayFilterFn)
+      if (feedConfig.requiresMedia && !hasMedia(event)) return false
+      if (feedConfig.requiresReplies && !getEventReplyingTo(event)) return false
+      if (feedConfig.repliesTo && getEventReplyingTo(event) !== feedConfig.repliesTo)
+        return false
+
+      if (feedConfig.excludeSeen) {
+        if (
+          feedConfig.id === "unseen" &&
+          refreshSignal &&
+          openedAt &&
+          refreshSignal > openedAt &&
+          seenEventIds.has(event.id)
+        ) {
+          return false
+        } else if (feedConfig.id !== "unseen" && seenEventIds.has(event.id)) {
+          return false
+        }
+      }
+
+      // Relay filtering (from combinedDisplayFilterFn)
+      if (feedConfig.relayUrls?.length) {
+        if (!event.onRelays?.length) return false
+        const normalizeRelay = (url: string) =>
+          url.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
+        const normalizedTargetRelays = feedConfig.relayUrls.map(normalizeRelay)
+        const eventIsOnTargetRelay = event.onRelays.some((relay) =>
+          normalizedTargetRelays.includes(normalizeRelay(relay.url))
+        )
+        if (!eventIsOnTargetRelay) return false
+      }
+
+      // Follow distance filtering
+      if (feedConfig.followDistance !== undefined) {
+        const eventFollowDistance = socialGraph().getFollowDistance(event.pubkey)
+        if (eventFollowDistance > feedConfig.followDistance) return false
+      }
+
+      // Client-side search validation for relays that don't support search filters
+      if (localFilter.search) {
+        if (!event.content) return false
+        const searchTerm = localFilter.search.toLowerCase()
+        const eventContent = event.content.toLowerCase()
+        if (!eventContent.includes(searchTerm)) {
+          return false
+        }
+      }
+
+      const inAuthors = localFilter.authors?.includes(event.pubkey)
+      // Pass `allowUnknown` based on the `hideEventsByUnknownUsers` flag so that
+      // disabling the flag actually shows posts from users outside the follow graph.
+      if (!inAuthors && shouldHideAuthor(event.pubkey, 3, !hideEventsByUnknownUsers)) {
+        return false
+      }
+      if (
+        hideEventsByUnknownUsers &&
+        socialGraph().getFollowDistance(event.pubkey) >= 5 &&
+        !(filters.authors && filters.authors.includes(event.pubkey))
+      ) {
+        return false
+      }
+      return true
+    },
+    [
+      feedConfig,
+      refreshSignal,
+      openedAt,
+      localFilter.authors,
+      localFilter.search,
+      hideEventsByUnknownUsers,
+      filters.authors,
+    ]
+  )
+
   // Apply a single future event when its time comes
   const applyFutureEvent = useCallback((eventId: string) => {
     const futureEvent = futureEventsRef.current.get(eventId)
@@ -74,12 +161,12 @@ export default function useFeedEvents({
       const {event} = futureEvent
       futureEventsRef.current.delete(eventId)
 
-      if (!eventsRef.current.has(eventId)) {
+      if (!eventsRef.current.has(eventId) && shouldAcceptEvent(event)) {
         setNewEvents((prev) => new Map([...prev, [eventId, event]]))
         setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
       }
     }
-  }, [])
+  }, [shouldAcceptEvent])
 
   // Add future event to buffer with individual timer
   const addFutureEvent = useCallback(
@@ -128,46 +215,8 @@ export default function useFeedEvents({
     setEventsVersion((prev) => prev + 1)
   }
 
-  const filterEvents = useCallback(
-    (event: NDKEvent) => {
-      if (!event.created_at) return false
-      if (displayFilterFn && !displayFilterFn(event)) return false
-
-      // Client-side search validation for relays that don't support search filters
-      if (localFilter.search && event.content) {
-        const searchTerm = localFilter.search.toLowerCase()
-        const eventContent = event.content.toLowerCase()
-        if (!eventContent.includes(searchTerm)) {
-          return false
-        }
-      }
-
-      const inAuthors = localFilter.authors?.includes(event.pubkey)
-      // Pass `allowUnknown` based on the `hideEventsByUnknownUsers` flag so that
-      // disabling the flag actually shows posts from users outside the follow graph.
-      if (!inAuthors && shouldHideAuthor(event.pubkey, 3, !hideEventsByUnknownUsers)) {
-        return false
-      }
-      if (
-        hideEventsByUnknownUsers &&
-        socialGraph().getFollowDistance(event.pubkey) >= 5 &&
-        !(filters.authors && filters.authors.includes(event.pubkey))
-      ) {
-        return false
-      }
-      return true
-    },
-    [
-      displayFilterFn,
-      localFilter.authors,
-      localFilter.search,
-      hideEventsByUnknownUsers,
-      filters.authors,
-    ]
-  )
-
   const filteredEvents = useMemo(() => {
-    const events = Array.from(eventsRef.current.values()).filter(filterEvents)
+    const events = Array.from(eventsRef.current.values())
 
     if (sortLikedPosts) {
       const likesByPostId = new Map<string, number>()
@@ -189,7 +238,7 @@ export default function useFeedEvents({
     }
 
     return events
-  }, [eventsVersion, filterEvents, sortLikedPosts])
+  }, [eventsVersion, sortLikedPosts])
 
   const eventsByUnknownUsers = useMemo(() => {
     if (!hideEventsByUnknownUsers) {
@@ -197,13 +246,12 @@ export default function useFeedEvents({
     }
     return Array.from(eventsRef.current.values()).filter(
       (event) =>
-        (!displayFilterFn || displayFilterFn(event)) &&
         socialGraph().getFollowDistance(event.pubkey) >= 5 &&
         !(filters.authors && filters.authors.includes(event.pubkey)) &&
         // Only include events that aren't heavily muted
         !shouldHideAuthor(event.pubkey, undefined, true)
     )
-  }, [eventsVersion, displayFilterFn, hideEventsByUnknownUsers, filters.authors])
+  }, [eventsVersion, hideEventsByUnknownUsers, filters.authors])
 
   useEffect(() => {
     setLocalFilter(filters)
@@ -240,7 +288,7 @@ export default function useFeedEvents({
     sub.on("event", (event) => {
       if (!event?.id || !event.created_at) return
       if (eventsRef.current.has(event.id)) return
-      if (fetchFilterFn && !fetchFilterFn(event)) return
+      if (!shouldAcceptEvent(event)) return
 
       const now = Math.floor(Date.now() / 1000)
       const isFutureEvent = event.created_at > now
@@ -281,7 +329,7 @@ export default function useFeedEvents({
       clearTimeout(initialLoadTimeout)
       markLoadDoneIfHasEvents.cancel()
     }
-  }, [JSON.stringify(localFilter), addFutureEvent])
+  }, [JSON.stringify(localFilter), addFutureEvent, shouldAcceptEvent])
 
   // Cleanup future event timers on unmount
   useEffect(() => {

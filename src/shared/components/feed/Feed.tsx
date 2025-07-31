@@ -113,65 +113,6 @@ const Feed = memo(function Feed({
 
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
 
-  const displayFilterFn = useMemo(() => {
-    return (event: NDKEvent) => {
-      if (feedConfig.requiresMedia && !hasMedia(event)) return false
-      if (feedConfig.requiresReplies && !getEventReplyingTo(event)) return false
-      if (feedConfig.hideReplies && getEventReplyingTo(event)) return false
-      if (feedConfig.repliesTo && getEventReplyingTo(event) !== feedConfig.repliesTo)
-        return false
-
-      if (feedConfig.excludeSeen) {
-        if (
-          feedConfig.id === "unseen" &&
-          refreshSignal &&
-          openedAt &&
-          refreshSignal > openedAt &&
-          seenEventIds.has(event.id)
-        ) {
-          return false
-        } else if (feedConfig.id !== "unseen" && seenEventIds.has(event.id)) {
-          return false
-        }
-      }
-
-      return true
-    }
-  }, [feedConfig, refreshSignal, openedAt])
-
-  const fetchFilterFn = useMemo(
-    () => (event: NDKEvent) => {
-      if (feedConfig.excludeSeen && seenEventIds.has(event.id)) return false
-      if (feedConfig.hideReplies && getEventReplyingTo(event)) return false
-      return true
-    },
-    [feedConfig]
-  )
-
-  const combinedDisplayFilterFn = useMemo(() => {
-    const normalizeRelay = (url: string) =>
-      url.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
-
-    return (event: NDKEvent) => {
-      if (!displayFilterFn(event)) return false
-
-      if (feedConfig.relayUrls?.length) {
-        if (!event.onRelays?.length) return false
-        const normalizedTargetRelays = feedConfig.relayUrls.map(normalizeRelay)
-        const eventIsOnTargetRelay = event.onRelays.some((relay) =>
-          normalizedTargetRelays.includes(normalizeRelay(relay.url))
-        )
-        if (!eventIsOnTargetRelay) return false
-      }
-
-      if (feedConfig.followDistance !== undefined) {
-        const eventFollowDistance = socialGraph().getFollowDistance(event.pubkey)
-        if (eventFollowDistance > feedConfig.followDistance) return false
-      }
-
-      return true
-    }
-  }, [displayFilterFn, feedConfig])
 
   const {feedDisplayAs: persistedDisplayAs, setFeedDisplayAs} = useFeedStore()
 
@@ -192,12 +133,13 @@ const Feed = memo(function Feed({
     filters,
     cacheKey,
     displayCount,
-    displayFilterFn: combinedDisplayFilterFn,
-    fetchFilterFn,
+    feedConfig,
     hideEventsByUnknownUsers: false,
     sortLikedPosts: feedConfig.sortLikedPosts || false,
     sortFn,
     relayUrls: feedConfig.relayUrls,
+    refreshSignal,
+    openedAt,
   })
 
   const loadMoreItems = () => {
@@ -209,8 +151,8 @@ const Feed = memo(function Feed({
   }
 
   const newEventsFiltered = useMemo(() => {
-    return Array.from(newEventsMap.values()).filter(combinedDisplayFilterFn)
-  }, [newEventsMap, combinedDisplayFilterFn])
+    return Array.from(newEventsMap.values())
+  }, [newEventsMap])
 
   const newEventsFromFiltered = useMemo(() => {
     return new Set(newEventsFiltered.map((event) => event.pubkey))
