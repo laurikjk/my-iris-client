@@ -349,7 +349,7 @@ export default function MediaFeed({events}: MediaFeedProps) {
         <div className="grid grid-cols-3 gap-px md:gap-1">
           {visibleEvents.map((item, index) => (
             <ImageGridItem
-              key={item.id}
+              key={`${item.id}_${index}`}
               event={item}
               index={index}
               setActiveItemIndex={handleImageClick}
