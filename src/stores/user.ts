@@ -26,6 +26,7 @@ interface UserState {
   walletConnect: boolean
   cashuEnabled: boolean
   defaultZapAmount: number
+  ndkOutboxModel: boolean
 
   hasHydrated: boolean
 
@@ -42,6 +43,7 @@ interface UserState {
   setWalletConnect: (walletConnect: boolean) => void
   setCashuEnabled: (cashuEnabled: boolean) => void
   setDefaultZapAmount: (defaultZapAmount: number) => void
+  setNdkOutboxModel: (ndkOutboxModel: boolean) => void
   reset: () => void
   ensureDefaultMediaserver: (isSubscriber: boolean) => void
   awaitHydration: () => Promise<void>
@@ -65,6 +67,7 @@ export const useUserStore = create<UserState>()(
         walletConnect: false,
         cashuEnabled: false,
         defaultZapAmount: 21,
+        ndkOutboxModel: !import.meta.env.VITE_USE_LOCAL_RELAY,
         hasHydrated: false,
       }
 
@@ -88,6 +91,7 @@ export const useUserStore = create<UserState>()(
         setWalletConnect: (walletConnect: boolean) => set({walletConnect}),
         setCashuEnabled: (cashuEnabled: boolean) => set({cashuEnabled}),
         setDefaultZapAmount: (defaultZapAmount: number) => set({defaultZapAmount}),
+        setNdkOutboxModel: (ndkOutboxModel: boolean) => set({ndkOutboxModel}),
         reset: () => set(initialState),
         ensureDefaultMediaserver: (isSubscriber: boolean) =>
           set((state) => {
@@ -142,4 +146,5 @@ export const useDefaultMediaserver = () =>
 export const useWalletConnect = () => useUserStore((state) => state.walletConnect)
 export const useCashuEnabled = () => useUserStore((state) => state.cashuEnabled)
 export const useDefaultZapAmount = () => useUserStore((state) => state.defaultZapAmount)
+export const useNdkOutboxModel = () => useUserStore((state) => state.ndkOutboxModel)
 export const useReset = () => useUserStore((state) => state.reset)

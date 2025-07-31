@@ -14,7 +14,7 @@ export function Network() {
   const [connectToRelayUrls, setConnectToRelayUrls] = useState<string[]>([])
   const [sortField, setSortField] = useState<SortField>("status")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
-  const {relays, setRelays} = useUserStore()
+  const {relays, setRelays, ndkOutboxModel, setNdkOutboxModel} = useUserStore()
 
   useEffect(() => {
     if (relays && relays.length > 0) {
@@ -40,6 +40,10 @@ export function Network() {
     if (!url) return
     if (!url.startsWith("wss://") && !url.startsWith("ws://")) {
       url = `wss://${url}`
+    }
+    // Ensure trailing slash for consistency with NDK normalization
+    if (!url.endsWith("/")) {
+      url = url + "/"
     }
     const newRelays = [...(connectToRelayUrls || []), url]
     setConnectToRelayUrls(newRelays)
@@ -105,6 +109,25 @@ export function Network() {
     <div>
       <h2 className="text-2xl mb-4">Network</h2>
 
+      {/* NDK Outbox Model Setting */}
+      <div className="mb-6">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={ndkOutboxModel}
+            onChange={(e) => setNdkOutboxModel(e.target.checked)}
+            className="checkbox checkbox-primary"
+          />
+          <div>
+            <span className="text-base font-medium">Enable NDK Outbox Model</span>
+            <p className="text-sm text-base-content/70">
+              Improves relay selection and event distribution using the outbox model
+              pattern
+            </p>
+          </div>
+        </label>
+      </div>
+
       {/* Column Headers */}
       <div className="flex justify-between items-center py-2 border-b border-base-300 mb-2">
         <button
@@ -135,7 +158,14 @@ export function Network() {
 
       <div className="divide-y divide-base-300">
         {sortedRelayUrls.map((url) => {
-          const relay = ndkRelays.get(url)
+          // Try to get relay with exact URL first, then try with trailing slash
+          let relay = ndkRelays.get(url)
+          if (!relay && !url.endsWith("/")) {
+            relay = ndkRelays.get(url + "/")
+          }
+          if (!relay && url.endsWith("/")) {
+            relay = ndkRelays.get(url.slice(0, -1))
+          }
           return (
             <div key={url} className="py-2 flex justify-between items-center">
               <Link
