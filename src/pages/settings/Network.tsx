@@ -1,14 +1,19 @@
 import {FormEvent, useEffect, useMemo, useState} from "react"
-import {RiDeleteBinLine} from "@remixicon/react"
+import {RiDeleteBinLine, RiArrowUpSLine, RiArrowDownSLine} from "@remixicon/react"
 import {Link} from "react-router"
 
 import {DEFAULT_RELAYS, ndk as getNdk} from "@/utils/ndk"
 import {useUserStore} from "@/stores/user"
 
+type SortField = "url" | "status"
+type SortDirection = "asc" | "desc"
+
 export function Network() {
   const ndk = getNdk()
   const [ndkRelays, setNdkRelays] = useState(new Map(ndk.pool.relays))
   const [connectToRelayUrls, setConnectToRelayUrls] = useState<string[]>([])
+  const [sortField, setSortField] = useState<SortField>("status")
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const {relays, setRelays} = useUserStore()
 
   useEffect(() => {
@@ -55,6 +60,40 @@ export function Network() {
     setRelays(DEFAULT_RELAYS)
   }
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+    } else {
+      setSortField(field)
+      setSortDirection(field === "status" ? "desc" : "asc")
+    }
+  }
+
+  const sortedRelayUrls = useMemo(() => {
+    if (!connectToRelayUrls) return []
+
+    return [...connectToRelayUrls].sort((a, b) => {
+      const relayA = ndkRelays.get(a)
+      const relayB = ndkRelays.get(b)
+
+      if (sortField === "status") {
+        const connectedA = relayA?.connected ? 1 : 0
+        const connectedB = relayB?.connected ? 1 : 0
+        const statusDiff = connectedB - connectedA
+
+        if (statusDiff !== 0) {
+          return sortDirection === "desc" ? statusDiff : -statusDiff
+        }
+        // Secondary sort by URL
+        return a.localeCompare(b)
+      } else {
+        // Sort by URL
+        const urlDiff = a.localeCompare(b)
+        return sortDirection === "desc" ? -urlDiff : urlDiff
+      }
+    })
+  }, [connectToRelayUrls, ndkRelays, sortField, sortDirection])
+
   const hasDefaultRelays = useMemo(
     () =>
       connectToRelayUrls?.every((url) => DEFAULT_RELAYS.includes(url)) &&
@@ -65,8 +104,37 @@ export function Network() {
   return (
     <div>
       <h2 className="text-2xl mb-4">Network</h2>
+
+      {/* Column Headers */}
+      <div className="flex justify-between items-center py-2 border-b border-base-300 mb-2">
+        <button
+          onClick={() => handleSort("url")}
+          className="flex items-center gap-1 text-sm font-medium text-base-content/70 hover:text-base-content cursor-pointer"
+        >
+          URL
+          {sortField === "url" &&
+            (sortDirection === "asc" ? (
+              <RiArrowUpSLine className="w-4 h-4" />
+            ) : (
+              <RiArrowDownSLine className="w-4 h-4" />
+            ))}
+        </button>
+        <button
+          onClick={() => handleSort("status")}
+          className="flex items-center gap-1 text-sm font-medium text-base-content/70 hover:text-base-content cursor-pointer"
+        >
+          Status
+          {sortField === "status" &&
+            (sortDirection === "asc" ? (
+              <RiArrowUpSLine className="w-4 h-4" />
+            ) : (
+              <RiArrowDownSLine className="w-4 h-4" />
+            ))}
+        </button>
+      </div>
+
       <div className="divide-y divide-base-300">
-        {connectToRelayUrls?.map((url) => {
+        {sortedRelayUrls.map((url) => {
           const relay = ndkRelays.get(url)
           return (
             <div key={url} className="py-2 flex justify-between items-center">

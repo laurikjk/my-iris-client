@@ -92,7 +92,7 @@ iframe {
   [class*="hover:bg-"]:hover {
     background-color: inherit !important;
   }
-  
+
   /* Disable focus styles that can persist after touch */
   *:focus {
     outline: none !important;
