@@ -18,7 +18,7 @@ import {Link, useNavigate} from "react-router"
 import LikeHeader from "../LikeHeader"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
-import {KIND_TEXT_NOTE, KIND_REACTION} from "@/utils/constants"
+import {KIND_TEXT_NOTE, KIND_REACTION, KIND_ZAP_RECEIPT} from "@/utils/constants"
 
 type FeedItemProps = {
   event?: NDKEvent
@@ -318,13 +318,15 @@ function FeedItem({
               "pl-14": asRepliedTo || asReply,
             })}
           >
-            {showActions && (
-              <FeedItemActions
-                feedItemRef={feedItemRef}
-                event={referredEvent || event}
-                standalone={standalone}
-              />
-            )}
+            {showActions &&
+              event.kind !== KIND_REACTION &&
+              event.kind !== KIND_ZAP_RECEIPT && (
+                <FeedItemActions
+                  feedItemRef={feedItemRef}
+                  event={referredEvent || event}
+                  standalone={standalone}
+                />
+              )}
           </div>
         </div>
         {expandOverlay}
