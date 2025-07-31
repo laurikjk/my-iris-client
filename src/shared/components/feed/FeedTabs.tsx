@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from "react"
+import React, {useEffect, useLayoutEffect, useRef, useState} from "react"
 import {useFeedStore, useEnabledFeedIds, type FeedConfig} from "@/stores/feed"
 import {
   RiArrowLeftSLine,
@@ -25,7 +25,24 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
   } = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
   const containerRef = useRef<HTMLDivElement>(null)
-  const [maxWidth, setMaxWidth] = useState<number | null>(null)
+  const [maxWidth, setMaxWidth] = useState<number | null>(400) // Start with reasonable default
+
+  // Calculate max width for tab container based on available space
+  // TODO: fix layout to prevent middle column overflowing x-axis. difficult with sticky elements
+  useLayoutEffect(() => {
+    const calculateMaxWidth = () => {
+      if (containerRef.current) {
+        const parentWidth = containerRef.current.parentElement?.clientWidth || 0
+        // Reserve space for edit button (40px) + create button if in edit mode (80px) + padding (32px)
+        const reservedSpace = editMode ? 152 : 72
+        setMaxWidth(Math.max(200, parentWidth - reservedSpace))
+      }
+    }
+
+    calculateMaxWidth()
+    window.addEventListener("resize", calculateMaxWidth)
+    return () => window.removeEventListener("resize", calculateMaxWidth)
+  }, [editMode])
 
   // Filter and order feeds based on enabled feed IDs from store
   const feeds = React.useMemo(() => {
@@ -81,23 +98,6 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
     // Set as active feed
     setActiveFeed(uniqueId)
   }
-
-  // Calculate max width for tab container based on available space
-  // TODO: fix layout to prevent middle column overflowing x-axis. difficult with sticky elements
-  useEffect(() => {
-    const calculateMaxWidth = () => {
-      if (containerRef.current) {
-        const parentWidth = containerRef.current.parentElement?.clientWidth || 0
-        // Reserve space for edit button (40px) + create button if in edit mode (80px) + padding (32px)
-        const reservedSpace = editMode ? 152 : 72
-        setMaxWidth(Math.max(200, parentWidth - reservedSpace))
-      }
-    }
-
-    calculateMaxWidth()
-    window.addEventListener("resize", calculateMaxWidth)
-    return () => window.removeEventListener("resize", calculateMaxWidth)
-  }, [editMode])
 
   return (
     <div className="px-4 pb-4">
