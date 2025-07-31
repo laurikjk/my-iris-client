@@ -151,10 +151,8 @@ export function useSwipable({
 
       // Only handle horizontal movement
       if (direction === "horizontal") {
-        // Prevent default for horizontal movement to avoid page scroll
-        if ("touches" in e) {
-          e.preventDefault()
-        }
+        // Always prevent default for horizontal movement to avoid page scroll
+        e.preventDefault()
 
         // Mark as dragged if moved horizontally
         const timeSinceStart = Date.now() - (touchStartTime.current || 0)
@@ -174,7 +172,7 @@ export function useSwipable({
         dragLastX.current = clientX
       }
     },
-    [isDragging]
+    [isDragging, detectDirection]
   )
 
   const onDragEnd = useCallback(() => {

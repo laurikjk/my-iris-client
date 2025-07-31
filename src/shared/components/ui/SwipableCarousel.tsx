@@ -126,6 +126,10 @@ export function SwipableCarousel({
     }
 
     const handleTouchMove = (e: TouchEvent) => {
+      // Always try to prevent default on touchmove during potential horizontal swipes
+      if (isDragging) {
+        e.preventDefault()
+      }
       handlers.onDragMove(e as unknown as ReactTouchEvent | ReactMouseEvent)
     }
 
@@ -190,10 +194,7 @@ export function SwipableCarousel({
   return (
     <div
       className={`relative overflow-hidden ${className}`}
-      style={{
-        touchAction: items.length > 1 ? (isDragging ? "none" : "pan-y pinch-zoom") : "auto",
-        ...style
-      }}
+      style={{touchAction: items.length > 1 ? "pan-y pinch-zoom" : "auto", ...style}}
     >
       <div
         ref={containerRef}
