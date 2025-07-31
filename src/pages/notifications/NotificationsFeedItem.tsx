@@ -46,7 +46,7 @@ function NotificationAvatar({pubKey, emoji, zapAmount}: NotificationAvatarProps)
     if (zapAmount && zapAmount > 0) {
       return formatAmount(zapAmount)
     }
-    if (emoji) {
+    if (emoji && emoji.length <= 2) {
       return emoji === "+" ? "❤️" : emoji
     }
     return null
