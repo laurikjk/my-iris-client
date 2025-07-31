@@ -190,7 +190,10 @@ export function SwipableCarousel({
   return (
     <div
       className={`relative overflow-hidden ${className}`}
-      style={{touchAction: items.length > 1 ? "pan-y pinch-zoom" : "auto", ...style}}
+      style={{
+        touchAction: items.length > 1 ? (isDragging ? "none" : "pan-y pinch-zoom") : "auto",
+        ...style
+      }}
     >
       <div
         ref={containerRef}
