@@ -16,6 +16,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
+    "dev:local": "VITE_USE_LOCAL_RELAY=true vite",
     "start": "vite",
     "build": "tsc && vite build --mode production",
     "build:dev": "tsx ./scripts/updateSocialGraph.ts && tsc && vite build --mode development",

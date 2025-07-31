@@ -17,16 +17,19 @@ let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
 let nip07Signer: NDKNip07Signer | undefined
 
-/**
- * Default relays to use when initializing NDK
- */
-export const DEFAULT_RELAYS = [
+const LOCAL_RELAY = ["ws://localhost:7777"]
+
+const PRODUCTION_RELAYS = [
   "wss://temp.iris.to",
   "wss://vault.iris.to",
   "wss://relay.damus.io",
   "wss://relay.nostr.band",
   "wss://relay.snort.social",
 ]
+
+export const DEFAULT_RELAYS = import.meta.env.VITE_USE_LOCAL_RELAY
+  ? LOCAL_RELAY
+  : PRODUCTION_RELAYS
 
 /**
  * Get a singleton "default" NDK instance to get started quickly. If you want to init NDK with e.g. your own relays, pass them on the first call.
@@ -39,7 +42,7 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
     const store = useUserStore.getState()
     const options = opts || {
       explicitRelayUrls: DEFAULT_RELAYS,
-      enableOutboxModel: true,
+      enableOutboxModel: !import.meta.env.VITE_USE_LOCAL_RELAY,
       cacheAdapter: new NDKCacheAdapterDexie({dbName: "treelike-nostr", saveSig: true}),
     }
     ndkInstance = new NDK(options)
