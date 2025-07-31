@@ -64,7 +64,6 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
       showRepliedTo: true,
       hideReplies: false,
       followDistance: 1,
-      showEventsByUnknownUsers: false,
       feedType: "chronological" as const,
       filter: {
         limit: 100,

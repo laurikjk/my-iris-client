@@ -194,10 +194,16 @@ function FeedEditor({
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  checked={!(localConfig.showEventsByUnknownUsers ?? false)}
-                  onChange={(e) =>
-                    updateConfig("showEventsByUnknownUsers", !e.target.checked)
-                  }
+                  checked={localConfig.followDistance !== undefined}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      // Enable with default value of 1
+                      updateConfig("followDistance", 1)
+                    } else {
+                      // Disable by setting to undefined
+                      updateConfig("followDistance", undefined)
+                    }
+                  }}
                   className="checkbox checkbox-sm"
                 />
                 <input
@@ -212,7 +218,7 @@ function FeedEditor({
                     )
                   }
                   className="input input-sm w-20 text-sm"
-                  placeholder="None"
+                  disabled={localConfig.followDistance === undefined}
                 />
               </div>
               <span className="text-xs text-base-content/50 mt-1 block">

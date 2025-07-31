@@ -25,11 +25,11 @@ interface FeedConfig {
   filter?: FeedFilter
   sortLikedPosts?: boolean
   // Store filter criteria as serializable data
-  followDistance?: number
+  followDistance?: number // undefined = no follow distance filtering, number = max degrees
   requiresMedia?: boolean
   requiresReplies?: boolean
   excludeSeen?: boolean
-  showEventsByUnknownUsers?: boolean
+  showEventsByUnknownUsers?: boolean // Deprecated in feed configs, used only in global settings
   relayUrls?: string[]
   feedType?: "chronological" | "popular"
   // For reply feeds - only show replies to this specific event

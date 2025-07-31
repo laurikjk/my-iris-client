@@ -164,10 +164,7 @@ const Feed = memo(function Feed({
         if (!eventIsOnTargetRelay) return false
       }
 
-      if (
-        feedConfig.followDistance !== undefined &&
-        !feedConfig.showEventsByUnknownUsers
-      ) {
+      if (feedConfig.followDistance !== undefined) {
         const eventFollowDistance = socialGraph().getFollowDistance(event.pubkey)
         if (eventFollowDistance > feedConfig.followDistance) return false
       }
@@ -197,7 +194,7 @@ const Feed = memo(function Feed({
     displayCount,
     displayFilterFn: combinedDisplayFilterFn,
     fetchFilterFn,
-    hideEventsByUnknownUsers: !feedConfig.showEventsByUnknownUsers,
+    hideEventsByUnknownUsers: false,
     sortLikedPosts: feedConfig.sortLikedPosts || false,
     sortFn,
     relayUrls: feedConfig.relayUrls,
