@@ -25,6 +25,7 @@ interface SwipableCarouselProps {
   onClose?: () => void
   showArrows?: boolean
   arrowClassName?: string
+  onBackgroundClick?: () => void
 }
 
 export function SwipableCarousel({
@@ -39,6 +40,7 @@ export function SwipableCarousel({
   onClose,
   showArrows = false,
   arrowClassName = "btn btn-circle btn-ghost text-white",
+  onBackgroundClick,
 }: SwipableCarouselProps) {
   const {
     currentIndex,
@@ -210,6 +212,24 @@ export function SwipableCarousel({
         onMouseUp={handlers.onDragEnd}
         onMouseLeave={isDragging ? handlers.onDragEnd : undefined}
         onTransitionEnd={handlers.onTransitionEnd}
+        onClick={(e) => {
+          console.log("SwipableCarousel clicked:", {
+            wasDragged: wasDragged.current,
+            isCurrentTarget: e.target === e.currentTarget,
+            target: e.target,
+            currentTarget: e.currentTarget,
+            hasCallback: !!onBackgroundClick
+          })
+          // Handle background clicks (outside media content)
+          // Check if click is on carousel container or on the media item containers (but not the actual media)
+          const isCarouselContainer = e.target === e.currentTarget
+          const isMediaItemContainer = (e.target as HTMLElement).classList?.contains('justify-center')
+          
+          if (!wasDragged.current && (isCarouselContainer || isMediaItemContainer) && onBackgroundClick) {
+            console.log("Calling onBackgroundClick")
+            onBackgroundClick()
+          }
+        }}
       >
         {renderCarouselItems()}
       </div>

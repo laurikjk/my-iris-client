@@ -103,6 +103,7 @@ function MediaModal({
                 enableKeyboardNav={true}
                 onClose={onClose}
                 showArrows={mediaItems.length > 1}
+                onBackgroundClick={onClose}
                 onIndexChange={(index) => {
                   setCurrentModalIndex(index)
                   // Call legacy callbacks if provided for backwards compatibility
