@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react"
-import {RiDeleteBinLine} from "@remixicon/react"
+import {RiDeleteBinLine, RiFileCopyLine} from "@remixicon/react"
 import {useFeedStore, type FeedConfig} from "@/stores/feed"
 import RelaySelector from "@/shared/components/ui/RelaySelector"
 import EventKindsSelector from "@/shared/components/ui/EventKindsSelector"
@@ -10,6 +10,7 @@ interface FeedEditorProps {
   onEditModeToggle: () => void
   onDeleteFeed: (feedId: string) => void
   onResetFeeds: () => void
+  onCloneFeed: (feedId: string) => void
 }
 
 function FeedEditor({
@@ -18,6 +19,7 @@ function FeedEditor({
   onEditModeToggle,
   onDeleteFeed,
   onResetFeeds,
+  onCloneFeed,
 }: FeedEditorProps) {
   const {saveFeedConfig, loadFeedConfig} = useFeedStore()
   const [editingName, setEditingName] = useState("")
@@ -152,14 +154,30 @@ function FeedEditor({
     }
   }
 
+  const handleClone = () => {
+    onCloneFeed(activeTab)
+  }
+
   const updateConfig = updateLocalConfig
 
   if (!localConfig) return null
 
   return (
     <div className="flex flex-col gap-4 mt-4 p-4 border border-base-300 rounded-lg">
-      <div className="text-lg font-semibold">
-        Edit &quot;{getDisplayName(activeTab, localConfig.name)}&quot;
+      <div className="flex justify-between items-center">
+        <div className="text-lg font-semibold">
+          Edit &quot;{getDisplayName(activeTab, localConfig.name)}&quot;
+        </div>
+        {activeTab !== "popular" && (
+          <button
+            onClick={handleClone}
+            className="btn btn-sm btn-neutral"
+            title="Clone this feed"
+          >
+            <RiFileCopyLine className="w-4 h-4" />
+            Clone
+          </button>
+        )}
       </div>
 
       {/* Show no options for popular feed */}

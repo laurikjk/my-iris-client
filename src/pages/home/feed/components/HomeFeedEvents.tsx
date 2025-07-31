@@ -39,6 +39,7 @@ function HomeFeedEvents() {
     getAllFeedConfigs,
     loadFeedConfig,
     deleteFeed,
+    cloneFeed,
     resetAllFeedsToDefaults,
   } = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
@@ -113,6 +114,10 @@ function HomeFeedEvents() {
     }
   }
 
+  const handleCloneFeed = (feedId: string) => {
+    cloneFeed(feedId)
+  }
+
   useEffect(() => {
     if (activeFeed !== "unseen") {
       feedCache.delete("unseen")
@@ -160,6 +165,7 @@ function HomeFeedEvents() {
           onEditModeToggle={toggleEditMode}
           onDeleteFeed={handleDeleteFeed}
           onResetFeeds={handleResetFeeds}
+          onCloneFeed={handleCloneFeed}
         />
       )}
       <NotificationPrompt />

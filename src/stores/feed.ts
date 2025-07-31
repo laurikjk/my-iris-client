@@ -55,6 +55,7 @@ interface FeedState {
   reorderFeeds: (startIndex: number, endIndex: number) => void
   toggleFeedEnabled: (feedId: string) => void
   deleteFeed: (feedId: string) => void
+  cloneFeed: (feedId: string) => string
   saveFeedConfig: (feedId: string, config: Partial<FeedConfig>) => void
   loadFeedConfig: (feedId: string) => FeedConfig | undefined
   getAllFeedConfigs: () => FeedConfig[]
@@ -194,6 +195,42 @@ export const useFeedStore = create<FeedState>()(
             enabledFeedIds: enabledFeedIds.filter((id) => id !== feedId),
             feedConfigs: newFeedConfigs,
           })
+        },
+        cloneFeed: (feedId: string) => {
+          const {feedConfigs, enabledFeedIds} = get()
+          const originalConfig = feedConfigs[feedId]
+          if (!originalConfig) return feedId
+
+          // Generate unique ID for the cloned feed
+          const timestamp = Date.now()
+          const newFeedId = `${feedId}_clone_${timestamp}`
+
+          // Get display name for the original feed
+          const originalName = originalConfig.customName || originalConfig.name
+
+          // Create cloned config with new ID and name
+          const clonedConfig: FeedConfig = {
+            ...originalConfig,
+            id: newFeedId,
+            customName: `Copy of ${originalName}`,
+          }
+
+          // Insert cloned feed right after the original feed in the enabled feeds list
+          const originalIndex = enabledFeedIds.findIndex((id) => id === feedId)
+          const newEnabledFeedIds = [...enabledFeedIds]
+          newEnabledFeedIds.splice(originalIndex + 1, 0, newFeedId)
+
+          // Add to configs and enabled feeds list
+          set({
+            feedConfigs: {
+              ...feedConfigs,
+              [newFeedId]: clonedConfig,
+            },
+            enabledFeedIds: newEnabledFeedIds,
+            activeFeed: newFeedId, // Switch to the cloned feed
+          })
+
+          return newFeedId
         },
         saveFeedConfig: (feedId: string, config: Partial<FeedConfig>) => {
           const {feedConfigs} = get()
