@@ -3,7 +3,12 @@ import {useEffect, useMemo, useState, useRef, memo} from "react"
 import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 
-import {getEventReplyingTo, getEventRoot, isRepost} from "@/utils/nostr.ts"
+import {
+  getEventReplyingTo,
+  getEventRoot,
+  isRepost,
+  getZappingUser,
+} from "@/utils/nostr.ts"
 import {getEventIdHex, handleEventContent} from "@/shared/components/event/utils.ts"
 import RepostHeader from "@/shared/components/event/RepostHeader.tsx"
 import FeedItemActions from "../reactions/FeedItemActions.tsx"
@@ -16,6 +21,7 @@ import FeedItemHeader from "./FeedItemHeader.tsx"
 import FeedItemTitle from "./FeedItemTitle.tsx"
 import {Link, useNavigate} from "react-router"
 import LikeHeader from "../LikeHeader"
+import ZapReceiptHeader from "../ZapReceiptHeader"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 import {KIND_TEXT_NOTE, KIND_REACTION, KIND_ZAP_RECEIPT} from "@/utils/constants"
@@ -234,6 +240,11 @@ function FeedItem({
     )
   }
 
+  // Hide zap receipts if we can't get the zapping user
+  if (event.kind === KIND_ZAP_RECEIPT && !getZappingUser(event, false)) {
+    return null
+  }
+
   return (
     <ErrorBoundary>
       {showThreadRoot && (
@@ -296,6 +307,11 @@ function FeedItem({
               <LikeHeader event={event} />
             </div>
           )}
+          {event.kind === KIND_ZAP_RECEIPT && referredEvent && (
+            <div className="flex flex-row select-none mb-2 px-4">
+              <ZapReceiptHeader event={event} />
+            </div>
+          )}
           <div className="flex flex-row gap-4 flex-1">
             <div className={classNames("flex-1 w-full", {"text-lg": standalone})}>
               <FeedItemHeader
@@ -319,11 +335,14 @@ function FeedItem({
             })}
           >
             {showActions &&
-              event.kind !== KIND_REACTION &&
-              event.kind !== KIND_ZAP_RECEIPT && (
+              ((event.kind !== KIND_REACTION &&
+                event.kind !== KIND_ZAP_RECEIPT &&
+                !isRepost(event)) ||
+                referredEvent) && (
                 <FeedItemActions
                   feedItemRef={feedItemRef}
-                  event={referredEvent || event}
+                  event={referredEvent ? undefined : event}
+                  eventId={referredEvent?.id}
                   standalone={standalone}
                 />
               )}

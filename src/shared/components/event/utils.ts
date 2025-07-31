@@ -2,14 +2,18 @@ import {getTag, NDKEventFromRawEvent} from "@/utils/nostr.ts"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
-import {KIND_REPOST, KIND_REACTION} from "@/utils/constants"
+import {KIND_REPOST, KIND_REACTION, KIND_ZAP_RECEIPT} from "@/utils/constants"
 
 export const handleEventContent = (
   event: NDKEvent,
   setReferredEvent: (event: NDKEvent) => void
 ): (() => void) | undefined => {
   try {
-    if (event.kind === KIND_REPOST || event.kind === KIND_REACTION) {
+    if (
+      event.kind === KIND_REPOST ||
+      event.kind === KIND_REACTION ||
+      event.kind === KIND_ZAP_RECEIPT
+    ) {
       let originalEvent
       try {
         originalEvent = event.content ? JSON.parse(event.content) : undefined

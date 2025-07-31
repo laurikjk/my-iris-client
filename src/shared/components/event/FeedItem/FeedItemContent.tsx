@@ -2,6 +2,7 @@ import MarketListing from "../../market/MarketListing"
 import ChannelCreation from "../ChannelCreation.tsx"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ZapReceipt from "../ZapReceipt.tsx"
+import {KIND_ZAP_RECEIPT, KIND_REACTION} from "@/utils/constants"
 import Zapraiser from "../Zapraiser.tsx"
 import Highlight from "../Highlight.tsx"
 import TextNote from "../TextNote.tsx"
@@ -18,10 +19,23 @@ type ContentProps = {
 const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentProps) => {
   if (!event) {
     return ""
+  } else if (event.kind === KIND_ZAP_RECEIPT) {
+    // For zap receipts, if there's a referred event, show that instead
+    // If no referred event, it's a direct zap to user, show ZapReceipt
+    return referredEvent ? (
+      <TextNote event={referredEvent} truncate={truncate} />
+    ) : (
+      <ZapReceipt event={event} />
+    )
+  } else if (event.kind === KIND_REACTION) {
+    // For reactions, show both the reaction info and the referred event if available
+    return referredEvent ? (
+      <TextNote event={referredEvent} truncate={truncate} />
+    ) : (
+      <TextNote event={event} truncate={truncate} />
+    )
   } else if (referredEvent) {
     return <TextNote event={referredEvent} truncate={truncate} />
-  } else if (event.kind === 9735) {
-    return <ZapReceipt event={event} />
   } else if (event.kind === 1 && event.tagValue("zapraiser")) {
     return <Zapraiser event={event} />
   } else if (event.kind === 9802) {

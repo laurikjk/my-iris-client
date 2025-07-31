@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState, useMemo} from "react"
+import React, {useEffect, useRef, useState} from "react"
 import {
   RiAddLine,
   RiChat1Fill,
@@ -94,15 +94,15 @@ function EventKindsSelector({
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customKindInput, setCustomKindInput] = useState("")
 
-  // Pre-calculate ordered event kinds before first render
-  const orderedEventKinds = useMemo(() => {
+  // Calculate ordered event kinds only on mount, keep order fixed after that
+  const [orderedEventKinds] = useState(() => {
     const selectedKindsSet = new Set(selectedKinds)
     const selected = COMMON_EVENT_KINDS.filter((kind) => selectedKindsSet.has(kind.kind))
     const unselected = COMMON_EVENT_KINDS.filter(
       (kind) => !selectedKindsSet.has(kind.kind)
     )
     return [...selected, ...unselected]
-  }, [selectedKinds])
+  })
 
   const toggleKind = (kind: number) => {
     const isSelected = selectedKinds.includes(kind)

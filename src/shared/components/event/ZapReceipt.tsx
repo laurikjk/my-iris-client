@@ -43,8 +43,8 @@ function ZapReceipt({event}: ZapReceiptProps) {
             <UserRow pubKey={zapRecipient} avatarWidth={20} showHoverCard={true} />
           )}
         </div>
-        <div className="flex items-center gap-1">
-          <span className="text-base-content/50 text-sm">verified by</span>
+        <div className="flex items-center gap-1 opacity-50">
+          <span className="text-base-content text-sm">verified by</span>
           <UserRow pubKey={event.pubkey} avatarWidth={20} />
         </div>
       </div>
