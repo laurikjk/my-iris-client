@@ -191,6 +191,7 @@ const store = create<SessionStore>()(
           ...innerEvent,
           pubkey: "user",
           reactions: {},
+          nostrEventId: publishedEvent.id,
         }
         // Optimistic update
         routeEventToStore(sessionId, message)

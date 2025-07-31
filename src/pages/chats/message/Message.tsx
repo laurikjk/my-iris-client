@@ -18,6 +18,7 @@ import {EMOJI_REGEX} from "@/utils/validation"
 
 export type MessageType = Rumor & {
   reactions?: Record<string, string>
+  nostrEventId?: string
 }
 
 type MessageProps = {
@@ -179,6 +180,8 @@ const Message = ({
             isUser={isUser}
             onReply={onReply}
             onSendReaction={onSendReaction}
+            nostrEventId={message.nostrEventId}
+            message={message}
           />
         )}
 
@@ -238,6 +241,8 @@ const Message = ({
             isUser={isUser}
             onReply={onReply}
             onSendReaction={onSendReaction}
+            nostrEventId={message.nostrEventId}
+            message={message}
           />
         )}
       </div>

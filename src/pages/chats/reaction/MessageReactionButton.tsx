@@ -4,6 +4,8 @@ import {useSessionsStore} from "@/stores/sessions"
 import {MouseEvent, useState} from "react"
 import classNames from "classnames"
 import {KIND_REACTION} from "@/utils/constants"
+import {MessageDropdown} from "./MessageDropdown"
+import {MessageInfoModal} from "./MessageInfoModal"
 
 type MessageReactionButtonProps = {
   messageId: string
@@ -11,6 +13,11 @@ type MessageReactionButtonProps = {
   isUser: boolean
   onReply?: () => void
   onSendReaction?: (messageId: string, emoji: string) => Promise<void>
+  nostrEventId?: string
+  message?: {
+    created_at?: number
+    tags?: string[][]
+  }
 }
 
 type EmojiData = {
@@ -24,10 +31,13 @@ const MessageReactionButton = ({
   isUser,
   onReply,
   onSendReaction,
+  nostrEventId,
+  message,
 }: MessageReactionButtonProps) => {
   const {sendMessage} = useSessionsStore()
   const [showReactionsPicker, setShowReactionsPicker] = useState(false)
   const [pickerPosition, setPickerPosition] = useState<{clientY?: number}>({})
+  const [showInfoModal, setShowInfoModal] = useState(false)
 
   const handleReactionClick = (e: MouseEvent) => {
     const buttonRect = e.currentTarget.getBoundingClientRect()
@@ -49,6 +59,10 @@ const MessageReactionButton = ({
       }
       sendMessage(sessionId, event)
     }
+  }
+
+  const handleInfoClick = () => {
+    setShowInfoModal(true)
   }
 
   return (
@@ -75,6 +89,12 @@ const MessageReactionButton = ({
         >
           <RiHeartAddLine className="w-6 h-6" />
         </div>
+        <MessageDropdown
+          messageId={messageId}
+          sessionId={sessionId}
+          isUser={isUser}
+          onInfoClick={handleInfoClick}
+        />
       </div>
 
       <FloatingEmojiPicker
@@ -82,6 +102,13 @@ const MessageReactionButton = ({
         onClose={() => setShowReactionsPicker(false)}
         onEmojiSelect={handleEmojiClick}
         position={{clientY: pickerPosition.clientY, openRight: isUser}}
+      />
+
+      <MessageInfoModal
+        isOpen={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
+        nostrEventId={nostrEventId}
+        message={message}
       />
     </div>
   )

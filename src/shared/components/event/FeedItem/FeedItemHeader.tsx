@@ -6,6 +6,7 @@ import {nip19} from "nostr-tools"
 
 import RelativeTime from "@/shared/components/event/RelativeTime.tsx"
 import FeedItemDropdown from "../reactions/FeedItemDropdown.tsx"
+import Dropdown from "@/shared/components/ui/Dropdown.tsx"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {EVENT_AVATAR_WIDTH} from "../../user/const.ts"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -19,9 +20,7 @@ type FeedItemHeaderProps = {
 function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
   const [publishedAt, setPublishedAt] = useState<number>(0)
   const [showDropdown, setShowDropdown] = useState(false)
-
-  const [dropdownRef, setDropdownRef] = useState<HTMLDivElement | null>(null)
-  const [dropdownIconRef, setDropdownIconRef] = useState<HTMLDivElement | null>(null)
+  const [dropdownPosition, setDropdownPosition] = useState<{clientY?: number}>({})
 
   // handle long-form published timestamp
   useEffect(() => {
@@ -47,25 +46,6 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
   }, [event, referredEvent])
 
   const onClose = useCallback(() => setShowDropdown(false), [setShowDropdown])
-
-  // hide dropdown when clicking outside of it
-  useEffect(() => {
-    const handleClickOutsideDropdown = (event: MouseEvent) => {
-      if (
-        showDropdown &&
-        dropdownRef &&
-        !dropdownRef.contains(event.target as Node) &&
-        dropdownIconRef &&
-        !dropdownIconRef?.contains(event.target as Node)
-      ) {
-        setShowDropdown(false)
-      }
-    }
-    document.addEventListener("click", handleClickOutsideDropdown)
-    return () => {
-      document.removeEventListener("click", handleClickOutsideDropdown)
-    }
-  }, [dropdownRef, dropdownIconRef])
 
   return (
     <header
@@ -95,17 +75,26 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
           tabIndex={0}
           role="button"
           className="p-2"
-          ref={setDropdownIconRef}
           onClick={(e) => {
             e.stopPropagation()
+            const buttonRect = e.currentTarget.getBoundingClientRect()
+            setDropdownPosition({clientY: buttonRect.top})
             setShowDropdown(true)
           }}
         >
           <RiMoreLine className="h-6 w-6 cursor-pointer text-base-content/50" />
         </div>
         {showDropdown && (
-          <div ref={setDropdownRef} className="z-40">
-            <FeedItemDropdown onClose={onClose} event={referredEvent || event} />
+          <div className="z-40">
+            <Dropdown
+              onClose={onClose}
+              position={{
+                clientY: dropdownPosition.clientY,
+                alignRight: true,
+              }}
+            >
+              <FeedItemDropdown onClose={onClose} event={referredEvent || event} />
+            </Dropdown>
           </div>
         )}
       </div>

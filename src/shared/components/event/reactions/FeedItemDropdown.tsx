@@ -13,6 +13,7 @@ import MuteUser from "../MuteUser.tsx"
 import RawJSON from "../RawJSON.tsx"
 import RelayList from "./RelayList.tsx"
 import {useNavigate} from "react-router"
+import {useRebroadcast} from "@/shared/hooks/useRebroadcast"
 
 type FeedItemDropdownProps = {
   event: NDKEvent
@@ -22,6 +23,7 @@ type FeedItemDropdownProps = {
 function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
   const myPubKey = usePublicKey()
   const navigate = useNavigate()
+  const {rebroadcast, isRebroadcasting} = useRebroadcast()
 
   const [showReactions, setShowReactions] = useState(false)
   const [showRawJSON, setShowRawJSON] = useState(false)
@@ -73,6 +75,10 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
 
   const handleReporting = () => {
     setReporting(true)
+  }
+
+  const handleRebroadcast = async () => {
+    await rebroadcast(event.id)
   }
 
   return (
@@ -131,6 +137,11 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
           </li>
           <li>
             <button onClick={handleCopyNoteID}>Copy Event ID</button>
+          </li>
+          <li>
+            <button onClick={handleRebroadcast} disabled={isRebroadcasting}>
+              {isRebroadcasting ? "Rebroadcasting..." : "Rebroadcast"}
+            </button>
           </li>
           {myPubKey !== event.pubkey && event.kind !== 9735 && (
             <>
