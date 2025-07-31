@@ -13,6 +13,7 @@ export interface SwipeItem {
   url: string
   type: "image" | "video"
   imeta?: string[]
+  event?: unknown
 }
 
 export interface UseSwipableOptions {

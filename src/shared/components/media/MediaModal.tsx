@@ -44,12 +44,16 @@ function MediaModal({
             id: mediaUrl,
             url: mediaUrl,
             type: mediaType,
+            event,
           },
         ]
       : [])
 
   const initialIndex = propCurrentIndex ?? 0
   const [currentModalIndex, setCurrentModalIndex] = useState(initialIndex)
+
+  // Get the current event from the media array or fallback to the prop
+  const currentEvent = (mediaItems[currentModalIndex]?.event as EmbedEvent) || event
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map())
 
   // Effect to handle video play/pause based on current index
@@ -157,11 +161,11 @@ function MediaModal({
           )}
         </div>
 
-        {showFeedItem && event && (
+        {showFeedItem && currentEvent && (
           <div className="w-[400px] bg-base-100 border-l flex-shrink-0 overflow-y-auto">
             <FeedItem
-              key={isNDKEvent(event) ? event.id : undefined}
-              event={isNDKEvent(event) ? event : undefined}
+              key={isNDKEvent(currentEvent) ? currentEvent.id : undefined}
+              event={isNDKEvent(currentEvent) ? currentEvent : undefined}
               asReply={false}
               showRepliedTo={true}
               showReplies={Infinity}

@@ -3,7 +3,6 @@ import {IMAGE_REGEX, VIDEO_REGEX} from "../embed/media/MediaEmbed"
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
 import {useState, useMemo, useCallback, useEffect, useRef} from "react"
 import useHistoryState from "@/shared/hooks/useHistoryState"
-import PreloadImages from "../media/PreloadImages"
 import MediaModal from "../media/MediaModal"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ImageGridItem from "./ImageGridItem"
@@ -15,7 +14,6 @@ interface MediaFeedProps {
 
 // Limit memory usage by keeping only recent events
 const MAX_FETCHED_EVENTS = 100
-const PRELOAD_RANGE = 3 // Only preload 3 images before/after current
 
 export default function MediaFeed({events}: MediaFeedProps) {
   const [showModal, setShowModal] = useState(false)
@@ -311,44 +309,23 @@ export default function MediaFeed({events}: MediaFeedProps) {
       id: item.url,
       url: item.url,
       type: item.type,
+      event: item.event,
     }))
   }, [modalMedia])
-
-  // Calculate preload range for better memory management
-  const preloadImages = useMemo(() => {
-    if (!shouldShowModal || activeItemIndex === null) return []
-
-    const start = Math.max(0, activeItemIndex - PRELOAD_RANGE)
-    const end = Math.min(modalMedia.length, activeItemIndex + PRELOAD_RANGE + 1)
-
-    return modalMedia.slice(start, end).map((m) => m.url)
-  }, [shouldShowModal, activeItemIndex, modalMedia])
-
-  // Calculate the current index within the preload range
-  const currentPreloadIndex = useMemo(() => {
-    if (!shouldShowModal || activeItemIndex === null) return 0
-
-    const start = Math.max(0, activeItemIndex - PRELOAD_RANGE)
-    return activeItemIndex - start
-  }, [shouldShowModal, activeItemIndex])
 
   return (
     <>
       {shouldShowModal && (
-        <>
-          <MediaModal
-            onClose={() => {
-              setShowModal(false)
-              setActiveItemIndex(null)
-              setModalMedia([])
-            }}
-            media={modalMediaArray}
-            showFeedItem={true}
-            event={modalMedia[activeItemIndex].event}
-            currentIndex={activeItemIndex}
-          />
-          <PreloadImages images={preloadImages} currentIndex={currentPreloadIndex} />
-        </>
+        <MediaModal
+          onClose={() => {
+            setShowModal(false)
+            setActiveItemIndex(null)
+            setModalMedia([])
+          }}
+          media={modalMediaArray}
+          showFeedItem={true}
+          currentIndex={activeItemIndex}
+        />
       )}
 
       <InfiniteScroll onLoadMore={loadMoreItems}>
