@@ -1,4 +1,4 @@
-import React, {useEffect, useLayoutEffect, useRef, useState} from "react"
+import React, {useLayoutEffect, useRef, useState} from "react"
 import {useFeedStore, useEnabledFeedIds, type FeedConfig} from "@/stores/feed"
 import {
   RiArrowLeftSLine,

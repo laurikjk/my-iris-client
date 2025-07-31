@@ -218,6 +218,7 @@ const Feed = memo(function Feed({
 
   const gridEvents = useMemo(() => {
     if (displayAs === "grid") {
+      const seen = new Set<string>()
       return filteredEvents
         .map((event) => {
           if ("content" in event && event.kind === 7) {
@@ -226,7 +227,13 @@ const Feed = memo(function Feed({
           }
           return event
         })
-        .filter((event) => event !== null)
+        .filter((event): event is NDKEvent | {id: string} => {
+          if (event === null) return false
+          // Deduplicate by event ID to prevent multiple reposts of same event
+          if (seen.has(event.id)) return false
+          seen.add(event.id)
+          return true
+        })
     }
     return filteredEvents
   }, [filteredEvents, displayAs])

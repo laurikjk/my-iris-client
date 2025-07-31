@@ -188,7 +188,13 @@ export default function MediaFeed({events}: MediaFeedProps) {
         })
         .filter(Boolean) as NDKEvent[]
 
-      // Calculate media from all available events
+      // Ensure the clicked event is included in allEvents
+      // Only add if not already present to prevent duplicates
+      if (!allEvents.find((e) => e.id === event.id)) {
+        allEvents.push(event)
+      }
+
+      // Calculate media from all available events for feed-wide browsing
       const mediaArray = calculateAllMedia(allEvents)
       const mediaIndex = mediaArray.findIndex(
         (media) => media.event.id === event.id && media.url === clickedUrl

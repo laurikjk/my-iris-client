@@ -55,12 +55,12 @@ function MediaModal({
   // Effect to handle video play/pause based on current index
   useEffect(() => {
     const videoMap = videoRefs.current
-    
+
     // Stop all videos first
     videoMap.forEach((video) => {
       video.pause()
     })
-    
+
     // Play only the current video if it exists
     const currentItem = mediaItems[currentModalIndex]
     if (currentItem?.type === "video") {
@@ -73,7 +73,7 @@ function MediaModal({
 
   const renderMediaItem = (
     item: SwipeItem,
-    index: number,
+    _index: number,
     wasDragged: {current: boolean}
   ) => {
     const handleImageClick = () => {
@@ -82,10 +82,8 @@ function MediaModal({
       if (!showFeedItem) onClose()
     }
 
-    const isCurrentItem = index === currentModalIndex
-    
     return item.type === "video" ? (
-      <video 
+      <video
         ref={(el) => {
           if (el) {
             videoRefs.current.set(item.url, el)
@@ -93,11 +91,11 @@ function MediaModal({
             videoRefs.current.delete(item.url)
           }
         }}
-        loop 
+        loop
         autoPlay={false}
-        src={item.url} 
-        controls 
-        className="max-w-full max-h-full" 
+        src={item.url}
+        controls
+        className="max-w-full max-h-full"
       />
     ) : (
       <ProxyImg

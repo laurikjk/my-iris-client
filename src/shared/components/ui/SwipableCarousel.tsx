@@ -218,14 +218,20 @@ export function SwipableCarousel({
             isCurrentTarget: e.target === e.currentTarget,
             target: e.target,
             currentTarget: e.currentTarget,
-            hasCallback: !!onBackgroundClick
+            hasCallback: !!onBackgroundClick,
           })
           // Handle background clicks (outside media content)
           // Check if click is on carousel container or on the media item containers (but not the actual media)
           const isCarouselContainer = e.target === e.currentTarget
-          const isMediaItemContainer = (e.target as HTMLElement).classList?.contains('justify-center')
-          
-          if (!wasDragged.current && (isCarouselContainer || isMediaItemContainer) && onBackgroundClick) {
+          const isMediaItemContainer = (e.target as HTMLElement).classList?.contains(
+            "justify-center"
+          )
+
+          if (
+            !wasDragged.current &&
+            (isCarouselContainer || isMediaItemContainer) &&
+            onBackgroundClick
+          ) {
             console.log("Calling onBackgroundClick")
             onBackgroundClick()
           }
