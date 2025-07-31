@@ -26,7 +26,8 @@ function ZapReceipt({event}: ZapReceiptProps) {
     }
   }, [event])
 
-  const zapRecipient = event.tagValue("P") || event.tagValue("p")
+  // Get the first p or P tag as recipient
+  const zapRecipient = event.tags.find(tag => tag[0] === "P" || tag[0] === "p")?.[1]
 
   return (
     <div className="px-4">
