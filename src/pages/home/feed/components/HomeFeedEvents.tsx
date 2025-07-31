@@ -171,7 +171,7 @@ function HomeFeedEvents() {
         />
       )}
       <NotificationPrompt />
-      {activeFeedConfig?.feedType === "popular" ? (
+      {activeFeedConfig?.feedType === "popular" || !myPubKey ? (
         <PopularFeed />
       ) : (
         <Feed
@@ -184,10 +184,10 @@ function HomeFeedEvents() {
           openedAt={openedAt}
         />
       )}
-      {follows.length <= 1 && (
+      {follows.length <= 1 && myPubKey && (
         <>
           <NoFollows myPubKey={myPubKey} />
-          <PopularFeed displayOptions={{ showDisplaySelector: false }} />
+          {activeFeedConfig?.feedType !== "popular" && <PopularFeed displayOptions={{ showDisplaySelector: false }} />}
         </>
       )}
     </>
