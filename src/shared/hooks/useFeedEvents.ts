@@ -155,18 +155,21 @@ export default function useFeedEvents({
   )
 
   // Apply a single future event when its time comes
-  const applyFutureEvent = useCallback((eventId: string) => {
-    const futureEvent = futureEventsRef.current.get(eventId)
-    if (futureEvent) {
-      const {event} = futureEvent
-      futureEventsRef.current.delete(eventId)
+  const applyFutureEvent = useCallback(
+    (eventId: string) => {
+      const futureEvent = futureEventsRef.current.get(eventId)
+      if (futureEvent) {
+        const {event} = futureEvent
+        futureEventsRef.current.delete(eventId)
 
-      if (!eventsRef.current.has(eventId) && shouldAcceptEvent(event)) {
-        setNewEvents((prev) => new Map([...prev, [eventId, event]]))
-        setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
+        if (!eventsRef.current.has(eventId) && shouldAcceptEvent(event)) {
+          setNewEvents((prev) => new Map([...prev, [eventId, event]]))
+          setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
+        }
       }
-    }
-  }, [shouldAcceptEvent])
+    },
+    [shouldAcceptEvent]
+  )
 
   // Add future event to buffer with individual timer
   const addFutureEvent = useCallback(

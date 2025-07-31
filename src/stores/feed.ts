@@ -310,5 +310,14 @@ export const useFeedDisplayAs = () => useFeedStore((state) => state.feedDisplayA
 export const useEnabledFeedIds = () => useFeedStore((state) => state.enabledFeedIds)
 export const useFeedConfigs = () => useFeedStore((state) => state.feedConfigs)
 
+// Utility function to generate cache key for feed configs
+// Excludes display-only properties that shouldn't invalidate cache
+export const getFeedCacheKey = (feedConfig: FeedConfig): string => {
+  // Create a copy without display-only properties
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const {name, customName, ...cacheableConfig} = feedConfig
+  return JSON.stringify(cacheableConfig)
+}
+
 // Export types
 export type {FeedConfig, FeedFilter}

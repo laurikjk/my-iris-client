@@ -15,6 +15,7 @@ import {
   useEnabledFeedIds,
   useFeedConfigs,
   type FeedConfig,
+  getFeedCacheKey,
 } from "@/stores/feed"
 import FeedTabs from "@/shared/components/feed/FeedTabs"
 import FeedEditor from "@/shared/components/feed/FeedEditor"
@@ -129,7 +130,8 @@ function HomeFeedEvents() {
 
   // Create a comprehensive key that changes when any relevant config changes
   const feedKey = useMemo(() => {
-    return `feed-${JSON.stringify(activeFeedConfig)}`
+    if (!activeFeedConfig) return "feed-null"
+    return `feed-${getFeedCacheKey(activeFeedConfig)}`
   }, [activeFeedConfig])
 
   if (!activeFeedConfig?.filter) {

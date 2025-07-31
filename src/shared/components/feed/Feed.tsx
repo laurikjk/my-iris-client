@@ -12,12 +12,10 @@ import {useSocialGraphLoaded} from "@/utils/socialGraph.ts"
 import UnknownUserEvents from "./UnknownUserEvents.tsx"
 import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
-import {useFeedStore, type FeedConfig} from "@/stores/feed"
-import {getTag, getEventReplyingTo} from "@/utils/nostr"
+import {useFeedStore, type FeedConfig, getFeedCacheKey} from "@/stores/feed"
+import {getTag} from "@/utils/nostr"
 import MediaFeed from "./MediaFeed"
 import socialGraph from "@/utils/socialGraph"
-import {hasMedia} from "@/shared/components/embed"
-import {seenEventIds} from "@/utils/memcache"
 import useFollows from "@/shared/hooks/useFollows"
 
 interface FeedProps {
@@ -103,7 +101,7 @@ const Feed = memo(function Feed({
     }
   }, [feedConfig.sortType])
 
-  const cacheKey = JSON.stringify(feedConfig)
+  const cacheKey = useMemo(() => getFeedCacheKey(feedConfig), [feedConfig])
 
   const [displayCount, setDisplayCount] = useHistoryState(
     INITIAL_DISPLAY_COUNT,
@@ -112,7 +110,6 @@ const Feed = memo(function Feed({
   const firstFeedItemRef = useRef<HTMLDivElement>(null)
 
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
-
 
   const {feedDisplayAs: persistedDisplayAs, setFeedDisplayAs} = useFeedStore()
 
