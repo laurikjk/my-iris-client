@@ -10,6 +10,7 @@ import Dropdown from "@/shared/components/ui/Dropdown.tsx"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {EVENT_AVATAR_WIDTH} from "../../user/const.ts"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {getZappingUser} from "@/utils/nostr"
 
 type FeedItemHeaderProps = {
   event: NDKEvent
@@ -47,6 +48,9 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
 
   const onClose = useCallback(() => setShowDropdown(false), [setShowDropdown])
 
+  // For zap receipts, get the user who sent the zap
+  const displayUser = event.kind === 9735 ? getZappingUser(event, false) : null
+
   return (
     <header
       className={classNames("flex justify-between items-center px-4", {"mb-2": !tight})}
@@ -56,9 +60,9 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
           avatarWidth={EVENT_AVATAR_WIDTH}
           showHoverCard={true}
           pubKey={
-            (event.kind === 9735 && event.tagValue("P")
-              ? event.tagValue("P")
-              : referredEvent?.pubkey) || event.pubkey
+            event.kind === 9735
+              ? displayUser || event.pubkey
+              : referredEvent?.pubkey || event.pubkey
           }
         />
       </div>
