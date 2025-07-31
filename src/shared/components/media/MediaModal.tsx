@@ -1,4 +1,4 @@
-import {useState} from "react"
+import {useState, useEffect, useRef} from "react"
 import FeedItem from "../event/FeedItem/FeedItem"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {EmbedEvent} from "../embed/index"
@@ -50,10 +50,30 @@ function MediaModal({
 
   const initialIndex = propCurrentIndex ?? 0
   const [currentModalIndex, setCurrentModalIndex] = useState(initialIndex)
+  const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map())
+
+  // Effect to handle video play/pause based on current index
+  useEffect(() => {
+    const videoMap = videoRefs.current
+    
+    // Stop all videos first
+    videoMap.forEach((video) => {
+      video.pause()
+    })
+    
+    // Play only the current video if it exists
+    const currentItem = mediaItems[currentModalIndex]
+    if (currentItem?.type === "video") {
+      const currentVideo = videoMap.get(currentItem.url)
+      if (currentVideo) {
+        currentVideo.play().catch(console.error)
+      }
+    }
+  }, [currentModalIndex, mediaItems])
 
   const renderMediaItem = (
     item: SwipeItem,
-    _index: number,
+    index: number,
     wasDragged: {current: boolean}
   ) => {
     const handleImageClick = () => {
@@ -62,8 +82,23 @@ function MediaModal({
       if (!showFeedItem) onClose()
     }
 
+    const isCurrentItem = index === currentModalIndex
+    
     return item.type === "video" ? (
-      <video loop autoPlay src={item.url} controls className="max-w-full max-h-full" />
+      <video 
+        ref={(el) => {
+          if (el) {
+            videoRefs.current.set(item.url, el)
+          } else {
+            videoRefs.current.delete(item.url)
+          }
+        }}
+        loop 
+        autoPlay={false}
+        src={item.url} 
+        controls 
+        className="max-w-full max-h-full" 
+      />
     ) : (
       <ProxyImg
         src={item.url}
