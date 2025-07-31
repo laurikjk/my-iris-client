@@ -7,6 +7,7 @@ import Icon from "../Icons/Icon"
 import Modal from "../ui/Modal"
 import SwipableCarousel from "../ui/SwipableCarousel"
 import {SwipeItem} from "@/shared/hooks/useSwipable"
+import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 
 interface MediaModalProps {
   onClose: () => void
@@ -51,6 +52,7 @@ function MediaModal({
 
   const initialIndex = propCurrentIndex ?? 0
   const [currentModalIndex, setCurrentModalIndex] = useState(initialIndex)
+  const [isEventBarVisible, setIsEventBarVisible] = useState(true)
 
   // Get the current event from the media array or fallback to the prop
   const currentEvent = (mediaItems[currentModalIndex]?.event as EmbedEvent) || event
@@ -116,11 +118,25 @@ function MediaModal({
       <div className="relative flex w-screen h-screen">
         <div className="flex-1 relative bg-base-200/90 select-none">
           <button
-            className="btn btn-circle btn-ghost absolute right-2 top-2 focus:outline-none text-white z-10"
+            className="btn btn-circle btn-ghost absolute left-2 top-2 focus:outline-none text-white z-10"
             onClick={onClose}
           >
             <Icon name="close" size={12} />
           </button>
+
+          {showFeedItem && currentEvent && (
+            <button
+              className="btn btn-circle btn-ghost absolute right-2 top-2 focus:outline-none text-white z-10"
+              onClick={() => setIsEventBarVisible(!isEventBarVisible)}
+              title={isEventBarVisible ? "Hide event details" : "Show event details"}
+            >
+              {isEventBarVisible ? (
+                <RiArrowRightSLine className="w-5 h-5" />
+              ) : (
+                <RiArrowLeftSLine className="w-5 h-5" />
+              )}
+            </button>
+          )}
 
           <div
             className="absolute inset-0 flex items-center justify-center"
@@ -155,13 +171,13 @@ function MediaModal({
           </div>
 
           {mediaItems.length > 1 && (
-            <div className="absolute top-2 left-2 text-white bg-black bg-opacity-50 px-2 py-1 rounded z-10">
+            <div className="absolute bottom-2 left-2 text-white bg-black bg-opacity-50 px-2 py-1 rounded z-10 flex items-center">
               {currentModalIndex + 1} / {mediaItems.length}
             </div>
           )}
         </div>
 
-        {showFeedItem && currentEvent && (
+        {showFeedItem && currentEvent && isEventBarVisible && (
           <div className="w-[400px] bg-base-100 border-l flex-shrink-0 overflow-y-auto">
             <FeedItem
               key={isNDKEvent(currentEvent) ? currentEvent.id : undefined}
