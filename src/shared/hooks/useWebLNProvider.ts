@@ -12,7 +12,7 @@ export const useWebLNProvider = () => {
       if (window.webln) {
         try {
           const enabled = await window.webln.isEnabled()
-          if (enabled) {
+          if (enabled && typeof window.webln.getBalance === "function") {
             setProvider(window.webln)
             return true
           }
@@ -30,7 +30,7 @@ export const useWebLNProvider = () => {
         nwcUnsubscribe = onConnected(async (newProvider) => {
           try {
             const enabled = await newProvider.isEnabled()
-            if (enabled) {
+            if (enabled && typeof newProvider.getBalance === "function") {
               setProvider(newProvider)
             }
           } catch (error) {

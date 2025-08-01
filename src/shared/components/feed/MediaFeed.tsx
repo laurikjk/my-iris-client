@@ -74,7 +74,6 @@ export default function MediaFeed({events, eventsToHighlight}: MediaFeedProps) {
     [events, fetchedEventsMap, calculateAllMedia, openModal]
   )
 
-  // Memoize modal media array to prevent recreating on every render
   const modalMediaArray = useMemo(() => {
     return modalMedia.map((item) => ({
       id: item.url,
