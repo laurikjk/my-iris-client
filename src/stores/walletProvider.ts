@@ -354,50 +354,55 @@ export const useWalletProviderStore = create<WalletProviderState>()(
 
         // Look for Cashu NWC connection string in localStorage
         try {
-          const cashuNWCString = localStorage.getItem("cashu-nwc-connection")
-          if (cashuNWCString) {
-            console.log("🔍 Found Cashu NWC connection string in localStorage")
+          const bcConfigString = localStorage.getItem("bc:config")
+          if (bcConfigString) {
+            const bcConfig = JSON.parse(bcConfigString)
+            const cashuNWCString = bcConfig.nwcUrl
 
-            // Check if we already have this connection
-            const existingConnection = state.nwcConnections.find(
-              (conn) => conn.connectionString === cashuNWCString
-            )
+            if (cashuNWCString) {
+              console.log("🔍 Found Cashu NWC connection string in localStorage")
 
-            if (existingConnection) {
-              console.log("🔍 Cashu NWC connection already exists")
+              // Check if we already have this connection
+              const existingConnection = state.nwcConnections.find(
+                (conn) => conn.connectionString === cashuNWCString
+              )
 
-              // Only set as active if no wallet is currently active
-              if (state.activeProviderType === "disabled") {
-                console.log("🔍 No active wallet, setting Cashu NWC as active")
-                set({
-                  activeProviderType: "nwc",
-                  activeNWCId: existingConnection.id,
-                })
-                get().refreshActiveProvider()
-              }
-            } else {
-              console.log("🔍 Adding new Cashu NWC connection")
-              const connectionId = get().addNWCConnection({
-                name: "Cashu Wallet",
-                connectionString: cashuNWCString,
-              })
+              if (existingConnection) {
+                console.log("🔍 Cashu NWC connection already exists")
 
-              // Only set as active if no wallet is currently active
-              if (state.activeProviderType === "disabled") {
-                console.log("🔍 No active wallet, setting new Cashu NWC as active")
-                set({
-                  activeProviderType: "nwc",
-                  activeNWCId: connectionId,
-                })
-                get().refreshActiveProvider()
+                // Only set as active if no wallet is currently active
+                if (state.activeProviderType === "disabled") {
+                  console.log("🔍 No active wallet, setting Cashu NWC as active")
+                  set({
+                    activeProviderType: "nwc",
+                    activeNWCId: existingConnection.id,
+                  })
+                  get().refreshActiveProvider()
+                }
               } else {
-                console.log(
-                  "🔍 Wallet already active, Cashu NWC added but not set as active"
-                )
+                console.log("🔍 Adding new Cashu NWC connection")
+                const connectionId = get().addNWCConnection({
+                  name: "Cashu Wallet",
+                  connectionString: cashuNWCString,
+                })
+
+                // Only set as active if no wallet is currently active
+                if (state.activeProviderType === "disabled") {
+                  console.log("🔍 No active wallet, setting new Cashu NWC as active")
+                  set({
+                    activeProviderType: "nwc",
+                    activeNWCId: connectionId,
+                  })
+                  get().refreshActiveProvider()
+                } else {
+                  console.log(
+                    "🔍 Wallet already active, Cashu NWC added but not set as active"
+                  )
+                }
               }
             }
           } else {
-            console.log("🔍 No Cashu NWC connection string found in localStorage")
+            console.log("🔍 No Cashu NWC connection found in localStorage")
           }
         } catch (error) {
           console.warn("🔍 Error checking for Cashu NWC connection:", error)
