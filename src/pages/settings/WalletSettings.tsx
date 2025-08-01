@@ -99,6 +99,12 @@ const WalletSettings = () => {
     }
   }
 
+  const getBalanceDisplay = () => {
+    if (activeProviderType === "disabled") return "No wallet connected"
+    if (balance !== null) return `${balance.toLocaleString()} sats`
+    return "Loading..."
+  }
+
   const getCurrentWalletDisplay = () => {
     console.log("📱 Getting current wallet display:", {
       activeProviderType,
@@ -123,9 +129,7 @@ const WalletSettings = () => {
         <h1 className="text-2xl font-bold">Wallet Settings</h1>
         <div className="flex items-center gap-3 text-lg">
           <span className="text-gray-600">Balance:</span>
-          <span className="font-semibold">
-            {balance !== null ? `${balance.toLocaleString()} sats` : "Loading..."}
-          </span>
+          <span className="font-semibold">{getBalanceDisplay()}</span>
         </div>
       </div>
 
