@@ -51,7 +51,7 @@ export default function MediaFeed({events, eventsToHighlight}: MediaFeedProps) {
             return fetchedEvent
           }
           // If it's already a full event, use it
-          if ("content" in eventItem) {
+          if ("content" in eventItem && "tags" in eventItem) {
             return eventItem
           }
           // Skip unfetched events for now (they'll be fetched on demand)
@@ -73,9 +73,6 @@ export default function MediaFeed({events, eventsToHighlight}: MediaFeedProps) {
     },
     [events, fetchedEventsMap, calculateAllMedia, openModal]
   )
-
-  // Clean up events that are no longer visible (throttled for performance)
-  // Note: No cache clearing on unmount for faster navigation
 
   // Memoize modal media array to prevent recreating on every render
   const modalMediaArray = useMemo(() => {
