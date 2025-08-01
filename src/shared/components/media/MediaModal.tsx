@@ -8,6 +8,7 @@ import Modal from "../ui/Modal"
 import SwipableCarousel from "../ui/SwipableCarousel"
 import {SwipeItem} from "@/shared/hooks/useSwipable"
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
+import {useMediaModalSidebarVisible, useUIStore} from "@/stores/ui"
 
 interface MediaModalProps {
   onClose: () => void
@@ -52,7 +53,10 @@ function MediaModal({
 
   const initialIndex = propCurrentIndex ?? 0
   const [currentModalIndex, setCurrentModalIndex] = useState(initialIndex)
-  const [isEventBarVisible, setIsEventBarVisible] = useState(true)
+  const isEventBarVisible = useMediaModalSidebarVisible()
+  const setMediaModalSidebarVisible = useUIStore(
+    (state) => state.setMediaModalSidebarVisible
+  )
 
   // Get the current event from the media array or fallback to the prop
   const currentEvent = (mediaItems[currentModalIndex]?.event as EmbedEvent) || event
@@ -127,7 +131,7 @@ function MediaModal({
           {showFeedItem && currentEvent && (
             <button
               className="btn btn-circle btn-ghost absolute right-2 top-2 focus:outline-none text-white z-10"
-              onClick={() => setIsEventBarVisible(!isEventBarVisible)}
+              onClick={() => setMediaModalSidebarVisible(!isEventBarVisible)}
               title={isEventBarVisible ? "Hide event details" : "Show event details"}
             >
               {isEventBarVisible ? (

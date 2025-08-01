@@ -7,12 +7,14 @@ interface UIState {
   showLoginDialog: boolean
   goToNotifications: number
   hidePWAPrompt: boolean
+  isMediaModalSidebarVisible: boolean
 
   setIsSidebarOpen: (isOpen: boolean) => void
   setNewPostOpen: (isOpen: boolean) => void
   setShowLoginDialog: (isOpen: boolean) => void
   incrementGoToNotifications: () => void
   setHidePWAPrompt: (hide: boolean) => void
+  setMediaModalSidebarVisible: (isVisible: boolean) => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -24,6 +26,7 @@ export const useUIStore = create<UIState>()(
         showLoginDialog: false,
         goToNotifications: 0,
         hidePWAPrompt: false,
+        isMediaModalSidebarVisible: true,
       }
 
       const actions = {
@@ -33,6 +36,8 @@ export const useUIStore = create<UIState>()(
         incrementGoToNotifications: () =>
           set({goToNotifications: get().goToNotifications + 1}),
         setHidePWAPrompt: (hidePWAPrompt: boolean) => set({hidePWAPrompt}),
+        setMediaModalSidebarVisible: (isMediaModalSidebarVisible: boolean) =>
+          set({isMediaModalSidebarVisible}),
       }
 
       return {
@@ -51,3 +56,5 @@ export const useNewPostOpen = () => useUIStore((state) => state.newPostOpen)
 export const useShowLoginDialog = () => useUIStore((state) => state.showLoginDialog)
 export const useGoToNotifications = () => useUIStore((state) => state.goToNotifications)
 export const useHidePWAPrompt = () => useUIStore((state) => state.hidePWAPrompt)
+export const useMediaModalSidebarVisible = () =>
+  useUIStore((state) => state.isMediaModalSidebarVisible)
