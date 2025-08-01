@@ -119,6 +119,8 @@ const Feed = memo(function Feed({
   // Use persisted value only when selector is shown, otherwise use initialDisplayAs
   const displayAs = showDisplayAsSelector ? persistedDisplayAs : initialDisplayAs
   const setDisplayAs = (value: "list" | "grid") => {
+    // Show new events when switching display modes
+    showNewEventsWithHighlight()
     setFeedDisplayAs(value)
   }
 
