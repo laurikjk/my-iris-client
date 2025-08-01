@@ -15,6 +15,7 @@ import Modal from "@/shared/components/ui/Modal.tsx"
 import {Name} from "@/shared/components/user/Name"
 import {useZapStore} from "@/stores/zap"
 import {useWebLNProvider} from "@/shared/hooks/useWebLNProvider"
+import {useWalletProviderStore} from "@/stores/walletProvider"
 import {ndk} from "@/utils/ndk"
 
 interface ZapModalProps {
@@ -25,7 +26,12 @@ interface ZapModalProps {
 
 function ZapModal({onClose, event, setZapped}: ZapModalProps) {
   const {defaultZapAmount, setDefaultZapAmount} = useZapStore()
-  const provider = useWebLNProvider()
+  const webLNProvider = useWebLNProvider()
+  const {activeProvider, activeProviderType} = useWalletProviderStore()
+
+  // Use active provider from wallet provider store, fallback to webLNProvider
+  const provider =
+    activeProviderType !== "disabled" ? activeProvider || webLNProvider : null
   const [copiedPaymentRequest, setCopiedPaymentRequest] = useState(false)
   const [noAddress, setNoAddress] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
@@ -38,7 +44,6 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
   const [error, setError] = useState<string>("")
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [zapRefresh, setZapRefresh] = useState(false)
-
   const amounts: Record<string, string> = {
     [defaultZapAmount.toString()]: "",
     "1000": "👍",
@@ -100,22 +105,32 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
       }
 
       const lnPay: LnPayCb = async ({pr}) => {
+        // Always set the invoice for QR code display
+        setBolt11Invoice(pr)
+        setShowQRCode(true)
+
         if (provider) {
           try {
-            await provider.sendPayment(pr)
-            setZapped(true)
-            setZapRefresh(!zapRefresh)
-            onClose()
-            return {preimage: ""} // TODO: Get actual preimage from provider
+            // Attempt wallet payment in background
+            setTimeout(async () => {
+              try {
+                await provider.sendPayment(pr)
+                setZapped(true)
+                setZapRefresh(!zapRefresh)
+                onClose()
+              } catch (error) {
+                console.warn("Wallet payment failed, user can use QR code:", error)
+                setError("Wallet payment failed. Please use the QR code below.")
+              }
+            }, 100) // Small delay to let QR code render first
           } catch (error) {
-            setError("Failed to send payment. Please try again.")
-            throw error
+            console.warn("Failed to initiate wallet payment:", error)
+            setError("Wallet payment failed. Please use the QR code below.")
           }
-        } else {
-          setBolt11Invoice(pr)
-          setShowQRCode(true)
-          return undefined
         }
+
+        // Always return undefined to let NDK know we're handling payment via QR
+        return undefined
       }
 
       const zapper = new NDKZapper(event, amount, "msat", {
@@ -245,8 +260,19 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
 
         {showQRCode ? (
           <div className="flex flex-col items-center gap-4">
-            <p>
-              Scan the QR code to zap <b>{zapAmount} sats</b>
+            {provider && !error && (
+              <div className="alert alert-info">
+                <div className="loading loading-spinner loading-sm"></div>
+                <span>Attempting to pay with your wallet...</span>
+              </div>
+            )}
+            {error && (
+              <div className="alert alert-warning">
+                <span>{error}</span>
+              </div>
+            )}
+            <p className="text-center">
+              {provider ? "Or scan" : "Scan"} the QR code to zap <b>{zapAmount} sats</b>
             </p>
             <div className="w-40 h-40">
               {qrCodeUrl && <img id="qr-image" className="w-40 h-40" src={qrCodeUrl} />}
@@ -259,7 +285,7 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
               onClick={handleCopyPaymentRequest}
             >
               {!copiedPaymentRequest ? <RiFileCopyLine /> : <RiCheckLine />}
-              Copy zap invoice
+              Copy Lightning Invoice
             </button>
           </div>
         ) : (

@@ -174,7 +174,9 @@ export const useWalletProviderStore = create<WalletProviderState>()(
           console.log("🔌 Waiting for provider connection...")
           // Wait for provider connection
           return new Promise((resolve) => {
-            const unsubscribe = onConnected(async (provider) => {
+            let unsubscribe: (() => void) | null = null
+
+            unsubscribe = onConnected(async (provider) => {
               console.log("🔌 Provider connected, checking capabilities...")
               console.log("🔌 Provider object:", provider)
               console.log("🔌 Provider methods:", Object.getOwnPropertyNames(provider))
@@ -201,16 +203,16 @@ export const useWalletProviderStore = create<WalletProviderState>()(
                   })
 
                   console.log("✅ NWC connection successful!")
-                  unsubscribe()
+                  unsubscribe?.()
                   resolve(true)
                 } else {
                   console.log("❌ Provider missing required methods")
-                  unsubscribe()
+                  unsubscribe?.()
                   resolve(false)
                 }
               } catch (error) {
                 console.warn("❌ Failed to check NWC provider:", error)
-                unsubscribe()
+                unsubscribe?.()
                 resolve(false)
               }
             })
@@ -218,7 +220,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
             // Timeout after 10 seconds
             setTimeout(() => {
               console.log("⏰ NWC connection timeout after 10 seconds")
-              unsubscribe()
+              unsubscribe?.()
               resolve(false)
             }, 10000)
           })

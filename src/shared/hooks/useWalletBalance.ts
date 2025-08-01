@@ -14,7 +14,7 @@ export const useWalletBalance = () => {
     // Use activeProvider from wallet provider store, fallback to webLNProvider for backward compatibility
     const currentProvider = activeProvider || webLNProvider
     setProvider(currentProvider)
-    
+
     // Clear balance when wallet is disabled
     if (activeProviderType === "disabled") {
       setBalance(null)
@@ -63,15 +63,22 @@ export const useWalletBalance = () => {
 
     // Use activeProvider for balance fetching, ensuring we react to wallet changes
     const currentProvider = activeProvider || provider
-    
-    if (currentProvider && typeof currentProvider.getBalance === "function" && activeProviderType !== "disabled") {
+
+    if (
+      currentProvider &&
+      typeof currentProvider.getBalance === "function" &&
+      activeProviderType !== "disabled"
+    ) {
       const updateBalance = async () => {
         try {
           const balanceInfo = await currentProvider.getBalance()
           setBalance(balanceInfo.balance)
           return true
         } catch (error) {
-          console.warn("Failed to get balance:", error)
+          // Don't spam console with expected balance request failures
+          if (error instanceof Error && !error.message.includes("rate-limited")) {
+            console.warn("Failed to get balance:", error)
+          }
           return false
         }
       }
@@ -97,29 +104,6 @@ export const useWalletBalance = () => {
 
       // Set up more frequent polling (every 30 seconds) for better responsiveness
       pollIntervalRef.current = setInterval(updateBalance, 30000)
-
-      // Listen for provider events if supported
-      if (currentProvider.on) {
-        currentProvider.on("accountChanged", updateBalance)
-        
-        // Listen for invoice-related events that might indicate balance changes
-        currentProvider.on("invoice_paid", updateBalance)
-        currentProvider.on("payment_received", updateBalance)
-        currentProvider.on("balance_changed", updateBalance)
-        
-        return () => {
-          currentProvider.off?.("accountChanged", updateBalance)
-          currentProvider.off?.("invoice_paid", updateBalance)
-          currentProvider.off?.("payment_received", updateBalance)
-          currentProvider.off?.("balance_changed", updateBalance)
-          if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current)
-          }
-          if (retryTimeoutRef.current) {
-            clearTimeout(retryTimeoutRef.current)
-          }
-        }
-      }
 
       return () => {
         if (pollIntervalRef.current) {
