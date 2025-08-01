@@ -1,18 +1,14 @@
 import {requestProvider} from "@getalby/bitcoin-connect"
 import {useWalletBalance} from "@/shared/hooks/useWalletBalance"
 import {useUserStore} from "@/stores/user"
-import {useWalletProviderStore, WalletProviderType, NWCConnection} from "@/stores/walletProvider"
+import {useWalletProviderStore, WalletProviderType} from "@/stores/walletProvider"
 import {ChangeEvent, useState} from "react"
 
 const WalletSettings = () => {
   const {balance} = useWalletBalance()
-  const {
-    cashuEnabled,
-    defaultZapAmount,
-    setCashuEnabled,
-    setDefaultZapAmount,
-  } = useUserStore()
-  
+  const {cashuEnabled, defaultZapAmount, setCashuEnabled, setDefaultZapAmount} =
+    useUserStore()
+
   const {
     activeProviderType,
     activeNWCId,
@@ -23,7 +19,6 @@ const WalletSettings = () => {
     addNWCConnection,
     removeNWCConnection,
     connectToNWC,
-    disconnectCurrentProvider,
   } = useWalletProviderStore()
 
   const [newNWCName, setNewNWCName] = useState("")
@@ -42,24 +37,24 @@ const WalletSettings = () => {
 
   const handleAddNWCConnection = async () => {
     if (!newNWCName.trim() || !newNWCConnection.trim()) return
-    
+
     const id = addNWCConnection({
       name: newNWCName.trim(),
       connectionString: newNWCConnection.trim(),
     })
-    
+
     setNewNWCName("")
     setNewNWCConnection("")
-    
+
     // Auto-select the new connection
     setActiveProviderType("nwc")
     setActiveNWCId(id)
-    
+
     setIsConnecting(true)
     try {
       await connectToNWC(id)
       // Close modal on success
-      ;(document.getElementById('add-nwc-modal') as HTMLDialogElement)?.close()
+      ;(document.getElementById("add-nwc-modal") as HTMLDialogElement)?.close()
     } finally {
       setIsConnecting(false)
     }
@@ -72,7 +67,7 @@ const WalletSettings = () => {
       filters: ["nwc"],
       showBalance: false,
     })
-    
+
     setIsConnecting(true)
     try {
       const provider = await requestProvider()
@@ -91,10 +86,6 @@ const WalletSettings = () => {
     }
   }
 
-  const handleDisconnectWallet = async () => {
-    await disconnectCurrentProvider()
-  }
-
   const handleDefaultZapAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.value === "0" || !event.target.value) {
       setDefaultZapAmount(0)
@@ -109,12 +100,16 @@ const WalletSettings = () => {
   }
 
   const getCurrentWalletDisplay = () => {
-    console.log("📱 Getting current wallet display:", {activeProviderType, activeNWCId, nwcConnectionsCount: nwcConnections.length})
-    
+    console.log("📱 Getting current wallet display:", {
+      activeProviderType,
+      activeNWCId,
+      nwcConnectionsCount: nwcConnections.length,
+    })
+
     if (activeProviderType === "disabled") return "No wallet connected"
     if (activeProviderType === "native") return "Native WebLN"
     if (activeProviderType === "nwc" && activeNWCId) {
-      const connection = nwcConnections.find(c => c.id === activeNWCId)
+      const connection = nwcConnections.find((c) => c.id === activeNWCId)
       console.log("📱 Found NWC connection:", connection?.name)
       return connection ? connection.name : "Unknown NWC"
     }
@@ -138,7 +133,7 @@ const WalletSettings = () => {
       <div className="card bg-base-100 shadow-lg">
         <div className="card-body">
           <h2 className="card-title text-lg mb-4">Lightning Wallet</h2>
-          
+
           {/* Current Wallet Display */}
           <div className="flex items-center justify-between p-4 bg-base-200 rounded-lg mb-4">
             <div>
@@ -155,11 +150,11 @@ const WalletSettings = () => {
             <label className="label">
               <span className="label-text font-medium">Select Wallet</span>
             </label>
-            <select 
+            <select
               className="select select-bordered w-full"
               value={
-                activeProviderType === "nwc" && activeNWCId 
-                  ? activeNWCId 
+                activeProviderType === "nwc" && activeNWCId
+                  ? activeNWCId
                   : activeProviderType
               }
               onChange={(e) => {
@@ -167,7 +162,7 @@ const WalletSettings = () => {
                 console.log("Dropdown selection changed to:", value)
                 console.log("Current activeProviderType:", activeProviderType)
                 console.log("Current activeNWCId:", activeNWCId)
-                
+
                 if (value === "disabled" || value === "native") {
                   handleProviderTypeChange(value as WalletProviderType)
                 } else {
@@ -177,14 +172,13 @@ const WalletSettings = () => {
               }}
             >
               <option value="disabled">🚫 No wallet</option>
-              {nativeProvider && (
-                <option value="native">⚡ Native WebLN</option>
-              )}
+              {nativeProvider && <option value="native">⚡ Native WebLN</option>}
               {nwcConnections.length > 0 && (
                 <optgroup label="NWC Connections">
                   {nwcConnections.map((conn) => (
                     <option key={conn.id} value={conn.id}>
-                      🔗 {conn.name} {conn.balance !== undefined && `(${conn.balance} sats)`}
+                      🔗 {conn.name}{" "}
+                      {conn.balance !== undefined && `(${conn.balance} sats)`}
                     </option>
                   ))}
                 </optgroup>
@@ -196,7 +190,7 @@ const WalletSettings = () => {
           <div className="flex gap-2">
             <button
               className="btn btn-outline flex-1"
-              onClick={() => document.getElementById('add-nwc-modal')?.showModal()}
+              onClick={() => (document.getElementById("add-nwc-modal") as HTMLDialogElement)?.showModal()}
             >
               + Add NWC Wallet
             </button>
@@ -214,7 +208,9 @@ const WalletSettings = () => {
             <div className="mt-4">
               <button
                 className="btn btn-ghost btn-sm"
-                onClick={() => document.getElementById('manage-connections-modal')?.showModal()}
+                onClick={() =>
+                  (document.getElementById("manage-connections-modal") as HTMLDialogElement)?.showModal()
+                }
               >
                 Manage Connections ({nwcConnections.length})
               </button>
@@ -301,7 +297,7 @@ const WalletSettings = () => {
               />
               <label className="label">
                 <span className="label-text-alt text-gray-500">
-                  Get this from your wallet's NWC settings
+                  Get this from your wallet&apos;s NWC settings
                 </span>
               </label>
             </div>
@@ -330,14 +326,16 @@ const WalletSettings = () => {
           <h3 className="font-bold text-lg mb-4">Manage NWC Connections</h3>
           <div className="space-y-3">
             {nwcConnections.map((conn) => (
-              <div key={conn.id} className="flex items-center justify-between p-3 bg-base-200 rounded-lg">
+              <div
+                key={conn.id}
+                className="flex items-center justify-between p-3 bg-base-200 rounded-lg"
+              >
                 <div className="flex-1">
                   <div className="font-medium">{conn.name}</div>
                   <div className="text-sm text-gray-500">
-                    {conn.lastUsed 
+                    {conn.lastUsed
                       ? `Last used: ${new Date(conn.lastUsed).toLocaleDateString()}`
-                      : "Never used"
-                    }
+                      : "Never used"}
                   </div>
                   {conn.balance !== undefined && (
                     <div className="text-sm text-success">

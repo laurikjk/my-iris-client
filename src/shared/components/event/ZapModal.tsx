@@ -13,7 +13,6 @@ import {decode} from "light-bolt11-decoder"
 import {Avatar} from "@/shared/components/user/Avatar"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {Name} from "@/shared/components/user/Name"
-import {useUserStore} from "@/stores/user"
 import {useZapStore} from "@/stores/zap"
 import {useWebLNProvider} from "@/shared/hooks/useWebLNProvider"
 import {ndk} from "@/utils/ndk"
@@ -107,7 +106,7 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
             setZapped(true)
             setZapRefresh(!zapRefresh)
             onClose()
-            return provider.sendPayment(pr)
+            return {preimage: ""} // TODO: Get actual preimage from provider
           } catch (error) {
             setError("Failed to send payment. Please try again.")
             throw error

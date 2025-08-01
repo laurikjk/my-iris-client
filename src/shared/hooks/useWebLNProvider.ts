@@ -3,11 +3,8 @@ import {WebLNProvider} from "@/types/global"
 import {useEffect} from "react"
 
 export const useWebLNProvider = (): WebLNProvider | null => {
-  const {
-    activeProvider,
-    initializeProviders,
-    refreshActiveProvider,
-  } = useWalletProviderStore()
+  const {activeProvider, initializeProviders, refreshActiveProvider} =
+    useWalletProviderStore()
 
   useEffect(() => {
     // Initialize providers on mount

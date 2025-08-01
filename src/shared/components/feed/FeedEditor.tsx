@@ -121,7 +121,11 @@ function FeedEditor({
 
   // Helper function to save config if changed
   const saveConfigIfChanged = () => {
-    if (localConfig && activeTabConfig && JSON.stringify(localConfig) !== JSON.stringify(activeTabConfig)) {
+    if (
+      localConfig &&
+      activeTabConfig &&
+      JSON.stringify(localConfig) !== JSON.stringify(activeTabConfig)
+    ) {
       saveFeedConfig(activeTab, localConfig)
     }
   }
