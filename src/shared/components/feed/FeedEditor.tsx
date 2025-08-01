@@ -136,12 +136,12 @@ function FeedEditor({
 
     const timer = setTimeout(saveConfigIfChanged, 1000)
     return () => clearTimeout(timer)
-  }, [localConfig, activeTab, activeTabConfig, saveFeedConfig])
+  }, [localConfig, activeTab, activeTabConfig])
 
   // Apply changes immediately when component unmounts (editor closes)
   useEffect(() => {
     return saveConfigIfChanged
-  }, [localConfig, activeTab, activeTabConfig, saveFeedConfig])
+  }, [localConfig, activeTab, activeTabConfig])
 
   // Update local config immediately
   const updateLocalConfig = (field: keyof FeedConfig, value: unknown) => {

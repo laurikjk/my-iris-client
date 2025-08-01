@@ -51,7 +51,6 @@ export default function useFeedEvents({
   const bottomVisibleEventTimestampRef = useRef(bottomVisibleEventTimestamp)
   bottomVisibleEventTimestampRef.current = bottomVisibleEventTimestamp
   const myPubKey = useUserStore((state) => state.publicKey)
-  const [localFilter, setLocalFilter] = useState(filters)
   const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
   const [newEvents, setNewEvents] = useState(new Map<string, NDKEvent>())
   const eventsRef = useRef(
@@ -73,6 +72,7 @@ export default function useFeedEvents({
     )
   )
   const oldestRef = useRef<number | undefined>(undefined)
+  const [untilTimestamp, setUntilTimestamp] = useState<number | undefined>(undefined)
   const initialLoadDoneRef = useRef<boolean>(eventsRef.current.size > 0)
   const [initialLoadDoneState, setInitialLoadDoneState] = useState(
     initialLoadDoneRef.current
@@ -80,99 +80,93 @@ export default function useFeedEvents({
   const hasReceivedEventsRef = useRef<boolean>(eventsRef.current.size > 0)
   const [eventsVersion, setEventsVersion] = useState(0) // Version counter for filtered events
 
-  const shouldAcceptEvent = useCallback(
-    (event: NDKEvent) => {
-      if (!event.created_at) return false
+  const shouldAcceptEventRef = useRef<(event: NDKEvent) => boolean>()
+  
+  shouldAcceptEventRef.current = (event: NDKEvent) => {
+    if (!event.created_at) return false
 
-      // Feed-specific filtering (from fetchFilterFn)
-      if (feedConfig.excludeSeen && seenEventIds.has(event.id)) return false
-      if (feedConfig.hideReplies && getEventReplyingTo(event)) return false
+    // Feed-specific filtering (from fetchFilterFn)
+    if (feedConfig.excludeSeen && seenEventIds.has(event.id)) return false
+    if (feedConfig.hideReplies && getEventReplyingTo(event)) return false
 
-      // Feed-specific display filtering (from displayFilterFn)
-      if (feedConfig.requiresMedia && !hasMedia(event)) return false
-      if (feedConfig.requiresReplies && !getEventReplyingTo(event)) return false
-      if (feedConfig.repliesTo && getEventReplyingTo(event) !== feedConfig.repliesTo)
-        return false
+    // Feed-specific display filtering (from displayFilterFn)
+    if (feedConfig.requiresMedia && !hasMedia(event)) return false
+    if (feedConfig.requiresReplies && !getEventReplyingTo(event)) return false
+    if (feedConfig.repliesTo && getEventReplyingTo(event) !== feedConfig.repliesTo)
+      return false
 
-      // Display mode filtering - in grid mode, only accept events with images/videos
-      if (displayAs === "grid") {
-        if (
-          !event.content ||
-          typeof event.content !== "string" ||
-          !hasImageOrVideo(event.content)
-        ) {
-          return false
-        }
-      }
-
-      if (feedConfig.excludeSeen) {
-        if (
-          feedConfig.id === "unseen" &&
-          refreshSignal &&
-          openedAt &&
-          refreshSignal > openedAt &&
-          seenEventIds.has(event.id)
-        ) {
-          return false
-        } else if (feedConfig.id !== "unseen" && seenEventIds.has(event.id)) {
-          return false
-        }
-      }
-
-      // Relay filtering (from combinedDisplayFilterFn)
-      if (feedConfig.relayUrls?.length) {
-        if (!event.onRelays?.length) return false
-        const normalizeRelay = (url: string) =>
-          url.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
-        const normalizedTargetRelays = feedConfig.relayUrls.map(normalizeRelay)
-        const eventIsOnTargetRelay = event.onRelays.some((relay) =>
-          normalizedTargetRelays.includes(normalizeRelay(relay.url))
-        )
-        if (!eventIsOnTargetRelay) return false
-      }
-
-      // Follow distance filtering
-      if (feedConfig.followDistance !== undefined) {
-        const eventFollowDistance = socialGraph().getFollowDistance(event.pubkey)
-        if (eventFollowDistance > feedConfig.followDistance) return false
-      }
-
-      // Client-side search validation for relays that don't support search filters
-      if (localFilter.search) {
-        if (!event.content) return false
-        const searchTerm = localFilter.search.toLowerCase()
-        const eventContent = event.content.toLowerCase()
-        if (!eventContent.includes(searchTerm)) {
-          return false
-        }
-      }
-
-      const inAuthors = localFilter.authors?.includes(event.pubkey)
-      // Pass `allowUnknown` based on the `hideEventsByUnknownUsers` flag so that
-      // disabling the flag actually shows posts from users outside the follow graph.
-      if (!inAuthors && shouldHideAuthor(event.pubkey, 3, !hideEventsByUnknownUsers)) {
-        return false
-      }
+    // Display mode filtering - in grid mode, only accept events with images/videos
+    if (displayAs === "grid") {
       if (
-        hideEventsByUnknownUsers &&
-        socialGraph().getFollowDistance(event.pubkey) >= 5 &&
-        !(filters.authors && filters.authors.includes(event.pubkey))
+        !event.content ||
+        typeof event.content !== "string" ||
+        !hasImageOrVideo(event.content)
       ) {
         return false
       }
-      return true
-    },
-    [
-      feedConfig,
-      refreshSignal,
-      openedAt,
-      localFilter.authors,
-      localFilter.search,
-      hideEventsByUnknownUsers,
-      filters.authors,
-      displayAs,
-    ]
-  )
+    }
+
+    if (feedConfig.excludeSeen) {
+      if (
+        feedConfig.id === "unseen" &&
+        refreshSignal &&
+        openedAt &&
+        refreshSignal > openedAt &&
+        seenEventIds.has(event.id)
+      ) {
+        return false
+      } else if (feedConfig.id !== "unseen" && seenEventIds.has(event.id)) {
+        return false
+      }
+    }
+
+    // Relay filtering (from combinedDisplayFilterFn)
+    if (feedConfig.relayUrls?.length) {
+      if (!event.onRelays?.length) return false
+      const normalizeRelay = (url: string) =>
+        url.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
+      const normalizedTargetRelays = feedConfig.relayUrls.map(normalizeRelay)
+      const eventIsOnTargetRelay = event.onRelays.some((relay) =>
+        normalizedTargetRelays.includes(normalizeRelay(relay.url))
+      )
+      if (!eventIsOnTargetRelay) return false
+    }
+
+    // Follow distance filtering
+    if (feedConfig.followDistance !== undefined) {
+      const eventFollowDistance = socialGraph().getFollowDistance(event.pubkey)
+      if (eventFollowDistance > feedConfig.followDistance) return false
+    }
+
+    // Client-side search validation for relays that don't support search filters
+    if (filters.search) {
+      if (!event.content) return false
+      const searchTerm = filters.search.toLowerCase()
+      const eventContent = event.content.toLowerCase()
+      if (!eventContent.includes(searchTerm)) {
+        return false
+      }
+    }
+
+    const inAuthors = filters.authors?.includes(event.pubkey)
+    // Pass `allowUnknown` based on the `hideEventsByUnknownUsers` flag so that
+    // disabling the flag actually shows posts from users outside the follow graph.
+    if (!inAuthors && shouldHideAuthor(event.pubkey, 3, !hideEventsByUnknownUsers)) {
+      return false
+    }
+    if (
+      hideEventsByUnknownUsers &&
+      socialGraph().getFollowDistance(event.pubkey) >= 5 &&
+      !(filters.authors && filters.authors.includes(event.pubkey))
+    ) {
+      return false
+    }
+    return true
+  }
+
+  const shouldAcceptEvent = useCallback((event: NDKEvent) => {
+    return shouldAcceptEventRef.current!(event)
+  }, [])
 
   // Apply a single future event when its time comes
   const applyFutureEvent = useCallback(
@@ -182,13 +176,13 @@ export default function useFeedEvents({
         const {event} = futureEvent
         futureEventsRef.current.delete(eventId)
 
-        if (!eventsRef.current.has(eventId) && shouldAcceptEvent(event)) {
+        if (!eventsRef.current.has(eventId) && shouldAcceptEventRef.current!(event)) {
           setNewEvents((prev) => new Map([...prev, [eventId, event]]))
           setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
         }
       }
     },
-    [shouldAcceptEvent]
+    []
   )
 
   // Add future event to buffer with individual timer
@@ -224,7 +218,7 @@ export default function useFeedEvents({
         }
       }
     },
-    [applyFutureEvent]
+    []
   )
 
   const showNewEvents = () => {
@@ -290,17 +284,27 @@ export default function useFeedEvents({
     )
   }, [eventsVersion, hideEventsByUnknownUsers, filters.authors])
 
+  const prevFiltersStringRef = useRef<string>()
+  
   useEffect(() => {
-    setLocalFilter(filters)
-    oldestRef.current = undefined
+    const filtersString = JSON.stringify(filters)
+    if (prevFiltersStringRef.current !== filtersString) {
+      prevFiltersStringRef.current = filtersString
+      oldestRef.current = undefined
+      setUntilTimestamp(undefined)
+    }
   }, [filters])
 
   useEffect(() => {
-    if (localFilter.authors && localFilter.authors.length === 0) {
+    if (filters.authors && filters.authors.length === 0) {
       return
     }
 
-    const sub = ndk().subscribe(localFilter, relayUrls ? {relayUrls} : undefined)
+    const subscriptionFilter = untilTimestamp 
+      ? { ...filters, until: untilTimestamp }
+      : filters
+
+    const sub = ndk().subscribe(subscriptionFilter, relayUrls ? {relayUrls} : undefined)
 
     // Reset these flags when subscription changes
     hasReceivedEventsRef.current = eventsRef.current.size > 0
@@ -325,7 +329,7 @@ export default function useFeedEvents({
     sub.on("event", (event) => {
       if (!event?.id || !event.created_at) return
       if (eventsRef.current.has(event.id)) return
-      if (!shouldAcceptEvent(event)) return
+      if (!shouldAcceptEventRef.current!(event)) return
 
       const now = Math.floor(Date.now() / 1000)
       const isFutureEvent = event.created_at > now
@@ -392,7 +396,7 @@ export default function useFeedEvents({
       clearTimeout(initialLoadTimeout)
       markLoadDoneIfHasEvents.cancel()
     }
-  }, [JSON.stringify(localFilter), addFutureEvent, shouldAcceptEvent])
+  }, [JSON.stringify(filters), untilTimestamp, addFutureEvent])
 
   // Cleanup future event timers on unmount
   useEffect(() => {
@@ -414,11 +418,8 @@ export default function useFeedEvents({
   const loadMoreItems = () => {
     if (filteredEvents.length > displayCount) {
       return true
-    } else if (localFilter.until !== oldestRef.current) {
-      setLocalFilter((prev) => ({
-        ...prev,
-        until: oldestRef.current,
-      }))
+    } else if (untilTimestamp !== oldestRef.current) {
+      setUntilTimestamp(oldestRef.current)
     }
     return false
   }

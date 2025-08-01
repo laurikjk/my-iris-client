@@ -8,7 +8,7 @@ import Widget from "@/shared/components/ui/Widget"
 import {useSettingsStore} from "@/stores/settings"
 import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {useState, useEffect} from "react"
+import {useState, useEffect, useCallback} from "react"
 import {getTags} from "@/utils/nostr"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
@@ -61,11 +61,11 @@ export default function ThreadPage({
     }
   }, [isNaddr, naddrData])
 
-  const addRelevantPerson = (person: string) => {
+  const addRelevantPerson = useCallback((person: string) => {
     setRelevantPeople((prev) => new Map(prev).set(person, true))
-  }
+  }, [])
 
-  const addToThread = (event: NDKEvent) => {
+  const addToThread = useCallback((event: NDKEvent) => {
     if (
       content.hideEventsByUnknownUsers &&
       socialGraph().getFollowDistance(event.pubkey) > 5
@@ -76,7 +76,7 @@ export default function ThreadPage({
     for (const user of getTags("p", event.tags)) {
       addRelevantPerson(user)
     }
-  }
+  }, [content.hideEventsByUnknownUsers, threadAuthor, addRelevantPerson])
 
   return (
     <div className="flex justify-center">

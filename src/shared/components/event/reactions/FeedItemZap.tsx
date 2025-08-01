@@ -98,9 +98,17 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
         pr,
       }): Promise<NDKPaymentConfirmationLN | undefined> => {
         if (provider) {
-          await provider.sendPayment(pr)
-          setShowZapModal(false)
-          return {preimage: ""} // TODO: Get actual preimage from provider
+          // Handle payment in background like ZapModal does
+          provider.sendPayment(pr)
+            .then(() => {
+              // Payment succeeded
+            })
+            .catch((error) => {
+              console.warn("Quick zap payment failed:", error)
+            })
+          
+          // Return undefined to let NDK know we're handling payment ourselves
+          return undefined
         }
         return undefined
       }
