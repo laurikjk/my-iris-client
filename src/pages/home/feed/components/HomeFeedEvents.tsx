@@ -187,7 +187,9 @@ function HomeFeedEvents() {
       {follows.length <= 1 && myPubKey && (
         <>
           <NoFollows myPubKey={myPubKey} />
-          {activeFeedConfig?.feedType !== "popular" && <PopularFeed displayOptions={{ showDisplaySelector: false }} />}
+          {activeFeedConfig?.feedType !== "popular" && (
+            <PopularFeed displayOptions={{showDisplaySelector: false}} />
+          )}
         </>
       )}
     </>

@@ -1,4 +1,4 @@
-import {eventsByIdCache, addSeenEventId} from "@/utils/memcache.ts"
+import {eventsByIdCache} from "@/utils/memcache.ts"
 import {useEffect, useMemo, useState, useRef, memo} from "react"
 import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
@@ -121,45 +121,8 @@ function FeedItem({
   useEffect(() => {
     if (event) {
       onEvent?.(event)
-    } else {
-      return
     }
-
-    if (!event) return
-
-    let timeoutId: number | undefined
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            // Start the timer when the item becomes visible
-            timeoutId = window.setTimeout(() => {
-              addSeenEventId(event.id)
-              observer.disconnect()
-            }, 1000)
-          } else {
-            // Clear the timer if the item becomes hidden before 1s
-            if (timeoutId) {
-              window.clearTimeout(timeoutId)
-              timeoutId = undefined
-            }
-          }
-        })
-      },
-      {rootMargin: "-200px 0px 0px 0px"}
-    )
-
-    if (feedItemRef.current) {
-      observer.observe(feedItemRef.current)
-    }
-
-    return () => {
-      if (timeoutId) {
-        window.clearTimeout(timeoutId)
-      }
-      observer.disconnect()
-    }
-  }, [event])
+  }, [event, onEvent])
 
   useEffect(() => {
     // Clean up any existing subscription first

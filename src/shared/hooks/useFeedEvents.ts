@@ -28,6 +28,7 @@ interface UseFeedEventsProps {
   relayUrls?: string[]
   refreshSignal?: number
   openedAt?: number
+  bottomVisibleEventTimestamp?: number
 }
 
 export default function useFeedEvents({
@@ -41,7 +42,10 @@ export default function useFeedEvents({
   relayUrls,
   refreshSignal,
   openedAt,
+  bottomVisibleEventTimestamp = Infinity,
 }: UseFeedEventsProps) {
+  const bottomVisibleEventTimestampRef = useRef(bottomVisibleEventTimestamp)
+  bottomVisibleEventTimestampRef.current = bottomVisibleEventTimestamp
   const myPubKey = useUserStore((state) => state.publicKey)
   const [localFilter, setLocalFilter] = useState(filters)
   const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
@@ -322,8 +326,21 @@ export default function useFeedEvents({
       const isNewEvent =
         initialLoadDoneRef.current && !isMyRecent && (!sortLikedPosts || event.kind === 1)
 
-      if (isNewEvent) addNew()
-      else addMain()
+      // Check if event would appear below viewport (no layout shift)
+      // Events with older timestamps appear below newer ones in chronological feed
+      const currentBottomVisible = bottomVisibleEventTimestampRef.current
+      const wouldBeInViewport =
+        isNewEvent && (event.created_at || 0) >= currentBottomVisible
+      const wouldBeBelowViewport =
+        isNewEvent && (event.created_at || 0) < currentBottomVisible
+
+      if (wouldBeBelowViewport) {
+        addMain() // Add directly, no layout shift
+      } else if (isNewEvent && wouldBeInViewport) {
+        addNew() // Buffer for "show new" button
+      } else {
+        addMain()
+      }
 
       markLoadDoneIfHasEvents()
     })

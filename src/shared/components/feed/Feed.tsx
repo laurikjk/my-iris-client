@@ -17,6 +17,7 @@ import {getTag} from "@/utils/nostr"
 import MediaFeed from "./MediaFeed"
 import socialGraph from "@/utils/socialGraph"
 import useFollows from "@/shared/hooks/useFollows"
+import {addSeenEventId} from "@/utils/memcache.ts"
 
 interface FeedProps {
   feedConfig: FeedConfig
@@ -108,6 +109,8 @@ const Feed = memo(function Feed({
     "displayCount"
   )
   const firstFeedItemRef = useRef<HTMLDivElement>(null)
+  const [bottomVisibleEventTimestamp, setBottomVisibleEventTimestamp] =
+    useState<number>(Infinity)
 
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
 
@@ -137,6 +140,7 @@ const Feed = memo(function Feed({
     relayUrls: feedConfig.relayUrls,
     refreshSignal,
     openedAt,
+    bottomVisibleEventTimestamp,
   })
 
   const loadMoreItems = () => {
@@ -194,6 +198,74 @@ const Feed = memo(function Feed({
     }, 2000)
   }, [newEventsMap, showNewEvents])
 
+  // Single observer for both seen tracking and lowest visible timestamp
+  useEffect(() => {
+    const seenTimers = new Map<string, number>()
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEvents: {id: string; timestamp: number; ratio: number}[] = []
+
+        entries.forEach((entry) => {
+          const eventId = entry.target.getAttribute("data-event-id")
+          if (!eventId) return
+
+          const event = filteredEvents.find((e) => e.id === eventId)
+          if (!event) return
+
+          if (entry.isIntersecting) {
+            visibleEvents.push({
+              id: eventId,
+              timestamp: "created_at" in event ? event.created_at || 0 : 0,
+              ratio: entry.intersectionRatio,
+            })
+
+            // Start timer for marking as seen
+            if (!seenTimers.has(eventId)) {
+              const timerId = window.setTimeout(() => {
+                addSeenEventId(eventId)
+                seenTimers.delete(eventId)
+              }, 1000)
+              seenTimers.set(eventId, timerId)
+            }
+          } else {
+            // Clear timer if item becomes hidden before 1s
+            const timerId = seenTimers.get(eventId)
+            if (timerId) {
+              window.clearTimeout(timerId)
+              seenTimers.delete(eventId)
+            }
+          }
+        })
+
+        // Find lowest timestamp among FULLY visible events (intersection ratio > 0.9)
+        // If no fully visible events, set to Infinity to force all new events to buffer
+        const fullyVisibleEvents = visibleEvents.filter((e) => e.ratio > 0.9)
+
+        if (fullyVisibleEvents.length > 0) {
+          const lowestTimestamp = Math.min(...fullyVisibleEvents.map((e) => e.timestamp))
+          setBottomVisibleEventTimestamp(lowestTimestamp)
+        } else if (visibleEvents.length > 0) {
+          // Only partially visible items - use their timestamp as threshold
+          const lowestTimestamp = Math.min(...visibleEvents.map((e) => e.timestamp))
+          setBottomVisibleEventTimestamp(lowestTimestamp)
+        }
+      },
+      {rootMargin: "-200px 0px 0px 0px"}
+    )
+
+    // Observe all feed items
+    const feedItems = document.querySelectorAll("[data-event-id]")
+    feedItems.forEach((item) => observer.observe(item))
+
+    return () => {
+      // Clear all pending timers
+      seenTimers.forEach((timerId) => window.clearTimeout(timerId))
+      seenTimers.clear()
+      observer.disconnect()
+    }
+  }, [filteredEvents, displayCount])
+
   // Auto-show new events if enabled
   useEffect(() => {
     if (feedConfig.autoShowNewEvents && newEventsFiltered.length > 0) {
@@ -242,7 +314,11 @@ const Feed = memo(function Feed({
             ) : (
               <>
                 {filteredEvents.slice(0, displayCount).map((event, index) => (
-                  <div key={event.id} ref={index === 0 ? firstFeedItemRef : null}>
+                  <div
+                    key={event.id}
+                    ref={index === 0 ? firstFeedItemRef : null}
+                    data-event-id={event.id}
+                  >
                     <FeedItem
                       key={event.id}
                       asReply={asReply}
