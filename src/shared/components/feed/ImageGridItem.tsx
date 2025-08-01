@@ -21,6 +21,7 @@ interface ImageGridItemProps {
   setActiveItemIndex: (event: NDKEvent, url: string) => void
   onEventFetched?: (event: NDKEvent) => void
   lastElementRef?: MutableRefObject<HTMLDivElement>
+  highlightAsNew?: boolean
 }
 
 // Use smaller sizes for mobile performance
@@ -67,6 +68,7 @@ const ImageGridItem = memo(function ImageGridItem({
   setActiveItemIndex,
   onEventFetched,
   lastElementRef,
+  highlightAsNew = false,
 }: ImageGridItemProps) {
   const navigate = useNavigate()
   const [loadErrors, setLoadErrors] = useState<Record<number, boolean>>({})
@@ -75,7 +77,24 @@ const ImageGridItem = memo(function ImageGridItem({
     "content" in initialEvent ? initialEvent : undefined
   )
   const {content, imgproxy} = useSettingsStore()
+  const gridItemRef = useRef<HTMLDivElement>(null)
   const subscriptionRef = useRef<NDKSubscription | null>(null)
+
+  // Handle highlight animation with opacity fade-in
+  useEffect(() => {
+    if (highlightAsNew && gridItemRef.current) {
+      // Start with low opacity
+      gridItemRef.current.style.opacity = "0.3"
+      gridItemRef.current.style.transition = "opacity 0.8s ease-out"
+
+      // Fade in to full opacity
+      setTimeout(() => {
+        if (gridItemRef.current) {
+          gridItemRef.current.style.opacity = "1"
+        }
+      }, 50)
+    }
+  }, [highlightAsNew, initialEvent.id])
 
   const eventIdHex = useMemo(() => {
     return "content" in initialEvent ? initialEvent.id : initialEvent.id
@@ -243,7 +262,14 @@ const ImageGridItem = memo(function ImageGridItem({
             navigate(`/${nip19.noteEncode(event.id)}`)
           }
         }}
-        ref={i === urls.length - 1 ? lastElementRef : undefined}
+        ref={(el) => {
+          if (i === urls.length - 1 && lastElementRef && el) {
+            lastElementRef.current = el
+          }
+          if (i === 0) {
+            gridItemRef.current = el
+          }
+        }}
       >
         {hasError || (isVideo && (!imgproxy.enabled || proxyFailed[i])) ? (
           <div

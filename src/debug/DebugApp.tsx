@@ -538,13 +538,12 @@ const DebugApp = () => {
                             <td className="text-xs font-mono">{feed.feedName}</td>
                             <td>
                               <span
-                                className={`badge badge-xs ${
-                                  feed.action === "addMain"
-                                    ? "badge-success"
-                                    : feed.action === "showNewEvents"
-                                      ? "badge-warning"
-                                      : "badge-info"
-                                }`}
+                                className={`badge badge-xs ${(() => {
+                                  if (feed.action === "addMain") return "badge-success"
+                                  if (feed.action === "showNewEvents")
+                                    return "badge-warning"
+                                  return "badge-info"
+                                })()}`}
                               >
                                 {feed.action}
                               </span>

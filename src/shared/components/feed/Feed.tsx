@@ -332,7 +332,7 @@ const Feed = memo(function Feed({
         {filteredEvents.length > 0 && (
           <InfiniteScroll onLoadMore={loadMoreItems}>
             {displayAs === "grid" ? (
-              <MediaFeed events={gridEvents} />
+              <MediaFeed events={gridEvents} eventsToHighlight={eventsToHighlight} />
             ) : (
               <>
                 {filteredEvents.slice(0, displayCount).map((event, index) => (

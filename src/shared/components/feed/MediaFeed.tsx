@@ -10,12 +10,13 @@ import DebugManager from "@/utils/DebugManager"
 
 interface MediaFeedProps {
   events: (NDKEvent | {id: string})[]
+  eventsToHighlight?: Set<string>
 }
 
 // Limit memory usage by keeping only recent events
 const MAX_FETCHED_EVENTS = 100
 
-export default function MediaFeed({events}: MediaFeedProps) {
+export default function MediaFeed({events, eventsToHighlight}: MediaFeedProps) {
   const [showModal, setShowModal] = useState(false)
   const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null)
   const [displayCount, setDisplayCount] = useHistoryState(
@@ -337,6 +338,7 @@ export default function MediaFeed({events}: MediaFeedProps) {
               index={index}
               setActiveItemIndex={handleImageClick}
               onEventFetched={handleEventFetched}
+              highlightAsNew={eventsToHighlight?.has(item.id) || false}
             />
           ))}
         </div>
