@@ -29,6 +29,7 @@ interface WalletProviderState {
 
   // Internal cleanup function
   __cashuUnsubscribe?: (() => void) | null
+  __cashuChecked?: boolean
 
   // Actions
   setActiveProviderType: (type: WalletProviderType) => void
@@ -61,6 +62,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
       activeProvider: null,
       nwcConnections: [],
       __cashuUnsubscribe: null,
+      __cashuChecked: false,
 
       setActiveProviderType: (type: WalletProviderType) => {
         console.log("🔄 Setting active provider type to:", type)
@@ -359,7 +361,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
         const cashuEnabled = useUserStore.getState().cashuEnabled
 
         if (!cashuEnabled) {
-          console.log("🔍 Cashu not enabled, skipping NWC check")
+          set({__cashuChecked: false}) // Reset flag when disabled
           return
         }
 
@@ -371,24 +373,26 @@ export const useWalletProviderStore = create<WalletProviderState>()(
             const cashuNWCString = bcConfig.nwcUrl
 
             if (cashuNWCString) {
-              console.log("🔍 Found Cashu NWC connection string in localStorage")
-
               // Check if we already have this connection
               const existingConnection = state.nwcConnections.find(
                 (conn) => conn.connectionString === cashuNWCString
               )
 
               if (existingConnection) {
-                console.log("🔍 Cashu NWC connection already exists")
+                // Only log and act if we haven't processed this connection yet
+                if (!state.__cashuChecked) {
+                  console.log("🔍 Found existing Cashu NWC connection, setting up")
+                  set({__cashuChecked: true})
 
-                // Only set as active if no wallet is currently active
-                if (state.activeProviderType === "disabled") {
-                  console.log("🔍 No active wallet, setting Cashu NWC as active")
-                  set({
-                    activeProviderType: "nwc",
-                    activeNWCId: existingConnection.id,
-                  })
-                  get().refreshActiveProvider()
+                  // Only set as active if no wallet is currently active
+                  if (state.activeProviderType === "disabled") {
+                    console.log("🔍 No active wallet, setting Cashu NWC as active")
+                    set({
+                      activeProviderType: "nwc",
+                      activeNWCId: existingConnection.id,
+                    })
+                    get().refreshActiveProvider()
+                  }
                 }
               } else {
                 console.log("🔍 Adding new Cashu NWC connection")
@@ -396,6 +400,8 @@ export const useWalletProviderStore = create<WalletProviderState>()(
                   name: "Cashu Wallet",
                   connectionString: cashuNWCString,
                 })
+
+                set({__cashuChecked: true})
 
                 // Only set as active if no wallet is currently active
                 if (state.activeProviderType === "disabled") {
@@ -412,8 +418,6 @@ export const useWalletProviderStore = create<WalletProviderState>()(
                 }
               }
             }
-          } else {
-            console.log("🔍 No Cashu NWC connection found in localStorage")
           }
         } catch (error) {
           console.warn("🔍 Error checking for Cashu NWC connection:", error)
@@ -421,22 +425,23 @@ export const useWalletProviderStore = create<WalletProviderState>()(
       },
 
       startCashuNWCChecking: () => {
-        // Delay initial check to give Cashu iframe time to load (3 seconds)
+        // Initial check after 3 seconds
         setTimeout(() => {
           get().checkCashuNWCConnection()
-
-          // Set up periodic check for Cashu NWC connection (every 5 seconds for first minute)
-          let checkCount = 0
-          const maxChecks = 12 // 12 * 5 seconds = 1 minute
-          const checkInterval = setInterval(() => {
-            checkCount++
-            get().checkCashuNWCConnection()
-
-            if (checkCount >= maxChecks) {
-              clearInterval(checkInterval)
-            }
-          }, 5000)
         }, 3000)
+        
+        // Follow-up checks at 5s, 10s, and 15s only
+        setTimeout(() => {
+          get().checkCashuNWCConnection() 
+        }, 5000)
+        
+        setTimeout(() => {
+          get().checkCashuNWCConnection()
+        }, 10000)
+        
+        setTimeout(() => {
+          get().checkCashuNWCConnection()
+        }, 15000)
       },
 
       cleanup: () => {

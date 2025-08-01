@@ -110,23 +110,19 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
         setShowQRCode(true)
 
         if (provider) {
-          try {
-            // Attempt wallet payment in background
-            setTimeout(async () => {
-              try {
-                await provider.sendPayment(pr)
+          // Attempt wallet payment in background (fire-and-forget)
+          setTimeout(() => {
+            provider.sendPayment(pr)
+              .then(() => {
                 setZapped(true)
                 setZapRefresh(!zapRefresh)
                 onClose()
-              } catch (error) {
+              })
+              .catch((error) => {
                 console.warn("Wallet payment failed, user can use QR code:", error)
                 setError("Wallet payment failed. Please use the QR code below.")
-              }
-            }, 100) // Small delay to let QR code render first
-          } catch (error) {
-            console.warn("Failed to initiate wallet payment:", error)
-            setError("Wallet payment failed. Please use the QR code below.")
-          }
+              })
+          }, 100) // Small delay to let QR code render first
         }
 
         // Always return undefined to let NDK know we're handling payment via QR
@@ -143,7 +139,11 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
         ],
       })
 
-      await zapper.zap()
+      // Don't await zap publish - let it succeed on any available relays
+      zapper.zap().catch((error) => {
+        console.warn("Zap publish failed on some relays (this is okay):", error)
+        // Don't throw the error - the payment flow should continue
+      })
     } catch (error) {
       console.warn("Zap failed: ", error)
       if (error instanceof Error) {

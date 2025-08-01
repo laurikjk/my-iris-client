@@ -83,13 +83,13 @@ export const useWalletBalance = () => {
         }
       }
 
-      // Try to get balance with infinite retries and reasonable backoff
+      // Try to get balance with less frequent retries
       const tryUpdateBalance = async (attempt = 1) => {
         const success = await updateBalance()
 
         if (!success) {
-          // Retry with exponential backoff, capped at 30 seconds
-          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30000)
+          // Retry with slower backoff, starting at 5 seconds, capped at 30 seconds
+          const delay = Math.min(5000 * Math.pow(1.5, attempt - 1), 30000)
           console.log(`Balance check failed, retrying in ${delay}ms (attempt ${attempt})`)
           retryTimeoutRef.current = setTimeout(() => {
             tryUpdateBalance(attempt + 1)
@@ -97,10 +97,10 @@ export const useWalletBalance = () => {
         }
       }
 
-      // Initial attempt with a delay to let wallet initialize
+      // Initial attempt with a longer delay to let wallet initialize
       retryTimeoutRef.current = setTimeout(() => {
         tryUpdateBalance()
-      }, 2000)
+      }, 5000)
 
       // Set up more frequent polling (every 30 seconds) for better responsiveness
       pollIntervalRef.current = setInterval(updateBalance, 30000)
