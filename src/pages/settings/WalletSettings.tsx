@@ -145,45 +145,67 @@ const WalletSettings = () => {
             )}
           </div>
 
-          {/* Wallet Selection Dropdown */}
+          {/* Wallet Selection Radio Buttons */}
           <div className="form-control mb-4">
             <label className="label">
               <span className="label-text font-medium">Select Wallet</span>
             </label>
-            <select
-              className="select select-bordered w-full"
-              value={
-                activeProviderType === "nwc" && activeNWCId
-                  ? activeNWCId
-                  : activeProviderType
-              }
-              onChange={(e) => {
-                const value = e.target.value
-                console.log("Dropdown selection changed to:", value)
-                console.log("Current activeProviderType:", activeProviderType)
-                console.log("Current activeNWCId:", activeNWCId)
+            <div className="space-y-2">
+              {/* No wallet option */}
+              <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-50">
+                <input
+                  type="radio"
+                  name="wallet-selection"
+                  className="radio radio-primary"
+                  checked={activeProviderType === "disabled"}
+                  onChange={() => handleProviderTypeChange("disabled")}
+                />
+                <div className="flex-1">
+                  <div className="font-medium">🚫 No wallet</div>
+                  <div className="text-sm text-gray-500">Disable Lightning payments</div>
+                </div>
+              </label>
 
-                if (value === "disabled" || value === "native") {
-                  handleProviderTypeChange(value as WalletProviderType)
-                } else {
-                  // It's an NWC connection ID
-                  handleNWCSelectionChange(value)
-                }
-              }}
-            >
-              <option value="disabled">🚫 No wallet</option>
-              {nativeProvider && <option value="native">⚡ Native WebLN</option>}
-              {nwcConnections.length > 0 && (
-                <optgroup label="NWC Connections">
-                  {nwcConnections.map((conn) => (
-                    <option key={conn.id} value={conn.id}>
-                      🔗 {conn.name}{" "}
-                      {conn.balance !== undefined && `(${conn.balance} sats)`}
-                    </option>
-                  ))}
-                </optgroup>
+              {/* Native WebLN option */}
+              {nativeProvider && (
+                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-50">
+                  <input
+                    type="radio"
+                    name="wallet-selection"
+                    className="radio radio-primary"
+                    checked={activeProviderType === "native"}
+                    onChange={() => handleProviderTypeChange("native")}
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">⚡ Native WebLN</div>
+                    <div className="text-sm text-gray-500">Browser extension wallet</div>
+                  </div>
+                </label>
               )}
-            </select>
+
+              {/* NWC Connections */}
+              {nwcConnections.map((conn) => (
+                <label
+                  key={conn.id}
+                  className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-50"
+                >
+                  <input
+                    type="radio"
+                    name="wallet-selection"
+                    className="radio radio-primary"
+                    checked={activeProviderType === "nwc" && activeNWCId === conn.id}
+                    onChange={() => handleNWCSelectionChange(conn.id)}
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">🔗 {conn.name}</div>
+                    <div className="text-sm text-gray-500">
+                      NWC Connection
+                      {conn.balance !== undefined && ` • ${conn.balance} sats`}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Add New Connection Button */}

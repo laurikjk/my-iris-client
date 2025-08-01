@@ -55,7 +55,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
   persist(
     (set, get) => ({
       // Initial state
-      activeProviderType: "native",
+      activeProviderType: "disabled",
       activeNWCId: undefined,
       nativeProvider: null,
       activeProvider: null,
@@ -252,8 +252,17 @@ export const useWalletProviderStore = create<WalletProviderState>()(
             if (enabled && typeof window.webln.getBalance === "function") {
               set({nativeProvider: window.webln})
 
-              // If active type is native, set as active provider
-              if (state.activeProviderType === "native") {
+              // If currently disabled and no other wallets, set native as active
+              if (
+                state.activeProviderType === "disabled" &&
+                state.nwcConnections.length === 0
+              ) {
+                set({
+                  activeProviderType: "native",
+                  activeProvider: window.webln,
+                })
+              } else if (state.activeProviderType === "native") {
+                // If already set to native, update the provider
                 set({activeProvider: window.webln})
               }
             }
