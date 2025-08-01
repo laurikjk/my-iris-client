@@ -15,6 +15,7 @@ import Modal from "@/shared/components/ui/Modal.tsx"
 import {Name} from "@/shared/components/user/Name"
 import {useUserStore} from "@/stores/user"
 import {useZapStore} from "@/stores/zap"
+import {useWebLNProvider} from "@/shared/hooks/useWebLNProvider"
 import {ndk} from "@/utils/ndk"
 
 interface ZapModalProps {
@@ -25,7 +26,7 @@ interface ZapModalProps {
 
 function ZapModal({onClose, event, setZapped}: ZapModalProps) {
   const {defaultZapAmount, setDefaultZapAmount} = useZapStore()
-  const {walletConnect: isWalletConnect} = useUserStore()
+  const provider = useWebLNProvider()
   const [copiedPaymentRequest, setCopiedPaymentRequest] = useState(false)
   const [noAddress, setNoAddress] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
@@ -100,17 +101,15 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
       }
 
       const lnPay: LnPayCb = async ({pr}) => {
-        if (isWalletConnect) {
+        if (provider) {
           try {
-            const {requestProvider} = await import("@getalby/bitcoin-connect-react")
-            const provider = await requestProvider()
             await provider.sendPayment(pr)
             setZapped(true)
             setZapRefresh(!zapRefresh)
             onClose()
             return provider.sendPayment(pr)
           } catch (error) {
-            setError("Failed to connect to wallet. Please try again.")
+            setError("Failed to send payment. Please try again.")
             throw error
           }
         } else {

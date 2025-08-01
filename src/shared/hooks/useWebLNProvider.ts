@@ -1,52 +1,23 @@
-import {onConnected} from "@getalby/bitcoin-connect"
+import {useWalletProviderStore} from "@/stores/walletProvider"
 import {WebLNProvider} from "@/types/global"
-import {useEffect, useState} from "react"
+import {useEffect} from "react"
 
-let nwcUnsubscribe: (() => void) | null = null
-
-export const useWebLNProvider = () => {
-  const [provider, setProvider] = useState<WebLNProvider | null>(null)
+export const useWebLNProvider = (): WebLNProvider | null => {
+  const {
+    activeProvider,
+    initializeProviders,
+    refreshActiveProvider,
+  } = useWalletProviderStore()
 
   useEffect(() => {
-    const checkNativeWebLN = async () => {
-      if (window.webln) {
-        try {
-          const enabled = await window.webln.isEnabled()
-          if (enabled && typeof window.webln.getBalance === "function") {
-            setProvider(window.webln)
-            return true
-          }
-        } catch (error) {
-          console.warn("Failed to enable native WebLN provider:", error)
-        }
-      }
-      return false
-    }
+    // Initialize providers on mount
+    initializeProviders()
+  }, [initializeProviders])
 
-    // Check native WebLN first
-    checkNativeWebLN().then((hasNativeWebLN) => {
-      if (!hasNativeWebLN) {
-        // Only set up NWC if native WebLN is not available
-        nwcUnsubscribe = onConnected(async (newProvider) => {
-          try {
-            const enabled = await newProvider.isEnabled()
-            if (enabled && typeof newProvider.getBalance === "function") {
-              setProvider(newProvider)
-            }
-          } catch (error) {
-            console.warn("Failed to enable NWC provider:", error)
-          }
-        })
-      }
-    })
+  useEffect(() => {
+    // Refresh active provider when it changes
+    refreshActiveProvider()
+  }, [refreshActiveProvider])
 
-    return () => {
-      if (nwcUnsubscribe) {
-        nwcUnsubscribe()
-        nwcUnsubscribe = null
-      }
-    }
-  }, [])
-
-  return provider
+  return activeProvider
 }

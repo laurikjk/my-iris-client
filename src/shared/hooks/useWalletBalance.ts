@@ -1,10 +1,8 @@
 import {useWebLNProvider} from "./useWebLNProvider"
 import {useWalletStore} from "@/stores/wallet"
-import {useUserStore} from "@/stores/user"
 import {useEffect, useRef} from "react"
 
 export const useWalletBalance = () => {
-  const isWalletConnect = useUserStore((state) => state.walletConnect)
   const {balance, setBalance, provider, setProvider} = useWalletStore()
   const webLNProvider = useWebLNProvider()
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -108,5 +106,5 @@ export const useWalletBalance = () => {
     }
   }, [provider])
 
-  return {balance, isWalletConnect}
+  return {balance}
 }
