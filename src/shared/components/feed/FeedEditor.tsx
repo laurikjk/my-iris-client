@@ -119,18 +119,24 @@ function FeedEditor({
     }
   }, [activeTab, tabs, activeTabConfig])
 
+  // Helper function to save config if changed
+  const saveConfigIfChanged = () => {
+    if (localConfig && activeTabConfig && JSON.stringify(localConfig) !== JSON.stringify(activeTabConfig)) {
+      saveFeedConfig(activeTab, localConfig)
+    }
+  }
+
   // Debounced commit to store
   useEffect(() => {
     if (!localConfig || !activeTabConfig) return
 
-    const timer = setTimeout(() => {
-      // Only commit if local config differs from store config
-      if (JSON.stringify(localConfig) !== JSON.stringify(activeTabConfig)) {
-        saveFeedConfig(activeTab, localConfig)
-      }
-    }, 1000)
-
+    const timer = setTimeout(saveConfigIfChanged, 1000)
     return () => clearTimeout(timer)
+  }, [localConfig, activeTab, activeTabConfig, saveFeedConfig])
+
+  // Apply changes immediately when component unmounts (editor closes)
+  useEffect(() => {
+    return saveConfigIfChanged
   }, [localConfig, activeTab, activeTabConfig, saveFeedConfig])
 
   // Update local config immediately
