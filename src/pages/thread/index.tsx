@@ -65,18 +65,21 @@ export default function ThreadPage({
     setRelevantPeople((prev) => new Map(prev).set(person, true))
   }, [])
 
-  const addToThread = useCallback((event: NDKEvent) => {
-    if (
-      content.hideEventsByUnknownUsers &&
-      socialGraph().getFollowDistance(event.pubkey) > 5
-    )
-      return
-    if (!threadAuthor) setThreadAuthor(event.pubkey)
-    addRelevantPerson(event.pubkey)
-    for (const user of getTags("p", event.tags)) {
-      addRelevantPerson(user)
-    }
-  }, [content.hideEventsByUnknownUsers, threadAuthor, addRelevantPerson])
+  const addToThread = useCallback(
+    (event: NDKEvent) => {
+      if (
+        content.hideEventsByUnknownUsers &&
+        socialGraph().getFollowDistance(event.pubkey) > 5
+      )
+        return
+      if (!threadAuthor) setThreadAuthor(event.pubkey)
+      addRelevantPerson(event.pubkey)
+      for (const user of getTags("p", event.tags)) {
+        addRelevantPerson(user)
+      }
+    },
+    [content.hideEventsByUnknownUsers, threadAuthor, addRelevantPerson]
+  )
 
   return (
     <div className="flex justify-center">

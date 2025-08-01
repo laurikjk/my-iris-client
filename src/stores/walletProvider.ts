@@ -429,16 +429,16 @@ export const useWalletProviderStore = create<WalletProviderState>()(
         setTimeout(() => {
           get().checkCashuNWCConnection()
         }, 3000)
-        
+
         // Follow-up checks at 5s, 10s, and 15s only
         setTimeout(() => {
-          get().checkCashuNWCConnection() 
+          get().checkCashuNWCConnection()
         }, 5000)
-        
+
         setTimeout(() => {
           get().checkCashuNWCConnection()
         }, 10000)
-        
+
         setTimeout(() => {
           get().checkCashuNWCConnection()
         }, 15000)

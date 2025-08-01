@@ -112,7 +112,8 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
         if (provider) {
           // Attempt wallet payment in background (fire-and-forget)
           setTimeout(() => {
-            provider.sendPayment(pr)
+            provider
+              .sendPayment(pr)
               .then(() => {
                 setZapped(true)
                 setZapRefresh(!zapRefresh)

@@ -80,8 +80,8 @@ export default function useFeedEvents({
   const hasReceivedEventsRef = useRef<boolean>(eventsRef.current.size > 0)
   const [eventsVersion, setEventsVersion] = useState(0) // Version counter for filtered events
 
-  const shouldAcceptEventRef = useRef<(event: NDKEvent) => boolean>()
-  
+  const shouldAcceptEventRef = useRef<(event: NDKEvent) => boolean>(() => false)
+
   shouldAcceptEventRef.current = (event: NDKEvent) => {
     if (!event.created_at) return false
 
@@ -164,62 +164,52 @@ export default function useFeedEvents({
     return true
   }
 
-  const shouldAcceptEvent = useCallback((event: NDKEvent) => {
-    return shouldAcceptEventRef.current!(event)
+  // Apply a single future event when its time comes
+  const applyFutureEvent = useCallback((eventId: string) => {
+    const futureEvent = futureEventsRef.current.get(eventId)
+    if (futureEvent) {
+      const {event} = futureEvent
+      futureEventsRef.current.delete(eventId)
+
+      if (!eventsRef.current.has(eventId) && shouldAcceptEventRef.current!(event)) {
+        setNewEvents((prev) => new Map([...prev, [eventId, event]]))
+        setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
+      }
+    }
   }, [])
 
-  // Apply a single future event when its time comes
-  const applyFutureEvent = useCallback(
-    (eventId: string) => {
-      const futureEvent = futureEventsRef.current.get(eventId)
-      if (futureEvent) {
-        const {event} = futureEvent
-        futureEventsRef.current.delete(eventId)
-
-        if (!eventsRef.current.has(eventId) && shouldAcceptEventRef.current!(event)) {
-          setNewEvents((prev) => new Map([...prev, [eventId, event]]))
-          setNewEventsFrom((prev) => new Set([...prev, event.pubkey]))
-        }
-      }
-    },
-    []
-  )
-
   // Add future event to buffer with individual timer
-  const addFutureEvent = useCallback(
-    (event: NDKEvent) => {
-      if (!event.created_at) return
+  const addFutureEvent = useCallback((event: NDKEvent) => {
+    if (!event.created_at) return
 
-      const now = Math.floor(Date.now() / 1000)
-      const delay = (event.created_at - now) * 1000 // Convert to milliseconds
+    const now = Math.floor(Date.now() / 1000)
+    const delay = (event.created_at - now) * 1000 // Convert to milliseconds
 
-      // Clear existing future event if any (this will cancel its timer)
-      const existingFutureEvent = futureEventsRef.current.get(event.id)
-      if (existingFutureEvent) {
-        clearTimeout(existingFutureEvent.timer)
-        futureEventsRef.current.delete(event.id)
+    // Clear existing future event if any (this will cancel its timer)
+    const existingFutureEvent = futureEventsRef.current.get(event.id)
+    if (existingFutureEvent) {
+      clearTimeout(existingFutureEvent.timer)
+      futureEventsRef.current.delete(event.id)
+    }
+
+    // Set timer for this specific event
+    const timer = setTimeout(() => {
+      applyFutureEvent(event.id)
+    }, delay)
+
+    // Add to buffer
+    futureEventsRef.current.set(event.id, {event, timer})
+
+    // Keep only the 20 most recent future events (evict oldest)
+    while (futureEventsRef.current.size > 20) {
+      const firstEntry = futureEventsRef.current.entries().next().value
+      if (firstEntry) {
+        const [oldId, oldFutureEvent] = firstEntry
+        clearTimeout(oldFutureEvent.timer) // Cancel timer on evict
+        futureEventsRef.current.delete(oldId)
       }
-
-      // Set timer for this specific event
-      const timer = setTimeout(() => {
-        applyFutureEvent(event.id)
-      }, delay)
-
-      // Add to buffer
-      futureEventsRef.current.set(event.id, {event, timer})
-
-      // Keep only the 20 most recent future events (evict oldest)
-      while (futureEventsRef.current.size > 20) {
-        const firstEntry = futureEventsRef.current.entries().next().value
-        if (firstEntry) {
-          const [oldId, oldFutureEvent] = firstEntry
-          clearTimeout(oldFutureEvent.timer) // Cancel timer on evict
-          futureEventsRef.current.delete(oldId)
-        }
-      }
-    },
-    []
-  )
+    }
+  }, [])
 
   const showNewEvents = () => {
     const eventCount = newEvents.size
@@ -284,8 +274,8 @@ export default function useFeedEvents({
     )
   }, [eventsVersion, hideEventsByUnknownUsers, filters.authors])
 
-  const prevFiltersStringRef = useRef<string>()
-  
+  const prevFiltersStringRef = useRef<string | undefined>(undefined)
+
   useEffect(() => {
     const filtersString = JSON.stringify(filters)
     if (prevFiltersStringRef.current !== filtersString) {
@@ -300,8 +290,8 @@ export default function useFeedEvents({
       return
     }
 
-    const subscriptionFilter = untilTimestamp 
-      ? { ...filters, until: untilTimestamp }
+    const subscriptionFilter = untilTimestamp
+      ? {...filters, until: untilTimestamp}
       : filters
 
     const sub = ndk().subscribe(subscriptionFilter, relayUrls ? {relayUrls} : undefined)
