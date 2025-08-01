@@ -366,7 +366,7 @@ export default function useFeedEvents({
     eventsRef.current.size &&
       !feedCache.has(cacheKey) &&
       feedCache.set(cacheKey, eventsRef.current)
-  }, [eventsRef.current.size])
+  }, [cacheKey, eventsVersion])
 
   const loadMoreItems = () => {
     if (filteredEvents.length > displayCount) {

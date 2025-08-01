@@ -25,6 +25,7 @@ const MarketGridItem = ({
     <Link
       to={`/${nip19.noteEncode(event.id)}`}
       className={`aspect-square cursor-pointer relative bg-neutral-300 hover:opacity-80 block ${shouldBlur ? "blur-xl" : ""}`}
+      data-event-id={event.id}
     >
       {(price || title) && (
         <div className="absolute top-0 left-0 right-0 p-4 pb-8 bg-gradient-to-b from-black/85 via-black/65 via-black/45 to-transparent text-white z-10">

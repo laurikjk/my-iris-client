@@ -249,14 +249,23 @@ const Feed = memo(function Feed({
           // Only partially visible items - use their timestamp as threshold
           const lowestTimestamp = Math.min(...visibleEvents.map((e) => e.timestamp))
           setBottomVisibleEventTimestamp(lowestTimestamp)
+        } else {
+          // No visible events - if we have events but no observer hits, use the newest event as fallback
+          if (bottomVisibleEventTimestamp === Infinity && filteredEvents.length > 0) {
+            const firstEventTimestamp =
+              "created_at" in filteredEvents[0] ? filteredEvents[0].created_at || 0 : 0
+            setBottomVisibleEventTimestamp(firstEventTimestamp)
+          }
         }
       },
       {rootMargin: "-200px 0px 0px 0px"}
     )
 
-    // Observe all feed items
-    const feedItems = document.querySelectorAll("[data-event-id]")
-    feedItems.forEach((item) => observer.observe(item))
+    // Observe all feed items (use setTimeout to ensure DOM is updated)
+    setTimeout(() => {
+      const feedItems = document.querySelectorAll("[data-event-id]")
+      feedItems.forEach((item) => observer.observe(item))
+    }, 0)
 
     return () => {
       // Clear all pending timers
@@ -264,7 +273,7 @@ const Feed = memo(function Feed({
       seenTimers.clear()
       observer.disconnect()
     }
-  }, [filteredEvents, displayCount])
+  }, [displayCount, displayAs, filteredEvents.length])
 
   // Auto-show new events if enabled
   useEffect(() => {

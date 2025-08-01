@@ -123,7 +123,7 @@ const ImageGridItem = memo(function ImageGridItem({
         subscriptionRef.current = null
       }
     }
-  }, [event, eventIdHex, onEventFetched])
+  }, [event, eventIdHex])
 
   const imageMatch = event?.content.match(IMAGE_REGEX)?.[0]
   const videoMatch = event?.content.match(VIDEO_REGEX)?.[0]
@@ -238,6 +238,7 @@ const ImageGridItem = memo(function ImageGridItem({
         className={`aspect-square cursor-pointer relative bg-neutral-300 hover:opacity-80 ${
           shouldBlur ? "blur-xl" : ""
         }`}
+        data-event-id={event.id}
         onClick={() => {
           if (window.innerWidth > 767) {
             setActiveItemIndex(event, url)
