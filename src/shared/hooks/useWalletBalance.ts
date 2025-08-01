@@ -1,30 +1,46 @@
 import {useWebLNProvider} from "./useWebLNProvider"
 import {useWalletStore} from "@/stores/wallet"
+import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useEffect, useRef} from "react"
 
 export const useWalletBalance = () => {
   const {balance, setBalance, provider, setProvider} = useWalletStore()
   const webLNProvider = useWebLNProvider()
+  const {activeProvider, activeProviderType, activeNWCId} = useWalletProviderStore()
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    setProvider(webLNProvider)
-  }, [webLNProvider])
+    // Use activeProvider from wallet provider store, fallback to webLNProvider for backward compatibility
+    const currentProvider = activeProvider || webLNProvider
+    setProvider(currentProvider)
+    
+    // Clear balance when wallet is disabled
+    if (activeProviderType === "disabled") {
+      setBalance(null)
+    }
+  }, [activeProvider, webLNProvider, activeProviderType, setProvider, setBalance])
 
   // Listen for bitcoin-connect payment events that might affect balance
   useEffect(() => {
     const handlePayment = () => {
-      // Refresh balance after a payment
+      // Refresh balance after a payment with multiple attempts
       if (provider && typeof provider.getBalance === "function") {
-        setTimeout(async () => {
+        const refreshBalance = async () => {
           try {
             const balanceInfo = await provider.getBalance()
             setBalance(balanceInfo.balance)
           } catch (error) {
             console.warn("Failed to refresh balance after payment:", error)
           }
-        }, 1000) // Small delay to let payment settle
+        }
+
+        // Immediate refresh
+        setTimeout(refreshBalance, 500)
+        // Second attempt after 2 seconds
+        setTimeout(refreshBalance, 2000)
+        // Third attempt after 5 seconds to catch slower settlements
+        setTimeout(refreshBalance, 5000)
       }
     }
 
@@ -45,10 +61,13 @@ export const useWalletBalance = () => {
       retryTimeoutRef.current = null
     }
 
-    if (provider && typeof provider.getBalance === "function") {
+    // Use activeProvider for balance fetching, ensuring we react to wallet changes
+    const currentProvider = activeProvider || provider
+    
+    if (currentProvider && typeof currentProvider.getBalance === "function" && activeProviderType !== "disabled") {
       const updateBalance = async () => {
         try {
-          const balanceInfo = await provider.getBalance()
+          const balanceInfo = await currentProvider.getBalance()
           setBalance(balanceInfo.balance)
           return true
         } catch (error) {
@@ -76,14 +95,23 @@ export const useWalletBalance = () => {
         tryUpdateBalance()
       }, 2000)
 
-      // Set up less frequent polling (every 2 minutes) since balance doesn't change often
-      pollIntervalRef.current = setInterval(updateBalance, 120000)
+      // Set up more frequent polling (every 30 seconds) for better responsiveness
+      pollIntervalRef.current = setInterval(updateBalance, 30000)
 
-      // Listen for account changes if supported
-      if (provider.on) {
-        provider.on("accountChanged", updateBalance)
+      // Listen for provider events if supported
+      if (currentProvider.on) {
+        currentProvider.on("accountChanged", updateBalance)
+        
+        // Listen for invoice-related events that might indicate balance changes
+        currentProvider.on("invoice_paid", updateBalance)
+        currentProvider.on("payment_received", updateBalance)
+        currentProvider.on("balance_changed", updateBalance)
+        
         return () => {
-          provider.off?.("accountChanged", updateBalance)
+          currentProvider.off?.("accountChanged", updateBalance)
+          currentProvider.off?.("invoice_paid", updateBalance)
+          currentProvider.off?.("payment_received", updateBalance)
+          currentProvider.off?.("balance_changed", updateBalance)
           if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current)
           }
@@ -104,7 +132,7 @@ export const useWalletBalance = () => {
     } else {
       setBalance(null)
     }
-  }, [provider])
+  }, [activeProvider, provider, activeProviderType, activeNWCId, setBalance])
 
   return {balance}
 }
