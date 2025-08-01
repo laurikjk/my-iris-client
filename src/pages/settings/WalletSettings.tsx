@@ -190,7 +190,11 @@ const WalletSettings = () => {
           <div className="flex gap-2">
             <button
               className="btn btn-outline flex-1"
-              onClick={() => (document.getElementById("add-nwc-modal") as HTMLDialogElement)?.showModal()}
+              onClick={() =>
+                (
+                  document.getElementById("add-nwc-modal") as HTMLDialogElement
+                )?.showModal()
+              }
             >
               + Add NWC Wallet
             </button>
@@ -209,7 +213,11 @@ const WalletSettings = () => {
               <button
                 className="btn btn-ghost btn-sm"
                 onClick={() =>
-                  (document.getElementById("manage-connections-modal") as HTMLDialogElement)?.showModal()
+                  (
+                    document.getElementById(
+                      "manage-connections-modal"
+                    ) as HTMLDialogElement
+                  )?.showModal()
                 }
               >
                 Manage Connections ({nwcConnections.length})

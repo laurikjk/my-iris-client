@@ -2,6 +2,7 @@ import {create} from "zustand"
 import {persist} from "zustand/middleware"
 import {onConnected, disconnect} from "@getalby/bitcoin-connect"
 import {WebLNProvider} from "@/types/global"
+import {useUserStore} from "@/stores/user"
 
 export type WalletProviderType = "native" | "nwc" | "disabled"
 
@@ -26,6 +27,9 @@ interface WalletProviderState {
   // Saved NWC connections
   nwcConnections: NWCConnection[]
 
+  // Internal cleanup function
+  __cashuUnsubscribe?: (() => void) | null
+
   // Actions
   setActiveProviderType: (type: WalletProviderType) => void
   setActiveNWCId: (id: string) => void
@@ -42,6 +46,9 @@ interface WalletProviderState {
   // Provider initialization
   initializeProviders: () => Promise<void>
   refreshActiveProvider: () => Promise<void>
+  checkCashuNWCConnection: () => void
+  startCashuNWCChecking: () => void
+  cleanup: () => void
 }
 
 export const useWalletProviderStore = create<WalletProviderState>()(
@@ -53,6 +60,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
       nativeProvider: null,
       activeProvider: null,
       nwcConnections: [],
+      __cashuUnsubscribe: null,
 
       setActiveProviderType: (type: WalletProviderType) => {
         console.log("🔄 Setting active provider type to:", type)
@@ -254,10 +262,36 @@ export const useWalletProviderStore = create<WalletProviderState>()(
           }
         }
 
+        // Start Cashu NWC checking on initialization
+        get().startCashuNWCChecking()
+
         // Initialize active NWC connection if selected
         if (state.activeProviderType === "nwc" && state.activeNWCId) {
           await get().connectToNWC(state.activeNWCId)
         }
+
+        // Watch for changes in Cashu enabled state
+        let previousCashuEnabled = useUserStore.getState().cashuEnabled
+        const unsubscribeUserStore = useUserStore.subscribe((state) => {
+          const currentCashuEnabled = state.cashuEnabled
+          if (currentCashuEnabled !== previousCashuEnabled) {
+            console.log(
+              "🔍 Cashu enabled state changed:",
+              previousCashuEnabled,
+              "->",
+              currentCashuEnabled
+            )
+            previousCashuEnabled = currentCashuEnabled
+
+            if (currentCashuEnabled) {
+              // Cashu was just enabled - use same delayed check pattern
+              get().startCashuNWCChecking()
+            }
+          }
+        })
+
+        // Store the unsubscribe function for cleanup
+        set({__cashuUnsubscribe: unsubscribeUserStore})
       },
 
       refreshActiveProvider: async () => {
@@ -304,6 +338,96 @@ export const useWalletProviderStore = create<WalletProviderState>()(
             console.log("🔄 Disabling provider")
             set({activeProvider: null})
             break
+        }
+      },
+
+      checkCashuNWCConnection: () => {
+        const state = get()
+
+        // Only check if Cashu is enabled
+        const cashuEnabled = useUserStore.getState().cashuEnabled
+
+        if (!cashuEnabled) {
+          console.log("🔍 Cashu not enabled, skipping NWC check")
+          return
+        }
+
+        // Look for Cashu NWC connection string in localStorage
+        try {
+          const cashuNWCString = localStorage.getItem("cashu-nwc-connection")
+          if (cashuNWCString) {
+            console.log("🔍 Found Cashu NWC connection string in localStorage")
+
+            // Check if we already have this connection
+            const existingConnection = state.nwcConnections.find(
+              (conn) => conn.connectionString === cashuNWCString
+            )
+
+            if (existingConnection) {
+              console.log("🔍 Cashu NWC connection already exists")
+
+              // Only set as active if no wallet is currently active
+              if (state.activeProviderType === "disabled") {
+                console.log("🔍 No active wallet, setting Cashu NWC as active")
+                set({
+                  activeProviderType: "nwc",
+                  activeNWCId: existingConnection.id,
+                })
+                get().refreshActiveProvider()
+              }
+            } else {
+              console.log("🔍 Adding new Cashu NWC connection")
+              const connectionId = get().addNWCConnection({
+                name: "Cashu Wallet",
+                connectionString: cashuNWCString,
+              })
+
+              // Only set as active if no wallet is currently active
+              if (state.activeProviderType === "disabled") {
+                console.log("🔍 No active wallet, setting new Cashu NWC as active")
+                set({
+                  activeProviderType: "nwc",
+                  activeNWCId: connectionId,
+                })
+                get().refreshActiveProvider()
+              } else {
+                console.log(
+                  "🔍 Wallet already active, Cashu NWC added but not set as active"
+                )
+              }
+            }
+          } else {
+            console.log("🔍 No Cashu NWC connection string found in localStorage")
+          }
+        } catch (error) {
+          console.warn("🔍 Error checking for Cashu NWC connection:", error)
+        }
+      },
+
+      startCashuNWCChecking: () => {
+        // Delay initial check to give Cashu iframe time to load (3 seconds)
+        setTimeout(() => {
+          get().checkCashuNWCConnection()
+
+          // Set up periodic check for Cashu NWC connection (every 5 seconds for first minute)
+          let checkCount = 0
+          const maxChecks = 12 // 12 * 5 seconds = 1 minute
+          const checkInterval = setInterval(() => {
+            checkCount++
+            get().checkCashuNWCConnection()
+
+            if (checkCount >= maxChecks) {
+              clearInterval(checkInterval)
+            }
+          }, 5000)
+        }, 3000)
+      },
+
+      cleanup: () => {
+        const state = get()
+        if (state.__cashuUnsubscribe) {
+          state.__cashuUnsubscribe()
+          set({__cashuUnsubscribe: null})
         }
       },
     }),
