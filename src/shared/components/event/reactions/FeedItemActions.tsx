@@ -62,15 +62,21 @@ function FeedItemActions({
       }
     >
       {event.kind !== KIND_APP_DATA && content.showReplies && (
-        <FeedItemComment event={event} />
+        <FeedItemComment event={event} showReactionCounts={showReactionCounts} />
       )}
       {event.kind !== KIND_APP_DATA && content.showReposts && (
-        <FeedItemRepost event={event} />
+        <FeedItemRepost event={event} showReactionCounts={showReactionCounts} />
       )}
       {content.showLikes && (
         <FeedItemLike event={event} showReactionCounts={showReactionCounts} />
       )}
-      {content.showZaps && <FeedItemZap feedItemRef={feedItemRef} event={event} />}
+      {content.showZaps && (
+        <FeedItemZap
+          feedItemRef={feedItemRef}
+          event={event}
+          showReactionCounts={showReactionCounts}
+        />
+      )}
       <FeedItemShare event={event} />
     </div>
   )
