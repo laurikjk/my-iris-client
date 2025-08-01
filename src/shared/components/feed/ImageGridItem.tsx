@@ -6,6 +6,7 @@ import {nip19} from "nostr-tools"
 
 import {eventsByIdCache} from "@/utils/memcache.ts"
 import {IMAGE_REGEX, VIDEO_REGEX} from "@/shared/components/embed/media/MediaEmbed.tsx"
+import {hasImageOrVideo} from "@/shared/utils/mediaUtils"
 import {useSettingsStore} from "@/stores/settings"
 import MarketGridItem from "../market/MarketGridItem"
 import {isMarketListing} from "@/shared/utils/marketUtils.ts"
@@ -206,11 +207,7 @@ const ImageGridItem = memo(function ImageGridItem({
     return <div className="aspect-square bg-neutral-300 animate-pulse" />
   }
 
-  if (
-    event.kind !== 30402 &&
-    !IMAGE_REGEX.test(event.content) &&
-    !VIDEO_REGEX.test(event.content)
-  ) {
+  if (event.kind !== 30402 && !hasImageOrVideo(event.content)) {
     return null
   }
 

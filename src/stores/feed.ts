@@ -38,6 +38,8 @@ interface FeedConfig {
   sortType?: "chronological" | "followDistance" | "liked"
   // Show new events automatically without the dialog
   autoShowNewEvents?: boolean
+  // Display mode for this specific feed
+  displayAs?: "list" | "grid"
 }
 
 interface FeedState {
@@ -314,6 +316,7 @@ export const useFeedConfigs = () => useFeedStore((state) => state.feedConfigs)
 // Excludes display-only properties that shouldn't invalidate cache
 export const getFeedCacheKey = (feedConfig: FeedConfig): string => {
   // Create a copy without display-only properties
+  // Note: displayAs affects content filtering (grid mode filters media-only), so it's included
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const {name, customName, ...cacheableConfig} = feedConfig
   return JSON.stringify(cacheableConfig)

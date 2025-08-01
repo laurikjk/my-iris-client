@@ -52,6 +52,16 @@ interface MediaFeedMemory {
   timestamp: number
 }
 
+interface FeedEvents {
+  action: string
+  cacheKey: string
+  feedName: string
+  eventsRefSize: number
+  eventId?: string
+  newEventsShown?: number
+  timestamp: number
+}
+
 interface SubscriptionData {
   filters: unknown[]
   relays: string[]
@@ -71,6 +81,7 @@ const DebugApp = () => {
     MediaFeedPerformance[]
   >([])
   const [mediaFeedMemory, setMediaFeedMemory] = useState<MediaFeedMemory[]>([])
+  const [feedEvents, setFeedEvents] = useState<FeedEvents[]>([])
   const [subscriptions, setSubscriptions] = useState<Record<
     string,
     SubscriptionData
@@ -188,6 +199,16 @@ const DebugApp = () => {
       }
     )
 
+    // Subscribe to Feed events data
+    const unsubscribeFeedEvents = debugSession.subscribe("feed_events", (value) => {
+      setFeedEvents((prev) => {
+        const newEntry = value as FeedEvents
+        // Keep only last 50 feed events to avoid memory buildup
+        const updated = [newEntry, ...prev].slice(0, 50)
+        return updated
+      })
+    })
+
     // Monitor connection status periodically
     const checkConnection = () => {
       setIsConnected(debugSession.isConnectedToRelay(TEMP_IRIS_RELAY))
@@ -217,6 +238,7 @@ const DebugApp = () => {
       unsubscribeMediaFeedDebug()
       unsubscribeMediaFeedPerformance()
       unsubscribeMediaFeedMemory()
+      unsubscribeFeedEvents()
       debugSession.close()
     }
   }, [])
@@ -481,6 +503,56 @@ const DebugApp = () => {
                               {mem.oldSize &&
                                 mem.newSize &&
                                 ` ${mem.oldSize}→${mem.newSize}`}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {feedEvents.length > 0 && (
+              <div className="card bg-base-200 shadow">
+                <div className="card-body">
+                  <h3 className="card-title">
+                    Feed Events
+                    <span className="badge badge-primary badge-sm">Live</span>
+                  </h3>
+                  <div className="overflow-x-auto max-h-60">
+                    <table className="table table-xs">
+                      <thead>
+                        <tr>
+                          <th>Time</th>
+                          <th>Feed</th>
+                          <th>Action</th>
+                          <th>Size</th>
+                          <th>Details</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {feedEvents.map((feed, index) => (
+                          <tr key={index}>
+                            <td>{new Date(feed.timestamp).toLocaleTimeString()}</td>
+                            <td className="text-xs font-mono">{feed.feedName}</td>
+                            <td>
+                              <span
+                                className={`badge badge-xs ${
+                                  feed.action === "addMain"
+                                    ? "badge-success"
+                                    : feed.action === "showNewEvents"
+                                      ? "badge-warning"
+                                      : "badge-info"
+                                }`}
+                              >
+                                {feed.action}
+                              </span>
+                            </td>
+                            <td className="font-mono">{feed.eventsRefSize}</td>
+                            <td className="text-xs">
+                              {feed.eventId && `Event: ${feed.eventId.slice(0, 8)}...`}
+                              {feed.newEventsShown && `Shown: ${feed.newEventsShown}`}
                             </td>
                           </tr>
                         ))}

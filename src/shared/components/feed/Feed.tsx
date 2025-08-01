@@ -114,13 +114,22 @@ const Feed = memo(function Feed({
 
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
 
-  const {feedDisplayAs: persistedDisplayAs, setFeedDisplayAs} = useFeedStore()
+  const {
+    feedDisplayAs: persistedDisplayAs,
+    setFeedDisplayAs,
+    saveFeedConfig,
+  } = useFeedStore()
 
-  // Use persisted value only when selector is shown, otherwise use initialDisplayAs
-  const displayAs = showDisplayAsSelector ? persistedDisplayAs : initialDisplayAs
+  // Use per-feed displayAs if available, otherwise use persisted value when selector is shown
+  const displayAs = showDisplayAsSelector
+    ? feedConfig.displayAs || persistedDisplayAs
+    : initialDisplayAs
+
   const setDisplayAs = (value: "list" | "grid") => {
-    // Show new events when switching display modes
-    showNewEventsWithHighlight()
+    // Save displayAs to the specific feed config
+    saveFeedConfig(feedConfig.id, {displayAs: value})
+
+    // Also update global setting for consistency
     setFeedDisplayAs(value)
   }
 
@@ -143,6 +152,7 @@ const Feed = memo(function Feed({
     refreshSignal,
     openedAt,
     bottomVisibleEventTimestamp,
+    displayAs,
   })
 
   const loadMoreItems = () => {
@@ -174,6 +184,7 @@ const Feed = memo(function Feed({
         })
         .filter((event): event is NDKEvent | {id: string} => {
           if (event === null) return false
+
           // Deduplicate by event ID to prevent multiple reposts of same event
           if (seen.has(event.id)) return false
           seen.add(event.id)

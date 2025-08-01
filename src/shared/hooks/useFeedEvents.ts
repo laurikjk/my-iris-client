@@ -10,7 +10,9 @@ import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
 import {getEventReplyingTo} from "@/utils/nostr"
 import {hasMedia} from "@/shared/components/embed"
+import {hasImageOrVideo} from "@/shared/utils/mediaUtils"
 import {type FeedConfig} from "@/stores/feed"
+import DebugManager from "@/utils/DebugManager"
 
 interface FutureEvent {
   event: NDKEvent
@@ -29,6 +31,7 @@ interface UseFeedEventsProps {
   refreshSignal?: number
   openedAt?: number
   bottomVisibleEventTimestamp?: number
+  displayAs?: "list" | "grid"
 }
 
 export default function useFeedEvents({
@@ -43,6 +46,7 @@ export default function useFeedEvents({
   refreshSignal,
   openedAt,
   bottomVisibleEventTimestamp = Infinity,
+  displayAs = "list",
 }: UseFeedEventsProps) {
   const bottomVisibleEventTimestampRef = useRef(bottomVisibleEventTimestamp)
   bottomVisibleEventTimestampRef.current = bottomVisibleEventTimestamp
@@ -89,6 +93,17 @@ export default function useFeedEvents({
       if (feedConfig.requiresReplies && !getEventReplyingTo(event)) return false
       if (feedConfig.repliesTo && getEventReplyingTo(event) !== feedConfig.repliesTo)
         return false
+
+      // Display mode filtering - in grid mode, only accept events with images/videos
+      if (displayAs === "grid") {
+        if (
+          !event.content ||
+          typeof event.content !== "string" ||
+          !hasImageOrVideo(event.content)
+        ) {
+          return false
+        }
+      }
 
       if (feedConfig.excludeSeen) {
         if (
@@ -155,6 +170,7 @@ export default function useFeedEvents({
       localFilter.search,
       hideEventsByUnknownUsers,
       filters.authors,
+      displayAs,
     ]
   )
 
@@ -212,6 +228,7 @@ export default function useFeedEvents({
   )
 
   const showNewEvents = () => {
+    const eventCount = newEvents.size
     newEvents.forEach((event) => {
       if (!eventsRef.current.has(event.id)) {
         eventsRef.current.set(event.id, event)
@@ -220,6 +237,19 @@ export default function useFeedEvents({
     setNewEvents(new Map())
     setNewEventsFrom(new Set())
     setEventsVersion((prev) => prev + 1)
+
+    // Debug logging
+    const debugSession = DebugManager.getDebugSession()
+    if (debugSession) {
+      debugSession.publish("feed_events", {
+        action: "showNewEvents",
+        cacheKey,
+        feedName: feedConfig.name || feedConfig.id || "unknown",
+        eventsRefSize: eventsRef.current.size,
+        newEventsShown: eventCount,
+        timestamp: Date.now(),
+      })
+    }
   }
 
   const filteredEvents = useMemo(() => {
@@ -315,6 +345,19 @@ export default function useFeedEvents({
       const addMain = () => {
         eventsRef.current.set(event.id, event)
         setEventsVersion((prev) => prev + 1)
+
+        // Debug logging
+        const debugSession = DebugManager.getDebugSession()
+        if (debugSession) {
+          debugSession.publish("feed_events", {
+            action: "addMain",
+            cacheKey,
+            feedName: feedConfig.name || feedConfig.id || "unknown",
+            eventsRefSize: eventsRef.current.size,
+            eventId: event.id,
+            timestamp: Date.now(),
+          })
+        }
       }
       const addNew = () => {
         setNewEvents((prev) => new Map([...prev, [event.id, event]]))
