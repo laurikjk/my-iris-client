@@ -47,18 +47,19 @@ function LongForm({event, standalone}: LongFormProps) {
     return `${textBody.substring(0, 250)}...`
   }
 
+  const titleSize = standalone ? "text-3xl my-4" : "text-xl my-2";
+
   return (
     <>
       {imageUrl && standalone && (
         <ProxyImg
           src={imageUrl}
           alt={title || "Article image"}
-          className="w-full object-cover max-h-96 my-4"
+          className="w-full object-cover h-64 lg:h-96 my-4"
           width={800}
         />
       )}
       <div className="flex flex-col gap-2 px-5">
-        <h1 className="flex items-center gap-2 text-lg">{title}</h1>
         {imageUrl && !standalone && (
           <div
             className="cursor-pointer"
@@ -75,6 +76,7 @@ function LongForm({event, standalone}: LongFormProps) {
             />
           </div>
         )}
+        <h1 className={`flex items-center gap-2 ${titleSize}`}>{title}</h1>
         <Markdown
           className="prose leading-relaxed tracking-wide text-gray-450 whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
           options={{forceBlock: true}}

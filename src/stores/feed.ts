@@ -108,7 +108,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     hideReplies: true,
     filter: {
       kinds: [KIND_LONG_FORM_CONTENT],
-      limit: 50,
+      limit: 100,
     },
   },
   market: {
