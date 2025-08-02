@@ -61,7 +61,21 @@ function LongForm({event, standalone}: LongFormProps) {
         <h1 className={`flex items-center gap-2 ${titleSize}`}>{title}</h1>
         <Markdown
           className="prose leading-relaxed tracking-wide text-gray-450 whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
-          options={{forceBlock: true}}
+          options={{
+            forceBlock: true,
+            overrides: {
+              img: {
+                component: ProxyImg,
+                props: {
+                  className: standalone
+                    ? "w-full object-cover rounded"
+                    : "h-48 w-full object-cover rounded",
+                  width: 600,
+                  loading: "lazy",
+                },
+              },
+            },
+          }}
         >
           {getDisplayContent()}
         </Markdown>
