@@ -44,5 +44,8 @@ export const KIND_DEBUG_DATA = 30000 // Used for encrypted debug key-value stora
 // Classified listings
 export const KIND_CLASSIFIED = 30402
 
+// Highlights
+export const KIND_HIGHLIGHT = 9802
+
 // Additional kinds found in codebase
 export const KIND_WALLET_CONNECT = 6927

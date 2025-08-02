@@ -2,7 +2,7 @@ import MarketListing from "../../market/MarketListing"
 import ChannelCreation from "../ChannelCreation.tsx"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ZapReceipt from "../ZapReceipt.tsx"
-import {KIND_ZAP_RECEIPT, KIND_REACTION} from "@/utils/constants"
+import {KIND_ZAP_RECEIPT, KIND_REACTION, KIND_TEXT_NOTE, KIND_HIGHLIGHT, KIND_LONG_FORM_CONTENT, KIND_CLASSIFIED, KIND_CHANNEL_CREATE} from "@/utils/constants"
 import Zapraiser from "../Zapraiser.tsx"
 import Highlight from "../Highlight.tsx"
 import TextNote from "../TextNote.tsx"
@@ -36,13 +36,13 @@ const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentPr
     )
   } else if (referredEvent) {
     return <TextNote event={referredEvent} truncate={truncate} />
-  } else if (event.kind === 1 && event.tagValue("zapraiser")) {
+  } else if (event.kind === KIND_TEXT_NOTE && event.tagValue("zapraiser")) {
     return <Zapraiser event={event} />
-  } else if (event.kind === 9802) {
+  } else if (event.kind === KIND_HIGHLIGHT) {
     return <Highlight event={event} />
-  } else if (event.kind === 30023) {
+  } else if (event.kind === KIND_LONG_FORM_CONTENT) {
     return <LongForm event={event} standalone={standalone} />
-  } else if (event.kind === 30402) {
+  } else if (event.kind === KIND_CLASSIFIED) {
     return (
       <MarketListing
         key={`${event.id}-${truncate > 0}`}
@@ -50,7 +50,7 @@ const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentPr
         truncate={truncate}
       />
     )
-  } else if (event.kind === 40) {
+  } else if (event.kind === KIND_CHANNEL_CREATE) {
     return <ChannelCreation event={event} />
   } else {
     return <TextNote event={event} truncate={truncate} />
