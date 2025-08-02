@@ -1,4 +1,3 @@
-import {requestProvider} from "@getalby/bitcoin-connect"
 import {useWalletBalance} from "@/shared/hooks/useWalletBalance"
 import {useUserStore} from "@/stores/user"
 import {useWalletProviderStore, WalletProviderType} from "@/stores/walletProvider"
@@ -6,13 +5,12 @@ import {ChangeEvent, useState} from "react"
 
 const WalletSettings = () => {
   const {balance} = useWalletBalance()
-  const {cashuEnabled, defaultZapAmount, setCashuEnabled, setDefaultZapAmount} =
-    useUserStore()
+  const {defaultZapAmount, setDefaultZapAmount} = useUserStore()
 
   const {
     activeProviderType,
     activeNWCId,
-    nativeProvider,
+    nativeWallet,
     nwcConnections,
     setActiveProviderType,
     setActiveNWCId,
@@ -60,32 +58,6 @@ const WalletSettings = () => {
     }
   }
 
-  const handleConnectLegacyWallet = async () => {
-    const {init} = await import("@getalby/bitcoin-connect-react")
-    init({
-      appName: "Iris",
-      filters: ["nwc"],
-      showBalance: false,
-    })
-
-    setIsConnecting(true)
-    try {
-      const provider = await requestProvider()
-      if (provider) {
-        // Add as a new NWC connection
-        const id = addNWCConnection({
-          name: `NWC Connection ${Date.now()}`,
-          connectionString: "managed_by_bitcoin_connect",
-          provider,
-        })
-        setActiveProviderType("nwc")
-        setActiveNWCId(id)
-      }
-    } finally {
-      setIsConnecting(false)
-    }
-  }
-
   const handleDefaultZapAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.value === "0" || !event.target.value) {
       setDefaultZapAmount(0)
@@ -100,7 +72,8 @@ const WalletSettings = () => {
   }
 
   const getBalanceDisplay = () => {
-    if (activeProviderType === "disabled" || activeProviderType === undefined) return "No wallet connected"
+    if (activeProviderType === "disabled" || activeProviderType === undefined)
+      return "No wallet connected"
     if (balance !== null) return `${balance.toLocaleString()} sats`
     return "Loading..."
   }
@@ -112,7 +85,8 @@ const WalletSettings = () => {
       nwcConnectionsCount: nwcConnections.length,
     })
 
-    if (activeProviderType === "disabled" || activeProviderType === undefined) return "No wallet connected"
+    if (activeProviderType === "disabled" || activeProviderType === undefined)
+      return "No wallet connected"
     if (activeProviderType === "native") return "Native WebLN"
     if (activeProviderType === "nwc" && activeNWCId) {
       const connection = nwcConnections.find((c) => c.id === activeNWCId)
@@ -171,7 +145,7 @@ const WalletSettings = () => {
               </label>
 
               {/* Native WebLN option */}
-              {nativeProvider && (
+              {nativeWallet && (
                 <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-50">
                   <input
                     type="radio"
@@ -224,13 +198,6 @@ const WalletSettings = () => {
             >
               + Add NWC Wallet
             </button>
-            <button
-              className="btn btn-outline flex-1"
-              onClick={handleConnectLegacyWallet}
-              disabled={isConnecting}
-            >
-              {isConnecting ? "Connecting..." : "Quick Connect"}
-            </button>
           </div>
 
           {/* Manage Connections */}
@@ -250,27 +217,6 @@ const WalletSettings = () => {
               </button>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Cashu Wallet Section */}
-      <div className="card bg-base-100 shadow-lg">
-        <div className="card-body">
-          <h2 className="card-title text-lg mb-4">Cashu Wallet</h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium">Cashu ecash wallet</div>
-              <div className="text-sm text-gray-500">
-                For private, offline Bitcoin transactions
-              </div>
-            </div>
-            <button
-              className={`btn ${cashuEnabled ? "btn-error" : "btn-primary"}`}
-              onClick={() => setCashuEnabled(!cashuEnabled)}
-            >
-              {cashuEnabled ? "Disable" : "Enable"}
-            </button>
-          </div>
         </div>
       </div>
 

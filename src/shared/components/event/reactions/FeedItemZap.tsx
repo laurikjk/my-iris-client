@@ -98,16 +98,22 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
       }): Promise<NDKPaymentConfirmationLN | undefined> => {
         if (provider) {
           // Handle payment in background like ZapModal does
-          provider
-            .sendPayment(pr)
-            .then(() => {
-              // Payment succeeded
-            })
-            .catch((error) => {
-              console.warn("Quick zap payment failed:", error)
-              // Open zap modal on payment failure
-              setShowZapModal(true)
-            })
+          // Check if provider has sendPayment method (legacy WebLN)
+          if ("sendPayment" in provider && typeof provider.sendPayment === "function") {
+            provider
+              .sendPayment(pr)
+              .then(() => {
+                // Payment succeeded
+              })
+              .catch((error: Error) => {
+                console.warn("Quick zap payment failed:", error)
+                // Open zap modal on payment failure
+                setShowZapModal(true)
+              })
+          } else {
+            // For NDK wallets, we'll open the zap modal instead of trying direct payment
+            setShowZapModal(true)
+          }
 
           // Return undefined to let NDK know we're handling payment ourselves
           return undefined

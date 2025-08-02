@@ -27,11 +27,11 @@ interface ZapModalProps {
 function ZapModal({onClose, event, setZapped}: ZapModalProps) {
   const {defaultZapAmount, setDefaultZapAmount} = useZapStore()
   const webLNProvider = useWebLNProvider()
-  const {activeProvider, activeProviderType} = useWalletProviderStore()
+  const {activeWallet, activeProviderType} = useWalletProviderStore()
 
-  // Use active provider from wallet provider store, fallback to webLNProvider
+  // Use active wallet from wallet provider store, fallback to webLNProvider
   const provider =
-    activeProviderType !== "disabled" ? activeProvider || webLNProvider : null
+    activeProviderType !== "disabled" ? activeWallet || webLNProvider : null
   const [copiedPaymentRequest, setCopiedPaymentRequest] = useState(false)
   const [noAddress, setNoAddress] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
@@ -112,17 +112,23 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
         if (provider) {
           // Attempt wallet payment in background (fire-and-forget)
           setTimeout(() => {
-            provider
-              .sendPayment(pr)
-              .then(() => {
-                setZapped(true)
-                setZapRefresh(!zapRefresh)
-                onClose()
-              })
-              .catch((error) => {
-                console.warn("Wallet payment failed, user can use QR code:", error)
-                setError("Wallet payment failed. Please use the QR code below.")
-              })
+            // Check if provider has sendPayment method (legacy WebLN)
+            if ("sendPayment" in provider && typeof provider.sendPayment === "function") {
+              provider
+                .sendPayment(pr)
+                .then(() => {
+                  setZapped(true)
+                  setZapRefresh(!zapRefresh)
+                  onClose()
+                })
+                .catch((error: Error) => {
+                  console.warn("Wallet payment failed, user can use QR code:", error)
+                  setError("Wallet payment failed. Please use the QR code below.")
+                })
+            } else {
+              // For NDK wallets, show QR code for manual payment
+              setError("Please use the QR code below to complete the payment.")
+            }
           }, 100) // Small delay to let QR code render first
         }
 

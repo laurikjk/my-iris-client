@@ -52,7 +52,6 @@ export default function SignUp({onClose}: SignUpProps) {
     setState({
       privateKey: privateKeyHex,
       publicKey: pk,
-      cashuEnabled: true,
       walletConnect: true,
     })
 

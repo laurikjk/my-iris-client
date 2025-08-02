@@ -2,21 +2,29 @@ import RightColumn from "@/shared/components/RightColumn.tsx"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
 import Widget from "@/shared/components/ui/Widget"
 import {useUserStore} from "@/stores/user"
+import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useNavigate} from "react-router"
 import {useEffect} from "react"
 
 export default function WalletPage() {
   const navigate = useNavigate()
   const myPubKey = useUserStore((state) => state.publicKey)
-  const cashuEnabled = useUserStore((state) => state.cashuEnabled)
+  const activeProviderType = useWalletProviderStore((state) => state.activeProviderType)
+  const activeNWCId = useWalletProviderStore((state) => state.activeNWCId)
+  const nwcConnections = useWalletProviderStore((state) => state.nwcConnections)
+
+  const isLocalCashuWallet =
+    activeProviderType === "nwc" &&
+    activeNWCId &&
+    nwcConnections.find((conn) => conn.id === activeNWCId)?.isLocalCashuWallet
 
   useEffect(() => {
-    if (!cashuEnabled) {
+    if (!isLocalCashuWallet) {
       navigate("/settings/wallet", {replace: true})
     }
-  }, [navigate, cashuEnabled])
+  }, [navigate, isLocalCashuWallet])
 
-  if (!cashuEnabled) {
+  if (!isLocalCashuWallet) {
     return null
   }
 
