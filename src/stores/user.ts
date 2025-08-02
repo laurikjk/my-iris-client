@@ -63,7 +63,7 @@ export const useUserStore = create<UserState>()(
         mediaservers: [],
         defaultMediaserver: null,
         walletConnect: false,
-        defaultZapAmount: 21,
+        defaultZapAmount: 0,
         ndkOutboxModel: !import.meta.env.VITE_USE_LOCAL_RELAY,
         hasHydrated: false,
       }

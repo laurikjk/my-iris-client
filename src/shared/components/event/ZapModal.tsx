@@ -13,7 +13,7 @@ import {decode} from "light-bolt11-decoder"
 import {Avatar} from "@/shared/components/user/Avatar"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {Name} from "@/shared/components/user/Name"
-import {useZapStore} from "@/stores/zap"
+import {useUserStore} from "@/stores/user"
 import {useWebLNProvider} from "@/shared/hooks/useWebLNProvider"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {ndk} from "@/utils/ndk"
@@ -22,10 +22,20 @@ interface ZapModalProps {
   onClose: () => void
   event: NDKEvent
   setZapped: Dispatch<SetStateAction<boolean>>
+  initialInvoice?: string
+  initialAmount?: string
+  paymentFailed?: boolean
 }
 
-function ZapModal({onClose, event, setZapped}: ZapModalProps) {
-  const {defaultZapAmount, setDefaultZapAmount} = useZapStore()
+function ZapModal({
+  onClose,
+  event,
+  setZapped,
+  initialInvoice,
+  initialAmount,
+  paymentFailed,
+}: ZapModalProps) {
+  const {defaultZapAmount, setDefaultZapAmount} = useUserStore()
   const webLNProvider = useWebLNProvider()
   const {activeWallet, activeProviderType} = useWalletProviderStore()
 
@@ -34,9 +44,11 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
     activeProviderType !== "disabled" ? activeWallet || webLNProvider : null
   const [copiedPaymentRequest, setCopiedPaymentRequest] = useState(false)
   const [noAddress, setNoAddress] = useState(false)
-  const [showQRCode, setShowQRCode] = useState(false)
-  const [bolt11Invoice, setBolt11Invoice] = useState<string>("")
-  const [zapAmount, setZapAmount] = useState<string>(defaultZapAmount.toString())
+  const [showQRCode, setShowQRCode] = useState(!!initialInvoice)
+  const [bolt11Invoice, setBolt11Invoice] = useState<string>(initialInvoice || "")
+  const [zapAmount, setZapAmount] = useState<string>(
+    initialAmount || (defaultZapAmount > 0 ? defaultZapAmount.toString() : "21")
+  )
   const [customAmount, setCustomAmount] = useState<string>("")
   const [zapMessage, setZapMessage] = useState<string>("")
   const [shouldSetDefault, setShouldSetDefault] = useState(false)
@@ -45,14 +57,15 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [zapRefresh, setZapRefresh] = useState(false)
   const amounts: Record<string, string> = {
-    [defaultZapAmount.toString()]: "",
-    "1000": "👍",
-    "5000": "💜",
-    "10000": "😍",
-    "20000": "🤩",
-    "50000": "🔥",
-    "100000": "🚀",
-    "1000000": "🤯",
+    ...(defaultZapAmount > 0 ? {[defaultZapAmount.toString()]: ""} : {}),
+    "1": "⚡",
+    "21": "👍",
+    "42": "🤙",
+    "69": "😏",
+    "100": "💯",
+    "1000": "🔥",
+    "10000": "🚀",
+    "100000": "🤯",
   }
 
   const handleZapAmountChange = (amount: string) => {
@@ -267,7 +280,7 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
 
         {showQRCode ? (
           <div className="flex flex-col items-center gap-4">
-            {provider && !error && (
+            {provider && !error && !paymentFailed && (
               <div className="alert alert-info">
                 <div className="loading loading-spinner loading-sm"></div>
                 <span>Attempting to pay with your wallet...</span>

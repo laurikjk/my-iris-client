@@ -40,7 +40,7 @@ export const FeedItemLike = ({
   const [isLongPress, setIsLongPress] = useState(false)
 
   const like = async () => {
-    if (likesByAuthor.has(myPubKey)) return
+    if (!myPubKey || likesByAuthor.has(myPubKey)) return
     try {
       event.react("+")
       setMyReaction("+")
@@ -77,6 +77,7 @@ export const FeedItemLike = ({
   const handleMouseDown = (
     e: ReactMouseEvent<HTMLButtonElement> | ReactTouchEvent<HTMLButtonElement>
   ) => {
+    if (!myPubKey) return
     setIsLongPress(false)
     if ("touches" in e && e.touches.length > 0) {
       setPickerPosition({clientY: e.touches[0].clientY})

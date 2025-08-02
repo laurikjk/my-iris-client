@@ -1,5 +1,6 @@
 import {LnPayCb, NDKEvent, NDKZapper, NDKPaymentConfirmationLN} from "@nostr-dev-kit/ndk"
 import {useWebLNProvider} from "@/shared/hooks/useWebLNProvider"
+import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
 import {RefObject, useEffect, useState, useRef} from "react"
 import useProfile from "@/shared/hooks/useProfile.ts"
@@ -7,8 +8,7 @@ import {getZappingUser} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
 import {decode} from "light-bolt11-decoder"
-import {usePublicKey} from "@/stores/user"
-import {useZapStore} from "@/stores/zap"
+import {usePublicKey, useUserStore} from "@/stores/user"
 import Icon from "../../Icons/Icon.tsx"
 import ZapModal from "../ZapModal.tsx"
 import debounce from "lodash/debounce"
@@ -26,7 +26,8 @@ interface FeedItemZapProps {
 
 function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZapProps) {
   const myPubKey = usePublicKey()
-  const {defaultZapAmount} = useZapStore()
+  const {defaultZapAmount} = useUserStore()
+  const {activeWallet, activeProviderType} = useWalletProviderStore()
   const [isZapping, setIsZapping] = useState(false)
   const longPressTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [isLongPress, setIsLongPress] = useState(false)
@@ -35,12 +36,15 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
   const profile = useProfile(event.pubkey)
 
   const [showZapModal, setShowZapModal] = useState(false)
+  const [failedInvoice, setFailedInvoice] = useState<string>("")
 
   const [zapsByAuthor, setZapsByAuthor] = useState<Map<string, NDKEvent[]>>(
     zapsByEventCache.get(event.id) || new Map()
   )
 
-  const canQuickZap = !!defaultZapAmount
+  // Quick zap is only enabled if there's a default zap amount AND a wallet is available
+  const hasWallet = activeProviderType !== "disabled" && (activeWallet || provider)
+  const canQuickZap = !!defaultZapAmount && defaultZapAmount > 0 && hasWallet
 
   const calculateZappedAmount = async (
     zaps: Map<string, NDKEvent[]>
@@ -83,6 +87,8 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
     if (canQuickZap) {
       await handleOneClickZap()
     } else {
+      // Clear any previous failed state when opening modal normally
+      setFailedInvoice("")
       setShowZapModal(true)
     }
   }
@@ -107,11 +113,13 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
               })
               .catch((error: Error) => {
                 console.warn("Quick zap payment failed:", error)
-                // Open zap modal on payment failure
+                // Store the failed invoice for the modal
+                setFailedInvoice(pr)
                 setShowZapModal(true)
               })
           } else {
             // For NDK wallets, we'll open the zap modal instead of trying direct payment
+            setFailedInvoice(pr)
             setShowZapModal(true)
           }
 
@@ -132,6 +140,7 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
     } catch (error) {
       console.warn("Unable to one-click zap:", error)
       // Open zap modal on zap failure
+      setFailedInvoice("")
       setShowZapModal(true)
     } finally {
       setIsZapping(false)
@@ -232,11 +241,17 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
     <>
       {showZapModal && (
         <ZapModal
-          onClose={() => setShowZapModal(false)}
+          onClose={() => {
+            setShowZapModal(false)
+            setFailedInvoice("")
+          }}
           event={event}
           setZapped={() => {
             flashElement()
           }}
+          initialInvoice={failedInvoice}
+          initialAmount={failedInvoice ? defaultZapAmount.toString() : undefined}
+          paymentFailed={!!failedInvoice}
         />
       )}
       <button

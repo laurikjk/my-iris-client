@@ -38,7 +38,7 @@ function FeedItemRepost({event, showReactionCounts = true}: FeedItemRepostProps)
   const reposted = repostsByAuthor.has(myPubKey)
 
   const handleRepost = async () => {
-    if (reposted) return
+    if (!myPubKey || reposted) return
     setShowButtons(false)
     try {
       event.repost()
