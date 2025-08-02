@@ -291,8 +291,7 @@ const store = create<SessionStore>()(
           encrypt
         )
         const e = NDKEventFromRawEvent(event)
-        e
-          .publish()
+        e.publish()
           .then((res) => console.log("published", res))
           .catch((e) => console.warn("Error publishing event:", e))
         const sessionId = `${invite.inviter}:${session.name}`
