@@ -1,5 +1,4 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {useEffect, useState} from "react"
 import Markdown from "markdown-to-jsx"
 import ProxyImg from "../ProxyImg"
 import {useNavigate} from "react-router"
@@ -11,29 +10,12 @@ interface LongFormProps {
 }
 
 function LongForm({event, standalone}: LongFormProps) {
-  const [title, setTitle] = useState<string>("")
-  const [topics, setTopics] = useState<string>()
-  const [textBody, setTextBody] = useState<string>("")
-  const [summary, setSummary] = useState<string>("")
-  const [imageUrl, setImageUrl] = useState<string>("")
+  const title = event.tagValue("title") || ""
+  const topics = event.tagValue("t")
+  const textBody = event.content || ""
+  const summary = event.tagValue("summary") || ""
+  const imageUrl = event.tagValue("image") || ""
   const navigate = useNavigate()
-
-  useEffect(() => {
-    const title = event.tagValue("title")
-    if (title) setTitle(title)
-
-    const hashtags = event.tagValue("t")
-    if (hashtags) setTopics(hashtags)
-
-    const textBody = event.content
-    setTextBody(textBody)
-
-    const summaryTag = event.tagValue("summary")
-    if (summaryTag) setSummary(summaryTag)
-
-    const imageTag = event.tagValue("image")
-    if (imageTag) setImageUrl(imageTag)
-  }, [event])
 
   const getDisplayContent = () => {
     if (standalone) {
@@ -47,7 +29,7 @@ function LongForm({event, standalone}: LongFormProps) {
     return `${textBody.substring(0, 250)}...`
   }
 
-  const titleSize = standalone ? "text-3xl my-4" : "text-xl my-2";
+  const titleSize = standalone ? "text-3xl my-4" : "text-xl my-2"
 
   return (
     <>

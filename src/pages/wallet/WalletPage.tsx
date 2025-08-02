@@ -51,7 +51,13 @@ export default function WalletPage() {
         {() => (
           <>
             <Widget title="Popular">
-              <PopularFeed displayOptions={{small: true, showDisplaySelector: false, randomSort: true}} />
+              <PopularFeed
+                displayOptions={{
+                  small: true,
+                  showDisplaySelector: false,
+                  randomSort: true,
+                }}
+              />
             </Widget>
           </>
         )}

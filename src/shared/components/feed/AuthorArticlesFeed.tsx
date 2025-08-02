@@ -29,9 +29,9 @@ const AuthorArticlesFeed = memo(function AuthorArticlesFeed({
     })
 
     subscription.on("event", (event: NDKEvent) => {
-      setEvents(prev => {
+      setEvents((prev) => {
         // Avoid duplicates and filter out current article
-        if (event.id === currentArticleId || prev.some(e => e.id === event.id)) {
+        if (event.id === currentArticleId || prev.some((e) => e.id === event.id)) {
           return prev
         }
         return [...prev, event].sort((a, b) => (b.created_at || 0) - (a.created_at || 0))

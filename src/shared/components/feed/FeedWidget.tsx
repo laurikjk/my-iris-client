@@ -69,9 +69,7 @@ const FeedWidget = memo(function FeedWidget({
     }
 
     // displayAs === "list"
-    return displayEvents.map((event) => (
-      <FeedItem key={event.id} event={event} />
-    ))
+    return displayEvents.map((event) => <FeedItem key={event.id} event={event} />)
   }
 
   return (
@@ -84,9 +82,7 @@ const FeedWidget = memo(function FeedWidget({
       )}
 
       {loadMore ? (
-        <InfiniteScroll onLoadMore={loadMore}>
-          {renderEvents()}
-        </InfiniteScroll>
+        <InfiniteScroll onLoadMore={loadMore}>{renderEvents()}</InfiniteScroll>
       ) : (
         renderEvents()
       )}

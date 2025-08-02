@@ -12,8 +12,8 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useState, useEffect, useCallback} from "react"
 import {getTags} from "@/utils/nostr"
 import {nip19} from "nostr-tools"
-import {ndk} from "@/utils/ndk"
 import {KIND_LONG_FORM_CONTENT} from "@/utils/constants"
+import {useLongformEvent} from "@/shared/hooks/useLongformEvent"
 
 export default function ThreadPage({
   id,
@@ -26,51 +26,41 @@ export default function ThreadPage({
 }) {
   const [relevantPeople, setRelevantPeople] = useState(new Map<string, boolean>())
   const {content} = useSettingsStore()
-  const [event, setEvent] = useState<NDKEvent | null>(null)
-  const [loading, setLoading] = useState(isNaddr)
   const [threadAuthor, setThreadAuthor] = useState<string | null>(null)
   const [isArticle, setIsArticle] = useState(false)
+
+  // Use the custom hook for longform event caching
+  const {event: longformEvent, loading: longformLoading} = useLongformEvent(
+    isNaddr ? naddrData : null
+  )
+  const [event, setEvent] = useState<NDKEvent | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const addRelevantPerson = useCallback((person: string) => {
+    setRelevantPeople((prev) => new Map(prev).set(person, true))
+  }, [])
 
   useEffect(() => {
     setThreadAuthor(null)
   }, [id])
 
+  // Handle longform event updates from the hook
   useEffect(() => {
-    if (isNaddr && naddrData) {
-      setLoading(true)
-      ndk()
-        .fetchEvent(
-          {
-            authors: [naddrData.pubkey],
-            kinds: [naddrData.kind],
-            "#d": [naddrData.identifier],
-          },
-          undefined
-        )
-        .then((e) => {
-          if (e) {
-            setEvent(e)
-            if (e.pubkey) {
-              setThreadAuthor(e.pubkey)
-              addRelevantPerson(e.pubkey)
-            }
-            // Check if this is an article
-            if (e.kind === KIND_LONG_FORM_CONTENT) {
-              setIsArticle(true)
-            }
-          }
-          setLoading(false)
-        })
-        .catch((err) => {
-          console.warn("Error fetching naddr event:", err)
-          setLoading(false)
-        })
+    if (isNaddr && longformEvent) {
+      setEvent(longformEvent)
+      setLoading(longformLoading)
+      if (longformEvent.pubkey) {
+        setThreadAuthor(longformEvent.pubkey)
+        addRelevantPerson(longformEvent.pubkey)
+      }
+      // Check if this is an article
+      if (longformEvent.kind === KIND_LONG_FORM_CONTENT) {
+        setIsArticle(true)
+      }
+    } else if (isNaddr) {
+      setLoading(longformLoading)
     }
-  }, [isNaddr, naddrData])
-
-  const addRelevantPerson = useCallback((person: string) => {
-    setRelevantPeople((prev) => new Map(prev).set(person, true))
-  }, [])
+  }, [isNaddr, longformEvent, longformLoading, addRelevantPerson])
 
   const addToThread = useCallback(
     (event: NDKEvent) => {
@@ -160,7 +150,13 @@ export default function ThreadPage({
               )
             )}
             <Widget title="Popular">
-              <PopularFeed displayOptions={{small: true, showDisplaySelector: false, randomSort: true}} />
+              <PopularFeed
+                displayOptions={{
+                  small: true,
+                  showDisplaySelector: false,
+                  randomSort: true,
+                }}
+              />
             </Widget>
           </>
         )}

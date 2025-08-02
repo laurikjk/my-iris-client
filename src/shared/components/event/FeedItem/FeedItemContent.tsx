@@ -2,7 +2,15 @@ import MarketListing from "../../market/MarketListing"
 import ChannelCreation from "../ChannelCreation.tsx"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ZapReceipt from "../ZapReceipt.tsx"
-import {KIND_ZAP_RECEIPT, KIND_REACTION, KIND_TEXT_NOTE, KIND_HIGHLIGHT, KIND_LONG_FORM_CONTENT, KIND_CLASSIFIED, KIND_CHANNEL_CREATE} from "@/utils/constants"
+import {
+  KIND_ZAP_RECEIPT,
+  KIND_REACTION,
+  KIND_TEXT_NOTE,
+  KIND_HIGHLIGHT,
+  KIND_LONG_FORM_CONTENT,
+  KIND_CLASSIFIED,
+  KIND_CHANNEL_CREATE,
+} from "@/utils/constants"
 import Zapraiser from "../Zapraiser.tsx"
 import Highlight from "../Highlight.tsx"
 import TextNote from "../TextNote.tsx"
