@@ -111,13 +111,14 @@ function FeedEditor({
   useEffect(() => {
     const activeTabData = tabs.find((t) => t.id === activeTab)
     if (activeTabData) {
-      setEditingName(getDisplayName(activeTab, activeTabData.name))
+      const config = loadFeedConfig(activeTab)
+      if (config) {
+        const displayName = config.customName || activeTabData.name
+        setEditingName(displayName)
+        setLocalConfig(config)
+      }
     }
-    // Initialize local config
-    if (activeTabConfig) {
-      setLocalConfig(activeTabConfig)
-    }
-  }, [activeTab, tabs, activeTabConfig])
+  }, [activeTab, tabs])
 
   // Helper function to save config if changed
   const saveConfigIfChanged = () => {
