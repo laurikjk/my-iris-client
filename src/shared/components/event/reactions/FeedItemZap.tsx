@@ -1,5 +1,4 @@
 import {LnPayCb, NDKEvent, NDKZapper, NDKPaymentConfirmationLN} from "@nostr-dev-kit/ndk"
-import {useWebLNProvider} from "@/shared/hooks/useWebLNProvider"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
 import {RefObject, useEffect, useState, useRef} from "react"
@@ -27,11 +26,11 @@ interface FeedItemZapProps {
 function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZapProps) {
   const myPubKey = usePublicKey()
   const {defaultZapAmount} = useUserStore()
-  const {activeWallet, activeProviderType} = useWalletProviderStore()
+  const {activeProviderType, sendPayment: walletProviderSendPayment} =
+    useWalletProviderStore()
   const [isZapping, setIsZapping] = useState(false)
   const longPressTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [isLongPress, setIsLongPress] = useState(false)
-  const provider = useWebLNProvider()
 
   const profile = useProfile(event.pubkey)
 
@@ -43,7 +42,7 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
   )
 
   // Quick zap is only enabled if there's a default zap amount AND a wallet is available
-  const hasWallet = activeProviderType !== "disabled" && (activeWallet || provider)
+  const hasWallet = activeProviderType !== "disabled" && activeProviderType !== undefined
   const canQuickZap = !!defaultZapAmount && defaultZapAmount > 0 && hasWallet
 
   const calculateZappedAmount = async (
@@ -102,26 +101,18 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
       const lnPay: LnPayCb = async ({
         pr,
       }): Promise<NDKPaymentConfirmationLN | undefined> => {
-        if (provider) {
-          // Handle payment in background like ZapModal does
-          // Check if provider has sendPayment method (legacy WebLN)
-          if ("sendPayment" in provider && typeof provider.sendPayment === "function") {
-            provider
-              .sendPayment(pr)
-              .then(() => {
-                // Payment succeeded
-              })
-              .catch((error: Error) => {
-                console.warn("Quick zap payment failed:", error)
-                // Store the failed invoice for the modal
-                setFailedInvoice(pr)
-                setShowZapModal(true)
-              })
-          } else {
-            // For NDK wallets, we'll open the zap modal instead of trying direct payment
-            setFailedInvoice(pr)
-            setShowZapModal(true)
-          }
+        if (hasWallet) {
+          // Use unified payment method for all wallet types
+          walletProviderSendPayment(pr)
+            .then(() => {
+              // Payment succeeded
+            })
+            .catch((error: Error) => {
+              console.warn("Quick zap payment failed:", error)
+              // Store the failed invoice for the modal
+              setFailedInvoice(pr)
+              setShowZapModal(true)
+            })
 
           // Return undefined to let NDK know we're handling payment ourselves
           return undefined

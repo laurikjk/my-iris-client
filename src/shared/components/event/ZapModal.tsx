@@ -14,7 +14,6 @@ import {Avatar} from "@/shared/components/user/Avatar"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {Name} from "@/shared/components/user/Name"
 import {useUserStore} from "@/stores/user"
-import {useWebLNProvider} from "@/shared/hooks/useWebLNProvider"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {ndk} from "@/utils/ndk"
 
@@ -36,12 +35,11 @@ function ZapModal({
   paymentFailed,
 }: ZapModalProps) {
   const {defaultZapAmount, setDefaultZapAmount} = useUserStore()
-  const webLNProvider = useWebLNProvider()
-  const {activeWallet, activeProviderType} = useWalletProviderStore()
+  const {activeProviderType, sendPayment: walletProviderSendPayment} =
+    useWalletProviderStore()
 
-  // Use active wallet from wallet provider store, fallback to webLNProvider
-  const provider =
-    activeProviderType !== "disabled" ? activeWallet || webLNProvider : null
+  // Check if we have any wallet available
+  const hasWallet = activeProviderType !== "disabled" && activeProviderType !== undefined
   const [copiedPaymentRequest, setCopiedPaymentRequest] = useState(false)
   const [noAddress, setNoAddress] = useState(false)
   const [showQRCode, setShowQRCode] = useState(!!initialInvoice)
@@ -122,26 +120,19 @@ function ZapModal({
         setBolt11Invoice(pr)
         setShowQRCode(true)
 
-        if (provider) {
+        if (hasWallet) {
           // Attempt wallet payment in background (fire-and-forget)
           setTimeout(() => {
-            // Check if provider has sendPayment method (legacy WebLN)
-            if ("sendPayment" in provider && typeof provider.sendPayment === "function") {
-              provider
-                .sendPayment(pr)
-                .then(() => {
-                  setZapped(true)
-                  setZapRefresh(!zapRefresh)
-                  onClose()
-                })
-                .catch((error: Error) => {
-                  console.warn("Wallet payment failed, user can use QR code:", error)
-                  setError("Wallet payment failed. Please use the QR code below.")
-                })
-            } else {
-              // For NDK wallets, show QR code for manual payment
-              setError("Please use the QR code below to complete the payment.")
-            }
+            walletProviderSendPayment(pr)
+              .then(() => {
+                setZapped(true)
+                setZapRefresh(!zapRefresh)
+                onClose()
+              })
+              .catch((error: Error) => {
+                console.warn("Wallet payment failed, user can use QR code:", error)
+                setError("Wallet payment failed. Please use the QR code below.")
+              })
           }, 100) // Small delay to let QR code render first
         }
 
@@ -280,7 +271,7 @@ function ZapModal({
 
         {showQRCode ? (
           <div className="flex flex-col items-center gap-4">
-            {provider && !error && !paymentFailed && (
+            {hasWallet && !error && !paymentFailed && (
               <div className="alert alert-info">
                 <div className="loading loading-spinner loading-sm"></div>
                 <span>Attempting to pay with your wallet...</span>
@@ -292,7 +283,7 @@ function ZapModal({
               </div>
             )}
             <p className="text-center">
-              {provider ? "Or scan" : "Scan"} the QR code to zap <b>{zapAmount} sats</b>
+              {hasWallet ? "Or scan" : "Scan"} the QR code to zap <b>{zapAmount} sats</b>
             </p>
             <div className="w-40 h-40">
               {qrCodeUrl && <img id="qr-image" className="w-40 h-40" src={qrCodeUrl} />}
