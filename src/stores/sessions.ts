@@ -70,9 +70,26 @@ interface SessionStoreActions {
 
 type SessionStore = SessionStoreState & SessionStoreActions
 const subscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
-  const sub = ndk().subscribe(filter)
-  sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
-  return () => sub.stop()
+  try {
+    const sub = ndk().subscribe(filter)
+    sub.on("event", (e) => {
+      try {
+        onEvent(e as unknown as VerifiedEvent)
+      } catch (error) {
+        console.warn("Error handling event in subscription:", error)
+      }
+    })
+    return () => {
+      try {
+        sub.stop()
+      } catch (error) {
+        console.warn("Error stopping subscription:", error)
+      }
+    }
+  } catch (error) {
+    console.warn("Error creating subscription:", error)
+    return () => {}
+  }
 }
 
 const routeEventToStore = (sessionId: string, message: MessageType) => {
@@ -105,7 +122,7 @@ const store = create<SessionStore>()(
           }
           const event = invite.getEvent() as RawEvent
           console.log("Publishing public invite...", event)
-          await NDKEventFromRawEvent(event)
+          NDKEventFromRawEvent(event)
             .publish()
             .then((res) => console.log("Published public invite", res))
             .catch((e) => console.warn("Error publishing public invite:", e))
@@ -158,20 +175,24 @@ const store = create<SessionStore>()(
           )
           store.setState(newState)
           const sessionUnsubscribe = session.onEvent((event) => {
-            // Handle group creation event (kind 40)
-            if (event.kind === 40 && event.content) {
-              try {
-                const group = JSON.parse(event.content)
-                const groups = useGroupsStore.getState().groups
-                if (!groups[group.id]) {
-                  useGroupsStore.getState().addGroup(group)
+            try {
+              // Handle group creation event (kind 40)
+              if (event.kind === 40 && event.content) {
+                try {
+                  const group = JSON.parse(event.content)
+                  const groups = useGroupsStore.getState().groups
+                  if (!groups[group.id]) {
+                    useGroupsStore.getState().addGroup(group)
+                  }
+                } catch (e) {
+                  console.warn("Failed to parse group from kind 40 event", e)
                 }
-              } catch (e) {
-                console.warn("Failed to parse group from kind 40 event", e)
               }
+              routeEventToStore(sessionId, event)
+              store.setState({sessions: new Map(store.getState().sessions)})
+            } catch (error) {
+              console.warn("Error handling session event:", error)
             }
-            routeEventToStore(sessionId, event)
-            store.setState({sessions: new Map(store.getState().sessions)})
           })
           sessionListeners.set(sessionId, sessionUnsubscribe)
         })
@@ -270,7 +291,7 @@ const store = create<SessionStore>()(
           encrypt
         )
         const e = NDKEventFromRawEvent(event)
-        await e
+        e
           .publish()
           .then((res) => console.log("published", res))
           .catch((e) => console.warn("Error publishing event:", e))
@@ -285,9 +306,13 @@ const store = create<SessionStore>()(
           session
         )
         const sessionUnsubscribe = session.onEvent((event) => {
-          routeEventToStore(sessionId, event)
-          // make sure we persist session state
-          set({sessions: new Map(get().sessions)})
+          try {
+            routeEventToStore(sessionId, event)
+            // make sure we persist session state
+            set({sessions: new Map(get().sessions)})
+          } catch (error) {
+            console.warn("Error handling session event:", error)
+          }
         })
         sessionListeners.set(sessionId, sessionUnsubscribe)
         set(newState)
@@ -344,20 +369,24 @@ const store = create<SessionStore>()(
               )
               store.setState(newState)
               const sessionUnsubscribe = session.onEvent((event) => {
-                // Handle group creation event (kind 40)
-                if (event.kind === 40 && event.content) {
-                  try {
-                    const group = JSON.parse(event.content)
-                    const groups = useGroupsStore.getState().groups
-                    if (!groups[group.id]) {
-                      useGroupsStore.getState().addGroup(group)
+                try {
+                  // Handle group creation event (kind 40)
+                  if (event.kind === 40 && event.content) {
+                    try {
+                      const group = JSON.parse(event.content)
+                      const groups = useGroupsStore.getState().groups
+                      if (!groups[group.id]) {
+                        useGroupsStore.getState().addGroup(group)
+                      }
+                    } catch (e) {
+                      console.warn("Failed to parse group from kind 40 event", e)
                     }
-                  } catch (e) {
-                    console.warn("Failed to parse group from kind 40 event", e)
                   }
+                  routeEventToStore(sessionId, event)
+                  store.setState({sessions: new Map(store.getState().sessions)})
+                } catch (error) {
+                  console.warn("Error handling session event:", error)
                 }
-                routeEventToStore(sessionId, event)
-                store.setState({sessions: new Map(store.getState().sessions)})
               })
               sessionListeners.set(sessionId, sessionUnsubscribe)
             }
@@ -376,21 +405,25 @@ const store = create<SessionStore>()(
             store.setState({lastSeen: newLastSeen})
           }
           const sessionUnsubscribe = session.onEvent((event) => {
-            // Handle group creation event (kind 40)
-            if (event.kind === 40 && event.content) {
-              try {
-                const group = JSON.parse(event.content)
-                const groups = useGroupsStore.getState().groups
-                if (!groups[group.id]) {
-                  useGroupsStore.getState().addGroup(group)
+            try {
+              // Handle group creation event (kind 40)
+              if (event.kind === 40 && event.content) {
+                try {
+                  const group = JSON.parse(event.content)
+                  const groups = useGroupsStore.getState().groups
+                  if (!groups[group.id]) {
+                    useGroupsStore.getState().addGroup(group)
+                  }
+                  console.log("group created", group)
+                } catch (e) {
+                  console.warn("Failed to parse group from kind 40 event", e)
                 }
-                console.log("group created", group)
-              } catch (e) {
-                console.warn("Failed to parse group from kind 40 event", e)
               }
+              routeEventToStore(sessionId, event)
+              store.setState({sessions: new Map(store.getState().sessions)})
+            } catch (error) {
+              console.warn("Error handling session event:", error)
             }
-            routeEventToStore(sessionId, event)
-            store.setState({sessions: new Map(store.getState().sessions)})
           })
           sessionListeners.set(sessionId, sessionUnsubscribe)
         })

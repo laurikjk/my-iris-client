@@ -130,7 +130,7 @@ const Message = ({
 
     const now = Math.floor(Date.now() / 1000)
     const messageAge = now - message.created_at
-    const timeUntilAlert = 10 - messageAge
+    const timeUntilAlert = 5 - messageAge
 
     if (timeUntilAlert > 0) {
       const timer = setTimeout(() => {
