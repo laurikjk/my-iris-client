@@ -4,7 +4,7 @@ import {onConnected, disconnect} from "@getalby/bitcoin-connect"
 import {WebLNProvider} from "@/types/global"
 import {useUserStore} from "@/stores/user"
 
-export type WalletProviderType = "native" | "nwc" | "disabled"
+export type WalletProviderType = "native" | "nwc" | "disabled" | undefined
 
 export interface NWCConnection {
   id: string
@@ -56,7 +56,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
   persist(
     (set, get) => ({
       // Initial state
-      activeProviderType: "disabled",
+      activeProviderType: undefined,
       activeNWCId: undefined,
       nativeProvider: null,
       activeProvider: null,
@@ -249,38 +249,49 @@ export const useWalletProviderStore = create<WalletProviderState>()(
       initializeProviders: async () => {
         const state = get()
 
-        // Check for native WebLN
-        if (window.webln) {
-          try {
-            const enabled = await window.webln.isEnabled()
-            if (enabled && typeof window.webln.getBalance === "function") {
-              set({nativeProvider: window.webln})
-
-              // If currently disabled and no other wallets, set native as active
-              if (
-                state.activeProviderType === "disabled" &&
-                state.nwcConnections.length === 0
-              ) {
+        // Only run wallet discovery if activeProviderType is undefined
+        if (state.activeProviderType === undefined) {
+          console.log("🔍 Starting wallet discovery...")
+          
+          // Check for native WebLN first
+          if (window.webln) {
+            try {
+              const enabled = await window.webln.isEnabled()
+              if (enabled && typeof window.webln.getBalance === "function") {
+                console.log("🔍 Found native WebLN, setting as temporary active")
                 set({
+                  nativeProvider: window.webln,
                   activeProviderType: "native",
                   activeProvider: window.webln,
                 })
-              } else if (state.activeProviderType === "native") {
-                // If already set to native, update the provider
-                set({activeProvider: window.webln})
               }
+            } catch (error) {
+              console.warn("Failed to enable native WebLN provider:", error)
             }
-          } catch (error) {
-            console.warn("Failed to enable native WebLN provider:", error)
           }
-        }
 
-        // Start Cashu NWC checking on initialization
-        get().startCashuNWCChecking()
+          // Start Cashu discovery - this will override WebLN if found
+          get().startCashuNWCChecking()
+        } else {
+          // Provider already selected, just update providers
+          if (window.webln) {
+            try {
+              const enabled = await window.webln.isEnabled()
+              if (enabled && typeof window.webln.getBalance === "function") {
+                set({nativeProvider: window.webln})
+                if (state.activeProviderType === "native") {
+                  set({activeProvider: window.webln})
+                }
+              }
+            } catch (error) {
+              console.warn("Failed to enable native WebLN provider:", error)
+            }
+          }
 
-        // Initialize active NWC connection if selected
-        if (state.activeProviderType === "nwc" && state.activeNWCId) {
-          await get().connectToNWC(state.activeNWCId)
+          // Initialize active NWC connection if selected
+          if (state.activeProviderType === "nwc" && state.activeNWCId) {
+            await get().connectToNWC(state.activeNWCId)
+          }
         }
 
         // Watch for changes in Cashu enabled state
@@ -384,9 +395,9 @@ export const useWalletProviderStore = create<WalletProviderState>()(
                   console.log("🔍 Found existing Cashu NWC connection, setting up")
                   set({__cashuChecked: true})
 
-                  // Only set as active if no wallet is currently active
-                  if (state.activeProviderType === "disabled") {
-                    console.log("🔍 No active wallet, setting Cashu NWC as active")
+                  // Set as active if no wallet is active, or override WebLN during discovery
+                  if (state.activeProviderType === undefined || state.activeProviderType === "native") {
+                    console.log("🔍 Setting Cashu NWC as active (overriding WebLN if present)")
                     set({
                       activeProviderType: "nwc",
                       activeNWCId: existingConnection.id,
@@ -403,9 +414,9 @@ export const useWalletProviderStore = create<WalletProviderState>()(
 
                 set({__cashuChecked: true})
 
-                // Only set as active if no wallet is currently active
-                if (state.activeProviderType === "disabled") {
-                  console.log("🔍 No active wallet, setting new Cashu NWC as active")
+                // Set as active if no wallet is active, or override WebLN during discovery
+                if (state.activeProviderType === undefined || state.activeProviderType === "native") {
+                  console.log("🔍 Setting new Cashu NWC as active (overriding WebLN if present)")
                   set({
                     activeProviderType: "nwc",
                     activeNWCId: connectionId,
@@ -413,7 +424,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
                   get().refreshActiveProvider()
                 } else {
                   console.log(
-                    "🔍 Wallet already active, Cashu NWC added but not set as active"
+                    "🔍 Other wallet type already active, Cashu NWC added but not set as active"
                   )
                 }
               }

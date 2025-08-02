@@ -100,7 +100,7 @@ const WalletSettings = () => {
   }
 
   const getBalanceDisplay = () => {
-    if (activeProviderType === "disabled") return "No wallet connected"
+    if (activeProviderType === "disabled" || activeProviderType === undefined) return "No wallet connected"
     if (balance !== null) return `${balance.toLocaleString()} sats`
     return "Loading..."
   }
@@ -112,7 +112,7 @@ const WalletSettings = () => {
       nwcConnectionsCount: nwcConnections.length,
     })
 
-    if (activeProviderType === "disabled") return "No wallet connected"
+    if (activeProviderType === "disabled" || activeProviderType === undefined) return "No wallet connected"
     if (activeProviderType === "native") return "Native WebLN"
     if (activeProviderType === "nwc" && activeNWCId) {
       const connection = nwcConnections.find((c) => c.id === activeNWCId)

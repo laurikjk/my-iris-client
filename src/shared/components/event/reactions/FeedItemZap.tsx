@@ -105,6 +105,8 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
             })
             .catch((error) => {
               console.warn("Quick zap payment failed:", error)
+              // Open zap modal on payment failure
+              setShowZapModal(true)
             })
 
           // Return undefined to let NDK know we're handling payment ourselves
@@ -123,6 +125,8 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
       await zapper.zap()
     } catch (error) {
       console.warn("Unable to one-click zap:", error)
+      // Open zap modal on zap failure
+      setShowZapModal(true)
     } finally {
       setIsZapping(false)
     }

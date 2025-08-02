@@ -118,10 +118,11 @@ const Layout = () => {
               <iframe
                 id="cashu-wallet"
                 title="Background Cashu Wallet"
-                src="/cashu"
+                src="/cashu/index.html#/"
                 className="fixed top-0 left-0 w-0 h-0 border-none"
                 style={{zIndex: -1}}
                 referrerPolicy="no-referrer"
+                sandbox="allow-scripts allow-same-origin allow-forms"
               />
             )}
           </ErrorBoundary>

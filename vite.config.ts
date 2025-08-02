@@ -82,11 +82,6 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/cashu": {
-        target: "http://127.0.0.1:8080", // Serve cashu.me here for development
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/cashu/, ""),
-      },
       "/user": {
         target: "http://localhost:8000",
         changeOrigin: true,

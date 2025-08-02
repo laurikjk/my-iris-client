@@ -15,8 +15,8 @@ export const useWalletBalance = () => {
     const currentProvider = activeProvider || webLNProvider
     setProvider(currentProvider)
 
-    // Clear balance when wallet is disabled
-    if (activeProviderType === "disabled") {
+    // Clear balance when wallet is disabled or uninitialized
+    if (activeProviderType === "disabled" || activeProviderType === undefined) {
       setBalance(null)
       return
     }
@@ -62,8 +62,8 @@ export const useWalletBalance = () => {
       retryTimeoutRef.current = null
     }
 
-    // Clear balance immediately when wallet is disabled
-    if (activeProviderType === "disabled") {
+    // Clear balance immediately when wallet is disabled or uninitialized
+    if (activeProviderType === "disabled" || activeProviderType === undefined) {
       setBalance(null)
       return
     }
