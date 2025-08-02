@@ -51,7 +51,7 @@ interface WalletProviderState {
   // Wallet operations
   sendPayment: (invoice: string) => Promise<{preimage?: string}>
   createInvoice: (amount: number, description?: string) => Promise<{invoice: string}>
-  getBalance: () => Promise<number | null>
+  getBalance: () => Promise<number | null | undefined>
   getInfo: () => Promise<Record<string, unknown> | null>
 }
 
@@ -512,13 +512,73 @@ export const useWalletProviderStore = create<WalletProviderState>()(
 
       getBalance: async () => {
         try {
-          const {activeWallet} = get()
+          const {activeWallet, activeProviderType} = get()
+          console.log(
+            "🔍 getBalance called, activeProviderType:",
+            activeProviderType,
+            "hasActiveWallet:",
+            !!activeWallet
+          )
 
           if (!activeWallet) {
+            console.log("🔍 No active wallet, returning null")
             return null
           }
 
-          // For NDK wallets, check if balance is available
+          // Handle NWC wallets with proper balance request
+          if (activeProviderType === "nwc" && activeWallet instanceof NDKNWCWallet) {
+            console.log("🔍 Entering NWC balance request path")
+            try {
+              console.log("🔍 Making NWC balance request...")
+
+              // Add timeout to prevent hanging
+              const timeoutMs = 10000 // 10 seconds
+              const response = await Promise.race([
+                activeWallet.req("get_balance", {}),
+                new Promise((_, reject) =>
+                  setTimeout(() => reject(new Error("NWC request timed out")), timeoutMs)
+                ),
+              ])
+
+              console.log("🔍 NWC balance response received:", response)
+
+              // Check if response has the expected structure from the logs
+              if (response && typeof response === "object") {
+                // Try different possible response structures
+                if (
+                  "result" in response &&
+                  response.result &&
+                  typeof response.result === "object" &&
+                  "balance" in response.result
+                ) {
+                  // Structure: {result: {balance: 9000}}
+                  const balance = Math.floor((response.result.balance as number) / 1000)
+                  console.log(
+                    "🔍 Parsed NWC balance (from result.balance):",
+                    balance,
+                    "sats"
+                  )
+                  return balance
+                } else if ("balance" in response) {
+                  // Structure: {balance: 9000}
+                  const balance = Math.floor((response.balance as number) / 1000)
+                  console.log("🔍 Parsed NWC balance (from balance):", balance, "sats")
+                  return balance
+                }
+              }
+              console.warn("🔍 Unexpected NWC balance response structure:", response)
+            } catch (error) {
+              console.error("🔍 NWC balance request failed with error:", error)
+              // Don't return null on timeout - preserve existing balance
+              if (error instanceof Error && error.message.includes("timed out")) {
+                console.log("🔍 NWC request timed out, preserving existing balance")
+                return undefined // Signal to useWalletBalance to keep current value
+              }
+              return null
+            }
+          }
+
+          // For other wallet types, try NDK balance methods
           const balance = activeWallet.balance
           if (balance && typeof balance === "object" && "amount" in balance) {
             return (balance as {amount: number}).amount || 0

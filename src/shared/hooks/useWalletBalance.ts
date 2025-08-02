@@ -39,8 +39,15 @@ export const useWalletBalance = () => {
 
     const updateBalance = async () => {
       try {
+        console.log("🔍 useWalletBalance: calling getBalance()")
         const balance = await getBalance()
-        setBalance(balance)
+        console.log("🔍 useWalletBalance: getBalance returned:", balance)
+        // Only update balance if we got a valid response (null or number, not undefined)
+        if (balance !== undefined) {
+          setBalance(balance)
+        } else {
+          console.log("🔍 Preserving existing balance due to timeout")
+        }
         return true
       } catch (error) {
         // Don't spam console with expected balance request failures
