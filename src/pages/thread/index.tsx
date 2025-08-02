@@ -1,6 +1,7 @@
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
+import AuthorArticlesFeed from "@/shared/components/feed/AuthorArticlesFeed"
 import FollowList from "@/pages/user/components/FollowList"
 import Header from "@/shared/components/header/Header"
 import {Name} from "@/shared/components/user/Name"
@@ -12,6 +13,7 @@ import {useState, useEffect, useCallback} from "react"
 import {getTags} from "@/utils/nostr"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
+import {KIND_LONG_FORM_CONTENT} from "@/utils/constants"
 
 export default function ThreadPage({
   id,
@@ -27,6 +29,7 @@ export default function ThreadPage({
   const [event, setEvent] = useState<NDKEvent | null>(null)
   const [loading, setLoading] = useState(isNaddr)
   const [threadAuthor, setThreadAuthor] = useState<string | null>(null)
+  const [isArticle, setIsArticle] = useState(false)
 
   useEffect(() => {
     setThreadAuthor(null)
@@ -51,6 +54,10 @@ export default function ThreadPage({
               setThreadAuthor(e.pubkey)
               addRelevantPerson(e.pubkey)
             }
+            // Check if this is an article
+            if (e.kind === KIND_LONG_FORM_CONTENT) {
+              setIsArticle(true)
+            }
           }
           setLoading(false)
         })
@@ -73,6 +80,10 @@ export default function ThreadPage({
       )
         return
       if (!threadAuthor) setThreadAuthor(event.pubkey)
+      // Check if this is an article (long-form content)
+      if (event.kind === KIND_LONG_FORM_CONTENT) {
+        setIsArticle(true)
+      }
       addRelevantPerson(event.pubkey)
       for (const user of getTags("p", event.tags)) {
         addRelevantPerson(user)
@@ -130,16 +141,26 @@ export default function ThreadPage({
       <RightColumn>
         {() => (
           <>
-            {relevantPeople.size > 0 && (
-              <Widget title="Relevant people">
-                <FollowList
-                  follows={Array.from(relevantPeople.keys())}
-                  showAbout={true}
+            {isArticle && threadAuthor ? (
+              <Widget title="More from this author">
+                <AuthorArticlesFeed
+                  authorPubkey={threadAuthor}
+                  currentArticleId={event?.id || id}
+                  maxItems={5}
                 />
               </Widget>
+            ) : (
+              relevantPeople.size > 0 && (
+                <Widget title="Relevant people">
+                  <FollowList
+                    follows={Array.from(relevantPeople.keys())}
+                    showAbout={true}
+                  />
+                </Widget>
+              )
             )}
             <Widget title="Popular">
-              <PopularFeed displayOptions={{small: true, showDisplaySelector: false}} />
+              <PopularFeed displayOptions={{small: true, showDisplaySelector: false, randomSort: true}} />
             </Widget>
           </>
         )}

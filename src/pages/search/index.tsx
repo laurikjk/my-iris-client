@@ -135,7 +135,7 @@ function SearchPage() {
         {() => (
           <>
             <Widget title="Popular">
-              <PopularFeed displayOptions={{small: true, showDisplaySelector: false}} />
+              <PopularFeed displayOptions={{small: true, showDisplaySelector: false, randomSort: true}} />
             </Widget>
           </>
         )}

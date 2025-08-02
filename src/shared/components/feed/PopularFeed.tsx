@@ -1,15 +1,12 @@
 import {memo} from "react"
-import EventBorderless from "@/shared/components/event/EventBorderless"
-import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
-import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
-import MediaFeed from "./MediaFeed"
-import {DisplayAsSelector} from "./DisplayAsSelector"
+import FeedWidget from "./FeedWidget"
 import usePopularHomeFeedEvents from "@/shared/hooks/usePopularHomeFeedEvents"
 import {useFeedStore} from "@/stores/feed"
 
 interface PopularFeedDisplayOptions {
   small?: boolean
   showDisplaySelector?: boolean
+  randomSort?: boolean
 }
 
 interface PopularFeedProps {
@@ -19,10 +16,11 @@ interface PopularFeedProps {
 const defaultDisplayOptions: PopularFeedDisplayOptions = {
   small: false,
   showDisplaySelector: true,
+  randomSort: false,
 }
 
 const PopularFeed = memo(function PopularFeed({displayOptions = {}}: PopularFeedProps) {
-  const {small, showDisplaySelector} = {
+  const {small, showDisplaySelector, randomSort} = {
     ...defaultDisplayOptions,
     ...displayOptions,
   }
@@ -30,44 +28,19 @@ const PopularFeed = memo(function PopularFeed({displayOptions = {}}: PopularFeed
   const {events, loadMore, loading} = usePopularHomeFeedEvents()
   const {feedDisplayAs: displayAs, setFeedDisplayAs: setDisplayAs} = useFeedStore()
 
-  if (events.length === 0) {
-    return (
-      <div
-        className={
-          small ? "px-4" : "p-8 flex items-center justify-center text-base-content/50"
-        }
-      >
-        {loading ? "Loading popular posts..." : "No popular posts found"}
-      </div>
-    )
-  }
-
-  if (small) {
-    return (
-      <InfiniteScroll onLoadMore={loadMore}>
-        <div className="flex flex-col gap-4 text-base-content/50">
-          {events.map((event) => (
-            <EventBorderless key={event.id} eventId={event.id} />
-          ))}
-        </div>
-      </InfiniteScroll>
-    )
-  }
-
   return (
-    <>
-      {showDisplaySelector && (
-        <DisplayAsSelector activeSelection={displayAs} onSelect={setDisplayAs} />
-      )}
-
-      <InfiniteScroll onLoadMore={loadMore}>
-        {displayAs === "grid" ? (
-          <MediaFeed events={events} />
-        ) : (
-          events.map((event) => <FeedItem key={event.id} event={event} />)
-        )}
-      </InfiniteScroll>
-    </>
+    <FeedWidget
+      events={events}
+      loading={loading}
+      loadMore={loadMore}
+      displayAs={small ? "borderless" : displayAs}
+      showDisplaySelector={showDisplaySelector}
+      onDisplayAsChange={setDisplayAs}
+      emptyMessage="No popular posts found"
+      loadingMessage="Loading popular posts..."
+      small={small}
+      randomSort={randomSort}
+    />
   )
 })
 
