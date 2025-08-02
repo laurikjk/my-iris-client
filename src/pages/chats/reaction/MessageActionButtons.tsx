@@ -7,7 +7,7 @@ import {KIND_REACTION} from "@/utils/constants"
 import {MessageDropdown} from "./MessageDropdown"
 import {MessageInfoModal} from "./MessageInfoModal"
 
-type MessageReactionButtonProps = {
+type MessageActionButtonsProps = {
   messageId: string
   sessionId: string
   isUser: boolean
@@ -25,7 +25,7 @@ type EmojiData = {
   [key: string]: unknown
 }
 
-const MessageReactionButton = ({
+const MessageActionButtons = ({
   messageId,
   sessionId,
   isUser,
@@ -33,7 +33,7 @@ const MessageReactionButton = ({
   onSendReaction,
   nostrEventId,
   message,
-}: MessageReactionButtonProps) => {
+}: MessageActionButtonsProps) => {
   const {sendMessage} = useSessionsStore()
   const [showReactionsPicker, setShowReactionsPicker] = useState(false)
   const [pickerPosition, setPickerPosition] = useState<{clientY?: number}>({})
@@ -108,10 +108,12 @@ const MessageReactionButton = ({
         isOpen={showInfoModal}
         onClose={() => setShowInfoModal(false)}
         nostrEventId={nostrEventId}
+        sessionId={sessionId}
+        messageId={messageId}
         message={message}
       />
     </div>
   )
 }
 
-export default MessageReactionButton
+export default MessageActionButtons

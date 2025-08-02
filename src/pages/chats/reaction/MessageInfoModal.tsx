@@ -3,6 +3,7 @@ import {RiFileCopyLine, RiCheckLine, RiRadioLine} from "@remixicon/react"
 import classNames from "classnames"
 import Modal from "@/shared/components/ui/Modal"
 import {ndk} from "@/utils/ndk"
+import {useEventsStore} from "@/stores/events"
 import {nip19} from "nostr-tools"
 import {useRebroadcast} from "@/shared/hooks/useRebroadcast"
 
@@ -10,6 +11,8 @@ type MessageInfoModalProps = {
   isOpen: boolean
   onClose: () => void
   nostrEventId?: string
+  sessionId?: string
+  messageId?: string
   message?: {
     created_at?: number
     tags?: string[][]
@@ -20,12 +23,15 @@ export const MessageInfoModal = ({
   isOpen,
   onClose,
   nostrEventId,
+  sessionId,
+  messageId,
   message,
 }: MessageInfoModalProps) => {
   const [copiedEventId, setCopiedEventId] = useState(false)
   const [relayStatus, setRelayStatus] = useState<Record<string, boolean>>({})
   const [showRawMessage, setShowRawMessage] = useState(false)
   const {rebroadcast, isRebroadcasting, rebroadcastSuccess} = useRebroadcast()
+  const {updateMessage} = useEventsStore()
 
   const handleCopyEventId = async () => {
     if (nostrEventId) {
@@ -41,7 +47,17 @@ export const MessageInfoModal = ({
 
   const handleRebroadcast = async () => {
     if (!nostrEventId) return
-    await rebroadcast(nostrEventId)
+    const success = await rebroadcast(nostrEventId)
+
+    // If rebroadcast was successful, mark message as sent to relays and re-check status
+    if (success && sessionId && messageId) {
+      updateMessage(sessionId, messageId, {sentToRelays: true})
+
+      // Re-check relay status after a short delay to update the UI
+      setTimeout(() => {
+        checkRelayStatus()
+      }, 1000)
+    }
   }
 
   const getTimestampInfo = () => {
@@ -100,6 +116,14 @@ export const MessageInfoModal = ({
         }
       }
       setRelayStatus(status)
+
+      // Update message store with sentToRelays flag based on relay status
+      // Only update if we found it on relays, don't downgrade from true to false
+      const foundOnAnyRelay = Object.values(status).some((found) => found)
+      if (sessionId && messageId && foundOnAnyRelay) {
+        updateMessage(sessionId, messageId, {sentToRelays: true})
+      }
+
       sub.stop()
     })
 
@@ -107,6 +131,13 @@ export const MessageInfoModal = ({
     setTimeout(() => {
       sub.stop()
       setRelayStatus(status)
+
+      // Update message store with sentToRelays flag based on relay status
+      // Only update if we found it on relays, don't downgrade from true to false
+      const foundOnAnyRelay = Object.values(status).some((found) => found)
+      if (sessionId && messageId && foundOnAnyRelay) {
+        updateMessage(sessionId, messageId, {sentToRelays: true})
+      }
     }, 3000)
   }
 

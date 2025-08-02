@@ -41,6 +41,9 @@ const recreateSearchIndex = () => {
   })
 }
 
+// Track if we're currently fetching profiles to prevent infinite loops
+let isFetchingProfiles = false
+
 // Update the search index with new user data (internal)
 const updateDoubleRatchetSearchIndexImmediate = () => {
   // Update all users' profiles in the map
@@ -64,13 +67,15 @@ const updateDoubleRatchetSearchIndexImmediate = () => {
   recreateSearchIndex()
   console.log("Updated double ratchet search index", userData.size)
 
-  // If we have users without profiles, fetch them all at once
+  // If we have users without profiles and we're not already fetching, fetch them
   const usersWithoutProfiles = Array.from(doubleRatchetUsers).filter(
     (pubkey) => !profileCache.get(pubkey)
   )
 
-  if (usersWithoutProfiles.length > 0) {
+  if (usersWithoutProfiles.length > 0 && !isFetchingProfiles) {
     console.log("Fetching profiles for", usersWithoutProfiles.length, "users")
+    isFetchingProfiles = true
+
     const sub = ndk().subscribe(
       {kinds: [KIND_METADATA], authors: usersWithoutProfiles},
       {closeOnEose: true}
@@ -91,6 +96,7 @@ const updateDoubleRatchetSearchIndexImmediate = () => {
 
     // Update search index again when profiles are loaded
     sub.on("eose", () => {
+      isFetchingProfiles = false
       updateDoubleRatchetSearchIndexImmediate()
     })
   }

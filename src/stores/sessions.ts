@@ -199,6 +199,11 @@ const store = create<SessionStore>()(
           const e = NDKEventFromRawEvent(publishedEvent)
           await e.publish(undefined, undefined, 0) // required relay count 0
           console.log("published", publishedEvent.id)
+
+          // Update message store to mark as sent to relays
+          useEventsStore
+            .getState()
+            .updateMessage(sessionId, message.id, {sentToRelays: true})
         } catch (err) {
           console.warn("Error publishing event:", err)
         }
