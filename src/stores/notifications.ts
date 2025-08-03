@@ -56,13 +56,5 @@ if (typeof window !== "undefined") {
   ).useNotificationsStore = useNotificationsStore
 }
 
-export const useLatestNotification = () =>
-  useNotificationsStore((state) => state.latestNotification)
 export const useRefreshRouteSignal = () =>
   useNotificationsStore((state) => state.refreshRouteSignal)
-export const useNotificationsDeclined = () =>
-  useNotificationsStore((state) => state.notificationsDeclined)
-export const useNotificationsSeenAt = () =>
-  useNotificationsStore((state) => state.notificationsSeenAt)
-export const useGoToNotifications = () =>
-  useNotificationsStore((state) => state.goToNotifications)

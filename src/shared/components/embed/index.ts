@@ -96,11 +96,6 @@ export const mediaEmbeds = [
   WavLake,
 ]
 
-// For textEmbeds, include EncryptedUrl even if not in mediaEmbeds
-export const textEmbeds = allEmbeds.filter(
-  (e) => mediaEmbeds.includes(e) || e === EncryptedUrl
-)
-
 export const hasMedia = (e: {content: string}) => {
   for (const embed of mediaEmbeds) {
     if (e.content.match(embed.regex)) {

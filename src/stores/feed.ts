@@ -306,9 +306,6 @@ export const useFeedStore = create<FeedState>()(
   )
 )
 
-export const useActiveFeed = () => useFeedStore((state) => state.activeFeed)
-export const useDisplayCount = () => useFeedStore((state) => state.displayCount)
-export const useFeedDisplayAs = () => useFeedStore((state) => state.feedDisplayAs)
 export const useEnabledFeedIds = () => useFeedStore((state) => state.enabledFeedIds)
 export const useFeedConfigs = () => useFeedStore((state) => state.feedConfigs)
 

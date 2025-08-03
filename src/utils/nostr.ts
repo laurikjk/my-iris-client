@@ -1,4 +1,4 @@
-import {NDKEvent, NDKRelayList, NDKTag} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
 import {eventRegex} from "@/shared/components/embed/nostr/NostrNote"
 import {decode} from "light-bolt11-decoder"
 import {profileCache} from "./profileCache"
@@ -6,67 +6,6 @@ import AnimalName from "./AnimalName"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 import {KIND_REPOST, KIND_TEXT_NOTE, KIND_ZAP_RECEIPT} from "@/utils/constants"
-
-export const ISSUE_REGEX =
-  /^\/apps\/git\/repos\/[a-zA-Z0-9_-]+\/issues\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/title$/
-
-export const PR_REGEX =
-  /^\/apps\/git\/repos\/[a-zA-Z0-9_-]+\/pull-requests\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/title$/
-
-// ref format: uuid:type:pubKey:repoId // (issue_pr_uuid):(i|p):(issue_pr_author):(repositoryId)
-export const ISSUE_PR_REF_REGEX =
-  /((?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):(?:i|p):(?:[0-9a-f]{64}):(?:[a-zA-Z0-9]*))/g
-
-// turn a UNIX timestamp into "dd/mm/yyyy hh:mm"
-export function formatUnixTimestamp(timestamp: number): string {
-  const now = new Date()
-  const date = new Date(timestamp * 1000) // Convert seconds to milliseconds
-
-  const monthAbbreviations = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ]
-
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-  const diffInMinutes = Math.floor(diffInSeconds / 60)
-  const diffInHours = Math.floor(diffInMinutes / 60)
-  const diffInDays = Math.floor(diffInHours / 24)
-  const diffInYears = now.getFullYear() - date.getFullYear()
-
-  if (diffInYears >= 1) {
-    // More than a year old, return "dd Jan 2023"
-    const day = String(date.getDate()).padStart(2, "0")
-    const month = monthAbbreviations[date.getMonth()]
-    const year = date.getFullYear()
-    return `${day} ${month} ${year}`
-  } else if (diffInDays >= 1) {
-    // Less than a year old but more than 24 hours, return "Dec 05"
-    const day = String(date.getDate()).padStart(2, "0")
-    const month = monthAbbreviations[date.getMonth()]
-    return `${month} ${day}`
-  } else if (diffInHours >= 1) {
-    if (diffInHours === 1) return "1 hour ago"
-    // Less than 24 hours old but more than 1 hour, return "x hours ago"
-    return `${diffInHours} hours ago`
-  } else if (diffInMinutes >= 1) {
-    if (diffInMinutes === 1) return "1 minute ago"
-    // Less than an hour old but more than 1 minute, return "x minutes ago"
-    return `${diffInMinutes} minutes ago`
-  } else {
-    // Less than a minute old
-    return "just now"
-  }
-}
 
 export function getEventReplyingTo(event: NDKEvent) {
   if (event.kind !== KIND_TEXT_NOTE) {
@@ -140,16 +79,6 @@ export function getEventRoot(event: NDKEvent) {
   return event?.tags?.find((t) => t[0] === "e" && t[1] !== quotedEvent)?.[1]
 }
 
-export function getLikedEventId(event: NDKEvent) {
-  if (!event.tags) {
-    return undefined
-  }
-  return event.tags
-    .slice()
-    .reverse()
-    .find((tag: NDKTag) => tag[0] === "e")?.[1]
-}
-
 export const getTag = (key: string, tags: NDKTag[]): string => {
   for (const t of tags) {
     if (t[0] === key) {
@@ -167,14 +96,6 @@ export const getTags = (key: string, tags: NDKTag[]): string[] => {
     }
   }
   return res
-}
-
-export const npubToHex = (npub: string): string | void => {
-  try {
-    return nip19.decode(npub).data.toString()
-  } catch (error) {
-    console.error("Error decoding npub:", error)
-  }
 }
 
 export const fetchZappedAmount = async (event: NDKEvent): Promise<number> => {
@@ -221,18 +142,6 @@ export const fetchZappedAmount = async (event: NDKEvent): Promise<number> => {
 //   }
 // }
 
-export const sortEventArrayDesc = (events: NDKEvent[]): NDKEvent[] => {
-  return events.sort((a, b) => (b?.created_at || 0) - (a?.created_at || 0))
-}
-
-export const extractUrls = (relays: NDKRelayList): string[] => {
-  const urls: string[] = []
-  relays.tags.forEach((relay) => {
-    urls.push(relay[1])
-  })
-  return urls
-}
-
 export type RawEvent = {
   id: string
   kind: number
@@ -253,30 +162,6 @@ export const NDKEventFromRawEvent = (rawEvent: RawEvent): NDKEvent => {
   ndkEvent.created_at = rawEvent.created_at
   ndkEvent.sig = rawEvent.sig
   ndkEvent.pubkey = rawEvent.pubkey
-  return ndkEvent
-}
-export const serializeEvent = (event: NDKEvent): string => {
-  return JSON.stringify({
-    id: event?.id,
-    pubkey: event?.pubkey,
-    created_at: event?.created_at,
-    kind: event?.kind,
-    tags: event?.tags,
-    content: event?.content,
-    sig: event?.sig,
-  })
-}
-export const deserializeEvent = (event: string): NDKEvent => {
-  const parsedEvent = JSON.parse(event)
-  const ndkEvent = new NDKEvent()
-  ndkEvent.ndk = ndk()
-  ndkEvent.id = parsedEvent.id
-  ndkEvent.kind = parsedEvent.kind
-  ndkEvent.pubkey = parsedEvent.pubkey
-  ndkEvent.created_at = parsedEvent.created_at
-  ndkEvent.content = parsedEvent.content
-  ndkEvent.tags = parsedEvent.tags
-  ndkEvent.sig = parsedEvent.sig
   return ndkEvent
 }
 export const getCachedName = (pubKey: string): string => {
@@ -311,8 +196,4 @@ export const getQuotedEvent = (event: NDKEvent): string | false => {
   const match = event.content.match(eventRegex)
   if (match) return match[1]
   return false
-}
-
-export const isQuote = (event: NDKEvent): boolean => {
-  return !!getQuotedEvent(event)
 }

@@ -49,8 +49,3 @@ export const useDraftStore = create<DraftState>()(
     }
   )
 )
-
-export const useDraftContent = () => useDraftStore((state) => state.content)
-export const useDraftImageMetadata = () => useDraftStore((state) => state.imageMetadata)
-export const useDraftRepliedEventId = () => useDraftStore((state) => state.repliedEventId)
-export const useDraftQuotedEventId = () => useDraftStore((state) => state.quotedEventId)

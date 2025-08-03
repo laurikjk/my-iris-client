@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
     "src/main.tsx",
-    "src/vite-env.d.ts"
+    "src/service-worker.ts"
   ],
   "project": [
     "src/**/*.{ts,tsx}"
@@ -18,7 +18,12 @@
     "src/debug/**"
   ],
   "ignoreDependencies": [
-    "@types/node"
+    "workbox-strategies",
+    "workbox-cacheable-response",
+    "workbox-precaching",
+    "workbox-expiration",
+    "workbox-routing",
+    "workbox-core"
   ],
   "ignoreExportsUsedInFile": true,
   "playwright": {

@@ -2,7 +2,7 @@ import {useState, useCallback} from "react"
 import classNames from "classnames"
 
 import MediaModal from "@/shared/components/media/MediaModal"
-import SwipableCarousel from "@/shared/components/ui/SwipableCarousel"
+import {SwipableCarousel} from "@/shared/components/ui/SwipableCarousel"
 import {useSettingsStore} from "@/stores/settings"
 import {SwipeItem} from "@/shared/hooks/useSwipable"
 import ImageComponent from "./ImageComponent"

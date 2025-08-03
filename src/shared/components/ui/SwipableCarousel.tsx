@@ -273,5 +273,3 @@ export function SwipableCarousel({
     </div>
   )
 }
-
-export default SwipableCarousel

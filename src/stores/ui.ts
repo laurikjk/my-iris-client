@@ -51,10 +51,5 @@ export const useUIStore = create<UIState>()(
   )
 )
 
-export const useIsSidebarOpen = () => useUIStore((state) => state.isSidebarOpen)
-export const useNewPostOpen = () => useUIStore((state) => state.newPostOpen)
-export const useShowLoginDialog = () => useUIStore((state) => state.showLoginDialog)
-export const useGoToNotifications = () => useUIStore((state) => state.goToNotifications)
-export const useHidePWAPrompt = () => useUIStore((state) => state.hidePWAPrompt)
 export const useMediaModalSidebarVisible = () =>
   useUIStore((state) => state.isMediaModalSidebarVisible)

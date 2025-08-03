@@ -34,6 +34,3 @@ export const useWalletStore = create<WalletState>()(
     }
   )
 )
-
-export const useBalance = () => useWalletStore((state) => state.balance)
-export const useProvider = () => useWalletStore((state) => state.provider)
