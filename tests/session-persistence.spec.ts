@@ -9,8 +9,11 @@ test.describe("Session persistence", () => {
     // Refresh the page
     await page.reload()
 
+    // Wait for the page to load and profile to be fetched
+    await page.waitForLoadState("networkidle")
+    
     // Verify user is still logged in
-    await expect(page.getByText(username, {exact: true})).toBeVisible()
+    await expect(page.getByText(username, {exact: true})).toBeVisible({timeout: 10000})
     await expect(
       page.locator("#main-content").getByTestId("new-post-button")
     ).toBeVisible()

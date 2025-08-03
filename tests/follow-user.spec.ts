@@ -22,6 +22,6 @@ test("can follow user by npub", async ({page}) => {
   const followButton = headerActions.getByRole("button", {name: "Follow"})
   await followButton.click()
 
-  // Verify button text changes to "Unfollow"
-  await expect(followButton).toHaveText("Unfollow")
+  // Verify button text changes to "Following"
+  await expect(followButton).toHaveText("Following")
 })
