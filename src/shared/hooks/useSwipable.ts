@@ -8,6 +8,7 @@ import {
   TransitionEvent,
 } from "react"
 import {useScrollDirection} from "./useScrollDirection"
+import {lockScroll} from "@/shared/utils/scrollLock"
 
 export interface SwipeItem {
   url: string
@@ -45,6 +46,7 @@ export interface UseSwipableReturn {
     getNextIndex: () => number
   }
   getTransform: () => string
+  cleanup: () => void
 }
 
 export function useSwipable({
@@ -68,6 +70,7 @@ export function useSwipable({
   const containerRef = useRef<HTMLDivElement>(null)
   const wasDragged = useRef(false)
   const touchStartTime = useRef<number | null>(null)
+  const unlockScrollRef = useRef<(() => void) | null>(null)
   const {
     detectDirection,
     getCurrentDirection,
@@ -121,12 +124,17 @@ export function useSwipable({
     touchStartTime.current = Date.now()
     resetScrollDirection()
 
+    // Lock scroll on touch start for touch events
+    if ("touches" in e && !unlockScrollRef.current) {
+      unlockScrollRef.current = lockScroll({touchAction: "pan-y"})
+    }
+
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
     dragStartX.current = clientX
     dragStartY.current = clientY
     dragLastX.current = clientX
-  }, [])
+  }, [resetScrollDirection])
 
   const onDragMove = useCallback(
     (e: TouchEvent | MouseEvent) => {
@@ -143,6 +151,11 @@ export function useSwipable({
 
       // If scrolling vertically, don't handle carousel movement and allow page scroll
       if (direction === "vertical") {
+        // Unlock scroll to allow vertical scrolling
+        if (unlockScrollRef.current) {
+          unlockScrollRef.current()
+          unlockScrollRef.current = null
+        }
         // Don't preventDefault to allow normal page scrolling
         setIsDragging(false)
         wasDragged.current = false
@@ -178,6 +191,12 @@ export function useSwipable({
   const onDragEnd = useCallback(() => {
     if (!isDragging) return
     setIsDragging(false)
+
+    // Always unlock scroll on drag end
+    if (unlockScrollRef.current) {
+      unlockScrollRef.current()
+      unlockScrollRef.current = null
+    }
 
     // If this was a vertical scroll, don't do carousel navigation
     if (getCurrentDirection() === "vertical") {
@@ -273,6 +292,14 @@ export function useSwipable({
     return finalTransform
   }, [dragX, isTransitioning, transitionDirection])
 
+  // Cleanup function to ensure scroll is unlocked
+  const cleanup = useCallback(() => {
+    if (unlockScrollRef.current) {
+      unlockScrollRef.current()
+      unlockScrollRef.current = null
+    }
+  }, [])
+
   return {
     currentIndex,
     dragX,
@@ -295,5 +322,6 @@ export function useSwipable({
       getNextIndex,
     },
     getTransform,
+    cleanup,
   }
 }

@@ -51,6 +51,7 @@ export function SwipableCarousel({
     handlers,
     navigation,
     getTransform,
+    cleanup,
   } = useSwipable({
     items,
     initialIndex,
@@ -146,8 +147,9 @@ export function SwipableCarousel({
       element.removeEventListener("touchstart", handleTouchStart)
       element.removeEventListener("touchmove", handleTouchMove)
       element.removeEventListener("touchend", handleTouchEnd)
+      cleanup()
     }
-  }, [items.length, handlers])
+  }, [items.length, handlers, cleanup])
 
   if (items.length === 0) return null
 
