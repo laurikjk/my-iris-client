@@ -1,13 +1,14 @@
 import {LnPayCb, NDKEvent, NDKZapper, NDKPaymentConfirmationLN} from "@nostr-dev-kit/ndk"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
-import {RefObject, useEffect, useState, useRef} from "react"
+import {RefObject, useEffect, useState} from "react"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import {getZappingUser} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
 import {decode} from "light-bolt11-decoder"
 import {usePublicKey, useUserStore} from "@/stores/user"
+import {useScrollAwareLongPress} from "@/shared/hooks/useScrollAwareLongPress"
 import Icon from "../../Icons/Icon.tsx"
 import ZapModal from "../ZapModal.tsx"
 import debounce from "lodash/debounce"
@@ -29,8 +30,14 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
   const {activeProviderType, sendPayment: walletProviderSendPayment} =
     useWalletProviderStore()
   const [isZapping, setIsZapping] = useState(false)
-  const longPressTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const [isLongPress, setIsLongPress] = useState(false)
+  const {
+    handleMouseDown: handleLongPressDown,
+    handleMouseMove: handleLongPressMove,
+    handleMouseUp: handleLongPressUp,
+    isLongPress,
+  } = useScrollAwareLongPress({
+    onLongPress: () => setShowZapModal(true),
+  })
 
   const profile = useProfile(event.pubkey)
 
@@ -138,20 +145,6 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
     }
   }
 
-  const handleMouseDown = () => {
-    setIsLongPress(false)
-    longPressTimeout.current = setTimeout(() => {
-      setIsLongPress(true)
-      setShowZapModal(true)
-    }, 500)
-  }
-
-  const handleMouseUp = () => {
-    if (longPressTimeout.current) {
-      clearTimeout(longPressTimeout.current)
-    }
-  }
-
   const handleClick = () => {
     if (!isLongPress) {
       handleZapClick()
@@ -251,11 +244,13 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
           zapped ? "cursor-pointer text-accent" : "cursor-pointer hover:text-accent"
         } flex flex-row items-center gap-1 transition duration-200 ease-in-out min-w-[50px] md:min-w-[80px]`}
         onClick={handleClick}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={handleMouseDown}
-        onTouchEnd={handleMouseUp}
+        onMouseDown={handleLongPressDown}
+        onMouseMove={handleLongPressMove}
+        onMouseUp={handleLongPressUp}
+        onMouseLeave={handleLongPressUp}
+        onTouchStart={handleLongPressDown}
+        onTouchMove={handleLongPressMove}
+        onTouchEnd={handleLongPressUp}
       >
         {isZapping ? (
           <div className="loading loading-spinner loading-xs" />
