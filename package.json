@@ -129,5 +129,10 @@
     "vite-plugin-node-polyfills": "^0.24.0",
     "vite-plugin-pwa": "^1.0.1",
     "vitest": "^3.1.1"
+  },
+  "resolutions": {
+    "@noble/curves": "^1.9.4",
+    "@noble/hashes": "^1.8.0",
+    "@scure/base": "^1.2.6"
   }
 }
