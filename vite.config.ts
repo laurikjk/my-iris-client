@@ -67,6 +67,7 @@ export default defineConfig({
             "@noble/curves",
             "@scure/base",
             "@scure/bip32",
+            "@scure/bip39",
             "classnames",
             "fuse.js",
             "react-string-replace",
