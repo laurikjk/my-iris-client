@@ -45,7 +45,10 @@ test.describe("Message Form - Desktop", () => {
     await messageInput.fill(testMessage)
     await messageInput.press("Enter")
 
-    await expect(page.getByRole("paragraph").filter({hasText: testMessage})).toBeVisible()
+    // Look for the message in the chat area specifically
+    await expect(
+      page.locator(".whitespace-pre-wrap").getByText(testMessage)
+    ).toBeVisible()
 
     await expect(page.getByRole("button", {name: "Send message"})).not.toBeVisible()
   })
@@ -57,7 +60,10 @@ test.describe("Message Form - Desktop", () => {
     await messageInput.fill("   ") // Just spaces
     await messageInput.press("Enter")
 
-    await expect(page.getByRole("paragraph").filter({hasText: "   "})).not.toBeVisible()
+    // Verify empty message doesn't appear in chat
+    await expect(
+      page.locator(".whitespace-pre-wrap").getByText("   ", {exact: true})
+    ).not.toBeVisible()
   })
 
   test("shift + enter adds a new line", async ({page}) => {
@@ -87,7 +93,7 @@ test.describe("Message Form - Desktop", () => {
     const expectedMessage =
       "Hello, this is a test message!\n\n\nThis text should appear after three newlines"
     await expect(
-      page.getByRole("paragraph").filter({hasText: expectedMessage})
+      page.locator(".whitespace-pre-wrap").getByText(expectedMessage)
     ).toBeVisible()
   })
 
@@ -104,7 +110,7 @@ test.describe("Message Form - Desktop", () => {
     const expectedMessage =
       "Hello, this is a test message!\nThis is a new line\nThis is another new line"
     await expect(
-      page.getByRole("paragraph").filter({hasText: expectedMessage})
+      page.locator(".whitespace-pre-wrap").getByText(expectedMessage)
     ).toBeVisible()
   })
 

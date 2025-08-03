@@ -36,3 +36,8 @@ test-results/
 
 src-tauri/gen
 src-tauri/target
+
+# Docker dev setup
+nvim-config
+Dockerfile.dev
+docker-compose.dev.yml

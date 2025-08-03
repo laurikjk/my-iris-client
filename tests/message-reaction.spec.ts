@@ -20,7 +20,7 @@ test("user can react to a chat message", async ({page}) => {
   const text = "Reaction test"
   await messageInput.fill(text)
   await messageInput.press("Enter")
-  await expect(page.getByRole("paragraph").filter({hasText: text})).toBeVisible()
+  await expect(page.locator(".whitespace-pre-wrap").getByText(text)).toBeVisible()
 
   await page.getByTestId("reaction-button").click()
   await page.getByRole("button", {name: "👍"}).first().click()

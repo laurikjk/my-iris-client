@@ -41,5 +41,5 @@ test("can search for self and start a private chat via user search", async ({pag
   await messageInput.press("Enter")
 
   // Verify message appears in chat
-  await expect(page.getByRole("paragraph").filter({hasText: "Hello"})).toBeVisible()
+  await expect(page.locator(".whitespace-pre-wrap").getByText("Hello")).toBeVisible()
 })
