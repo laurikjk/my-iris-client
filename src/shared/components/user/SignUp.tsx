@@ -37,11 +37,11 @@ export default function SignUp({onClose}: SignUpProps) {
   function handleKeyDown(e: KeyboardEvent<HTMLFormElement>) {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
-      handleSubmit(true)
+      handleSubmit()
     }
   }
 
-  function handleSubmit(ctrlPressed = false) {
+  function handleSubmit() {
     ndk()
     const sk = generateSecretKey()
     const pk = getPublicKey(sk)
@@ -61,8 +61,8 @@ export default function SignUp({onClose}: SignUpProps) {
     const privateKeySigner = new NDKPrivateKeySigner(privateKeyHex)
     ndk().signer = privateKeySigner
 
-    const incognito = ctrlPressed && newUserName.trim() === ""
-    if (!incognito) {
+    // Only create profile if username is provided
+    if (newUserName.trim()) {
       const profileEvent = new NDKEvent(ndk())
       profileEvent.kind = 0
       profileEvent.content = JSON.stringify({
