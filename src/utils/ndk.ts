@@ -32,9 +32,13 @@ const PRODUCTION_RELAYS = [
   "wss://relay.snort.social/",
 ]
 
-export const DEFAULT_RELAYS = import.meta.env.VITE_USE_LOCAL_RELAY
-  ? LOCAL_RELAY
-  : PRODUCTION_RELAYS
+const TEST_RELAY = ["wss://temp.iris.to/"]
+
+export const DEFAULT_RELAYS = import.meta.env.VITE_USE_TEST_RELAY
+  ? TEST_RELAY
+  : import.meta.env.VITE_USE_LOCAL_RELAY
+    ? LOCAL_RELAY
+    : PRODUCTION_RELAYS
 
 /**
  * Get a singleton "default" NDK instance to get started quickly. If you want to init NDK with e.g. your own relays, pass them on the first call.
@@ -45,8 +49,15 @@ export const DEFAULT_RELAYS = import.meta.env.VITE_USE_LOCAL_RELAY
 export const ndk = (opts?: NDKConstructorParams): NDK => {
   if (!ndkInstance) {
     const store = useUserStore.getState()
+    const relays = opts?.explicitRelayUrls || DEFAULT_RELAYS
+
+    // Log when using test relay
+    if (relays === TEST_RELAY) {
+      console.log("🧪 Using test relay only: wss://temp.iris.to/")
+    }
+
     const options = opts || {
-      explicitRelayUrls: DEFAULT_RELAYS,
+      explicitRelayUrls: relays,
       enableOutboxModel: store.ndkOutboxModel,
       cacheAdapter: new NDKCacheAdapterDexie({dbName: "treelike-nostr", saveSig: true}),
     }
