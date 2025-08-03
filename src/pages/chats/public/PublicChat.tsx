@@ -1,4 +1,4 @@
-import {CHANNEL_MESSAGE, REACTION_KIND} from "../utils/constants"
+import {KIND_CHANNEL_MESSAGE, KIND_REACTION} from "@/utils/constants"
 import {usePublicChatsStore} from "@/stores/publicChats"
 import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
@@ -66,7 +66,7 @@ const PublicChat = () => {
 
     // Set up subscription for channel messages
     const sub = ndk().subscribe({
-      kinds: [CHANNEL_MESSAGE],
+      kinds: [KIND_CHANNEL_MESSAGE],
       "#e": [id],
     })
 
@@ -81,7 +81,7 @@ const PublicChat = () => {
         content: event.content,
         created_at: event.created_at,
         tags: event.tags,
-        kind: CHANNEL_MESSAGE,
+        kind: KIND_CHANNEL_MESSAGE,
         reactions: {},
       }
 
@@ -121,7 +121,7 @@ const PublicChat = () => {
 
       // Create channel message event (kind 42)
       const event = new NDKEvent(ndk())
-      event.kind = CHANNEL_MESSAGE
+      event.kind = KIND_CHANNEL_MESSAGE
       event.content = content
 
       // Add channel tag
@@ -145,7 +145,7 @@ const PublicChat = () => {
         content: content,
         created_at: Math.floor(Date.now() / 1000),
         tags: event.tags,
-        kind: CHANNEL_MESSAGE,
+        kind: KIND_CHANNEL_MESSAGE,
         reactions: {},
       }
 
@@ -169,7 +169,7 @@ const PublicChat = () => {
     try {
       // Create reaction event (kind 7)
       const event = new NDKEvent(ndk())
-      event.kind = REACTION_KIND
+      event.kind = KIND_REACTION
       event.content = emoji
 
       // Add tags for the message being reacted to and the chat root

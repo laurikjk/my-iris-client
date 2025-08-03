@@ -1,14 +1,14 @@
 import {LnPayCb, NDKEvent, NDKZapper, NDKPaymentConfirmationLN} from "@nostr-dev-kit/ndk"
-import {useWebLNProvider} from "@/shared/hooks/useWebLNProvider"
+import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
-import {RefObject, useEffect, useState, useRef} from "react"
+import {RefObject, useEffect, useState} from "react"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import {getZappingUser} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
 import {decode} from "light-bolt11-decoder"
-import {usePublicKey} from "@/stores/user"
-import {useZapStore} from "@/stores/zap"
+import {usePublicKey, useUserStore} from "@/stores/user"
+import {useScrollAwareLongPress} from "@/shared/hooks/useScrollAwareLongPress"
 import Icon from "../../Icons/Icon.tsx"
 import ZapModal from "../ZapModal.tsx"
 import debounce from "lodash/debounce"
@@ -21,25 +21,36 @@ const zapsByEventCache = new LRUCache<string, Map<string, NDKEvent[]>>({
 interface FeedItemZapProps {
   event: NDKEvent
   feedItemRef: RefObject<HTMLDivElement | null>
+  showReactionCounts?: boolean
 }
 
-function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
+function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZapProps) {
   const myPubKey = usePublicKey()
-  const {defaultZapAmount} = useZapStore()
+  const {defaultZapAmount} = useUserStore()
+  const {activeProviderType, sendPayment: walletProviderSendPayment} =
+    useWalletProviderStore()
   const [isZapping, setIsZapping] = useState(false)
-  const longPressTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const [isLongPress, setIsLongPress] = useState(false)
-  const provider = useWebLNProvider()
+  const {
+    handleMouseDown: handleLongPressDown,
+    handleMouseMove: handleLongPressMove,
+    handleMouseUp: handleLongPressUp,
+    isLongPress,
+  } = useScrollAwareLongPress({
+    onLongPress: () => setShowZapModal(true),
+  })
 
   const profile = useProfile(event.pubkey)
 
   const [showZapModal, setShowZapModal] = useState(false)
+  const [failedInvoice, setFailedInvoice] = useState<string>("")
 
   const [zapsByAuthor, setZapsByAuthor] = useState<Map<string, NDKEvent[]>>(
     zapsByEventCache.get(event.id) || new Map()
   )
 
-  const canQuickZap = !!defaultZapAmount
+  // Quick zap is only enabled if there's a default zap amount AND a wallet is available
+  const hasWallet = activeProviderType !== "disabled" && activeProviderType !== undefined
+  const canQuickZap = !!defaultZapAmount && defaultZapAmount > 0 && hasWallet
 
   const calculateZappedAmount = async (
     zaps: Map<string, NDKEvent[]>
@@ -82,6 +93,8 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
     if (canQuickZap) {
       await handleOneClickZap()
     } else {
+      // Clear any previous failed state when opening modal normally
+      setFailedInvoice("")
       setShowZapModal(true)
     }
   }
@@ -95,10 +108,21 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
       const lnPay: LnPayCb = async ({
         pr,
       }): Promise<NDKPaymentConfirmationLN | undefined> => {
-        if (provider) {
-          await provider.sendPayment(pr)
-          setShowZapModal(false)
-          return {preimage: ""} // TODO: Get actual preimage from provider
+        if (hasWallet) {
+          // Use unified payment method for all wallet types
+          walletProviderSendPayment(pr)
+            .then(() => {
+              // Payment succeeded
+            })
+            .catch((error: Error) => {
+              console.warn("Quick zap payment failed:", error)
+              // Store the failed invoice for the modal
+              setFailedInvoice(pr)
+              setShowZapModal(true)
+            })
+
+          // Return undefined to let NDK know we're handling payment ourselves
+          return undefined
         }
         return undefined
       }
@@ -113,22 +137,11 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
       await zapper.zap()
     } catch (error) {
       console.warn("Unable to one-click zap:", error)
+      // Open zap modal on zap failure
+      setFailedInvoice("")
+      setShowZapModal(true)
     } finally {
       setIsZapping(false)
-    }
-  }
-
-  const handleMouseDown = () => {
-    setIsLongPress(false)
-    longPressTimeout.current = setTimeout(() => {
-      setIsLongPress(true)
-      setShowZapModal(true)
-    }, 500)
-  }
-
-  const handleMouseUp = () => {
-    if (longPressTimeout.current) {
-      clearTimeout(longPressTimeout.current)
     }
   }
 
@@ -139,6 +152,8 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
   }
 
   useEffect(() => {
+    if (!showReactionCounts) return
+
     const filter = {
       kinds: [9735],
       ["#e"]: [event.id],
@@ -183,7 +198,7 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
     } catch (error) {
       console.warn(error)
     }
-  }, [])
+  }, [showReactionCounts])
 
   useEffect(() => {
     calculateZappedAmount(zapsByAuthor).then(setZappedAmount)
@@ -210,11 +225,17 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
     <>
       {showZapModal && (
         <ZapModal
-          onClose={() => setShowZapModal(false)}
+          onClose={() => {
+            setShowZapModal(false)
+            setFailedInvoice("")
+          }}
           event={event}
           setZapped={() => {
             flashElement()
           }}
+          initialInvoice={failedInvoice}
+          initialAmount={failedInvoice ? defaultZapAmount.toString() : undefined}
+          paymentFailed={!!failedInvoice}
         />
       )}
       <button
@@ -223,18 +244,20 @@ function FeedItemZap({event, feedItemRef}: FeedItemZapProps) {
           zapped ? "cursor-pointer text-accent" : "cursor-pointer hover:text-accent"
         } flex flex-row items-center gap-1 transition duration-200 ease-in-out min-w-[50px] md:min-w-[80px]`}
         onClick={handleClick}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={handleMouseDown}
-        onTouchEnd={handleMouseUp}
+        onMouseDown={handleLongPressDown}
+        onMouseMove={handleLongPressMove}
+        onMouseUp={handleLongPressUp}
+        onMouseLeave={handleLongPressUp}
+        onTouchStart={handleLongPressDown}
+        onTouchMove={handleLongPressMove}
+        onTouchEnd={handleLongPressUp}
       >
         {isZapping ? (
           <div className="loading loading-spinner loading-xs" />
         ) : (
           <Icon name={iconName} size={16} />
         )}
-        <span>{formatAmount(zappedAmount)}</span>
+        <span>{showReactionCounts ? formatAmount(zappedAmount) : ""}</span>
       </button>
     </>
   )

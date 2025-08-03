@@ -7,6 +7,7 @@ import {bytesToHex} from "@noble/hashes/utils"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
+import {KIND_BLOSSOM_AUTH, KIND_HTTP_AUTH} from "@/utils/constants"
 
 type MediaServerProtocol = "blossom" | "nip96"
 
@@ -57,7 +58,7 @@ async function uploadToBlossom(
   // Create a Nostr event for authentication
   const currentTime = Math.floor(Date.now() / 1000)
   const event = new NDKEvent(ndk(), {
-    kind: 24242, // Blossom authorization event
+    kind: KIND_BLOSSOM_AUTH, // Blossom authorization event
     tags: [
       ["t", "upload"],
       ["x", sha256], // Required: SHA256 hash of the file
@@ -130,7 +131,7 @@ async function uploadToNip96(
   // Create a NIP-98 event for authentication
   const currentTime = Math.floor(Date.now() / 1000)
   const event = new NDKEvent(ndk(), {
-    kind: 27235, // NIP-98 HTTP authentication
+    kind: KIND_HTTP_AUTH, // NIP-98 HTTP authentication
     tags: [
       ["u", url],
       ["method", "POST"],

@@ -12,14 +12,16 @@ import Icon from "../../Icons/Icon"
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import {getEventReplyingTo} from "@/utils/nostr"
 import {LRUCache} from "typescript-lru-cache"
+import {KIND_TEXT_NOTE} from "@/utils/constants"
 
 interface FeedItemCommentProps {
   event: NDKEvent
+  showReactionCounts?: boolean
 }
 
 const replyCountByEventCache = new LRUCache({maxSize: 100})
 
-function FeedItemComment({event}: FeedItemCommentProps) {
+function FeedItemComment({event, showReactionCounts = true}: FeedItemCommentProps) {
   const myPubKey = useUserStore((state) => state.publicKey)
   const [replyCount, setReplyCount] = useState(replyCountByEventCache.get(event.id) || 0)
 
@@ -36,10 +38,12 @@ function FeedItemComment({event}: FeedItemCommentProps) {
   // refetch when location.pathname changes
   // to refetch count when switching display profile
   useEffect(() => {
+    if (!showReactionCounts) return
+
     const replies = new Set<string>()
     setReplyCount(replyCountByEventCache.get(event.id) || 0)
     const filter: NDKFilter = {
-      kinds: [1],
+      kinds: [KIND_TEXT_NOTE],
       ["#e"]: [event.id],
     }
 
@@ -65,7 +69,7 @@ function FeedItemComment({event}: FeedItemCommentProps) {
     } catch (error) {
       console.warn(error)
     }
-  }, [event.id])
+  }, [event.id, showReactionCounts])
 
   return (
     <>
@@ -75,7 +79,7 @@ function FeedItemComment({event}: FeedItemCommentProps) {
         onClick={handleCommentClick}
       >
         <Icon name="reply" size={16} />
-        {formatAmount(replyCount)}
+        {showReactionCounts ? formatAmount(replyCount) : ""}
       </button>
 
       {isPopupOpen && (

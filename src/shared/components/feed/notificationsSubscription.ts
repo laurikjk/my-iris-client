@@ -1,7 +1,7 @@
 import {useSettingsStore} from "@/stores/settings"
 import socialGraph from "@/utils/socialGraph"
 import {shouldHideAuthor} from "@/utils/visibility"
-import {getTag, getZappingUser} from "@/utils/nostr.ts"
+import {getTag, getZappingUser, getZapAmount} from "@/utils/nostr.ts"
 import {notifications, Notification as IrisNotification} from "@/utils/notifications"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {useNotificationsStore} from "@/stores/notifications"
@@ -37,7 +37,7 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
   const settings = useSettingsStore.getState()
   const hideEventsByUnknownUsers = settings.content?.hideEventsByUnknownUsers
 
-  sub.on("event", (event: NDKEvent) => {
+  sub.on("event", async (event: NDKEvent) => {
     if (event.kind !== 9735) {
       // allow zap notifs from self & unknown users
       if (event.pubkey === myPubKey) return
@@ -72,7 +72,20 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
       }
       const existing = notification.users.get(user)
       if (!existing || existing.time < event.created_at) {
-        notification.users.set(user, {time: event.created_at})
+        let content: string | undefined = undefined
+        if (event.kind === 7) {
+          // Reaction content (emoji)
+          content = event.content
+        } else if (event.kind === 9735) {
+          // Zap receipt - extract zap amount
+          const zapAmount = await getZapAmount(event)
+          content = zapAmount > 0 ? zapAmount.toString() : undefined
+        }
+
+        notification.users.set(user, {
+          time: event.created_at,
+          content,
+        })
       }
       if (event.created_at > notification.time) {
         notification.time = event.created_at
@@ -80,11 +93,9 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
 
       notifications.set(key, notification)
 
-      const created_at = event.created_at * 1000
-
-      if (created_at > latest) {
-        latest = created_at
-        useNotificationsStore.getState().setLatestNotification(latest)
+      if (event.created_at > latest) {
+        latest = event.created_at
+        useNotificationsStore.getState().setLatestNotification(event.created_at)
       }
     }
   })

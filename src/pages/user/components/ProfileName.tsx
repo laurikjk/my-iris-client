@@ -1,8 +1,7 @@
 import {RiVerifiedBadgeLine, RiErrorWarningLine} from "@remixicon/react"
 import {useNip05Validation} from "@/shared/hooks/useNip05Validation"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {useNavigate} from "react-router"
-import {useCallback} from "react"
+import {Navigate} from "@/shared/components/Navigate"
 
 interface ProfileNameProps {
   profile?: NDKUserProfile
@@ -10,13 +9,10 @@ interface ProfileNameProps {
 }
 
 function ProfileName({profile, pubkey}: ProfileNameProps) {
-  const navigate = useNavigate()
   const nip05valid = useNip05Validation(pubkey, profile?.nip05)
 
-  const handleClick = useCallback(() => navigate(`/${pubkey}`), [pubkey])
-
   return (
-    <div className="ProfileItem-text-container cursor-pointer" onClick={handleClick}>
+    <Navigate className="ProfileItem-text-container" to={`/${pubkey}`}>
       <span className="ProfileName-names-row">
         {profile?.name && <span>{profile.name}</span>}
         {profile?.name && profile?.displayName && (
@@ -28,14 +24,19 @@ function ProfileName({profile, pubkey}: ProfileNameProps) {
       {profile?.nip05 && (
         <span className="ProfileName-nip05">
           {nip05valid ? (
-            <RiVerifiedBadgeLine className="ProfileName-nip05-icon" />
+            <>
+              <RiVerifiedBadgeLine className="verified" />
+              <span className="verified">{profile.nip05}</span>
+            </>
           ) : (
-            <RiErrorWarningLine className="ProfileName-nip05-icon" />
+            <>
+              <RiErrorWarningLine className="not-verified" />
+              <span className="not-verified">{profile.nip05}</span>
+            </>
           )}
-          <small className="ProfileName-nip05-text">{profile?.nip05}</small>
         </span>
       )}
-    </div>
+    </Navigate>
   )
 }
 

@@ -1,8 +1,8 @@
-import {useEffect, useMemo, useState} from "react"
+import {useEffect, useMemo, useState, ReactNode, CSSProperties} from "react"
 
 import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
+import {ProfileHoverCard} from "@/shared/components/user/ProfileHoverCard"
 import {useHoverCard} from "@/shared/components/user/useHoverCard"
-import ProfileCard from "@/shared/components/user/ProfileCard"
 import ProxyImg from "@/shared/components/ProxyImg.tsx"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import {Badge} from "@/shared/components/user/Badge"
@@ -16,12 +16,20 @@ export const Avatar = ({
   showBadge = true,
   showTooltip = true,
   showHoverCard = false,
+  cornerBadge,
 }: {
   width?: number
   pubKey: string
   showBadge?: boolean
   showTooltip?: boolean
   showHoverCard?: boolean
+  cornerBadge?: {
+    content: ReactNode
+    position?: "top-right" | "bottom-right"
+    className?: string
+    style?: CSSProperties
+    shape?: "circle" | "rounded"
+  }
 }) => {
   const pubKeyHex = useMemo(() => {
     if (!pubKey) {
@@ -47,6 +55,17 @@ export const Avatar = ({
   }
 
   const {hoverProps, showCard} = useHoverCard(showHoverCard)
+
+  const getCornerBadgePosition = () => {
+    const position = cornerBadge?.position || "bottom-right"
+    switch (position) {
+      case "top-right":
+        return "absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4"
+      case "bottom-right":
+      default:
+        return "absolute bottom-0 right-0 transform translate-x-1/4 translate-y-1/4"
+    }
+  }
 
   return (
     <div
@@ -87,21 +106,22 @@ export const Avatar = ({
           <MinidenticonImg username={pubKeyHex} alt="User Avatar" />
         )}
       </div>
-      {showHoverCard && (
-        <div
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
+      {cornerBadge && (
+        <span
+          className={`${getCornerBadgePosition()} bg-base-100 border border-base-300 leading-none flex items-center justify-center rounded-full ${
+            cornerBadge.shape === "rounded" ? "px-1" : ""
+          } ${cornerBadge.className || ""}`}
+          style={{
+            ...(cornerBadge.shape === "rounded"
+              ? {minWidth: 16, height: 16, fontSize: 10}
+              : {width: 16, height: 16, fontSize: 10}),
+            ...cornerBadge.style,
           }}
-          className={`cursor-default z-20 bg-base-100 rounded-2xl fixed md:absolute left-0 top-1/2 -translate-y-1/2 md:top-full md:translate-y-0 mt-2 w-full md:w-96 min-h-32 p-4 transition-all duration-300 ease-in-out ${
-            showCard ? "opacity-100" : "opacity-0 pointer-events-none"
-          }`}
         >
-          {showCard && (
-            <ProfileCard pubKey={pubKey} showFollows={true} showHoverCard={false} />
-          )}
-        </div>
+          {cornerBadge.content}
+        </span>
       )}
+      {showHoverCard && <ProfileHoverCard pubKey={pubKey} showCard={showCard} />}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import {calculateDimensions, generateBlurhashUrl} from "./mediaUtils"
-import {useEffect, useRef, useState, useMemo} from "react"
+import {useEffect, useRef, useState, useMemo, memo, useCallback} from "react"
 import {generateProxyUrl} from "../../../utils/imgproxy"
 import {useSettingsStore} from "@/stores/settings"
 import classNames from "classnames"
@@ -25,7 +25,7 @@ function HlsVideoComponent({
   isMuted = true,
   onMuteChange,
 }: HlsVideoComponentProps) {
-  const {content} = useSettingsStore()
+  const {content, imgproxy} = useSettingsStore()
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [blur, setBlur] = useState(
     content.blurNSFW &&
@@ -54,54 +54,58 @@ function HlsVideoComponent({
     [blurhash, calculatedDimensions]
   )
 
+  // Memoize video initialization to prevent unnecessary re-runs
+  const initVideo = useCallback(async () => {
+    if (!videoRef.current) return
+
+    const isHls = match.includes(".m3u8") || match.includes("playlist")
+
+    if (!isHls || videoRef.current.canPlayType("application/vnd.apple.mpegurl")) {
+      videoRef.current.src = match
+      return
+    }
+
+    try {
+      const {default: Hls} = await import("hls.js")
+      if (Hls.isSupported() && videoRef.current) {
+        const hls = new Hls()
+        hls.loadSource(match)
+        hls.attachMedia(videoRef.current)
+      }
+    } catch (error) {
+      console.error("Failed to load HLS:", error)
+    }
+  }, [match])
+
+  // Initialize video when match changes
   useEffect(() => {
-    const initVideo = async () => {
-      const isHls = match.includes(".m3u8") || match.includes("playlist")
-
-      if (!isHls || videoRef.current?.canPlayType("application/vnd.apple.mpegurl")) {
-        videoRef.current!.src = match
-        return
-      }
-
-      try {
-        const {default: Hls} = await import("hls.js")
-        if (Hls.isSupported() && videoRef.current) {
-          const hls = new Hls()
-          hls.loadSource(match)
-          hls.attachMedia(videoRef.current)
-        }
-      } catch (error) {
-        console.error("Failed to load HLS:", error)
-      }
-    }
-
     initVideo()
+  }, [initVideo])
 
-    if (content.autoplayVideos) {
-      const handleIntersection = (entries: IntersectionObserverEntry[]) => {
-        const entry = entries[0]
-        if (entry.isIntersecting) {
-          videoRef.current?.play()
-        } else {
-          videoRef.current?.pause()
-        }
-      }
+  // Handle autoplay with intersection observer
+  useEffect(() => {
+    if (!content.autoplayVideos || !videoRef.current) return
 
-      const observer = new IntersectionObserver(handleIntersection, {
-        threshold: 0.33,
-      })
-
-      if (videoRef.current) {
-        observer.observe(videoRef.current)
-      }
-
-      return () => {
-        if (videoRef.current) {
-          observer.unobserve(videoRef.current)
-        }
+    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+      const entry = entries[0]
+      if (entry.isIntersecting) {
+        videoRef.current?.play()
+      } else {
+        videoRef.current?.pause()
       }
     }
-  }, [match, content.autoplayVideos])
+
+    const observer = new IntersectionObserver(handleIntersection, {
+      threshold: 0.33,
+    })
+
+    const currentVideo = videoRef.current
+    observer.observe(currentVideo)
+
+    return () => {
+      observer.unobserve(currentVideo)
+    }
+  }, [content.autoplayVideos])
 
   return (
     <div
@@ -138,10 +142,18 @@ function HlsVideoComponent({
         autoPlay={content.autoplayVideos}
         playsInline
         loop
-        poster={generateProxyUrl(match, {height: 638})}
+        poster={generateProxyUrl(
+          match,
+          {height: 638},
+          {
+            url: imgproxy.url,
+            key: imgproxy.key,
+            salt: imgproxy.salt,
+          }
+        )}
       ></video>
     </div>
   )
 }
 
-export default HlsVideoComponent
+export default memo(HlsVideoComponent)

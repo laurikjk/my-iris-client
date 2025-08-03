@@ -1,10 +1,11 @@
-import {NDKEvent, NDKFilter, NDKRelayList, NDKTag} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKRelayList, NDKTag} from "@nostr-dev-kit/ndk"
 import {eventRegex} from "@/shared/components/embed/nostr/NostrNote"
 import {decode} from "light-bolt11-decoder"
-import {profileCache} from "./memcache"
+import {profileCache} from "./profileCache"
 import AnimalName from "./AnimalName"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
+import {KIND_REPOST, KIND_TEXT_NOTE, KIND_ZAP_RECEIPT} from "@/utils/constants"
 
 export const ISSUE_REGEX =
   /^\/apps\/git\/repos\/[a-zA-Z0-9_-]+\/issues\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/title$/
@@ -68,7 +69,7 @@ export function formatUnixTimestamp(timestamp: number): string {
 }
 
 export function getEventReplyingTo(event: NDKEvent) {
-  if (event.kind !== 1) {
+  if (event.kind !== KIND_TEXT_NOTE) {
     return undefined
   }
   const qEvent = event.tags?.find((tag) => tag[0] === "q")?.[1]
@@ -84,27 +85,14 @@ export function getEventReplyingTo(event: NDKEvent) {
   return undefined
 }
 
-export async function fetchEvent(filter: NDKFilter): Promise<NDKEvent> {
-  ndk().fetchEvent(filter)
-  return new Promise<NDKEvent>((resolve) => {
-    const sub = ndk().subscribe(filter)
-    sub.on("event", (event) => {
-      if (event && event.id) {
-        sub.stop()
-        resolve(event)
-      }
-    })
-  })
-}
-
 export function isRepost(event: NDKEvent) {
-  if (event.kind === 6) {
+  if (event.kind === KIND_REPOST) {
     return true
   }
   const mentionIndex = event.tags?.findIndex(
     (tag) => tag[0] === "e" && tag[3] === "mention"
   )
-  if (event.kind === 1 && event.content === `#[${mentionIndex}]`) {
+  if (event.kind === KIND_TEXT_NOTE && event.content === `#[${mentionIndex}]`) {
     return true
   }
   return false
@@ -193,7 +181,7 @@ export const fetchZappedAmount = async (event: NDKEvent): Promise<number> => {
   return new Promise((resolve) => {
     let zappedAmount = 0
     const filter = {
-      kinds: [9735],
+      kinds: [KIND_ZAP_RECEIPT],
       ["#e"]: [event.id],
     }
     try {
@@ -315,7 +303,7 @@ export const getCachedName = (pubKey: string): string => {
 
 export const getQuotedEvent = (event: NDKEvent): string | false => {
   const qTag = event.tagValue("q")
-  if (event.kind === 1 && qTag) return qTag
+  if (event.kind === KIND_TEXT_NOTE && qTag) return qTag
   const mentionTag = event.tags
     .filter((tag) => tag[0] === "e")
     .find((tag) => tag[3] === "mention" && tag[1] === event.id)

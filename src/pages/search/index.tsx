@@ -1,14 +1,16 @@
-import {useMemo, useState, useEffect, FormEvent, useCallback} from "react"
+import {useMemo, useState, useEffect, FormEvent} from "react"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import SearchBox from "@/shared/components/ui/SearchBox"
 import Header from "@/shared/components/header/Header"
-import {NDKFilter, NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKFilter} from "@nostr-dev-kit/ndk"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import {useParams, useNavigate} from "react-router"
 import Widget from "@/shared/components/ui/Widget"
 import {Helmet} from "react-helmet"
+import {useSettingsStore} from "@/stores/settings"
+import {KIND_CLASSIFIED, KIND_TEXT_NOTE} from "@/utils/constants"
 
 function SearchPage() {
   const {query} = useParams()
@@ -20,9 +22,18 @@ function SearchPage() {
   )
   const [forceUpdate, setForceUpdate] = useState(0)
 
+  const {content} = useSettingsStore()
+  const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
+    !content.hideEventsByUnknownUsers,
+    "searchShowEventsByUnknownUsers"
+  )
+
   useEffect(() => {
     setSearchTerm(query?.toLowerCase() || "")
-  }, [query])
+    if (query) {
+      setActiveTab("posts")
+    }
+  }, [query, setActiveTab])
 
   useEffect(() => {
     setForceUpdate((prev) => prev + 1)
@@ -30,16 +41,10 @@ function SearchPage() {
 
   const filters: NDKFilter = useMemo(
     () => ({
-      kinds: activeTab === "market" ? [30402] : [1],
+      kinds: activeTab === "market" ? [KIND_CLASSIFIED] : [KIND_TEXT_NOTE],
       search: query,
     }),
     [query, activeTab]
-  )
-
-  const displayFilterFn = useCallback(
-    (event: NDKEvent) =>
-      (event.content + JSON.stringify(event.tags)).toLowerCase().includes(searchTerm),
-    [searchTerm]
   )
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -90,20 +95,35 @@ function SearchPage() {
               Market
             </button>
           </div>
+
+          {query && activeTab !== "people" && (
+            <div className="flex items-center gap-2 p-2">
+              <input
+                type="checkbox"
+                className="toggle toggle-sm"
+                checked={showEventsByUnknownUsers}
+                onChange={(e) => setShowEventsByUnknownUsers(e.target.checked)}
+              />
+              <span className="text-sm">Show posts from unknown users</span>
+            </div>
+          )}
+
           {query && (
             <Feed
               key={`${activeTab}-${query}`}
-              filters={filters}
-              displayFilterFn={displayFilterFn}
-              showRepliedTo={false}
-              showFilters={true}
-              cacheKey={`search-${activeTab}-${query}`}
+              feedConfig={{
+                name: "Search Results",
+                id: `search-${activeTab}-${query}`,
+                showRepliedTo: false,
+                showEventsByUnknownUsers: showEventsByUnknownUsers,
+                filter: filters,
+              }}
               forceUpdate={forceUpdate}
             />
           )}
           {!query && (
             <div className="mt-4">
-              <PopularFeed small={false} />
+              <PopularFeed displayOptions={{showDisplaySelector: false}} />
             </div>
           )}
         </div>
@@ -115,7 +135,13 @@ function SearchPage() {
         {() => (
           <>
             <Widget title="Popular">
-              <PopularFeed />
+              <PopularFeed
+                displayOptions={{
+                  small: true,
+                  showDisplaySelector: false,
+                  randomSort: true,
+                }}
+              />
             </Widget>
           </>
         )}

@@ -14,18 +14,9 @@ interface MuteUserProps {
   setMutedState: Dispatch<SetStateAction<boolean>>
 }
 
-function MuteUser({user, setMuting, muteState}: MuteUserProps) {
+function MuteUser({user, setMuting, muteState, setMutedState}: MuteUserProps) {
   const [muted, setMuted] = useState<boolean>(false)
-
-  // Placeholder for missing function
-  const setMutedList = (list: string[]) => {
-    console.log(list) // TODO: Implement the actual logic
-  }
-
-  // Placeholder for missing function
-  const setPublishingError = (error: boolean) => {
-    console.log(error) // TODO: Implement the actual logic
-  } // TODO: Define or import the actual setPublishingError function
+  const [publishingError, setPublishingError] = useState<boolean>(false)
 
   useEffect(() => {
     setMuted(muteState)
@@ -36,50 +27,56 @@ function MuteUser({user, setMuting, muteState}: MuteUserProps) {
   }
 
   const handleMuteUser = async () => {
-    const followDistance = socialGraph().getFollowDistance(user)
-    if (followDistance === 1) {
-      // Unfollow the user if they are being followed
-      const event = new NDKEvent(ndk())
-      event.kind = 3
-      const followedUsers = socialGraph().getFollowedByUser(socialGraph().getRoot())
-      followedUsers.delete(user)
-      event.tags = Array.from(followedUsers).map((pubKey) => ["p", pubKey]) as NDKTag[]
-      event.publish().catch((e) => console.warn("Error publishing unfollow event:", e))
-    }
+    try {
+      const followDistance = socialGraph().getFollowDistance(user)
+      if (followDistance === 1) {
+        // Unfollow the user if they are being followed
+        const event = new NDKEvent(ndk())
+        event.kind = 3
+        const followedUsers = socialGraph().getFollowedByUser(socialGraph().getRoot())
+        followedUsers.delete(user)
+        event.tags = Array.from(followedUsers).map((pubKey) => ["p", pubKey]) as NDKTag[]
+        event.publish().catch((e) => console.warn("Error publishing unfollow event:", e))
+      }
 
-    muteUser(user)
-      .then((newList) => {
-        localStorage.setItem("mutedIds", JSON.stringify(newList))
-      })
-      .catch(() => setPublishingError(false))
+      const newList = await muteUser(user)
+      localStorage.setItem("mutedIds", JSON.stringify(newList))
+      setMuted(true)
+      setMutedState(true)
+      setPublishingError(false)
+    } catch (error) {
+      console.error("Error muting user:", error)
+      setPublishingError(true)
+    }
   }
 
   const handleUnmuteUser = async () => {
     try {
-      await unmuteUser(user)
-        .then((newList) => {
-          setMutedList(newList)
-          setMuted(false)
-          localStorage.setItem("mutedIds", JSON.stringify(newList))
-        })
-        .catch(() => {
-          //error message printed in muteUser
-          setPublishingError(false)
-        })
+      const newList = await unmuteUser(user)
+      localStorage.setItem("mutedIds", JSON.stringify(newList))
+      setMuted(false)
+      setMutedState(false)
+      setPublishingError(false)
     } catch (error) {
-      // Ignore
+      console.error("Error unmuting user:", error)
+      setPublishingError(true)
     }
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 w-80 min-w-80">
       <div>
         <h1 className="text-lg font-bold mb-4">Mute User</h1>
-        <div>
+        {publishingError && (
+          <div className="alert alert-error mb-4">
+            <span>Error updating mute list. Please try again.</span>
+          </div>
+        )}
+        <div className="min-h-32">
           {muted ? (
-            <div className="flex flex-col items-center">
-              <div>User Muted</div>
-              <button onClick={handleUnmuteUser} className="btn btn-neutral mt-2">
+            <div className="flex flex-col items-center justify-center h-full">
+              <div className="text-center mb-4">User Muted</div>
+              <button onClick={handleUnmuteUser} className="btn btn-neutral">
                 Undo?
               </button>
             </div>
@@ -87,12 +84,12 @@ function MuteUser({user, setMuting, muteState}: MuteUserProps) {
             <>
               <div>
                 <p>Are you sure you want to mute:</p>
-                <div className="flex items-center mt-4">
+                <div className="flex items-center mt-4 mb-4">
                   <UserRow pubKey={user} />
                 </div>
               </div>
-              <div className="flex mt-4">
-                <button onClick={handleClose} className="btn btn-neutral mr-2">
+              <div className="flex justify-center gap-2">
+                <button onClick={handleClose} className="btn btn-neutral">
                   No
                 </button>
                 <button onClick={handleMuteUser} className="btn btn-primary">

@@ -1,6 +1,7 @@
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
+import AuthorArticlesFeed from "@/shared/components/feed/AuthorArticlesFeed"
 import FollowList from "@/pages/user/components/FollowList"
 import Header from "@/shared/components/header/Header"
 import {Name} from "@/shared/components/user/Name"
@@ -8,10 +9,11 @@ import Widget from "@/shared/components/ui/Widget"
 import {useSettingsStore} from "@/stores/settings"
 import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {useState, useEffect} from "react"
+import {useState, useEffect, useCallback} from "react"
 import {getTags} from "@/utils/nostr"
 import {nip19} from "nostr-tools"
-import {ndk} from "@/utils/ndk"
+import {KIND_LONG_FORM_CONTENT} from "@/utils/constants"
+import {useLongformEvent} from "@/shared/hooks/useLongformEvent"
 
 export default function ThreadPage({
   id,
@@ -24,59 +26,61 @@ export default function ThreadPage({
 }) {
   const [relevantPeople, setRelevantPeople] = useState(new Map<string, boolean>())
   const {content} = useSettingsStore()
-  const [event, setEvent] = useState<NDKEvent | null>(null)
-  const [loading, setLoading] = useState(isNaddr)
   const [threadAuthor, setThreadAuthor] = useState<string | null>(null)
+  const [isArticle, setIsArticle] = useState(false)
+
+  // Use the custom hook for longform event caching
+  const {event: longformEvent, loading: longformLoading} = useLongformEvent(
+    isNaddr ? naddrData : null
+  )
+  const [event, setEvent] = useState<NDKEvent | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const addRelevantPerson = useCallback((person: string) => {
+    setRelevantPeople((prev) => new Map(prev).set(person, true))
+  }, [])
 
   useEffect(() => {
     setThreadAuthor(null)
   }, [id])
 
+  // Handle longform event updates from the hook
   useEffect(() => {
-    if (isNaddr && naddrData) {
-      setLoading(true)
-      ndk()
-        .fetchEvent(
-          {
-            authors: [naddrData.pubkey],
-            kinds: [naddrData.kind],
-            "#d": [naddrData.identifier],
-          },
-          undefined
-        )
-        .then((e) => {
-          if (e) {
-            setEvent(e)
-            if (e.pubkey) {
-              setThreadAuthor(e.pubkey)
-              addRelevantPerson(e.pubkey)
-            }
-          }
-          setLoading(false)
-        })
-        .catch((err) => {
-          console.warn("Error fetching naddr event:", err)
-          setLoading(false)
-        })
+    if (isNaddr && longformEvent) {
+      setEvent(longformEvent)
+      setLoading(longformLoading)
+      if (longformEvent.pubkey) {
+        setThreadAuthor(longformEvent.pubkey)
+        addRelevantPerson(longformEvent.pubkey)
+      }
+      // Check if this is an article
+      if (longformEvent.kind === KIND_LONG_FORM_CONTENT) {
+        setIsArticle(true)
+      }
+    } else if (isNaddr) {
+      setLoading(longformLoading)
     }
-  }, [isNaddr, naddrData])
+  }, [isNaddr, longformEvent, longformLoading, addRelevantPerson])
 
-  const addRelevantPerson = (person: string) => {
-    setRelevantPeople((prev) => new Map(prev).set(person, true))
-  }
-
-  const addToThread = (event: NDKEvent) => {
-    if (
-      content.hideEventsByUnknownUsers &&
-      socialGraph().getFollowDistance(event.pubkey) > 5
-    )
-      return
-    if (!threadAuthor) setThreadAuthor(event.pubkey)
-    addRelevantPerson(event.pubkey)
-    for (const user of getTags("p", event.tags)) {
-      addRelevantPerson(user)
-    }
-  }
+  const addToThread = useCallback(
+    (event: NDKEvent) => {
+      if (
+        content.hideEventsByUnknownUsers &&
+        socialGraph().getFollowDistance(event.pubkey) > 5
+      )
+        return
+      if (!threadAuthor) setThreadAuthor(event.pubkey)
+      // Check if this is an article (long-form content)
+      if (event.kind === KIND_LONG_FORM_CONTENT) {
+        setIsArticle(true)
+      }
+      addRelevantPerson(event.pubkey)
+      for (const user of getTags("p", event.tags)) {
+        addRelevantPerson(user)
+      }
+    },
+    [content.hideEventsByUnknownUsers, threadAuthor, addRelevantPerson]
+  )
 
   return (
     <div className="flex justify-center">
@@ -127,16 +131,32 @@ export default function ThreadPage({
       <RightColumn>
         {() => (
           <>
-            {relevantPeople.size > 0 && (
-              <Widget title="Relevant people">
-                <FollowList
-                  follows={Array.from(relevantPeople.keys())}
-                  showAbout={true}
+            {isArticle && threadAuthor ? (
+              <Widget title="More from this author">
+                <AuthorArticlesFeed
+                  authorPubkey={threadAuthor}
+                  currentArticleId={event?.id || id}
+                  maxItems={5}
                 />
               </Widget>
+            ) : (
+              relevantPeople.size > 0 && (
+                <Widget title="Relevant people">
+                  <FollowList
+                    follows={Array.from(relevantPeople.keys())}
+                    showAbout={true}
+                  />
+                </Widget>
+              )
             )}
             <Widget title="Popular">
-              <PopularFeed />
+              <PopularFeed
+                displayOptions={{
+                  small: true,
+                  showDisplaySelector: false,
+                  randomSort: true,
+                }}
+              />
             </Widget>
           </>
         )}

@@ -15,8 +15,12 @@ import {
 import {ndk} from "./utils/ndk"
 import {router} from "@/pages"
 import socialGraph from "./utils/socialGraph"
+import DebugManager from "./utils/DebugManager"
 
 ndk()
+
+// Initialize debug system
+DebugManager
 
 // Initialize chat modules if we have a public key
 const state = useUserStore.getState()
@@ -34,7 +38,10 @@ document.title = CONFIG.appName
 
 // Initialize theme from settings store
 const {appearance} = useSettingsStore.getState()
-document.documentElement.setAttribute("data-theme", appearance.theme)
+document.documentElement.setAttribute(
+  "data-theme",
+  appearance.theme || CONFIG.defaultTheme
+)
 
 // Perform migration before rendering the app
 migrateUserState()

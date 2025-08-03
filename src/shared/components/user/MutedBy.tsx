@@ -2,7 +2,7 @@ import FollowList from "@/pages/user/components/FollowList"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {Fragment, useMemo, useState} from "react"
-import socialGraph from "@/utils/socialGraph"
+import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {Link} from "react-router"
 import {nip19} from "nostr-tools"
 import {Name} from "./Name"
@@ -17,6 +17,7 @@ export default function MutedBy({pubkey}: {pubkey: string}) {
       totalMutedBy: mutedBy.size,
     }
   }, [pubkey])
+  useSocialGraphLoaded() // social graph updated hook needed?
 
   const root = socialGraph().getRoot()
   const mutedBy = socialGraph().getUserMutedBy(pubkey)

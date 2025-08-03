@@ -11,21 +11,30 @@ import {generateSecretKey, getPublicKey, nip19} from "nostr-tools"
 import NDKCacheAdapterDexie from "@nostr-dev-kit/ndk-cache-dexie"
 import {bytesToHex, hexToBytes} from "@noble/hashes/utils"
 import {useUserStore} from "@/stores/user"
+import {KIND_METADATA} from "@/utils/constants"
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
 let nip07Signer: NDKNip07Signer | undefined
 
-/**
- * Default relays to use when initializing NDK
- */
-export const DEFAULT_RELAYS = [
-  "wss://temp.iris.to",
-  "wss://vault.iris.to",
-  "wss://relay.damus.io",
-  "wss://relay.nostr.band",
-  "wss://relay.snort.social",
+function normalizeRelayUrl(url: string): string {
+  // Ensure URL ends with / to match NDK's internal normalization
+  return url.endsWith("/") ? url : url + "/"
+}
+
+const LOCAL_RELAY = ["ws://localhost:7777"]
+
+const PRODUCTION_RELAYS = [
+  "wss://temp.iris.to/",
+  "wss://vault.iris.to/",
+  "wss://relay.damus.io/",
+  "wss://relay.nostr.band/",
+  "wss://relay.snort.social/",
 ]
+
+export const DEFAULT_RELAYS = import.meta.env.VITE_USE_LOCAL_RELAY
+  ? LOCAL_RELAY
+  : PRODUCTION_RELAYS
 
 /**
  * Get a singleton "default" NDK instance to get started quickly. If you want to init NDK with e.g. your own relays, pass them on the first call.
@@ -38,8 +47,8 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
     const store = useUserStore.getState()
     const options = opts || {
       explicitRelayUrls: DEFAULT_RELAYS,
-      enableOutboxModel: true,
-      cacheAdapter: new NDKCacheAdapterDexie({dbName: "irisdb-nostr", saveSig: true}),
+      enableOutboxModel: store.ndkOutboxModel,
+      cacheAdapter: new NDKCacheAdapterDexie({dbName: "treelike-nostr", saveSig: true}),
     }
     ndkInstance = new NDK(options)
 
@@ -64,14 +73,33 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
     watchLocalSettings(ndkInstance)
     ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
     ndkInstance.connect()
+    console.log("NDK instance initialized", ndkInstance)
   } else if (opts) {
     throw new Error("NDK instance already initialized, cannot pass options")
   }
   return ndkInstance
 }
 
+function recreateNDKInstance() {
+  if (ndkInstance) {
+    // Disconnect all relays individually
+    for (const relay of ndkInstance.pool.relays.values()) {
+      relay.disconnect()
+    }
+    ndkInstance = null
+    privateKeySigner = undefined
+    nip07Signer = undefined
+  }
+  ndk()
+}
+
 function watchLocalSettings(instance: NDK) {
   useUserStore.subscribe((state, prevState) => {
+    if (state.ndkOutboxModel !== prevState.ndkOutboxModel) {
+      console.log("NDK outbox model setting changed, recreating NDK instance")
+      recreateNDKInstance()
+      return
+    }
     if (state.privateKey !== prevState.privateKey) {
       const havePrivateKey = state.privateKey && typeof state.privateKey === "string"
       if (havePrivateKey) {
@@ -112,14 +140,28 @@ function watchLocalSettings(instance: NDK) {
 
     if (state.relays !== prevState.relays) {
       if (Array.isArray(state.relays)) {
+        // Normalize relay URLs for consistent comparison
+        const normalizedNewRelays = state.relays.map(normalizeRelayUrl)
+        const normalizedPoolUrls = Array.from(instance.pool.relays.keys()).map(
+          normalizeRelayUrl
+        )
+
+        // Add new relays
         state.relays.forEach((url) => {
-          if (!instance.pool.relays.has(url)) {
-            instance.pool.addRelay(new NDKRelay(url, undefined, instance))
+          const normalizedUrl = normalizeRelayUrl(url)
+          if (!normalizedPoolUrls.includes(normalizedUrl)) {
+            const relay = new NDKRelay(url, undefined, instance)
+            instance.pool.addRelay(relay)
+            // Explicitly connect to the new relay
+            relay.connect()
           }
         })
-        for (const url of instance.pool.relays.keys()) {
-          if (!state.relays.includes(url)) {
-            instance.pool.removeRelay(url)
+
+        // Remove relays not in the new list
+        for (const poolUrl of instance.pool.relays.keys()) {
+          const normalizedPoolUrl = normalizeRelayUrl(poolUrl)
+          if (!normalizedNewRelays.includes(normalizedPoolUrl)) {
+            instance.pool.removeRelay(poolUrl)
           }
         }
       }
@@ -150,7 +192,7 @@ export function newUserLogin(name: string) {
   privateKeySigner = new NDKPrivateKeySigner(privateKeyHex)
   ndkInstance!.signer = privateKeySigner
   const profileEvent = new NDKEvent(ndkInstance!)
-  profileEvent.kind = 0
+  profileEvent.kind = KIND_METADATA
   profileEvent.content = JSON.stringify({name})
   profileEvent.publish()
 }

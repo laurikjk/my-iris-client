@@ -157,7 +157,7 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
           <FollowerCount pubKey={pubKeyHex} />
           <FollowsCount pubKey={pubKeyHex} />
         </div>
-        {pubKeyHex !== myPubKey && (
+        {myPubKey && pubKeyHex !== myPubKey && (
           <div className="flex flex-row gap-4 px-4 mb-4 items-end flex-wrap">
             <FollowedBy pubkey={pubKeyHex} />
           </div>

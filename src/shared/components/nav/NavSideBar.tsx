@@ -1,4 +1,4 @@
-import {RiLoginBoxLine, RiLockLine} from "@remixicon/react"
+import {RiLoginBoxLine, RiLockLine, RiBugLine} from "@remixicon/react"
 import {useRef, useMemo} from "react"
 import classNames from "classnames"
 import NavLink from "./NavLink"
@@ -12,6 +12,7 @@ import PublishButton from "../ui/PublishButton"
 import ErrorBoundary from "../ui/ErrorBoundary"
 import {formatAmount} from "@/utils/utils"
 import {usePublicKey} from "@/stores/user"
+import {useSettingsStore} from "@/stores/settings"
 import {navItemsConfig} from "./navConfig"
 import {UserRow} from "../user/UserRow"
 import {useUIStore} from "@/stores/ui"
@@ -23,6 +24,7 @@ const NavSideBar = () => {
   const {isSidebarOpen, setIsSidebarOpen, setShowLoginDialog} = useUIStore()
   const {balance} = useWalletBalance()
   const myPubKey = usePublicKey()
+  const {debug} = useSettingsStore()
 
   const navItems = useMemo(() => {
     const configItems = navItemsConfig()
@@ -44,7 +46,7 @@ const NavSideBar = () => {
       <div
         ref={ref}
         className={classNames(
-          "bg-base-200 transition-transform duration-300 fixed md:sticky md:translate-x-0 top-0 select-none w-56 md:w-20 xl:w-64 h-screen z-40 flex flex-col md:justify-between border-r border-custom overflow-y-auto pt-[env(safe-area-inset-top)]",
+          "bg-base-200 transition-transform duration-300 fixed md:sticky md:translate-x-0 top-0 select-none w-56 md:w-20 xl:w-64 h-screen z-40 flex flex-col md:justify-between border-r border-custom overflow-y-auto pt-[env(safe-area-inset-top)] flex-shrink-0",
           {
             "translate-x-0": isSidebarOpen,
             "-translate-x-full": !isSidebarOpen,
@@ -60,10 +62,24 @@ const NavSideBar = () => {
             <span className="inline md:hidden xl:inline">{CONFIG.appName}</span>
           </NavLink>
           {myPubKey && !ndk().signer && (
-            <div className="ml-4 md:ml-0 xl:ml-4 flex items-center gap-2 text-error text-sm">
-              <RiLockLine className="w-4 h-4" />
+            <div
+              title="Read-only mode"
+              className="px-4 py-2 mx-2 md:mx-0 xl:mx-2 flex items-center gap-2 text-error text-xl"
+            >
+              <RiLockLine className="w-6 h-6" />
               <span className="hidden xl:inline">Read-only mode</span>
             </div>
+          )}
+          {debug.enabled && (
+            <NavLink
+              to="/settings/system"
+              title="Debug mode active - Click to manage"
+              className="px-4 py-2 mx-2 md:mx-0 xl:mx-2 flex items-center gap-2 text-warning text-xl hover:bg-base-300 rounded-full"
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <RiBugLine className="w-6 h-6" />
+              <span className="hidden xl:inline">Debug mode</span>
+            </NavLink>
           )}
           <ul className="menu px-2 py-0 text-xl flex flex-col gap-4 md:gap-2 xl:gap-4 rounded-2xl">
             {navItems.map(({to, icon, activeIcon, inactiveIcon, label, onClick}) => {
@@ -124,7 +140,7 @@ const NavSideBar = () => {
         {myPubKey && (
           <>
             <div
-              className="flex flex-col p-4 md:mb-2 xl:mb-6 gap-4"
+              className="flex flex-col p-4 mb-2 xl:mb-6 gap-4"
               onClick={() => setIsSidebarOpen(false)}
               data-testid="sidebar-user-row"
             >

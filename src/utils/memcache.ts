@@ -1,13 +1,15 @@
-import {NDKEvent, NDKUserProfile} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {SortedMap} from "./SortedMap/SortedMap"
 import {LRUCache} from "typescript-lru-cache"
-import debounce from "lodash/debounce"
+import throttle from "lodash/throttle"
 import localforage from "localforage"
 
 export const eventsByIdCache = new LRUCache({maxSize: 500})
 export const feedCache = new LRUCache<string, SortedMap<string, NDKEvent>>({maxSize: 10})
+export const replyFeedCache = new LRUCache<string, SortedMap<string, NDKEvent>>({
+  maxSize: 20,
+})
 export const seenEventIds = new LRUCache<string, boolean>({maxSize: 10000})
-export const profileCache = new LRUCache<string, NDKUserProfile>({maxSize: 100000})
 
 // Cache for NIP-05 verification results
 export const nip05VerificationCache = new LRUCache<string, boolean>({maxSize: 1000})
@@ -15,6 +17,39 @@ export const nip05VerificationCache = new LRUCache<string, boolean>({maxSize: 10
 // Cache for imgproxy failures - track URLs that failed to load through proxy
 export const imgproxyFailureCache = new LRUCache<string, boolean>({maxSize: 100})
 
+// Cache for loaded images to prevent remounting and flashing
+export const loadedImageCache = new LRUCache<string, string>({maxSize: 200})
+
+// Special feed cache interfaces
+interface PostFetcherCache {
+  events?: NDKEvent[]
+  hasLoadedInitial?: boolean
+}
+
+interface ReactionSubscriptionCache {
+  hasInitialData?: boolean
+  pendingReactionCounts?: Map<string, Set<string>>
+  showingReactionCounts?: Map<string, Set<string>>
+}
+
+interface PopularityFiltersCache {
+  filterLevel?: number
+}
+
+interface PopularHomeFeedCache {
+  postFetcher: PostFetcherCache
+  reactionSubscription: ReactionSubscriptionCache
+  popularityFilters: PopularityFiltersCache
+}
+
+// Simple cache for popular home feed - no LRU needed since there's only one instance
+export const popularHomeFeedCache: PopularHomeFeedCache = {
+  postFetcher: {},
+  reactionSubscription: {},
+  popularityFilters: {},
+}
+
+// Load seenEventIds from localForage
 localforage
   .getItem<string[]>("seenEventIds")
   .then((s) => {
@@ -26,12 +61,12 @@ localforage
     console.error("failed to load seenEventIds:", e)
   })
 
-const debouncedSave = debounce(
+const throttledSave = throttle(
   () => localforage.setItem("seenEventIds", [...seenEventIds.keys()]),
   5000
 )
 
 export const addSeenEventId = (id: string) => {
   seenEventIds.set(id, true)
-  debouncedSave()
+  throttledSave()
 }

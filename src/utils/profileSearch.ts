@@ -1,5 +1,5 @@
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {profileCache} from "./memcache"
+import {loadProfileCache, profileCache} from "./profileCache"
 import Fuse from "fuse.js"
 
 export type SearchResult = {
@@ -17,22 +17,18 @@ let searchIndex: Fuse<SearchResult> = new Fuse<SearchResult>([], {
 
 async function initializeSearchIndex() {
   console.time("fuse init")
-  // TODO load from localForage?
-  const {default: profileJson} = await import("nostr-social-graph/data/profileData.json")
-  const processedData = [] as SearchResult[]
-  profileJson.forEach((v) => {
-    if (v[0] && v[1]) {
-      processedData.push({
-        pubKey: v[0],
-        name: v[1],
-        nip05: v[2] || undefined,
-      })
+  // Wait for profiles to be loaded from cache or profileData.json
+  await loadProfileCache()
 
-      let pictureUrl = v[3]
-      if (pictureUrl && !pictureUrl.startsWith("http://")) {
-        pictureUrl = `https://${pictureUrl}`
-      }
-      profileCache.set(v[0], {username: v[1], picture: pictureUrl || undefined})
+  const processedData = [] as SearchResult[]
+  profileCache.forEach((profile, pubKey) => {
+    const name = profile.name || profile.username
+    if (name) {
+      processedData.push({
+        pubKey: String(pubKey),
+        name: String(name),
+        nip05: profile.nip05 || undefined,
+      })
     }
   })
 

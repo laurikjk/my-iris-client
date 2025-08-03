@@ -17,7 +17,7 @@ import {registerRoute} from "workbox-routing"
 import {clientsClaim} from "workbox-core"
 import {VerifiedEvent} from "nostr-tools"
 import localforage from "localforage"
-import {GROUP_INVITE_KIND} from "./pages/chats/utils/constants"
+import {KIND_CHANNEL_CREATE} from "./utils/constants"
 
 // eslint-disable-next-line no-undef
 declare const self: ServiceWorkerGlobalScope & {
@@ -43,7 +43,7 @@ registerRoute(
   ({request, url}) => {
     return (
       request.destination === "image" &&
-      url.href.startsWith("https://imgproxy.iris.to/") &&
+      url.href.startsWith("https://imgproxy.") &&
       (url.pathname.includes(
         `rs:fill:${PROFILE_AVATAR_WIDTH * 2}:${PROFILE_AVATAR_WIDTH * 2}`
       ) ||
@@ -177,19 +177,40 @@ self.addEventListener("notificationclick", (event) => {
       console.debug("Found clients:", allClients.length)
 
       if (allClients.length > 0) {
-        const client = allClients[0]
-        await client.focus()
-        console.debug("Sending navigation message to client")
-        await client.postMessage({
-          type: "NAVIGATE_REACT_ROUTER",
-          url: fullUrl,
-        })
-        return
+        // Try to find a visible client first, otherwise use the first one
+        let client = allClients.find((c) => c.visibilityState === "visible")
+        if (!client) {
+          client = allClients[0]
+        }
+
+        try {
+          await client.focus()
+          console.debug("Client focused, sending navigation message")
+          // Add a small delay to ensure focus completes before navigation
+          await new Promise((resolve) => setTimeout(resolve, 100))
+          await client.postMessage({
+            type: "NAVIGATE_REACT_ROUTER",
+            url: fullUrl,
+          })
+          console.debug("Navigation message sent successfully")
+          return
+        } catch (error) {
+          console.error("Failed to focus client or send navigation message:", error)
+          // Fall through to opening new window
+        }
       }
 
-      console.debug("No clients found, opening new window")
+      console.debug("No clients found or client communication failed, opening new window")
       if (self.clients.openWindow) {
-        return self.clients.openWindow(fullUrl)
+        try {
+          const newClient = await self.clients.openWindow(fullUrl)
+          console.debug("New window opened successfully")
+          return newClient
+        } catch (error) {
+          console.error("Failed to open new window:", error)
+        }
+      } else {
+        console.error("openWindow not available")
       }
     })()
   )
@@ -303,7 +324,7 @@ self.addEventListener("push", (event) => {
       if (data.event.kind === MESSAGE_EVENT_KIND) {
         const result = await tryDecryptPrivateDM(data)
         if (result.success) {
-          if (result.kind === GROUP_INVITE_KIND) {
+          if (result.kind === KIND_CHANNEL_CREATE) {
             await self.registration.showNotification("New group invite", {
               icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
               data: {
@@ -337,8 +358,23 @@ self.addEventListener("push", (event) => {
         return
       }
 
+      const imgproxySettings = (await localforage.getItem("imgproxy-settings")) as {
+        url: string
+        key: string
+        salt: string
+        enabled: boolean
+        fallbackToOriginal: boolean
+      } | null
+      const proxyConfig = imgproxySettings
+        ? {
+            url: imgproxySettings.url,
+            key: imgproxySettings.key,
+            salt: imgproxySettings.salt,
+          }
+        : undefined
+
       const icon = data.icon?.startsWith("http")
-        ? generateProxyUrl(data.icon, {width: 128, square: true})
+        ? generateProxyUrl(data.icon, {width: 128, square: true}, proxyConfig)
         : data.icon || "/favicon.png"
 
       await self.registration.showNotification(data.title || "New notification", {

@@ -1,52 +1,22 @@
-import {onConnected} from "@getalby/bitcoin-connect"
-import {WebLNProvider} from "@/types/global"
-import {useEffect, useState} from "react"
+import {useWalletProviderStore} from "@/stores/walletProvider"
+import {NDKWallet} from "@nostr-dev-kit/ndk-wallet"
+import {useEffect} from "react"
 
-let nwcUnsubscribe: (() => void) | null = null
-
-export const useWebLNProvider = () => {
-  const [provider, setProvider] = useState<WebLNProvider | null>(null)
+export const useWebLNProvider = (): NDKWallet | null => {
+  const {activeWallet, initializeProviders, refreshActiveProvider} =
+    useWalletProviderStore()
 
   useEffect(() => {
-    const checkNativeWebLN = async () => {
-      if (window.webln) {
-        try {
-          const enabled = await window.webln.isEnabled()
-          if (enabled) {
-            setProvider(window.webln)
-            return true
-          }
-        } catch (error) {
-          console.warn("Failed to enable native WebLN provider:", error)
-        }
-      }
-      return false
-    }
+    console.log("🔍 useWebLNProvider: initializing providers")
+    // Initialize providers on mount
+    initializeProviders()
+  }, [initializeProviders])
 
-    // Check native WebLN first
-    checkNativeWebLN().then((hasNativeWebLN) => {
-      if (!hasNativeWebLN) {
-        // Only set up NWC if native WebLN is not available
-        nwcUnsubscribe = onConnected(async (newProvider) => {
-          try {
-            const enabled = await newProvider.isEnabled()
-            if (enabled) {
-              setProvider(newProvider)
-            }
-          } catch (error) {
-            console.warn("Failed to enable NWC provider:", error)
-          }
-        })
-      }
-    })
+  useEffect(() => {
+    console.log("🔍 useWebLNProvider: refreshing active provider")
+    // Refresh active provider when it changes
+    refreshActiveProvider()
+  }, [refreshActiveProvider])
 
-    return () => {
-      if (nwcUnsubscribe) {
-        nwcUnsubscribe()
-        nwcUnsubscribe = null
-      }
-    }
-  }, [])
-
-  return provider
+  return activeWallet
 }

@@ -27,7 +27,13 @@ function Notifications() {
         {() => (
           <>
             <Widget title="Popular">
-              <PopularFeed />
+              <PopularFeed
+                displayOptions={{
+                  small: true,
+                  showDisplaySelector: false,
+                  randomSort: true,
+                }}
+              />
             </Widget>
           </>
         )}

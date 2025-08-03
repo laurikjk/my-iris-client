@@ -6,9 +6,7 @@ import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
-
-const NSEC_NPUB_REGEX = /(nsec1|npub1)[a-zA-Z0-9]{20,65}/gi
-const HEX_REGEX = /[0-9a-fA-F]{64}/gi
+import {NSEC_NPUB_REGEX, HEX_REGEX} from "@/utils/validation"
 
 interface SignInProps {
   onClose: () => void

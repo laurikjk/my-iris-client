@@ -6,8 +6,7 @@ import {useHoverCard} from "@/shared/components/user/useHoverCard"
 import {Avatar} from "@/shared/components/user/Avatar"
 import {Name} from "@/shared/components/user/Name"
 import ProfileCard from "./ProfileCard"
-
-const HEX_REGEX = /^[0-9a-fA-F]{64}$/
+import {HEX_REGEX_STRICT as HEX_REGEX} from "@/utils/validation"
 
 export function UserRow({
   pubKey,
@@ -28,11 +27,8 @@ export function UserRow({
 }) {
   const {hoverProps, showCard} = useHoverCard(showHoverCard)
 
-  const content = (
-    <div
-      className="flex flex-row items-center gap-2 justify-between relative"
-      {...hoverProps}
-    >
+  const mainContent = (
+    <div className="flex flex-row items-center gap-2 justify-between">
       <div className="flex items-center gap-2 flex-row break-words [overflow-wrap:anywhere]">
         <Avatar
           pubKey={pubKey}
@@ -43,19 +39,6 @@ export function UserRow({
         <Name pubKey={pubKey} className={textClassName} />
       </div>
       <span className="text-base-content">{description}</span>
-      <div
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-        }}
-        className={`cursor-default z-40 bg-base-100 rounded-2xl absolute left-0 top-full mt-2 w-96 min-h-32 p-4 transition-all duration-300 ease-in-out ${
-          showCard ? "opacity-100" : "opacity-0 hidden"
-        }`}
-      >
-        {showCard && (
-          <ProfileCard pubKey={pubKey} showFollows={true} showHoverCard={false} />
-        )}
-      </div>
     </div>
   )
 
@@ -75,5 +58,22 @@ export function UserRow({
     return ""
   }, [linkToProfile, pubKey])
 
-  return linkToProfile ? <Link to={link}>{content}</Link> : content
+  return (
+    <div className="relative" {...hoverProps}>
+      {linkToProfile ? <Link to={link}>{mainContent}</Link> : mainContent}
+      <div
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+        }}
+        className={`cursor-default z-40 bg-base-100 rounded-2xl absolute left-0 top-full mt-2 w-96 min-h-32 p-4 transition-all duration-300 ease-in-out ${
+          showCard ? "opacity-100" : "opacity-0 hidden"
+        }`}
+      >
+        {showCard && (
+          <ProfileCard pubKey={pubKey} showFollows={true} showHoverCard={false} />
+        )}
+      </div>
+    </div>
+  )
 }

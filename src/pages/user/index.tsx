@@ -1,114 +1,102 @@
 import {NavLink, Route, Routes, useLocation} from "react-router"
-import {useMemo, ReactNode, useState, useEffect} from "react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {useMemo, useState, useEffect} from "react"
 import classNames from "classnames"
 
 import RightColumn from "@/shared/components/RightColumn"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
 import Feed from "@/shared/components/feed/Feed.tsx"
+import {type FeedConfig} from "@/stores/feed"
 import {shouldHideAuthor} from "@/utils/visibility"
 import Widget from "@/shared/components/ui/Widget"
 import useFollows from "@/shared/hooks/useFollows"
-import {hasMedia} from "@/shared/components/embed"
 import {PublicKey} from "@/shared/utils/PublicKey"
 import FollowList from "./components/FollowList"
-import {getEventReplyingTo} from "@/utils/nostr"
 import socialGraph from "@/utils/socialGraph"
 import ProfileHeader from "./ProfileHeader"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
+import {
+  KIND_TEXT_NOTE,
+  KIND_REPOST,
+  KIND_REACTION,
+  KIND_CLASSIFIED,
+} from "@/utils/constants"
 
 type Tab = {
   name: string
   path: string
-  element: ({
-    pubKey,
-    myPubKey,
-    showRepliedTo,
-    displayFilterFn,
-  }: {
-    pubKey: string
-    myPubKey: string
-    showRepliedTo?: boolean
-    displayFilterFn?: (e: NDKEvent) => boolean
-  }) => ReactNode
-  displayFilterFn?: (e: NDKEvent) => boolean
-  showRepliedTo?: boolean
+  getFeedConfig: (pubKey: string, myPubKey: string) => FeedConfig
 }
 
 const tabs: Tab[] = [
   {
     name: "Posts",
     path: "",
-    displayFilterFn: (e: NDKEvent) => !getEventReplyingTo(e),
-    element: ({pubKey, displayFilterFn}) => (
-      <Feed
-        key={`feed-${pubKey}`}
-        filters={{kinds: [1, 6], authors: [pubKey]}}
-        displayFilterFn={displayFilterFn}
-        borderTopFirst={true}
-      />
-    ),
+    getFeedConfig: (pubKey) => ({
+      name: "Posts",
+      id: `posts-${pubKey}`,
+      hideReplies: true,
+      showEventsByUnknownUsers: true,
+      filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
+    }),
   },
   {
     name: "Market",
     path: "market",
-    element: ({pubKey}) => (
-      <Feed
-        key={`feed-${pubKey}`}
-        filters={{kinds: [30402], authors: [pubKey]}}
-        borderTopFirst={true}
-        showRepliedTo={true}
-      />
-    ),
+    getFeedConfig: (pubKey) => ({
+      name: "Market",
+      id: `market-${pubKey}`,
+      showEventsByUnknownUsers: true,
+      filter: {kinds: [KIND_CLASSIFIED], authors: [pubKey]},
+      showRepliedTo: true,
+    }),
   },
   {
     name: "Replies",
     path: "replies",
-    element: ({pubKey}) => (
-      <Feed
-        key={`feed-${pubKey}`}
-        filters={{kinds: [1, 6], authors: [pubKey]}}
-        showRepliedTo={true}
-        borderTopFirst={true}
-      />
-    ),
+    getFeedConfig: (pubKey) => ({
+      name: "Replies",
+      id: `replies-${pubKey}`,
+      showEventsByUnknownUsers: true,
+      filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
+      showRepliedTo: true,
+    }),
   },
   {
     name: "Media",
     path: "media",
-    displayFilterFn: (e: NDKEvent) => hasMedia(e),
-    element: ({pubKey, displayFilterFn}) => (
-      <Feed
-        key={`feed-${pubKey}`}
-        filters={{kinds: [1, 6], authors: [pubKey]}}
-        displayFilterFn={displayFilterFn}
-        borderTopFirst={true}
-      />
-    ),
+    getFeedConfig: (pubKey) => ({
+      name: "Media",
+      id: `media-${pubKey}`,
+      requiresMedia: true,
+      showEventsByUnknownUsers: true,
+      filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
+    }),
   },
   {
     name: "Likes",
     path: "likes",
-    element: ({pubKey}) => (
-      <Feed
-        key={`feed-${pubKey}`}
-        filters={{kinds: [7], authors: [pubKey]}}
-        borderTopFirst={true}
-      />
-    ),
+    getFeedConfig: (pubKey) => ({
+      name: "Likes",
+      id: `likes-${pubKey}`,
+      showEventsByUnknownUsers: true,
+      filter: {kinds: [KIND_REACTION], authors: [pubKey]},
+    }),
   },
   {
     name: "You",
     path: "you",
-    element: ({pubKey, myPubKey}) => (
-      <Feed
-        key={`feed-${pubKey}`}
-        filters={{kinds: [1, 6, 7], authors: [pubKey], "#p": [myPubKey]}}
-        borderTopFirst={true}
-        showRepliedTo={true}
-      />
-    ),
+    getFeedConfig: (pubKey, myPubKey) => ({
+      name: "You",
+      id: `you-${pubKey}`,
+      showEventsByUnknownUsers: true,
+      filter: {
+        kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_REACTION],
+        authors: [pubKey],
+        "#p": [myPubKey],
+      },
+      showRepliedTo: true,
+    }),
   },
 ]
 
@@ -122,7 +110,7 @@ function useHasMarketEvents(pubKey: string) {
     setHasMarketEvents(false)
 
     const sub = ndk().subscribe({
-      kinds: [30402],
+      kinds: [KIND_CLASSIFIED],
       authors: [pubKey],
       limit: 1,
     })
@@ -154,9 +142,10 @@ function UserPage({pubKey}: {pubKey: string}) {
   const follows = useFollows(pubKey)
   const hasMarketEvents = useHasMarketEvents(pubKeyHex)
   const filteredFollows = useMemo(() => {
-    return follows
-      .filter((follow) => socialGraph().getFollowDistance(follow) > 1)
-      .sort(() => Math.random() - 0.5) // Randomize order
+    const filtered = myPubKey
+      ? follows.filter((follow) => socialGraph().getFollowDistance(follow) > 1)
+      : follows
+    return filtered.sort(() => Math.random() - 0.5) // Randomize order
   }, [follows])
   const location = useLocation()
   const activeProfile = location.pathname.split("/")[1] || ""
@@ -195,11 +184,10 @@ function UserPage({pubKey}: {pubKey: string}) {
                   key={tab.path}
                   path={tab.path}
                   element={
-                    <tab.element
-                      showRepliedTo={tab.showRepliedTo}
-                      pubKey={pubKeyHex}
-                      displayFilterFn={tab.displayFilterFn}
-                      myPubKey={myPubKey}
+                    <Feed
+                      key={`feed-${pubKeyHex}-${tab.path}`}
+                      feedConfig={tab.getFeedConfig(pubKeyHex, myPubKey)}
+                      borderTopFirst={true}
                     />
                   }
                 />
@@ -218,7 +206,13 @@ function UserPage({pubKey}: {pubKey: string}) {
             )}
             {pubKeyHex === myPubKey && (
               <Widget title="Popular">
-                <PopularFeed />
+                <PopularFeed
+                  displayOptions={{
+                    small: true,
+                    showDisplaySelector: false,
+                    randomSort: true,
+                  }}
+                />
               </Widget>
             )}
           </>

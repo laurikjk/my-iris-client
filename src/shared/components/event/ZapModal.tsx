@@ -14,23 +14,39 @@ import {Avatar} from "@/shared/components/user/Avatar"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {Name} from "@/shared/components/user/Name"
 import {useUserStore} from "@/stores/user"
-import {useZapStore} from "@/stores/zap"
+import {useWalletProviderStore} from "@/stores/walletProvider"
 import {ndk} from "@/utils/ndk"
 
 interface ZapModalProps {
   onClose: () => void
   event: NDKEvent
   setZapped: Dispatch<SetStateAction<boolean>>
+  initialInvoice?: string
+  initialAmount?: string
+  paymentFailed?: boolean
 }
 
-function ZapModal({onClose, event, setZapped}: ZapModalProps) {
-  const {defaultZapAmount, setDefaultZapAmount} = useZapStore()
-  const {walletConnect: isWalletConnect} = useUserStore()
+function ZapModal({
+  onClose,
+  event,
+  setZapped,
+  initialInvoice,
+  initialAmount,
+  paymentFailed,
+}: ZapModalProps) {
+  const {defaultZapAmount, setDefaultZapAmount} = useUserStore()
+  const {activeProviderType, sendPayment: walletProviderSendPayment} =
+    useWalletProviderStore()
+
+  // Check if we have any wallet available
+  const hasWallet = activeProviderType !== "disabled" && activeProviderType !== undefined
   const [copiedPaymentRequest, setCopiedPaymentRequest] = useState(false)
   const [noAddress, setNoAddress] = useState(false)
-  const [showQRCode, setShowQRCode] = useState(false)
-  const [bolt11Invoice, setBolt11Invoice] = useState<string>("")
-  const [zapAmount, setZapAmount] = useState<string>(defaultZapAmount.toString())
+  const [showQRCode, setShowQRCode] = useState(!!initialInvoice)
+  const [bolt11Invoice, setBolt11Invoice] = useState<string>(initialInvoice || "")
+  const [zapAmount, setZapAmount] = useState<string>(
+    initialAmount || (defaultZapAmount > 0 ? defaultZapAmount.toString() : "21")
+  )
   const [customAmount, setCustomAmount] = useState<string>("")
   const [zapMessage, setZapMessage] = useState<string>("")
   const [shouldSetDefault, setShouldSetDefault] = useState(false)
@@ -38,16 +54,16 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
   const [error, setError] = useState<string>("")
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [zapRefresh, setZapRefresh] = useState(false)
-
   const amounts: Record<string, string> = {
-    [defaultZapAmount.toString()]: "",
-    "1000": "👍",
-    "5000": "💜",
-    "10000": "😍",
-    "20000": "🤩",
-    "50000": "🔥",
-    "100000": "🚀",
-    "1000000": "🤯",
+    ...(defaultZapAmount > 0 ? {[defaultZapAmount.toString()]: ""} : {}),
+    "1": "⚡",
+    "21": "👍",
+    "42": "🤙",
+    "69": "😏",
+    "100": "💯",
+    "1000": "🔥",
+    "10000": "🚀",
+    "100000": "🤯",
   }
 
   const handleZapAmountChange = (amount: string) => {
@@ -100,24 +116,28 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
       }
 
       const lnPay: LnPayCb = async ({pr}) => {
-        if (isWalletConnect) {
-          try {
-            const {requestProvider} = await import("@getalby/bitcoin-connect-react")
-            const provider = await requestProvider()
-            await provider.sendPayment(pr)
-            setZapped(true)
-            setZapRefresh(!zapRefresh)
-            onClose()
-            return provider.sendPayment(pr)
-          } catch (error) {
-            setError("Failed to connect to wallet. Please try again.")
-            throw error
-          }
-        } else {
-          setBolt11Invoice(pr)
-          setShowQRCode(true)
-          return undefined
+        // Always set the invoice for QR code display
+        setBolt11Invoice(pr)
+        setShowQRCode(true)
+
+        if (hasWallet) {
+          // Attempt wallet payment in background (fire-and-forget)
+          setTimeout(() => {
+            walletProviderSendPayment(pr)
+              .then(() => {
+                setZapped(true)
+                setZapRefresh(!zapRefresh)
+                onClose()
+              })
+              .catch((error: Error) => {
+                console.warn("Wallet payment failed, user can use QR code:", error)
+                setError("Wallet payment failed. Please use the QR code below.")
+              })
+          }, 100) // Small delay to let QR code render first
         }
+
+        // Always return undefined to let NDK know we're handling payment via QR
+        return undefined
       }
 
       const zapper = new NDKZapper(event, amount, "msat", {
@@ -130,7 +150,11 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
         ],
       })
 
-      await zapper.zap()
+      // Don't await zap publish - let it succeed on any available relays
+      zapper.zap().catch((error) => {
+        console.warn("Zap publish failed on some relays (this is okay):", error)
+        // Don't throw the error - the payment flow should continue
+      })
     } catch (error) {
       console.warn("Zap failed: ", error)
       if (error instanceof Error) {
@@ -247,8 +271,19 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
 
         {showQRCode ? (
           <div className="flex flex-col items-center gap-4">
-            <p>
-              Scan the QR code to zap <b>{zapAmount} sats</b>
+            {hasWallet && !error && !paymentFailed && (
+              <div className="alert alert-info">
+                <div className="loading loading-spinner loading-sm"></div>
+                <span>Attempting to pay with your wallet...</span>
+              </div>
+            )}
+            {error && (
+              <div className="alert alert-warning">
+                <span>{error}</span>
+              </div>
+            )}
+            <p className="text-center">
+              {hasWallet ? "Or scan" : "Scan"} the QR code to zap <b>{zapAmount} sats</b>
             </p>
             <div className="w-40 h-40">
               {qrCodeUrl && <img id="qr-image" className="w-40 h-40" src={qrCodeUrl} />}
@@ -261,7 +296,7 @@ function ZapModal({onClose, event, setZapped}: ZapModalProps) {
               onClick={handleCopyPaymentRequest}
             >
               {!copiedPaymentRequest ? <RiFileCopyLine /> : <RiCheckLine />}
-              Copy zap invoice
+              Copy Lightning Invoice
             </button>
           </div>
         ) : (

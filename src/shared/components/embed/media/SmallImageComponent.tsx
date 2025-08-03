@@ -1,20 +1,15 @@
-import {getMarketImageUrls} from "@/shared/utils/marketUtils"
-import {useState, MouseEvent, useEffect} from "react"
+import {useState, MouseEvent, useMemo} from "react"
 import {useSettingsStore} from "@/stores/settings"
 import MediaModal from "../../media/MediaModal"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ProxyImg from "../../ProxyImg"
 import classNames from "classnames"
 import {EmbedEvent} from "../index"
+import {getAllEventMedia} from "./mediaUtils"
 
 interface SmallImageComponentProps {
   match: string
   event: EmbedEvent | undefined
   size?: number
-}
-
-function isNDKEvent(event: EmbedEvent): event is NDKEvent {
-  return event && typeof (event as NDKEvent).rawEvent !== "undefined"
 }
 
 function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps) {
@@ -29,45 +24,43 @@ function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps
   const [showModal, setShowModal] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
+  // Current URLs from the match
+  const urls = match.trim().split(/\s+/)
+
+  // Get all media from the event
+  const allEventMedia = useMemo(() => {
+    const eventMedia = getAllEventMedia(event)
+
+    // If no media found in event but we have URLs from the match, create media items
+    if (eventMedia.length === 0 && urls.length > 0) {
+      return urls.map((url) => ({
+        url,
+        type: url.match(/\.(mp4|webm|ogg|mov|m3u8)(?:\?|#|$)/i)
+          ? ("video" as const)
+          : ("image" as const),
+      }))
+    }
+
+    return eventMedia
+  }, [event, urls])
+
+  // Find the index of the first URL from the match in all media
+  const initialIndex = useMemo(() => {
+    if (urls.length > 0) {
+      return allEventMedia.findIndex((item) => item.url === urls[0])
+    }
+    return 0
+  }, [allEventMedia, urls])
+
   const onClick = (event: MouseEvent) => {
     event.stopPropagation()
     if (isBlurred) {
       setIsBlurred(false)
     } else {
       setShowModal(true)
-      setCurrentImageIndex(0)
+      setCurrentImageIndex(initialIndex >= 0 ? initialIndex : 0)
     }
   }
-
-  const urls = match.trim().split(/\s+/)
-
-  // Get all image URLs from tags if it's a market listing
-  const allImageUrls = event && isNDKEvent(event) ? getMarketImageUrls(event) : urls
-
-  const handlePrev = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + allImageUrls.length) % allImageUrls.length)
-  }
-
-  const handleNext = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % allImageUrls.length)
-  }
-
-  useEffect(() => {
-    if (!showModal) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") {
-        handleNext()
-      } else if (e.key === "ArrowLeft") {
-        handlePrev()
-      } else if (e.key === "Escape") {
-        setShowModal(false)
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [showModal])
 
   return (
     <>
@@ -95,17 +88,13 @@ function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps
           </div>
         ))}
       </div>
-      {showModal && (
+      {showModal && allEventMedia.length > 0 && (
         <MediaModal
           onClose={() => setShowModal(false)}
-          mediaUrl={allImageUrls[currentImageIndex]}
-          mediaType="image"
+          media={allEventMedia}
+          currentIndex={currentImageIndex}
           showFeedItem={false}
           event={event}
-          onPrev={allImageUrls.length > 1 ? handlePrev : undefined}
-          onNext={allImageUrls.length > 1 ? handleNext : undefined}
-          currentIndex={allImageUrls.length > 1 ? currentImageIndex : undefined}
-          totalCount={allImageUrls.length > 1 ? allImageUrls.length : undefined}
         />
       )}
     </>

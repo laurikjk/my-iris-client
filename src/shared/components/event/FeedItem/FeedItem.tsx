@@ -1,9 +1,14 @@
-import {eventsByIdCache, addSeenEventId} from "@/utils/memcache.ts"
+import {eventsByIdCache} from "@/utils/memcache.ts"
 import {useEffect, useMemo, useState, useRef, memo} from "react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
 import classNames from "classnames"
 
-import {getEventReplyingTo, fetchEvent, getEventRoot, isRepost} from "@/utils/nostr.ts"
+import {
+  getEventReplyingTo,
+  getEventRoot,
+  isRepost,
+  getZappingUser,
+} from "@/utils/nostr.ts"
 import {getEventIdHex, handleEventContent} from "@/shared/components/event/utils.ts"
 import RepostHeader from "@/shared/components/event/RepostHeader.tsx"
 import FeedItemActions from "../reactions/FeedItemActions.tsx"
@@ -13,22 +18,13 @@ import Feed from "@/shared/components/feed/Feed.tsx"
 import FeedItemContent from "./FeedItemContent.tsx"
 import {onClick, TRUNCATE_LENGTH} from "./utils.ts"
 import FeedItemHeader from "./FeedItemHeader.tsx"
-import socialGraph from "@/utils/socialGraph.ts"
 import FeedItemTitle from "./FeedItemTitle.tsx"
 import {Link, useNavigate} from "react-router"
 import LikeHeader from "../LikeHeader"
+import ZapReceiptHeader from "../ZapReceiptHeader"
 import {nip19} from "nostr-tools"
-
-const replySortFn = (a: NDKEvent, b: NDKEvent) => {
-  const followDistanceA = socialGraph().getFollowDistance(a.pubkey)
-  const followDistanceB = socialGraph().getFollowDistance(b.pubkey)
-  if (followDistanceA !== followDistanceB) {
-    return followDistanceA - followDistanceB
-  }
-  if (a.created_at && b.created_at) return a.created_at - b.created_at
-  console.warn("timestamps could not be compared:", a, b)
-  return 0
-}
+import {ndk} from "@/utils/ndk"
+import {KIND_TEXT_NOTE, KIND_REACTION, KIND_ZAP_RECEIPT} from "@/utils/constants"
 
 type FeedItemProps = {
   event?: NDKEvent
@@ -44,6 +40,7 @@ type FeedItemProps = {
   asReply?: boolean
   onEvent?: (event: NDKEvent) => void
   borderTop?: boolean
+  highlightAsNew?: boolean
 }
 
 function FeedItem({
@@ -60,9 +57,29 @@ function FeedItem({
   asReply = false,
   onEvent,
   borderTop,
+  highlightAsNew = false,
 }: FeedItemProps) {
   const [expanded, setExpanded] = useState(false)
+  const [hasActualReplies, setHasActualReplies] = useState(false)
   const navigate = useNavigate()
+  const subscriptionRef = useRef<NDKSubscription | null>(null)
+
+  // Handle highlight animation with lightning-like flash
+  useEffect(() => {
+    if (highlightAsNew && feedItemRef.current) {
+      // Quick flash in (lightning-like)
+      feedItemRef.current.style.transition = "background-color 0.05s ease-in"
+      feedItemRef.current.style.backgroundColor = "rgba(59, 130, 246, 0.15)" // more transparent blue flash
+
+      setTimeout(() => {
+        if (feedItemRef.current) {
+          // Slower fade out
+          feedItemRef.current.style.transition = "background-color 1.5s ease-out"
+          feedItemRef.current.style.backgroundColor = ""
+        }
+      }, 200)
+    }
+  }, [highlightAsNew])
 
   if ((!initialEvent || !initialEvent.id) && !eventId) {
     throw new Error(
@@ -104,70 +121,54 @@ function FeedItem({
   useEffect(() => {
     if (event) {
       onEvent?.(event)
-    } else {
-      return
     }
-
-    if (!event) return
-
-    let timeoutId: number | undefined
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            // Start the timer when the item becomes visible
-            timeoutId = window.setTimeout(() => {
-              addSeenEventId(event.id)
-              observer.disconnect()
-            }, 1000)
-          } else {
-            // Clear the timer if the item becomes hidden before 1s
-            if (timeoutId) {
-              window.clearTimeout(timeoutId)
-              timeoutId = undefined
-            }
-          }
-        })
-      },
-      {rootMargin: "-200px 0px 0px 0px"}
-    )
-
-    if (feedItemRef.current) {
-      observer.observe(feedItemRef.current)
-    }
-
-    return () => {
-      if (timeoutId) {
-        window.clearTimeout(timeoutId)
-      }
-      observer.disconnect()
-    }
-  }, [event])
+  }, [event, onEvent])
 
   useEffect(() => {
+    // Clean up any existing subscription first
+    if (subscriptionRef.current) {
+      subscriptionRef.current.stop()
+      subscriptionRef.current = null
+    }
+
     if (!event && eventIdHex) {
       const cached = eventsByIdCache.get(eventIdHex)
       if (cached) {
         setEvent(cached)
       } else {
-        fetchEvent({ids: [eventIdHex], authors: authorHints}).then((fetched) => {
-          if (fetched) {
-            setEvent(fetched)
-            eventsByIdCache.set(eventIdHex, fetched)
+        const sub = ndk().subscribe(
+          {ids: [eventIdHex], authors: authorHints},
+          {closeOnEose: true}
+        )
+        subscriptionRef.current = sub
+
+        sub.on("event", (fetchedEvent: NDKEvent) => {
+          if (fetchedEvent && fetchedEvent.id) {
+            setEvent(fetchedEvent)
+            eventsByIdCache.set(eventIdHex, fetchedEvent)
           }
         })
+      }
+    }
+
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current.stop()
+        subscriptionRef.current = null
       }
     }
   }, [event, eventIdHex, authorHints])
 
   useEffect(() => {
     if (event) {
-      handleEventContent(event, (referred) => {
+      const cleanup = handleEventContent(event, (referred) => {
         setReferredEvent(referred)
         eventsByIdCache.set(eventIdHex, referred)
       })
+
+      return cleanup
     }
-  }, [event])
+  }, [event, eventIdHex])
 
   const wrapperClasses = classNames("relative max-w-[100vw]", {
     "h-[200px] overflow-hidden": asEmbed && !expanded,
@@ -202,6 +203,11 @@ function FeedItem({
     )
   }
 
+  // Hide zap receipts if we can't get the zapping user
+  if (event.kind === KIND_ZAP_RECEIPT && !getZappingUser(event, false)) {
+    return null
+  }
+
   return (
     <ErrorBoundary>
       {showThreadRoot && (
@@ -215,7 +221,7 @@ function FeedItem({
           </Link>
         </div>
       )}
-      {event.kind === 1 && showRepliedTo && repliedToEventId && (
+      {event.kind === KIND_TEXT_NOTE && showRepliedTo && repliedToEventId && (
         <>
           <FeedItem
             borderTop={borderTop}
@@ -233,8 +239,11 @@ function FeedItem({
             "flex flex-col border-custom pt-3 pb-0 transition-colors duration-200 ease-in-out relative",
             {
               "cursor-pointer": !standalone,
-              "border-b": !asRepliedTo && !asEmbed,
-              "border-t": !asReply && borderTop,
+              "border-b": !asRepliedTo && !asEmbed && !(asReply && hasActualReplies),
+              "border-t":
+                !asReply &&
+                borderTop &&
+                (asRepliedTo || !(showRepliedTo && repliedToEventId)),
               "border pt-3 pb-3 my-2 rounded": asEmbed,
               "hover:bg-[var(--note-hover-color)]": !standalone,
             }
@@ -248,14 +257,22 @@ function FeedItem({
           {asRepliedTo && (
             <div className="h-full w-0.5 bg-base-300 absolute top-12 left-9" />
           )}
+          {asReply && hasActualReplies && (
+            <div className="h-full w-0.5 bg-base-300 absolute top-12 left-9" />
+          )}
           {isRepost(event) && (
             <div className="flex flex-row select-none mb-2 px-4">
               <RepostHeader event={event} />
             </div>
           )}
-          {event.kind === 7 && (
+          {event.kind === KIND_REACTION && (
             <div className="flex flex-row select-none mb-2 px-4">
               <LikeHeader event={event} />
+            </div>
+          )}
+          {event.kind === KIND_ZAP_RECEIPT && referredEvent && (
+            <div className="flex flex-row select-none mb-2 px-4">
+              <ZapReceiptHeader event={event} />
             </div>
           )}
           <div className="flex flex-row gap-4 flex-1">
@@ -275,10 +292,23 @@ function FeedItem({
               </div>
             </div>
           </div>
-          <div className={classNames("px-4", {"pl-14": asRepliedTo})}>
-            {showActions && (
-              <FeedItemActions feedItemRef={feedItemRef} event={referredEvent || event} />
-            )}
+          <div
+            className={classNames("px-4", {
+              "pl-14": asRepliedTo || asReply,
+            })}
+          >
+            {showActions &&
+              ((event.kind !== KIND_REACTION &&
+                event.kind !== KIND_ZAP_RECEIPT &&
+                !isRepost(event)) ||
+                referredEvent) && (
+                <FeedItemActions
+                  feedItemRef={feedItemRef}
+                  event={referredEvent ? undefined : event}
+                  eventId={referredEvent?.id}
+                  standalone={standalone}
+                />
+              )}
           </div>
         </div>
         {expandOverlay}
@@ -286,18 +316,24 @@ function FeedItem({
       {showReplies > 0 && (eventId || event?.id) && (
         <div className="flex flex-col justify-center">
           <Feed
-            showRepliedTo={false}
             asReply={true}
-            filters={{"#e": [eventIdHex], kinds: [1]}}
-            displayFilterFn={(e: NDKEvent) => getEventReplyingTo(e) === event.id}
-            onEvent={onEvent}
+            feedConfig={{
+              name: "Replies",
+              id: `replies-${event.id}`,
+              repliesTo: event.id,
+              sortType: "followDistance",
+              showRepliedTo: false,
+              filter: {kinds: [KIND_TEXT_NOTE], "#e": [eventIdHex]},
+            }}
+            onEvent={(e) => {
+              onEvent?.(e)
+              setHasActualReplies(true)
+            }}
             borderTopFirst={false}
             emptyPlaceholder={null}
             showReplies={showReplies}
-            sortFn={replySortFn}
             showDisplayAsSelector={false}
             displayAs="list"
-            showEventsByUnknownUsersButton={!!standalone}
           />
           <FeedItemTitle event={event} />
         </div>

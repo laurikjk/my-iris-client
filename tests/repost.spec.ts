@@ -11,6 +11,6 @@ test("user can create a post", async ({page}) => {
 
   await expect(page.getByText(postContent)).toBeVisible()
 
-  await page.getByRole("link", {name: "Home"}).click()
+  await page.getByRole("link", {name: "Home", exact: true}).click()
   await expect(page.getByText(postContent)).toBeVisible()
 })

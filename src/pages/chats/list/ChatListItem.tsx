@@ -6,7 +6,7 @@ import {Avatar} from "@/shared/components/user/Avatar"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {Name} from "@/shared/components/user/Name"
-import {CHANNEL_MESSAGE, GROUP_INVITE_KIND} from "../utils/constants"
+import {KIND_CHANNEL_MESSAGE, KIND_CHANNEL_CREATE} from "@/utils/constants"
 import {useLocation, NavLink} from "react-router"
 import {MessageType} from "../message/Message"
 import {useEventsStore} from "@/stores/events"
@@ -91,7 +91,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
     }, 300)
 
     const sub = ndk().subscribe({
-      kinds: [CHANNEL_MESSAGE],
+      kinds: [KIND_CHANNEL_MESSAGE],
       "#e": [id],
       limit: 1,
     })
@@ -143,7 +143,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
   const getPreviewContent = () => {
     if (isPublic && latestMessage?.content) {
       // Show special preview for group invite messages
-      if (latestMessage.kind === GROUP_INVITE_KIND) {
+      if (latestMessage.kind === KIND_CHANNEL_CREATE) {
         return getGroupInvitePreview(
           latestMessage.pubkey,
           latestMessage.pubkey === myPubKey
@@ -155,7 +155,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
 
     if (actualLatest?.content) {
       // Show special preview for group invite messages
-      if (actualLatest.kind === GROUP_INVITE_KIND) {
+      if (actualLatest.kind === KIND_CHANNEL_CREATE) {
         return getGroupInvitePreview(actualLatest.pubkey, actualLatest.pubkey === "user")
       }
       const content = actualLatest.content

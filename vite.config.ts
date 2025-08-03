@@ -39,6 +39,10 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      input: {
+        main: "index.html",
+        debug: "debug.html",
+      },
       output: {
         manualChunks: {
           vendor: [
@@ -47,6 +51,7 @@ export default defineConfig({
             "react-router",
             "react-helmet",
             "@nostr-dev-kit/ndk",
+            "@nostr-dev-kit/ndk-wallet",
             "markdown-to-jsx",
             "@remixicon/react",
             "minidenticons",
@@ -63,6 +68,10 @@ export default defineConfig({
             "fuse.js",
             "react-string-replace",
             "react-swipeable",
+            "@scure/bip32",
+            "@cashu/cashu-ts",
+            "zustand",
+            "blurhash",
           ],
         },
       },
@@ -78,11 +87,6 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/cashu": {
-        target: "http://127.0.0.1:8080", // Serve cashu.me here for development
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/cashu/, ""),
-      },
       "/user": {
         target: "http://localhost:8000",
         changeOrigin: true,

@@ -1,11 +1,26 @@
 import {ReactNode, useEffect} from "react"
+import classNames from "classnames"
 
 type DropdownProps = {
   children: ReactNode
   onClose: () => void
+  position?: {
+    clientY?: number
+    alignRight?: boolean
+  }
 }
 
-function Dropdown({children, onClose}: DropdownProps) {
+function Dropdown({children, onClose, position}: DropdownProps) {
+  // Calculate direction immediately based on position prop
+  const getDirection = () => {
+    if (position?.clientY && typeof window !== "undefined") {
+      return position.clientY < window.innerHeight / 2 ? "down" : "up"
+    }
+    return "down"
+  }
+
+  const direction = getDirection()
+
   useEffect(() => {
     const onEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -30,11 +45,15 @@ function Dropdown({children, onClose}: DropdownProps) {
     }
   }, [onClose])
 
-  return (
-    <div className="dropdown dropdown-open dropdown-left dropdown-container">
-      {children}
-    </div>
-  )
+  const getPositionClasses = () => {
+    const baseClasses = "dropdown dropdown-open dropdown-container"
+    const alignClass = position?.alignRight ? "dropdown-end" : "dropdown-left"
+    const directionClass = direction === "up" ? "dropdown-top" : "dropdown-bottom"
+
+    return classNames(baseClasses, alignClass, directionClass)
+  }
+
+  return <div className={getPositionClasses()}>{children}</div>
 }
 
 export default Dropdown

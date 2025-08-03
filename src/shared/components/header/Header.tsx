@@ -102,7 +102,14 @@ const Header = ({
 
   const handleButtonClick = () => {
     if (showBack) {
-      if (window.history.state?.idx > 0) {
+      // idx works only in production for some reason
+      // in production we dont want the history.length check
+      // because it could return you out of the app
+      const canGoBack = import.meta.env.DEV
+        ? window.history.length > 1
+        : window.history.state?.idx > 0
+
+      if (canGoBack) {
         navigate(-1)
       } else {
         navigate("/chats")

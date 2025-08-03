@@ -3,7 +3,6 @@ import {
   TouchEvent as ReactTouchEvent,
   useEffect,
   useState,
-  useRef,
 } from "react"
 import {FloatingEmojiPicker} from "@/shared/components/emoji/FloatingEmojiPicker"
 import {shouldHideAuthor} from "@/utils/visibility"
@@ -11,6 +10,7 @@ import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
+import {useScrollAwareLongPress} from "@/shared/hooks/useScrollAwareLongPress"
 import debounce from "lodash/debounce"
 import EmojiType from "@/types/emoji"
 import Icon from "../../Icons/Icon"
@@ -20,7 +20,13 @@ const likeCache = new LRUCache<string, Set<string>>({
   maxSize: 100,
 })
 
-export const FeedItemLike = ({event}: {event: NDKEvent}) => {
+export const FeedItemLike = ({
+  event,
+  showReactionCounts = true,
+}: {
+  event: NDKEvent
+  showReactionCounts?: boolean
+}) => {
   const myPubKey = useUserStore((state) => state.publicKey)
   const cachedLikes = likeCache.get(event.id)
   const [likesByAuthor, setLikesByAuthor] = useState<Set<string>>(
@@ -30,11 +36,34 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
   const [myReaction, setMyReaction] = useState<string>("+")
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [pickerPosition, setPickerPosition] = useState<{clientY?: number}>({})
-  const longPressTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const [isLongPress, setIsLongPress] = useState(false)
+  const {
+    handleMouseDown: handleLongPressDown,
+    handleMouseMove: handleLongPressMove,
+    handleMouseUp: handleLongPressUp,
+    isLongPress,
+  } = useScrollAwareLongPress({
+    onLongPress: () => setShowEmojiPicker(true),
+  })
+
+  // Custom handler to also set picker position
+  const handleMouseDown = (
+    e: ReactMouseEvent<HTMLButtonElement> | ReactTouchEvent<HTMLButtonElement>
+  ) => {
+    if (!myPubKey) return
+
+    // Set picker position
+    if ("touches" in e && e.touches.length > 0) {
+      setPickerPosition({clientY: e.touches[0].clientY})
+    } else if ("clientY" in e) {
+      setPickerPosition({clientY: e.clientY})
+    }
+
+    // Delegate to long press handler
+    handleLongPressDown(e)
+  }
 
   const like = async () => {
-    if (likesByAuthor.has(myPubKey)) return
+    if (!myPubKey || likesByAuthor.has(myPubKey)) return
     try {
       event.react("+")
       setMyReaction("+")
@@ -68,27 +97,6 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
     }
   }
 
-  const handleMouseDown = (
-    e: ReactMouseEvent<HTMLButtonElement> | ReactTouchEvent<HTMLButtonElement>
-  ) => {
-    setIsLongPress(false)
-    if ("touches" in e && e.touches.length > 0) {
-      setPickerPosition({clientY: e.touches[0].clientY})
-    } else if ("clientY" in e) {
-      setPickerPosition({clientY: e.clientY})
-    }
-    longPressTimeout.current = setTimeout(() => {
-      setIsLongPress(true)
-      setShowEmojiPicker(true)
-    }, 500)
-  }
-
-  const handleMouseUp = () => {
-    if (longPressTimeout.current) {
-      clearTimeout(longPressTimeout.current)
-    }
-  }
-
   const handleClick = () => {
     if (!isLongPress) {
       like()
@@ -96,6 +104,8 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
   }
 
   useEffect(() => {
+    if (!showReactionCounts) return
+
     const filter = {
       kinds: [7],
       ["#e"]: [event.id],
@@ -128,7 +138,7 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
     } catch (error) {
       console.warn(error)
     }
-  }, [])
+  }, [showReactionCounts])
 
   const liked = likesByAuthor.has(myPubKey)
 
@@ -147,13 +157,17 @@ export const FeedItemLike = ({event}: {event: NDKEvent}) => {
       } flex flex-row gap-1 items-center`}
       onClick={handleClick}
       onMouseDown={(e) => handleMouseDown(e)}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onMouseMove={(e) => handleLongPressMove(e)}
+      onMouseUp={handleLongPressUp}
+      onMouseLeave={handleLongPressUp}
       onTouchStart={(e) => handleMouseDown(e)}
-      onTouchEnd={handleMouseUp}
+      onTouchMove={(e) => handleLongPressMove(e)}
+      onTouchEnd={handleLongPressUp}
     >
       {getReactionIcon()}
-      <span data-testid="like-count">{formatAmount(likeCount)}</span>
+      <span data-testid="like-count">
+        {showReactionCounts ? formatAmount(likeCount) : ""}
+      </span>
 
       <FloatingEmojiPicker
         isOpen={showEmojiPicker}

@@ -14,7 +14,8 @@ export function useNip05Validation(pubkey: string, nip05?: string) {
     const cacheKey = `${pubkey}:${nip05}`
     const cachedResult = nip05VerificationCache.get(cacheKey)
 
-    if (cachedResult !== undefined) {
+    // Only use cached result if it's a boolean (true/false), not null
+    if (cachedResult !== undefined && cachedResult !== null) {
       setIsValid(cachedResult)
       return
     }

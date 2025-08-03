@@ -1,7 +1,7 @@
 import {notifications} from "@/utils/notifications"
 import NotificationsFeedItem from "@/pages/notifications/NotificationsFeedItem"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
-import {useEffect, useCallback, useState, Suspense} from "react"
+import {useEffect, useCallback, Suspense} from "react"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {useNotificationsStore} from "@/stores/notifications"
 import runningOstrich from "@/assets/running-ostrich.gif"
@@ -36,20 +36,13 @@ function NotificationsFeed() {
 
   const {latestNotification: latestNotificationTime} = useNotificationsStore()
 
-  const [initialNotificationsSeenAt, setInitialNotificationsSeenAt] =
-    useState(notificationsSeenAt)
-  useEffect(() => {
-    if (initialNotificationsSeenAt === 0) {
-      setInitialNotificationsSeenAt(notificationsSeenAt)
-    }
-  }, [notificationsSeenAt])
-  console.log("initialNotificationsSeenAt", initialNotificationsSeenAt)
-
   const updateSeenAt = useCallback(() => {
     if (document.hasFocus()) {
       setTimeout(() => {
-        useNotificationsStore.getState().setNotificationsSeenAt(Date.now())
-      }, 1000)
+        useNotificationsStore
+          .getState()
+          .setNotificationsSeenAt(Math.round(Date.now() / 1000))
+      }, 10000)
     }
   }, [latestNotificationTime, notificationsSeenAt])
 
@@ -101,7 +94,7 @@ function NotificationsFeed() {
             .slice(0, displayCount)
             .map((entry) => (
               <NotificationsFeedItem
-                highlight={entry[1].time > initialNotificationsSeenAt}
+                highlight={entry[1].time > notificationsSeenAt}
                 key={entry[0]}
                 notification={entry[1]}
               />

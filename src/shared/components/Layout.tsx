@@ -9,7 +9,7 @@ import Footer from "@/shared/components/Footer.tsx"
 import {useSettingsStore} from "@/stores/settings"
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {trackEvent} from "@/utils/IrisAPI"
-import {useUserStore} from "@/stores/user"
+import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useUIStore} from "@/stores/ui"
 import {Helmet} from "react-helmet"
 import {useEffect} from "react"
@@ -28,11 +28,19 @@ const Layout = () => {
   const goToNotifications = useUIStore((state) => state.goToNotifications)
   const showLoginDialog = useUIStore((state) => state.showLoginDialog)
   const setShowLoginDialog = useUIStore((state) => state.setShowLoginDialog)
+  const activeProviderType = useWalletProviderStore((state) => state.activeProviderType)
+  const initializeProviders = useWalletProviderStore((state) => state.initializeProviders)
   const navigate = useNavigate()
   const navigationType = useNavigationType()
   const location = useLocation()
 
   socialGraphLoaded.then() // just make sure we start loading social the graph
+
+  // Initialize wallet providers on app startup
+  useEffect(() => {
+    console.log("🔍 Layout: Initializing wallet providers")
+    initializeProviders()
+  }, [initializeProviders])
 
   useEffect(() => {
     if (goToNotifications > openedAt) {
@@ -111,14 +119,15 @@ const Layout = () => {
         <div className="relative flex-1 min-h-screen py-16 md:py-0 overscroll-none mt-[env(safe-area-inset-top)] mb-[env(safe-area-inset-bottom)]">
           <ErrorBoundary>
             <Outlet />
-            {useUserStore.getState().cashuEnabled && (
+            {activeProviderType !== "disabled" && (
               <iframe
                 id="cashu-wallet"
                 title="Background Cashu Wallet"
-                src="/cashu"
+                src="/cashu/index.html#/"
                 className="fixed top-0 left-0 w-0 h-0 border-none"
                 style={{zIndex: -1}}
                 referrerPolicy="no-referrer"
+                sandbox="allow-scripts allow-same-origin allow-forms"
               />
             )}
           </ErrorBoundary>

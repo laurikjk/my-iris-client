@@ -14,6 +14,7 @@ import {
   removeDoubleRatchetUser,
   DoubleRatchetUser,
 } from "../utils/doubleRatchetUsers"
+import {KIND_APP_DATA} from "@/utils/constants"
 
 export const useDoubleRatchetUsers = () => {
   const [users, setUsers] = useState<DoubleRatchetUser[]>([])
@@ -49,7 +50,7 @@ export const useDoubleRatchetUsers = () => {
     // Handle incoming events
     const handleEvent = (event: NDKEvent) => {
       console.log("Received event", event)
-      if (event.kind !== 30078) {
+      if (event.kind !== KIND_APP_DATA) {
         return
       }
       if (event.tags.length > 0) {
@@ -70,7 +71,7 @@ export const useDoubleRatchetUsers = () => {
       socialGraphSize = authors.length - 1 // excluding myPubKey
 
       currentSub = ndk().subscribe({
-        kinds: [30078],
+        kinds: [KIND_APP_DATA],
         authors,
         "#l": ["double-ratchet/invites"],
       })

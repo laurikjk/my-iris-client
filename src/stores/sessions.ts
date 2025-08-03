@@ -7,7 +7,7 @@ import {createJSONStorage, persist} from "zustand/middleware"
 import type {MessageType} from "@/pages/chats/message/Message"
 import {Filter, UnsignedEvent, VerifiedEvent} from "nostr-tools"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
-import {REACTION_KIND} from "@/pages/chats/utils/constants"
+import {KIND_REACTION} from "@/utils/constants"
 import {ndk} from "@/utils/ndk"
 import localforage from "localforage"
 import {create} from "zustand"
@@ -222,7 +222,7 @@ export const useSessionsStore = create<SessionsStore>()(
           }
 
           if (
-            event.kind === REACTION_KIND &&
+            event.kind === KIND_REACTION &&
             !event.tags?.find((tag) => tag[0] === "e")
           ) {
             throw new Error("Cannot send a reaction without a replyingToId")

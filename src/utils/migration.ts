@@ -1,4 +1,4 @@
-import {CHANNEL_MESSAGE} from "@/pages/chats/utils/constants"
+import {KIND_CHANNEL_MESSAGE} from "@/utils/constants"
 import {usePublicChatsStore} from "@/stores/publicChats"
 import {useUserStore} from "../stores/user"
 import {ndk} from "@/utils/ndk"
@@ -48,7 +48,7 @@ export const migratePublicChats = async () => {
 
   const events = await ndk()
     .fetchEvents({
-      kinds: [CHANNEL_MESSAGE],
+      kinds: [KIND_CHANNEL_MESSAGE],
       authors: [myPubKey],
       limit: 100,
     })

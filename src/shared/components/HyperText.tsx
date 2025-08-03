@@ -1,8 +1,7 @@
 import {MouseEvent, ReactNode, useState, memo, useMemo, useCallback} from "react"
 import reactStringReplace from "react-string-replace"
 
-import {Rumor} from "nostr-double-ratchet/src"
-import {allEmbeds, smallEmbeds} from "./embed"
+import {allEmbeds, smallEmbeds, EmbedEvent} from "./embed"
 
 const HyperText = memo(
   ({
@@ -14,7 +13,7 @@ const HyperText = memo(
     textPadding = !small,
   }: {
     children: string
-    event?: Rumor
+    event?: EmbedEvent
     small?: boolean
     truncate?: number
     expandable?: boolean
@@ -37,19 +36,30 @@ const HyperText = memo(
 
       let result: Array<ReactNode | string> = [content]
       const embeds = small ? smallEmbeds : allEmbeds
+      let globalMatchCounter = 0
 
       for (const embed of embeds) {
-        result = reactStringReplace(result, embed.regex, (match, i) => (
-          <embed.component
-            match={match}
-            index={i}
-            event={event}
-            key={`${embed.settingsKey}-${i}${embed.inline ? "-inline" : ""}`}
-          />
-        ))
+        result = reactStringReplace(result, embed.regex, (match, i) => {
+          // Skip processing if match is empty or just whitespace
+          if (!match || !match.trim()) {
+            return match
+          }
+
+          const uniqueKey = `${embed.settingsKey || `embed-${embeds.indexOf(embed)}`}-${globalMatchCounter++}${embed.inline ? "-inline" : ""}`
+
+          return (
+            <embed.component
+              match={match}
+              index={i}
+              event={event}
+              truncated={!!truncate && !isExpanded}
+              key={uniqueKey}
+            />
+          )
+        })
       }
       return result
-    }, [content, small, event])
+    }, [content, small, event, truncate, isExpanded])
 
     // Handle truncation and expansion
     const finalChildren = useMemo(() => {
@@ -58,7 +68,7 @@ const HyperText = memo(
         if (isExpanded) {
           return [
             ...processedChildren,
-            <span key="show-less">
+            <span key="show-less-inline">
               {" "}
               <a href="#" onClick={toggleShowMore} className="text-info underline">
                 show less
@@ -70,10 +80,25 @@ const HyperText = memo(
       }
 
       let result = [...processedChildren]
-      let charCount = 0
       let isTruncated = false
 
-      // First, find the position of the second media embed
+      // Find the first media embed to preserve it during truncation
+      let firstMediaEmbed: ReactNode | null = null
+      let firstMediaEmbedIndex = -1
+
+      for (let i = 0; i < result.length; i++) {
+        const child = result[i]
+        if (child && typeof child === "object" && "key" in child) {
+          const isMediaEmbed = child.key && !child.key.includes("-inline")
+          if (isMediaEmbed) {
+            firstMediaEmbed = child
+            firstMediaEmbedIndex = i
+            break
+          }
+        }
+      }
+
+      // Find the position of the second media embed
       let mediaEmbedCount = 0
       let secondEmbedIndex = -1
 
@@ -97,16 +122,45 @@ const HyperText = memo(
         isTruncated = true
       } else {
         // No second media embed found, apply text truncation
+        let currentCharCount = 0
+        let foundTruncationPoint = false
+
         const truncatedChildren = result.reduce(
           (acc: Array<ReactNode | string>, child) => {
+            if (foundTruncationPoint) {
+              return acc // Stop processing after truncation
+            }
+
             if (typeof child === "string") {
-              if (charCount + child.length > truncate) {
-                acc.push(child.substring(0, truncate - charCount))
+              if (currentCharCount + child.length > truncate) {
+                const remainingChars = truncate - currentCharCount
+                if (remainingChars > 0) {
+                  let truncatedText = child.substring(0, remainingChars)
+
+                  // Try to break at word boundary to avoid cutting words in half
+                  const lastSpaceIndex = truncatedText.lastIndexOf(" ")
+                  if (lastSpaceIndex > remainingChars * 0.7) {
+                    // Only if we don't lose too much text
+                    truncatedText = truncatedText.substring(0, lastSpaceIndex)
+                  }
+
+                  // Remove trailing whitespace/newlines to prevent gap before ellipsis
+                  truncatedText = truncatedText.trimEnd()
+
+                  if (truncatedText.trim()) {
+                    acc.push(truncatedText)
+                  }
+                }
+                foundTruncationPoint = true
                 isTruncated = true
                 return acc
               }
-              charCount += child.length
+              currentCharCount += child.length
+            } else {
+              // For React components, estimate character count (assume ~10 chars for mentions)
+              currentCharCount += 10
             }
+
             acc.push(child)
             return acc
           },
@@ -115,15 +169,62 @@ const HyperText = memo(
         result = truncatedChildren
       }
 
-      if (isTruncated && expandable) {
-        result.push(
-          <span key="show-more">
-            ...{" "}
-            <a href="#" onClick={toggleShowMore} className="text-info underline">
-              show more
-            </a>
-          </span>
-        )
+      // If content was truncated and we have a first media embed that got cut off, preserve it
+      if (isTruncated && firstMediaEmbed && firstMediaEmbedIndex >= result.length) {
+        // Check if the first media embed is not already in the truncated result
+        const hasFirstMediaEmbed = result.some((child) => {
+          return (
+            child &&
+            typeof child === "object" &&
+            "key" in child &&
+            (child as {key?: string}).key === (firstMediaEmbed as {key?: string}).key
+          )
+        })
+
+        if (!hasFirstMediaEmbed) {
+          result.push(firstMediaEmbed)
+        }
+      }
+
+      if (isTruncated) {
+        // Find the last string element to append ellipsis inline
+        let lastStringIndex = -1
+        for (let i = result.length - 1; i >= 0; i--) {
+          if (typeof result[i] === "string") {
+            lastStringIndex = i
+            break
+          }
+        }
+
+        if (lastStringIndex >= 0) {
+          // Append ellipsis to the last string element
+          if (expandable) {
+            result[lastStringIndex] = (
+              <span key="show-more-inline">
+                {result[lastStringIndex]}...{" "}
+                <a href="#" onClick={toggleShowMore} className="text-info underline">
+                  show more
+                </a>
+              </span>
+            )
+          } else {
+            result[lastStringIndex] = result[lastStringIndex] + "..."
+          }
+        } else {
+          // No string elements found, add as separate element
+          if (expandable) {
+            result.push(
+              <span key="show-more-inline">
+                ...{" "}
+                <a href="#" onClick={toggleShowMore} className="text-info underline">
+                  show more
+                </a>
+              </span>
+            )
+          } else {
+            result.push(<span key="ellipsis-inline">...</span>)
+          }
+        }
       }
 
       return result

@@ -1,10 +1,13 @@
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
+import localforage from "localforage"
+import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 
 interface SettingsState {
   // Appearance settings
   appearance: {
     theme: string
+    showRightColumn: boolean
   }
   // Content settings
   content: {
@@ -17,6 +20,16 @@ interface SettingsState {
     showReplies: boolean
     showZaps: boolean
     showReactionsBar: boolean
+    showReactionCounts: boolean
+    showReactionCountsInStandalone: boolean
+  }
+  // Imgproxy settings
+  imgproxy: {
+    url: string
+    key: string
+    salt: string
+    enabled: boolean
+    fallbackToOriginal: boolean
   }
   // Notification settings
   notifications: {
@@ -26,11 +39,18 @@ interface SettingsState {
   privacy: {
     enableAnalytics: boolean
   }
+  // Debug settings
+  debug: {
+    enabled: boolean
+    privateKey: string | null
+  }
   // Update a specific setting group
   updateAppearance: (settings: Partial<SettingsState["appearance"]>) => void
   updateContent: (settings: Partial<SettingsState["content"]>) => void
+  updateImgproxy: (settings: Partial<SettingsState["imgproxy"]>) => void
   updateNotifications: (settings: Partial<SettingsState["notifications"]>) => void
   updatePrivacy: (settings: Partial<SettingsState["privacy"]>) => void
+  updateDebug: (settings: Partial<SettingsState["debug"]>) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -38,6 +58,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       appearance: {
         theme: CONFIG.defaultTheme,
+        showRightColumn: true,
       },
       content: {
         blurNSFW: true,
@@ -49,12 +70,25 @@ export const useSettingsStore = create<SettingsState>()(
         showReplies: true,
         showZaps: true,
         showReactionsBar: true,
+        showReactionCounts: !isTouchDevice, // Hide in feed on mobile by default
+        showReactionCountsInStandalone: true, // Always show in post view by default
+      },
+      imgproxy: {
+        url: "https://imgproxy.coracle.social",
+        key: "",
+        salt: "",
+        enabled: true,
+        fallbackToOriginal: true,
       },
       notifications: {
         server: CONFIG.defaultSettings.notificationServer,
       },
       privacy: {
         enableAnalytics: true,
+      },
+      debug: {
+        enabled: false,
+        privateKey: null,
       },
       updateAppearance: (settings) =>
         set((state) => ({
@@ -64,6 +98,12 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           content: {...state.content, ...settings},
         })),
+      updateImgproxy: (settings) =>
+        set((state) => {
+          const newImgproxy = {...state.imgproxy, ...settings}
+          localforage.setItem("imgproxy-settings", newImgproxy)
+          return {imgproxy: newImgproxy}
+        }),
       updateNotifications: (settings) =>
         set((state) => ({
           notifications: {...state.notifications, ...settings},
@@ -72,9 +112,18 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           privacy: {...state.privacy, ...settings},
         })),
+      updateDebug: (settings) =>
+        set((state) => ({
+          debug: {...state.debug, ...settings},
+        })),
     }),
     {
       name: "settings-storage",
+      onRehydrateStorage: () => (state) => {
+        if (state?.imgproxy) {
+          localforage.setItem("imgproxy-settings", state.imgproxy)
+        }
+      },
     }
   )
 )

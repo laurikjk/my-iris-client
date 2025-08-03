@@ -47,25 +47,34 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
     return null
   }
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (!myPubKey || !pubKeyHex) {
       console.error("Cannot handle click: missing keys")
       return
     }
 
-    setLocalIsFollowing(!localIsFollowing)
-
     const event = new NDKEvent(ndk())
     event.kind = 3
     const followedUsers = socialGraph().getFollowedByUser(myPubKey)
+
+    if (isMuted) {
+      // Handle unmute case - just unmute, don't follow
+      try {
+        await unmuteUser(pubKeyHex)
+        // Force a re-render to update the button state
+        setUpdated((updated) => updated + 1)
+      } catch (error) {
+        console.error("Error unmuting user:", error)
+      }
+      return // Don't proceed with follow/unfollow logic
+    }
+
+    setLocalIsFollowing(!localIsFollowing)
 
     if (isFollowing) {
       followedUsers.delete(pubKeyHex)
     } else {
       followedUsers.add(pubKeyHex)
-      if (isMuted) {
-        unmuteUser(pubKeyHex)
-      }
     }
 
     event.tags = Array.from(followedUsers).map((pubKey) => ["p", pubKey]) as NDKTag[]

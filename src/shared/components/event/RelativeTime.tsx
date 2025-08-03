@@ -16,13 +16,16 @@ function RelativeTime({from, fallback}: RelativeTimeProps) {
   const calcTime = useCallback((fromTime: number) => {
     const currentTime = new Date()
     const timeDifference = Math.floor((currentTime.getTime() - fromTime) / 1000)
+    const absTimeDifference = Math.abs(timeDifference)
 
-    if (timeDifference < secondsInAMinute) {
+    if (absTimeDifference < secondsInAMinute) {
       return "now"
-    } else if (timeDifference < secondsInAnHour) {
-      return `${Math.floor(timeDifference / secondsInAMinute)}m`
-    } else if (timeDifference < secondsInADay) {
-      return `${Math.floor(timeDifference / secondsInAnHour)}h`
+    } else if (absTimeDifference < secondsInAnHour) {
+      const minutes = Math.floor(absTimeDifference / secondsInAMinute)
+      return timeDifference < 0 ? `now + ${minutes}m` : `${minutes}m`
+    } else if (absTimeDifference < secondsInADay) {
+      const hours = Math.floor(absTimeDifference / secondsInAnHour)
+      return timeDifference < 0 ? `now + ${hours}h` : `${hours}h`
     } else {
       const fromDate = new Date(fromTime)
       if (fromDate.getFullYear() === currentTime.getFullYear()) {

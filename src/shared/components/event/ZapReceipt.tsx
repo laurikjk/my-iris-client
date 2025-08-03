@@ -1,7 +1,9 @@
-import {decode} from "light-bolt11-decoder"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {useEffect, useState} from "react"
 import {UserRow} from "../user/UserRow"
+import {useEffect, useState} from "react"
+import {decode} from "light-bolt11-decoder"
+import {RiFlashlightFill} from "@remixicon/react"
+import {formatAmount} from "@/utils/utils"
 
 interface ZapReceiptProps {
   event: NDKEvent
@@ -10,6 +12,7 @@ interface ZapReceiptProps {
 function ZapReceipt({event}: ZapReceiptProps) {
   const [zappedAmount, setZappedAmount] = useState<number>()
 
+  // Extract zap amount from bolt11 invoice
   useEffect(() => {
     const invoice = event.tagValue("bolt11")
     if (invoice) {
@@ -21,15 +24,35 @@ function ZapReceipt({event}: ZapReceiptProps) {
         setZappedAmount(Math.floor(parseInt(amountSection.value) / 1000))
       }
     }
-  }, [])
+  }, [event])
+
+  // Get the first p or P tag as recipient
+  const zapRecipient = event.tags.find((tag) => tag[0] === "P" || tag[0] === "p")?.[1]
 
   return (
-    <div>
-      <div className="flex items-center gap-2 px-4">
-        <p className="">Zapped {zappedAmount} sats to</p>
-        <UserRow pubKey={event.tagValue("p") || ""} avatarWidth={30} />
+    <div className="px-4">
+      <div className="flex justify-between items-center gap-2 mb-2 flex-wrap">
+        <div className="flex items-center gap-1 flex-wrap">
+          <RiFlashlightFill className="w-4 h-4 text-yellow-500" />
+          <span className="text-base-content/70">zapped</span>
+          <span className="text-yellow-600 font-semibold">
+            {formatAmount(zappedAmount || 0)} sats
+          </span>
+          <span className="text-base-content/70">to</span>
+          {zapRecipient && (
+            <UserRow pubKey={zapRecipient} avatarWidth={20} showHoverCard={true} />
+          )}
+        </div>
+        <div className="flex items-center gap-1 opacity-50">
+          <span className="text-base-content text-sm">verified by</span>
+          <UserRow pubKey={event.pubkey} avatarWidth={20} />
+        </div>
       </div>
-      <p>{event.content}</p>
+      {event.content && (
+        <div className="mt-2 text-base-content/70">
+          <p>{event.content}</p>
+        </div>
+      )}
     </div>
   )
 }

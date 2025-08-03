@@ -1,7 +1,7 @@
 import {comparator} from "@/pages/chats/utils/messageGrouping"
 import type {MessageType} from "@/pages/chats/message/Message"
 import * as messageRepository from "@/utils/messageRepository"
-import {REACTION_KIND} from "@/pages/chats/utils/constants"
+import {KIND_REACTION} from "@/utils/constants"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {create} from "zustand"
 
@@ -23,6 +23,11 @@ interface EventsStoreState {
 
 interface EventsStoreActions {
   upsert: (sessionId: string, message: MessageType) => Promise<void>
+  updateMessage: (
+    sessionId: string,
+    messageId: string,
+    updates: Partial<MessageType>
+  ) => Promise<void>
   removeSession: (sessionId: string) => Promise<void>
   removeMessage: (sessionId: string, messageId: string) => Promise<void>
   clear: () => Promise<void>
@@ -31,7 +36,7 @@ interface EventsStoreActions {
 type EventsStore = EventsStoreState & EventsStoreActions
 
 const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
-  const isReaction = message.kind === REACTION_KIND
+  const isReaction = message.kind === KIND_REACTION
   const eTag = message.tags.find(([key]) => key === "e")
   if (isReaction && eTag) {
     const [, messageId] = eTag
@@ -83,6 +88,27 @@ export const useEventsStore = create<EventsStore>((set) => {
       await rehydration
       await messageRepository.clearAll()
       set({events: new Map()})
+    },
+
+    updateMessage: async (
+      sessionId: string,
+      messageId: string,
+      updates: Partial<MessageType>
+    ) => {
+      await rehydration
+      set((state) => {
+        const events = new Map(state.events)
+        const eventMap = events.get(sessionId)
+        if (eventMap) {
+          const existingMessage = eventMap.get(messageId)
+          if (existingMessage) {
+            const updatedMessage = {...existingMessage, ...updates}
+            eventMap.set(messageId, updatedMessage)
+            messageRepository.save(sessionId, updatedMessage)
+          }
+        }
+        return {events}
+      })
     },
 
     removeMessage: async (sessionId: string, messageId: string) => {

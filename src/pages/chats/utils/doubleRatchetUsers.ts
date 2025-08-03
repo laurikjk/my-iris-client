@@ -1,9 +1,10 @@
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {profileCache} from "@/utils/memcache"
+import {profileCache, addCachedProfile} from "@/utils/profileCache"
 import {handleProfile} from "@/utils/profileSearch"
 import {ndk} from "@/utils/ndk"
 import debounce from "lodash/debounce"
 import Fuse from "fuse.js"
+import {KIND_METADATA} from "@/utils/constants"
 
 export interface DoubleRatchetUser {
   pubkey: string
@@ -40,6 +41,9 @@ const recreateSearchIndex = () => {
   })
 }
 
+// Track if we're currently fetching profiles to prevent infinite loops
+let isFetchingProfiles = false
+
 // Update the search index with new user data (internal)
 const updateDoubleRatchetSearchIndexImmediate = () => {
   // Update all users' profiles in the map
@@ -63,24 +67,26 @@ const updateDoubleRatchetSearchIndexImmediate = () => {
   recreateSearchIndex()
   console.log("Updated double ratchet search index", userData.size)
 
-  // If we have users without profiles, fetch them all at once
+  // If we have users without profiles and we're not already fetching, fetch them
   const usersWithoutProfiles = Array.from(doubleRatchetUsers).filter(
     (pubkey) => !profileCache.get(pubkey)
   )
 
-  if (usersWithoutProfiles.length > 0) {
+  if (usersWithoutProfiles.length > 0 && !isFetchingProfiles) {
     console.log("Fetching profiles for", usersWithoutProfiles.length, "users")
+    isFetchingProfiles = true
+
     const sub = ndk().subscribe(
-      {kinds: [0], authors: usersWithoutProfiles},
+      {kinds: [KIND_METADATA], authors: usersWithoutProfiles},
       {closeOnEose: true}
     )
 
     sub.on("event", (event) => {
-      if (event.kind === 0) {
+      if (event.kind === KIND_METADATA) {
         try {
           const profile = JSON.parse(event.content)
           profile.created_at = event.created_at
-          profileCache.set(event.pubkey, profile)
+          addCachedProfile(event.pubkey, profile)
           handleProfile(event.pubkey, profile)
         } catch (e) {
           console.warn("Failed to parse profile for", event.pubkey, e)
@@ -90,6 +96,7 @@ const updateDoubleRatchetSearchIndexImmediate = () => {
 
     // Update search index again when profiles are loaded
     sub.on("eose", () => {
+      isFetchingProfiles = false
       updateDoubleRatchetSearchIndexImmediate()
     })
   }

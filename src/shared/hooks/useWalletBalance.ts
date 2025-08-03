@@ -1,35 +1,94 @@
-import {useWebLNProvider} from "./useWebLNProvider"
 import {useWalletStore} from "@/stores/wallet"
-import {useUserStore} from "@/stores/user"
-import {useEffect} from "react"
+import {useWalletProviderStore} from "@/stores/walletProvider"
+import {useEffect, useRef} from "react"
 
 export const useWalletBalance = () => {
-  const isWalletConnect = useUserStore((state) => state.walletConnect)
-  const {balance, setBalance, provider, setProvider} = useWalletStore()
-  const webLNProvider = useWebLNProvider()
+  const {balance, setBalance} = useWalletStore()
+  const {activeWallet, activeProviderType, activeNWCId, getBalance} =
+    useWalletProviderStore()
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    setProvider(webLNProvider)
-  }, [webLNProvider])
+    console.log("🔍 useWalletBalance state:", {
+      activeProviderType,
+      activeNWCId,
+      hasActiveWallet: !!activeWallet,
+    })
 
-  useEffect(() => {
-    if (provider) {
-      const updateBalance = async () => {
-        const balanceInfo = await provider.getBalance()
-        setBalance(balanceInfo.balance)
-      }
-      updateBalance()
-
-      if (provider.on) {
-        provider.on("accountChanged", updateBalance)
-        return () => {
-          provider.off?.("accountChanged", updateBalance)
-        }
-      }
-    } else {
-      setBalance(null)
+    // Clear any existing intervals/timeouts
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
     }
-  }, [provider])
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current)
+      retryTimeoutRef.current = null
+    }
 
-  return {balance, isWalletConnect}
+    // Clear balance immediately when wallet is disabled or uninitialized
+    if (
+      activeProviderType === "disabled" ||
+      activeProviderType === undefined ||
+      !activeWallet
+    ) {
+      console.log("🔍 No active wallet, clearing balance")
+      setBalance(null)
+      return
+    }
+
+    const updateBalance = async () => {
+      try {
+        console.log("🔍 useWalletBalance: calling getBalance()")
+        const balance = await getBalance()
+        console.log("🔍 useWalletBalance: getBalance returned:", balance)
+        // Only update balance if we got a valid response (null or number, not undefined)
+        if (balance !== undefined) {
+          setBalance(balance)
+        } else {
+          console.log("🔍 Preserving existing balance due to timeout")
+        }
+        return true
+      } catch (error) {
+        // Don't spam console with expected balance request failures
+        if (error instanceof Error && !error.message.includes("rate-limited")) {
+          console.warn("Failed to get balance:", error)
+        }
+        return false
+      }
+    }
+
+    // Try to get balance with less frequent retries
+    const tryUpdateBalance = async (attempt = 1) => {
+      const success = await updateBalance()
+
+      if (!success) {
+        // Retry with slower backoff, starting at 5 seconds, capped at 30 seconds
+        const delay = Math.min(5000 * Math.pow(1.5, attempt - 1), 30000)
+        console.log(`Balance check failed, retrying in ${delay}ms (attempt ${attempt})`)
+        retryTimeoutRef.current = setTimeout(() => {
+          tryUpdateBalance(attempt + 1)
+        }, delay)
+      }
+    }
+
+    // Initial attempt with a longer delay to let wallet initialize
+    retryTimeoutRef.current = setTimeout(() => {
+      tryUpdateBalance()
+    }, 5000)
+
+    // Set up more frequent polling (every 30 seconds) for better responsiveness
+    pollIntervalRef.current = setInterval(updateBalance, 30000)
+
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current)
+      }
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current)
+      }
+    }
+  }, [activeWallet, activeProviderType, activeNWCId, setBalance, getBalance])
+
+  return {balance}
 }

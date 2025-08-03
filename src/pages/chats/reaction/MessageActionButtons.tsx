@@ -1,15 +1,23 @@
 import {FloatingEmojiPicker} from "@/shared/components/emoji/FloatingEmojiPicker"
 import {RiHeartAddLine, RiReplyLine} from "@remixicon/react"
-import {useUserRecordsStore} from "@/stores/userRecords"
+import {useSessionsStore} from "@/stores/sessions"
 import {MouseEvent, useState} from "react"
 import classNames from "classnames"
+import {KIND_REACTION} from "@/utils/constants"
+import {MessageDropdown} from "./MessageDropdown"
+import {MessageInfoModal} from "./MessageInfoModal"
 
-type MessageReactionButtonProps = {
+type MessageActionButtonsProps = {
   messageId: string
   sessionId: string
   isUser: boolean
   onReply?: () => void
   onSendReaction?: (messageId: string, emoji: string) => Promise<void>
+  nostrEventId?: string
+  message?: {
+    created_at?: number
+    tags?: string[][]
+  }
 }
 
 type EmojiData = {
@@ -17,16 +25,19 @@ type EmojiData = {
   [key: string]: unknown
 }
 
-const MessageReactionButton = ({
+const MessageActionButtons = ({
   messageId,
   sessionId,
   isUser,
   onReply,
   onSendReaction,
-}: MessageReactionButtonProps) => {
-  const {sendMessage} = useUserRecordsStore()
+  nostrEventId,
+  message,
+}: MessageActionButtonsProps) => {
+  const {sendMessage} = useSessionsStore()
   const [showReactionsPicker, setShowReactionsPicker] = useState(false)
   const [pickerPosition, setPickerPosition] = useState<{clientY?: number}>({})
+  const [showInfoModal, setShowInfoModal] = useState(false)
 
   const handleReactionClick = (e: MouseEvent) => {
     const buttonRect = e.currentTarget.getBoundingClientRect()
@@ -43,11 +54,15 @@ const MessageReactionButton = ({
       // Construct a reaction event
       const event = {
         content: emoji.native,
-        kind: 7, // REACTION_KIND
+        kind: KIND_REACTION,
         tags: [["e", messageId]],
       }
       sendMessage(sessionId, event)
     }
+  }
+
+  const handleInfoClick = () => {
+    setShowInfoModal(true)
   }
 
   return (
@@ -74,6 +89,12 @@ const MessageReactionButton = ({
         >
           <RiHeartAddLine className="w-6 h-6" />
         </div>
+        <MessageDropdown
+          messageId={messageId}
+          sessionId={sessionId}
+          isUser={isUser}
+          onInfoClick={handleInfoClick}
+        />
       </div>
 
       <FloatingEmojiPicker
@@ -82,8 +103,17 @@ const MessageReactionButton = ({
         onEmojiSelect={handleEmojiClick}
         position={{clientY: pickerPosition.clientY, openRight: isUser}}
       />
+
+      <MessageInfoModal
+        isOpen={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
+        nostrEventId={nostrEventId}
+        sessionId={sessionId}
+        messageId={messageId}
+        message={message}
+      />
     </div>
   )
 }
 
-export default MessageReactionButton
+export default MessageActionButtons

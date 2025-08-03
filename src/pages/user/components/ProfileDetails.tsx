@@ -12,6 +12,7 @@ import Icon from "@/shared/components/Icons/Icon"
 import {unmuteUser} from "@/shared/services/Mute"
 import useMutes from "@/shared/hooks/useMutes"
 import {Page404} from "@/pages/Page404"
+import {NIP05_REGEX} from "@/utils/validation"
 
 const Bolt = () => <Icon name="zap-solid" className="text-accent" />
 const Link = () => <Icon name="link-02" className="text-info" />
@@ -102,7 +103,7 @@ function ProfileDetails({
       )}
       <MutedBy pubkey={hexPub} />
       <SubscriberBadge className="mb-1" pubkey={hexPub} />
-      {displayProfile?.nip05 && (
+      {displayProfile?.nip05 && NIP05_REGEX.test(displayProfile.nip05) && (
         <div>
           {renderProfileField(
             (() => {

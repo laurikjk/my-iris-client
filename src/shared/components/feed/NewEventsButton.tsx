@@ -23,8 +23,16 @@ const NewEventsButton = ({
         className="btn btn-info shadow-xl rounded-full"
         onClick={() => {
           showNewEvents()
-          firstFeedItemRef?.current?.scrollIntoView({block: "start"})
-          window.scrollBy(0, -200) // scroll a bit above
+
+          // Scroll to first feed item with offset, then ensure header is visible
+          if (firstFeedItemRef?.current) {
+            const rect = firstFeedItemRef.current.getBoundingClientRect()
+            const scrollTop = window.scrollY + rect.top - 200 // 200px offset above
+            window.scrollTo({top: Math.max(0, scrollTop), behavior: "instant"})
+          } else {
+            // Fallback to top if ref not available
+            window.scrollTo({top: 0, behavior: "instant"})
+          }
         }}
       >
         <AvatarGroup pubKeys={Array.from(newEventsFrom).slice(0, 3)} />

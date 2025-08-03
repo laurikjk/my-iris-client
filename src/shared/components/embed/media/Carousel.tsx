@@ -1,11 +1,10 @@
-import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
-import {useEffect, useState, MouseEvent, useCallback} from "react"
-import {useSwipeable} from "react-swipeable"
+import {useState, useCallback} from "react"
 import classNames from "classnames"
 
-import PreloadImages from "@/shared/components/media/PreloadImages"
 import MediaModal from "@/shared/components/media/MediaModal"
+import SwipableCarousel from "@/shared/components/ui/SwipableCarousel"
 import {useSettingsStore} from "@/stores/settings"
+import {SwipeItem} from "@/shared/hooks/useSwipable"
 import ImageComponent from "./ImageComponent"
 import VideoComponent from "./VideoComponent"
 import {EmbedEvent} from "../index"
@@ -23,24 +22,6 @@ interface CarouselProps {
 
 function Carousel({media, event}: CarouselProps) {
   const {content} = useSettingsStore()
-  const CarouselButton = ({
-    direction,
-    onClick,
-  }: {
-    direction: "left" | "right"
-    onClick: (e: MouseEvent<HTMLButtonElement>) => void
-  }) => (
-    <button
-      onClick={(e) => onClick(e as MouseEvent<HTMLButtonElement>)}
-      className={`absolute top-1/2 ${direction === "left" ? "left-0" : "right-0"} transform -translate-y-1/2 bg-gray-800 rounded-full opacity-50 text-white p-2`}
-    >
-      {direction === "left" ? (
-        <RiArrowLeftSLine size={24} />
-      ) : (
-        <RiArrowRightSLine size={24} />
-      )}
-    </button>
-  )
 
   const ImageIndicators = ({
     images,
@@ -113,6 +94,14 @@ function Carousel({media, event}: CarouselProps) {
   }
 
   const [currentIndex, setCurrentIndex] = useState(0)
+
+  // Convert media to SwipeItem format
+  const swipeItems: SwipeItem[] = media.map((item) => ({
+    url: item.url,
+    type: item.type,
+    imeta: item.imeta,
+  }))
+
   const [blur, setBlur] = useState(
     content.blurNSFW &&
       (!!event?.content.toLowerCase().includes("#nsfw") ||
@@ -121,63 +110,32 @@ function Carousel({media, event}: CarouselProps) {
   const [showModal, setShowModal] = useState(false)
   const [isMuted, setIsMuted] = useState(content.autoplayVideos)
 
-  const nextImage = (e?: MouseEvent | KeyboardEvent) => {
-    e?.stopPropagation()
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % media.length)
-  }
-
-  const prevImage = (e?: MouseEvent | KeyboardEvent) => {
-    e?.stopPropagation()
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + media.length) % media.length)
-  }
-
-  const onClickImage = () => {
-    if (blur) {
-      setBlur(false)
-    } else {
-      setShowModal(true)
-    }
-  }
-
-  const handlers = useSwipeable({
-    onSwipedLeft: () => nextImage(),
-    onSwipedRight: () => prevImage(),
-    preventScrollOnSwipe: true,
-    trackMouse: true,
-  })
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") {
-        nextImage(e)
-      } else if (e.key === "ArrowLeft") {
-        prevImage(e)
-      }
-    }
-
-    if (showModal) {
-      window.addEventListener("keydown", handleKeyDown)
-    } else {
-      window.removeEventListener("keydown", handleKeyDown)
-    }
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [showModal])
-
   const onCloseModal = useCallback(() => {
     setShowModal(false)
   }, [])
 
   const limitHeight = media.length > 1
 
-  const renderMediaComponent = (item: MediaItem, index: number) => {
+  const renderMediaComponent = (
+    item: SwipeItem,
+    _index: number,
+    wasDragged: {current: boolean}
+  ) => {
+    const onClickImage = () => {
+      // Don't open modal if this was a drag
+      if (wasDragged.current) return
+
+      if (blur) {
+        setBlur(false)
+      } else {
+        setShowModal(true)
+      }
+    }
+
     if (item.type === "image") {
       return (
         <ImageComponent
           match={item.url}
-          index={index}
           onClickImage={onClickImage}
           blur={blur}
           key={item.url}
@@ -206,7 +164,6 @@ function Carousel({media, event}: CarouselProps) {
     <>
       <div className="w-full my-2 flex flex-col items-center gap-2">
         <div
-          {...handlers}
           className={classNames(
             `relative w-full flex flex-col items-center justify-center`,
             {
@@ -214,27 +171,20 @@ function Carousel({media, event}: CarouselProps) {
             }
           )}
         >
-          {renderMediaComponent(media[currentIndex], currentIndex)}
-          {media.length > 1 && (
-            <>
-              <CarouselButton direction="left" onClick={prevImage} />
-              <CarouselButton direction="right" onClick={nextImage} />
-              <PreloadImages
-                images={media.filter((m) => m.type === "image").map((m) => m.url)}
-                currentIndex={currentIndex}
-                size={650}
-              />
-            </>
-          )}
+          <SwipableCarousel
+            items={swipeItems}
+            renderItem={renderMediaComponent}
+            initialIndex={currentIndex}
+            onIndexChange={setCurrentIndex}
+            className="w-full h-full"
+            showArrows={media.length > 1}
+            arrowClassName="bg-gray-800 rounded-full opacity-50 text-white p-2"
+          />
           {showModal && (
             <MediaModal
               onClose={onCloseModal}
-              onPrev={media.length > 1 ? prevImage : undefined}
-              onNext={media.length > 1 ? nextImage : undefined}
-              mediaUrl={media[currentIndex].url}
-              mediaType={media[currentIndex].type}
-              currentIndex={media.length > 1 ? currentIndex : undefined}
-              totalCount={media.length > 1 ? media.length : undefined}
+              media={swipeItems}
+              currentIndex={currentIndex}
             />
           )}
         </div>

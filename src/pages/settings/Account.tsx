@@ -122,7 +122,9 @@ function Account() {
 
         try {
           await publishInviteTombstones()
-        } catch {}
+        } catch (e) {
+          console.error("Error publishing invite tombstones:", e)
+        }
 
         await withTimeout(cleanupNDK(), 3000)
         const {reset} = useUserStore.getState()

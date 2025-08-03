@@ -1,5 +1,6 @@
 import Header from "@/shared/components/header/Header"
 import {useGroupsStore} from "@/stores/groups"
+import {Navigate} from "@/shared/components/Navigate"
 import {useNavigate} from "react-router"
 import {useState} from "react"
 import {RiMoreLine} from "@remixicon/react"
@@ -13,10 +14,6 @@ const GroupChatHeader = ({groupId}: {groupId: string}) => {
 
   if (!group) return null
 
-  const handleClick = () => {
-    navigate(`/chats/group/${groupId}/details`)
-  }
-
   const handleDeleteGroup = () => {
     if (groupId && confirm("Delete this group?")) {
       removeGroup(groupId)
@@ -27,7 +24,10 @@ const GroupChatHeader = ({groupId}: {groupId: string}) => {
   return (
     <Header showNotifications={false} scrollDown={true} slideUp={false} bold={false}>
       <div className="flex items-center justify-between w-full">
-        <div className="flex items-center cursor-pointer flex-1" onClick={handleClick}>
+        <Navigate
+          className="flex items-center flex-1"
+          to={`/chats/group/${groupId}/details`}
+        >
           {group.picture ? (
             <img src={group.picture} alt="Group" className="w-8 h-8 rounded-full" />
           ) : (
@@ -39,22 +39,26 @@ const GroupChatHeader = ({groupId}: {groupId: string}) => {
             <span className="font-bold text-base">{group.name}</span>
             <span className="text-xs text-base-content/70">{group.description}</span>
           </div>
-        </div>
-        <div className="flex items-center gap-2 relative">
+        </Navigate>
+        <div className="relative">
           <button
+            className="btn btn-ghost btn-circle btn-sm ml-auto"
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="btn btn-ghost btn-sm btn-circle"
           >
-            <RiMoreLine className="h-6 w-6 cursor-pointer text-base-content/50" />
+            <RiMoreLine size={20} />
           </button>
           {dropdownOpen && (
-            <Dropdown onClose={() => setDropdownOpen(false)}>
-              <ul className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
-                <li>
-                  <button onClick={handleDeleteGroup}>Delete Group</button>
-                </li>
-              </ul>
-            </Dropdown>
+            <div className="dropdown-container">
+              <Dropdown onClose={() => setDropdownOpen(false)}>
+                <ul className="menu bg-base-100 rounded-box w-52 p-2 shadow">
+                  <li>
+                    <button onClick={handleDeleteGroup} className="text-error">
+                      Delete Group
+                    </button>
+                  </li>
+                </ul>
+              </Dropdown>
+            </div>
           )}
         </div>
       </div>

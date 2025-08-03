@@ -5,8 +5,7 @@ import {bytesToHex} from "@noble/hashes/utils"
 import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
 import {ndk} from "@/utils/ndk"
-
-const NSEC_NPUB_REGEX = /(nsec1|npub1)[a-zA-Z0-9]{20,65}/gi
+import {NSEC_NPUB_REGEX} from "@/utils/validation"
 
 interface SignUpProps {
   onClose: () => void
@@ -38,11 +37,11 @@ export default function SignUp({onClose}: SignUpProps) {
   function handleKeyDown(e: KeyboardEvent<HTMLFormElement>) {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
-      handleSubmit(true)
+      handleSubmit()
     }
   }
 
-  function handleSubmit(ctrlPressed = false) {
+  function handleSubmit() {
     ndk()
     const sk = generateSecretKey()
     const pk = getPublicKey(sk)
@@ -53,7 +52,6 @@ export default function SignUp({onClose}: SignUpProps) {
     setState({
       privateKey: privateKeyHex,
       publicKey: pk,
-      cashuEnabled: true,
       walletConnect: true,
     })
 
@@ -63,8 +61,8 @@ export default function SignUp({onClose}: SignUpProps) {
     const privateKeySigner = new NDKPrivateKeySigner(privateKeyHex)
     ndk().signer = privateKeySigner
 
-    const incognito = ctrlPressed && newUserName.trim() === ""
-    if (!incognito) {
+    // Only create profile if username is provided
+    if (newUserName.trim()) {
       const profileEvent = new NDKEvent(ndk())
       profileEvent.kind = 0
       profileEvent.content = JSON.stringify({

@@ -4,6 +4,7 @@ import socialGraph from "@/utils/socialGraph"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import {ndk} from "@/utils/ndk"
+import {KIND_REPOST} from "@/utils/constants"
 
 export default function Reposts({event}: {event: NDKEvent}) {
   const [reactions, setReactions] = useState<Map<string, NDKEvent>>(new Map())
@@ -12,7 +13,7 @@ export default function Reposts({event}: {event: NDKEvent}) {
     try {
       setReactions(new Map())
       const filter = {
-        kinds: [6],
+        kinds: [KIND_REPOST],
         ["#e"]: [event.id],
       }
       const sub = ndk().subscribe(filter)

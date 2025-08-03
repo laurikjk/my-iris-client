@@ -1,21 +1,24 @@
-import {useCallback, useMemo, useEffect, useState} from "react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {useMemo, useEffect, useState} from "react"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
 import {useRefreshRouteSignal} from "@/stores/notifications"
-import {seenEventIds, feedCache} from "@/utils/memcache"
+import {feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
 import Feed from "@/shared/components/feed/Feed.tsx"
-import {hasMedia} from "@/shared/components/embed"
 import useFollows from "@/shared/hooks/useFollows"
-import {getEventReplyingTo} from "@/utils/nostr"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {usePublicKey} from "@/stores/user"
-import {useFeedStore} from "@/stores/feed"
-
-const UNSEEN_CACHE_KEY = "unseenFeed"
+import {
+  useFeedStore,
+  useEnabledFeedIds,
+  useFeedConfigs,
+  type FeedConfig,
+  getFeedCacheKey,
+} from "@/stores/feed"
+import FeedTabs from "@/shared/components/feed/FeedTabs"
+import FeedEditor from "@/shared/components/feed/FeedEditor"
 
 const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
   myPubKey ? (
@@ -31,123 +34,118 @@ function HomeFeedEvents() {
   const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true) // to update on follows change
   const refreshSignal = useRefreshRouteSignal()
-  console.log("refreshSignal", refreshSignal)
-  const {activeHomeTab: activeTab, setActiveHomeTab: setActiveTab} = useFeedStore()
-  const [forceUpdate, setForceUpdate] = useState(0)
+  const {
+    activeFeed,
+    setActiveFeed,
+    getAllFeedConfigs,
+    loadFeedConfig,
+    deleteFeed,
+    cloneFeed,
+    resetAllFeedsToDefaults,
+  } = useFeedStore()
+  const enabledFeedIds = useEnabledFeedIds()
+  const feedConfigs = useFeedConfigs()
+  const socialGraphLoaded = useSocialGraphLoaded()
+  const [editMode, setEditMode] = useState(false)
 
-  const tabs = useMemo(
-    () => [
-      {
-        name: "Unseen",
-        path: "unseen",
-        cacheKey: UNSEEN_CACHE_KEY,
-        showRepliedTo: false,
-        fetchFilterFn: (e: NDKEvent) => !getEventReplyingTo(e) && !seenEventIds.has(e.id),
-      },
-      {
-        name: "Popular",
-        path: "popular",
-        filter: {
-          kinds: [6, 7],
-          since: Math.floor(Date.now() / 1000 - 60 * 60 * 24),
-          limit: 300,
-        },
-        displayFilterFn: (e: NDKEvent) => socialGraph().getFollowDistance(e.pubkey) <= 2,
-        cacheKey: "popularFeed",
-        sortLikedPosts: true,
-      },
-      {
-        name: "Latest",
-        path: "latest",
-        showRepliedTo: false,
-        displayFilterFn: (e: NDKEvent) =>
-          !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 1,
-      },
-      {
-        name: "Market",
-        path: "market",
-        showRepliedTo: false,
-        filter: {
-          kinds: [30402],
-          limit: 100,
-        },
-        displayFilterFn: (e: NDKEvent) =>
-          !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 3,
-      },
-      {
-        name: "Replies",
-        path: "replies",
-        displayFilterFn: (e: NDKEvent) => socialGraph().getFollowDistance(e.pubkey) <= 1,
-      },
-      {
-        name: "Media",
-        path: "media",
-        showRepliedTo: false,
-        displayFilterFn: (e: NDKEvent) => hasMedia(e),
-      },
-      {
-        name: "Adventure",
-        path: "adventure",
-        showRepliedTo: false,
-        filter: {
-          kinds: [1],
-          limit: 100,
-        },
-        fetchFilterFn: (e: NDKEvent) =>
-          !getEventReplyingTo(e) && socialGraph().getFollowDistance(e.pubkey) <= 5,
-      },
-    ],
-    [follows]
+  // Get all feed configs from store
+  const allFeeds = useMemo(() => {
+    return getAllFeedConfigs()
+  }, [getAllFeedConfigs, feedConfigs, activeFeed])
+
+  // Filter and order feeds based on enabled feed IDs from store
+  const feeds = useMemo(() => {
+    const feedsMap = new Map(allFeeds.map((feed) => [feed.id, feed]))
+    return enabledFeedIds
+      .map((id) => feedsMap.get(id))
+      .filter((feed): feed is FeedConfig => feed !== undefined)
+  }, [allFeeds, enabledFeedIds])
+
+  const activeFeedItem = useMemo(
+    () => feeds.find((f) => f.id === activeFeed) || feeds[0] || null,
+    [activeFeed, feeds]
   )
 
-  const activeTabItem = useMemo(
-    () => tabs.find((t) => t.path === activeTab) || tabs[0],
-    [activeTab, tabs]
+  const activeFeedConfig = useMemo(
+    () => loadFeedConfig(activeFeed),
+    [loadFeedConfig, activeFeed, feedConfigs]
   )
 
   const openedAt = useMemo(() => Date.now(), [])
 
-  useEffect(() => {
-    if (activeTab !== "unseen") {
-      feedCache.delete(UNSEEN_CACHE_KEY)
-    }
-    if (activeTab === "unseen" && refreshSignal > openedAt) {
-      feedCache.delete(UNSEEN_CACHE_KEY)
-      setForceUpdate((prev) => prev + 1) // Force update Feed component
-    }
-  }, [activeTabItem, openedAt, refreshSignal, activeTab])
+  // Editor handler functions
+  const toggleEditMode = () => {
+    setEditMode(!editMode)
+  }
 
-  const filters = useMemo(() => {
-    if (activeTabItem.filter) {
-      return activeTabItem.filter
+  const handleDeleteFeed = (feedId: string) => {
+    if (feeds.length <= 1) {
+      return // Don't allow deleting the last feed
     }
 
-    return {
-      authors: follows,
-      kinds: [1, 6],
-      limit: 100,
+    const getDisplayName = (feedId: string, defaultName: string) => {
+      const config = loadFeedConfig(feedId)
+      return config?.customName || defaultName
     }
-  }, [follows, activeTabItem])
 
-  const displayFilterFn = useCallback(
-    (event: NDKEvent) => {
-      if (
-        activeTab === "unseen" &&
-        refreshSignal > openedAt &&
-        seenEventIds.has(event.id)
-      ) {
-        return false
+    if (
+      confirm(
+        `Delete feed "${getDisplayName(feedId, allFeeds.find((f) => f.id === feedId)?.name || "")}"?`
+      )
+    ) {
+      // If deleting the active feed, switch to the first remaining feed
+      if (feedId === activeFeed) {
+        const remainingFeeds = feeds.filter((f) => f.id !== feedId)
+        if (remainingFeeds.length > 0) {
+          setActiveFeed(remainingFeeds[0].id)
+        }
       }
-      const tabFilter = activeTabItem.displayFilterFn
-      return tabFilter ? tabFilter(event) : true
-    },
-    [activeTabItem, activeTab, refreshSignal, openedAt]
-  )
+
+      deleteFeed(feedId)
+    }
+  }
+
+  const handleResetFeeds = () => {
+    if (confirm("Reset all feeds to defaults?")) {
+      console.log("User confirmed reset")
+      setEditMode(false)
+      feedCache.clear()
+      resetAllFeedsToDefaults()
+      console.log("Reset function called")
+    }
+  }
+
+  const handleCloneFeed = (feedId: string) => {
+    cloneFeed(feedId)
+  }
+
+  useEffect(() => {
+    if (activeFeed !== "unseen") {
+      feedCache.delete("unseen")
+    }
+    if (activeFeed === "unseen" && refreshSignal > openedAt) {
+      feedCache.delete("unseen")
+    }
+  }, [activeFeedItem, openedAt, refreshSignal, activeFeed])
+
+  // Create a comprehensive key that changes when any relevant config changes
+  const feedKey = useMemo(() => {
+    if (!activeFeedConfig) return "feed-null"
+    return `feed-${getFeedCacheKey(activeFeedConfig)}`
+  }, [activeFeedConfig])
+
+  if (!activeFeedConfig?.filter) {
+    return null
+  }
 
   const feedName =
     follows.length <= 1
       ? "Home"
-      : tabs.find((t) => t.path === activeTab)?.name || "Following"
+      : activeFeedConfig?.customName || activeFeedItem?.name || "Following"
+
+  if (!socialGraphLoaded) {
+    return <div>Loading...</div>
+  }
 
   return (
     <>
@@ -155,35 +153,43 @@ function HomeFeedEvents() {
         <span className="md:px-3 md:py-2">{feedName}</span>
       </Header>
       {follows.length > 1 && myPubKey && (
-        <div className="px-4 pb-4 flex flex-row gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
-          {tabs.map((t) => (
-            <button
-              key={t.path}
-              className={`btn btn-sm ${activeTab === t.path ? "btn-primary" : "btn-neutral"}`}
-              onClick={() => setActiveTab(t.path)}
-            >
-              {t.name}
-            </button>
-          ))}
-        </div>
+        <FeedTabs
+          allTabs={allFeeds}
+          editMode={editMode}
+          onEditModeToggle={toggleEditMode}
+        />
+      )}
+      {editMode && follows.length > 1 && myPubKey && (
+        <FeedEditor
+          key={activeFeed}
+          activeTab={activeFeed}
+          tabs={feeds}
+          onEditModeToggle={toggleEditMode}
+          onDeleteFeed={handleDeleteFeed}
+          onResetFeeds={handleResetFeeds}
+          onCloneFeed={handleCloneFeed}
+        />
       )}
       <NotificationPrompt />
-      <Feed
-        key={activeTab === "unseen" ? "unseen" : "other"}
-        filters={filters}
-        displayFilterFn={displayFilterFn}
-        fetchFilterFn={activeTabItem.fetchFilterFn}
-        showDisplayAsSelector={follows.length > 1}
-        cacheKey={activeTabItem.cacheKey}
-        showRepliedTo={activeTabItem.showRepliedTo}
-        forceUpdate={forceUpdate}
-        sortLikedPosts={activeTabItem.sortLikedPosts}
-        emptyPlaceholder={""}
-      />
-      {follows.length <= 1 && (
+      {activeFeedConfig?.feedType === "popular" || !myPubKey ? (
+        <PopularFeed />
+      ) : (
+        <Feed
+          key={feedKey}
+          feedConfig={activeFeedConfig}
+          showDisplayAsSelector={follows.length > 1}
+          forceUpdate={0}
+          emptyPlaceholder={""}
+          refreshSignal={refreshSignal}
+          openedAt={openedAt}
+        />
+      )}
+      {follows.length <= 1 && myPubKey && (
         <>
           <NoFollows myPubKey={myPubKey} />
-          <PopularFeed small={false} days={7} />
+          {activeFeedConfig?.feedType !== "popular" && (
+            <PopularFeed displayOptions={{showDisplaySelector: false}} />
+          )}
         </>
       )}
     </>

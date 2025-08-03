@@ -1,5 +1,5 @@
 import {getMillisecondTimestamp, Rumor} from "nostr-double-ratchet/src"
-import MessageReactionButton from "../reaction/MessageReactionButton"
+import MessageActionButtons from "../reaction/MessageActionButtons"
 import MessageReactions from "../reaction/MessageReactions"
 import {Avatar} from "@/shared/components/user/Avatar"
 import HyperText from "@/shared/components/HyperText"
@@ -12,11 +12,15 @@ import classNames from "classnames"
 import {Link} from "react-router"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
-import {GROUP_INVITE_KIND} from "../utils/constants"
+import {RiCheckLine, RiAlertLine} from "@remixicon/react"
+import {KIND_CHANNEL_CREATE, KIND_REACTION} from "@/utils/constants"
 import {UserRow} from "@/shared/components/user/UserRow"
+import {EMOJI_REGEX} from "@/utils/validation"
 
 export type MessageType = Rumor & {
   reactions?: Record<string, string>
+  nostrEventId?: string
+  sentToRelays?: boolean
 }
 
 type MessageProps = {
@@ -29,9 +33,6 @@ type MessageProps = {
   onSendReaction?: (messageId: string, emoji: string) => Promise<void>
   reactions?: Record<string, string>
 }
-
-// Moved regex outside component to avoid recreation on each render
-const EMOJI_REGEX = /^[\p{Extended_Pictographic}\p{Emoji_Presentation}]+$/u
 
 // Extracted time formatting logic
 const formatMessageTime = (timestamp: number): string => {
@@ -85,6 +86,7 @@ const Message = ({
   const [localReactions, setLocalReactions] = useState<Record<string, string>>(
     propReactions || {}
   )
+  const [notOnRelays, setNotOnRelays] = useState(false)
   const isShortEmoji = useMemo(
     () => EMOJI_REGEX.test(message.content?.trim() ?? ""),
     [message.content]
@@ -95,7 +97,7 @@ const Message = ({
   // Set up reaction subscription
   useEffect(() => {
     const filter = {
-      kinds: [7], // REACTION_KIND
+      kinds: [KIND_REACTION],
       "#e": [message.id],
     }
 
@@ -115,6 +117,32 @@ const Message = ({
       sub.stop()
     }
   }, [message.id])
+
+  // Set up timer to mark message as not on relays after 10 seconds
+  useEffect(() => {
+    if (!isUser || !message.created_at) return
+
+    // Reset notOnRelays if message becomes confirmed on relays
+    if (message.sentToRelays) {
+      setNotOnRelays(false)
+      return
+    }
+
+    const now = Math.floor(Date.now() / 1000)
+    const messageAge = now - message.created_at
+    const timeUntilAlert = 5 - messageAge
+
+    if (timeUntilAlert > 0) {
+      const timer = setTimeout(() => {
+        setNotOnRelays(true)
+      }, timeUntilAlert * 1000)
+
+      return () => clearTimeout(timer)
+    } else {
+      // Message is already older than 10 seconds
+      setNotOnRelays(true)
+    }
+  }, [isUser, message.sentToRelays, message.created_at])
 
   const repliedId = useMemo(() => {
     // First check for explicit reply tag
@@ -145,7 +173,7 @@ const Message = ({
     [message]
   )
 
-  if (message.kind === GROUP_INVITE_KIND) {
+  if (message.kind === KIND_CHANNEL_CREATE) {
     console.log("invite", message)
     let content = null
     if (message.pubkey === "user") {
@@ -175,12 +203,14 @@ const Message = ({
     >
       <div className="flex items-center justify-center gap-2">
         {isUser && (
-          <MessageReactionButton
+          <MessageActionButtons
             messageId={message.id}
             sessionId={sessionId}
             isUser={isUser}
             onReply={onReply}
             onSendReaction={onSendReaction}
+            nostrEventId={message.nostrEventId}
+            message={message}
           />
         )}
 
@@ -205,20 +235,34 @@ const Message = ({
                 isShortEmoji && "flex-col gap-1 items-center"
               )}
             >
-              <p
-                className={classNames(
-                  isShortEmoji ? "text-6xl" : "text-sm",
-                  "whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+              <div className="flex items-center gap-1">
+                <div
+                  className={classNames(
+                    isShortEmoji ? "text-6xl" : "text-sm",
+                    "whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                  )}
+                >
+                  <HyperText small={true} truncate={500} event={message}>
+                    {message.content}
+                  </HyperText>
+                </div>
+                {isUser && (
+                  <div className="w-3 h-3 flex-shrink-0">
+                    {notOnRelays && !message.sentToRelays && (
+                      <RiAlertLine className="w-3 h-3 text-orange-400/70" />
+                    )}
+                  </div>
                 )}
-              >
-                <HyperText small={true} truncate={500} event={message}>
-                  {message.content}
-                </HyperText>
-              </p>
+              </div>
               {isLast && (
-                <p className="text-xs opacity-50 ml-2 whitespace-nowrap">
-                  {formattedTime}
-                </p>
+                <div className="flex items-center gap-1 ml-2">
+                  <p className="text-xs opacity-50 whitespace-nowrap">{formattedTime}</p>
+                  <div className="w-3 h-3 flex-shrink-0">
+                    {isUser && message.sentToRelays && (
+                      <RiCheckLine className="w-3 h-3 text-white/60" />
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -234,12 +278,14 @@ const Message = ({
         </div>
 
         {!isUser && (
-          <MessageReactionButton
+          <MessageActionButtons
             messageId={message.id}
             sessionId={sessionId}
             isUser={isUser}
             onReply={onReply}
             onSendReaction={onSendReaction}
+            nostrEventId={message.nostrEventId}
+            message={message}
           />
         )}
       </div>
