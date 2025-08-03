@@ -2,6 +2,7 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useNavigate} from "react-router"
 import {nip19} from "nostr-tools"
 import {MouseEvent} from "react"
+import {KIND_WALLET_CONNECT, KIND_APP_DATA} from "@/utils/constants"
 
 export const TRUNCATE_LENGTH = 300
 
@@ -18,8 +19,8 @@ export function onClick(
   navigate: ReturnType<typeof useNavigate>
 ) {
   if (
-    event?.kind === 6927 ||
-    event?.kind === 30078 ||
+    event?.kind === KIND_WALLET_CONNECT ||
+    event?.kind === KIND_APP_DATA ||
     e.target instanceof HTMLAnchorElement ||
     e.target instanceof HTMLImageElement ||
     e.target instanceof HTMLVideoElement ||

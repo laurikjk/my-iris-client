@@ -1,4 +1,4 @@
-import React, {useLayoutEffect, useRef, useState} from "react"
+import {useLayoutEffect, useRef, useState, useMemo} from "react"
 import {useFeedStore, useEnabledFeedIds, type FeedConfig} from "@/stores/feed"
 import {
   RiArrowLeftSLine,
@@ -45,7 +45,7 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
   }, [editMode])
 
   // Filter and order feeds based on enabled feed IDs from store
-  const feeds = React.useMemo(() => {
+  const feeds = useMemo(() => {
     const feedsMap = new Map(allTabs.map((feed) => [feed.id, feed]))
     return enabledFeedIds
       .map((id) => feedsMap.get(id))

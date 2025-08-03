@@ -1,7 +1,7 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "react-router"
-import React, {useState} from "react"
+import {useState, FormEvent} from "react"
 import {ndk} from "@/utils/ndk"
 
 const PublicChannelCreateStep = () => {
@@ -13,7 +13,7 @@ const PublicChannelCreateStep = () => {
   const [error, setError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!name.trim()) {
       setError("Channel name is required")

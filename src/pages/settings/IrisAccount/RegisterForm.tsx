@@ -1,5 +1,5 @@
 import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
-import React, {FormEvent, useState} from "react"
+import {FormEvent, useState, ChangeEvent} from "react"
 import {useUserStore} from "@/stores/user"
 import AccountName from "./AccountName"
 import {Link} from "react-router"
@@ -18,7 +18,7 @@ function RegisterForm({minLength, subscriptionPlan, onRegister}: RegisterFormPro
   const [statusMessage, setStatusMessage] = useState("")
   const pubKey = useUserStore.getState().publicKey
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value
     setUsername(name)
     setIsValid(false)

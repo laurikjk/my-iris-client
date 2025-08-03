@@ -7,7 +7,7 @@ import {
 import {createJSONStorage, persist, PersistStorage} from "zustand/middleware"
 import {Filter, VerifiedEvent, UnsignedEvent} from "nostr-tools"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
-import {KIND_REACTION} from "@/utils/constants"
+import {KIND_REACTION, KIND_CHANNEL_CREATE} from "@/utils/constants"
 import type {MessageType} from "@/pages/chats/message/Message"
 import {hexToBytes} from "@noble/hashes/utils"
 import {useEventsStore} from "./events"
@@ -176,8 +176,8 @@ const store = create<SessionStore>()(
           store.setState(newState)
           const sessionUnsubscribe = session.onEvent((event) => {
             try {
-              // Handle group creation event (kind 40)
-              if (event.kind === 40 && event.content) {
+              // Handle group creation event
+              if (event.kind === KIND_CHANNEL_CREATE && event.content) {
                 try {
                   const group = JSON.parse(event.content)
                   const groups = useGroupsStore.getState().groups
@@ -185,7 +185,7 @@ const store = create<SessionStore>()(
                     useGroupsStore.getState().addGroup(group)
                   }
                 } catch (e) {
-                  console.warn("Failed to parse group from kind 40 event", e)
+                  console.warn("Failed to parse group from channel creation event", e)
                 }
               }
               routeEventToStore(sessionId, event)
@@ -378,7 +378,7 @@ const store = create<SessionStore>()(
                         useGroupsStore.getState().addGroup(group)
                       }
                     } catch (e) {
-                      console.warn("Failed to parse group from kind 40 event", e)
+                      console.warn("Failed to parse group from channel creation event", e)
                     }
                   }
                   routeEventToStore(sessionId, event)
@@ -405,8 +405,8 @@ const store = create<SessionStore>()(
           }
           const sessionUnsubscribe = session.onEvent((event) => {
             try {
-              // Handle group creation event (kind 40)
-              if (event.kind === 40 && event.content) {
+              // Handle group creation event
+              if (event.kind === KIND_CHANNEL_CREATE && event.content) {
                 try {
                   const group = JSON.parse(event.content)
                   const groups = useGroupsStore.getState().groups
@@ -415,7 +415,7 @@ const store = create<SessionStore>()(
                   }
                   console.log("group created", group)
                 } catch (e) {
-                  console.warn("Failed to parse group from kind 40 event", e)
+                  console.warn("Failed to parse group from channel creation event", e)
                 }
               }
               routeEventToStore(sessionId, event)

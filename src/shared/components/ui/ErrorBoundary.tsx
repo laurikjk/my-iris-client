@@ -1,5 +1,5 @@
 import {trackEvent} from "@/utils/IrisAPI"
-import React from "react"
+import {Component, ReactNode, ErrorInfo} from "react"
 
 interface ErrorBoundaryState {
   hasError: boolean
@@ -8,10 +8,10 @@ interface ErrorBoundaryState {
 }
 
 interface ErrorBoundaryProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
-export default class ErrorBoundary extends React.Component<
+export default class ErrorBoundary extends Component<
   ErrorBoundaryProps,
   ErrorBoundaryState
 > {
@@ -24,7 +24,7 @@ export default class ErrorBoundary extends React.Component<
     return {hasError: true, errorMessage: error.message, stack: error.stack}
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Caught an error:", error, errorInfo)
     trackEvent("error_boundary", {
       error_message: error.message,

@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useRef} from "react"
+import {useEffect, useState, useRef, ChangeEvent} from "react"
 import {DebugSession} from "./DebugSession"
 
 interface SystemInfo {
@@ -243,7 +243,7 @@ const DebugApp = () => {
     }
   }, [])
 
-  const handleTestInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTestInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value
     setTestValue(newValue)
     session?.publish("testInput", newValue)

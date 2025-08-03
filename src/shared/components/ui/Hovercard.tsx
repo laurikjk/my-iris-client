@@ -1,7 +1,7 @@
-import React from "react"
+import {ReactNode} from "react"
 interface HoverCardProps {
-  children: React.ReactNode
-  content: React.ReactNode
+  children: ReactNode
+  content: ReactNode
   onClick?: () => void
 }
 

@@ -1,11 +1,11 @@
 import SearchBox from "@/shared/components/ui/SearchBox.tsx"
-import React, {useState, useEffect} from "react"
+import {useState, useEffect, ReactNode} from "react"
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import {useSettingsStore} from "@/stores/settings"
 import ErrorBoundary from "./ui/ErrorBoundary"
 
 interface RightColumnProps {
-  children: () => React.ReactNode
+  children: () => ReactNode
 }
 
 function useWindowWidth() {

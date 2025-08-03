@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react"
+import {useState, useEffect, ChangeEvent} from "react"
 import Debug from "@/utils/DebugManager"
 import {useSettingsStore} from "@/stores/settings"
 
@@ -118,7 +118,7 @@ export default function SystemSettings() {
     }
   }
 
-  const handleTestInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTestInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value
     setTestValue(newValue)
     const debugSession = Debug.getDebugSession()

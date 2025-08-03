@@ -1,5 +1,6 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {formatAmount} from "@/utils/utils"
+import {KIND_CLASSIFIED} from "@/utils/constants"
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
@@ -78,5 +79,5 @@ export const formatTagValue = (tag: string[]) => {
  * Checks if an event is a market listing
  */
 export const isMarketListing = (event: NDKEvent) => {
-  return event.kind === 30402
+  return event.kind === KIND_CLASSIFIED
 }
