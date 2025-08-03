@@ -1,5 +1,6 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {formatAmount} from "@/utils/utils"
+import {KIND_CLASSIFIED} from "@/utils/constants"
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
@@ -57,14 +58,6 @@ export const extractMarketData = (event: NDKEvent) => {
 }
 
 /**
- * Gets all image URLs from a market listing
- */
-export const getMarketImageUrls = (event: NDKEvent) => {
-  if (!isMarketListing(event)) return []
-  return event.tags.filter((tag) => tag[0] === "image").map((tag) => tag[1])
-}
-
-/**
  * Formats a tag value for display
  */
 export const formatTagValue = (tag: string[]) => {
@@ -78,5 +71,5 @@ export const formatTagValue = (tag: string[]) => {
  * Checks if an event is a market listing
  */
 export const isMarketListing = (event: NDKEvent) => {
-  return event.kind === 30402
+  return event.kind === KIND_CLASSIFIED
 }

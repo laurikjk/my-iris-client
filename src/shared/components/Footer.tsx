@@ -1,5 +1,5 @@
 import classNames from "classnames"
-import React from "react"
+import {ReactNode} from "react"
 import {RiLockLine} from "@remixicon/react"
 
 import UnseenMessagesBadge from "@/shared/components/messages/UnseenMessagesBadge"
@@ -19,7 +19,7 @@ type MenuItem = {
   link?: string
   loggedInOnly?: boolean
   requireSigner?: boolean
-  el?: React.ReactNode
+  el?: ReactNode
   activeIcon?: string
   inactiveIcon?: string
   badge?: string

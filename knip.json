@@ -1,0 +1,35 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/main.tsx",
+    "src/service-worker.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}"
+  ],
+  "ignore": [
+    "public/**",
+    "dist/**",
+    "build/**",
+    "coverage/**",
+    "tests/**/*.spec.ts",
+    "**/*.test.{ts,tsx}",
+    "**/*.spec.{ts,tsx}",
+    "src/debug/**"
+  ],
+  "ignoreDependencies": [
+    "workbox-strategies",
+    "workbox-cacheable-response",
+    "workbox-precaching",
+    "workbox-expiration",
+    "workbox-routing",
+    "workbox-core"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "playwright": {
+    "entry": ["tests/**/*.spec.ts"]
+  },
+  "vite": {
+    "config": ["vite.config.ts"]
+  }
+}

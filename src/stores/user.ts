@@ -133,13 +133,3 @@ export const useUserStore = create<UserState>()(
 )
 
 export const usePublicKey = () => useUserStore((state) => state.publicKey)
-export const usePrivateKey = () => useUserStore((state) => state.privateKey)
-export const useNip07Login = () => useUserStore((state) => state.nip07Login)
-export const useRelays = () => useUserStore((state) => state.relays)
-export const useMediaservers = () => useUserStore((state) => state.mediaservers)
-export const useDefaultMediaserver = () =>
-  useUserStore((state) => state.defaultMediaserver)
-export const useWalletConnect = () => useUserStore((state) => state.walletConnect)
-export const useDefaultZapAmount = () => useUserStore((state) => state.defaultZapAmount)
-export const useNdkOutboxModel = () => useUserStore((state) => state.ndkOutboxModel)
-export const useReset = () => useUserStore((state) => state.reset)

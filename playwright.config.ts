@@ -22,8 +22,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "yarn dev",
+    command: "VITE_USE_TEST_RELAY=true yarn dev",
     url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
+    env: {
+      VITE_USE_TEST_RELAY: "true",
+    },
   },
 })

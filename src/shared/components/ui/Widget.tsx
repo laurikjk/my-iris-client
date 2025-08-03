@@ -1,8 +1,8 @@
-import React from "react"
+import {ReactNode} from "react"
 
 interface WidgetProps {
   title: string
-  children: React.ReactNode
+  children: ReactNode
 }
 
 function Widget({title, children}: WidgetProps) {

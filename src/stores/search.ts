@@ -35,5 +35,3 @@ export const useSearchStore = create<SearchState>()(
     }
   )
 )
-
-export const useRecentSearches = () => useSearchStore((state) => state.recentSearches)

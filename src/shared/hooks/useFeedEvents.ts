@@ -13,6 +13,7 @@ import {hasMedia} from "@/shared/components/embed"
 import {hasImageOrVideo} from "@/shared/utils/mediaUtils"
 import {type FeedConfig} from "@/stores/feed"
 import DebugManager from "@/utils/DebugManager"
+import {KIND_TEXT_NOTE} from "@/utils/constants"
 
 interface FutureEvent {
   event: NDKEvent
@@ -363,7 +364,9 @@ export default function useFeedEvents({
       const isMyRecent =
         event.pubkey === myPubKey && event.created_at * 1000 > Date.now() - 10000
       const isNewEvent =
-        initialLoadDoneRef.current && !isMyRecent && (!sortLikedPosts || event.kind === 1)
+        initialLoadDoneRef.current &&
+        !isMyRecent &&
+        (!sortLikedPosts || event.kind === KIND_TEXT_NOTE)
 
       // Check if event would appear below viewport (no layout shift)
       // Events with older timestamps appear below newer ones in chronological feed

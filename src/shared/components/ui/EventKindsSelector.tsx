@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from "react"
+import {useEffect, useRef, useState, ReactNode} from "react"
 import {
   RiAddLine,
   RiChat1Fill,
@@ -22,7 +22,7 @@ interface EventKind {
   kind: number
   name: string
   description: string
-  icon: React.ReactNode
+  icon: ReactNode
   color: string
 }
 

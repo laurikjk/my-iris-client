@@ -24,7 +24,8 @@ async function signUp(page, username = "Test User") {
   // Wait for signup to complete
   await expect(page.getByRole("heading", {name: "Sign up"})).not.toBeVisible()
   await expect(page.locator("#main-content").getByTestId("new-post-button")).toBeVisible()
-  await expect(page.getByText(username, {exact: true})).toBeVisible()
+  // Check that username appears in the sidebar (most reliable location)
+  await expect(page.getByTestId("sidebar-user-row").getByText(username)).toBeVisible()
 
   return username
 }

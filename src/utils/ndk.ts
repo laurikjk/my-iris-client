@@ -5,13 +5,9 @@ import NDK, {
   NDKRelay,
   NDKRelayAuthPolicies,
   NDKUser,
-  NDKEvent,
 } from "@nostr-dev-kit/ndk"
-import {generateSecretKey, getPublicKey, nip19} from "nostr-tools"
 import NDKCacheAdapterDexie from "@nostr-dev-kit/ndk-cache-dexie"
-import {bytesToHex, hexToBytes} from "@noble/hashes/utils"
 import {useUserStore} from "@/stores/user"
-import {KIND_METADATA} from "@/utils/constants"
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
@@ -32,9 +28,13 @@ const PRODUCTION_RELAYS = [
   "wss://relay.snort.social/",
 ]
 
-export const DEFAULT_RELAYS = import.meta.env.VITE_USE_LOCAL_RELAY
-  ? LOCAL_RELAY
-  : PRODUCTION_RELAYS
+const TEST_RELAY = ["wss://temp.iris.to/"]
+
+export const DEFAULT_RELAYS = import.meta.env.VITE_USE_TEST_RELAY
+  ? TEST_RELAY
+  : import.meta.env.VITE_USE_LOCAL_RELAY
+    ? LOCAL_RELAY
+    : PRODUCTION_RELAYS
 
 /**
  * Get a singleton "default" NDK instance to get started quickly. If you want to init NDK with e.g. your own relays, pass them on the first call.
@@ -45,8 +45,15 @@ export const DEFAULT_RELAYS = import.meta.env.VITE_USE_LOCAL_RELAY
 export const ndk = (opts?: NDKConstructorParams): NDK => {
   if (!ndkInstance) {
     const store = useUserStore.getState()
+    const relays = opts?.explicitRelayUrls || DEFAULT_RELAYS
+
+    // Log when using test relay
+    if (relays === TEST_RELAY) {
+      console.log("🧪 Using test relay only: wss://temp.iris.to/")
+    }
+
     const options = opts || {
-      explicitRelayUrls: DEFAULT_RELAYS,
+      explicitRelayUrls: relays,
       enableOutboxModel: store.ndkOutboxModel,
       cacheAdapter: new NDKCacheAdapterDexie({dbName: "treelike-nostr", saveSig: true}),
     }
@@ -173,48 +180,4 @@ function watchLocalSettings(instance: NDK) {
         : undefined
     }
   })
-}
-
-/**
- * Create a new account (keypair), login with it and publish a profile event with the given name
- * @param name
- */
-export function newUserLogin(name: string) {
-  ndk()
-  const sk = generateSecretKey() // `sk` is a Uint8Array
-  const pk = getPublicKey(sk) // `pk` is a hex string
-  const privateKeyHex = bytesToHex(sk)
-
-  const store = useUserStore.getState()
-  store.setPrivateKey(privateKeyHex)
-  store.setPublicKey(pk)
-
-  privateKeySigner = new NDKPrivateKeySigner(privateKeyHex)
-  ndkInstance!.signer = privateKeySigner
-  const profileEvent = new NDKEvent(ndkInstance!)
-  profileEvent.kind = KIND_METADATA
-  profileEvent.content = JSON.stringify({name})
-  profileEvent.publish()
-}
-
-/**
- * Login with a private key
- * @param privateKey - hex or nsec format
- */
-export function privateKeyLogin(privateKey: string) {
-  ndk()
-  if (privateKey && typeof privateKey === "string") {
-    const bytes =
-      privateKey.indexOf("nsec1") === 0
-        ? (nip19.decode(privateKey).data as Uint8Array)
-        : hexToBytes(privateKey)
-    const hex = bytesToHex(bytes)
-    privateKeySigner = new NDKPrivateKeySigner(hex)
-    ndkInstance!.signer = privateKeySigner
-    const publicKey = getPublicKey(bytes)
-
-    const store = useUserStore.getState()
-    store.setPrivateKey(hex)
-    store.setPublicKey(publicKey)
-  }
 }

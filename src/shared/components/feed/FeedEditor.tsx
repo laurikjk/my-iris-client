@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react"
+import {useEffect, useState, ChangeEvent, KeyboardEvent} from "react"
 import {RiDeleteBinLine, RiFileCopyLine} from "@remixicon/react"
 import {useFeedStore, type FeedConfig} from "@/stores/feed"
 import RelaySelector from "@/shared/components/ui/RelaySelector"
@@ -149,14 +149,14 @@ function FeedEditor({
     setLocalConfig((prev) => (prev ? {...prev, [field]: value} : null))
   }
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value
     setEditingName(newName)
     // Update local config instead of directly saving to store
     updateLocalConfig("customName", newName.trim() || undefined)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
       const activeTabData = tabs.find((t) => t.id === activeTab)
       if (activeTabData) {

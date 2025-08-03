@@ -5,6 +5,7 @@ import {getCachedName, NDKEventFromRawEvent} from "@/utils/nostr"
 import {Rumor, Session} from "nostr-double-ratchet/src"
 import {useUserRecordsStore} from "@/stores/userRecords"
 import socialGraph from "@/utils/socialGraph"
+import {KIND_APP_DATA} from "@/utils/constants"
 
 const connections = new Map<string, PeerConnection>()
 export function getPeerConnection(
@@ -127,7 +128,7 @@ export default class PeerConnection extends EventEmitter {
     const answer = await this.peerConnection.createAnswer()
     await this.peerConnection.setLocalDescription(answer)
     this.send({
-      kind: 30078,
+      kind: KIND_APP_DATA,
       tags: [
         ["l", "webrtc"],
         ["type", "answer"],
@@ -154,7 +155,7 @@ export default class PeerConnection extends EventEmitter {
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
         this.send({
-          kind: 30078,
+          kind: KIND_APP_DATA,
           content: JSON.stringify(event.candidate),
           tags: [
             ["l", "webrtc"],
@@ -190,7 +191,7 @@ export default class PeerConnection extends EventEmitter {
     const offer = await this.peerConnection.createOffer()
     await this.peerConnection.setLocalDescription(offer)
     this.send({
-      kind: 30078,
+      kind: KIND_APP_DATA,
       tags: [
         ["l", "webrtc"],
         ["type", "offer"],
@@ -205,7 +206,7 @@ export default class PeerConnection extends EventEmitter {
     const answer = await this.peerConnection.createAnswer()
     await this.peerConnection.setLocalDescription(answer)
     this.send({
-      kind: 30078,
+      kind: KIND_APP_DATA,
       tags: [
         ["l", "webrtc"],
         ["type", "answer"],

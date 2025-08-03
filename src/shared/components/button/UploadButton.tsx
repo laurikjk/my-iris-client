@@ -1,4 +1,4 @@
-import React, {useRef, useState, ReactNode} from "react"
+import {useRef, useState, ReactNode, ChangeEvent, MouseEvent} from "react"
 
 import type {EncryptionMeta} from "@/types/global"
 import {RiLock2Line} from "@remixicon/react"
@@ -66,7 +66,7 @@ const UploadButton = ({
     }
   }
 
-  const onChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) {
       return
     }
@@ -95,7 +95,7 @@ const UploadButton = ({
     }
   }
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (e: MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     fileInputRef.current?.click()

@@ -2,6 +2,7 @@ import {create} from "zustand"
 import {persist} from "zustand/middleware"
 import {NDKNWCWallet, NDKWebLNWallet, NDKWallet} from "@nostr-dev-kit/ndk-wallet"
 import NDK from "@nostr-dev-kit/ndk"
+import {DEFAULT_RELAYS} from "@/utils/ndk"
 
 export type WalletProviderType = "native" | "nwc" | "disabled" | undefined
 
@@ -146,11 +147,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
           let ndk = state.ndk
           if (!ndk) {
             ndk = new NDK({
-              explicitRelayUrls: [
-                "wss://relay.damus.io",
-                "wss://nos.lol",
-                "wss://relay.nostr.band",
-              ],
+              explicitRelayUrls: DEFAULT_RELAYS,
             })
             await ndk.connect()
             set({ndk})
@@ -245,11 +242,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
         // Initialize NDK
         if (!state.ndk) {
           const ndk = new NDK({
-            explicitRelayUrls: [
-              "wss://relay.damus.io",
-              "wss://nos.lol",
-              "wss://relay.nostr.band",
-            ],
+            explicitRelayUrls: DEFAULT_RELAYS,
           })
           await ndk.connect()
           set({ndk})
