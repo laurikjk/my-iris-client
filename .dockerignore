@@ -13,4 +13,6 @@ build
 coverage
 .DS_Store
 *.log
-nvim-config
+src-tauri/target
+target
+Cargo.lock
