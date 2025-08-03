@@ -41,8 +41,10 @@ async function captureBaseline() {
 }
 
 // @ts-expect-error - temporary implementation
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function extractMetric(_results: unknown, _metricName: string): number {
+
+function extractMetric(results: unknown, metricName: string): number {
+  // TODO: Implement metric extraction
+  console.log("Extracting metric:", metricName, "from results:", results)
   return 0
 }
 

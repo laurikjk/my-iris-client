@@ -1,0 +1,30 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/main.tsx",
+    "src/vite-env.d.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}"
+  ],
+  "ignore": [
+    "public/**",
+    "dist/**",
+    "build/**",
+    "coverage/**",
+    "tests/**/*.spec.ts",
+    "**/*.test.{ts,tsx}",
+    "**/*.spec.{ts,tsx}",
+    "src/debug/**"
+  ],
+  "ignoreDependencies": [
+    "@types/node"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "playwright": {
+    "entry": ["tests/**/*.spec.ts"]
+  },
+  "vite": {
+    "config": ["vite.config.ts"]
+  }
+}
