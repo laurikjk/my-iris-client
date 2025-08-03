@@ -1,6 +1,7 @@
 import {INVITE_RESPONSE_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
 import {useSettingsStore} from "@/stores/settings"
 import {useUserRecordsStore} from "@/stores/userRecords"
+import {useSessionsStore} from "@/stores/sessions"
 import {SortedMap} from "./SortedMap/SortedMap"
 import {useUserStore} from "@/stores/user"
 import {NDKTag} from "@nostr-dev-kit/ndk"
@@ -140,7 +141,7 @@ export const subscribeToDMNotifications = debounce(async () => {
     return
   }
   const invites = useUserRecordsStore.getState().invites
-  const sessions = useUserRecordsStore.getState().sessions
+  const sessions = useSessionsStore.getState().sessions
 
   const inviteRecipients = Array.from(invites.values())
     .map((i) => i.inviterEphemeralPublicKey)

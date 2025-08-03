@@ -137,7 +137,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         console.log("Current userRecords:", Array.from(get().userRecords.keys()))
       },
 
-      createInvite: (label: string, inviteId?: string) => {
+      createInvite: (_label: string, inviteId?: string) => {
         const myPubKey = useUserStore.getState().publicKey
         const myPrivKey = useUserStore.getState().privateKey
         if (!myPubKey) {
@@ -642,10 +642,20 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         console.log("User records store reset completed.")
       },
 
-      initializeListeners: () => {
+      initializeListeners: async () => {
         const myPubKey = useUserStore.getState().publicKey
         const myPrivKey = useUserStore.getState().privateKey
-        const currentDeviceId = get().deviceId
+        let currentDeviceId = get().deviceId
+
+        // If deviceId is not in store, try to load from localforage
+        if (!currentDeviceId) {
+          const stored = await localforage.getItem<string>("deviceId")
+          if (stored) {
+            currentDeviceId = stored
+            set({deviceId: stored})
+            console.log("Loaded deviceId from storage in initializeListeners:", stored)
+          }
+        }
 
         if (!myPubKey || !currentDeviceId) {
           console.error("No public key or device ID available for initializeListeners")
@@ -779,7 +789,15 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         // Trigger session listener initialization after rehydration
         if (state) {
           console.log("Storage rehydrated, scheduling session listener initialization")
-          setTimeout(() => {
+          setTimeout(async () => {
+            // Ensure deviceId is loaded before initializing listeners
+            if (!state.deviceId) {
+              const stored = await localforage.getItem<string>("deviceId")
+              if (stored) {
+                state.deviceId = stored
+                console.log("Loaded deviceId from storage during rehydration:", stored)
+              }
+            }
             state.initializeSessionListeners()
           }, 100)
         }

@@ -40,17 +40,48 @@ const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
   const eTag = message.tags.find(([key]) => key === "e")
   if (isReaction && eTag) {
     const [, messageId] = eTag
-    const oldMsg = await messageRepository.getById(messageId)
+    // First try to find by the exact ID (for inner message IDs)
+    let oldMsg = await messageRepository.getById(messageId)
+
+    // If not found, search through all messages to find by canonical ID
+    if (!oldMsg) {
+      const state = useEventsStore.getState()
+
+      // Search through all sessions for a message with matching canonical ID
+      for (const [, sessionMessages] of state.events.entries()) {
+        // Find message with matching canonical ID
+        for (const [, msg] of sessionMessages.entries()) {
+          if (msg.canonicalId === messageId || msg.id === messageId) {
+            oldMsg = msg
+            break
+          }
+        }
+        if (oldMsg) break
+      }
+    }
 
     const pubKey = message.pubkey || sessionId.split(":")[0]
 
     if (oldMsg) {
-      return {
+      const updatedMsg = {
         ...oldMsg,
         reactions: {
           ...oldMsg.reactions,
           [pubKey]: message.content,
         },
+      }
+      // Find which session this message belongs to
+      let targetSessionId = null
+      for (const [tid, sessionMessages] of useEventsStore.getState().events.entries()) {
+        if (sessionMessages.has(oldMsg.id)) {
+          targetSessionId = tid
+          break
+        }
+      }
+
+      if (targetSessionId) {
+        await messageRepository.save(targetSessionId, updatedMsg)
+        return updatedMsg
       }
     }
   }

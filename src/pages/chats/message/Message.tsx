@@ -21,6 +21,7 @@ export type MessageType = Rumor & {
   reactions?: Record<string, string>
   nostrEventId?: string
   sentToRelays?: boolean
+  canonicalId?: string
 }
 
 type MessageProps = {

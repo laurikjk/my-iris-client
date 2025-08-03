@@ -30,11 +30,17 @@ const PRODUCTION_RELAYS = [
 
 const TEST_RELAY = ["wss://temp.iris.to/"]
 
-export const DEFAULT_RELAYS = import.meta.env.VITE_USE_TEST_RELAY
-  ? TEST_RELAY
-  : import.meta.env.VITE_USE_LOCAL_RELAY
-    ? LOCAL_RELAY
-    : PRODUCTION_RELAYS
+function getDefaultRelays() {
+  if (import.meta.env.VITE_USE_TEST_RELAY) {
+    return TEST_RELAY
+  }
+  if (import.meta.env.VITE_USE_LOCAL_RELAY) {
+    return LOCAL_RELAY
+  }
+  return PRODUCTION_RELAYS
+}
+
+export const DEFAULT_RELAYS = getDefaultRelays()
 
 /**
  * Get a singleton "default" NDK instance to get started quickly. If you want to init NDK with e.g. your own relays, pass them on the first call.

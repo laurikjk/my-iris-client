@@ -11,6 +11,7 @@ import {KIND_REACTION} from "@/utils/constants"
 import {ndk} from "@/utils/ndk"
 import localforage from "localforage"
 import {create} from "zustand"
+import {calculateCanonicalId} from "@/utils/canonicalId"
 
 // Import stores that we need for event routing
 import {useEventsStore} from "./events"
@@ -232,8 +233,15 @@ export const useSessionsStore = create<SessionsStore>()(
 
           // Optimistic update – show our own message immediately
           if (innerEvent) {
+            // Calculate canonical ID for messages (not reactions)
+            let canonicalId = innerEvent.id
+            if (innerEvent.kind !== KIND_REACTION) {
+              canonicalId = await calculateCanonicalId(innerEvent)
+            }
+
             routeEventToStore(sessionId, {
               ...innerEvent,
+              canonicalId,
               pubkey: "user",
               reactions: {},
             } as MessageType)
@@ -418,11 +426,16 @@ export const useSessionsStore = create<SessionsStore>()(
 )
 
 // Helper to process any session event consistently
-const handleSessionEvent = (
+const handleSessionEvent = async (
   get: () => SessionsStore,
   sessionId: string,
   event: MessageType
 ) => {
+  // Calculate canonical ID for non-reaction messages
+  if (event.kind !== KIND_REACTION) {
+    event.canonicalId = await calculateCanonicalId(event)
+  }
+
   // Handle group creation event (kind 40)
   if (event.kind === 40 && event.content) {
     try {

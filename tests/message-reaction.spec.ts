@@ -3,7 +3,19 @@ import {signUp} from "./auth.setup"
 
 async function setupChatWithSelf(page, username) {
   await page.getByRole("link", {name: "Chats"}).click()
-  await expect(page.locator("header").getByText("New Chat")).toBeVisible({timeout: 10000})
+  await page.waitForLoadState("networkidle")
+
+  // Wait for either header text or link text
+  await expect(
+    page
+      .getByRole("link", {name: /New Chat/})
+      .or(page.locator("header").getByText("New Chat"))
+  ).toBeVisible({timeout: 10000})
+
+  // Click the New Chat link to go to /chats/new
+  await page.getByRole("link", {name: /New Chat/}).click()
+  await expect(page).toHaveURL(/\/chats\/new/)
+
   const searchInput = page.getByPlaceholder("Search for users")
   await searchInput.fill(username)
   await page.waitForTimeout(1000)
@@ -22,8 +34,16 @@ test("user can react to a chat message", async ({page}) => {
   await messageInput.press("Enter")
   await expect(page.locator(".whitespace-pre-wrap").getByText(text)).toBeVisible()
 
+  // Give the message time to be fully processed
+  await page.waitForTimeout(1000)
+
   await page.getByTestId("reaction-button").click()
   await page.getByRole("button", {name: "👍"}).first().click()
 
-  await expect(page.getByText("👍")).toBeVisible()
+  // Wait for reaction to be sent and displayed
+  await page.waitForTimeout(2000)
+
+  // Check if the reaction appears on the message
+  // Reactions might appear in different ways depending on the UI
+  await expect(page.getByText("👍").nth(1)).toBeVisible({timeout: 5000})
 })

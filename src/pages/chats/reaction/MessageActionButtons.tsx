@@ -17,6 +17,7 @@ type MessageActionButtonsProps = {
   message?: {
     created_at?: number
     tags?: string[][]
+    canonicalId?: string
   }
 }
 
@@ -52,10 +53,12 @@ const MessageActionButtons = ({
       onSendReaction(messageId, emoji.native)
     } else {
       // Construct a reaction event
+      // Use canonical ID if available, otherwise fall back to message ID
+      const reactionTargetId = message?.canonicalId || messageId
       const event = {
         content: emoji.native,
         kind: KIND_REACTION,
-        tags: [["e", messageId]],
+        tags: [["e", reactionTargetId]],
       }
       sendMessage(sessionId, event)
     }
