@@ -1,5 +1,5 @@
 import RightColumn from "@/shared/components/RightColumn.tsx"
-import PopularFeed from "@/shared/components/feed/PopularFeed"
+import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import Widget from "@/shared/components/ui/Widget"
 import {useUserStore} from "@/stores/user"
 import {useWalletProviderStore} from "@/stores/walletProvider"
@@ -56,7 +56,8 @@ export default function WalletPage() {
         {() => (
           <>
             <Widget title="Popular">
-              <PopularFeed
+              <AlgorithmicFeed
+                type="popular"
                 displayOptions={{
                   small: true,
                   showDisplaySelector: false,

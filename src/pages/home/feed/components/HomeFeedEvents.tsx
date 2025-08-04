@@ -3,7 +3,9 @@ import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
-import PopularFeed from "@/shared/components/feed/PopularFeed"
+import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
+import {useRefreshRouteSignal} from "@/stores/notifications"
+import {feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import useFollows from "@/shared/hooks/useFollows"
@@ -36,6 +38,7 @@ function HomeFeedEvents() {
   const containerRef = useRef<HTMLDivElement>(null)
   const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true) // to update on follows change
+  const refreshSignal = useRefreshRouteSignal()
   const {appearance, updateAppearance} = useSettingsStore()
   const isLargeScreen = useIsLargeScreen()
   const navItemClicked = useUIStore((state) => state.navItemClicked)
@@ -124,7 +127,7 @@ function HomeFeedEvents() {
     if (confirm("Reset all feeds to defaults?")) {
       console.log("User confirmed reset")
       setEditMode(false)
-      // Stack navigation will handle caching
+      feedCache.clear()
       resetAllFeedsToDefaults()
       console.log("Reset function called")
     }
@@ -134,13 +137,24 @@ function HomeFeedEvents() {
     cloneFeed(feedId)
   }
 
+  const openedAt = useMemo(() => Date.now(), [])
+
   // Create a comprehensive key that changes when any relevant config changes
   const feedKey = useMemo(() => {
     if (!activeFeedConfig) return "feed-null"
     return `feed-${getFeedCacheKey(activeFeedConfig)}`
   }, [activeFeedConfig])
 
-  if (!activeFeedConfig?.filter) {
+  useEffect(() => {
+    if (activeFeed !== "unseen") {
+      feedCache.delete("unseen")
+    }
+    if (activeFeed === "unseen" && refreshSignal > openedAt) {
+      feedCache.delete("unseen")
+    }
+  }, [activeFeedItem, openedAt, refreshSignal, activeFeed])
+
+  if (!activeFeedConfig?.filter && !activeFeedConfig?.feedStrategy) {
     return null
   }
 
@@ -199,23 +213,31 @@ function HomeFeedEvents() {
           />
         )}
         <NotificationPrompt />
-        {activeFeedConfig?.feedType === "popular" || !myPubKey ? (
-          <PopularFeed />
-        ) : (
-          <Feed
-            key={feedKey}
-            feedConfig={activeFeedConfig}
-            showDisplayAsSelector={follows.length > 1}
-            forceUpdate={0}
-            emptyPlaceholder={""}
-            refreshSignal={feedRefreshSignal}
-          />
-        )}
+        {(() => {
+          if (!myPubKey) return <AlgorithmicFeed type="popular" />
+
+          if (activeFeedConfig?.feedStrategy)
+            return <AlgorithmicFeed type={activeFeedConfig.feedStrategy} />
+
+          return (
+            <Feed
+              key={feedKey}
+              feedConfig={activeFeedConfig}
+              showDisplayAsSelector={follows.length > 1}
+              forceUpdate={0}
+              emptyPlaceholder={""}
+              refreshSignal={feedRefreshSignal}
+            />
+          )
+        })()}
         {follows.length <= 1 && myPubKey && (
           <>
             <NoFollows myPubKey={myPubKey} />
-            {activeFeedConfig?.feedType !== "popular" && (
-              <PopularFeed displayOptions={{showDisplaySelector: false}} />
+            {!activeFeedConfig?.feedStrategy && (
+              <AlgorithmicFeed
+                type="popular"
+                displayOptions={{showDisplaySelector: false}}
+              />
             )}
           </>
         )}

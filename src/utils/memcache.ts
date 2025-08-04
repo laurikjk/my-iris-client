@@ -5,6 +5,7 @@ import throttle from "lodash/throttle"
 import localforage from "localforage"
 
 export const eventsByIdCache = new LRUCache({maxSize: 500})
+export const feedCache = new LRUCache<string, SortedMap<string, NDKEvent>>({maxSize: 10})
 export const replyFeedCache = new LRUCache<string, SortedMap<string, NDKEvent>>({
   maxSize: 20,
 })
@@ -20,10 +21,6 @@ export const imgproxyFailureCache = new LRUCache<string, boolean>({maxSize: 100}
 export const loadedImageCache = new LRUCache<string, string>({maxSize: 200})
 
 // Special feed cache interfaces
-interface PostFetcherCache {
-  events?: NDKEvent[]
-  hasLoadedInitial?: boolean
-}
 
 interface ReactionSubscriptionCache {
   hasInitialData?: boolean
@@ -35,9 +32,34 @@ interface PopularityFiltersCache {
   filterLevel?: number
 }
 
+interface ChronologicalSubscriptionCache {
+  hasInitialData?: boolean
+  pendingPosts?: Map<string, number>
+  showingPosts?: Map<string, number>
+  timeRange?: number
+}
+
+interface CombinedPostFetcherCache {
+  events?: NDKEvent[]
+  hasLoadedInitial?: boolean
+}
+
+interface PostFetcherCache {
+  events?: NDKEvent[]
+  hasLoadedInitial?: boolean
+}
+
 interface PopularHomeFeedCache {
   postFetcher: PostFetcherCache
   reactionSubscription: ReactionSubscriptionCache
+  popularityFilters: PopularityFiltersCache
+  chronologicalSubscription?: ChronologicalSubscriptionCache
+}
+
+interface ForYouFeedCache {
+  combinedPostFetcher: CombinedPostFetcherCache
+  reactionSubscription: ReactionSubscriptionCache
+  chronologicalSubscription: ChronologicalSubscriptionCache
   popularityFilters: PopularityFiltersCache
 }
 
@@ -46,6 +68,19 @@ export const popularHomeFeedCache: PopularHomeFeedCache = {
   postFetcher: {},
   reactionSubscription: {},
   popularityFilters: {},
+  chronologicalSubscription: {},
+}
+
+// Cache for for-you feed
+export const forYouFeedCache: ForYouFeedCache = {
+  combinedPostFetcher: {},
+  reactionSubscription: {},
+  chronologicalSubscription: {},
+  popularityFilters: {},
+}
+
+export const getOrCreateAlgorithmicFeedCache = (feedId: string) => {
+  return feedId === "popular" ? popularHomeFeedCache : forYouFeedCache
 }
 
 // Load seenEventIds from localForage

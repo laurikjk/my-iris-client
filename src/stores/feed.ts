@@ -3,10 +3,11 @@ import {create} from "zustand"
 import {
   KIND_TEXT_NOTE,
   KIND_REPOST,
-  KIND_REACTION,
   KIND_CLASSIFIED,
   KIND_LONG_FORM_CONTENT,
 } from "@/utils/constants"
+
+export type FeedType = "popular" | "for-you"
 
 interface FeedFilter {
   kinds?: number[]
@@ -23,7 +24,6 @@ interface FeedConfig {
   showRepliedTo?: boolean
   hideReplies?: boolean
   filter?: FeedFilter
-  sortLikedPosts?: boolean
   // Store filter criteria as serializable data
   followDistance?: number // undefined = no follow distance filtering, number = max degrees
   requiresMedia?: boolean
@@ -31,7 +31,6 @@ interface FeedConfig {
   excludeSeen?: boolean
   showEventsByUnknownUsers?: boolean // Deprecated in feed configs, used only in global settings
   relayUrls?: string[]
-  feedType?: "chronological" | "popular"
   // For reply feeds - only show replies to this specific event
   repliesTo?: string
   // Sort type for events
@@ -40,6 +39,8 @@ interface FeedConfig {
   autoShowNewEvents?: boolean
   // Display mode for this specific feed
   displayAs?: "list" | "grid"
+  // Feed strategy for popular feeds
+  feedStrategy?: FeedType
 }
 
 interface FeedState {
@@ -82,14 +83,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
   popular: {
     name: "Popular",
     id: "popular",
-    filter: {
-      kinds: [KIND_REPOST, KIND_REACTION],
-      since: Math.floor(Date.now() / 1000 - 60 * 60 * 24),
-      limit: 300,
-    },
-    followDistance: 2,
-    sortLikedPosts: true,
-    feedType: "popular",
+    feedStrategy: "popular",
   },
   latest: {
     name: "Latest",
@@ -147,6 +141,11 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     followDistance: 5,
     hideReplies: true,
   },
+  "for-you": {
+    name: "For You",
+    id: "for-you",
+    feedStrategy: "for-you",
+  },
 }
 
 export const useFeedStore = create<FeedState>()(
@@ -159,6 +158,7 @@ export const useFeedStore = create<FeedState>()(
         enabledFeedIds: [
           "unseen",
           "popular",
+          "for-you",
           "articles",
           "latest",
           "market",
@@ -264,6 +264,7 @@ export const useFeedStore = create<FeedState>()(
             enabledFeedIds: [
               "unseen",
               "popular",
+              "for-you",
               "latest",
               "market",
               "articles",

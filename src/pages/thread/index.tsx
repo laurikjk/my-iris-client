@@ -1,6 +1,6 @@
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
 import RightColumn from "@/shared/components/RightColumn.tsx"
-import PopularFeed from "@/shared/components/feed/PopularFeed"
+import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import AuthorArticlesFeed from "@/shared/components/feed/AuthorArticlesFeed"
 import FollowList from "@/pages/user/components/FollowList"
 import Header from "@/shared/components/header/Header"
@@ -151,7 +151,8 @@ export default function ThreadPage({
                 )
               )}
               <Widget title="Popular">
-                <PopularFeed
+                <AlgorithmicFeed
+                  type="popular"
                   displayOptions={{
                     small: true,
                     showDisplaySelector: false,

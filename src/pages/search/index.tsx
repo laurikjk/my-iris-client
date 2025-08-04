@@ -1,6 +1,6 @@
 import {useMemo, useState, useEffect, FormEvent, useRef} from "react"
 import RightColumn from "@/shared/components/RightColumn.tsx"
-import PopularFeed from "@/shared/components/feed/PopularFeed"
+import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import SearchBox from "@/shared/components/ui/SearchBox"
 import Header from "@/shared/components/header/Header"
@@ -137,7 +137,10 @@ function SearchPage() {
               />
             ) : (
               <div className="mt-4">
-                <PopularFeed displayOptions={{showDisplaySelector: true}} />
+                <AlgorithmicFeed
+                  type="popular"
+                  displayOptions={{showDisplaySelector: false}}
+                />
               </div>
             )}
           </div>
@@ -149,7 +152,8 @@ function SearchPage() {
           {() => (
             <>
               <Widget title="Popular">
-                <PopularFeed
+                <AlgorithmicFeed
+                  type="popular"
                   displayOptions={{
                     small: true,
                     showDisplaySelector: false,

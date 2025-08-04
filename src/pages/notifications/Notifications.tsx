@@ -1,6 +1,6 @@
 import NotificationsFeed from "@/shared/components/feed/NotificationsFeed.tsx"
 import RightColumn from "@/shared/components/RightColumn"
-import PopularFeed from "@/shared/components/feed/PopularFeed"
+import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import Header from "@/shared/components/header/Header"
 import Widget from "@/shared/components/ui/Widget"
 
@@ -28,7 +28,8 @@ function Notifications() {
           {() => (
             <>
               <Widget title="Popular">
-                <PopularFeed
+                <AlgorithmicFeed
+                  type="popular"
                   displayOptions={{
                     small: true,
                     showDisplaySelector: false,
