@@ -41,3 +41,7 @@ src-tauri/target
 nvim-config
 Dockerfile.dev
 docker-compose.dev.yml
+
+# Dev relay data
+dev-relay/*.jsonl
+dev-relay/*.jsonl.bz2
