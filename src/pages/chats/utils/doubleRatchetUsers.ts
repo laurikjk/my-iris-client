@@ -44,12 +44,9 @@ const recreateSearchIndex = () => {
 // Track if we're currently fetching profiles to prevent infinite loops
 let isFetchingProfiles = false
 
-// Update the search index with new user data (internal)
-const updateDoubleRatchetSearchIndexImmediate = () => {
-  // Update all users' profiles in the map
+// Update user data map from profile cache
+const updateUserDataFromCache = () => {
   const updatedUsers = new Map<string, DoubleRatchetUser>()
-
-  // Get all users that have profiles
   doubleRatchetUsers.forEach((userPubkey) => {
     const profile = profileCache.get(userPubkey)
     if (profile) {
@@ -59,12 +56,15 @@ const updateDoubleRatchetSearchIndexImmediate = () => {
       })
     }
   })
-
-  // Replace the old map with the updated one
+  
   userData.clear()
   updatedUsers.forEach((user) => userData.set(user.pubkey, user))
-
   recreateSearchIndex()
+}
+
+// Update the search index with new user data (internal)
+const updateDoubleRatchetSearchIndexImmediate = () => {
+  updateUserDataFromCache()
   console.log("Updated double ratchet search index", userData.size)
 
   // If we have users without profiles and we're not already fetching, fetch them
@@ -94,10 +94,11 @@ const updateDoubleRatchetSearchIndexImmediate = () => {
       }
     })
 
-    // Update search index again when profiles are loaded
+    // Update index once when subscription ends, without triggering new lookups
     sub.on("eose", () => {
       isFetchingProfiles = false
-      updateDoubleRatchetSearchIndexImmediate()
+      updateUserDataFromCache()
+      notifySubscribers()
     })
   }
 
