@@ -54,7 +54,9 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
 
     const options = opts || {
       explicitRelayUrls: relays,
-      enableOutboxModel: store.ndkOutboxModel,
+      enableOutboxModel: import.meta.env.VITE_USE_LOCAL_RELAY
+        ? false
+        : store.ndkOutboxModel,
       cacheAdapter: new NDKCacheAdapterDexie({dbName: "treelike-nostr", saveSig: true}),
     }
     ndkInstance = new NDK(options)
