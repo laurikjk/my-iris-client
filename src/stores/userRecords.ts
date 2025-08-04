@@ -287,6 +287,35 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         // Get UserRecord for this user
         const userRecord = get().userRecords.get(userPubKey)
 
+        // Special handling when sending to self
+        if (userPubKey === myPubKey) {
+          const currentDeviceId = get().deviceId
+          const myRecord = get().userRecords.get(myPubKey)
+
+          // Exclude current device from fan-out
+          if (currentDeviceId && myRecord) {
+            const currentSessionId = myRecord.getActiveSessionId(currentDeviceId)
+            if (currentSessionId) {
+              sentSessionIds.add(currentSessionId)
+            }
+          }
+
+          // Check if we have other devices to send to
+          if (myRecord?.hasActiveSessions()) {
+            const otherDevices = myRecord
+              .getActiveDevices()
+              .filter((d) => d.activeSessionId && !sentSessionIds.has(d.activeSessionId))
+
+            if (otherDevices.length > 0) {
+              await fanOutToOwnDevices(sentSessionIds)
+              return
+            }
+          }
+
+          // No other devices found - ensure we're listening for them
+          get().listenToUserDevices(myPubKey)
+        }
+
         // Send to all peer devices we already have sessions with (concurrently)
         if (userRecord && userRecord.hasActiveSessions()) {
           await Promise.all(
@@ -303,6 +332,9 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             })
           )
 
+          // Immediately fan-out to own devices
+          await fanOutToOwnDevices(sentSessionIds)
+
           // If at least one peer session succeeded we're done
           if (sentSessionIds.size > 0) {
             return
@@ -312,6 +344,12 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
         // No existing sessions - listen for invites and queue message
         console.log("No existing sessions, queuing message and listening for invites")
+
+        // Special case for self-messaging - we can't wait for our own invite
+        if (userPubKey === myPubKey) {
+          // The message is already shown optimistically, so just resolve
+          return Promise.resolve()
+        }
 
         return new Promise<void>((resolve, reject) => {
           const timeoutId = setTimeout(() => {
