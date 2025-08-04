@@ -1,5 +1,5 @@
 import {Name} from "@/shared/components/user/Name"
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useState, useEffect} from "react"
 import {MessageType} from "./Message"
 import classNames from "classnames"
@@ -13,7 +13,7 @@ type ReplyPreviewProps = {
 
 const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
   const [repliedToMessage, setRepliedToMessage] = useState<MessageType | null>(null)
-  const {events} = useEventsStore()
+  const {events} = usePrivateMessagesStore()
 
   // No need to find the reply tag here since we're passing it directly
   const theirPublicKey = sessionId.split(":")[0]

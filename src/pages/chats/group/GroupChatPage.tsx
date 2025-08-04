@@ -1,7 +1,7 @@
 import {useState} from "react"
 import {useParams} from "react-router"
 import {useGroupsStore} from "@/stores/groups"
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useUserStore} from "@/stores/user"
 import {useUserRecordsStore} from "@/stores/userRecords"
 import ChatContainer from "../components/ChatContainer"
@@ -18,7 +18,7 @@ const GroupChatPage = () => {
   const {groups} = useGroupsStore()
   const group = id ? groups[id] : undefined
   // Fix: Use the events store with proper subscription to get reactive updates
-  const {events} = useEventsStore()
+  const {events} = usePrivateMessagesStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const {sendToUser} = useUserRecordsStore()
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)

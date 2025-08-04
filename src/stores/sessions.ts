@@ -14,7 +14,7 @@ import {create} from "zustand"
 import {calculateCanonicalId} from "@/utils/canonicalId"
 
 // Import stores that we need for event routing
-import {useEventsStore} from "./events"
+import {usePrivateMessagesStore} from "./privateMessages"
 import {useUserStore} from "./user"
 import {useGroupsStore} from "./groups"
 import {useUserRecordsStore} from "./userRecords"
@@ -57,7 +57,7 @@ const routeEventToStore = (sessionId: string, message: MessageType) => {
     targetId = userPubKey
   }
 
-  useEventsStore.getState().upsert(targetId, message)
+  usePrivateMessagesStore.getState().upsert(targetId, message)
 }
 
 // Helper subscribe implementation for Session reconstruction

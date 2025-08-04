@@ -9,7 +9,7 @@ import {Name} from "@/shared/components/user/Name"
 import {KIND_CHANNEL_MESSAGE, KIND_CHANNEL_CREATE} from "@/utils/constants"
 import {useLocation, NavLink} from "react-router"
 import {MessageType} from "../message/Message"
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {RiEarthLine} from "@remixicon/react"
 import {useUserStore} from "@/stores/user"
 import {useEffect, useState} from "react"
@@ -38,7 +38,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
     kind: number
   } | null>(null)
   const [showPlaceholder, setShowPlaceholder] = useState(false)
-  const {events} = useEventsStore()
+  const {events} = usePrivateMessagesStore()
   const {
     publicChats,
     lastSeen: lastSeenPublic,

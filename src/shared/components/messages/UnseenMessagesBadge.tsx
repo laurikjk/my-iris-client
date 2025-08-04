@@ -1,6 +1,6 @@
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import {useUserRecordsStore} from "@/stores/userRecords"
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {MessageType} from "@/pages/chats/message/Message"
 import {useMemo} from "react"
@@ -12,7 +12,7 @@ interface UnseenMessagesBadgeProps {
 
 const UnseenMessagesBadge = ({messages, lastSeen}: UnseenMessagesBadgeProps) => {
   const {lastSeen: globalLastSeen} = useUserRecordsStore()
-  const {events} = useEventsStore()
+  const {events} = usePrivateMessagesStore()
 
   // Global usage - check all sessions (for navsidebar/footer)
   const hasUnread = useMemo(() => {

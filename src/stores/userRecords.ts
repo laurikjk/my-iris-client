@@ -3,7 +3,7 @@ import {createJSONStorage, persist} from "zustand/middleware"
 import {Filter, VerifiedEvent, UnsignedEvent} from "nostr-tools"
 import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
 import {getEncryptFunction, getDecryptFunction} from "@/utils/nostrCrypto"
-import {useEventsStore} from "./events"
+import {usePrivateMessagesStore} from "./privateMessages"
 import {useSessionsStore} from "./sessions"
 import {UserRecord} from "./UserRecord"
 import localforage from "localforage"
@@ -479,7 +479,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
         // Remove session from sessions store
         useSessionsStore.getState().removeSession(sessionId)
-        useEventsStore.getState().removeSession(sessionId)
+        usePrivateMessagesStore.getState().removeSession(sessionId)
       },
 
       listenToUserDevices: (userPubKey: string) => {

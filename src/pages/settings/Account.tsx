@@ -1,7 +1,7 @@
 import {unsubscribeAll} from "@/utils/notifications"
 import {useUserStore} from "@/stores/user"
 import {useUserRecordsStore} from "@/stores/userRecords"
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useDraftStore} from "@/stores/draft"
 import {MouseEvent, useState} from "react"
 import {useNavigate, Link} from "react-router"
@@ -46,7 +46,7 @@ function Account() {
   async function cleanupStores() {
     try {
       // Clear events store (clears message repository)
-      await useEventsStore.getState().clear()
+      await usePrivateMessagesStore.getState().clear()
 
       // Reset stores with reset methods
       useUserRecordsStore.getState().reset()

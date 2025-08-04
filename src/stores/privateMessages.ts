@@ -17,11 +17,11 @@ const addToMap = (
   return sessionEventMap
 }
 
-interface EventsStoreState {
+interface PrivateMessagesStoreState {
   events: Map<string, SortedMap<string, MessageType>>
 }
 
-interface EventsStoreActions {
+interface PrivateMessagesStoreActions {
   upsert: (sessionId: string, message: MessageType) => Promise<void>
   updateMessage: (
     sessionId: string,
@@ -33,7 +33,7 @@ interface EventsStoreActions {
   clear: () => Promise<void>
 }
 
-type EventsStore = EventsStoreState & EventsStoreActions
+type PrivateMessagesStore = PrivateMessagesStoreState & PrivateMessagesStoreActions
 
 const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
   const isReaction = message.kind === KIND_REACTION
@@ -45,7 +45,7 @@ const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
 
     // If not found, search through all messages to find by canonical ID
     if (!oldMsg) {
-      const state = useEventsStore.getState()
+      const state = usePrivateMessagesStore.getState()
 
       // Search through all sessions for a message with matching canonical ID
       for (const [, sessionMessages] of state.events.entries()) {
@@ -72,7 +72,9 @@ const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
       }
       // Find which session this message belongs to
       let targetSessionId = null
-      for (const [tid, sessionMessages] of useEventsStore.getState().events.entries()) {
+      for (const [tid, sessionMessages] of usePrivateMessagesStore
+        .getState()
+        .events.entries()) {
         if (sessionMessages.has(oldMsg.id)) {
           targetSessionId = tid
           break
@@ -88,7 +90,7 @@ const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
   return message
 }
 
-export const useEventsStore = create<EventsStore>((set) => {
+export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
   const rehydration = messageRepository
     .loadAll()
     .then((data) => set({events: data}))

@@ -1,4 +1,4 @@
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 
 export const useMessageDeletion = () => {
   const deleteMessageLocally = (messageId: string, sessionId: string) => {
@@ -8,13 +8,13 @@ export const useMessageDeletion = () => {
 
     if (confirmed) {
       // Remove the message from the events store
-      const {events} = useEventsStore.getState()
+      const {events} = usePrivateMessagesStore.getState()
       const sessionEvents = events.get(sessionId)
 
       if (sessionEvents) {
         sessionEvents.delete(messageId)
         // Force re-render by updating the store
-        useEventsStore.setState({events: new Map(events)})
+        usePrivateMessagesStore.setState({events: new Map(events)})
       }
 
       return true // Deletion confirmed and executed

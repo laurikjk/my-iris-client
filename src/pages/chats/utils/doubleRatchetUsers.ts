@@ -56,7 +56,7 @@ const updateUserDataFromCache = () => {
       })
     }
   })
-  
+
   userData.clear()
   updatedUsers.forEach((user) => userData.set(user.pubkey, user))
   recreateSearchIndex()

@@ -3,7 +3,7 @@ import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "../utils/messageGrouping"
 import PrivateChatHeader from "./PrivateChatHeader"
 import {usePrivateChatsStore} from "@/stores/privateChats"
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import MessageForm from "../message/MessageForm"
 import {MessageType} from "../message/Message"
 import {useEffect, useState} from "react"
@@ -24,7 +24,7 @@ const Chat = ({id}: {id: string}) => {
   const hasAnySessions = userSessions.length > 0
 
   // Get messages reactively from events store - this will update when new messages are added
-  const eventsMap = useEventsStore((state) => state.events)
+  const eventsMap = usePrivateMessagesStore((state) => state.events)
   const messages = eventsMap.get(id) ?? new SortedMap<string, MessageType>([], comparator)
 
   useEffect(() => {

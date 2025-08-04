@@ -6,7 +6,7 @@ import HyperText from "@/shared/components/HyperText"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {Name} from "@/shared/components/user/Name"
 import {useMemo, useEffect, useState} from "react"
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import ReplyPreview from "./ReplyPreview"
 import classNames from "classnames"
 import {Link} from "react-router"
@@ -83,7 +83,7 @@ const Message = ({
   reactions: propReactions,
 }: MessageProps) => {
   const isUser = message.pubkey === "user"
-  const {events} = useEventsStore()
+  const {events} = usePrivateMessagesStore()
   const [localReactions, setLocalReactions] = useState<Record<string, string>>(
     propReactions || {}
   )

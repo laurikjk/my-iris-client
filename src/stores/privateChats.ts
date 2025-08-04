@@ -2,7 +2,7 @@ import {createJSONStorage, persist} from "zustand/middleware"
 import {MessageType} from "@/pages/chats/message/Message"
 import {comparator} from "@/pages/chats/utils/messageGrouping"
 import {useUserRecordsStore} from "./userRecords"
-import {useEventsStore} from "./events"
+import {usePrivateMessagesStore} from "./privateMessages"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import localforage from "localforage"
 import {create} from "zustand"
@@ -83,7 +83,7 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
         return Array.from(userPubKeys)
           .map((userPubKey) => {
             // Get messages directly from events store
-            const events = useEventsStore.getState().events
+            const events = usePrivateMessagesStore.getState().events
             const messages =
               events.get(userPubKey) ?? new SortedMap<string, MessageType>([], comparator)
             const lastMessage = messages.last()?.[1]
