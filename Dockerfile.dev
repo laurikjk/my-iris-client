@@ -77,7 +77,10 @@ RUN npm install -g @anthropic-ai/claude-code
 RUN npm install -g typescript typescript-language-server
 
 # Install only Chromium for Playwright (smaller download)
-RUN npx playwright install --with-deps chromium
+RUN npx playwright install --with-deps chromium && \
+    # Copy Playwright cache to a shared location
+    cp -r /root/.cache/ms-playwright /opt/ms-playwright && \
+    chmod -R 755 /opt/ms-playwright
 
 # Final stage
 FROM npm-tools AS dev
@@ -89,14 +92,20 @@ RUN useradd -m -s /bin/zsh developer
 RUN git clone https://github.com/irislib/iris-client.git /home/developer/iris-client && \
     chown -R developer:developer /home/developer/iris-client
 
-# Install dependencies
+# Install dependencies as developer user
 WORKDIR /home/developer/iris-client
+USER developer
 RUN yarn install --frozen-lockfile
+USER root
 
 # Copy nvim config for both users
 COPY ./nvim-config /root/.config/nvim
 COPY ./nvim-config /home/developer/.config/nvim
-RUN chown -R developer:developer /home/developer/.config/nvim
+RUN chown -R developer:developer /home/developer/.config/nvim && \
+    # Setup Playwright cache for developer user
+    mkdir -p /home/developer/.cache && \
+    ln -s /opt/ms-playwright /home/developer/.cache/ms-playwright && \
+    chown -R developer:developer /home/developer/.cache
 
 
 # Expose dev server port
