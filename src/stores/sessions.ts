@@ -259,6 +259,7 @@ export const useSessionsStore = create<SessionsStore>()(
                 ...innerEvent,
                 pubkey: myPubKey,
                 reactions: {},
+                nostrEventId: publishedEvent.id, // Add the outer event ID
               } as MessageType
 
               // Get the user we're chatting with from session data
@@ -283,6 +284,36 @@ export const useSessionsStore = create<SessionsStore>()(
 
             await e.publish(undefined, undefined, 0)
             console.log("published", publishedEvent.id)
+            
+            // Mark message as sent to relays
+            if (innerEvent && innerEvent.id) {
+              const sessionData = get().sessions.get(sessionId)
+              if (sessionData) {
+                // Determine the chat ID based on the message type
+                const groupLabelTag = innerEvent.tags?.find((tag: string[]) => tag[0] === "l")
+                const pTag = innerEvent.tags?.find((tag: string[]) => tag[0] === "p")
+                const myPubKey = useUserStore.getState().publicKey
+                
+                let chatId
+                if (groupLabelTag && groupLabelTag[1]) {
+                  chatId = groupLabelTag[1]
+                } else if (innerEvent.pubkey === myPubKey) {
+                  chatId = pTag?.[1] || sessionData.userPubKey
+                } else {
+                  chatId = sessionData.userPubKey
+                }
+                
+                // Update the message with sentToRelays flag and nostrEventId
+                await usePrivateMessagesStore.getState().updateMessage(
+                  chatId,
+                  innerEvent.id,
+                  { 
+                    sentToRelays: true,
+                    nostrEventId: publishedEvent.id
+                  }
+                )
+              }
+            }
           } catch (err) {
             console.warn("Error publishing event:", err)
           }

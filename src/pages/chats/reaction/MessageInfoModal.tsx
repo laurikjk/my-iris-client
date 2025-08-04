@@ -273,9 +273,28 @@ export const MessageInfoModal = ({
             )}
           </div>
         ) : (
-          <p className="text-sm text-base-content/60">
-            No nostr event ID available for this message.
-          </p>
+          <div className="space-y-3">
+            <p className="text-sm text-base-content/60">
+              This message was received through an encrypted channel and doesn't have a public event ID.
+            </p>
+            {message && (
+              <div>
+                <button
+                  onClick={() => setShowRawMessage(!showRawMessage)}
+                  className="btn btn-ghost btn-sm"
+                >
+                  {showRawMessage ? "Hide" : "Show"} Raw Message
+                </button>
+                {showRawMessage && (
+                  <div className="mt-2">
+                    <pre className="text-xs bg-base-200 p-3 rounded overflow-auto max-h-60 whitespace-pre-wrap break-all">
+                      {JSON.stringify(message, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </Modal>
