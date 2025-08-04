@@ -149,8 +149,8 @@ export const subscribeToDMNotifications = debounce(async () => {
 
   const sessionAuthors = Array.from(sessions.values())
     .flatMap((s) => [
-      s?.state.theirCurrentNostrPublicKey,
-      s?.state.theirNextNostrPublicKey,
+      s?.session.state.theirCurrentNostrPublicKey,
+      s?.session.state.theirNextNostrPublicKey,
     ])
     .filter((a) => typeof a === "string") as string[]
 

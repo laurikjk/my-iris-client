@@ -34,12 +34,12 @@ export function getPeerConnection(
       !ask ||
       confirm(`WebRTC connect with ${getCachedName(pubKey)}?`))
   ) {
-    const session = useSessionsStore.getState().sessions.get(sessionId)
-    if (!session) {
+    const sessionData = useSessionsStore.getState().sessions.get(sessionId)
+    if (!sessionData) {
       console.error("Session not found for peer:", sessionId)
       return
     }
-    const connection = new PeerConnection(session, sessionId)
+    const connection = new PeerConnection(sessionData.session, sessionId)
     connections.set(sessionId, connection)
     if (connect) {
       connection?.connect()
