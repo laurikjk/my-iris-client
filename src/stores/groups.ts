@@ -16,6 +16,7 @@ interface GroupsStore {
   addGroup: (group: Group) => void
   removeGroup: (groupId: string) => void
   updateGroup: (groupId: string, data: Partial<Group>) => void
+  addMember: (groupId: string, memberPubKey: string) => void
 }
 
 const store = create<GroupsStore>()(
@@ -45,6 +46,24 @@ const store = create<GroupsStore>()(
             },
           },
         })),
+      addMember: (groupId, memberPubKey) =>
+        set((state) => {
+          const group = state.groups[groupId]
+          if (!group) return state
+          
+          // Only add if not already a member
+          if (group.members.includes(memberPubKey)) return state
+          
+          return {
+            groups: {
+              ...state.groups,
+              [groupId]: {
+                ...group,
+                members: [...group.members, memberPubKey],
+              },
+            },
+          }
+        }),
     }),
     {
       name: "groups",

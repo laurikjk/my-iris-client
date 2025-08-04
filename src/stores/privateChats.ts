@@ -162,6 +162,11 @@ export async function subscribeToOwnDeviceInvites() {
   // Initialize listeners for current device's invite
   useUserRecordsStore.getState().initializeListeners()
 
-  // Then start listening for new device invites from other devices
-  useUserRecordsStore.getState().listenToUserDevices(publicKey)
+  // Wait a bit to ensure sessions are fully loaded from storage before listening for invites
+  // This prevents re-accepting invites we already have sessions for
+  setTimeout(() => {
+    console.log("Starting to listen for device invites after delay")
+    // Then start listening for new device invites from other devices
+    useUserRecordsStore.getState().listenToUserDevices(publicKey)
+  }, 2000) // 2 second delay to ensure session data is loaded
 }
