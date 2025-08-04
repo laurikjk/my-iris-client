@@ -1,9 +1,9 @@
 import {useState} from "react"
 import {useParams} from "react-router"
 import {useGroupsStore} from "@/stores/groups"
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useUserStore} from "@/stores/user"
-import {useSessionsStore} from "@/stores/sessions"
+import {useUserRecordsStore} from "@/stores/userRecords"
 import ChatContainer from "../components/ChatContainer"
 import MessageForm from "../message/MessageForm"
 import GroupChatHeader from "./GroupChatHeader"
@@ -18,9 +18,9 @@ const GroupChatPage = () => {
   const {groups} = useGroupsStore()
   const group = id ? groups[id] : undefined
   // Fix: Use the events store with proper subscription to get reactive updates
-  const {events} = useEventsStore()
+  const {events} = usePrivateMessagesStore()
   const myPubKey = useUserStore((state) => state.publicKey)
-  const {sendToUser} = useSessionsStore()
+  const {sendToUser} = useUserRecordsStore()
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
   if (!id || !group) {
@@ -41,12 +41,10 @@ const GroupChatPage = () => {
       ],
     }
 
-    // Send to all group members except self
-    await Promise.all(
-      group.members
-        .filter((pubkey: string) => pubkey !== myPubKey)
-        .map((pubkey: string) => sendToUser(pubkey, event))
-    )
+    // Send to all group members
+    // For ourselves, the optimistic update in sendMessage will handle display
+    // For others, we need to actually send the message
+    await Promise.all(group.members.map((pubkey: string) => sendToUser(pubkey, event)))
   }
 
   const handleSendReaction = async (messageId: string, emoji: string) => {
@@ -63,12 +61,8 @@ const GroupChatPage = () => {
       ],
     }
 
-    // Send reaction to all group members except self
-    await Promise.all(
-      group.members
-        .filter((pubkey: string) => pubkey !== myPubKey)
-        .map((pubkey: string) => sendToUser(pubkey, event))
-    )
+    // Send reaction to all group members including self for multi-device support
+    await Promise.all(group.members.map((pubkey: string) => sendToUser(pubkey, event)))
   }
 
   return (

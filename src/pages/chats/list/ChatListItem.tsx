@@ -7,10 +7,9 @@ import ProxyImg from "@/shared/components/ProxyImg"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {Name} from "@/shared/components/user/Name"
 import {KIND_CHANNEL_MESSAGE, KIND_CHANNEL_CREATE} from "@/utils/constants"
-import {useSessionsStore} from "@/stores/sessions"
 import {useLocation, NavLink} from "react-router"
 import {MessageType} from "../message/Message"
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {RiEarthLine} from "@remixicon/react"
 import {useUserStore} from "@/stores/user"
 import {useEffect, useState} from "react"
@@ -18,15 +17,19 @@ import debounce from "lodash/debounce"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
 import {useGroupsStore} from "@/stores/groups"
+import {usePrivateChatsStore} from "@/stores/privateChats"
+import {SortedMap} from "@/utils/SortedMap/SortedMap"
+import {comparator} from "@/pages/chats/utils/messageGrouping"
 
 interface ChatListItemProps {
   id: string
   isPublic?: boolean
+  type?: string
 }
 
-const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
+const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
   const location = useLocation()
-  const pubKey = isPublic ? "" : id.split(":").shift() || ""
+  const pubKey = isPublic ? "" : id
   const isActive = location.state?.id === id
   const [latestMessage, setLatestMessage] = useState<{
     content: string
@@ -35,8 +38,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
     kind: number
   } | null>(null)
   const [showPlaceholder, setShowPlaceholder] = useState(false)
-  const {events} = useEventsStore()
-  const {lastSeen} = useSessionsStore()
+  const {events} = usePrivateMessagesStore()
   const {
     publicChats,
     lastSeen: lastSeenPublic,
@@ -45,12 +47,30 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
   } = usePublicChatsStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const {groups} = useGroupsStore()
+  const {getChatsList} = usePrivateChatsStore()
   const group = groups[id]
 
   const chat = isPublic ? publicChats[id] : null
 
-  const [, latest] = events.get(id)?.last() ?? []
-  const lastSeenPrivateTime = lastSeen.get(id) || 0
+  // For private chats, get aggregated messages from all sessions
+  const privateMessages =
+    type === "private" ? (events.get(id) ?? new SortedMap([], comparator)) : null
+  const [, latest] = privateMessages?.last() ?? []
+
+  // For groups, get messages normally
+  const groupMessages = type === "group" ? events.get(id) : null
+  const [, groupLatest] = groupMessages?.last() ?? []
+
+  // Choose the appropriate latest message
+  const actualLatest = type === "group" ? groupLatest : latest
+
+  // Get chat data for unread counts
+  const chatsList = getChatsList()
+  const chatData = chatsList.find((c) => c.userPubKey === id)
+
+  const lastSeenPrivateTime = chatData?.lastMessage?.created_at
+    ? chatData.lastMessage.created_at * 1000
+    : 0
   const lastSeenPublicTime = lastSeenPublic[id] || 0
 
   useEffect(() => {
@@ -133,12 +153,15 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
       return content.length > 30 ? content.slice(0, 30) + "..." : content
     }
 
-    if (latest?.content) {
+    if (actualLatest?.content) {
       // Show special preview for group invite messages
-      if (latest.kind === KIND_CHANNEL_CREATE) {
-        return getGroupInvitePreview(latest.pubkey, latest.pubkey === "user")
+      if (actualLatest.kind === KIND_CHANNEL_CREATE) {
+        return getGroupInvitePreview(
+          actualLatest.pubkey,
+          actualLatest.pubkey === myPubKey
+        )
       }
-      const content = latest.content
+      const content = actualLatest.content
       return content.length > 30 ? content.slice(0, 30) + "..." : content
     }
 
@@ -225,8 +248,9 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
       }
     }
   } else if (!group) {
-    if (latest?.created_at && latest.pubkey !== "user") {
-      const hasUnread = getMillisecondTimestamp(latest) > lastSeenPrivateTime
+    if (actualLatest?.created_at && actualLatest.pubkey !== myPubKey) {
+      const hasUnread =
+        getMillisecondTimestamp(actualLatest as MessageType) > lastSeenPrivateTime
       if (!lastSeenPrivateTime || hasUnread) {
         unreadBadge = <div className="indicator-item badge badge-primary badge-xs" />
       }
@@ -240,6 +264,7 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
   } else if (isPublic) {
     chatRoute = `/chats/${id}`
   } else {
+    // For private chats, id is now userPubKey
     chatRoute = "/chats/chat"
   }
 
@@ -262,14 +287,14 @@ const ChatListItem = ({id, isPublic = false}: ChatListItemProps) => {
               {title}
             </span>
             <div className="flex flex-col gap-2">
-              {(isPublic ? latestMessage?.created_at : latest?.created_at) && (
+              {(isPublic ? latestMessage?.created_at : actualLatest?.created_at) && (
                 <span className="text-sm text-base-content/70 ml-2">
                   <RelativeTime
                     from={(() => {
                       if (isPublic && latestMessage?.created_at) {
                         return latestMessage.created_at * 1000
                       } else {
-                        return getMillisecondTimestamp(latest as MessageType)
+                        return getMillisecondTimestamp(actualLatest as MessageType)
                       }
                     })()}
                   />

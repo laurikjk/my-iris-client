@@ -1,9 +1,11 @@
 import {Name} from "@/shared/components/user/Name"
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
+import {useSessionsStore} from "@/stores/sessions"
 import {useState, useEffect} from "react"
 import {MessageType} from "./Message"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
+import {useUserStore} from "@/stores/user"
 
 type ReplyPreviewProps = {
   isUser: boolean
@@ -13,10 +15,11 @@ type ReplyPreviewProps = {
 
 const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
   const [repliedToMessage, setRepliedToMessage] = useState<MessageType | null>(null)
-  const {events} = useEventsStore()
+  const {events} = usePrivateMessagesStore()
 
   // No need to find the reply tag here since we're passing it directly
-  const theirPublicKey = sessionId.split(":")[0]
+  const sessionData = useSessionsStore((state) => state.sessions.get(sessionId))
+  const theirPublicKey = sessionData?.userPubKey || sessionId.split(":")[0]
 
   // Function to handle scrolling to the replied message
   const handleScrollToReply = () => {
@@ -86,7 +89,7 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
       onClick={handleScrollToReply}
     >
       <div className="font-semibold">
-        {repliedToMessage.pubkey === "user" ? (
+        {repliedToMessage.pubkey === useUserStore.getState().publicKey ? (
           "You"
         ) : (
           <Name

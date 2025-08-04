@@ -2,38 +2,50 @@ import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "../utils/messageGrouping"
 import PrivateChatHeader from "./PrivateChatHeader"
-import {useSessionsStore} from "@/stores/sessions"
+import {usePrivateChatsStore} from "@/stores/privateChats"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import MessageForm from "../message/MessageForm"
 import {MessageType} from "../message/Message"
-import {useEventsStore} from "@/stores/events"
 import {useEffect, useState} from "react"
+import {useUserRecordsStore} from "@/stores/userRecords"
+import {useUserStore} from "@/stores/user"
+import {KIND_REACTION} from "@/utils/constants"
 
 const Chat = ({id}: {id: string}) => {
-  const {sessions, updateLastSeen} = useSessionsStore()
-  // Fix: Use the events store with proper subscription to get reactive updates
-  const {events} = useEventsStore()
+  // id is now userPubKey instead of sessionId
+  const {updateLastSeen} = usePrivateChatsStore()
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
-  const session = sessions.get(id)!
+
+  // Get all sessions for this user
+  const sessions = useUserRecordsStore((state) => state.sessions)
+  const userSessions = Array.from(sessions.keys()).filter((sessionId) =>
+    sessionId.startsWith(`${id}:`)
+  )
+  const hasAnySessions = userSessions.length > 0
+
+  // Get messages reactively from events store - this will update when new messages are added
+  const eventsMap = usePrivateMessagesStore((state) => state.events)
+  const messages = eventsMap.get(id) ?? new SortedMap<string, MessageType>([], comparator)
 
   useEffect(() => {
-    if (!(id && session)) {
+    if (!id || !hasAnySessions) {
       return
     }
 
-    const sessionEvents = events.get(id)
-    if (!sessionEvents) return
+    if (!messages) return
 
-    Array.from(sessionEvents.entries()).forEach(([, message]) => {
-      if (!haveReply && message.pubkey !== "user") {
+    const myPubKey = useUserStore.getState().publicKey
+    Array.from(messages.entries()).forEach(([, message]) => {
+      if (!haveReply && message.pubkey !== myPubKey) {
         setHaveReply(true)
       }
-      if (!haveSent && message.pubkey === "user") {
+      if (!haveSent && message.pubkey === myPubKey) {
         setHaveSent(true)
       }
     })
-  }, [id, session, events, haveReply, haveSent])
+  }, [id, messages, haveReply, haveSent, hasAnySessions])
 
   useEffect(() => {
     if (!id) return
@@ -59,16 +71,38 @@ const Chat = ({id}: {id: string}) => {
     }
   }, [id, updateLastSeen])
 
-  if (!id || !session) {
-    return null
+  const {sendToUser} = useUserRecordsStore()
+
+  const handleSendReaction = async (messageId: string, emoji: string) => {
+    const myPubKey = useUserStore.getState().publicKey
+    if (!myPubKey) return
+
+    const event = {
+      kind: KIND_REACTION,
+      content: emoji,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [
+        ["e", messageId],
+        ["ms", String(Date.now())],
+      ],
+    }
+
+    await sendToUser(id, event)
   }
 
-  const messages = events.get(id) ?? new SortedMap<string, MessageType>([], comparator)
+  if (!id) {
+    return null
+  }
 
   return (
     <>
       <PrivateChatHeader id={id} messages={messages} />
-      <ChatContainer messages={messages} sessionId={id} onReply={setReplyingTo} />
+      <ChatContainer
+        messages={messages}
+        sessionId={id}
+        onReply={setReplyingTo}
+        onSendReaction={handleSendReaction}
+      />
       <MessageForm id={id} replyingTo={replyingTo} setReplyingTo={setReplyingTo} />
     </>
   )

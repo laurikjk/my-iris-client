@@ -1,495 +1,581 @@
 import {
-  Invite,
   Session,
   serializeSessionState,
   deserializeSessionState,
 } from "nostr-double-ratchet/src"
-import {createJSONStorage, persist, PersistStorage} from "zustand/middleware"
-import {Filter, VerifiedEvent, UnsignedEvent} from "nostr-tools"
-import {NDKEventFromRawEvent, RawEvent} from "@/utils/nostr"
-import {KIND_REACTION, KIND_CHANNEL_CREATE} from "@/utils/constants"
+import {createJSONStorage, persist} from "zustand/middleware"
 import type {MessageType} from "@/pages/chats/message/Message"
-import {hexToBytes} from "@noble/hashes/utils"
-import {useEventsStore} from "./events"
-import localforage from "localforage"
-import {useUserStore} from "./user"
+import {Filter, UnsignedEvent, VerifiedEvent} from "nostr-tools"
+import {NDKEventFromRawEvent} from "@/utils/nostr"
+import {KIND_REACTION} from "@/utils/constants"
 import {ndk} from "@/utils/ndk"
+import localforage from "localforage"
 import {create} from "zustand"
-import {useGroupsStore} from "./groups"
+import {getCanonicalId} from "@/utils/getCanonicalId"
 
-// Changing storage engine doesn't trigger migration. Only version difference in storage does.
-// Here's an utility function that works around it by setting a dummy entry with version 0.
-// Simplified version of the code here:
-// https://github.com/pmndrs/zustand/discussions/1717#discussioncomment-9355154
-const forceMigrationOnInitialPersist = <S>(
-  originalStorage: PersistStorage<S> | undefined,
-  initialState: S
-): PersistStorage<S> | undefined =>
-  originalStorage === undefined
-    ? originalStorage
-    : {
-        ...originalStorage,
-        getItem: async (name) => {
-          const item = await originalStorage.getItem(name)
-          return item ?? {state: initialState, version: 0}
+// Import stores that we need for event routing
+import {usePrivateMessagesStore} from "./privateMessages"
+import {useUserStore} from "./user"
+import {useGroupsStore} from "./groups"
+import {useUserRecordsStore} from "./userRecords"
+import {UserRecord} from "./UserRecord"
+import throttle from "lodash/throttle"
+
+// Route events to the appropriate store based on message content and tags
+const routeEventToStore = (
+  message: MessageType,
+  userPubKey: string,
+  ourPubKey: string
+) => {
+  console.log("=== ROUTE EVENT TO STORE ===")
+  const groupLabelTag = message.tags?.find((tag: string[]) => tag[0] === "l")
+  const pTag = message.tags?.find((tag: string[]) => tag[0] === "p")
+  console.log("Has group tag:", !!groupLabelTag)
+  console.log("Has p tag:", !!pTag, pTag?.[1])
+  console.log("Message from us:", message.pubkey === ourPubKey)
+
+  let chatId
+
+  if (groupLabelTag && groupLabelTag[1]) {
+    // Group message - store by group ID
+    chatId = groupLabelTag[1]
+    console.log("Routing to group:", chatId)
+  } else {
+    // Private message - check if it's from us
+    if (message.pubkey === ourPubKey) {
+      // For our own messages, route by the p tag (who we sent it to)
+      chatId = pTag?.[1] || userPubKey
+      console.log("Our message, routing to p tag recipient:", chatId)
+    } else {
+      // For messages from others, route by the sender (userPubKey)
+      chatId = userPubKey
+      console.log("Their message, routing to sender:", chatId)
+    }
+  }
+
+  console.log("Final chatId:", chatId)
+  usePrivateMessagesStore.getState().upsert(chatId, message)
+}
+
+// Helper subscribe implementation for Session reconstruction
+const sessionSubscribe = (
+  filter: Filter,
+  onEvent: (event: VerifiedEvent) => void
+): (() => void) => {
+  console.log("sessionSubscribe called with filter:", filter)
+  const sub = ndk().subscribe(filter)
+  sub.on("event", (e: unknown) => {
+    const event = e as VerifiedEvent
+    console.log("sessionSubscribe received event:", {
+      id: event?.id,
+      kind: event?.kind,
+      pubkey: event?.pubkey,
+      authors: filter?.authors,
+      filterMatch: filter?.authors?.includes(event?.pubkey),
+      kindMatch: filter?.kinds?.includes(event?.kind),
+    })
+    onEvent(event)
+  })
+  return () => {
+    console.log("sessionSubscribe unsubscribing from filter:", filter)
+    sub.stop()
+  }
+}
+
+interface SessionData {
+  session: Session
+  userPubKey: string
+  deviceId: string
+}
+
+interface SessionsStoreState {
+  sessions: Map<string, SessionData> // sessionId -> SessionData
+  sessionListeners: Map<string, () => void> // sessionId -> unsubscribe function
+  eventCallbacks: Set<(sessionId: string, event: MessageType) => void> // External event callbacks
+}
+
+interface SessionsStoreActions {
+  // Session management
+  addSession: (
+    sessionId: string,
+    session: Session,
+    userPubKey: string,
+    deviceId: string
+  ) => void
+  removeSession: (sessionId: string) => void
+  getSession: (sessionId: string) => Session | undefined
+  hasSession: (sessionId: string) => boolean
+  getAllSessionIds: () => string[]
+
+  // Session state updates (triggers individual persistence)
+  updateSession: (sessionId: string) => void
+  updateSessionthrottled: (sessionId: string) => void
+
+  // Send methods
+  sendMessage: (sessionId: string, event: Partial<UnsignedEvent>) => Promise<void>
+
+  // Event listeners (internal - sessions store handles these automatically)
+  setSessionListener: (sessionId: string, onEvent: (event: MessageType) => void) => void
+  removeSessionListener: (sessionId: string) => void
+
+  // Event callbacks (for external stores to get notified)
+  onSessionEvent: (
+    callback: (sessionId: string, event: MessageType) => void
+  ) => () => void
+
+  // Initialization
+  initializeSessionListeners: () => void
+
+  // Utilities
+  reset: () => void
+}
+
+type SessionsStore = SessionsStoreState & SessionsStoreActions
+
+export const useSessionsStore = create<SessionsStore>()(
+  persist(
+    (set, get) => {
+      // Create throttled version of updateSession
+      const throttledUpdateSession = throttle((sessionId: string) => {
+        console.log("throttled persistence trigger for session:", sessionId)
+        const newSessions = new Map(get().sessions)
+        set({sessions: newSessions})
+      }, 100) // 100ms debounce
+
+      return {
+        sessions: new Map(),
+        sessionListeners: new Map(),
+        eventCallbacks: new Set(),
+
+        addSession: (
+          sessionId: string,
+          session: Session,
+          userPubKey: string,
+          deviceId: string
+        ) => {
+          console.log("Adding session:", sessionId)
+          const newSessions = new Map(get().sessions)
+          newSessions.set(sessionId, {session, userPubKey, deviceId})
+          set({sessions: newSessions})
+
+          // Automatically set up event listener for the new session
+          get().setSessionListener(sessionId, async (event) => {
+            await processSessionEvent(get, sessionId, event)
+          })
+        },
+
+        removeSession: (sessionId: string) => {
+          console.log("Removing session:", sessionId)
+          const sessionData = get().sessions.get(sessionId)
+          if (sessionData) {
+            sessionData.session.close()
+          }
+
+          // Remove from sessions
+          const newSessions = new Map(get().sessions)
+          newSessions.delete(sessionId)
+
+          // Remove listener
+          get().removeSessionListener(sessionId)
+
+          set({sessions: newSessions})
+        },
+
+        getSession: (sessionId: string) => {
+          return get().sessions.get(sessionId)?.session
+        },
+
+        hasSession: (sessionId: string) => {
+          return get().sessions.has(sessionId)
+        },
+
+        getAllSessionIds: () => {
+          return Array.from(get().sessions.keys())
+        },
+
+        updateSession: (sessionId: string) => {
+          // Force persistence for this specific session by recreating the Map
+          // This is more efficient than the current approach of serializing all user records
+          console.log("Triggering persistence for session:", sessionId)
+          const newSessions = new Map(get().sessions)
+          set({sessions: newSessions})
+        },
+
+        updateSessionthrottled: throttledUpdateSession,
+
+        sendMessage: async (sessionId: string, event: Partial<UnsignedEvent>) => {
+          console.log("sendMessage called for session", sessionId, "event:", event)
+          const sessionData = get().sessions.get(sessionId)
+          if (!sessionData) {
+            throw new Error(`Session not found: ${sessionId}`)
+          }
+          const session = sessionData.session
+
+          // Debug session state
+          console.log("Session state for sending:", {
+            sessionId,
+            hasTheirNextKey: !!session.state?.theirNextNostrPublicKey,
+            hasOurCurrentKey: !!session.state?.ourCurrentNostrKey,
+            canSend: !!(
+              session.state?.theirNextNostrPublicKey && session.state?.ourCurrentNostrKey
+            ),
+          })
+
+          // Check if session can send messages
+          if (
+            !session.state?.theirNextNostrPublicKey ||
+            !session.state?.ourCurrentNostrKey
+          ) {
+            console.error("Session not ready to send messages:", sessionId, {
+              theirNextKey: !!session.state?.theirNextNostrPublicKey,
+              ourCurrentKey: !!session.state?.ourCurrentNostrKey,
+            })
+            throw new Error(
+              "Session not ready to send messages - missing keys after deserialization"
+            )
+          }
+
+          if (
+            event.kind === KIND_REACTION &&
+            !event.tags?.find((tag) => tag[0] === "e")
+          ) {
+            throw new Error("Cannot send a reaction without a replyingToId")
+          }
+
+          const {event: publishedEvent, innerEvent} = session.sendEvent(event)
+
+          // Process innerEvent to show message immediately
+          if (innerEvent) {
+            try {
+              const myPubKey = useUserStore.getState().publicKey
+
+              // Replace id with canonical id for all messages
+              // Set pubkey before calculating canonical ID to ensure consistency
+              innerEvent.pubkey = myPubKey
+              innerEvent.id = await getCanonicalId(innerEvent)
+
+              // Route the message - SortedMap will handle deduplication automatically
+              const messageToRoute = {
+                ...innerEvent,
+                pubkey: myPubKey,
+                reactions: {},
+              } as MessageType
+
+              // Get the user we're chatting with from session data
+              const sessionData = get().sessions.get(sessionId)
+              if (sessionData) {
+                routeEventToStore(messageToRoute, sessionData.userPubKey, myPubKey)
+              }
+            } catch (error) {
+              console.error("Error processing innerEvent:", error)
+            }
+          }
+
+          try {
+            const e = NDKEventFromRawEvent(publishedEvent)
+            // Debug NDK connection status
+            const ndkInstance = ndk()
+            console.log(
+              "NDK connected relays:",
+              ndkInstance.pool.connectedRelays().length
+            )
+            console.log("NDK total relays:", ndkInstance.pool.relays.size)
+
+            await e.publish(undefined, undefined, 0)
+            console.log("published", publishedEvent.id)
+          } catch (err) {
+            console.warn("Error publishing event:", err)
+          }
+
+          // Trigger throttled persistence for this session
+          get().updateSessionthrottled(sessionId)
+        },
+
+        setSessionListener: (
+          sessionId: string,
+          onEvent: (event: MessageType) => void
+        ) => {
+          const sessionData = get().sessions.get(sessionId)
+          if (!sessionData) {
+            console.warn("Cannot set listener for non-existent session:", sessionId)
+            return
+          }
+          const session = sessionData.session
+
+          // Remove existing listener if any
+          get().removeSessionListener(sessionId)
+
+          // Set up new listener
+          const unsubscribe = session.onEvent(async (event) => {
+            // Just pass to the onEvent callback - canonical ID will be handled by processSessionEvent
+            onEvent(event)
+          })
+
+          const newListeners = new Map(get().sessionListeners)
+          newListeners.set(sessionId, unsubscribe)
+          set({sessionListeners: newListeners})
+        },
+
+        removeSessionListener: (sessionId: string) => {
+          const unsubscribe = get().sessionListeners.get(sessionId)
+          if (unsubscribe) {
+            unsubscribe()
+            const newListeners = new Map(get().sessionListeners)
+            newListeners.delete(sessionId)
+            set({sessionListeners: newListeners})
+          }
+        },
+
+        onSessionEvent: (callback: (sessionId: string, event: MessageType) => void) => {
+          const callbacks = new Set(get().eventCallbacks)
+          callbacks.add(callback)
+          set({eventCallbacks: callbacks})
+
+          // Return unsubscribe function
+          return () => {
+            const newCallbacks = new Set(get().eventCallbacks)
+            newCallbacks.delete(callback)
+            set({eventCallbacks: newCallbacks})
+          }
+        },
+
+        initializeSessionListeners: () => {
+          console.log("Initializing session listeners for all deserialized sessions...")
+          const sessions = get().sessions
+          let count = 0
+
+          // Small delay to ensure sessions are fully reconstructed
+          setTimeout(() => {
+            for (const [sessionId, sessionData] of sessions.entries()) {
+              const session = sessionData.session
+              if (!get().sessionListeners.has(sessionId)) {
+                console.log("Setting up listener for deserialized session:", sessionId)
+
+                // Debug session state after deserialization
+                console.log("Deserialized session state:", {
+                  sessionId,
+                  hasTheirNextKey: !!session.state?.theirNextNostrPublicKey,
+                  hasOurCurrentKey: !!session.state?.ourCurrentNostrKey,
+                  canSend: !!(
+                    session.state?.theirNextNostrPublicKey &&
+                    session.state?.ourCurrentNostrKey
+                  ),
+                })
+
+                // Set up listener that calls the provided onEvent callback
+                get().setSessionListener(sessionId, async (event) => {
+                  await processSessionEvent(get, sessionId, event)
+                })
+                count++
+              }
+            }
+
+            console.log(
+              `Initialized ${count} session listeners for deserialized sessions`
+            )
+          }, 100)
+        },
+
+        reset: () => {
+          console.log("Resetting sessions store...")
+
+          // Close all sessions
+          for (const sessionData of get().sessions.values()) {
+            sessionData.session.close()
+          }
+
+          // Remove all listeners
+          for (const unsubscribe of get().sessionListeners.values()) {
+            unsubscribe()
+          }
+
+          set({
+            sessions: new Map(),
+            sessionListeners: new Map(),
+            eventCallbacks: new Set(),
+          })
+
+          console.log("Sessions store reset completed.")
         },
       }
-
-interface SessionStoreState {
-  invites: Map<string, Invite>
-  sessions: Map<string, Session>
-  lastSeen: Map<string, number>
-}
-
-const createSessionWithLastSeen = (
-  currentSessions: Map<string, Session>,
-  currentLastSeen: Map<string, number>,
-  sessionId: string,
-  session: Session
-) => {
-  const newSessions = new Map(currentSessions)
-  newSessions.set(sessionId, session)
-  const newLastSeen = new Map(currentLastSeen)
-  newLastSeen.set(sessionId, Date.now())
-  return {sessions: newSessions, lastSeen: newLastSeen}
-}
-
-const inviteListeners = new Map<string, () => void>()
-const sessionListeners = new Map<string, () => void>()
-
-interface SessionStoreActions {
-  createInvite: (label: string, inviteId?: string) => void
-  createDefaultInvites: () => void
-  acceptInvite: (url: string) => Promise<string>
-  sendMessage: (id: string, event: Partial<UnsignedEvent>) => Promise<void>
-  sendToUser: (userPubKey: string, event: Partial<UnsignedEvent>) => Promise<string>
-  updateLastSeen: (sessionId: string) => void
-  deleteInvite: (id: string) => void
-  deleteSession: (id: string) => void
-}
-
-type SessionStore = SessionStoreState & SessionStoreActions
-const subscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
-  try {
-    const sub = ndk().subscribe(filter)
-    sub.on("event", (e) => {
-      try {
-        onEvent(e as unknown as VerifiedEvent)
-      } catch (error) {
-        console.warn("Error handling event in subscription:", error)
-      }
-    })
-    return () => {
-      try {
-        sub.stop()
-      } catch (error) {
-        console.warn("Error stopping subscription:", error)
-      }
-    }
-  } catch (error) {
-    console.warn("Error creating subscription:", error)
-    return () => {}
-  }
-}
-
-const routeEventToStore = (sessionId: string, message: MessageType) => {
-  const from = sessionId.split(":")[0]
-  // Set pubkey to the original message pubkey, or from if not set
-  if (!message.pubkey || message.pubkey !== "user") {
-    message.pubkey = from
-  }
-  const groupLabelTag = message.tags?.find((tag: string[]) => tag[0] === "l")
-  const targetId = groupLabelTag && groupLabelTag[1] ? groupLabelTag[1] : sessionId
-  useEventsStore.getState().upsert(targetId, message)
-}
-
-const store = create<SessionStore>()(
-  persist(
-    (set, get) => ({
-      invites: new Map(),
-      sessions: new Map(),
-      lastSeen: new Map(),
-      createDefaultInvites: async () => {
-        const myPubKey = useUserStore.getState().publicKey
-        if (!myPubKey) {
-          throw new Error("No public key")
-        }
-        if (!get().invites.has("public")) {
-          get().createInvite("Public Invite", "public")
-          const invite = get().invites.get("public")
-          if (!invite) {
-            return
-          }
-          const event = invite.getEvent() as RawEvent
-          console.log("Publishing public invite...", event)
-          NDKEventFromRawEvent(event)
-            .publish()
-            .then((res) => console.log("Published public invite", res))
-            .catch((e) => console.warn("Error publishing public invite:", e))
-        }
-        if (!get().invites.has("private")) {
-          get().createInvite("Private Invite", "private")
-        }
-      },
-      deleteInvite: (id: string) => {
-        const currentInvites = get().invites
-        const newInvites = new Map(currentInvites)
-        newInvites.delete(id)
-        set({invites: newInvites})
-        const unsubscribe = inviteListeners.get(id)
-        if (unsubscribe) {
-          unsubscribe()
-          inviteListeners.delete(id)
-        }
-      },
-      createInvite: (label: string, inviteId?: string) => {
-        const myPubKey = useUserStore.getState().publicKey
-        const myPrivKey = useUserStore.getState().privateKey
-        if (!myPubKey) {
-          throw new Error("No public key")
-        }
-        const invite = Invite.createNew(myPubKey, label)
-        const id = inviteId || crypto.randomUUID()
-        const currentInvites = get().invites
-
-        const newInvites = new Map(currentInvites)
-        newInvites.set(id, invite)
-        const decrypt = myPrivKey
-          ? hexToBytes(myPrivKey)
-          : async (cipherText: string, pubkey: string) => {
-              if (window.nostr?.nip44) {
-                return window.nostr.nip44.decrypt(pubkey, cipherText)
-              }
-              throw new Error("No nostr extension or private key")
-            }
-        const unsubscribe = invite.listen(decrypt, subscribe, (session, identity) => {
-          const sessionId = `${identity}:${session.name}`
-          if (sessionListeners.has(sessionId)) {
-            return
-          }
-          const newState = createSessionWithLastSeen(
-            store.getState().sessions,
-            store.getState().lastSeen,
-            sessionId,
-            session
-          )
-          store.setState(newState)
-          const sessionUnsubscribe = session.onEvent((event) => {
-            try {
-              // Handle group creation event
-              if (event.kind === KIND_CHANNEL_CREATE && event.content) {
-                try {
-                  const group = JSON.parse(event.content)
-                  const groups = useGroupsStore.getState().groups
-                  if (!groups[group.id]) {
-                    useGroupsStore.getState().addGroup(group)
-                  }
-                } catch (e) {
-                  console.warn("Failed to parse group from channel creation event", e)
-                }
-              }
-              routeEventToStore(sessionId, event)
-              store.setState({sessions: new Map(store.getState().sessions)})
-            } catch (error) {
-              console.warn("Error handling session event:", error)
-            }
-          })
-          sessionListeners.set(sessionId, sessionUnsubscribe)
-        })
-        inviteListeners.set(id, unsubscribe)
-        set({invites: newInvites})
-      },
-      sendMessage: async (sessionId: string, event: Partial<UnsignedEvent>) => {
-        const session = get().sessions.get(sessionId)
-        if (!session) {
-          throw new Error("Session not found")
-        }
-        if (event.kind === KIND_REACTION && !event.tags?.find((tag) => tag[0] === "e")) {
-          throw new Error("Cannot send a reaction without a replyingToId")
-        }
-        const {event: publishedEvent, innerEvent} = session.sendEvent(event)
-        const message: MessageType = {
-          ...innerEvent,
-          pubkey: "user",
-          reactions: {},
-          nostrEventId: publishedEvent.id,
-        }
-        // Optimistic update
-        routeEventToStore(sessionId, message)
-        try {
-          const e = NDKEventFromRawEvent(publishedEvent)
-          await e.publish(undefined, undefined, 0) // required relay count 0
-          console.log("published", publishedEvent.id)
-
-          // Update message store to mark as sent to relays
-          useEventsStore
-            .getState()
-            .updateMessage(sessionId, message.id, {sentToRelays: true})
-        } catch (err) {
-          console.warn("Error publishing event:", err)
-        }
-        // make sure we persist session state
-        set({sessions: new Map(get().sessions)})
-      },
-      sendToUser: async (
-        userPubKey: string,
-        event: Partial<UnsignedEvent>
-      ): Promise<string> => {
-        console.log("sendToUser:", {userPubKey, event})
-        // First, try to find an existing session with this user
-        const existingSessionId = Array.from(get().sessions.keys()).find((sessionId) =>
-          sessionId.startsWith(`${userPubKey}:`)
-        )
-        if (existingSessionId) {
-          await get().sendMessage(existingSessionId, event)
-          console.log("sendToUser existingSessionId:", existingSessionId)
-          console.log("sendToUser result:", existingSessionId)
-          return existingSessionId
-        }
-        // No existing session, try to create one via Invite.fromUser
-        return new Promise((resolve, reject) => {
-          const timeoutId: NodeJS.Timeout = setTimeout(() => {
-            cleanup()
-            reject(new Error("Timeout waiting for user invite"))
-          }, 10000) // 10 second timeout
-          const unsubscribe = Invite.fromUser(userPubKey, subscribe, async (invite) => {
-            try {
-              cleanup()
-              const sessionId = await get().acceptInvite(invite.getUrl())
-              await get().sendMessage(sessionId, event)
-              console.log("sendToUser new sessionId:", sessionId)
-              console.log("sendToUser result:", sessionId)
-              resolve(sessionId)
-            } catch (error) {
-              reject(error)
-            }
-          })
-          const cleanup = () => {
-            if (timeoutId) clearTimeout(timeoutId)
-            if (unsubscribe) unsubscribe()
-          }
-        })
-      },
-      acceptInvite: async (url: string): Promise<string> => {
-        const invite = Invite.fromUrl(url)
-        const myPubKey = useUserStore.getState().publicKey
-        if (!myPubKey) {
-          throw new Error("No public key")
-        }
-        const myPrivKey = useUserStore.getState().privateKey
-        const encrypt = myPrivKey
-          ? hexToBytes(myPrivKey)
-          : async (plaintext: string, pubkey: string) => {
-              if (window.nostr?.nip44) {
-                return window.nostr.nip44.encrypt(pubkey, plaintext)
-              }
-              throw new Error("No nostr extension or private key")
-            }
-        const {session, event} = await invite.accept(
-          (filter, onEvent) => subscribe(filter, onEvent),
-          myPubKey,
-          encrypt
-        )
-        const e = NDKEventFromRawEvent(event)
-        e.publish()
-          .then((res) => console.log("published", res))
-          .catch((e) => console.warn("Error publishing event:", e))
-        const sessionId = `${invite.inviter}:${session.name}`
-        if (sessionListeners.has(sessionId)) {
-          return sessionId
-        }
-        const newState = createSessionWithLastSeen(
-          get().sessions,
-          get().lastSeen,
-          sessionId,
-          session
-        )
-        const sessionUnsubscribe = session.onEvent((event) => {
-          try {
-            routeEventToStore(sessionId, event)
-            // make sure we persist session state
-            set({sessions: new Map(get().sessions)})
-          } catch (error) {
-            console.warn("Error handling session event:", error)
-          }
-        })
-        sessionListeners.set(sessionId, sessionUnsubscribe)
-        set(newState)
-        return sessionId
-      },
-      updateLastSeen: (sessionId: string) => {
-        const newLastSeen = new Map(get().lastSeen)
-        newLastSeen.set(sessionId, Date.now())
-        set({lastSeen: newLastSeen})
-      },
-      deleteSession: (sessionId: string) => {
-        const newSessions = new Map(get().sessions)
-        newSessions.delete(sessionId)
-        set({sessions: newSessions})
-        const unsubscribe = sessionListeners.get(sessionId)
-        if (unsubscribe) {
-          unsubscribe()
-          sessionListeners.delete(sessionId)
-        }
-        useEventsStore.getState().removeSession(sessionId)
-      },
-    }),
+    },
     {
       name: "sessions",
-      onRehydrateStorage: () => async (state) => {
-        await useUserStore.getState().awaitHydration()
+      storage: createJSONStorage(() => localforage),
+      partialize: (state: SessionsStore) => ({
+        // Only serialize sessions, not listeners (they'll be recreated)
+        sessions: Array.from(state.sessions.entries()).map(([sessionId, sessionData]) => [
+          sessionId,
+          {
+            state: serializeSessionState(sessionData.session.state),
+            userPubKey: sessionData.userPubKey,
+            deviceId: sessionData.deviceId,
+          },
+        ]),
+      }),
+      merge: (persistedState: unknown, currentState: SessionsStore) => {
+        const state = (persistedState || {sessions: []}) as {
+          sessions: [string, {state: string; userPubKey: string; deviceId: string}][]
+        }
 
-        const privateKey = useUserStore.getState().privateKey
-        const decrypt = privateKey
-          ? hexToBytes(privateKey)
-          : async (cipherText: string, pubkey: string) => {
-              if (window.nostr?.nip44) {
-                return window.nostr.nip44.decrypt(pubkey, cipherText)
-              }
-              throw new Error("No nostr extension or private key")
-            }
-        Array.from(state?.invites || []).forEach(([id, invite]) => {
-          if (inviteListeners.has(id)) {
-            return
+        const newSessions = new Map<string, SessionData>()
+        state.sessions?.forEach(([sessionId, data]) => {
+          try {
+            const sessionState = deserializeSessionState(data.state)
+            const session = new Session(sessionSubscribe, sessionState)
+            newSessions.set(sessionId, {
+              session,
+              userPubKey: data.userPubKey,
+              deviceId: data.deviceId,
+            })
+            console.log("Successfully deserialized session:", sessionId)
+          } catch (e) {
+            console.warn("Failed to deserialize session:", sessionId, e)
+            // Individual session failures don't affect others
           }
-          const inviteUnsubscribe = invite.listen(
-            decrypt,
-            subscribe,
-            (session, identity) => {
-              const sessionId = `${identity}:${session.name}`
-              if (sessionListeners.has(sessionId)) {
-                return
-              }
-              const newState = createSessionWithLastSeen(
-                store.getState().sessions,
-                store.getState().lastSeen,
-                sessionId,
-                session
-              )
-              store.setState(newState)
-              const sessionUnsubscribe = session.onEvent((event) => {
-                try {
-                  // Handle group creation event (kind 40)
-                  if (event.kind === 40 && event.content) {
-                    try {
-                      const group = JSON.parse(event.content)
-                      const groups = useGroupsStore.getState().groups
-                      if (!groups[group.id]) {
-                        useGroupsStore.getState().addGroup(group)
-                      }
-                    } catch (e) {
-                      console.warn("Failed to parse group from channel creation event", e)
-                    }
-                  }
-                  routeEventToStore(sessionId, event)
-                  store.setState({sessions: new Map(store.getState().sessions)})
-                } catch (error) {
-                  console.warn("Error handling session event:", error)
-                }
-              })
-              sessionListeners.set(sessionId, sessionUnsubscribe)
-            }
-          )
-          inviteListeners.set(id, inviteUnsubscribe)
         })
-        Array.from(state?.sessions || []).forEach(([sessionId, session]) => {
-          if (sessionListeners.has(sessionId)) {
-            return
-          }
-          // Ensure lastSeen entry exists for rehydrated sessions
-          const currentLastSeen = store.getState().lastSeen
-          if (!currentLastSeen.has(sessionId)) {
-            const newLastSeen = new Map(currentLastSeen)
-            newLastSeen.set(sessionId, Date.now())
-            store.setState({lastSeen: newLastSeen})
-          }
-          const sessionUnsubscribe = session.onEvent((event) => {
-            try {
-              // Handle group creation event
-              if (event.kind === KIND_CHANNEL_CREATE && event.content) {
-                try {
-                  const group = JSON.parse(event.content)
-                  const groups = useGroupsStore.getState().groups
-                  if (!groups[group.id]) {
-                    useGroupsStore.getState().addGroup(group)
-                  }
-                  console.log("group created", group)
-                } catch (e) {
-                  console.warn("Failed to parse group from channel creation event", e)
-                }
-              }
-              routeEventToStore(sessionId, event)
-              store.setState({sessions: new Map(store.getState().sessions)})
-            } catch (error) {
-              console.warn("Error handling session event:", error)
-            }
-          })
-          sessionListeners.set(sessionId, sessionUnsubscribe)
-        })
-      },
-      storage: forceMigrationOnInitialPersist(
-        createJSONStorage(() => localforage),
-        JSON.parse(localStorage.getItem("sessions") || "null")
-      ),
-      version: 1,
-      migrate: async (oldData: unknown, version) => {
-        if (version === 0 && oldData) {
-          const data = {
-            version: 1,
-            state: oldData as SessionStore,
-          }
 
-          const dataString = JSON.stringify(data)
-
-          await localforage.setItem("sessions", dataString)
-
-          return data.state
-        }
-      },
-      partialize: (state) => {
-        return {
-          invites: Array.from(state.invites.entries()).map((entry) => {
-            const [id, invite] = entry as [string, Invite]
-            return [id, invite.serialize()]
-          }),
-          sessions: Array.from(state.sessions.entries()).map((entry) => {
-            const [id, session] = entry as [string, Session]
-            return [id, serializeSessionState(session.state)]
-          }),
-          lastSeen: Array.from(state.lastSeen.entries()),
-        }
-      },
-      merge: (persistedState: unknown, currentState: SessionStore) => {
-        const state = (persistedState || {
-          invites: [],
-          sessions: [],
-          lastSeen: [],
-        }) as {
-          invites: [string, string][]
-          sessions: [string, string][]
-          lastSeen: [string, number][]
-        }
-        const newSessions: [string, Session][] = state.sessions.map(
-          ([id, sessionState]: [string, string]) => {
-            const session = new Session(subscribe, deserializeSessionState(sessionState))
-            return [id, session] as [string, Session]
-          }
-        )
-        const newInvites: [string, Invite][] = state.invites.map(
-          (entry: [string, string]) => {
-            const [id, invite] = entry
-            return [id, Invite.deserialize(invite)] as [string, Invite]
-          }
-        )
         return {
           ...currentState,
-          invites: new Map<string, Invite>(newInvites),
-          sessions: new Map<string, Session>(newSessions),
-          lastSeen: new Map<string, number>(state.lastSeen || []),
+          sessions: newSessions,
+          sessionListeners: new Map(), // Will be recreated in onRehydrateStorage
+        }
+      },
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          console.log("Sessions store rehydrated, wiring listeners for hydrated sessions")
+          setTimeout(() => {
+            state.initializeSessionListeners()
+          }, 50)
         }
       },
     }
   )
 )
 
-export const useSessionsStore = store
+// Unified session event handler that processes all events
+const processSessionEvent = async (
+  get: () => SessionsStore,
+  sessionId: string,
+  event: MessageType
+) => {
+  console.log("=== PROCESS SESSION EVENT ===")
+  console.log("SessionId:", sessionId)
+  console.log("Event kind:", event.kind)
+  console.log("Event content preview:", event.content?.substring(0, 50))
+
+  // Get session data
+  const sessionData = get().sessions.get(sessionId)
+  if (!sessionData) {
+    console.warn("Session data not found for event processing:", sessionId)
+    return
+  }
+
+  console.log("Session user:", sessionData.userPubKey)
+  console.log("Session device:", sessionData.deviceId)
+
+  // Set pubkey before calculating canonical ID to ensure consistency
+  event.pubkey = sessionData.userPubKey
+
+  // Replace id with canonical id immediately for all messages
+  try {
+    event.id = await getCanonicalId(event)
+  } catch (error) {
+    console.error("Error calculating canonical ID:", error)
+  }
+
+  // Now handle the event
+  await handleSessionEvent(get, sessionId, event)
+
+  // Trigger persistence for this session
+  get().updateSession(sessionId)
+}
+
+// Helper to process any session event consistently
+const handleSessionEvent = async (
+  get: () => SessionsStore,
+  sessionId: string,
+  event: MessageType
+) => {
+  // Route to events store
+  // Get userPubKey from session data
+  const sessionData = get().sessions.get(sessionId)
+  if (!sessionData) {
+    console.warn("Session data not found for event routing:", sessionId)
+    return
+  }
+
+  console.log(
+    "handleSessionEvent called for session",
+    sessionId,
+    "event ID:",
+    event.id,
+    "kind:",
+    event.kind
+  )
+
+  // Handle group creation event (kind 40)
+  if (event.kind === 40 && event.content) {
+    try {
+      const group = JSON.parse(event.content)
+      const groups = useGroupsStore.getState().groups
+      if (!groups[group.id]) {
+        useGroupsStore.getState().addGroup(group)
+      }
+    } catch (e) {
+      console.warn("Failed to parse group from kind 40 event", e)
+    }
+  }
+
+  // Fallback: if message has an "l" tag (group id) ensure group exists
+  const groupLabel = event.tags?.find((t) => t[0] === "l")?.[1]
+  if (groupLabel && !useGroupsStore.getState().groups[groupLabel]) {
+    useGroupsStore.getState().addGroup({
+      id: groupLabel,
+      name: groupLabel, // placeholder
+      description: "",
+      picture: "",
+      members: [],
+      createdAt: Date.now(),
+    })
+  }
+
+  const ourPubKey = useUserStore.getState().publicKey
+  console.log("Routing event - ourPubKey:", ourPubKey)
+  console.log("Routing event - sessionData.userPubKey:", sessionData.userPubKey)
+  console.log("Routing event - message pubkey:", event.pubkey)
+  routeEventToStore(event, sessionData.userPubKey, ourPubKey)
+
+  // --- Ensure UserRecord exists and session is referenced ---
+  const {userPubKey, deviceId} = sessionData
+  const urStore = useUserRecordsStore.getState()
+  if (!urStore.userRecords.has(userPubKey)) {
+    const newRecord = new UserRecord(userPubKey, userPubKey)
+    const map = new Map(urStore.userRecords)
+    map.set(userPubKey, newRecord)
+    useUserRecordsStore.setState({userRecords: map})
+  }
+
+  // Ensure sessionId is linked to this user/device
+  const me = useUserStore.getState().publicKey
+  const myDeviceId = useUserRecordsStore.getState().deviceId
+  if (!(userPubKey === me && deviceId === myDeviceId)) {
+    const rec = useUserRecordsStore.getState().userRecords.get(userPubKey)!
+    if (rec && !rec.getActiveSessionId(deviceId)) {
+      rec.upsertSession(deviceId, sessionId)
+      // trigger persistence
+      useUserRecordsStore.setState({
+        userRecords: new Map(useUserRecordsStore.getState().userRecords),
+      })
+    }
+  }
+
+  // Notify external callbacks
+  for (const cb of get().eventCallbacks) {
+    try {
+      cb(sessionId, event)
+    } catch (err) {
+      console.warn("Error in session event callback", err)
+    }
+  }
+}

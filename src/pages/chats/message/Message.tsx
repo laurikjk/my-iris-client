@@ -6,7 +6,7 @@ import HyperText from "@/shared/components/HyperText"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {Name} from "@/shared/components/user/Name"
 import {useMemo, useEffect, useState} from "react"
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import ReplyPreview from "./ReplyPreview"
 import classNames from "classnames"
 import {Link} from "react-router"
@@ -16,6 +16,7 @@ import {RiCheckLine, RiAlertLine} from "@remixicon/react"
 import {KIND_CHANNEL_CREATE, KIND_REACTION} from "@/utils/constants"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {EMOJI_REGEX} from "@/utils/validation"
+import {useUserStore} from "@/stores/user"
 
 export type MessageType = Rumor & {
   reactions?: Record<string, string>
@@ -81,8 +82,9 @@ const Message = ({
   onSendReaction,
   reactions: propReactions,
 }: MessageProps) => {
-  const isUser = message.pubkey === "user"
-  const {events} = useEventsStore()
+  const myPubKey = useUserStore.getState().publicKey
+  const isUser = message.pubkey === myPubKey
+  const {events} = usePrivateMessagesStore()
   const [localReactions, setLocalReactions] = useState<Record<string, string>>(
     propReactions || {}
   )
@@ -176,7 +178,7 @@ const Message = ({
   if (message.kind === KIND_CHANNEL_CREATE) {
     console.log("invite", message)
     let content = null
-    if (message.pubkey === "user") {
+    if (message.pubkey === myPubKey) {
       content = "You created the group"
     } else {
       content = (

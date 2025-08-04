@@ -52,10 +52,12 @@ const MessageActionButtons = ({
       onSendReaction(messageId, emoji.native)
     } else {
       // Construct a reaction event
+      // Use the message ID which is already the canonical ID
+      const reactionTargetId = messageId
       const event = {
         content: emoji.native,
         kind: KIND_REACTION,
-        tags: [["e", messageId]],
+        tags: [["e", reactionTargetId]],
       }
       sendMessage(sessionId, event)
     }

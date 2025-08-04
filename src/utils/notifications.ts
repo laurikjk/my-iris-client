@@ -1,5 +1,6 @@
 import {INVITE_RESPONSE_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
 import {useSettingsStore} from "@/stores/settings"
+import {useUserRecordsStore} from "@/stores/userRecords"
 import {useSessionsStore} from "@/stores/sessions"
 import {SortedMap} from "./SortedMap/SortedMap"
 import {useUserStore} from "@/stores/user"
@@ -139,7 +140,7 @@ export const subscribeToDMNotifications = debounce(async () => {
   if (!pushSubscription) {
     return
   }
-  const invites = useSessionsStore.getState().invites
+  const invites = useUserRecordsStore.getState().invites
   const sessions = useSessionsStore.getState().sessions
 
   const inviteRecipients = Array.from(invites.values())

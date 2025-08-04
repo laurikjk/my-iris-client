@@ -3,7 +3,7 @@ import {RiFileCopyLine, RiCheckLine, RiRadioLine} from "@remixicon/react"
 import classNames from "classnames"
 import Modal from "@/shared/components/ui/Modal"
 import {ndk} from "@/utils/ndk"
-import {useEventsStore} from "@/stores/events"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {nip19} from "nostr-tools"
 import {useRebroadcast} from "@/shared/hooks/useRebroadcast"
 
@@ -31,7 +31,7 @@ export const MessageInfoModal = ({
   const [relayStatus, setRelayStatus] = useState<Record<string, boolean>>({})
   const [showRawMessage, setShowRawMessage] = useState(false)
   const {rebroadcast, isRebroadcasting, rebroadcastSuccess} = useRebroadcast()
-  const {updateMessage} = useEventsStore()
+  const {updateMessage} = usePrivateMessagesStore()
 
   const handleCopyEventId = async () => {
     if (nostrEventId) {

@@ -1,9 +1,10 @@
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
-import {useSessionsStore} from "@/stores/sessions"
-import {useEventsStore} from "@/stores/events"
+import {useUserRecordsStore} from "@/stores/userRecords"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {MessageType} from "@/pages/chats/message/Message"
 import {useMemo} from "react"
+import {useUserStore} from "@/stores/user"
 
 interface UnseenMessagesBadgeProps {
   messages?: SortedMap<string, MessageType>
@@ -11,15 +12,16 @@ interface UnseenMessagesBadgeProps {
 }
 
 const UnseenMessagesBadge = ({messages, lastSeen}: UnseenMessagesBadgeProps) => {
-  const {lastSeen: globalLastSeen} = useSessionsStore()
-  const {events} = useEventsStore()
+  const {lastSeen: globalLastSeen} = useUserRecordsStore()
+  const {events} = usePrivateMessagesStore()
 
   // Global usage - check all sessions (for navsidebar/footer)
   const hasUnread = useMemo(() => {
+    const myPubKey = useUserStore.getState().publicKey
     return Array.from(events.entries()).some(([sessionId, sessionEvents]) => {
       const [, latest] = sessionEvents.last() ?? []
       if (!latest) return false
-      if (latest.pubkey === "user") return false
+      if (latest.pubkey === myPubKey) return false
 
       const latestTime = getMillisecondTimestamp(latest)
       const lastSeenTime = globalLastSeen.get(sessionId)
@@ -35,7 +37,8 @@ const UnseenMessagesBadge = ({messages, lastSeen}: UnseenMessagesBadgeProps) => 
     const unseenMessages = Array.from(messages.entries())
       .filter(([, message]) => {
         if (!message.created_at) return false
-        if (message.pubkey === "user") return false
+        const myPubKey = useUserStore.getState().publicKey
+        if (message.pubkey === myPubKey) return false
         return message.created_at * 1000 > lastSeen
       })
       .slice(-10)
