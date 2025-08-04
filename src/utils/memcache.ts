@@ -36,9 +36,29 @@ interface PopularityFiltersCache {
   filterLevel?: number
 }
 
+interface ChronologicalSubscriptionCache {
+  hasInitialData?: boolean
+  pendingPosts?: Map<string, number>
+  showingPosts?: Map<string, number>
+  timeRange?: number
+}
+
+interface CombinedPostFetcherCache {
+  events?: NDKEvent[]
+  hasLoadedInitial?: boolean
+}
+
 interface PopularHomeFeedCache {
   postFetcher: PostFetcherCache
   reactionSubscription: ReactionSubscriptionCache
+  popularityFilters: PopularityFiltersCache
+  chronologicalSubscription?: ChronologicalSubscriptionCache
+}
+
+interface ForYouFeedCache {
+  combinedPostFetcher: CombinedPostFetcherCache
+  reactionSubscription: ReactionSubscriptionCache
+  chronologicalSubscription: ChronologicalSubscriptionCache
   popularityFilters: PopularityFiltersCache
 }
 
@@ -46,6 +66,15 @@ interface PopularHomeFeedCache {
 export const popularHomeFeedCache: PopularHomeFeedCache = {
   postFetcher: {},
   reactionSubscription: {},
+  popularityFilters: {},
+  chronologicalSubscription: {},
+}
+
+// Cache for for-you feed
+export const forYouFeedCache: ForYouFeedCache = {
+  combinedPostFetcher: {},
+  reactionSubscription: {},
+  chronologicalSubscription: {},
   popularityFilters: {},
 }
 

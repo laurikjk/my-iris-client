@@ -146,7 +146,6 @@ const Feed = memo(function Feed({
     displayCount,
     feedConfig,
     hideEventsByUnknownUsers: false,
-    sortLikedPosts: feedConfig.sortLikedPosts || false,
     sortFn,
     relayUrls: feedConfig.relayUrls,
     refreshSignal,

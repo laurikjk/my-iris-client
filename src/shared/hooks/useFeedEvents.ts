@@ -26,7 +26,6 @@ interface UseFeedEventsProps {
   displayCount: number
   feedConfig: FeedConfig
   hideEventsByUnknownUsers: boolean
-  sortLikedPosts?: boolean
   sortFn?: (a: NDKEvent, b: NDKEvent) => number
   relayUrls?: string[]
   refreshSignal?: number
@@ -41,7 +40,6 @@ export default function useFeedEvents({
   displayCount,
   feedConfig,
   hideEventsByUnknownUsers,
-  sortLikedPosts = false,
   sortFn,
   relayUrls,
   refreshSignal,
@@ -242,27 +240,8 @@ export default function useFeedEvents({
   const filteredEvents = useMemo(() => {
     const events = Array.from(eventsRef.current.values())
 
-    if (sortLikedPosts) {
-      const likesByPostId = new Map<string, number>()
-      events.forEach((event) => {
-        const postId = event.tags.find((t) => t[0] === "e")?.[1]
-        if (postId) {
-          likesByPostId.set(postId, (likesByPostId.get(postId) || 0) + 1)
-        }
-      })
-
-      const sortedIds = Array.from(likesByPostId.entries())
-        .sort(([, likesA], [, likesB]) => likesB - likesA)
-        .map(([postId]) => postId)
-
-      return sortedIds.map((id) => {
-        const event = Array.from(eventsRef.current.values()).find((e) => e.id === id)
-        return event || {id}
-      })
-    }
-
     return events
-  }, [eventsVersion, sortLikedPosts])
+  }, [eventsVersion])
 
   const eventsByUnknownUsers = useMemo(() => {
     if (!hideEventsByUnknownUsers) {
@@ -364,9 +343,7 @@ export default function useFeedEvents({
       const isMyRecent =
         event.pubkey === myPubKey && event.created_at * 1000 > Date.now() - 10000
       const isNewEvent =
-        initialLoadDoneRef.current &&
-        !isMyRecent &&
-        (!sortLikedPosts || event.kind === KIND_TEXT_NOTE)
+        initialLoadDoneRef.current && !isMyRecent && event.kind === KIND_TEXT_NOTE
 
       // Check if event would appear below viewport (no layout shift)
       // Events with older timestamps appear below newer ones in chronological feed

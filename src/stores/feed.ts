@@ -23,7 +23,6 @@ interface FeedConfig {
   showRepliedTo?: boolean
   hideReplies?: boolean
   filter?: FeedFilter
-  sortLikedPosts?: boolean
   // Store filter criteria as serializable data
   followDistance?: number // undefined = no follow distance filtering, number = max degrees
   requiresMedia?: boolean
@@ -40,6 +39,8 @@ interface FeedConfig {
   autoShowNewEvents?: boolean
   // Display mode for this specific feed
   displayAs?: "list" | "grid"
+  // Feed strategy for popular feeds
+  feedStrategy?: "popular" | "for-you"
 }
 
 interface FeedState {
@@ -86,8 +87,8 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
       limit: 300,
     },
     followDistance: 2,
-    sortLikedPosts: true,
     feedType: "popular",
+    feedStrategy: "popular",
   },
   latest: {
     name: "Latest",
@@ -145,6 +146,18 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     followDistance: 5,
     hideReplies: true,
   },
+  "for-you": {
+    name: "For You",
+    id: "for-you",
+    filter: {
+      kinds: [KIND_REPOST, KIND_REACTION],
+      since: Math.floor(Date.now() / 1000 - 60 * 60 * 24),
+      limit: 300,
+    },
+    followDistance: 2,
+    feedType: "popular",
+    feedStrategy: "for-you",
+  },
 }
 
 export const useFeedStore = create<FeedState>()(
@@ -157,6 +170,7 @@ export const useFeedStore = create<FeedState>()(
         enabledFeedIds: [
           "unseen",
           "popular",
+          "for-you",
           "articles",
           "latest",
           "market",
@@ -261,6 +275,7 @@ export const useFeedStore = create<FeedState>()(
             enabledFeedIds: [
               "unseen",
               "popular",
+              "for-you",
               "latest",
               "market",
               "articles",

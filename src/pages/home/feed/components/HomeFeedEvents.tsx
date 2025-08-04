@@ -3,6 +3,7 @@ import {useMemo, useEffect, useState} from "react"
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
+import ForYouFeed from "@/shared/components/feed/ForYouFeed"
 import {useRefreshRouteSignal} from "@/stores/notifications"
 import {feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
@@ -171,19 +172,28 @@ function HomeFeedEvents() {
         />
       )}
       <NotificationPrompt />
-      {activeFeedConfig?.feedType === "popular" || !myPubKey ? (
-        <PopularFeed />
-      ) : (
-        <Feed
-          key={feedKey}
-          feedConfig={activeFeedConfig}
-          showDisplayAsSelector={follows.length > 1}
-          forceUpdate={0}
-          emptyPlaceholder={""}
-          refreshSignal={refreshSignal}
-          openedAt={openedAt}
-        />
-      )}
+      {(() => {
+        if (
+          activeFeedConfig?.feedType === "popular" &&
+          activeFeedConfig?.id === "for-you"
+        ) {
+          return <ForYouFeed />
+        }
+        if (activeFeedConfig?.feedType === "popular" || !myPubKey) {
+          return <PopularFeed />
+        }
+        return (
+          <Feed
+            key={feedKey}
+            feedConfig={activeFeedConfig}
+            showDisplayAsSelector={follows.length > 1}
+            forceUpdate={0}
+            emptyPlaceholder={""}
+            refreshSignal={refreshSignal}
+            openedAt={openedAt}
+          />
+        )
+      })()}
       {follows.length <= 1 && myPubKey && (
         <>
           <NoFollows myPubKey={myPubKey} />
