@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  iris-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${PORT:-5173}:5173"
+    environment:
+      - NODE_ENV=development
+      # Add your Claude API key here or pass via .env file
+      # - CLAUDE_API_KEY=your_api_key_here
+    stdin_open: true
+    tty: true
