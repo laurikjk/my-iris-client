@@ -11,7 +11,7 @@ test.describe("Session persistence", () => {
 
     // Wait for the page to load and profile to be fetched
     await page.waitForLoadState("networkidle")
-    
+
     // Verify user is still logged in
     await expect(page.getByText(username, {exact: true})).toBeVisible({timeout: 10000})
     await expect(
