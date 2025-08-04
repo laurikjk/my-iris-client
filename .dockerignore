@@ -16,3 +16,13 @@ coverage
 src-tauri/target
 target
 Cargo.lock
+test-results
+playwright-report
+.eslintcache
+.cache
+.parcel-cache
+.next
+.nuxt
+*.swp
+*.swo
+*~
