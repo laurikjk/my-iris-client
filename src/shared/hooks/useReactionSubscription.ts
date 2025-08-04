@@ -5,6 +5,7 @@ import {KIND_REACTION, KIND_REPOST} from "@/utils/constants"
 import {getTag} from "@/utils/nostr"
 import {PopularityFilters} from "./usePopularityFilters"
 import {useSocialGraphLoaded} from "@/utils/socialGraph"
+import {seenEventIds} from "@/utils/memcache"
 
 const LOW_THRESHOLD = 30
 const INITIAL_DATA_THRESHOLD = 10
@@ -18,7 +19,8 @@ interface ReactionSubscriptionCache {
 export default function useReactionSubscription(
   currentFilters: PopularityFilters,
   expandFilters: () => void,
-  cache: ReactionSubscriptionCache
+  cache: ReactionSubscriptionCache,
+  filterSeen?: boolean
 ) {
   const isSocialGraphLoaded = useSocialGraphLoaded()
   const showingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
@@ -59,6 +61,9 @@ export default function useReactionSubscription(
       const originalPostId = getTag("e", event.tags)
 
       if (!originalPostId) return
+
+      // Skip seen events if filtering is enabled
+      if (filterSeen && seenEventIds.has(originalPostId)) return
 
       if (showingReactionCounts.current.has(originalPostId)) {
         showingReactionCounts.current.get(originalPostId)?.add(event.id)
