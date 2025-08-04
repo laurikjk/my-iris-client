@@ -4,6 +4,7 @@ import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import Message, {MessageType} from "../message/Message"
 import {groupMessages} from "../utils/messageGrouping"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
+import {useUserStore} from "@/stores/user"
 
 interface ChatContainerProps {
   messages: SortedMap<string, MessageType>
@@ -81,7 +82,8 @@ const ChatContainer = ({
       // If there's a new message and it's from the user, scroll to bottom
       if (newMessageIds.length > 0) {
         const newMessage = messages.get(newMessageIds[0])
-        if (newMessage && newMessage.pubkey === "user") {
+        const myPubKey = useUserStore.getState().publicKey
+        if (newMessage && newMessage.pubkey === myPubKey) {
           scrollToBottom()
         } else if (wasAtBottomRef.current) {
           // If user was at bottom, keep them there

@@ -5,6 +5,7 @@ import {useState, useEffect} from "react"
 import {MessageType} from "./Message"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
+import {useUserStore} from "@/stores/user"
 
 type ReplyPreviewProps = {
   isUser: boolean
@@ -88,7 +89,7 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
       onClick={handleScrollToReply}
     >
       <div className="font-semibold">
-        {repliedToMessage.pubkey === "user" ? (
+        {repliedToMessage.pubkey === useUserStore.getState().publicKey ? (
           "You"
         ) : (
           <Name

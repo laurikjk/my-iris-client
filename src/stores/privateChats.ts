@@ -90,9 +90,10 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
             const chatData = chats.get(userPubKey) || {lastSeen: 0}
 
             // Calculate unread count
+            const myPubKey = useUserStore.getState().publicKey
             const unreadCount = Array.from(messages.values()).filter(
               (msg: MessageType) => {
-                if (msg.pubkey === "user") return false // Don't count our own messages
+                if (msg.pubkey === myPubKey) return false // Don't count our own messages
                 const msgTime = msg.created_at ? msg.created_at * 1000 : 0
                 return msgTime > chatData.lastSeen
               }

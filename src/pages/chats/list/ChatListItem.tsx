@@ -156,7 +156,10 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
     if (actualLatest?.content) {
       // Show special preview for group invite messages
       if (actualLatest.kind === KIND_CHANNEL_CREATE) {
-        return getGroupInvitePreview(actualLatest.pubkey, actualLatest.pubkey === "user")
+        return getGroupInvitePreview(
+          actualLatest.pubkey,
+          actualLatest.pubkey === myPubKey
+        )
       }
       const content = actualLatest.content
       return content.length > 30 ? content.slice(0, 30) + "..." : content
@@ -245,7 +248,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
       }
     }
   } else if (!group) {
-    if (actualLatest?.created_at && actualLatest.pubkey !== "user") {
+    if (actualLatest?.created_at && actualLatest.pubkey !== myPubKey) {
       const hasUnread =
         getMillisecondTimestamp(actualLatest as MessageType) > lastSeenPrivateTime
       if (!lastSeenPrivateTime || hasUnread) {

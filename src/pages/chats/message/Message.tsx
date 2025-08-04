@@ -16,12 +16,12 @@ import {RiCheckLine, RiAlertLine} from "@remixicon/react"
 import {KIND_CHANNEL_CREATE, KIND_REACTION} from "@/utils/constants"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {EMOJI_REGEX} from "@/utils/validation"
+import {useUserStore} from "@/stores/user"
 
 export type MessageType = Rumor & {
   reactions?: Record<string, string>
   nostrEventId?: string
   sentToRelays?: boolean
-  canonicalId?: string
 }
 
 type MessageProps = {
@@ -82,7 +82,8 @@ const Message = ({
   onSendReaction,
   reactions: propReactions,
 }: MessageProps) => {
-  const isUser = message.pubkey === "user"
+  const myPubKey = useUserStore.getState().publicKey
+  const isUser = message.pubkey === myPubKey
   const {events} = usePrivateMessagesStore()
   const [localReactions, setLocalReactions] = useState<Record<string, string>>(
     propReactions || {}
@@ -177,7 +178,7 @@ const Message = ({
   if (message.kind === KIND_CHANNEL_CREATE) {
     console.log("invite", message)
     let content = null
-    if (message.pubkey === "user") {
+    if (message.pubkey === myPubKey) {
       content = "You created the group"
     } else {
       content = (

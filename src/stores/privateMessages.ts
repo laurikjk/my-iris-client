@@ -51,7 +51,7 @@ const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
       for (const [, sessionMessages] of state.events.entries()) {
         // Find message with matching canonical ID
         for (const [, msg] of sessionMessages.entries()) {
-          if (msg.canonicalId === messageId || msg.id === messageId) {
+          if (msg.id === messageId) {
             oldMsg = msg
             break
           }

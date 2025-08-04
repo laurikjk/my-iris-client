@@ -8,6 +8,7 @@ import MessageForm from "../message/MessageForm"
 import {MessageType} from "../message/Message"
 import {useEffect, useState} from "react"
 import {useUserRecordsStore} from "@/stores/userRecords"
+import {useUserStore} from "@/stores/user"
 
 const Chat = ({id}: {id: string}) => {
   // id is now userPubKey instead of sessionId
@@ -34,11 +35,12 @@ const Chat = ({id}: {id: string}) => {
 
     if (!messages) return
 
+    const myPubKey = useUserStore.getState().publicKey
     Array.from(messages.entries()).forEach(([, message]) => {
-      if (!haveReply && message.pubkey !== "user") {
+      if (!haveReply && message.pubkey !== myPubKey) {
         setHaveReply(true)
       }
-      if (!haveSent && message.pubkey === "user") {
+      if (!haveSent && message.pubkey === myPubKey) {
         setHaveSent(true)
       }
     })
