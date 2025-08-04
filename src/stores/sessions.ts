@@ -27,24 +27,33 @@ const routeEventToStore = (
   userPubKey: string,
   ourPubKey: string
 ) => {
+  console.log("=== ROUTE EVENT TO STORE ===")
   const groupLabelTag = message.tags?.find((tag: string[]) => tag[0] === "l")
+  const pTag = message.tags?.find((tag: string[]) => tag[0] === "p")
+  console.log("Has group tag:", !!groupLabelTag)
+  console.log("Has p tag:", !!pTag, pTag?.[1])
+  console.log("Message from us:", message.pubkey === ourPubKey)
+
   let chatId
 
   if (groupLabelTag && groupLabelTag[1]) {
     // Group message - store by group ID
     chatId = groupLabelTag[1]
+    console.log("Routing to group:", chatId)
   } else {
     // Private message - check if it's from us
     if (message.pubkey === ourPubKey) {
       // For our own messages, route by the p tag (who we sent it to)
-      const pTag = message.tags?.find((tag: string[]) => tag[0] === "p")
       chatId = pTag?.[1] || userPubKey
+      console.log("Our message, routing to p tag recipient:", chatId)
     } else {
       // For messages from others, route by the sender (userPubKey)
       chatId = userPubKey
+      console.log("Their message, routing to sender:", chatId)
     }
   }
 
+  console.log("Final chatId:", chatId)
   usePrivateMessagesStore.getState().upsert(chatId, message)
 }
 
@@ -450,12 +459,20 @@ const processSessionEvent = async (
   sessionId: string,
   event: MessageType
 ) => {
+  console.log("=== PROCESS SESSION EVENT ===")
+  console.log("SessionId:", sessionId)
+  console.log("Event kind:", event.kind)
+  console.log("Event content preview:", event.content?.substring(0, 50))
+
   // Get session data
   const sessionData = get().sessions.get(sessionId)
   if (!sessionData) {
     console.warn("Session data not found for event processing:", sessionId)
     return
   }
+
+  console.log("Session user:", sessionData.userPubKey)
+  console.log("Session device:", sessionData.deviceId)
 
   // Set pubkey before calculating canonical ID to ensure consistency
   event.pubkey = sessionData.userPubKey
@@ -524,6 +541,9 @@ const handleSessionEvent = async (
   }
 
   const ourPubKey = useUserStore.getState().publicKey
+  console.log("Routing event - ourPubKey:", ourPubKey)
+  console.log("Routing event - sessionData.userPubKey:", sessionData.userPubKey)
+  console.log("Routing event - message pubkey:", event.pubkey)
   routeEventToStore(event, sessionData.userPubKey, ourPubKey)
 
   // --- Ensure UserRecord exists and session is referenced ---

@@ -235,14 +235,35 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const fanOutToOwnDevices = async (sentVia: Set<string>) => {
           if (!myPubKey) return
           const myRecord = get().userRecords.get(myPubKey)
-          if (!myRecord) return
+          console.log("fanOutToOwnDevices - myRecord:", myRecord)
+          if (!myRecord) {
+            console.log("No user record found for own user:", myPubKey)
+            return
+          }
 
-          for (const device of myRecord.getActiveDevices()) {
+          const activeDevices = myRecord.getActiveDevices()
+          console.log("=== MY DEVICES ===")
+          console.log("Total active devices:", activeDevices.length)
+          console.log("My device ID:", get().deviceId)
+          console.log(
+            "All my devices:",
+            activeDevices.map((d) => ({
+              deviceId: d.deviceId,
+              hasSession: !!d.activeSessionId,
+              sessionId: d.activeSessionId,
+              isCurrentDevice: d.deviceId === get().deviceId,
+            }))
+          )
+
+          for (const device of activeDevices) {
+            console.log(`Checking device ${device.deviceId}:`)
             if (!device.activeSessionId) continue
             if (sentVia.has(device.activeSessionId)) continue
             try {
               const clone = JSON.parse(JSON.stringify(event)) as Partial<UnsignedEvent>
+              console.log(`Sending to own device session ${device.activeSessionId}`)
               await get().sendMessage(device.activeSessionId, clone)
+              console.log(`Successfully sent to ${device.activeSessionId}`)
             } catch (err) {
               console.warn(
                 `Failed to fan-out to own session ${device.activeSessionId}:`,
@@ -254,6 +275,14 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
         // Track which sessions we've already sent through
         const sentSessionIds = new Set<string>()
+
+        // ALWAYS fan out to our own devices first
+        console.log("=== SEND TO USER ===")
+        console.log("Sending to:", userPubKey)
+        console.log("My pubkey:", myPubKey)
+        console.log("Is sending to self:", userPubKey === myPubKey)
+        console.log("Fanning out to own devices...")
+        await fanOutToOwnDevices(sentSessionIds)
 
         // Get UserRecord for this user
         const userRecord = get().userRecords.get(userPubKey)
@@ -274,10 +303,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             })
           )
 
-          // Immediately fan-out to own devices
-          await fanOutToOwnDevices(sentSessionIds)
-
-          // If at least one peer session succeeded we’re done
+          // If at least one peer session succeeded we're done
           if (sentSessionIds.size > 0) {
             return
           }
@@ -328,9 +354,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
               await get().sendMessage(sessionId, event)
               console.log("sendToUser new sessionId:", sessionId)
-
-              // Fan-out to own devices as well
-              await fanOutToOwnDevices(sentSessionIds)
 
               resolve()
             } catch (error) {
@@ -501,6 +524,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           console.log("Received invite from user:", {
             inviter: invite.inviter,
             deviceId: invite.deviceId,
+            isOurself: invite.inviter === myPubKey,
           })
           try {
             if (invite.inviter !== userPubKey) {
