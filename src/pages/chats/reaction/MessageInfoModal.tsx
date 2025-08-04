@@ -275,7 +275,8 @@ export const MessageInfoModal = ({
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-base-content/60">
-              This message was received through an encrypted channel and doesn't have a public event ID.
+              This message was received through an encrypted channel and doesn&apos;t have
+              a public event ID.
             </p>
             {message && (
               <div>

@@ -161,6 +161,18 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
           const deviceId = `${identity}:incoming` // TODO invite acceptors need to communicate their device id in addition to identity?
 
+          // Check if we already have a session with this device
+          const existingUserRecord = get().userRecords.get(identity)
+          const existingSessionId = existingUserRecord?.getActiveSessionId(deviceId)
+
+          if (existingSessionId) {
+            console.log(
+              "Session already exists with this device in invite listener, skipping",
+              existingSessionId
+            )
+            return
+          }
+
           // Add session to sessions store and reference in UserRecord
           useSessionsStore.getState().addSession(sessionId, session, identity, deviceId)
 
@@ -750,6 +762,18 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const unsubscribe = invite.listen(decrypt, subscribe, (session, identity) => {
           if (!identity) return
 
+          // Check if we already have a session with this user from our device
+          const userRecord = get().userRecords.get(identity)
+          const existingSessionId = userRecord?.getActiveSessionId(currentDeviceId)
+
+          if (existingSessionId) {
+            console.log(
+              "Session already exists from our device to this user, skipping",
+              existingSessionId
+            )
+            return
+          }
+
           // Use the current device ID
           const sessionId = `${identity}:${currentDeviceId}`
 
@@ -760,14 +784,14 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
           // Get or create UserRecord
           const userRecords = new Map(get().userRecords)
-          let userRecord = userRecords.get(identity)
-          if (!userRecord) {
-            userRecord = new UserRecord(identity, identity)
-            userRecords.set(identity, userRecord)
+          let targetUserRecord = userRecords.get(identity)
+          if (!targetUserRecord) {
+            targetUserRecord = new UserRecord(identity, identity)
+            userRecords.set(identity, targetUserRecord)
           }
 
           // Add session reference to UserRecord with proper deviceId
-          userRecord.upsertSession(currentDeviceId, sessionId)
+          targetUserRecord.upsertSession(currentDeviceId, sessionId)
 
           // Update last seen
           const lastSeen = new Map(get().lastSeen)
