@@ -381,11 +381,28 @@ export class UserRecord {
 
   /**
    * Parses session ID to get device ID
+   * Uses sessions store first, falls back to string parsing
    */
   public static parseSessionId(sessionId: string): {
     userPubKey: string
     deviceId: string
   } {
+    // Try to get from sessions store first
+    try {
+      // Use dynamic import to avoid circular dependency
+      const sessionsModule = eval('require("./sessions")')
+      const {useSessionsStore} = sessionsModule
+      const sessionData = useSessionsStore.getState().sessions.get(sessionId)
+      if (sessionData) {
+        return {
+          userPubKey: sessionData.userPubKey,
+          deviceId: sessionData.deviceId || "unknown",
+        }
+      }
+    } catch {
+      // Fallback to string parsing if sessions store not available
+    }
+
     const [userPubKey, deviceId] = sessionId.split(":")
     return {userPubKey, deviceId: deviceId || "unknown"}
   }

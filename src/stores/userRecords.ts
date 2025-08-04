@@ -154,14 +154,15 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const decrypt = getDecryptFunction(myPrivKey)
 
         const unsubscribe = invite.listen(decrypt, subscribe, (session, identity) => {
-          if (!identity) return
+          // uniquely identify by their initial nostr public key to avoid duplicates. TODO for privacy we might not want to actually store this.
+          const sessionId = session.state.theirNextNostrPublicKey
+          console.log("got session", sessionId, session)
+          if (!identity || !sessionId) return
 
-          // Use the invite's deviceId, not session.name
-          const deviceId = id // This is the deviceId we passed to createNew
-          const sessionId = `${identity}:${deviceId}`
+          const deviceId = `${identity}:incoming` // TODO invite acceptors need to communicate their device id in addition to identity?
 
           // Add session to sessions store and reference in UserRecord
-          useSessionsStore.getState().addSession(sessionId, session)
+          useSessionsStore.getState().addSession(sessionId, session, identity, deviceId)
 
           // Get or create UserRecord
           const userRecords = new Map(get().userRecords)
@@ -423,7 +424,9 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           const sessionId = `${invite.inviter}:${deviceId}`
 
           // Add session to sessions store
-          useSessionsStore.getState().addSession(sessionId, session)
+          useSessionsStore
+            .getState()
+            .addSession(sessionId, session, invite.inviter, deviceId)
 
           // Get or create UserRecord
           const userRecords = new Map(get().userRecords)
@@ -687,7 +690,9 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           const sessionId = `${identity}:${currentDeviceId}`
 
           // Add session to sessions store
-          useSessionsStore.getState().addSession(sessionId, session)
+          useSessionsStore
+            .getState()
+            .addSession(sessionId, session, identity, currentDeviceId)
 
           // Get or create UserRecord
           const userRecords = new Map(get().userRecords)

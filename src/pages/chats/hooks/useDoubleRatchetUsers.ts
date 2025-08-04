@@ -1,6 +1,7 @@
 import {useEffect, useState, useCallback} from "react"
 import {useUserStore} from "@/stores/user"
 import {useUserRecordsStore} from "@/stores/userRecords"
+import {useSessionsStore} from "@/stores/sessions"
 import socialGraph from "@/utils/socialGraph"
 import {ndk} from "@/utils/ndk"
 import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
@@ -33,7 +34,8 @@ export const useDoubleRatchetUsers = () => {
 
     // Extract session partner pubkey from sessionId (format: "pubkey:sessionName")
     const getSessionPartner = (sessionId: string): string => {
-      return sessionId.split(":")[0]
+      const sessionData = useSessionsStore.getState().sessions.get(sessionId)
+      return sessionData?.userPubKey || sessionId.split(":")[0]
     }
 
     // Get all current session partners

@@ -21,16 +21,12 @@ import {useUserRecordsStore} from "./userRecords"
 import {UserRecord} from "./UserRecord"
 import throttle from "lodash/throttle"
 
-// Parse sessionId to get user info (moved from UserRecord)
-const parseSessionId = (sessionId: string): {userPubKey: string; deviceId: string} => {
-  const [userPubKey, deviceId] = sessionId.split(":")
-  return {userPubKey, deviceId: deviceId || "unknown"}
-}
-
 // Route events to the appropriate store based on message content and tags
-const routeEventToStore = (sessionId: string, message: MessageType) => {
-  const {userPubKey} = parseSessionId(sessionId)
-
+const routeEventToStore = (
+  sessionId: string,
+  message: MessageType,
+  userPubKey: string
+) => {
   // Set pubkey to the original message pubkey, or from if not set
   if (!message.pubkey || message.pubkey !== "user") {
     message.pubkey = userPubKey
@@ -85,15 +81,26 @@ const sessionSubscribe = (
   }
 }
 
+interface SessionData {
+  session: Session
+  userPubKey: string
+  deviceId: string
+}
+
 interface SessionsStoreState {
-  sessions: Map<string, Session> // sessionId -> Session
+  sessions: Map<string, SessionData> // sessionId -> SessionData
   sessionListeners: Map<string, () => void> // sessionId -> unsubscribe function
   eventCallbacks: Set<(sessionId: string, event: MessageType) => void> // External event callbacks
 }
 
 interface SessionsStoreActions {
   // Session management
-  addSession: (sessionId: string, session: Session) => void
+  addSession: (
+    sessionId: string,
+    session: Session,
+    userPubKey: string,
+    deviceId: string
+  ) => void
   removeSession: (sessionId: string) => void
   getSession: (sessionId: string) => Session | undefined
   hasSession: (sessionId: string) => boolean
@@ -141,10 +148,15 @@ export const useSessionsStore = create<SessionsStore>()(
         sessionListeners: new Map(),
         eventCallbacks: new Set(),
 
-        addSession: (sessionId: string, session: Session) => {
+        addSession: (
+          sessionId: string,
+          session: Session,
+          userPubKey: string,
+          deviceId: string
+        ) => {
           console.log("Adding session:", sessionId)
           const newSessions = new Map(get().sessions)
-          newSessions.set(sessionId, session)
+          newSessions.set(sessionId, {session, userPubKey, deviceId})
           set({sessions: newSessions})
 
           // Automatically set up event listener for the new session
@@ -155,9 +167,9 @@ export const useSessionsStore = create<SessionsStore>()(
 
         removeSession: (sessionId: string) => {
           console.log("Removing session:", sessionId)
-          const session = get().sessions.get(sessionId)
-          if (session) {
-            session.close()
+          const sessionData = get().sessions.get(sessionId)
+          if (sessionData) {
+            sessionData.session.close()
           }
 
           // Remove from sessions
@@ -171,7 +183,7 @@ export const useSessionsStore = create<SessionsStore>()(
         },
 
         getSession: (sessionId: string) => {
-          return get().sessions.get(sessionId)
+          return get().sessions.get(sessionId)?.session
         },
 
         hasSession: (sessionId: string) => {
@@ -193,10 +205,11 @@ export const useSessionsStore = create<SessionsStore>()(
         updateSessionthrottled: throttledUpdateSession,
 
         sendMessage: async (sessionId: string, event: Partial<UnsignedEvent>) => {
-          const session = get().sessions.get(sessionId)
-          if (!session) {
+          const sessionData = get().sessions.get(sessionId)
+          if (!sessionData) {
             throw new Error(`Session not found: ${sessionId}`)
           }
+          const session = sessionData.session
 
           // Debug session state
           console.log("Session state for sending:", {
@@ -239,12 +252,16 @@ export const useSessionsStore = create<SessionsStore>()(
               canonicalId = await calculateCanonicalId(innerEvent)
             }
 
-            routeEventToStore(sessionId, {
-              ...innerEvent,
-              canonicalId,
-              pubkey: "user",
-              reactions: {},
-            } as MessageType)
+            routeEventToStore(
+              sessionId,
+              {
+                ...innerEvent,
+                canonicalId,
+                pubkey: "user",
+                reactions: {},
+              } as MessageType,
+              sessionData.userPubKey
+            )
           }
 
           try {
@@ -271,11 +288,12 @@ export const useSessionsStore = create<SessionsStore>()(
           sessionId: string,
           onEvent: (event: MessageType) => void
         ) => {
-          const session = get().sessions.get(sessionId)
-          if (!session) {
+          const sessionData = get().sessions.get(sessionId)
+          if (!sessionData) {
             console.warn("Cannot set listener for non-existent session:", sessionId)
             return
           }
+          const session = sessionData.session
 
           // Remove existing listener if any
           get().removeSessionListener(sessionId)
@@ -325,7 +343,8 @@ export const useSessionsStore = create<SessionsStore>()(
 
           // Small delay to ensure sessions are fully reconstructed
           setTimeout(() => {
-            for (const [sessionId, session] of sessions.entries()) {
+            for (const [sessionId, sessionData] of sessions.entries()) {
+              const session = sessionData.session
               if (!get().sessionListeners.has(sessionId)) {
                 console.log("Setting up listener for deserialized session:", sessionId)
 
@@ -358,8 +377,8 @@ export const useSessionsStore = create<SessionsStore>()(
           console.log("Resetting sessions store...")
 
           // Close all sessions
-          for (const session of get().sessions.values()) {
-            session.close()
+          for (const sessionData of get().sessions.values()) {
+            sessionData.session.close()
           }
 
           // Remove all listeners
@@ -382,22 +401,30 @@ export const useSessionsStore = create<SessionsStore>()(
       storage: createJSONStorage(() => localforage),
       partialize: (state: SessionsStore) => ({
         // Only serialize sessions, not listeners (they'll be recreated)
-        sessions: Array.from(state.sessions.entries()).map(([sessionId, session]) => [
+        sessions: Array.from(state.sessions.entries()).map(([sessionId, sessionData]) => [
           sessionId,
-          serializeSessionState(session.state),
+          {
+            state: serializeSessionState(sessionData.session.state),
+            userPubKey: sessionData.userPubKey,
+            deviceId: sessionData.deviceId,
+          },
         ]),
       }),
       merge: (persistedState: unknown, currentState: SessionsStore) => {
         const state = (persistedState || {sessions: []}) as {
-          sessions: [string, string][]
+          sessions: [string, {state: string; userPubKey: string; deviceId: string}][]
         }
 
-        const newSessions = new Map<string, Session>()
-        state.sessions?.forEach(([sessionId, serializedState]) => {
+        const newSessions = new Map<string, SessionData>()
+        state.sessions?.forEach(([sessionId, data]) => {
           try {
-            const sessionState = deserializeSessionState(serializedState)
+            const sessionState = deserializeSessionState(data.state)
             const session = new Session(sessionSubscribe, sessionState)
-            newSessions.set(sessionId, session)
+            newSessions.set(sessionId, {
+              session,
+              userPubKey: data.userPubKey,
+              deviceId: data.deviceId,
+            })
             console.log("Successfully deserialized session:", sessionId)
           } catch (e) {
             console.warn("Failed to deserialize session:", sessionId, e)
@@ -463,10 +490,17 @@ const handleSessionEvent = async (
   }
 
   // Route to events store
-  routeEventToStore(sessionId, event)
+  // Get userPubKey from session data
+  const sessionData = get().sessions.get(sessionId)
+  if (!sessionData) {
+    console.warn("Session data not found for event routing:", sessionId)
+    return
+  }
+
+  routeEventToStore(sessionId, event, sessionData.userPubKey)
 
   // --- Ensure UserRecord exists and session is referenced ---
-  const {userPubKey, deviceId} = parseSessionId(sessionId)
+  const {userPubKey, deviceId} = sessionData
   const urStore = useUserRecordsStore.getState()
   if (!urStore.userRecords.has(userPubKey)) {
     const newRecord = new UserRecord(userPubKey, userPubKey)

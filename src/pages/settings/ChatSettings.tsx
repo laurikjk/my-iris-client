@@ -1,6 +1,7 @@
 import {useState, useEffect} from "react"
 import {useUserStore} from "@/stores/user"
 import {useUserRecordsStore} from "@/stores/userRecords"
+import {useSessionsStore} from "@/stores/sessions"
 import {RiDeleteBin6Line, RiRefreshLine} from "@remixicon/react"
 
 interface DeviceInfo {
@@ -33,10 +34,12 @@ const ChatSettings = () => {
       const deviceLastSeen = new Map<string, number>()
 
       Array.from(sessions.entries()).forEach(([sessionId]) => {
-        const [userPubKey, deviceId] = sessionId.split(":", 2)
+        const sessionData = useSessionsStore.getState().sessions.get(sessionId)
+        const userPubKey = sessionData?.userPubKey || sessionId.split(":")[0]
+        const deviceId = sessionData?.deviceId || sessionId.split(":", 2)[1] || "unknown"
         if (userPubKey === publicKey) {
           // This is a session with one of our own devices
-          const actualDeviceId = deviceId || "unknown"
+          const actualDeviceId = deviceId
           deviceSessions.set(
             actualDeviceId,
             (deviceSessions.get(actualDeviceId) || 0) + 1

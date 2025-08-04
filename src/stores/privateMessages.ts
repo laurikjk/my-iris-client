@@ -60,7 +60,10 @@ const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
       }
     }
 
-    const pubKey = message.pubkey || sessionId.split(":")[0]
+    // Import sessions store at the top level to avoid circular dependency
+    const {useSessionsStore} = await import("./sessions")
+    const sessionData = useSessionsStore.getState().sessions.get(sessionId)
+    const pubKey = message.pubkey || sessionData?.userPubKey || sessionId.split(":")[0]
 
     if (oldMsg) {
       const updatedMsg = {

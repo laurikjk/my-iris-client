@@ -17,7 +17,8 @@ export function getPeerConnection(
   } = {}
 ) {
   const {ask = true, connect = false, create = true} = options
-  const pubKey = sessionId.split(":")[0]
+  const sessionData = useSessionsStore.getState().sessions.get(sessionId)
+  const pubKey = sessionData?.userPubKey || sessionId.split(":")[0]
   if (
     create &&
     socialGraph().getFollowDistance(pubKey) > 1 &&
@@ -283,7 +284,8 @@ export default class PeerConnection extends EventEmitter {
       return
     }
 
-    const pubkey = this.peerId.split(":")[0]
+    const sessionData = useSessionsStore.getState().sessions.get(this.peerId)
+    const pubkey = sessionData?.userPubKey || this.peerId.split(":")[0]
     const name = getCachedName(pubkey)
     const confirmString = `Save ${this.incomingFileMetadata.name} from ${name}?`
     if (!confirm(confirmString)) {
