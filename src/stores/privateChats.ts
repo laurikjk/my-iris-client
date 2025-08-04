@@ -49,7 +49,13 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
           ])
           return userPubKey
         } else {
-          await recipientPromise
+          // When sending to self, we still need to ensure proper routing
+          // Add ['p', myPubKey] tag to help with routing
+          const eventWithPTag = {
+            ...event,
+            tags: [...(event.tags || []), ["p", myPubKey]],
+          }
+          await useUserRecordsStore.getState().sendToUser(myPubKey, eventWithPTag)
           return myPubKey
         }
       },
