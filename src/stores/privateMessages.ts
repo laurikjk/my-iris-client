@@ -6,15 +6,16 @@ import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {create} from "zustand"
 
 const addToMap = (
-  sessionEventMap: Map<string, SortedMap<string, MessageType>>,
-  sessionId: string,
+  chatEventMap: Map<string, SortedMap<string, MessageType>>,
+  chatId: string,
   message: MessageType
 ) => {
   const eventMap =
-    sessionEventMap.get(sessionId) || new SortedMap<string, MessageType>([], comparator)
+    chatEventMap.get(chatId) || new SortedMap<string, MessageType>([], comparator)
+
   eventMap.set(message.id, message)
-  sessionEventMap.set(sessionId, eventMap)
-  return sessionEventMap
+  chatEventMap.set(chatId, eventMap)
+  return chatEventMap
 }
 
 interface PrivateMessagesStoreState {
@@ -22,20 +23,20 @@ interface PrivateMessagesStoreState {
 }
 
 interface PrivateMessagesStoreActions {
-  upsert: (sessionId: string, message: MessageType) => Promise<void>
+  upsert: (chatId: string, message: MessageType) => Promise<void>
   updateMessage: (
-    sessionId: string,
+    chatId: string,
     messageId: string,
     updates: Partial<MessageType>
   ) => Promise<void>
-  removeSession: (sessionId: string) => Promise<void>
-  removeMessage: (sessionId: string, messageId: string) => Promise<void>
+  removeSession: (chatId: string) => Promise<void>
+  removeMessage: (chatId: string, messageId: string) => Promise<void>
   clear: () => Promise<void>
 }
 
 type PrivateMessagesStore = PrivateMessagesStoreState & PrivateMessagesStoreActions
 
-const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
+const makeOrModifyMessage = async (chatId: string, message: MessageType) => {
   const isReaction = message.kind === KIND_REACTION
   const eTag = message.tags.find(([key]) => key === "e")
   if (isReaction && eTag) {
@@ -47,10 +48,10 @@ const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
     if (!oldMsg) {
       const state = usePrivateMessagesStore.getState()
 
-      // Search through all sessions for a message with matching canonical ID
-      for (const [, sessionMessages] of state.events.entries()) {
-        // Find message with matching canonical ID
-        for (const [, msg] of sessionMessages.entries()) {
+      // Search through all chats for a message with matching ID
+      for (const [, chatMessages] of state.events.entries()) {
+        // Find message with matching ID
+        for (const [, msg] of chatMessages.entries()) {
           if (msg.id === messageId) {
             oldMsg = msg
             break
@@ -60,10 +61,7 @@ const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
       }
     }
 
-    // Import sessions store at the top level to avoid circular dependency
-    const {useSessionsStore} = await import("./sessions")
-    const sessionData = useSessionsStore.getState().sessions.get(sessionId)
-    const pubKey = message.pubkey || sessionData?.userPubKey || sessionId.split(":")[0]
+    const pubKey = message.pubkey
 
     if (oldMsg) {
       const updatedMsg = {
@@ -73,19 +71,19 @@ const makeOrModifyMessage = async (sessionId: string, message: MessageType) => {
           [pubKey]: message.content,
         },
       }
-      // Find which session this message belongs to
-      let targetSessionId = null
-      for (const [tid, sessionMessages] of usePrivateMessagesStore
+      // Find which chat this message belongs to
+      let messageChatId = null
+      for (const [cid, chatMessages] of usePrivateMessagesStore
         .getState()
         .events.entries()) {
-        if (sessionMessages.has(oldMsg.id)) {
-          targetSessionId = tid
+        if (chatMessages.has(oldMsg.id)) {
+          messageChatId = cid
           break
         }
       }
 
-      if (targetSessionId) {
-        await messageRepository.save(targetSessionId, updatedMsg)
+      if (messageChatId) {
+        await messageRepository.save(messageChatId, updatedMsg)
         return updatedMsg
       }
     }
@@ -101,21 +99,21 @@ export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
   return {
     events: new Map(),
 
-    upsert: async (sessionId, event) => {
+    upsert: async (chatId, event) => {
       await rehydration
-      const message = await makeOrModifyMessage(sessionId, event)
-      await messageRepository.save(sessionId, message)
+      const message = await makeOrModifyMessage(chatId, event)
+      await messageRepository.save(chatId, message)
       set((state) => ({
-        events: addToMap(new Map(state.events), sessionId, message),
+        events: addToMap(new Map(state.events), chatId, message),
       }))
     },
 
-    removeSession: async (sessionId) => {
+    removeSession: async (chatId) => {
       await rehydration
-      await messageRepository.deleteBySession(sessionId)
+      await messageRepository.deleteBySession(chatId)
       set((state) => {
         const events = new Map(state.events)
-        events.delete(sessionId)
+        events.delete(chatId)
         return {events}
       })
     },
@@ -127,38 +125,38 @@ export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
     },
 
     updateMessage: async (
-      sessionId: string,
+      chatId: string,
       messageId: string,
       updates: Partial<MessageType>
     ) => {
       await rehydration
       set((state) => {
         const events = new Map(state.events)
-        const eventMap = events.get(sessionId)
+        const eventMap = events.get(chatId)
         if (eventMap) {
           const existingMessage = eventMap.get(messageId)
           if (existingMessage) {
             const updatedMessage = {...existingMessage, ...updates}
             eventMap.set(messageId, updatedMessage)
-            messageRepository.save(sessionId, updatedMessage)
+            messageRepository.save(chatId, updatedMessage)
           }
         }
         return {events}
       })
     },
 
-    removeMessage: async (sessionId: string, messageId: string) => {
+    removeMessage: async (chatId: string, messageId: string) => {
       await rehydration
-      await messageRepository.deleteMessage(sessionId, messageId)
+      await messageRepository.deleteMessage(chatId, messageId)
       set((state) => {
         const events = new Map(state.events)
-        const eventMap = events.get(sessionId)
+        const eventMap = events.get(chatId)
         if (eventMap) {
           eventMap.delete(messageId)
           if (eventMap.size === 0) {
-            events.delete(sessionId)
+            events.delete(chatId)
           } else {
-            events.set(sessionId, eventMap)
+            events.set(chatId, eventMap)
           }
         }
         return {events}

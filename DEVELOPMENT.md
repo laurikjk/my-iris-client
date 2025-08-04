@@ -10,3 +10,4 @@
 - Avoid loading spinners for Nostr fetch operations: they're bad UX and Nostr doesnt have a single source of truth anyway. Can't rely solely on "eose" (end of stored events)
 - Avoid adding external dependencies, implement especially UI things in our own repo when feasible
 - When creating new Playwright tests or debugging failing ones, capture screenshots (`page.screenshot()`) at key points to understand the visual state. Use temp directory (e.g., `/tmp/playwright-debug/`) or remove screenshots after debugging. Use headless mode if possible.
+- Dont add "edited/deleted this" comments

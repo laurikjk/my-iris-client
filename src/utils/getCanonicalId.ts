@@ -29,11 +29,14 @@ export async function getCanonicalId(message: {
   }
 
   const hashInput = JSON.stringify(messageForHash)
+
   const hashBuffer = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(hashInput)
   )
-  return Array.from(new Uint8Array(hashBuffer))
+  const canonicalId = Array.from(new Uint8Array(hashBuffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("")
+
+  return canonicalId
 }

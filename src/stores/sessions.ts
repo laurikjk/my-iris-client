@@ -22,25 +22,30 @@ import {UserRecord} from "./UserRecord"
 import throttle from "lodash/throttle"
 
 // Route events to the appropriate store based on message content and tags
-const routeEventToStore = async (message: MessageType) => {
-  // Check for ['p', recipientPubKey] tag, but only use for routing if authored by us
-  const pTag = message.tags?.find((tag: string[]) => tag[0] === "p")
+const routeEventToStore = (
+  message: MessageType,
+  userPubKey: string,
+  ourPubKey: string
+) => {
   const groupLabelTag = message.tags?.find((tag: string[]) => tag[0] === "l")
-  const myPubKey = useUserStore.getState().publicKey
-  let targetId
+  let chatId
 
   if (groupLabelTag && groupLabelTag[1]) {
     // Group message - store by group ID
-    targetId = groupLabelTag[1]
-  } else if (pTag && pTag[1] && message.pubkey === myPubKey) {
-    // Message sent by us with recipient tag - store by recipient pubkey
-    targetId = pTag[1]
+    chatId = groupLabelTag[1]
   } else {
-    // Private message - always store by the other user's pubkey, not sessionId
-    targetId = message.pubkey
+    // Private message - check if it's from us
+    if (message.pubkey === ourPubKey) {
+      // For our own messages, route by the p tag (who we sent it to)
+      const pTag = message.tags?.find((tag: string[]) => tag[0] === "p")
+      chatId = pTag?.[1] || userPubKey
+    } else {
+      // For messages from others, route by the sender (userPubKey)
+      chatId = userPubKey
+    }
   }
 
-  usePrivateMessagesStore.getState().upsert(targetId, message)
+  usePrivateMessagesStore.getState().upsert(chatId, message)
 }
 
 // Helper subscribe implementation for Session reconstruction
@@ -110,9 +115,7 @@ interface SessionsStoreActions {
   ) => () => void
 
   // Initialization
-  initializeSessionListeners: (
-    onEvent: (sessionId: string, event: MessageType) => void
-  ) => void
+  initializeSessionListeners: () => void
 
   // Utilities
   reset: () => void
@@ -148,7 +151,7 @@ export const useSessionsStore = create<SessionsStore>()(
 
           // Automatically set up event listener for the new session
           get().setSessionListener(sessionId, async (event) => {
-            await handleSessionEvent(get, sessionId, event)
+            await processSessionEvent(get, sessionId, event)
           })
         },
 
@@ -192,6 +195,7 @@ export const useSessionsStore = create<SessionsStore>()(
         updateSessionthrottled: throttledUpdateSession,
 
         sendMessage: async (sessionId: string, event: Partial<UnsignedEvent>) => {
+          console.log("sendMessage called for session", sessionId, "event:", event)
           const sessionData = get().sessions.get(sessionId)
           if (!sessionData) {
             throw new Error(`Session not found: ${sessionId}`)
@@ -231,21 +235,31 @@ export const useSessionsStore = create<SessionsStore>()(
 
           const {event: publishedEvent, innerEvent} = session.sendEvent(event)
 
-          // Optimistic update – show our own message immediately
+          // Process innerEvent to show message immediately
           if (innerEvent) {
-            const myPubKey = useUserStore.getState().publicKey
+            try {
+              const myPubKey = useUserStore.getState().publicKey
 
-            // Replace id with canonical id for all messages
-            innerEvent.id = await getCanonicalId(innerEvent)
+              // Replace id with canonical id for all messages
+              // Set pubkey before calculating canonical ID to ensure consistency
+              innerEvent.pubkey = myPubKey
+              innerEvent.id = await getCanonicalId(innerEvent)
 
-            // For our own messages, set the pubkey before routing
-            const messageToRoute = {
-              ...innerEvent,
-              pubkey: myPubKey,
-              reactions: {},
-            } as MessageType
+              // Route the message - SortedMap will handle deduplication automatically
+              const messageToRoute = {
+                ...innerEvent,
+                pubkey: myPubKey,
+                reactions: {},
+              } as MessageType
 
-            routeEventToStore(messageToRoute)
+              // Get the user we're chatting with from session data
+              const sessionData = get().sessions.get(sessionId)
+              if (sessionData) {
+                routeEventToStore(messageToRoute, sessionData.userPubKey, myPubKey)
+              }
+            } catch (error) {
+              console.error("Error processing innerEvent:", error)
+            }
           }
 
           try {
@@ -284,14 +298,8 @@ export const useSessionsStore = create<SessionsStore>()(
 
           // Set up new listener
           const unsubscribe = session.onEvent(async (event) => {
-            console.log("Session event received:", sessionId, event.kind)
-
-            // Replace id with canonical id immediately for all messages
-            event.id = await getCanonicalId(event)
-
+            // Just pass to the onEvent callback - canonical ID will be handled by processSessionEvent
             onEvent(event)
-            // Trigger persistence for this session
-            get().updateSession(sessionId)
           })
 
           const newListeners = new Map(get().sessionListeners)
@@ -322,9 +330,7 @@ export const useSessionsStore = create<SessionsStore>()(
           }
         },
 
-        initializeSessionListeners: (
-          onEvent: (sessionId: string, event: MessageType) => void
-        ) => {
+        initializeSessionListeners: () => {
           console.log("Initializing session listeners for all deserialized sessions...")
           const sessions = get().sessions
           let count = 0
@@ -349,7 +355,7 @@ export const useSessionsStore = create<SessionsStore>()(
 
                 // Set up listener that calls the provided onEvent callback
                 get().setSessionListener(sessionId, async (event) => {
-                  await onEvent(sessionId, event)
+                  await processSessionEvent(get, sessionId, event)
                 })
                 count++
               }
@@ -430,15 +436,43 @@ export const useSessionsStore = create<SessionsStore>()(
         if (state) {
           console.log("Sessions store rehydrated, wiring listeners for hydrated sessions")
           setTimeout(() => {
-            state.initializeSessionListeners(async (sessionId, event) => {
-              await handleSessionEvent(() => state, sessionId, event)
-            })
+            state.initializeSessionListeners()
           }, 50)
         }
       },
     }
   )
 )
+
+// Unified session event handler that processes all events
+const processSessionEvent = async (
+  get: () => SessionsStore,
+  sessionId: string,
+  event: MessageType
+) => {
+  // Get session data
+  const sessionData = get().sessions.get(sessionId)
+  if (!sessionData) {
+    console.warn("Session data not found for event processing:", sessionId)
+    return
+  }
+
+  // Set pubkey before calculating canonical ID to ensure consistency
+  event.pubkey = sessionData.userPubKey
+
+  // Replace id with canonical id immediately for all messages
+  try {
+    event.id = await getCanonicalId(event)
+  } catch (error) {
+    console.error("Error calculating canonical ID:", error)
+  }
+
+  // Now handle the event
+  await handleSessionEvent(get, sessionId, event)
+
+  // Trigger persistence for this session
+  get().updateSession(sessionId)
+}
 
 // Helper to process any session event consistently
 const handleSessionEvent = async (
@@ -454,8 +488,14 @@ const handleSessionEvent = async (
     return
   }
 
-  event.pubkey = sessionData.userPubKey
-  console.log("session event", event)
+  console.log(
+    "handleSessionEvent called for session",
+    sessionId,
+    "event ID:",
+    event.id,
+    "kind:",
+    event.kind
+  )
 
   // Handle group creation event (kind 40)
   if (event.kind === 40 && event.content) {
@@ -483,7 +523,8 @@ const handleSessionEvent = async (
     })
   }
 
-  routeEventToStore(event)
+  const ourPubKey = useUserStore.getState().publicKey
+  routeEventToStore(event, sessionData.userPubKey, ourPubKey)
 
   // --- Ensure UserRecord exists and session is referenced ---
   const {userPubKey, deviceId} = sessionData

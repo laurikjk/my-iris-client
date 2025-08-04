@@ -9,6 +9,7 @@ import {MessageType} from "../message/Message"
 import {useEffect, useState} from "react"
 import {useUserRecordsStore} from "@/stores/userRecords"
 import {useUserStore} from "@/stores/user"
+import {KIND_REACTION} from "@/utils/constants"
 
 const Chat = ({id}: {id: string}) => {
   // id is now userPubKey instead of sessionId
@@ -70,6 +71,25 @@ const Chat = ({id}: {id: string}) => {
     }
   }, [id, updateLastSeen])
 
+  const {sendToUser} = useUserRecordsStore()
+
+  const handleSendReaction = async (messageId: string, emoji: string) => {
+    const myPubKey = useUserStore.getState().publicKey
+    if (!myPubKey) return
+
+    const event = {
+      kind: KIND_REACTION,
+      content: emoji,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [
+        ["e", messageId],
+        ["ms", String(Date.now())],
+      ],
+    }
+
+    await sendToUser(id, event)
+  }
+
   if (!id) {
     return null
   }
@@ -77,7 +97,12 @@ const Chat = ({id}: {id: string}) => {
   return (
     <>
       <PrivateChatHeader id={id} messages={messages} />
-      <ChatContainer messages={messages} sessionId={id} onReply={setReplyingTo} />
+      <ChatContainer
+        messages={messages}
+        sessionId={id}
+        onReply={setReplyingTo}
+        onSendReaction={handleSendReaction}
+      />
       <MessageForm id={id} replyingTo={replyingTo} setReplyingTo={setReplyingTo} />
     </>
   )

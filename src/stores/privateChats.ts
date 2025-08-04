@@ -38,14 +38,10 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
           .sendToUser(userPubKey, event)
         // If recipient is not self, also send to self
         if (userPubKey !== myPubKey) {
-          // Add ['p', recipientPubKey] to event for self
-          const eventForSelf = {
-            ...event,
-            tags: [...(event.tags || []), ["p", userPubKey]],
-          }
+          // Send same event to self (no p tag needed)
           await Promise.all([
             recipientPromise,
-            useUserRecordsStore.getState().sendToUser(myPubKey, eventForSelf),
+            useUserRecordsStore.getState().sendToUser(myPubKey, event),
           ])
           return userPubKey
         } else {

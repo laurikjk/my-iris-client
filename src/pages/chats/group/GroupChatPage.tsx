@@ -41,12 +41,10 @@ const GroupChatPage = () => {
       ],
     }
 
-    // Send to all group members except self
-    await Promise.all(
-      group.members
-        .filter((pubkey: string) => pubkey !== myPubKey)
-        .map((pubkey: string) => sendToUser(pubkey, event))
-    )
+    // Send to all group members
+    // For ourselves, the optimistic update in sendMessage will handle display
+    // For others, we need to actually send the message
+    await Promise.all(group.members.map((pubkey: string) => sendToUser(pubkey, event)))
   }
 
   const handleSendReaction = async (messageId: string, emoji: string) => {
@@ -63,12 +61,8 @@ const GroupChatPage = () => {
       ],
     }
 
-    // Send reaction to all group members except self
-    await Promise.all(
-      group.members
-        .filter((pubkey: string) => pubkey !== myPubKey)
-        .map((pubkey: string) => sendToUser(pubkey, event))
-    )
+    // Send reaction to all group members including self for multi-device support
+    await Promise.all(group.members.map((pubkey: string) => sendToUser(pubkey, event)))
   }
 
   return (

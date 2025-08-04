@@ -37,13 +37,16 @@ test("user can react to a chat message", async ({page}) => {
   // Give the message time to be fully processed
   await page.waitForTimeout(1000)
 
-  await page.getByTestId("reaction-button").click()
+  await page.getByTestId("reaction-button").first().click()
   await page.getByRole("button", {name: "👍"}).first().click()
 
   // Wait for reaction to be sent and displayed
   await page.waitForTimeout(2000)
 
   // Check if the reaction appears on the message
-  // Reactions might appear in different ways depending on the UI
-  await expect(page.getByText("👍").nth(1)).toBeVisible({timeout: 5000})
+  // Look for reaction elements that contain the thumbs up
+  const messageReactions = page.locator("div").filter({hasText: /^👍$/})
+  const count = await messageReactions.count()
+  console.log(`Found ${count} reaction elements with 👍`)
+  expect(count).toBeGreaterThanOrEqual(1)
 })

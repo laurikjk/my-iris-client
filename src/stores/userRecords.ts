@@ -216,16 +216,20 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         if (!event.created_at) {
           event.created_at = Math.round(Date.now() / 1000)
         }
-        if (!event.tags?.some((tag) => tag[0] === "ms")) {
-          event.tags = [["ms", Date.now().toString()]]
+
+        // Initialize tags if not present
+        if (!event.tags) {
+          event.tags = []
         }
 
-        const ensurePTag = (ev: Partial<UnsignedEvent>) => {
-          if (!ev.tags) ev.tags = []
-          const hasP = ev.tags.some((t) => t[0] === "p")
-          if (!hasP) {
-            ev.tags.push(["p", userPubKey])
-          }
+        // Add ms tag if not present
+        if (!event.tags.some((tag) => tag[0] === "ms")) {
+          event.tags.push(["ms", Date.now().toString()])
+        }
+
+        // Add p tag if not present
+        if (!event.tags.some((tag) => tag[0] === "p")) {
+          event.tags.push(["p", userPubKey])
         }
 
         const fanOutToOwnDevices = async (sentVia: Set<string>) => {
@@ -238,9 +242,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             if (sentVia.has(device.activeSessionId)) continue
             try {
               const clone = JSON.parse(JSON.stringify(event)) as Partial<UnsignedEvent>
-              ensurePTag(clone)
               await get().sendMessage(device.activeSessionId, clone)
-              console.log(`Fanned-out message to own session ${device.activeSessionId}`)
             } catch (err) {
               console.warn(
                 `Failed to fan-out to own session ${device.activeSessionId}:`,
