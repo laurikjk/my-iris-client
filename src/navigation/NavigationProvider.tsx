@@ -129,7 +129,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
             const updatedStack = [...prevState.stack]
             updatedStack[urlPosition] = {
               ...updatedStack[urlPosition],
-              index: state.index
+              index: state.index,
             }
             return {
               stack: updatedStack,
@@ -211,7 +211,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
           component: null,
           state: options.state,
         }
-        
+
         // Insert at current position + 1, keeping any forward history
         newStack.splice(prevState.currentIndex + 1, 0, newItem)
 
@@ -249,7 +249,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
 
       // No cached item found, create new one
       const newIndex = ++stackIndexRef.current
-      
+
       // Remove forward history for non-stateful navigation
       const newStack = prevState.stack.slice(0, prevState.currentIndex + 1)
 

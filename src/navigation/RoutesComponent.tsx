@@ -1,6 +1,7 @@
-import React from "react"
+import React, {useContext} from "react"
 import {useLocation} from "./hooks"
 import {matchPath} from "./utils"
+import {RouteBaseContext} from "./Router"
 
 interface RouteProps {
   path: string
@@ -15,6 +16,7 @@ interface RoutesProps {
 
 export const Routes = ({children}: RoutesProps) => {
   const location = useLocation()
+  const parentBase = useContext(RouteBaseContext)
 
   // Extract routes from children
   const routes = React.Children.toArray(children).filter(
@@ -28,36 +30,35 @@ export const Routes = ({children}: RoutesProps) => {
 
     // Handle relative paths for nested routes
     let fullPath: string
+    let newBase = parentBase
 
     if (path.startsWith("/")) {
       // Absolute path
       fullPath = path
+      // Update base for wildcard routes
+      if (path.endsWith("/*")) {
+        newBase = path.slice(0, -2)
+      }
     } else {
-      // For nested routes like those in /settings/*, /chats/*
-      // We need to find the parent route path
-      const segments = location.pathname.split("/").filter(Boolean)
-
-      if (segments.length >= 1) {
-        const parentPath = "/" + segments[0]
-
-        if (path === "/" || path === "") {
-          // Root of nested route
-          fullPath = parentPath
-        } else if (path === "*") {
-          // Catch-all
-          fullPath = `${parentPath}/*`
-        } else {
-          // Nested path
-          fullPath = `${parentPath}/${path}`
-        }
+      // Relative path - use parent base
+      if (path === "/" || path === "") {
+        // Root of nested route - match exact base path
+        fullPath = parentBase || "/"
+      } else if (path === "*") {
+        // Catch-all
+        fullPath = parentBase ? `${parentBase}/*` : "/*"
       } else {
-        fullPath = `/${path}`
+        // Nested path
+        fullPath = parentBase ? `${parentBase}/${path}` : `/${path}`
       }
     }
 
     const match = matchPath(location.pathname, fullPath)
     if (match) {
-      return element
+      // If this route matches and contains nested routes, provide the base context
+      return (
+        <RouteBaseContext.Provider value={newBase}>{element}</RouteBaseContext.Provider>
+      )
     }
   }
 

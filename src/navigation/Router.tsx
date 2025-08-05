@@ -1,9 +1,12 @@
-import {Suspense} from "react"
+import {Suspense, createContext} from "react"
 import {useNavigation} from "./NavigationProvider"
 import {routes} from "./routes"
 import {matchPath} from "./utils"
 import {LoadingFallback} from "@/shared/components/LoadingFallback"
 import {RouteProvider} from "./RouteContext"
+
+// Export context for nested routes to use
+export const RouteBaseContext = createContext<string>("")
 
 export const Router = () => {
   const {stack, currentIndex} = useNavigation()
@@ -15,12 +18,17 @@ export const Router = () => {
         // Find matching route for this stack item
         let matchedRoute = null
         let params: Record<string, string> = {}
+        let basePath = ""
 
         for (const route of routes) {
           const match = matchPath(item.url, route.path)
           if (match) {
             matchedRoute = route
             params = match.params
+            // If route ends with /*, provide base path for nested routes
+            if (route.path.endsWith("/*")) {
+              basePath = route.path.slice(0, -2)
+            }
             break
           }
         }
@@ -40,13 +48,15 @@ export const Router = () => {
             }}
           >
             <RouteProvider params={params} url={item.url}>
-              <Suspense fallback={<LoadingFallback />}>
-                {RouteComponent ? (
-                  <RouteComponent {...params} />
-                ) : (
-                  <div>Page not found</div>
-                )}
-              </Suspense>
+              <RouteBaseContext.Provider value={basePath}>
+                <Suspense fallback={<LoadingFallback />}>
+                  {RouteComponent ? (
+                    <RouteComponent {...params} />
+                  ) : (
+                    <div>Page not found</div>
+                  )}
+                </Suspense>
+              </RouteBaseContext.Provider>
             </RouteProvider>
           </div>
         )
