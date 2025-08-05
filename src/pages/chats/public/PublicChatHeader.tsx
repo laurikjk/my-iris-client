@@ -4,7 +4,7 @@ import {RiEarthLine, RiMoreLine} from "@remixicon/react"
 import Header from "@/shared/components/header/Header"
 import Dropdown from "@/shared/components/ui/Dropdown"
 import ProxyImg from "@/shared/components/ProxyImg"
-import {Link, useNavigate} from "react-router"
+import {Link, useNavigate} from "@/navigation"
 import {useEffect, useState} from "react"
 
 interface PublicChatHeaderProps {

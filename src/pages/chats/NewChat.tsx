@@ -2,7 +2,7 @@ import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import {RiUserLine, RiTeamLine, RiEarthLine} from "@remixicon/react"
 import InstallPWAPrompt from "@/shared/components/InstallPWAPrompt"
 import PrivateChatCreation from "./private/PrivateChatCreation"
-import {Link, Routes, Route, useLocation} from "react-router"
+import {Link, useLocation} from "@/navigation"
 import PublicChatCreation from "./public/PublicChatCreation"
 import GroupChatCreation from "./group/GroupChatCreation"
 import Header from "@/shared/components/header/Header"
@@ -41,6 +41,21 @@ const TabSelector = () => {
 }
 
 const NewChat = () => {
+  const location = useLocation()
+
+  // Determine which component to show based on the path
+  let content = null
+  if (location.pathname === "/chats/new/public/create") {
+    content = <PublicChannelCreateStep />
+  } else if (location.pathname === "/chats/new/public") {
+    content = <PublicChatCreation />
+  } else if (location.pathname === "/chats/new/group") {
+    content = <GroupChatCreation />
+  } else {
+    // Default to private chat creation for /chats/new
+    content = <PrivateChatCreation />
+  }
+
   return (
     <>
       <Header title="New Chat">
@@ -54,12 +69,7 @@ const NewChat = () => {
       </Header>
       <NotificationPrompt />
       <TabSelector />
-      <Routes>
-        <Route path="/" element={<PrivateChatCreation />} />
-        <Route path="/public" element={<PublicChatCreation />} />
-        <Route path="/public/create" element={<PublicChannelCreateStep />} />
-        <Route path="/group" element={<GroupChatCreation />} />
-      </Routes>
+      {content}
       <InstallPWAPrompt />
     </>
   )

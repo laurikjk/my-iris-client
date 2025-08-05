@@ -1,4 +1,4 @@
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import {useEffect, useState, useMemo, memo, MutableRefObject, useRef} from "react"
 import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
 import {decode} from "blurhash"

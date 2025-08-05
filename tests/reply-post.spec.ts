@@ -9,11 +9,11 @@ test("user can view post details", async ({page}) => {
   await page.getByPlaceholder("What's on your mind?").fill(postContent)
   await page.getByRole("button", {name: "Publish"}).click()
 
-  await expect(page.getByText(postContent)).toBeVisible()
+  await expect(page.getByText(postContent).first()).toBeVisible()
 
   await page.getByText(postContent).click()
 
   await expect(page.url()).toContain("/note")
 
-  await expect(page.getByText(postContent)).toBeVisible()
+  await expect(page.getByText(postContent).first()).toBeVisible()
 })

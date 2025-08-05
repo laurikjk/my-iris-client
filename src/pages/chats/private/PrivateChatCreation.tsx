@@ -1,4 +1,4 @@
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import {useUserStore} from "@/stores/user"
 import DoubleRatchetInfo from "../group/components/DoubleRatchetInfo"
 import {DoubleRatchetUserSearch} from "../components/DoubleRatchetUserSearch"

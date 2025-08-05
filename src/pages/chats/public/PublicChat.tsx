@@ -4,7 +4,7 @@ import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "../utils/messageGrouping"
 import {shouldHideAuthor} from "@/utils/visibility"
-import {useNavigate, useParams} from "react-router"
+import {useNavigate, useParams} from "@/navigation"
 import PublicChatHeader from "./PublicChatHeader"
 import {useEffect, useState, useRef} from "react"
 import MessageForm from "../message/MessageForm"
@@ -18,7 +18,7 @@ let publicKey = useUserStore.getState().publicKey
 useUserStore.subscribe((state) => (publicKey = state.publicKey))
 
 const PublicChat = () => {
-  const {id} = useParams<{id: string}>()
+  const {id} = useParams() as {id: string}
   const navigate = useNavigate()
   const {publicChats, addOrRefreshChatById} = usePublicChatsStore()
   const [messages, setMessages] = useState<SortedMap<string, MessageType>>(

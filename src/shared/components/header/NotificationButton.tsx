@@ -1,6 +1,6 @@
 import UnseenNotificationsBadge from "./UnseenNotificationsBadge"
 import {usePublicKey} from "@/stores/user"
-import {NavLink} from "react-router"
+import {NavLink} from "@/navigation"
 import Icon from "../Icons/Icon"
 
 export default function NotificationButton() {

@@ -1,6 +1,6 @@
 import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
 import {getSubscriptionIcon} from "@/shared/utils/subscriptionIcons"
-import {Link} from "react-router"
+import {Link} from "@/navigation"
 
 interface SubscriberBadgeProps {
   className?: string

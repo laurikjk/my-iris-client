@@ -3,7 +3,7 @@ import {RiShareLine, RiChat1Line} from "@remixicon/react"
 import {UserRow} from "@/shared/components/user/UserRow"
 import Header from "@/shared/components/header/Header"
 import ProxyImg from "@/shared/components/ProxyImg"
-import {useParams, useNavigate} from "react-router"
+import {useParams, useNavigate} from "@/navigation"
 import {useEffect, useState} from "react"
 import {nip19} from "nostr-tools"
 

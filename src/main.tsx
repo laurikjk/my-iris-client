@@ -1,6 +1,6 @@
 import "@/index.css"
 
-import {RouterProvider} from "react-router"
+import {NavigationProvider, Router} from "@/navigation"
 import {useUserStore} from "./stores/user"
 import ReactDOM from "react-dom/client"
 
@@ -13,9 +13,9 @@ import {
   resetDeviceInvitesInitialization,
 } from "@/stores/privateChats"
 import {ndk} from "./utils/ndk"
-import {router} from "@/pages"
 import socialGraph from "./utils/socialGraph"
 import DebugManager from "./utils/DebugManager"
+import Layout from "@/shared/components/Layout"
 
 ndk()
 
@@ -47,7 +47,11 @@ document.documentElement.setAttribute(
 migrateUserState()
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <RouterProvider router={router} />
+  <NavigationProvider>
+    <Layout>
+      <Router />
+    </Layout>
+  </NavigationProvider>
 )
 
 // Subscribe to public key changes from the user store

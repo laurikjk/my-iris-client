@@ -4,7 +4,7 @@ import {useEffect, useState, lazy, Suspense, useMemo} from "react"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {PublicKey} from "@/shared/utils/PublicKey"
 import Icon from "@/shared/components/Icons/Icon"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import {UserRow} from "./UserRow"
 const QRScanner = lazy(() => import("../QRScanner"))
 

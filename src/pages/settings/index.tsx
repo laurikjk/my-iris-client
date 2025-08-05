@@ -1,5 +1,5 @@
 import SocialGraphSettings from "@/pages/settings/SocialGraphSettings"
-import {useLocation, Link, Routes, Route} from "react-router"
+import {useLocation, Link} from "@/navigation"
 import MediaServers from "@/pages/settings/Mediaservers.tsx"
 import {ProfileSettings} from "@/pages/settings/Profile.tsx"
 import NotificationSettings from "./NotificationSettings"
@@ -193,23 +193,44 @@ function Settings() {
       <div className={`flex-1 ${isSettingsRoot ? "hidden lg:block" : "block"}`}>
         <Header title="Settings" slideUp={false} />
         <div className="p-4 mx-4 md:p-8 rounded-lg bg-base-100 shadow">
-          <Routes>
-            <Route path="account" element={<Account />} />
-            <Route path="network" element={<Network />} />
-            <Route path="profile" element={<ProfileSettings />} />
-            <Route path="iris" element={<IrisSettings />} />
-            <Route path="content" element={<Content />} />
-            <Route path="wallet" element={<WalletSettings />} />
-            <Route path="backup" element={<Backup />} />
-            <Route path="appearance" element={<Appearance />} />
-            <Route path="mediaservers" element={<MediaServers />} />
-            <Route path="social-graph" element={<SocialGraphSettings />} />
-            <Route path="notifications" element={<NotificationSettings />} />
-            <Route path="privacy" element={<PrivacySettings />} />
-            <Route path="system" element={<SystemSettings />} />
-            <Route path="chat" element={<ChatSettings />} />
-            <Route path="/" element={<ProfileSettings />} />
-          </Routes>
+          {(() => {
+            // Determine which component to show based on the path
+            const pathSegments = location.pathname.split("/").filter(Boolean)
+            const settingsPath = pathSegments[1] || "" // After filtering, settings is at index 0, subpage at index 1
+
+            switch (settingsPath) {
+              case "account":
+                return <Account />
+              case "network":
+                return <Network />
+              case "profile":
+                return <ProfileSettings />
+              case "iris":
+                return <IrisSettings />
+              case "content":
+                return <Content />
+              case "wallet":
+                return <WalletSettings />
+              case "backup":
+                return <Backup />
+              case "appearance":
+                return <Appearance />
+              case "mediaservers":
+                return <MediaServers />
+              case "social-graph":
+                return <SocialGraphSettings />
+              case "notifications":
+                return <NotificationSettings />
+              case "privacy":
+                return <PrivacySettings />
+              case "system":
+                return <SystemSettings />
+              case "chat":
+                return <ChatSettings />
+              default:
+                return <ProfileSettings />
+            }
+          })()}
         </div>
       </div>
       <Helmet>

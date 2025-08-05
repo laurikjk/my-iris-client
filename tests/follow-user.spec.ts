@@ -7,8 +7,8 @@ test("can follow user by npub", async ({page}) => {
 
   await expect(page.url()).toMatch(/localhost:5173\/?$/)
 
-  // Find and fill the search input
-  const searchInput = page.getByPlaceholder("Search")
+  // Find and fill the search input - use first one
+  const searchInput = page.getByPlaceholder("Search").first()
   await searchInput.fill(
     "npub1g53mukxnjkcmr94fhryzkqutdz2ukq4ks0gvy5af25rgmwsl4ngq43drvk"
   )

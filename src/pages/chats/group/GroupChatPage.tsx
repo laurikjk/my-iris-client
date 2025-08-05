@@ -1,5 +1,5 @@
 import {useState} from "react"
-import {useParams} from "react-router"
+import {useParams} from "@/navigation"
 import {useGroupsStore} from "@/stores/groups"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useUserStore} from "@/stores/user"

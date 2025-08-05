@@ -1,7 +1,7 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import Markdown from "markdown-to-jsx"
 import ProxyImg from "../ProxyImg"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import {nip19} from "nostr-tools"
 
 interface LongFormProps {

@@ -20,8 +20,8 @@ test("can search for self and start a private chat via user search", async ({pag
   await page.getByRole("link", {name: /New Chat/}).click()
   await expect(page).toHaveURL(/\/chats\/new/)
 
-  // Wait for the search input to be visible
-  const searchInput = page.getByPlaceholder("Search for users")
+  // Wait for the search input to be visible (use first in case of duplicates)
+  const searchInput = page.getByPlaceholder("Search for users").first()
   await expect(searchInput).toBeVisible()
 
   // Search for self by username

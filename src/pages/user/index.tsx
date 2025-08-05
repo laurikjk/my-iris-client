@@ -1,11 +1,10 @@
-import {NavLink, Route, Routes, useLocation} from "react-router"
-import {useMemo, useState, useEffect} from "react"
+import {useMemo, useState, useEffect, useRef} from "react"
 import classNames from "classnames"
 
 import RightColumn from "@/shared/components/RightColumn"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
 import Feed from "@/shared/components/feed/Feed.tsx"
-import {type FeedConfig} from "@/stores/feed"
+import {type FeedConfig, useFeedStore} from "@/stores/feed"
 import {shouldHideAuthor} from "@/utils/visibility"
 import Widget from "@/shared/components/ui/Widget"
 import useFollows from "@/shared/hooks/useFollows"
@@ -34,7 +33,7 @@ const tabs: Tab[] = [
     path: "",
     getFeedConfig: (pubKey) => ({
       name: "Posts",
-      id: `posts-${pubKey}`,
+      id: `profile-posts`,
       hideReplies: true,
       showEventsByUnknownUsers: true,
       filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
@@ -45,7 +44,7 @@ const tabs: Tab[] = [
     path: "market",
     getFeedConfig: (pubKey) => ({
       name: "Market",
-      id: `market-${pubKey}`,
+      id: `profile-market`,
       showEventsByUnknownUsers: true,
       filter: {kinds: [KIND_CLASSIFIED], authors: [pubKey]},
       showRepliedTo: true,
@@ -56,7 +55,7 @@ const tabs: Tab[] = [
     path: "replies",
     getFeedConfig: (pubKey) => ({
       name: "Replies",
-      id: `replies-${pubKey}`,
+      id: `profile-replies`,
       showEventsByUnknownUsers: true,
       filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
       showRepliedTo: true,
@@ -67,7 +66,7 @@ const tabs: Tab[] = [
     path: "media",
     getFeedConfig: (pubKey) => ({
       name: "Media",
-      id: `media-${pubKey}`,
+      id: `profile-media`,
       requiresMedia: true,
       showEventsByUnknownUsers: true,
       filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
@@ -78,7 +77,7 @@ const tabs: Tab[] = [
     path: "likes",
     getFeedConfig: (pubKey) => ({
       name: "Likes",
-      id: `likes-${pubKey}`,
+      id: `profile-likes`,
       showEventsByUnknownUsers: true,
       filter: {kinds: [KIND_REACTION], authors: [pubKey]},
     }),
@@ -88,7 +87,7 @@ const tabs: Tab[] = [
     path: "you",
     getFeedConfig: (pubKey, myPubKey) => ({
       name: "You",
-      id: `you-${pubKey}`,
+      id: `profile-you`,
       showEventsByUnknownUsers: true,
       filter: {
         kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_REACTION],
@@ -139,21 +138,23 @@ function UserPage({pubKey}: {pubKey: string}) {
     [pubKey]
   )
   const myPubKey = useUserStore((state) => state.publicKey)
+  const {loadFeedConfig} = useFeedStore()
   const follows = useFollows(pubKey)
   const hasMarketEvents = useHasMarketEvents(pubKeyHex)
+  const [activeTab, setActiveTab] = useState("")
+  const [feedMinHeight, setFeedMinHeight] = useState<number>(0)
+  const feedContainerRef = useRef<HTMLDivElement>(null)
   const filteredFollows = useMemo(() => {
     const filtered = myPubKey
       ? follows.filter((follow) => socialGraph().getFollowDistance(follow) > 1)
       : follows
     return filtered.sort(() => Math.random() - 0.5) // Randomize order
   }, [follows])
-  const location = useLocation()
-  const activeProfile = location.pathname.split("/")[1] || ""
 
   const visibleTabs = tabs.filter(
     (tab) =>
       (tab.path !== "you" || (myPubKey && !shouldHideAuthor(pubKeyHex))) &&
-      (tab.path !== "market" || hasMarketEvents || location.pathname.includes("/market"))
+      (tab.path !== "market" || hasMarketEvents || activeTab === "market")
   )
 
   return (
@@ -164,35 +165,61 @@ function UserPage({pubKey}: {pubKey: string}) {
           <div className="flex w-full flex-1 mt-2 flex flex-col gap-4">
             <div className="px-4 flex gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
               {visibleTabs.map((tab) => (
-                <NavLink
+                <button
                   key={tab.path}
-                  to={`/${activeProfile}${tab.path ? `/${tab.path}` : ""}`}
-                  end={tab.path === ""}
-                  replace={true}
-                  preventScrollReset={true}
-                  className={({isActive}) =>
-                    classNames("btn btn-sm", isActive ? "btn-primary" : "btn-neutral")
-                  }
+                  onClick={(e) => {
+                    e.preventDefault()
+                    // Capture current feed height before switching
+                    if (feedContainerRef.current) {
+                      const currentHeight = feedContainerRef.current.offsetHeight
+                      // Set min-height to at least maintain viewport visibility
+                      const viewportHeight = window.innerHeight
+                      const scrollY = window.scrollY
+                      const feedTop =
+                        feedContainerRef.current.getBoundingClientRect().top + scrollY
+                      const visibleHeight = Math.min(
+                        currentHeight,
+                        viewportHeight - (feedTop - scrollY)
+                      )
+                      setFeedMinHeight(Math.max(visibleHeight, 400)) // At least 400px
+                    }
+                    setActiveTab(tab.path)
+                    // Clear min-height after render
+                    setTimeout(() => setFeedMinHeight(0), 100)
+                  }}
+                  className={classNames(
+                    "btn btn-sm",
+                    activeTab === tab.path ? "btn-primary" : "btn-neutral"
+                  )}
                 >
                   {tab.name}
-                </NavLink>
+                </button>
               ))}
             </div>
-            <Routes>
-              {visibleTabs.map((tab) => (
-                <Route
-                  key={tab.path}
-                  path={tab.path}
-                  element={
-                    <Feed
-                      key={`feed-${pubKeyHex}-${tab.path}`}
-                      feedConfig={tab.getFeedConfig(pubKeyHex, myPubKey)}
-                      borderTopFirst={true}
-                    />
-                  }
-                />
-              ))}
-            </Routes>
+            {(() => {
+              const activeTabConfig =
+                visibleTabs.find((tab) => tab.path === activeTab) || visibleTabs[0]
+
+              const baseFeedConfig = activeTabConfig.getFeedConfig(pubKeyHex, myPubKey)
+              const savedConfig = loadFeedConfig(baseFeedConfig.id)
+              const feedConfig = {
+                ...baseFeedConfig,
+                displayAs: savedConfig?.displayAs,
+              }
+
+              return (
+                <div
+                  ref={feedContainerRef}
+                  style={{minHeight: feedMinHeight ? `${feedMinHeight}px` : undefined}}
+                >
+                  <Feed
+                    key={`feed-${pubKeyHex}-${activeTabConfig.path}`}
+                    feedConfig={feedConfig}
+                    borderTopFirst={true}
+                  />
+                </div>
+              )
+            })()}
           </div>
         </div>
       </div>

@@ -7,7 +7,7 @@ import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {useUserRecordsStore} from "@/stores/userRecords"
 import {MessageType} from "../message/Message"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import {useState} from "react"
 interface PrivateChatHeaderProps {
   id: string

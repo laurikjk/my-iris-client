@@ -1,5 +1,5 @@
 import {useState, MouseEvent} from "react"
-import {Link} from "react-router"
+import {Link} from "@/navigation"
 import type {NDKRelay} from "@nostr-dev-kit/ndk"
 
 export default function RelayList({relays}: {relays: NDKRelay[]}) {

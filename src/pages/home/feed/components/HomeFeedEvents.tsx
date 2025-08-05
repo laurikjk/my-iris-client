@@ -4,7 +4,6 @@ import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButto
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
 import {useRefreshRouteSignal} from "@/stores/notifications"
-import {feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import useFollows from "@/shared/hooks/useFollows"
@@ -109,7 +108,7 @@ function HomeFeedEvents() {
     if (confirm("Reset all feeds to defaults?")) {
       console.log("User confirmed reset")
       setEditMode(false)
-      feedCache.clear()
+      // Stack navigation will handle caching
       resetAllFeedsToDefaults()
       console.log("Reset function called")
     }
@@ -121,10 +120,10 @@ function HomeFeedEvents() {
 
   useEffect(() => {
     if (activeFeed !== "unseen") {
-      feedCache.delete("unseen")
+      // Stack navigation will handle caching
     }
     if (activeFeed === "unseen" && refreshSignal > openedAt) {
-      feedCache.delete("unseen")
+      // Stack navigation will handle caching
     }
   }, [activeFeedItem, openedAt, refreshSignal, activeFeed])
 

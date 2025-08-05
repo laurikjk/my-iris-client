@@ -17,8 +17,8 @@ async function setupChatWithSelf(page, username) {
   await page.getByRole("link", {name: /New Chat/}).click()
   await expect(page).toHaveURL(/\/chats\/new/)
 
-  // Search for self by username
-  const searchInput = page.getByPlaceholder("Search for users")
+  // Search for self by username (use first in case of duplicates)
+  const searchInput = page.getByPlaceholder("Search for users").first()
   await expect(searchInput).toBeVisible()
   await searchInput.fill(username)
   await page.waitForTimeout(1000)

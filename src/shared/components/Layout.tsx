@@ -1,4 +1,4 @@
-import {Outlet, useLocation, useNavigate, useNavigationType} from "react-router"
+import {useLocation, useNavigate} from "@/navigation"
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import NavSideBar from "@/shared/components/nav/NavSideBar"
@@ -12,7 +12,7 @@ import {trackEvent} from "@/utils/IrisAPI"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useUIStore} from "@/stores/ui"
 import {Helmet} from "react-helmet"
-import {useEffect} from "react"
+import {useEffect, ReactNode} from "react"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -21,7 +21,7 @@ interface ServiceWorkerMessage {
   url: string
 }
 
-const Layout = () => {
+const Layout = ({children}: {children: ReactNode}) => {
   const newPostOpen = useUIStore((state) => state.newPostOpen)
   const setNewPostOpen = useUIStore((state) => state.setNewPostOpen)
   const {privacy} = useSettingsStore()
@@ -31,7 +31,6 @@ const Layout = () => {
   const activeProviderType = useWalletProviderStore((state) => state.activeProviderType)
   const initializeProviders = useWalletProviderStore((state) => state.initializeProviders)
   const navigate = useNavigate()
-  const navigationType = useNavigationType()
   const location = useLocation()
 
   socialGraphLoaded.then() // just make sure we start loading social the graph
@@ -49,9 +48,7 @@ const Layout = () => {
   }, [navigate, goToNotifications])
 
   useEffect(() => {
-    if (navigationType === "PUSH") {
-      window.scrollTo(0, 0)
-    }
+    window.scrollTo(0, 0)
 
     const isMessagesRoute = location.pathname.startsWith("/chats/")
     const isSearchRoute = location.pathname.startsWith("/search/")
@@ -63,7 +60,7 @@ const Layout = () => {
     ) {
       trackEvent("pageview")
     }
-  }, [location, navigationType])
+  }, [location, privacy.enableAnalytics])
 
   useEffect(() => {
     const handleServiceWorkerMessage = (event: MessageEvent<ServiceWorkerMessage>) => {
@@ -118,7 +115,7 @@ const Layout = () => {
         <NavSideBar />
         <div className="relative flex-1 min-h-screen py-16 md:py-0 overscroll-none mt-[env(safe-area-inset-top)] mb-[env(safe-area-inset-bottom)]">
           <ErrorBoundary>
-            <Outlet />
+            {children}
             {activeProviderType !== "disabled" && (
               <iframe
                 id="cashu-wallet"

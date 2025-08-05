@@ -3,7 +3,7 @@ import useProfile from "@/shared/hooks/useProfile"
 import {useEffect, useMemo, useState} from "react"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
-import {Link} from "react-router"
+import {Link} from "@/navigation"
 import {ndk} from "@/utils/ndk"
 import ProxyImg from "@/shared/components/ProxyImg"
 

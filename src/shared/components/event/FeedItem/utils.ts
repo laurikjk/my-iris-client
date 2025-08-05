@@ -1,5 +1,5 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import {nip19} from "nostr-tools"
 import {MouseEvent} from "react"
 import {KIND_WALLET_CONNECT, KIND_APP_DATA} from "@/utils/constants"

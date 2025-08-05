@@ -1,7 +1,7 @@
 import {useEffect, useState, useCallback} from "react"
 import {RiMoreLine} from "@remixicon/react"
 import classNames from "classnames"
-import {Link} from "react-router"
+import {Link} from "@/navigation"
 import {nip19} from "nostr-tools"
 
 import RelativeTime from "@/shared/components/event/RelativeTime.tsx"

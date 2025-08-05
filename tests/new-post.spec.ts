@@ -15,6 +15,6 @@ test("user can create a new post", async ({page}) => {
   // Click publish
   await page.getByRole("button", {name: "Publish"}).click()
 
-  // Verify we're redirected to the new post page and content is visible
-  await expect(page.getByText(postContent)).toBeVisible()
+  // Verify we're redirected to the new post page and content is visible (use first in case of duplicates)
+  await expect(page.getByText(postContent).first()).toBeVisible()
 })
