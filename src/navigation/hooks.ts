@@ -1,6 +1,7 @@
-import {useCallback} from "react"
+import {useCallback, useContext} from "react"
 import {useNavigation} from "./NavigationProvider"
 import {NavigateOptions} from "./types"
+import {RouteContext} from "./RouteContext"
 
 export function useNavigate() {
   const {navigate, replace} = useNavigation()
@@ -35,6 +36,10 @@ export function useLocation() {
 }
 
 export function useParams(): Record<string, string> {
+  // First check if we're in a RouteContext (stack item)
+  const routeContext = useContext(RouteContext)
   const {currentParams} = useNavigation()
-  return currentParams
+
+  // Use RouteContext params if available, otherwise use navigation params
+  return routeContext?.params || currentParams
 }
