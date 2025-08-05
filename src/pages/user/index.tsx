@@ -1,4 +1,3 @@
-import {NavLink, useLocation} from "@/navigation"
 import {useMemo, useState, useEffect} from "react"
 import classNames from "classnames"
 
@@ -148,13 +147,12 @@ function UserPage({pubKey}: {pubKey: string}) {
       : follows
     return filtered.sort(() => Math.random() - 0.5) // Randomize order
   }, [follows])
-  const location = useLocation()
-  const activeProfile = location.pathname.split("/")[1] || ""
+  const [activeTab, setActiveTab] = useState("")
 
   const visibleTabs = tabs.filter(
     (tab) =>
       (tab.path !== "you" || (myPubKey && !shouldHideAuthor(pubKeyHex))) &&
-      (tab.path !== "market" || hasMarketEvents || location.pathname.includes("/market"))
+      (tab.path !== "market" || hasMarketEvents || activeTab === "market")
   )
 
   return (
@@ -165,29 +163,26 @@ function UserPage({pubKey}: {pubKey: string}) {
           <div className="flex w-full flex-1 mt-2 flex flex-col gap-4">
             <div className="px-4 flex gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
               {visibleTabs.map((tab) => (
-                <NavLink
+                <button
                   key={tab.path}
-                  to={`/${activeProfile}${tab.path ? `/${tab.path}` : ""}`}
-                  end={tab.path === ""}
-                  replace={true}
-                  preventScrollReset={true}
-                  className={({isActive}) =>
-                    classNames("btn btn-sm", isActive ? "btn-primary" : "btn-neutral")
-                  }
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setActiveTab(tab.path)
+                  }}
+                  className={classNames(
+                    "btn btn-sm",
+                    activeTab === tab.path ? "btn-primary" : "btn-neutral"
+                  )}
                 >
                   {tab.name}
-                </NavLink>
+                </button>
               ))}
             </div>
             {(() => {
-              // Determine which tab to show based on the path
-              const pathSegments = location.pathname.split("/").filter(Boolean)
-              const tabPath = pathSegments[1] || "" // After filtering, profile name is at 0, tab is at 1
+              const activeTabConfig =
+                visibleTabs.find((tab) => tab.path === activeTab) || visibleTabs[0]
 
-              const activeTab =
-                visibleTabs.find((tab) => tab.path === tabPath) || visibleTabs[0]
-
-              const baseFeedConfig = activeTab.getFeedConfig(pubKeyHex, myPubKey)
+              const baseFeedConfig = activeTabConfig.getFeedConfig(pubKeyHex, myPubKey)
               const savedConfig = loadFeedConfig(baseFeedConfig.id)
               const feedConfig = {
                 ...baseFeedConfig,
@@ -196,7 +191,7 @@ function UserPage({pubKey}: {pubKey: string}) {
 
               return (
                 <Feed
-                  key={`feed-${pubKeyHex}-${activeTab.path}`}
+                  key={`feed-${pubKeyHex}-${activeTabConfig.path}`}
                   feedConfig={feedConfig}
                   borderTopFirst={true}
                 />
