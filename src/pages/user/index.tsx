@@ -34,7 +34,7 @@ const tabs: Tab[] = [
     path: "",
     getFeedConfig: (pubKey) => ({
       name: "Posts",
-      id: `posts-${pubKey}`,
+      id: `profile-posts`,
       hideReplies: true,
       showEventsByUnknownUsers: true,
       filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
@@ -45,7 +45,7 @@ const tabs: Tab[] = [
     path: "market",
     getFeedConfig: (pubKey) => ({
       name: "Market",
-      id: `market-${pubKey}`,
+      id: `profile-market`,
       showEventsByUnknownUsers: true,
       filter: {kinds: [KIND_CLASSIFIED], authors: [pubKey]},
       showRepliedTo: true,
@@ -56,7 +56,7 @@ const tabs: Tab[] = [
     path: "replies",
     getFeedConfig: (pubKey) => ({
       name: "Replies",
-      id: `replies-${pubKey}`,
+      id: `profile-replies`,
       showEventsByUnknownUsers: true,
       filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
       showRepliedTo: true,
@@ -67,7 +67,7 @@ const tabs: Tab[] = [
     path: "media",
     getFeedConfig: (pubKey) => ({
       name: "Media",
-      id: `media-${pubKey}`,
+      id: `profile-media`,
       requiresMedia: true,
       showEventsByUnknownUsers: true,
       filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
@@ -78,7 +78,7 @@ const tabs: Tab[] = [
     path: "likes",
     getFeedConfig: (pubKey) => ({
       name: "Likes",
-      id: `likes-${pubKey}`,
+      id: `profile-likes`,
       showEventsByUnknownUsers: true,
       filter: {kinds: [KIND_REACTION], authors: [pubKey]},
     }),
@@ -88,7 +88,7 @@ const tabs: Tab[] = [
     path: "you",
     getFeedConfig: (pubKey, myPubKey) => ({
       name: "You",
-      id: `you-${pubKey}`,
+      id: `profile-you`,
       showEventsByUnknownUsers: true,
       filter: {
         kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_REACTION],

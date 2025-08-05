@@ -114,11 +114,7 @@ const Feed = memo(function Feed({
 
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
 
-  const {
-    feedDisplayAs: persistedDisplayAs,
-    setFeedDisplayAs,
-    saveFeedConfig,
-  } = useFeedStore()
+  const {feedDisplayAs: persistedDisplayAs, saveFeedConfig} = useFeedStore()
 
   // Use per-feed displayAs if available, otherwise use persisted value when selector is shown
   const displayAs = showDisplayAsSelector
@@ -126,11 +122,9 @@ const Feed = memo(function Feed({
     : initialDisplayAs
 
   const setDisplayAs = (value: "list" | "grid") => {
-    // Save displayAs to the specific feed config
+    // Save displayAs to the specific feed config only
     saveFeedConfig(feedConfig.id, {displayAs: value})
-
-    // Also update global setting for consistency
-    setFeedDisplayAs(value)
+    onDisplayAsChange?.(value)
   }
 
   const {
