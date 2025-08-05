@@ -5,46 +5,40 @@ import {matchPath} from "./utils"
 import {LoadingFallback} from "@/shared/components/LoadingFallback"
 
 export const Router = () => {
-  const {currentPath, stack} = useNavigation()
-  const currentStackItem = stack[stack.length - 1]
+  const {stack, currentIndex} = useNavigation()
 
-  // Find matching route
-  let matchedRoute = null
-  let params: Record<string, string> = {}
+  // Render all stack items but only display the current one
+  return (
+    <>
+      {stack.map((item, index) => {
+        // Find matching route for this stack item
+        let matchedRoute = null
+        let params: Record<string, string> = {}
 
-  for (const route of routes) {
-    const match = matchPath(currentPath, route.path)
-    if (match) {
-      matchedRoute = route
-      params = match.params
-      break
-    }
-  }
+        for (const route of routes) {
+          const match = matchPath(item.url, route.path)
+          if (match) {
+            matchedRoute = route
+            params = match.params
+            break
+          }
+        }
 
-  if (!matchedRoute) {
-    // 404 fallback
-    return <div>Page not found</div>
-  }
+        const RouteComponent = matchedRoute?.component
 
-  // Store params in stack item
-  if (currentStackItem && !currentStackItem.params) {
-    currentStackItem.params = params
-  }
-
-  // Check if we have a cached component for this path
-  let component = currentStackItem?.component
-
-  if (!component) {
-    // Create new component instance
-    const RouteComponent = matchedRoute.component
-    component = <RouteComponent {...params} />
-
-    // Cache the component in the stack item
-    if (currentStackItem) {
-      currentStackItem.component = component
-    }
-  }
-
-  // Render the component with suspense for lazy loaded routes
-  return <Suspense fallback={<LoadingFallback />}>{component}</Suspense>
+        return (
+          <div
+            key={`route-${item.index}`} // Stable key based on stack index
+            style={{
+              display: index === currentIndex ? "block" : "none",
+            }}
+          >
+            <Suspense fallback={<LoadingFallback />}>
+              {RouteComponent ? <RouteComponent {...params} /> : <div>Page not found</div>}
+            </Suspense>
+          </div>
+        )
+      })}
+    </>
+  )
 }

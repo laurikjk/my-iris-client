@@ -33,7 +33,12 @@ function Messages() {
           <Route path="new/*" element={<NewChat />} />
           <Route
             path="chat"
-            element={<PrivateChat key={location.state?.id as string} id={location.state?.id as string} />}
+            element={
+              <PrivateChat
+                key={location.state?.id as string}
+                id={location.state?.id as string}
+              />
+            }
           />
           <Route path="group/*" element={<GroupGroupRoutes />} />
           <Route path=":id/details" element={<PublicChatDetails />} />

@@ -12,6 +12,7 @@ export type NavigationContextType = {
   currentPath: string
   currentParams: Record<string, string>
   stack: StackItem[]
+  currentIndex: number
   navigate: (path: string, options?: NavigateOptions) => void
   goBack: () => void
   goForward: () => void

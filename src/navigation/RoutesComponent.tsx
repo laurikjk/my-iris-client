@@ -35,11 +35,11 @@ export const Routes = ({children}: RoutesProps) => {
     } else {
       // For nested routes like those in /settings/*, /chats/*
       // We need to find the parent route path
-      const segments = location.pathname.split('/').filter(Boolean)
-      
+      const segments = location.pathname.split("/").filter(Boolean)
+
       if (segments.length >= 1) {
-        const parentPath = '/' + segments[0]
-        
+        const parentPath = "/" + segments[0]
+
         if (path === "/" || path === "") {
           // Root of nested route
           fullPath = parentPath
