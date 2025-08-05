@@ -14,98 +14,97 @@ const CLOUDFLARE_CSAM_MESSAGE = "Flagged as CSAM by Cloudflare. See explanation 
 
 export default function NostrLinkHandler() {
   const {link} = useParams()
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>()
-  const [pubkey, setPubkey] = useState<string>()
-  const [naddrData, setNaddrData] = useState<{
-    pubkey: string
-    kind: number
-    identifier: string
-  }>()
 
   const isProfile = link?.startsWith("npub") || link?.startsWith("nprofile")
   const isNote = link?.startsWith("note") || link?.startsWith("nevent")
   const isAddress = link?.startsWith("naddr")
 
+  // Decode synchronously to avoid loading state
+  let pubkey: string | undefined
+  let naddrData: {pubkey: string; kind: number; identifier: string} | undefined
+  let needsAsyncResolution = false
+
+  try {
+    if (link) {
+      if (isProfile) {
+        const decoded = nip19.decode(link)
+        if (
+          typeof decoded.data === "object" &&
+          decoded.data !== null &&
+          "pubkey" in decoded.data
+        ) {
+          pubkey = decoded.data.pubkey
+        } else if (typeof decoded.data === "string" && decoded.data.length === 64) {
+          pubkey = decoded.data
+        }
+      } else if (isAddress) {
+        const decoded = nip19.decode(link)
+        naddrData = decoded.data as {pubkey: string; kind: number; identifier: string}
+      } else if (!isNote && link.includes("@")) {
+        // This needs async resolution
+        needsAsyncResolution = true
+      }
+    }
+  } catch (err) {
+    console.error("Decode error:", err)
+  }
+
+  const [asyncPubkey, setAsyncPubkey] = useState<string>()
+  const [loading, setLoading] = useState(needsAsyncResolution)
+
   useEffect(() => {
-    setLoading(true)
+    if (!needsAsyncResolution || !link) return
+
     setError(undefined)
-    setPubkey(undefined)
-    setNaddrData(undefined)
 
     const resolveLink = async () => {
-      if (!link) {
-        setLoading(false)
-        return
-      }
-
       try {
-        if (isProfile) {
-          const decoded = nip19.decode(link)
-          if (
-            typeof decoded.data === "object" &&
-            decoded.data !== null &&
-            "pubkey" in decoded.data
-          ) {
-            setPubkey(decoded.data.pubkey)
-          } else if (typeof decoded.data === "string" && decoded.data.length === 64) {
-            setPubkey(decoded.data)
-          } else {
-            setLoading(false)
-            return
-          }
-        } else if (isAddress) {
-          const decoded = nip19.decode(link)
-          const data = decoded.data as {pubkey: string; kind: number; identifier: string}
-          setNaddrData(data)
-        } else if (link.includes("@") || !isNote) {
-          // Try exact match first
-          let resolved = await nip05.queryProfile(link)
+        // Try exact match first
+        let resolved = await nip05.queryProfile(link)
 
-          // If not found and doesn't include @iris.to, try with @iris.to
-          if (!resolved && !link.includes("@iris.to")) {
-            const withIris = `${link}@iris.to`
-            resolved = await nip05.queryProfile(withIris)
-          }
+        // If not found and doesn't include @iris.to, try with @iris.to
+        if (!resolved && !link.includes("@iris.to")) {
+          const withIris = `${link}@iris.to`
+          resolved = await nip05.queryProfile(withIris)
+        }
 
-          if (!resolved) {
-            setLoading(false)
-            return
-          }
-          setPubkey(resolved.pubkey)
-          setLoading(false)
-          return
+        if (resolved) {
+          setAsyncPubkey(resolved.pubkey)
         }
       } catch (err) {
         console.error("Resolution error:", err)
+      } finally {
         setLoading(false)
-        return
       }
-      setLoading(false)
     }
 
     resolveLink()
-  }, [link])
+  }, [link, needsAsyncResolution])
+
+  // Use either sync or async pubkey
+  const finalPubkey = pubkey || asyncPubkey
 
   useEffect(() => {
-    if (pubkey && (isProfile || !isNote)) {
-      const hash = bytesToHex(sha256(hexToBytes(pubkey)))
+    if (finalPubkey && (isProfile || !isNote)) {
+      const hash = bytesToHex(sha256(hexToBytes(finalPubkey)))
       if (CLOUDFLARE_CSAM_FLAGGED.includes(hash)) {
         setError(`${CLOUDFLARE_CSAM_MESSAGE} /${CLOUDFLARE_CSAM_EXPLANATION_NOTE}`)
       }
     }
-  }, [pubkey, isProfile, isNote])
+  }, [finalPubkey, isProfile, isNote])
+
+  // Determine which content to render
+  let content = null
 
   if (loading) {
-    return (
+    content = (
       <div className="flex justify-center items-center min-h-screen">
         <div className="loading loading-spinner loading-lg" />
       </div>
     )
-  }
-
-  if (error) {
-    return (
+  } else if (error) {
+    content = (
       <section className="hero min-h-screen bg-base-200">
         <div className="hero-content text-center">
           <div className="max-w-md">
@@ -129,19 +128,16 @@ export default function NostrLinkHandler() {
         </div>
       </section>
     )
+  } else if ((isProfile || !isNote) && finalPubkey) {
+    content = <ProfilePage pubKey={finalPubkey} />
+  } else if (isNote) {
+    content = <ThreadPage id={link!} />
+  } else if (isAddress && naddrData) {
+    content = <ThreadPage id={link!} isNaddr={true} naddrData={naddrData} />
+  } else {
+    content = <Page404 />
   }
 
-  if ((isProfile || !isNote) && pubkey) {
-    return <ProfilePage pubKey={pubkey} />
-  }
-
-  if (isNote) {
-    return <ThreadPage id={link!} />
-  }
-
-  if (isAddress && naddrData) {
-    return <ThreadPage id={link!} isNaddr={true} naddrData={naddrData} />
-  }
-
-  return <Page404 />
+  // Keep the same root structure to prevent remounting
+  return <div className="min-h-screen">{content}</div>
 }

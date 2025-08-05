@@ -26,5 +26,11 @@ export const routes: RouteDefinition[] = [
   {path: "/search/:query", component: SearchPage},
   {path: "/relay/:url?", component: RelayPage},
   {path: "/about", component: AboutPage},
+  // Place specific patterns before the catch-all
+  {path: "/npub:link", component: NostrLinkHandler},
+  {path: "/nprofile:link", component: NostrLinkHandler},
+  {path: "/note:link", component: NostrLinkHandler},
+  {path: "/nevent:link", component: NostrLinkHandler},
+  {path: "/naddr:link", component: NostrLinkHandler},
   {path: "/:link", component: NostrLinkHandler},
 ]

@@ -34,7 +34,11 @@ export const Router = () => {
             }}
           >
             <Suspense fallback={<LoadingFallback />}>
-              {RouteComponent ? <RouteComponent {...params} /> : <div>Page not found</div>}
+              {RouteComponent ? (
+                <RouteComponent {...params} />
+              ) : (
+                <div>Page not found</div>
+              )}
             </Suspense>
           </div>
         )
