@@ -79,8 +79,21 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
       setNavState((prevState) => {
         currentUrlRef.current = newUrl
 
-        // If we don't have state, create a simple entry
+        // If we don't have state, try to find existing item by URL
         if (!state || typeof state.index !== "number") {
+          // Look for existing item with this URL
+          const existingIndex = prevState.stack.findIndex(
+            (item) => item.url === newUrl && !item.state
+          )
+
+          if (existingIndex !== -1) {
+            return {
+              ...prevState,
+              currentIndex: existingIndex,
+            }
+          }
+
+          // Create new entry if not found
           return {
             stack: [
               {
@@ -93,14 +106,35 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
           }
         }
 
-        // Find the item in our stack
+        // Find the item in our stack by index
         const position = prevState.stack.findIndex((item) => item.index === state.index)
 
         if (position !== -1) {
-          // Found in stack - update current index
+          // Found in stack - just update current index
           return {
             ...prevState,
             currentIndex: position,
+          }
+        }
+
+        // Not found by index - try to find by URL for non-stateful routes
+        if (!state.state) {
+          const urlPosition = prevState.stack.findIndex(
+            (item) => item.url === newUrl && !item.state
+          )
+
+          if (urlPosition !== -1) {
+            // Found by URL, update the index to match browser state
+            // Create a new stack array to avoid mutation
+            const updatedStack = [...prevState.stack]
+            updatedStack[urlPosition] = {
+              ...updatedStack[urlPosition],
+              index: state.index
+            }
+            return {
+              stack: updatedStack,
+              currentIndex: urlPosition,
+            }
           }
         }
 
@@ -166,8 +200,10 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
     setNavState((prevState) => {
       // If state is provided, always create a new stack item (no caching)
       if (options?.state) {
+        // Don't remove forward history for stateful navigation
+        // This preserves cached components
         const newIndex = ++stackIndexRef.current
-        const newStack = prevState.stack.slice(0, prevState.currentIndex + 1)
+        const newStack = [...prevState.stack]
 
         const newItem: StackItem = {
           index: newIndex,
@@ -175,7 +211,9 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
           component: null,
           state: options.state,
         }
-        newStack.push(newItem)
+        
+        // Insert at current position + 1, keeping any forward history
+        newStack.splice(prevState.currentIndex + 1, 0, newItem)
 
         window.history.pushState(
           {index: newIndex, url: path, state: options.state},
@@ -186,7 +224,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
 
         return {
           stack: newStack,
-          currentIndex: newStack.length - 1,
+          currentIndex: prevState.currentIndex + 1,
         }
       }
 
@@ -211,8 +249,8 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
 
       // No cached item found, create new one
       const newIndex = ++stackIndexRef.current
-
-      // Remove any forward history
+      
+      // Remove forward history for non-stateful navigation
       const newStack = prevState.stack.slice(0, prevState.currentIndex + 1)
 
       // Add new item with URL as implicit cache key
