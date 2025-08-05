@@ -69,7 +69,9 @@ export const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(
 
     const isActive = end
       ? currentPath === to
-      : currentPath.startsWith(to === "/" ? "/" : to)
+      : to === "/"
+        ? currentPath === "/"
+        : currentPath === to || currentPath.startsWith(to + "/")
 
     const computedClassName =
       typeof className === "function" ? className({isActive}) : className

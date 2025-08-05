@@ -26,10 +26,12 @@ export const Router = () => {
         }
 
         const RouteComponent = matchedRoute?.component
-        
+
         // Generate a stable key based on the route path pattern, not the actual URL
         // This ensures the same component instance is reused for the same route
-        const routeKey = matchedRoute ? `${item.index}-${matchedRoute.path}` : `${item.index}-404`
+        const routeKey = matchedRoute
+          ? `${item.index}-${matchedRoute.path}`
+          : `${item.index}-404`
 
         return (
           <div
