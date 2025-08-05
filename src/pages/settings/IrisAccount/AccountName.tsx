@@ -1,4 +1,4 @@
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 
 interface AccountNameProps {
   name?: string

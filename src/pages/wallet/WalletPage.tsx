@@ -3,7 +3,7 @@ import PopularFeed from "@/shared/components/feed/PopularFeed"
 import Widget from "@/shared/components/ui/Widget"
 import {useUserStore} from "@/stores/user"
 import {useWalletProviderStore} from "@/stores/walletProvider"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import {useEffect} from "react"
 
 export default function WalletPage() {

@@ -1,6 +1,6 @@
 import {CLOUDFLARE_CSAM_FLAGGED} from "@/utils/cloudflare_banned_users"
 import {hexToBytes, bytesToHex} from "@noble/hashes/utils"
-import {useParams, Link} from "react-router"
+import {useParams, Link} from "@/navigation"
 import {sha256} from "@noble/hashes/sha256"
 import {useEffect, useState} from "react"
 import {nip05, nip19} from "nostr-tools"

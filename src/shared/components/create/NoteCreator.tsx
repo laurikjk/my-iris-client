@@ -1,6 +1,6 @@
 import {ChangeEvent, DragEvent, useEffect, useState} from "react"
 import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import {nip19} from "nostr-tools"
 
 import UploadButton from "@/shared/components/button/UploadButton.tsx"

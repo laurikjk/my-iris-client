@@ -1,5 +1,5 @@
 import {UserRow} from "@/shared/components/user/UserRow"
-import {useParams} from "react-router"
+import {useParams} from "@/navigation"
 import {useGroupsStore} from "@/stores/groups"
 import Header from "@/shared/components/header/Header"
 

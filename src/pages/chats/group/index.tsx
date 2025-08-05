@@ -1,7 +1,7 @@
 import GroupChatCreation from "./GroupChatCreation"
 import GroupChatPage from "./GroupChatPage"
 import GroupDetailsPage from "./GroupDetailsPage"
-import {Routes, Route} from "react-router"
+import {Routes, Route} from "@/navigation"
 
 const GroupGroupRoutes = () => (
   <Routes>

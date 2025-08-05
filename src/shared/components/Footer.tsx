@@ -10,7 +10,7 @@ import Icon from "@/shared/components/Icons/Icon" // Add this import
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {formatAmount} from "@/utils/utils"
 import {useUserStore} from "@/stores/user"
-import {useLocation} from "react-router"
+import {useLocation} from "@/navigation"
 import {ndk} from "@/utils/ndk"
 
 type MenuItem = {

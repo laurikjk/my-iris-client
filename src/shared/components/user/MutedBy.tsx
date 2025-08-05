@@ -3,7 +3,7 @@ import Modal from "@/shared/components/ui/Modal.tsx"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {Fragment, useMemo, useState} from "react"
 import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
-import {Link} from "react-router"
+import {Link} from "@/navigation"
 import {nip19} from "nostr-tools"
 import {Name} from "./Name"
 

@@ -4,7 +4,7 @@ import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {shouldHideAuthor} from "@/utils/visibility"
 import socialGraph from "@/utils/socialGraph"
-import {feedCache, replyFeedCache, seenEventIds} from "@/utils/memcache"
+import {replyFeedCache, seenEventIds} from "@/utils/memcache"
 import {useUserStore} from "@/stores/user"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
@@ -55,9 +55,9 @@ export default function useFeedEvents({
   const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
   const [newEvents, setNewEvents] = useState(new Map<string, NDKEvent>())
   const isReplyFeed = !!feedConfig.repliesTo
-  const cache = isReplyFeed ? replyFeedCache : feedCache
+  const cache = isReplyFeed ? replyFeedCache : null
   const eventsRef = useRef(
-    cache.get(cacheKey) ||
+    (cache && cache.get(cacheKey)) ||
       new SortedMap(
         [],
         sortFn
@@ -406,6 +406,7 @@ export default function useFeedEvents({
 
   useEffect(() => {
     eventsRef.current.size &&
+      cache &&
       !cache.has(cacheKey) &&
       cache.set(cacheKey, eventsRef.current)
   }, [cacheKey, eventsVersion, cache])

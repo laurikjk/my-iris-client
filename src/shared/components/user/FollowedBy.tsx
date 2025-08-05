@@ -5,7 +5,7 @@ import {nip19} from "nostr-tools"
 import {Name} from "./Name"
 
 import socialGraph from "@/utils/socialGraph"
-import {Link} from "react-router"
+import {Link} from "@/navigation"
 import {Badge} from "./Badge"
 
 const MAX_FOLLOWED_BY_FRIENDS = 3

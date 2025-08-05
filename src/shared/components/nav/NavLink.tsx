@@ -1,6 +1,8 @@
-import {NavLink as RouterNavLink, NavLinkProps, useLocation} from "react-router"
+import {NavLink as RouterNavLink, useLocation} from "@/navigation"
 import {useNotificationsStore} from "@/stores/notifications"
-import {MouseEvent} from "react"
+import {MouseEvent, ComponentProps} from "react"
+
+type NavLinkProps = ComponentProps<typeof RouterNavLink>
 
 export default function NavLink(props: NavLinkProps) {
   const {to, onClick, ...rest} = props

@@ -1,5 +1,5 @@
 import SocialGraphSettings from "@/pages/settings/SocialGraphSettings"
-import {useLocation, Link, Routes, Route} from "react-router"
+import {useLocation, Link, Routes, Route} from "@/navigation"
 import MediaServers from "@/pages/settings/Mediaservers.tsx"
 import {ProfileSettings} from "@/pages/settings/Profile.tsx"
 import NotificationSettings from "./NotificationSettings"

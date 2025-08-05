@@ -1,6 +1,6 @@
 import MinidenticonImg from "../user/MinidenticonImg"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import ProxyImg from "../ProxyImg"
 
 type ChannelCreationProps = {

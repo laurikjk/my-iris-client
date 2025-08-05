@@ -1,5 +1,5 @@
 import {useMemo, ReactNode} from "react"
-import {Link} from "react-router"
+import {Link} from "@/navigation"
 import {nip19} from "nostr-tools"
 
 import {useHoverCard} from "@/shared/components/user/useHoverCard"

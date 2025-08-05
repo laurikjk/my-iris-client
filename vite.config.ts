@@ -48,7 +48,6 @@ export default defineConfig({
           vendor: [
             "react",
             "react-dom/client",
-            "react-router",
             "react-helmet",
             "@nostr-dev-kit/ndk",
             "@nostr-dev-kit/ndk-wallet",

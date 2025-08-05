@@ -1,6 +1,6 @@
 import {FormEvent, useEffect, useMemo, useState} from "react"
 import {RiDeleteBinLine, RiArrowUpSLine, RiArrowDownSLine} from "@remixicon/react"
-import {Link} from "react-router"
+import {Link} from "@/navigation"
 
 import {DEFAULT_RELAYS, ndk as getNdk} from "@/utils/ndk"
 import {useUserStore} from "@/stores/user"

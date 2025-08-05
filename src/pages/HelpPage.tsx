@@ -12,7 +12,7 @@ import PopularFeed from "@/shared/components/feed/PopularFeed"
 import Header from "@/shared/components/header/Header"
 import Widget from "@/shared/components/ui/Widget"
 import {useState, useEffect} from "react"
-import {Link} from "react-router"
+import {Link} from "@/navigation"
 
 export const AboutPage = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false)

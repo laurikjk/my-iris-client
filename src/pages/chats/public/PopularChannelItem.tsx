@@ -2,7 +2,7 @@ import {fetchChannelMetadata, ChannelMetadata} from "../utils/channelMetadata"
 import MinidenticonImg from "@/shared/components/user/MinidenticonImg"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {useEffect, useState} from "react"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 
 type PopularChannelItemProps = {
   channelId: string

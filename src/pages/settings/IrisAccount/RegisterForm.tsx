@@ -2,7 +2,7 @@ import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
 import {FormEvent, useState, ChangeEvent} from "react"
 import {useUserStore} from "@/stores/user"
 import AccountName from "./AccountName"
-import {Link} from "react-router"
+import {Link} from "@/navigation"
 
 interface RegisterFormProps {
   minLength: number

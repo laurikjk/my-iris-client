@@ -1,4 +1,4 @@
-import {NavLink, Route, Routes, useLocation} from "react-router"
+import {NavLink, Route, Routes, useLocation} from "@/navigation"
 import {useMemo, useState, useEffect} from "react"
 import classNames from "classnames"
 

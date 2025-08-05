@@ -12,7 +12,7 @@ import {usePublicKey} from "@/stores/user"
 import MuteUser from "../MuteUser.tsx"
 import RawJSON from "../RawJSON.tsx"
 import RelayList from "./RelayList.tsx"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import {useRebroadcast} from "@/shared/hooks/useRebroadcast"
 
 type FeedItemDropdownProps = {

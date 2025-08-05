@@ -1,4 +1,4 @@
-import {Link} from "react-router"
+import {Link} from "@/navigation"
 import Embed from "./index.ts"
 
 const Url: Embed = {

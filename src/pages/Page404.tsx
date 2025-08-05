@@ -1,4 +1,4 @@
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 
 export const Page404 = () => {
   const navigate = useNavigate()

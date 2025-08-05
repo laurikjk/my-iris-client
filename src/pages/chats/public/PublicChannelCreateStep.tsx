@@ -1,6 +1,6 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import {useState, FormEvent} from "react"
 import {ndk} from "@/utils/ndk"
 

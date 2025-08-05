@@ -6,7 +6,7 @@ import ProxyImg from "@/shared/components/ProxyImg"
 import Icon from "@/shared/components/Icons/Icon"
 import PopularChannels from "./PopularChannels"
 import {useUserStore} from "@/stores/user"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 
 let publicKey = useUserStore.getState().publicKey
 useUserStore.subscribe((state) => {

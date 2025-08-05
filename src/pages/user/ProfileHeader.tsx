@@ -1,6 +1,6 @@
 import {PublicKey} from "@/shared/utils/PublicKey"
 import {useMemo, useState, useEffect} from "react"
-import {Link, useNavigate} from "react-router"
+import {Link, useNavigate} from "@/navigation"
 import {useUserStore} from "@/stores/user"
 import {Invite} from "nostr-double-ratchet/src"
 import {ndk} from "@/utils/ndk"

@@ -1,5 +1,5 @@
 import {MouseEvent, ReactNode} from "react"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import classNames from "classnames"
 
 interface NavigateProps {

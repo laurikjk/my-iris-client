@@ -1,5 +1,5 @@
 import PublicChatDetails from "./public/PublicChatDetails"
-import {useLocation, Routes, Route} from "react-router"
+import {useLocation, Routes, Route} from "@/navigation"
 import PrivateChat from "./private/PrivateChat"
 import PublicChat from "./public/PublicChat"
 import ChatList from "./list/ChatList"
@@ -33,7 +33,7 @@ function Messages() {
           <Route path="new/*" element={<NewChat />} />
           <Route
             path="chat"
-            element={<PrivateChat key={location.state?.id} id={location.state?.id} />}
+            element={<PrivateChat key={location.state?.id as string} id={location.state?.id as string} />}
           />
           <Route path="group/*" element={<GroupGroupRoutes />} />
           <Route path=":id/details" element={<PublicChatDetails />} />

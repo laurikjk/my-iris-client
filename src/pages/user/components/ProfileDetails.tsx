@@ -2,7 +2,7 @@ import {RiErrorWarningLine, RiGithubFill, RiShieldCheckFill} from "@remixicon/re
 import {ElementType, ReactNode, useEffect, useMemo, useState} from "react"
 import {useNip05Validation} from "@/shared/hooks/useNip05Validation"
 import {NDKUserProfile} from "@nostr-dev-kit/ndk"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import {nip19} from "nostr-tools"
 
 import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"

@@ -5,7 +5,7 @@ import {useState, useEffect, FormEvent} from "react"
 import {useUserRecordsStore} from "@/stores/userRecords"
 import {useGroupsStore} from "@/stores/groups"
 import {useUserStore} from "@/stores/user"
-import {useNavigate} from "react-router"
+import {useNavigate} from "@/navigation"
 import {GroupDetails} from "./types"
 import {KIND_CHANNEL_CREATE} from "@/utils/constants"
 
