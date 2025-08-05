@@ -237,7 +237,7 @@ export default function useFeedEvents({
     }
   }
 
-  const filteredEvents = useMemo(() => {
+  const filteredEvents = useMemo((): NDKEvent[] => {
     const events = Array.from(eventsRef.current.values())
 
     return events

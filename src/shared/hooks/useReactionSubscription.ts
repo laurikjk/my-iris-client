@@ -27,7 +27,6 @@ export default function useReactionSubscription(
   const pendingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const [hasInitialData, setHasInitialData] = useState(cache.hasInitialData || false)
 
-  // Initialize refs from cache on mount
   useEffect(() => {
     if (cache.pendingReactionCounts) {
       pendingReactionCounts.current = cache.pendingReactionCounts
@@ -62,7 +61,6 @@ export default function useReactionSubscription(
 
       if (!originalPostId) return
 
-      // Skip seen events if filtering is enabled
       if (filterSeen && seenEventIds.has(originalPostId)) return
 
       if (showingReactionCounts.current.has(originalPostId)) {
@@ -73,7 +71,6 @@ export default function useReactionSubscription(
         pendingReactionCounts.current.set(originalPostId, new Set([event.id]))
       }
 
-      // Check if we have enough initial data
       if (
         !hasInitialData &&
         pendingReactionCounts.current.size >= INITIAL_DATA_THRESHOLD

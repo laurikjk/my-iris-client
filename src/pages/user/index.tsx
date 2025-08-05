@@ -3,7 +3,7 @@ import {useMemo, useState, useEffect} from "react"
 import classNames from "classnames"
 
 import RightColumn from "@/shared/components/RightColumn"
-import PopularFeed from "@/shared/components/feed/PopularFeed"
+import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import {type FeedConfig} from "@/stores/feed"
 import {shouldHideAuthor} from "@/utils/visibility"
@@ -206,7 +206,8 @@ function UserPage({pubKey}: {pubKey: string}) {
             )}
             {pubKeyHex === myPubKey && (
               <Widget title="Popular">
-                <PopularFeed
+                <AlgorithmicFeed
+                  type="popular"
                   displayOptions={{
                     small: true,
                     showDisplaySelector: false,

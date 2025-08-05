@@ -2,8 +2,7 @@ import {useMemo, useEffect, useState} from "react"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
-import PopularFeed from "@/shared/components/feed/PopularFeed"
-import ForYouFeed from "@/shared/components/feed/ForYouFeed"
+import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import {useRefreshRouteSignal} from "@/stores/notifications"
 import {feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
@@ -173,15 +172,11 @@ function HomeFeedEvents() {
       )}
       <NotificationPrompt />
       {(() => {
-        if (
-          activeFeedConfig?.feedType === "popular" &&
-          activeFeedConfig?.id === "for-you"
-        ) {
-          return <ForYouFeed />
-        }
-        if (activeFeedConfig?.feedType === "popular" || !myPubKey) {
-          return <PopularFeed />
-        }
+        if (!myPubKey) return <AlgorithmicFeed type="popular" />
+
+        if (activeFeedConfig?.feedStrategy)
+          return <AlgorithmicFeed type={activeFeedConfig.feedStrategy} />
+
         return (
           <Feed
             key={feedKey}
@@ -197,8 +192,11 @@ function HomeFeedEvents() {
       {follows.length <= 1 && myPubKey && (
         <>
           <NoFollows myPubKey={myPubKey} />
-          {activeFeedConfig?.feedType !== "popular" && (
-            <PopularFeed displayOptions={{showDisplaySelector: false}} />
+          {!activeFeedConfig?.feedStrategy && (
+            <AlgorithmicFeed
+              type="popular"
+              displayOptions={{showDisplaySelector: false}}
+            />
           )}
         </>
       )}

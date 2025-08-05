@@ -21,10 +21,6 @@ export const imgproxyFailureCache = new LRUCache<string, boolean>({maxSize: 100}
 export const loadedImageCache = new LRUCache<string, string>({maxSize: 200})
 
 // Special feed cache interfaces
-interface PostFetcherCache {
-  events?: NDKEvent[]
-  hasLoadedInitial?: boolean
-}
 
 interface ReactionSubscriptionCache {
   hasInitialData?: boolean
@@ -48,34 +44,29 @@ interface CombinedPostFetcherCache {
   hasLoadedInitial?: boolean
 }
 
-interface PopularHomeFeedCache {
-  postFetcher: PostFetcherCache
-  reactionSubscription: ReactionSubscriptionCache
+interface AlgorithmicFeedCache {
   popularityFilters: PopularityFiltersCache
-  chronologicalSubscription?: ChronologicalSubscriptionCache
-}
-
-interface ForYouFeedCache {
   combinedPostFetcher: CombinedPostFetcherCache
   reactionSubscription: ReactionSubscriptionCache
   chronologicalSubscription: ChronologicalSubscriptionCache
-  popularityFilters: PopularityFiltersCache
 }
 
-// Simple cache for popular home feed - no LRU needed since there's only one instance
-export const popularHomeFeedCache: PopularHomeFeedCache = {
-  postFetcher: {},
-  reactionSubscription: {},
-  popularityFilters: {},
-  chronologicalSubscription: {},
-}
+const algorithmicFeedCache = new LRUCache<string, AlgorithmicFeedCache>({
+  maxSize: 10,
+})
 
-// Cache for for-you feed
-export const forYouFeedCache: ForYouFeedCache = {
-  combinedPostFetcher: {},
-  reactionSubscription: {},
-  chronologicalSubscription: {},
-  popularityFilters: {},
+export const getOrCreateAlgorithmicFeedCache = (feedId: string): AlgorithmicFeedCache => {
+  let cache = algorithmicFeedCache.get(feedId)
+  if (!cache) {
+    cache = {
+      popularityFilters: {},
+      combinedPostFetcher: {},
+      reactionSubscription: {},
+      chronologicalSubscription: {},
+    }
+    algorithmicFeedCache.set(feedId, cache)
+  }
+  return cache
 }
 
 // Load seenEventIds from localForage
