@@ -2,12 +2,20 @@ export function matchPath(
   pathname: string,
   pattern: string
 ): {params: Record<string, string>} | null {
+  // Special handling for /* patterns - should match both /path and /path/...
+  if (pattern.endsWith("/*")) {
+    const basePath = pattern.slice(0, -2)
+    if (pathname === basePath || pathname.startsWith(basePath + "/")) {
+      const wildcardPart =
+        pathname === basePath ? "" : pathname.slice(basePath.length + 1)
+      return {params: {"*": wildcardPart}}
+    }
+    return null
+  }
+
   // Convert route pattern to regex
   const paramNames: string[] = []
   const segments = pattern.split("/")
-
-  // Check if last segment is wildcard
-  const hasWildcard = segments[segments.length - 1] === "*"
 
   const regexPattern = segments
     .map((segment) => {
@@ -26,9 +34,7 @@ export function matchPath(
     })
     .join("/")
 
-  // If pattern ends with wildcard, make it optional (could be empty)
-  const regexStr = hasWildcard ? `^${regexPattern}$` : `^${regexPattern}$`
-  const regex = new RegExp(regexStr)
+  const regex = new RegExp(`^${regexPattern}$`)
   const match = pathname.match(regex)
 
   if (!match) return null
