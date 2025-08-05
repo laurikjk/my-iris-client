@@ -16,7 +16,7 @@ const SubscriptionPage = lazy(() => import("@/pages/subscription"))
 const RelayPage = lazy(() => import("@/pages/relay"))
 
 export const routes: RouteDefinition[] = [
-  {path: "/", component: HomePage},
+  {path: "/", component: HomePage, alwaysKeep: true},
   {path: "/notifications", component: Notifications},
   {path: "/wallet", component: WalletPage},
   {path: "/chats/*", component: ChatsPage},

@@ -33,4 +33,5 @@ export type RouteDefinition = {
   path: string
   component: ComponentType<unknown>
   exact?: boolean
+  alwaysKeep?: boolean // Keep this route's component always mounted in memory
 }

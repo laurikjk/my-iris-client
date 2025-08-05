@@ -8,10 +8,12 @@ import React, {
 } from "react"
 import {NavigationContextType, StackItem, NavigateOptions} from "./types"
 import {getRouteParams} from "./routeMatcher"
+import {routes} from "./routes"
+import {matchPath} from "./utils"
 
 const NavigationContext = createContext<NavigationContextType | null>(null)
 
-const MAX_STACK_SIZE = 5
+const MAX_STACK_SIZE = 10 // Increase stack size to keep more items
 const SKIP_CACHE_PATTERNS = [
   /^\/\w+\/replies\//, // Reply feeds
   /^\/notifications/, // Notifications should always refresh
@@ -170,6 +172,17 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
     return !SKIP_CACHE_PATTERNS.some((pattern) => pattern.test(url))
   }
 
+  const shouldAlwaysKeep = (url: string): boolean => {
+    // Check if this URL matches any route with alwaysKeep flag
+    for (const route of routes) {
+      const match = matchPath(url, route.path)
+      if (match && route.alwaysKeep) {
+        return true
+      }
+    }
+    return false
+  }
+
   const navigate = useCallback((path: string, options?: NavigateOptions) => {
     if (options?.replace) {
       // Handle replace inline
@@ -291,12 +304,12 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
       if (newStack.length > MAX_STACK_SIZE) {
         const itemsToKeep = MAX_STACK_SIZE
         for (let i = 0; i < newStack.length - itemsToKeep; i++) {
-          // Always keep home ("/") in cache
-          if (
-            newStack[i].component &&
-            newStack[i].url !== "/" &&
-            shouldCachePage(newStack[i].url)
-          ) {
+          // Skip routes marked with alwaysKeep
+          if (shouldAlwaysKeep(newStack[i].url)) {
+            continue
+          }
+          // Clear components that should not be cached
+          if (newStack[i].component && !shouldCachePage(newStack[i].url)) {
             newStack[i].component = null
           }
         }
