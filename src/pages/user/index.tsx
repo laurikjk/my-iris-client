@@ -5,7 +5,7 @@ import classNames from "classnames"
 import RightColumn from "@/shared/components/RightColumn"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
 import Feed from "@/shared/components/feed/Feed.tsx"
-import {type FeedConfig} from "@/stores/feed"
+import {type FeedConfig, useFeedStore} from "@/stores/feed"
 import {shouldHideAuthor} from "@/utils/visibility"
 import Widget from "@/shared/components/ui/Widget"
 import useFollows from "@/shared/hooks/useFollows"
@@ -139,6 +139,7 @@ function UserPage({pubKey}: {pubKey: string}) {
     [pubKey]
   )
   const myPubKey = useUserStore((state) => state.publicKey)
+  const {loadFeedConfig} = useFeedStore()
   const follows = useFollows(pubKey)
   const hasMarketEvents = useHasMarketEvents(pubKeyHex)
   const filteredFollows = useMemo(() => {
@@ -186,10 +187,17 @@ function UserPage({pubKey}: {pubKey: string}) {
               const activeTab =
                 visibleTabs.find((tab) => tab.path === tabPath) || visibleTabs[0]
 
+              const baseFeedConfig = activeTab.getFeedConfig(pubKeyHex, myPubKey)
+              const savedConfig = loadFeedConfig(baseFeedConfig.id)
+              const feedConfig = {
+                ...baseFeedConfig,
+                displayAs: savedConfig?.displayAs,
+              }
+
               return (
                 <Feed
                   key={`feed-${pubKeyHex}-${activeTab.path}`}
-                  feedConfig={activeTab.getFeedConfig(pubKeyHex, myPubKey)}
+                  feedConfig={feedConfig}
                   borderTopFirst={true}
                 />
               )
