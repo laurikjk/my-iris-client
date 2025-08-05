@@ -21,10 +21,6 @@ export const imgproxyFailureCache = new LRUCache<string, boolean>({maxSize: 100}
 export const loadedImageCache = new LRUCache<string, string>({maxSize: 200})
 
 // Special feed cache interfaces
-interface PostFetcherCache {
-  events?: NDKEvent[]
-  hasLoadedInitial?: boolean
-}
 
 interface ReactionSubscriptionCache {
   hasInitialData?: boolean
@@ -44,6 +40,11 @@ interface ChronologicalSubscriptionCache {
 }
 
 interface CombinedPostFetcherCache {
+  events?: NDKEvent[]
+  hasLoadedInitial?: boolean
+}
+
+interface PostFetcherCache {
   events?: NDKEvent[]
   hasLoadedInitial?: boolean
 }
@@ -76,6 +77,10 @@ export const forYouFeedCache: ForYouFeedCache = {
   reactionSubscription: {},
   chronologicalSubscription: {},
   popularityFilters: {},
+}
+
+export const getOrCreateAlgorithmicFeedCache = (feedId: string) => {
+  return feedId === "popular" ? popularHomeFeedCache : forYouFeedCache
 }
 
 // Load seenEventIds from localForage

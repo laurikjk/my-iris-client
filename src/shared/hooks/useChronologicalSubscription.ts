@@ -9,12 +9,12 @@ import {seenEventIds} from "@/utils/memcache"
 
 const LOW_THRESHOLD = 20
 const INITIAL_DATA_THRESHOLD = 10
-const INITIAL_TIME_RANGE = 24 * 60 * 60 // 24 hours
-const TIME_RANGE_INCREMENT = 24 * 60 * 60 // Add 24 hours each expansion
+const INITIAL_TIME_RANGE = 24 * 60 * 60
+const TIME_RANGE_INCREMENT = 24 * 60 * 60
 
 interface ChronologicalSubscriptionCache {
   hasInitialData?: boolean
-  pendingPosts?: Map<string, number> // eventId -> timestamp
+  pendingPosts?: Map<string, number>
   showingPosts?: Map<string, number>
   timeRange?: number
 }
@@ -32,7 +32,6 @@ export default function useChronologicalSubscription(
   const [timeRange, setTimeRange] = useState(cache.timeRange || INITIAL_TIME_RANGE)
   const [hasInitialData, setHasInitialData] = useState(cache.hasInitialData || false)
 
-  // Initialize refs from cache on mount
   useEffect(() => {
     if (cache.pendingPosts) {
       pendingPosts.current = cache.pendingPosts
@@ -60,7 +59,6 @@ export default function useChronologicalSubscription(
     sub.on("event", (event) => {
       if (!event.created_at || !event.id) return
 
-      // Skip seen events if filtering is enabled
       if (filterSeen && seenEventIds.has(event.id)) return
 
       if (!showingPosts.current.has(event.id) && !pendingPosts.current.has(event.id)) {
