@@ -250,14 +250,18 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
 
         // Restore scroll position for Link navigation
         // (Browser handles scroll restoration automatically for back/forward)
-        if (existingItem.scrollPosition !== undefined && existingItem.scrollPosition > 0) {
+        if (
+          existingItem.scrollPosition !== undefined &&
+          existingItem.scrollPosition > 0
+        ) {
+          const scrollPos = existingItem.scrollPosition
           // Use setTimeout as backup to requestAnimationFrame
           requestAnimationFrame(() => {
-            window.scrollTo(0, existingItem.scrollPosition)
+            window.scrollTo(0, scrollPos)
             // Double-check after a delay in case something interferes
             setTimeout(() => {
-              if (window.scrollY !== existingItem.scrollPosition) {
-                window.scrollTo(0, existingItem.scrollPosition)
+              if (window.scrollY !== scrollPos) {
+                window.scrollTo(0, scrollPos)
               }
             }, 100)
           })
