@@ -33,7 +33,7 @@ test.describe("Session persistence", () => {
 
     // Wait for the post to appear in the feed
     await expect(
-      page.locator(".px-4").getByText(postContent, {exact: true})
+      page.locator(".px-4").getByText(postContent, {exact: true}).first()
     ).toBeVisible()
   })
 

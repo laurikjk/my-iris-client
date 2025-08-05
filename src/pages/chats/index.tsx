@@ -1,5 +1,5 @@
 import PublicChatDetails from "./public/PublicChatDetails"
-import {useLocation, Routes, Route} from "@/navigation"
+import {useLocation} from "@/navigation"
 import PrivateChat from "./private/PrivateChat"
 import PublicChat from "./public/PublicChat"
 import ChatList from "./list/ChatList"
@@ -29,22 +29,38 @@ function Messages() {
           flex: !isMessagesRoot,
         })}
       >
-        <Routes>
-          <Route path="new/*" element={<NewChat />} />
-          <Route
-            path="chat"
-            element={
+        {(() => {
+          const pathSegments = location.pathname.split("/").filter(Boolean)
+          // pathSegments: ['chats'] or ['chats', 'new'] or ['chats', 'chat'] etc.
+
+          if (pathSegments.length === 1) {
+            // Just /chats - show NewChat
+            return <NewChat />
+          }
+
+          const subPath = pathSegments[1]
+
+          if (subPath === "new") {
+            return <NewChat />
+          } else if (subPath === "chat") {
+            return (
               <PrivateChat
                 key={location.state?.id as string}
                 id={location.state?.id as string}
               />
-            }
-          />
-          <Route path="group/*" element={<GroupGroupRoutes />} />
-          <Route path=":id/details" element={<PublicChatDetails />} />
-          <Route path=":id" element={<PublicChat key={location.pathname} />} />
-          <Route path="/" element={<NewChat />} />
-        </Routes>
+            )
+          } else if (subPath === "group") {
+            return <GroupGroupRoutes />
+          } else if (pathSegments[2] === "details") {
+            // :id/details
+            return <PublicChatDetails />
+          } else if (subPath) {
+            // :id - public chat
+            return <PublicChat key={location.pathname} />
+          }
+
+          return <NewChat />
+        })()}
       </div>
       <Helmet>
         <title>Messages</title>

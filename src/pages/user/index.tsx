@@ -1,4 +1,4 @@
-import {NavLink, Route, Routes, useLocation} from "@/navigation"
+import {NavLink, useLocation} from "@/navigation"
 import {useMemo, useState, useEffect} from "react"
 import classNames from "classnames"
 
@@ -178,21 +178,22 @@ function UserPage({pubKey}: {pubKey: string}) {
                 </NavLink>
               ))}
             </div>
-            <Routes>
-              {visibleTabs.map((tab) => (
-                <Route
-                  key={tab.path}
-                  path={tab.path}
-                  element={
-                    <Feed
-                      key={`feed-${pubKeyHex}-${tab.path}`}
-                      feedConfig={tab.getFeedConfig(pubKeyHex, myPubKey)}
-                      borderTopFirst={true}
-                    />
-                  }
+            {(() => {
+              // Determine which tab to show based on the path
+              const pathSegments = location.pathname.split("/").filter(Boolean)
+              const tabPath = pathSegments[1] || "" // After filtering, profile name is at 0, tab is at 1
+
+              const activeTab =
+                visibleTabs.find((tab) => tab.path === tabPath) || visibleTabs[0]
+
+              return (
+                <Feed
+                  key={`feed-${pubKeyHex}-${activeTab.path}`}
+                  feedConfig={activeTab.getFeedConfig(pubKeyHex, myPubKey)}
+                  borderTopFirst={true}
                 />
-              ))}
-            </Routes>
+              )
+            })()}
           </div>
         </div>
       </div>

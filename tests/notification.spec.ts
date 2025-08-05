@@ -68,10 +68,10 @@ test.describe("Notifications", () => {
       await pageA.getByPlaceholder("What's on your mind?").fill(postContent)
       await pageA.getByRole("button", {name: "Publish"}).click()
 
-      await expect(pageA.getByText(postContent)).toBeVisible()
+      await expect(pageA.getByText(postContent).first()).toBeVisible()
 
       await pageB.goto("/")
-      await expect(pageB.getByText(postContent)).toBeVisible({timeout: 20000})
+      await expect(pageB.getByText(postContent).first()).toBeVisible({timeout: 20000})
 
       const postElement = pageB.locator("div").filter({hasText: postContent}).first()
       await postElement.getByTestId("like-button").click()

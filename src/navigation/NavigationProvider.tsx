@@ -11,7 +11,7 @@ import {getRouteParams} from "./routeMatcher"
 
 const NavigationContext = createContext<NavigationContextType | null>(null)
 
-const MAX_STACK_SIZE = 10
+const MAX_STACK_SIZE = 5
 const SKIP_CACHE_PATTERNS = [
   /^\/\w+\/replies\//, // Reply feeds
   /^\/notifications/, // Notifications should always refresh
@@ -265,7 +265,12 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
       if (newStack.length > MAX_STACK_SIZE) {
         const itemsToKeep = MAX_STACK_SIZE
         for (let i = 0; i < newStack.length - itemsToKeep; i++) {
-          if (newStack[i].component && shouldCachePage(newStack[i].url)) {
+          // Always keep home ("/") in cache
+          if (
+            newStack[i].component &&
+            newStack[i].url !== "/" &&
+            shouldCachePage(newStack[i].url)
+          ) {
             newStack[i].component = null
           }
         }
