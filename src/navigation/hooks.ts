@@ -1,7 +1,15 @@
 import {useCallback, useContext} from "react"
-import {useNavigation} from "./NavigationProvider"
 import {NavigateOptions} from "./types"
-import {RouteContext} from "./RouteContext"
+import {RouteContext} from "./routeContexts"
+import {NavigationContext} from "./contexts"
+
+export const useNavigation = () => {
+  const context = useContext(NavigationContext)
+  if (!context) {
+    throw new Error("useNavigation must be used within NavigationProvider")
+  }
+  return context
+}
 
 export function useNavigate() {
   const {navigate, replace} = useNavigation()

@@ -5,8 +5,7 @@ import {
   ReactNode,
   AnchorHTMLAttributes,
 } from "react"
-import {useNavigate} from "./hooks"
-import {useNavigation} from "./NavigationProvider"
+import {useNavigate, useNavigation} from "./hooks"
 
 interface LinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
   to: string
@@ -67,11 +66,14 @@ export const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(
   ({className, style, to, end, children, ...rest}, ref) => {
     const {currentPath} = useNavigation()
 
-    const isActive = end
-      ? currentPath === to
-      : to === "/"
-        ? currentPath === "/"
-        : currentPath === to || currentPath.startsWith(to + "/")
+    let isActive: boolean
+    if (end) {
+      isActive = currentPath === to
+    } else if (to === "/") {
+      isActive = currentPath === "/"
+    } else {
+      isActive = currentPath === to || currentPath.startsWith(to + "/")
+    }
 
     const computedClassName =
       typeof className === "function" ? className({isActive}) : className

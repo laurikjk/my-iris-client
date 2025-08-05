@@ -3,11 +3,12 @@ import PopularFeed from "@/shared/components/feed/PopularFeed"
 import Widget from "@/shared/components/ui/Widget"
 import {useUserStore} from "@/stores/user"
 import {useWalletProviderStore} from "@/stores/walletProvider"
-import {useNavigate} from "@/navigation"
+import {useNavigate, useLocation} from "@/navigation"
 import {useEffect} from "react"
 
 export default function WalletPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const myPubKey = useUserStore((state) => state.publicKey)
   const activeProviderType = useWalletProviderStore((state) => state.activeProviderType)
   const activeNWCId = useWalletProviderStore((state) => state.activeNWCId)
@@ -17,6 +18,9 @@ export default function WalletPage() {
     activeProviderType === "nwc" &&
     activeNWCId &&
     nwcConnections.find((conn) => conn.id === activeNWCId)?.isLocalCashuWallet
+
+  // Only show iframe when we're actually on the wallet page
+  const isWalletPage = location.pathname === "/wallet"
 
   useEffect(() => {
     if (!isLocalCashuWallet) {
@@ -42,6 +46,7 @@ export default function WalletPage() {
                 left: 0 !important;
                 z-index: 10 !important;
                 pointer-events: auto !important;
+                display: ${isWalletPage ? "block" : "none"} !important;
               }
             `}</style>
           </div>

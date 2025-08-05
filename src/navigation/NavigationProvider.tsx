@@ -1,17 +1,9 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-} from "react"
+import React, {useState, useEffect, useRef, useCallback} from "react"
 import {NavigationContextType, StackItem, NavigateOptions} from "./types"
 import {getRouteParams} from "./routeMatcher"
 import {routes} from "./routes"
 import {matchPath} from "./utils"
-
-const NavigationContext = createContext<NavigationContextType | null>(null)
+import {NavigationContext} from "./contexts"
 
 const MAX_STACK_SIZE = 10 // Increase stack size to keep more items
 const SKIP_CACHE_PATTERNS = [
@@ -397,12 +389,4 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
   }
 
   return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>
-}
-
-export const useNavigation = () => {
-  const context = useContext(NavigationContext)
-  if (!context) {
-    throw new Error("useNavigation must be used within NavigationProvider")
-  }
-  return context
 }

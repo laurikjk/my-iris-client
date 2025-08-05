@@ -1,12 +1,10 @@
-import {Suspense, createContext} from "react"
-import {useNavigation} from "./NavigationProvider"
+import {Suspense} from "react"
+import {useNavigation} from "./hooks"
 import {routes} from "./routes"
 import {matchPath} from "./utils"
 import {LoadingFallback} from "@/shared/components/LoadingFallback"
 import {RouteProvider} from "./RouteContext"
-
-// Export context for nested routes to use
-export const RouteBaseContext = createContext<string>("")
+import {RouteBaseContext} from "./contexts"
 
 export const Router = () => {
   const {stack, currentIndex} = useNavigation()

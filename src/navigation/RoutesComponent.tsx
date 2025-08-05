@@ -1,7 +1,7 @@
 import React, {useContext} from "react"
 import {useLocation} from "./hooks"
 import {matchPath} from "./utils"
-import {RouteBaseContext} from "./Router"
+import {RouteBaseContext} from "./contexts"
 
 interface RouteProps {
   path: string
@@ -30,7 +30,7 @@ export const Routes = ({children}: RoutesProps) => {
 
     // Handle relative paths for nested routes
     let fullPath: string
-    let newBase = parentBase
+    let newBase: string = parentBase || ""
 
     if (path.startsWith("/")) {
       // Absolute path

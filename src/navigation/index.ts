@@ -1,7 +1,8 @@
-export {NavigationProvider, useNavigation} from "./NavigationProvider"
+export {NavigationProvider} from "./NavigationProvider"
 export {Router} from "./Router"
 export {Link, NavLink} from "./Link"
-export {useNavigate, useLocation, useParams} from "./hooks"
+export {useNavigation, useNavigate, useLocation, useParams} from "./hooks"
+export {useRouteContext} from "./routeContexts"
 export {Routes, Route, Outlet} from "./RoutesComponent"
 export type {
   NavigationContextType,
