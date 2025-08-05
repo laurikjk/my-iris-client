@@ -50,10 +50,10 @@ const store = create<GroupsStore>()(
         set((state) => {
           const group = state.groups[groupId]
           if (!group) return state
-          
+
           // Only add if not already a member
           if (group.members.includes(memberPubKey)) return state
-          
+
           return {
             groups: {
               ...state.groups,

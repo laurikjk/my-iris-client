@@ -563,7 +563,7 @@ const handleSessionEvent = async (
   if (groupLabel) {
     const groupsStore = useGroupsStore.getState()
     const existingGroup = groupsStore.groups[groupLabel]
-    
+
     if (!existingGroup) {
       // Create group with sender as initial member
       groupsStore.addGroup({
@@ -574,7 +574,11 @@ const handleSessionEvent = async (
         members: [sessionData.userPubKey], // Add sender as member
         createdAt: Date.now(),
       })
-      console.log("Created new group with sender as member:", groupLabel, sessionData.userPubKey)
+      console.log(
+        "Created new group with sender as member:",
+        groupLabel,
+        sessionData.userPubKey
+      )
     } else {
       // Add sender to existing group if not already a member
       if (!existingGroup.members.includes(sessionData.userPubKey)) {
@@ -588,13 +592,13 @@ const handleSessionEvent = async (
   console.log("Routing event - ourPubKey:", ourPubKey)
   console.log("Routing event - sessionData.userPubKey:", sessionData.userPubKey)
   console.log("Routing event - message pubkey:", event.pubkey)
-  
+
   // If this message is from our own other device, mark it as sent to relays
   if (sessionData.userPubKey === ourPubKey && event.pubkey === ourPubKey) {
     console.log("Message from our own device, marking as sentToRelays")
     event.sentToRelays = true
   }
-  
+
   routeEventToStore(event, sessionData.userPubKey, ourPubKey)
 
   // --- Ensure UserRecord exists and session is referenced ---

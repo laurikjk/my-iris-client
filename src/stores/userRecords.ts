@@ -569,14 +569,15 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         }
 
         console.log("Starting to listen for device invites from user:", userPubKey)
-        
+
         // Log current state to debug
         const currentUserRecord = get().userRecords.get(userPubKey)
         if (currentUserRecord) {
-          console.log("Current sessions for user before listening:", 
-            currentUserRecord.getActiveDevices().map(d => ({
+          console.log(
+            "Current sessions for user before listening:",
+            currentUserRecord.getActiveDevices().map((d) => ({
               deviceId: d.deviceId,
-              sessionId: d.activeSessionId
+              sessionId: d.activeSessionId,
             }))
           )
         }
@@ -623,10 +624,13 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             console.log("Checking for existing session with deviceId:", inviteDeviceId)
             console.log("UserRecord exists:", !!userRecord)
             if (userRecord) {
-              console.log("Active devices:", userRecord.getActiveDevices().map(d => ({
-                deviceId: d.deviceId,
-                hasSession: !!d.activeSessionId
-              })))
+              console.log(
+                "Active devices:",
+                userRecord.getActiveDevices().map((d) => ({
+                  deviceId: d.deviceId,
+                  hasSession: !!d.activeSessionId,
+                }))
+              )
             }
             const existingSessionId = userRecord?.getActiveSessionId(inviteDeviceId)
 
