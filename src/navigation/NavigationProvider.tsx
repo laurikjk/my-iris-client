@@ -198,12 +198,19 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
     }
 
     setNavState((prevState) => {
+      // Save current scroll position before navigating away
+      const updatedStack = [...prevState.stack]
+      const currentItem = updatedStack[prevState.currentIndex]
+      if (currentItem) {
+        currentItem.scrollPosition = window.scrollY
+      }
+
       // If state is provided, always create a new stack item (no caching)
       if (options?.state) {
         // Don't remove forward history for stateful navigation
         // This preserves cached components
         const newIndex = ++stackIndexRef.current
-        const newStack = [...prevState.stack]
+        const newStack = updatedStack
 
         const newItem: StackItem = {
           index: newIndex,
@@ -229,20 +236,35 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
       }
 
       // For routes without state, use URL as cache key
-      const existingIndex = prevState.stack.findIndex(
+      const existingIndex = updatedStack.findIndex(
         (item) => item.url === path && !item.state
       )
 
       if (existingIndex !== -1) {
         // Reuse existing stack item with same URL (and no state)
-        const existingItem = prevState.stack[existingIndex]
+        const existingItem = updatedStack[existingIndex]
 
         // Move to this existing item
         window.history.pushState({index: existingItem.index, url: path}, "", path)
         currentUrlRef.current = path
 
+        // Restore scroll position for Link navigation
+        // (Browser handles scroll restoration automatically for back/forward)
+        if (existingItem.scrollPosition !== undefined && existingItem.scrollPosition > 0) {
+          // Use setTimeout as backup to requestAnimationFrame
+          requestAnimationFrame(() => {
+            window.scrollTo(0, existingItem.scrollPosition)
+            // Double-check after a delay in case something interferes
+            setTimeout(() => {
+              if (window.scrollY !== existingItem.scrollPosition) {
+                window.scrollTo(0, existingItem.scrollPosition)
+              }
+            }, 100)
+          })
+        }
+
         return {
-          ...prevState,
+          stack: updatedStack,
           currentIndex: existingIndex,
         }
       }
@@ -251,7 +273,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
       const newIndex = ++stackIndexRef.current
 
       // Remove forward history for non-stateful navigation
-      const newStack = prevState.stack.slice(0, prevState.currentIndex + 1)
+      const newStack = updatedStack.slice(0, prevState.currentIndex + 1)
 
       // Add new item with URL as implicit cache key
       const newItem: StackItem = {
