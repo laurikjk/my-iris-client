@@ -24,13 +24,13 @@ export function useNavigate() {
 }
 
 export function useLocation() {
-  const {currentPath} = useNavigation()
+  const {currentPath, currentState} = useNavigation()
 
   return {
     pathname: currentPath,
     search: "",
     hash: "",
-    state: {} as Record<string, unknown>,
+    state: currentState as Record<string, unknown>,
     key: currentPath,
   }
 }

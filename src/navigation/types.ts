@@ -6,11 +6,13 @@ export type StackItem = {
   component: ReactElement | null
   params?: Record<string, string>
   scrollPosition?: number
+  state?: unknown // Navigation state passed with navigate()
 }
 
 export type NavigationContextType = {
   currentPath: string
   currentParams: Record<string, string>
+  currentState: unknown
   stack: StackItem[]
   currentIndex: number
   navigate: (path: string, options?: NavigateOptions) => void

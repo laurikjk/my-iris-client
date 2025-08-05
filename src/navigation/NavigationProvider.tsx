@@ -42,6 +42,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
         index: existingState.index,
         url: initialPath,
         component: null,
+        state: existingState.state,
       }
       stackIndexRef.current = existingState.index
       setNavState({
@@ -108,6 +109,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
           index: state.index,
           url: newUrl,
           component: null,
+          state: state.state,
         }
 
         // Add to stack maintaining order
@@ -146,11 +148,12 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
             ...newStack[currentIndex],
             url: path,
             component: null,
+            state: options.state,
           }
         }
 
         window.history.replaceState(
-          {index: newStack[currentIndex]?.index || 0, url: path},
+          {index: newStack[currentIndex]?.index || 0, url: path, state: options.state},
           "",
           path
         )
@@ -160,13 +163,59 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
       return
     }
 
-    const newIndex = ++stackIndexRef.current
-
     setNavState((prevState) => {
+      // If state is provided, always create a new stack item (no caching)
+      if (options?.state) {
+        const newIndex = ++stackIndexRef.current
+        const newStack = prevState.stack.slice(0, prevState.currentIndex + 1)
+
+        const newItem: StackItem = {
+          index: newIndex,
+          url: path,
+          component: null,
+          state: options.state,
+        }
+        newStack.push(newItem)
+
+        window.history.pushState(
+          {index: newIndex, url: path, state: options.state},
+          "",
+          path
+        )
+        currentUrlRef.current = path
+
+        return {
+          stack: newStack,
+          currentIndex: newStack.length - 1,
+        }
+      }
+
+      // For routes without state, use URL as cache key
+      const existingIndex = prevState.stack.findIndex(
+        (item) => item.url === path && !item.state
+      )
+
+      if (existingIndex !== -1) {
+        // Reuse existing stack item with same URL (and no state)
+        const existingItem = prevState.stack[existingIndex]
+
+        // Move to this existing item
+        window.history.pushState({index: existingItem.index, url: path}, "", path)
+        currentUrlRef.current = path
+
+        return {
+          ...prevState,
+          currentIndex: existingIndex,
+        }
+      }
+
+      // No cached item found, create new one
+      const newIndex = ++stackIndexRef.current
+
       // Remove any forward history
       const newStack = prevState.stack.slice(0, prevState.currentIndex + 1)
 
-      // Add new item
+      // Add new item with URL as implicit cache key
       const newItem: StackItem = {
         index: newIndex,
         url: path,
@@ -243,6 +292,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
 
   const {stack, currentIndex} = navState
   const currentPath = stack[currentIndex]?.url || "/"
+  const currentState = stack[currentIndex]?.state
   const canGoBack = currentIndex > 0
   const canGoForward = currentIndex < stack.length - 1
 
@@ -252,6 +302,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
   const value: NavigationContextType = {
     currentPath,
     currentParams,
+    currentState,
     stack,
     currentIndex,
     navigate,

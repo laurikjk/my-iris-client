@@ -27,15 +27,14 @@ export const Router = () => {
 
         const RouteComponent = matchedRoute?.component
 
-        // Generate a stable key based on the route path pattern, not the actual URL
-        // This ensures the same component instance is reused for the same route
-        const routeKey = matchedRoute
-          ? `${item.index}-${matchedRoute.path}`
-          : `${item.index}-404`
+        // Use URL as key for routes without state (for caching)
+        // Use index for routes with state (always new instance)
+        // Note: We can change to item.index based + optional cache key routing later if needed
+        const routeKey = item.state ? `stack-${item.index}` : `url-${item.url}`
 
         return (
           <div
-            key={routeKey} // Use route pattern + index as key
+            key={routeKey} // Use cache key for stable component instances
             style={{
               display: index === currentIndex ? "block" : "none",
             }}
