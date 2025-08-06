@@ -140,8 +140,8 @@ function HomeFeedEvents() {
   }
 
   return (
-    <>
-      <Header showBack={false}>
+    <div className="relative w-full h-full">
+      <Header showBack={false} inColumn={true}>
         <div className="flex items-center justify-between w-full">
           <span className="md:px-3 md:py-2">{feedName}</span>
           {isLargeScreen && (
@@ -165,6 +165,7 @@ function HomeFeedEvents() {
           )}
         </div>
       </Header>
+      <div className={isLargeScreen ? "pt-16" : ""}>
       {follows.length > 1 && myPubKey && (
         <FeedTabs
           allTabs={allFeeds}
@@ -204,7 +205,8 @@ function HomeFeedEvents() {
           )}
         </>
       )}
-    </>
+      </div>
+    </div>
   )
 }
 

@@ -2,6 +2,7 @@ import {MOBILE_BREAKPOINT} from "@/shared/components/user/const.ts"
 import {ReactNode, useRef, useEffect, MouseEvent} from "react"
 import {RiMenuLine, RiArrowLeftLine} from "@remixicon/react"
 import {useScrollableParent} from "@/shared/hooks/useScrollableParent"
+import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
 import NotificationButton from "./NotificationButton"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "@/navigation"
@@ -17,6 +18,7 @@ interface HeaderProps {
   scrollDown?: boolean
   slideUp?: boolean
   bold?: boolean
+  inColumn?: boolean
 }
 
 const Header = ({
@@ -27,10 +29,12 @@ const Header = ({
   scrollDown = false,
   slideUp = true,
   bold = true,
+  inColumn = false,
 }: HeaderProps) => {
   const {isSidebarOpen, setIsSidebarOpen, setShowLoginDialog} = useUIStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const navigate = useNavigate()
+  const isLargeScreen = useIsLargeScreen()
 
   const headerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -246,7 +250,10 @@ const Header = ({
       ref={headerRef}
       onClick={handleHeaderClick}
       style={slideUp ? {transform: "translateY(0px)"} : undefined}
-      className="pt-[env(safe-area-inset-top)] min-h-16 flex fixed top-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none w-full cursor-pointer"
+      className={classNames(
+        "pt-[env(safe-area-inset-top)] min-h-16 flex top-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none w-full cursor-pointer",
+        inColumn && isLargeScreen ? "sticky" : "fixed"
+      )}
     >
       <div ref={contentRef} className="flex justify-between items-center flex-1 w-full">
         <div className="flex items-center gap-2 w-full">
