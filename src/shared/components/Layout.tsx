@@ -51,7 +51,7 @@ const Layout = ({children}: {children: ReactNode}) => {
     initializeProviders()
   }, [initializeProviders])
 
-  // Scroll middle column when home is clicked
+  // Scroll middle column when home is clicked (for two-column layout)
   useEffect(() => {
     if (navItemClicked.signal === 0 || navItemClicked.path !== "/" || !shouldShowMainFeed)
       return
@@ -126,7 +126,7 @@ const Layout = ({children}: {children: ReactNode}) => {
         {!appearance.singleColumnLayout && isLargeScreen && (
           <div
             ref={middleColumnRef}
-            className={`flex-1 min-w-0 border-r border-base-300 overflow-y-auto overflow-x-hidden scrollbar-hide ${
+            className={`flex-1 min-w-0 border-r border-base-300 overflow-y-scroll overflow-x-hidden scrollbar-hide ${
               shouldShowMainFeed ? "hidden lg:block" : "hidden"
             }`}
           >

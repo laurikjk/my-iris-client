@@ -1,4 +1,4 @@
-import {useMemo, useState} from "react"
+import {useMemo, useState, useEffect, useRef} from "react"
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
@@ -11,6 +11,7 @@ import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {usePublicKey} from "@/stores/user"
 import {useSettingsStore} from "@/stores/settings"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
+import {useUIStore} from "@/stores/ui"
 import {
   useFeedStore,
   useEnabledFeedIds,
@@ -32,10 +33,12 @@ const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
   ) : null
 
 function HomeFeedEvents() {
+  const containerRef = useRef<HTMLDivElement>(null)
   const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true) // to update on follows change
   const {appearance, updateAppearance} = useSettingsStore()
   const isLargeScreen = useIsLargeScreen()
+  const navItemClicked = useUIStore((state) => state.navItemClicked)
   const {
     activeFeed,
     setActiveFeed,
@@ -50,6 +53,17 @@ function HomeFeedEvents() {
   const feedConfigs = useFeedConfigs()
   const socialGraphLoaded = useSocialGraphLoaded()
   const [editMode, setEditMode] = useState(false)
+
+  // Handle home nav click to scroll to top
+  useEffect(() => {
+    if (navItemClicked.signal === 0 || navItemClicked.path !== "/") return
+
+    // Find the scrollable container
+    const scrollContainer = containerRef.current?.closest(".overflow-y-scroll")
+    if (scrollContainer) {
+      scrollContainer.scrollTo({top: 0, behavior: "instant"})
+    }
+  }, [navItemClicked])
 
   // Get all feed configs from store
   const allFeeds = useMemo(() => {
@@ -140,7 +154,7 @@ function HomeFeedEvents() {
   }
 
   return (
-    <div className="relative w-full h-full">
+    <div ref={containerRef} className="relative w-full h-full">
       <Header showBack={false} inColumn={true}>
         <div className="flex items-center justify-between w-full">
           <span className="md:px-3 md:py-2">{feedName}</span>
@@ -165,46 +179,46 @@ function HomeFeedEvents() {
           )}
         </div>
       </Header>
-      <div className={isLargeScreen ? "pt-16" : ""}>
-      {follows.length > 1 && myPubKey && (
-        <FeedTabs
-          allTabs={allFeeds}
-          editMode={editMode}
-          onEditModeToggle={toggleEditMode}
-        />
-      )}
-      {editMode && follows.length > 1 && myPubKey && (
-        <FeedEditor
-          key={activeFeed}
-          activeTab={activeFeed}
-          tabs={feeds}
-          onEditModeToggle={toggleEditMode}
-          onDeleteFeed={handleDeleteFeed}
-          onResetFeeds={handleResetFeeds}
-          onCloneFeed={handleCloneFeed}
-        />
-      )}
-      <NotificationPrompt />
-      {activeFeedConfig?.feedType === "popular" || !myPubKey ? (
-        <PopularFeed />
-      ) : (
-        <Feed
-          key={feedKey}
-          feedConfig={activeFeedConfig}
-          showDisplayAsSelector={follows.length > 1}
-          forceUpdate={0}
-          emptyPlaceholder={""}
-          refreshSignal={feedRefreshSignal}
-        />
-      )}
-      {follows.length <= 1 && myPubKey && (
-        <>
-          <NoFollows myPubKey={myPubKey} />
-          {activeFeedConfig?.feedType !== "popular" && (
-            <PopularFeed displayOptions={{showDisplaySelector: false}} />
-          )}
-        </>
-      )}
+      <div>
+        {follows.length > 1 && myPubKey && (
+          <FeedTabs
+            allTabs={allFeeds}
+            editMode={editMode}
+            onEditModeToggle={toggleEditMode}
+          />
+        )}
+        {editMode && follows.length > 1 && myPubKey && (
+          <FeedEditor
+            key={activeFeed}
+            activeTab={activeFeed}
+            tabs={feeds}
+            onEditModeToggle={toggleEditMode}
+            onDeleteFeed={handleDeleteFeed}
+            onResetFeeds={handleResetFeeds}
+            onCloneFeed={handleCloneFeed}
+          />
+        )}
+        <NotificationPrompt />
+        {activeFeedConfig?.feedType === "popular" || !myPubKey ? (
+          <PopularFeed />
+        ) : (
+          <Feed
+            key={feedKey}
+            feedConfig={activeFeedConfig}
+            showDisplayAsSelector={follows.length > 1}
+            forceUpdate={0}
+            emptyPlaceholder={""}
+            refreshSignal={feedRefreshSignal}
+          />
+        )}
+        {follows.length <= 1 && myPubKey && (
+          <>
+            <NoFollows myPubKey={myPubKey} />
+            {activeFeedConfig?.feedType !== "popular" && (
+              <PopularFeed displayOptions={{showDisplaySelector: false}} />
+            )}
+          </>
+        )}
       </div>
     </div>
   )
