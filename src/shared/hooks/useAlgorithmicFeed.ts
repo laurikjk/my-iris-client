@@ -42,12 +42,11 @@ interface FeedCache {
 
 interface FeedConfig {
   filterSeen?: boolean
-  includeChronological?: boolean
   popularRatio?: number
 }
 
 export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig = {}) {
-  const {filterSeen = false, includeChronological = false, popularRatio = 0.5} = config
+  const {filterSeen = false, popularRatio = 0.5} = config
 
   const {currentFilters, expandFilters} = usePopularityFilters(cache.popularityFilters)
 
@@ -60,13 +59,8 @@ export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig 
 
   const {getNextChronological, hasInitialData: hasChronologicalData} =
     useChronologicalSubscription(cache.chronologicalSubscription || {}, filterSeen)
-  const popularFeedResult = usePostFetcher(
-    getNextMostPopular,
-    hasPopularData,
-    cache.postFetcher || {}
-  )
 
-  const forYouFeedResult = useCombinedPostFetcher({
+  const result = useCombinedPostFetcher({
     getNextPopular: getNextMostPopular,
     getNextChronological,
     hasPopularData,
@@ -75,5 +69,5 @@ export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig 
     popularRatio,
   })
 
-  return includeChronological ? forYouFeedResult : popularFeedResult
+  return result
 }

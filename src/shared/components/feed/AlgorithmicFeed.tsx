@@ -25,20 +25,18 @@ const feedConfigs = {
   popular: {
     filterSeen: false,
     includeChronological: false,
-    popularRatio: 1.0,
     emptyMessage: "No popular posts found",
     loadingMessage: "Loading popular posts...",
   },
   "for-you": {
     filterSeen: true,
     includeChronological: true,
-    popularRatio: 0.5,
     emptyMessage: "No posts found for you",
     loadingMessage: "Loading your personalized feed...",
   },
 }
 
-const AlgorithmicFeed = memo(function AlgorithmicFeed({
+const AlgorithmicFeed = function AlgorithmicFeed({
   type,
   displayOptions = {},
 }: AlgorithmicFeedProps) {
@@ -53,8 +51,7 @@ const AlgorithmicFeed = memo(function AlgorithmicFeed({
 
   const {events, loadMore, loading} = useAlgorithmicFeed(cache, {
     filterSeen: config.filterSeen,
-    includeChronological: config.includeChronological,
-    popularRatio: config.popularRatio,
+    popularRatio: config.includeChronological ? 0.5 : 1.0,
   })
 
   const {feedDisplayAs: displayAs, setFeedDisplayAs: setDisplayAs} = useFeedStore()
@@ -73,6 +70,6 @@ const AlgorithmicFeed = memo(function AlgorithmicFeed({
       randomSort={randomSort}
     />
   )
-})
+}
 
 export default AlgorithmicFeed

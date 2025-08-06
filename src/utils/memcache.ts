@@ -3,6 +3,7 @@ import {SortedMap} from "./SortedMap/SortedMap"
 import {LRUCache} from "typescript-lru-cache"
 import throttle from "lodash/throttle"
 import localforage from "localforage"
+import {FeedType} from "@/stores/feed"
 
 export const eventsByIdCache = new LRUCache({maxSize: 500})
 export const feedCache = new LRUCache<string, SortedMap<string, NDKEvent>>({maxSize: 10})
@@ -79,8 +80,14 @@ export const forYouFeedCache: ForYouFeedCache = {
   popularityFilters: {},
 }
 
-export const getOrCreateAlgorithmicFeedCache = (feedId: string) => {
-  return feedId === "popular" ? popularHomeFeedCache : forYouFeedCache
+export const getOrCreateAlgorithmicFeedCache = (feedId: FeedType) => {
+  if (feedId === "popular") {
+    return popularHomeFeedCache
+  } else if (feedId === "for-you") {
+    return forYouFeedCache
+  } else {
+    throw new Error(`Unknown feed type: ${feedId}`)
+  }
 }
 
 // Load seenEventIds from localForage

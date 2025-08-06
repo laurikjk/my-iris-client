@@ -42,6 +42,7 @@ function HomeFeedEvents() {
     deleteFeed,
     cloneFeed,
     resetAllFeedsToDefaults,
+    feedRefreshSignal,
   } = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
   const feedConfigs = useFeedConfigs()
@@ -119,6 +120,12 @@ function HomeFeedEvents() {
     cloneFeed(feedId)
   }
 
+  // Create a comprehensive key that changes when any relevant config changes
+  const feedKey = useMemo(() => {
+    if (!activeFeedConfig) return "feed-null"
+    return `feed-${getFeedCacheKey(activeFeedConfig)}`
+  }, [activeFeedConfig])
+
   useEffect(() => {
     if (activeFeed !== "unseen") {
       feedCache.delete("unseen")
@@ -127,12 +134,6 @@ function HomeFeedEvents() {
       feedCache.delete("unseen")
     }
   }, [activeFeedItem, openedAt, refreshSignal, activeFeed])
-
-  // Create a comprehensive key that changes when any relevant config changes
-  const feedKey = useMemo(() => {
-    if (!activeFeedConfig) return "feed-null"
-    return `feed-${getFeedCacheKey(activeFeedConfig)}`
-  }, [activeFeedConfig])
 
   if (!activeFeedConfig?.filter && !activeFeedConfig?.feedStrategy) {
     return null
@@ -175,7 +176,12 @@ function HomeFeedEvents() {
         if (!myPubKey) return <AlgorithmicFeed type="popular" />
 
         if (activeFeedConfig?.feedStrategy)
-          return <AlgorithmicFeed type={activeFeedConfig.feedStrategy} />
+          return (
+            <AlgorithmicFeed
+              key={activeFeedConfig.feedStrategy}
+              type={activeFeedConfig.feedStrategy}
+            />
+          )
 
         return (
           <Feed
@@ -184,7 +190,7 @@ function HomeFeedEvents() {
             showDisplayAsSelector={follows.length > 1}
             forceUpdate={0}
             emptyPlaceholder={""}
-            refreshSignal={refreshSignal}
+            refreshSignal={feedRefreshSignal}
             openedAt={openedAt}
           />
         )
