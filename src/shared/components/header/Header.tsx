@@ -179,9 +179,7 @@ const Header = ({
       // idx works only in production for some reason
       // in production we dont want the history.length check
       // because it could return you out of the app
-      const canGoBack = import.meta.env.DEV
-        ? window.history.length > 1
-        : window.history.state?.idx > 0
+      const canGoBack = window.history.state?.index > 0
 
       if (canGoBack) {
         navigate(-1)
