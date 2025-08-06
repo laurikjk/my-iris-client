@@ -188,7 +188,7 @@ function HomeFeedEvents() {
             onEditModeToggle={toggleEditMode}
           />
         )}
-        {editMode && follows.length > 1 && myPubKey && (
+        {editMode && follows.length > 1 && myPubKey && !activeFeedConfig?.feedStrategy && (
           <FeedEditor
             key={activeFeed}
             activeTab={activeFeed}

@@ -179,29 +179,17 @@ function FeedEditor({
         <div className="text-lg font-semibold">
           Edit &quot;{getDisplayName(activeTab, localConfig.name)}&quot;
         </div>
-        {activeTab !== "popular" && (
-          <button
-            onClick={handleClone}
-            className="btn btn-sm btn-neutral"
-            title="Clone this feed"
-          >
-            <RiFileCopyLine className="w-4 h-4" />
-            Clone
-          </button>
-        )}
+        <button
+          onClick={handleClone}
+          className="btn btn-sm btn-neutral"
+          title="Clone this feed"
+        >
+          <RiFileCopyLine className="w-4 h-4" />
+          Clone
+        </button>
       </div>
 
-      {/* Show no options for popular feed */}
-      {activeTab === "popular" ? (
-        <div className="flex flex-col gap-2">
-          <div className="text-sm text-base-content/50 italic">
-            Popular feeds use a fixed algorithm to calculate the most popular posts first.
-            Editing functionality is under construction.
-          </div>
-        </div>
-      ) : (
-        <>
-          {/* Basic Settings */}
+      {/* Basic Settings */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-base-content/70 min-w-[7rem]">Name</span>
             <input
@@ -370,8 +358,6 @@ function FeedEditor({
           <div className="flex flex-col gap-2">
             {renderCommonCheckboxes(updateConfig)}
           </div>
-        </>
-      )}
 
       {/* Action Buttons */}
       <div className="flex justify-between gap-2 pt-2 border-t border-base-300">
