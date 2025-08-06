@@ -1,6 +1,7 @@
 import {AvatarGroup} from "@/shared/components/user/AvatarGroup.tsx"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {RefObject} from "react"
+import {useSettingsStore} from "@/stores/settings"
 
 interface NewEventsButtonProps {
   newEventsFiltered: NDKEvent[]
@@ -15,23 +16,43 @@ const NewEventsButton = ({
   showNewEvents,
   firstFeedItemRef,
 }: NewEventsButtonProps) => {
+  const {appearance} = useSettingsStore()
+  const isLargeScreen = typeof window !== "undefined" && window.innerWidth >= 1024
+  const isColumnLayout = appearance.alwaysShowMainFeed && isLargeScreen
+
   if (newEventsFiltered.length === 0) return null
 
   return (
-    <div className="fixed bottom-20 md:bottom-10 left-1/2 transform -translate-x-1/2 z-30 flex justify-center w-full max-w-lg pb-[env(safe-area-inset-bottom)]">
+    <div className="absolute bottom-20 md:bottom-10 left-0 right-0 z-30 flex justify-center pb-[env(safe-area-inset-bottom)] pointer-events-none">
       <button
-        className="btn btn-info shadow-xl rounded-full"
+        className="btn btn-info shadow-xl rounded-full pointer-events-auto"
         onClick={() => {
           showNewEvents()
 
-          // Scroll to first feed item with offset, then ensure header is visible
+          // For column layout, scroll the container; for regular layout, scroll window
           if (firstFeedItemRef?.current) {
-            const rect = firstFeedItemRef.current.getBoundingClientRect()
-            const scrollTop = window.scrollY + rect.top - 200 // 200px offset above
-            window.scrollTo({top: Math.max(0, scrollTop), behavior: "instant"})
+            if (isColumnLayout) {
+              // Find the scrollable column container
+              const scrollContainer = firstFeedItemRef.current.closest(".overflow-y-auto")
+              if (scrollContainer) {
+                scrollContainer.scrollTo({top: 0, behavior: "instant"})
+              }
+            } else {
+              // Regular window scroll
+              const rect = firstFeedItemRef.current.getBoundingClientRect()
+              const scrollTop = window.scrollY + rect.top - 200 // 200px offset above
+              window.scrollTo({top: Math.max(0, scrollTop), behavior: "instant"})
+            }
           } else {
-            // Fallback to top if ref not available
-            window.scrollTo({top: 0, behavior: "instant"})
+            // Fallback
+            if (isColumnLayout) {
+              const scrollContainer = document.querySelector(".overflow-y-auto")
+              if (scrollContainer) {
+                scrollContainer.scrollTo({top: 0, behavior: "instant"})
+              }
+            } else {
+              window.scrollTo({top: 0, behavior: "instant"})
+            }
           }
         }}
       >

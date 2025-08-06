@@ -3,13 +3,11 @@ import {create} from "zustand"
 
 interface NotificationsState {
   latestNotification: number
-  refreshRouteSignal: number
   notificationsDeclined: boolean
   notificationsSeenAt: number
   goToNotifications: number
 
   setLatestNotification: (timestamp: number) => void
-  updateRefreshRouteSignal: () => void
   setNotificationsDeclined: (declined: boolean) => void
   setNotificationsSeenAt: (timestamp: number) => void
   incrementGoToNotifications: () => void
@@ -20,7 +18,6 @@ export const useNotificationsStore = create<NotificationsState>()(
     (set, get) => {
       const initialState = {
         latestNotification: 0,
-        refreshRouteSignal: 0,
         notificationsDeclined: false,
         notificationsSeenAt: 0,
         goToNotifications: 0,
@@ -28,7 +25,6 @@ export const useNotificationsStore = create<NotificationsState>()(
 
       const actions = {
         setLatestNotification: (latestNotification: number) => set({latestNotification}),
-        updateRefreshRouteSignal: () => set({refreshRouteSignal: Date.now()}),
         setNotificationsDeclined: (notificationsDeclined: boolean) =>
           set({notificationsDeclined}),
         setNotificationsSeenAt: (notificationsSeenAt: number) =>
@@ -55,6 +51,3 @@ if (typeof window !== "undefined") {
     }
   ).useNotificationsStore = useNotificationsStore
 }
-
-export const useRefreshRouteSignal = () =>
-  useNotificationsStore((state) => state.refreshRouteSignal)

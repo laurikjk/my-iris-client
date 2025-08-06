@@ -8,6 +8,7 @@ interface SettingsState {
   appearance: {
     theme: string
     showRightColumn: boolean
+    alwaysShowMainFeed: boolean
   }
   // Content settings
   content: {
@@ -59,6 +60,7 @@ export const useSettingsStore = create<SettingsState>()(
       appearance: {
         theme: CONFIG.defaultTheme,
         showRightColumn: true,
+        alwaysShowMainFeed: true,
       },
       content: {
         blurNSFW: true,

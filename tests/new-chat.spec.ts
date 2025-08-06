@@ -9,16 +9,11 @@ test("can search for self and start a private chat via user search", async ({pag
   await page.getByRole("link", {name: "Chats"}).click()
   await page.waitForLoadState("networkidle")
 
-  // Wait for either header text or link text
-  await expect(
-    page
-      .getByRole("link", {name: /New Chat/})
-      .or(page.locator("header").getByText("New Chat"))
-  ).toBeVisible({timeout: 10000})
+  // Wait for the New Chat header to be visible
+  await expect(page.locator("header").getByText("New Chat")).toBeVisible({timeout: 10000})
 
-  // Click the New Chat link to go to /chats/new
-  await page.getByRole("link", {name: /New Chat/}).click()
-  await expect(page).toHaveURL(/\/chats\/new/)
+  // We're already on the new chat page at /chats
+  // No need to click any link since /chats now shows NewChat by default
 
   // Wait for the search input to be visible (use first in case of duplicates)
   const searchInput = page.getByPlaceholder("Search for users").first()

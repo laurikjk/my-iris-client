@@ -12,7 +12,9 @@ import {trackEvent} from "@/utils/IrisAPI"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useUIStore} from "@/stores/ui"
 import {Helmet} from "react-helmet"
-import {useEffect, ReactNode} from "react"
+import {useEffect, ReactNode, useRef} from "react"
+import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
+import HomeFeedEvents from "@/pages/home/feed/components/HomeFeedEvents"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -22,9 +24,12 @@ interface ServiceWorkerMessage {
 }
 
 const Layout = ({children}: {children: ReactNode}) => {
+  const middleColumnRef = useRef<HTMLDivElement>(null)
+  const outletColumnRef = useRef<HTMLDivElement>(null)
   const newPostOpen = useUIStore((state) => state.newPostOpen)
   const setNewPostOpen = useUIStore((state) => state.setNewPostOpen)
-  const {privacy} = useSettingsStore()
+  const navItemClicked = useUIStore((state) => state.navItemClicked)
+  const {privacy, appearance} = useSettingsStore()
   const goToNotifications = useUIStore((state) => state.goToNotifications)
   const showLoginDialog = useUIStore((state) => state.showLoginDialog)
   const setShowLoginDialog = useUIStore((state) => state.setShowLoginDialog)
@@ -32,6 +37,13 @@ const Layout = ({children}: {children: ReactNode}) => {
   const initializeProviders = useWalletProviderStore((state) => state.initializeProviders)
   const navigate = useNavigate()
   const location = useLocation()
+  const isLargeScreen = useIsLargeScreen()
+
+  const shouldShowMainFeed =
+    appearance.alwaysShowMainFeed &&
+    isLargeScreen &&
+    !location.pathname.startsWith("/settings") &&
+    !location.pathname.startsWith("/chats")
 
   socialGraphLoaded.then() // just make sure we start loading social the graph
 
@@ -41,15 +53,79 @@ const Layout = ({children}: {children: ReactNode}) => {
     initializeProviders()
   }, [initializeProviders])
 
+  // Scroll middle column when home is clicked
+  useEffect(() => {
+    if (navItemClicked.signal === 0 || navItemClicked.path !== "/" || !shouldShowMainFeed)
+      return
+
+    if (middleColumnRef.current) {
+      middleColumnRef.current.scrollTo({top: 0, behavior: "instant"})
+    }
+  }, [navItemClicked, shouldShowMainFeed])
+
   useEffect(() => {
     if (goToNotifications > openedAt) {
       navigate("/notifications")
     }
   }, [navigate, goToNotifications])
 
+  // Track and restore outlet column scroll position
   useEffect(() => {
-    window.scrollTo(0, 0)
+    const outletColumn = outletColumnRef.current
+    if (!outletColumn) return
 
+    // Save scroll position to current history state before navigation
+    const saveScrollPosition = () => {
+      const currentState = window.history.state
+      if (currentState) {
+        window.history.replaceState(
+          {
+            ...currentState,
+            outletScrollPosition: outletColumn.scrollTop,
+          },
+          ""
+        )
+      }
+    }
+
+    // Restore scroll position from history state
+    const restoreScrollPosition = () => {
+      const state = window.history.state
+      if (state?.outletScrollPosition !== undefined) {
+        // Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+          outletColumn.scrollTo(0, state.outletScrollPosition)
+        })
+      } else {
+        // No saved position, scroll to top
+        outletColumn.scrollTo(0, 0)
+      }
+    }
+
+    // Save scroll position before unload or navigation
+    window.addEventListener("beforeunload", saveScrollPosition)
+
+    // Restore scroll position after navigation
+    restoreScrollPosition()
+
+    // Save scroll position when navigating away
+    return () => {
+      saveScrollPosition()
+      window.removeEventListener("beforeunload", saveScrollPosition)
+    }
+  }, [location.pathname])
+
+  // Handle nav item clicks to reset scroll when navigating to same route
+  useEffect(() => {
+    if (navItemClicked.signal === 0) return
+
+    // If clicking on current path, scroll outlet to top
+    if (navItemClicked.path === location.pathname && outletColumnRef.current) {
+      outletColumnRef.current.scrollTo({top: 0, behavior: "instant"})
+    }
+  }, [navItemClicked, location.pathname])
+
+  useEffect(() => {
     const isMessagesRoute = location.pathname.startsWith("/chats/")
     const isSearchRoute = location.pathname.startsWith("/search/")
     if (
@@ -107,13 +183,26 @@ const Layout = ({children}: {children: ReactNode}) => {
   }, [])
 
   return (
-    <div className="relative flex flex-col w-full max-w-screen-xl min-h-screen overscroll-none">
+    <div className="relative flex flex-col w-full min-h-screen overscroll-none overflow-x-hidden">
       <div
-        className="flex relative min-h-screen flex-1 overscroll-none"
+        className="flex relative min-h-screen flex-1 overscroll-none overflow-x-hidden"
         id="main-content"
       >
         <NavSideBar />
-        <div className="relative flex-1 min-h-screen py-16 md:py-0 overscroll-none mt-[env(safe-area-inset-top)] mb-[env(safe-area-inset-bottom)]">
+        {appearance.alwaysShowMainFeed && isLargeScreen && (
+          <div
+            ref={middleColumnRef}
+            className={`flex-1 border-r border-base-300 overflow-y-auto overflow-x-hidden h-screen ${
+              shouldShowMainFeed ? "hidden lg:block" : "hidden"
+            }`}
+          >
+            <HomeFeedEvents />
+          </div>
+        )}
+        <div
+          ref={outletColumnRef}
+          className="flex-1 overflow-y-auto overflow-x-hidden h-screen pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+        >
           <ErrorBoundary>
             {children}
             {activeProviderType !== "disabled" && (

@@ -1,46 +1,35 @@
 import SearchBox from "@/shared/components/ui/SearchBox.tsx"
-import {useState, useEffect, ReactNode} from "react"
+import {ReactNode} from "react"
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import {useSettingsStore} from "@/stores/settings"
 import ErrorBoundary from "./ui/ErrorBoundary"
+import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
 
 interface RightColumnProps {
   children: () => ReactNode
 }
 
-function useWindowWidth() {
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth)
-
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth)
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
-
-  return windowWidth
-}
-
 function RightColumn({children}: RightColumnProps) {
-  const windowWidth = useWindowWidth()
+  const isLargeScreen = useIsLargeScreen()
   const {appearance, updateAppearance} = useSettingsStore()
   const isExpanded = appearance.showRightColumn
 
   const isTestEnvironment =
     typeof window !== "undefined" && window.location.href.includes("localhost:5173")
 
-  if (windowWidth < 1024 && !isTestEnvironment) {
+  // Don't show right column when alwaysShowMainFeed is enabled
+  if (appearance.alwaysShowMainFeed) {
+    return null
+  }
+
+  if (!isLargeScreen && !isTestEnvironment) {
     return null
   }
 
   // Collapsed state - just show toggle arrow
   if (!isExpanded) {
     return (
-      <div
-        className="hidden lg:block fixed top-3 z-50"
-        style={{
-          right: Math.max(16, (windowWidth - 1280) / 2 + 16), // 16px from max-w-screen-xl edge (1280px)
-        }}
-      >
+      <div className="hidden lg:block fixed top-3 z-50 right-4 xl:right-[calc((100vw-1280px)/2+16px)]">
         <button
           onClick={() => updateAppearance({showRightColumn: true})}
           className="bg-base-100 border border-base-300 p-2 rounded-full shadow-lg hover:bg-base-200 transition-colors"

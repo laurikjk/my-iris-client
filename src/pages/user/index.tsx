@@ -1,4 +1,4 @@
-import {useMemo, useState, useEffect, useRef} from "react"
+import {useMemo, useState, useEffect} from "react"
 import classNames from "classnames"
 
 import RightColumn from "@/shared/components/RightColumn"
@@ -142,8 +142,6 @@ function UserPage({pubKey}: {pubKey: string}) {
   const follows = useFollows(pubKey)
   const hasMarketEvents = useHasMarketEvents(pubKeyHex)
   const [activeTab, setActiveTab] = useState("")
-  const [feedMinHeight, setFeedMinHeight] = useState<number>(0)
-  const feedContainerRef = useRef<HTMLDivElement>(null)
   const filteredFollows = useMemo(() => {
     const filtered = myPubKey
       ? follows.filter((follow) => socialGraph().getFollowDistance(follow) > 1)
@@ -169,23 +167,7 @@ function UserPage({pubKey}: {pubKey: string}) {
                   key={tab.path}
                   onClick={(e) => {
                     e.preventDefault()
-                    // Capture current feed height before switching
-                    if (feedContainerRef.current) {
-                      const currentHeight = feedContainerRef.current.offsetHeight
-                      // Set min-height to at least maintain viewport visibility
-                      const viewportHeight = window.innerHeight
-                      const scrollY = window.scrollY
-                      const feedTop =
-                        feedContainerRef.current.getBoundingClientRect().top + scrollY
-                      const visibleHeight = Math.min(
-                        currentHeight,
-                        viewportHeight - (feedTop - scrollY)
-                      )
-                      setFeedMinHeight(Math.max(visibleHeight, 400)) // At least 400px
-                    }
                     setActiveTab(tab.path)
-                    // Clear min-height after render
-                    setTimeout(() => setFeedMinHeight(0), 100)
                   }}
                   className={classNames(
                     "btn btn-sm",
@@ -208,16 +190,11 @@ function UserPage({pubKey}: {pubKey: string}) {
               }
 
               return (
-                <div
-                  ref={feedContainerRef}
-                  style={{minHeight: feedMinHeight ? `${feedMinHeight}px` : undefined}}
-                >
-                  <Feed
-                    key={`feed-${pubKeyHex}-${activeTabConfig.path}`}
-                    feedConfig={feedConfig}
-                    borderTopFirst={true}
-                  />
-                </div>
+                <Feed
+                  key={`feed-${pubKeyHex}-${activeTabConfig.path}`}
+                  feedConfig={feedConfig}
+                  borderTopFirst={true}
+                />
               )
             })()}
           </div>

@@ -12,7 +12,11 @@ export interface NavItemConfig {
 
 export const navItemsConfig = (): Record<string, NavItemConfig> => ({
   home: {to: "/", icon: "home", label: "Home"},
-  search: {to: "/search", icon: "search", label: "Search"},
+  search: {
+    to: "/search",
+    icon: "search",
+    label: "Search",
+  },
   messages: {
     to: "/chats",
     icon: "mail",

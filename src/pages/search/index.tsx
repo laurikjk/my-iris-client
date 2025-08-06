@@ -1,4 +1,4 @@
-import {useMemo, useState, useEffect, FormEvent} from "react"
+import {useMemo, useState, useEffect, FormEvent, useRef} from "react"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
 import useHistoryState from "@/shared/hooks/useHistoryState"
@@ -10,17 +10,20 @@ import {useParams, useNavigate} from "@/navigation"
 import Widget from "@/shared/components/ui/Widget"
 import {Helmet} from "react-helmet"
 import {useSettingsStore} from "@/stores/settings"
+import {useUIStore} from "@/stores/ui"
 import {KIND_CLASSIFIED, KIND_TEXT_NOTE} from "@/utils/constants"
 
 function SearchPage() {
   const {query} = useParams()
   const navigate = useNavigate()
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchTerm, setSearchTerm] = useState(query || "")
   const [activeTab, setActiveTab] = useHistoryState<"people" | "posts" | "market">(
     query ? "posts" : "people",
     "searchTab"
   )
   const [forceUpdate, setForceUpdate] = useState(0)
+  const navItemClicked = useUIStore((state) => state.navItemClicked)
 
   const {content} = useSettingsStore()
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
@@ -39,6 +42,22 @@ function SearchPage() {
     setForceUpdate((prev) => prev + 1)
   }, [activeTab])
 
+  // Focus search input when search nav item is clicked
+  useEffect(() => {
+    if (navItemClicked.path !== "/search") return
+
+    // Focus the appropriate input based on active tab
+    if (activeTab === "people") {
+      // For SearchBox component, we need to find its input
+      const searchBoxInput = document.querySelector(
+        '.dropdown input[type="text"]'
+      ) as HTMLInputElement
+      searchBoxInput?.focus()
+    } else {
+      searchInputRef.current?.focus()
+    }
+  }, [navItemClicked, activeTab])
+
   const filters: NDKFilter = useMemo(
     () => ({
       kinds: activeTab === "market" ? [KIND_CLASSIFIED] : [KIND_TEXT_NOTE],
@@ -56,7 +75,7 @@ function SearchPage() {
 
   return (
     <div className="flex flex-row">
-      <div key={query} className="flex flex-col items-center flex-1">
+      <div className="flex flex-col items-center flex-1">
         <Header title={query ? `Search: "${query}"` : "Search"} />
         <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4">
           {activeTab === "people" ? (
@@ -64,6 +83,7 @@ function SearchPage() {
           ) : (
             <form onSubmit={handleSubmit} className="flex w-full">
               <input
+                ref={searchInputRef}
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -108,7 +128,7 @@ function SearchPage() {
             </div>
           )}
 
-          {query && (
+          {query ? (
             <Feed
               key={`${activeTab}-${query}`}
               feedConfig={{
@@ -120,10 +140,9 @@ function SearchPage() {
               }}
               forceUpdate={forceUpdate}
             />
-          )}
-          {!query && (
+          ) : (
             <div className="mt-4">
-              <PopularFeed displayOptions={{showDisplaySelector: false}} />
+              <PopularFeed displayOptions={{showDisplaySelector: true}} />
             </div>
           )}
         </div>

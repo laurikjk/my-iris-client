@@ -20,8 +20,8 @@ test.describe("Multi-device group messaging", () => {
       await page1.waitForLoadState("networkidle")
 
       // Navigate to new group creation
-      await page1.getByRole("link", {name: /New Chat/}).click()
-      await page1.getByRole("button", {name: "Create Group"}).click()
+      // We're already on /chats which shows NewChat
+      await page1.getByRole("link", {name: "Group"}).click()
 
       // Fill in group details
       const groupName = "Test Group " + Date.now()
@@ -123,8 +123,8 @@ test.describe("Multi-device group messaging", () => {
       await page1.getByRole("link", {name: "Chats"}).click()
       await page1.waitForLoadState("networkidle")
 
-      await page1.getByRole("link", {name: /New Chat/}).click()
-      await page1.getByRole("button", {name: "Create Group"}).click()
+      // We're already on /chats which shows NewChat
+      await page1.getByRole("link", {name: "Group"}).click()
 
       const groupName = "History Test Group " + Date.now()
       await page1.getByPlaceholder("Group name").fill(groupName)

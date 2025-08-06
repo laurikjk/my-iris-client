@@ -203,12 +203,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
     }
 
     setNavState((prevState) => {
-      // Save current scroll position before navigating away
       const updatedStack = [...prevState.stack]
-      const currentItem = updatedStack[prevState.currentIndex]
-      if (currentItem) {
-        currentItem.scrollPosition = window.scrollY
-      }
 
       // If state is provided, always create a new stack item (no caching)
       if (options?.state) {
@@ -253,24 +248,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
         window.history.pushState({index: existingItem.index, url: path}, "", path)
         currentUrlRef.current = path
 
-        // Restore scroll position for Link navigation
-        // (Browser handles scroll restoration automatically for back/forward)
-        if (
-          existingItem.scrollPosition !== undefined &&
-          existingItem.scrollPosition > 0
-        ) {
-          const scrollPos = existingItem.scrollPosition
-          // Use setTimeout as backup to requestAnimationFrame
-          requestAnimationFrame(() => {
-            window.scrollTo(0, scrollPos)
-            // Double-check after a delay in case something interferes
-            setTimeout(() => {
-              if (window.scrollY !== scrollPos) {
-                window.scrollTo(0, scrollPos)
-              }
-            }, 100)
-          })
-        }
+        // Scroll restoration is now handled by Layout component for outlet column
 
         return {
           stack: updatedStack,

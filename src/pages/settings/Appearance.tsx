@@ -8,6 +8,10 @@ function AppearanceSettings() {
     updateAppearance({theme: e.target.value})
   }
 
+  function handleAlwaysShowMainFeedChange(e: ChangeEvent<HTMLInputElement>) {
+    updateAppearance({alwaysShowMainFeed: e.target.checked})
+  }
+
   return (
     <div>
       <h1 className="text-2xl mb-4">Appearance</h1>
@@ -26,6 +30,20 @@ function AppearanceSettings() {
               <option value="system">System</option>
             </select>
           </div>
+        </div>
+        <div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-primary"
+              checked={appearance.alwaysShowMainFeed}
+              onChange={handleAlwaysShowMainFeedChange}
+            />
+            <span>Always show main feed</span>
+          </label>
+          <p className="text-sm text-base-content/60 mt-1">
+            Show the main feed as a middle column with content on the right
+          </p>
         </div>
       </div>
     </div>

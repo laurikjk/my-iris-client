@@ -8,6 +8,7 @@ interface UIState {
   goToNotifications: number
   hidePWAPrompt: boolean
   isMediaModalSidebarVisible: boolean
+  navItemClicked: {signal: number; path: string}
 
   setIsSidebarOpen: (isOpen: boolean) => void
   setNewPostOpen: (isOpen: boolean) => void
@@ -15,6 +16,7 @@ interface UIState {
   incrementGoToNotifications: () => void
   setHidePWAPrompt: (hide: boolean) => void
   setMediaModalSidebarVisible: (isVisible: boolean) => void
+  triggerNavItemClick: (path: string) => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -27,6 +29,7 @@ export const useUIStore = create<UIState>()(
         goToNotifications: 0,
         hidePWAPrompt: false,
         isMediaModalSidebarVisible: true,
+        navItemClicked: {signal: 0, path: ""},
       }
 
       const actions = {
@@ -38,6 +41,8 @@ export const useUIStore = create<UIState>()(
         setHidePWAPrompt: (hidePWAPrompt: boolean) => set({hidePWAPrompt}),
         setMediaModalSidebarVisible: (isMediaModalSidebarVisible: boolean) =>
           set({isMediaModalSidebarVisible}),
+        triggerNavItemClick: (path: string) =>
+          set({navItemClicked: {signal: Date.now(), path}}),
       }
 
       return {
@@ -47,6 +52,15 @@ export const useUIStore = create<UIState>()(
     },
     {
       name: "ui-storage",
+      partialize: (state) => ({
+        isSidebarOpen: state.isSidebarOpen,
+        newPostOpen: state.newPostOpen,
+        showLoginDialog: state.showLoginDialog,
+        goToNotifications: state.goToNotifications,
+        hidePWAPrompt: state.hidePWAPrompt,
+        isMediaModalSidebarVisible: state.isMediaModalSidebarVisible,
+        // Exclude searchTriggeredFromNav from persistence
+      }),
     }
   )
 )

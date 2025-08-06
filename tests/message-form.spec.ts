@@ -6,16 +6,11 @@ async function setupChatWithSelf(page, username) {
   await page.getByRole("link", {name: "Chats"}).click()
   await page.waitForLoadState("networkidle")
 
-  // Wait for either header text or link text
-  await expect(
-    page
-      .getByRole("link", {name: /New Chat/})
-      .or(page.locator("header").getByText("New Chat"))
-  ).toBeVisible({timeout: 10000})
+  // Wait for the New Chat header to be visible
+  await expect(page.locator("header").getByText("New Chat")).toBeVisible({timeout: 10000})
 
-  // Click the New Chat link to go to /chats/new
-  await page.getByRole("link", {name: /New Chat/}).click()
-  await expect(page).toHaveURL(/\/chats\/new/)
+  // We're already on the new chat page at /chats
+  // No need to click any link since /chats now shows NewChat by default
 
   // Search for self by username (use first in case of duplicates)
   const searchInput = page.getByPlaceholder("Search for users").first()
@@ -47,7 +42,7 @@ test.describe("Message Form - Desktop", () => {
   test("can send a basic text message using Enter key", async ({page}) => {
     await setupChatWithSelf(page, username)
 
-    const messageInput = page.getByPlaceholder("Message")
+    const messageInput = page.getByPlaceholder("Message").first()
     const testMessage = "Hello, this is a test message!"
     await messageInput.fill(testMessage)
     await messageInput.press("Enter")
@@ -63,7 +58,7 @@ test.describe("Message Form - Desktop", () => {
   test("empty message cannot be sent", async ({page}) => {
     await setupChatWithSelf(page, username)
 
-    const messageInput = page.getByPlaceholder("Message")
+    const messageInput = page.getByPlaceholder("Message").first()
     await messageInput.fill("   ") // Just spaces
     await messageInput.press("Enter")
 
@@ -76,7 +71,7 @@ test.describe("Message Form - Desktop", () => {
   test("shift + enter adds a new line", async ({page}) => {
     await setupChatWithSelf(page, username)
 
-    const messageInput = page.getByPlaceholder("Message")
+    const messageInput = page.getByPlaceholder("Message").first()
     await messageInput.fill("Hello, this is a test message!")
     await messageInput.press("Shift+Enter")
 
@@ -86,7 +81,7 @@ test.describe("Message Form - Desktop", () => {
   test("multiple shift + enter presses add multiple new lines", async ({page}) => {
     await setupChatWithSelf(page, username)
 
-    const messageInput = page.getByPlaceholder("Message")
+    const messageInput = page.getByPlaceholder("Message").first()
     await messageInput.pressSequentially("Hello, this is a test message!")
 
     await messageInput.press("Shift+Enter")
@@ -107,7 +102,7 @@ test.describe("Message Form - Desktop", () => {
   test("New lines are trimmed but exist in the middle of the message", async ({page}) => {
     await setupChatWithSelf(page, username)
 
-    const messageInput = page.getByPlaceholder("Message")
+    const messageInput = page.getByPlaceholder("Message").first()
     await messageInput.fill(
       "\nHello, this is a test message!\nThis is a new line\nThis is another new line\n"
     )
@@ -124,7 +119,7 @@ test.describe("Message Form - Desktop", () => {
   test("textarea resizes based on content", async ({page}) => {
     await setupChatWithSelf(page, username)
 
-    const messageInput = page.getByPlaceholder("Message")
+    const messageInput = page.getByPlaceholder("Message").first()
 
     const initialHeight = await messageInput.evaluate((el) => el.clientHeight)
 

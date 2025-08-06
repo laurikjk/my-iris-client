@@ -203,7 +203,7 @@ function FeedEditor({
         <>
           {/* Basic Settings */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-base-content/70 w-20">Name</span>
+            <span className="text-sm text-base-content/70 min-w-[7rem]">Name</span>
             <input
               type="text"
               value={editingName}
@@ -216,7 +216,7 @@ function FeedEditor({
 
           {/* Follow Distance */}
           <div className="flex items-start gap-2">
-            <span className="text-sm text-base-content/70 w-20 pt-2">
+            <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">
               Follow Distance
             </span>
             <div className="flex-1">
@@ -259,7 +259,9 @@ function FeedEditor({
 
           {/* Filter Kinds */}
           <div className="flex items-start gap-2">
-            <span className="text-sm text-base-content/70 w-20 pt-2">Event Kinds</span>
+            <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">
+              Event Kinds
+            </span>
             <div className="flex-1">
               <EventKindsSelector
                 selectedKinds={localConfig.filter?.kinds || []}
@@ -289,7 +291,7 @@ function FeedEditor({
 
           {/* Search Term */}
           <div className="flex items-start gap-2">
-            <span className="text-sm text-base-content/70 w-20 pt-2">Search</span>
+            <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">Search</span>
             <div className="flex-1">
               <input
                 type="text"
@@ -323,7 +325,7 @@ function FeedEditor({
 
           {/* Limit */}
           <div className="flex items-start gap-2">
-            <span className="text-sm text-base-content/70 w-20 pt-2">Limit</span>
+            <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">Limit</span>
             <div className="flex-1">
               <input
                 type="number"
@@ -347,7 +349,7 @@ function FeedEditor({
 
           {/* Relay Selection */}
           <div className="flex items-start gap-2">
-            <span className="text-sm text-base-content/70 w-20 pt-3">Relays</span>
+            <span className="text-sm text-base-content/70 min-w-[7rem] pt-3">Relays</span>
             <div className="flex-1">
               <RelaySelector
                 selectedRelay={localConfig.relayUrls?.[0] || ""}

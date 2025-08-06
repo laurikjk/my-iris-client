@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState, ReactNode} from "react"
+import {useState, ReactNode} from "react"
 import {
   RiAddLine,
   RiChat1Fill,
@@ -89,8 +89,6 @@ function EventKindsSelector({
   onKindsChange,
   className = "",
 }: EventKindsSelectorProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [maxWidth, setMaxWidth] = useState<number | null>(400) // Start with reasonable default
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customKindInput, setCustomKindInput] = useState("")
 
@@ -129,29 +127,9 @@ function EventKindsSelector({
     setShowCustomInput(false)
   }
 
-  // Calculate max width for container based on available space
-  useEffect(() => {
-    const calculateMaxWidth = () => {
-      if (containerRef.current) {
-        const parentWidth = containerRef.current.parentElement?.clientWidth || 0
-        // Reserve some space for the label (w-20 = 80px) + gap + padding
-        const reservedSpace = 100
-        setMaxWidth(Math.max(200, parentWidth - reservedSpace))
-      }
-    }
-
-    calculateMaxWidth()
-    window.addEventListener("resize", calculateMaxWidth)
-    return () => window.removeEventListener("resize", calculateMaxWidth)
-  }, [])
-
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
-      <div
-        ref={containerRef}
-        className="flex gap-2 overflow-x-auto scrollbar-hide pb-2"
-        style={{maxWidth: maxWidth ? `${maxWidth}px` : undefined}}
-      >
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 flex-1">
         {/* Custom event kind input */}
         {showCustomInput ? (
           <div className="flex items-center gap-1 flex-shrink-0">

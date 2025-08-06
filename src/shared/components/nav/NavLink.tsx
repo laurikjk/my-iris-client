@@ -1,5 +1,5 @@
 import {NavLink as RouterNavLink, useLocation} from "@/navigation"
-import {useNotificationsStore} from "@/stores/notifications"
+import {useUIStore} from "@/stores/ui"
 import {MouseEvent, ComponentProps} from "react"
 
 type NavLinkProps = ComponentProps<typeof RouterNavLink>
@@ -16,12 +16,9 @@ export default function NavLink(props: NavLinkProps) {
     }
 
     if (isActive) {
-      if (window.scrollY === 0) {
-        const {updateRefreshRouteSignal} = useNotificationsStore.getState()
-        updateRefreshRouteSignal()
-      } else {
-        window.scrollTo({top: 0, behavior: "instant"})
-      }
+      // Signal that the active nav item was clicked with its path
+      const {triggerNavItemClick} = useUIStore.getState()
+      triggerNavItemClick(to.toString())
     }
   }
 

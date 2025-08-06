@@ -303,7 +303,7 @@ const Feed = memo(function Feed({
   }
 
   return (
-    <>
+    <div className="relative">
       {showDisplayAsSelector && (
         <DisplayAsSelector activeSelection={displayAs} onSelect={setDisplayAs} />
       )}
@@ -368,7 +368,7 @@ const Feed = memo(function Feed({
           />
         )}
       </div>
-    </>
+    </div>
   )
 })
 

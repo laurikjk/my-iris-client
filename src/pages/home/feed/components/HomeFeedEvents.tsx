@@ -1,9 +1,8 @@
-import {useMemo, useEffect, useState} from "react"
+import {useMemo, useState} from "react"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
-import {useRefreshRouteSignal} from "@/stores/notifications"
 import Header from "@/shared/components/header/Header"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import useFollows from "@/shared/hooks/useFollows"
@@ -32,7 +31,6 @@ const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
 function HomeFeedEvents() {
   const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true) // to update on follows change
-  const refreshSignal = useRefreshRouteSignal()
   const {
     activeFeed,
     setActiveFeed,
@@ -69,8 +67,6 @@ function HomeFeedEvents() {
     () => loadFeedConfig(activeFeed),
     [loadFeedConfig, activeFeed, feedConfigs]
   )
-
-  const openedAt = useMemo(() => Date.now(), [])
 
   // Editor handler functions
   const toggleEditMode = () => {
@@ -117,15 +113,6 @@ function HomeFeedEvents() {
   const handleCloneFeed = (feedId: string) => {
     cloneFeed(feedId)
   }
-
-  useEffect(() => {
-    if (activeFeed !== "unseen") {
-      // Stack navigation will handle caching
-    }
-    if (activeFeed === "unseen" && refreshSignal > openedAt) {
-      // Stack navigation will handle caching
-    }
-  }, [activeFeedItem, openedAt, refreshSignal, activeFeed])
 
   // Create a comprehensive key that changes when any relevant config changes
   const feedKey = useMemo(() => {
@@ -179,8 +166,6 @@ function HomeFeedEvents() {
           showDisplayAsSelector={follows.length > 1}
           forceUpdate={0}
           emptyPlaceholder={""}
-          refreshSignal={refreshSignal}
-          openedAt={openedAt}
         />
       )}
       {follows.length <= 1 && myPubKey && (
