@@ -67,10 +67,12 @@ const NewChat = () => {
           <Icon name="gear" className="w-5 h-5" />
         </Link>
       </Header>
-      <NotificationPrompt />
-      <TabSelector />
-      {content}
-      <InstallPWAPrompt />
+      <div className="pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
+        <NotificationPrompt />
+        <TabSelector />
+        {content}
+        <InstallPWAPrompt />
+      </div>
     </>
   )
 }

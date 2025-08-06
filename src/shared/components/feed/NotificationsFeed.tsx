@@ -102,7 +102,7 @@ function NotificationsFeed() {
         ) : (
           <div className="p-8 flex flex-col gap-8 items-center justify-center text-base-content/50">
             No notifications yet
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={null}>
               <img src={runningOstrich} alt="" className="w-24" />
             </Suspense>
           </div>

@@ -163,7 +163,7 @@ function UserPage({pubKey}: {pubKey: string}) {
         <Name pubKey={pubKeyHex} />
       </Header>
       <div className="flex justify-center overflow-y-auto overflow-x-hidden flex-1 relative">
-        <div className="flex-1">
+        <div className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
           <div className="flex flex-1 flex-col items-center">
             <ProfileHeader pubKey={pubKey} key={pubKey} showHeader={false} />
             <div className="flex w-full flex-1 mt-2 flex flex-col gap-4">

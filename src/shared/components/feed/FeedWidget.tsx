@@ -28,7 +28,7 @@ const FeedWidget = memo(function FeedWidget({
   showDisplaySelector = false,
   onDisplayAsChange,
   emptyMessage = "No posts found",
-  loadingMessage = "Loading...",
+  loadingMessage = "",
   maxItems,
   small = true,
   randomSort = false,
@@ -38,11 +38,11 @@ const FeedWidget = memo(function FeedWidget({
   const displayEvents = maxItems ? sortedEvents.slice(0, maxItems) : sortedEvents
 
   if (loading && events.length === 0) {
-    return (
+    return loadingMessage ? (
       <div className={small ? "px-4 py-2" : "p-8 flex items-center justify-center"}>
         <span className="text-base-content/50 text-sm">{loadingMessage}</span>
       </div>
-    )
+    ) : null
   }
 
   if (displayEvents.length === 0) {

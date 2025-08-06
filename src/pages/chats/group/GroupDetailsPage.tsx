@@ -16,7 +16,7 @@ const GroupDetailsPage = () => {
   return (
     <>
       <Header title="Group Details" showBack />
-      <div className="w-full mx-auto p-6 text-left">
+      <div className="w-full mx-auto p-6 text-left pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-6 md:pb-6">
         <div className="flex items-center gap-4 mb-6">
           {group.picture ? (
             <img src={group.picture} alt="Group" className="w-16 h-16 rounded-full" />

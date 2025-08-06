@@ -64,7 +64,7 @@ const ChatList = ({className}: ChatListProps) => {
       <div className="md:hidden">
         <Header title="Chats" slideUp={false} />
       </div>
-      <div className="flex flex-col">
+      <div className="flex flex-col pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
         <NavLink
           to="/chats/new"
           end

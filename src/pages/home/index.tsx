@@ -16,7 +16,7 @@ function Index() {
   if (!isLargeScreen) {
     return (
       <section className="flex w-full overflow-y-auto overflow-x-hidden scrollbar-hide flex-1 relative">
-        <div className="w-full">
+        <div className="w-full pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]">
           <HomeFeedEvents />
         </div>
       </section>

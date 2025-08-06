@@ -76,7 +76,7 @@ const NewEventsButton = ({
       style={buttonStyle}
     >
       <button
-        className="btn btn-info shadow-xl rounded-full pointer-events-auto flex items-center gap-2 whitespace-nowrap"
+        className="btn btn-info shadow-xl rounded-full pointer-events-auto flex items-center gap-2 px-4 min-w-max"
         onClick={() => {
           showNewEvents()
 

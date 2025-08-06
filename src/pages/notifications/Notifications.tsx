@@ -21,7 +21,7 @@ function Notifications() {
     <section className="flex flex-col h-full">
       <Header title="Notifications" />
       <div className="flex overflow-y-auto overflow-x-hidden flex-1 relative">
-        <div className="flex flex-col flex-1 gap-2">
+        <div className="flex flex-col flex-1 gap-2 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
           <NotificationsFeed />
         </div>
         <RightColumn>

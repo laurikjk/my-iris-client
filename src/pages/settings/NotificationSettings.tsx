@@ -328,7 +328,7 @@ const NotificationSettings = () => {
           </button>
           {showDebugData && (
             <pre className="bg-base-200 p-4 rounded overflow-auto whitespace-pre-wrap break-all">
-              {JSON.stringify(subscriptionsData, null, 2) || "Loading..."}
+              {JSON.stringify(subscriptionsData, null, 2) || ""}
             </pre>
           )}
         </div>

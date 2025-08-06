@@ -43,7 +43,7 @@ function RelayPage() {
     <div className="flex flex-row">
       <div className="flex flex-col items-center flex-1">
         <Header title={decodedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"} />
-        <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4">
+        <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
           <RelaySelector
             selectedRelay={selectedRelayUrl}
             onRelaySelect={(newRelay) => {

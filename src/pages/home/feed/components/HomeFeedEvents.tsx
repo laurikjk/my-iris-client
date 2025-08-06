@@ -135,7 +135,7 @@ function HomeFeedEvents() {
       : activeFeedConfig?.customName || activeFeedItem?.name || "Following"
 
   if (!socialGraphLoaded) {
-    return <div>Loading...</div>
+    return null
   }
 
   return (

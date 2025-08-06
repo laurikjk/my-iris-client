@@ -75,7 +75,7 @@ const WalletSettings = () => {
     if (activeProviderType === "disabled" || activeProviderType === undefined)
       return "No wallet connected"
     if (balance !== null) return `${balance.toLocaleString()} sats`
-    return "Loading..."
+    return ""
   }
 
   const getCurrentWalletDisplay = () => {

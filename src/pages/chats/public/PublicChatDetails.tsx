@@ -31,7 +31,7 @@ const PublicChatDetails = () => {
   return (
     <>
       <Header title="Chat Details" showBack />
-      <div className="p-4">
+      <div className="p-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-4 md:pb-4">
         {!metadata && <div className="text-center">Chat not found</div>}
         {metadata && (
           <div className="space-y-4">

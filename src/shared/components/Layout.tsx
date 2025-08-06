@@ -126,14 +126,14 @@ const Layout = ({children}: {children: ReactNode}) => {
         {!appearance.singleColumnLayout && isLargeScreen && (
           <div
             ref={middleColumnRef}
-            className={`flex-1 py-16 md:py-0 min-w-0 border-r border-base-300 overflow-y-auto overflow-x-hidden scrollbar-hide ${
+            className={`flex-1 min-w-0 border-r border-base-300 overflow-y-auto overflow-x-hidden scrollbar-hide ${
               shouldShowMainFeed ? "hidden lg:block" : "hidden"
             }`}
           >
             <HomeFeedEvents />
           </div>
         )}
-        <div className="py-16 md:py-0 flex-1 flex flex-col overflow-hidden min-w-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {children}
           {activeProviderType !== "disabled" && (
             <iframe
