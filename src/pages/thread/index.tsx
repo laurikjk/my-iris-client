@@ -83,7 +83,7 @@ export default function ThreadPage({
   )
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-y-scroll overflow-x-hidden">
       <Header>
         {threadAuthor ? (
           <>

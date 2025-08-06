@@ -133,7 +133,7 @@ const Layout = ({children}: {children: ReactNode}) => {
             <HomeFeedEvents />
           </div>
         )}
-        <div className="flex-1 flex flex-col overflow-y-scroll overflow-x-hidden min-w-0">
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {children}
           {activeProviderType !== "disabled" && (
             <iframe
