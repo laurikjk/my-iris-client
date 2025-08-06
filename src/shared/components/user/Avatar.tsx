@@ -54,7 +54,7 @@ export const Avatar = ({
     setImage("")
   }
 
-  const {hoverProps, showCard} = useHoverCard(showHoverCard)
+  const {hoverProps, showCard, cardRef} = useHoverCard(showHoverCard)
 
   const getCornerBadgePosition = () => {
     const position = cornerBadge?.position || "bottom-right"
@@ -121,7 +121,9 @@ export const Avatar = ({
           {cornerBadge.content}
         </span>
       )}
-      {showHoverCard && <ProfileHoverCard pubKey={pubKey} showCard={showCard} />}
+      {showHoverCard && (
+        <ProfileHoverCard pubKey={pubKey} showCard={showCard} cardRef={cardRef} />
+      )}
     </div>
   )
 }

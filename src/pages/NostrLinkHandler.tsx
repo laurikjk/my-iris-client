@@ -187,5 +187,5 @@ export default function NostrLinkHandler() {
   }, [link, loading, error, linkData, finalPubkey])
 
   // Keep the same root structure to prevent remounting
-  return <div className="min-h-screen">{content}</div>
+  return <div className="flex flex-col flex-1 min-h-0">{content}</div>
 }

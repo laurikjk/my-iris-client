@@ -13,7 +13,7 @@ function Messages() {
   const isMessagesRoot = location.pathname === "/chats"
 
   return (
-    <div className="flex flex-1 h-full relative">
+    <div className="flex flex-1 h-full relative overflow-hidden">
       <ChatList
         className={classNames(
           "sticky top-0 w-full md:w-80 md:h-screen overflow-y-auto md:border-r border-custom",

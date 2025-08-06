@@ -5,6 +5,7 @@ import Widget from "@/shared/components/ui/Widget.tsx"
 import {useSettingsStore} from "@/stores/settings"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
 import irisConnectingPeople from "@/assets/iris-connecting-people.png"
+import {Link} from "@/navigation"
 
 function Index() {
   const {appearance} = useSettingsStore()
@@ -13,7 +14,7 @@ function Index() {
   // On mobile, always show HomeFeedEvents regardless of settings
   if (!isLargeScreen) {
     return (
-      <section className="flex flex-1 w-full justify-center">
+      <section className="flex w-full justify-center overflow-y-auto overflow-x-hidden flex-1">
         <div className="flex-1">
           <HomeFeedEvents />
         </div>
@@ -25,19 +26,21 @@ function Index() {
   // So here we just show a placeholder message
   if (appearance.alwaysShowMainFeed) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <img
-          src={irisConnectingPeople}
-          alt="Iris — Connecting People"
-          className="max-w-md"
-        />
+      <div className="flex flex-1 items-center justify-center">
+        <Link to="/about">
+          <img
+            src={irisConnectingPeople}
+            alt="Iris — Connecting People"
+            className="max-w-md cursor-pointer hover:opacity-90 transition-opacity duration-300 ease-in-out"
+          />
+        </Link>
       </div>
     )
   }
 
   // When alwaysShowMainFeed is disabled on desktop, show the normal home layout
   return (
-    <section className="flex flex-1 w-full justify-center">
+    <section className="flex w-full justify-center overflow-y-auto overflow-x-hidden h-full">
       <div className="flex-1">
         <HomeFeedEvents />
       </div>

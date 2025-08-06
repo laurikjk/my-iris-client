@@ -6,6 +6,16 @@ html {
   font-size: 15px;
 }
 
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Common page container styles */
+.page-container {
+  @apply flex flex-1 overflow-y-auto overflow-x-hidden;
+}
+
 .btn,
 .input {
   @apply rounded-full;

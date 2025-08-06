@@ -22,8 +22,6 @@ export type NavigationContextType = {
   canGoForward: boolean
   replace: (path: string) => void
   clearStack: () => void
-  registerScrollContainer: (element: HTMLElement | null) => void
-  getScrollPosition: (path: string) => number | undefined
 }
 
 export type NavigateOptions = {

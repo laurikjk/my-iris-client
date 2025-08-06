@@ -1,4 +1,5 @@
 import {ReactNode, useEffect, useRef, useState} from "react"
+import {useLocation} from "@/navigation"
 import Icon from "../Icons/Icon"
 
 type ModalProps = {
@@ -11,6 +12,7 @@ const Modal = ({onClose, children, hasBackground = true}: ModalProps) => {
   const modalRef = useRef<HTMLDialogElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const [isMouseDownOnBackdrop, setIsMouseDownOnBackdrop] = useState(false)
+  const location = useLocation()
 
   const showModal = () => {
     modalRef.current?.showModal()
@@ -20,6 +22,15 @@ const Modal = ({onClose, children, hasBackground = true}: ModalProps) => {
     modalRef.current?.close()
     onClose?.()
   }
+
+  // Close modal when location changes
+  useEffect(() => {
+    // Only close if modal is already mounted (not on initial mount)
+    if (modalRef.current?.open) {
+      closeModal()
+      onClose()
+    }
+  }, [location.pathname])
 
   useEffect(() => {
     showModal()

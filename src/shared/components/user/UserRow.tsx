@@ -25,7 +25,7 @@ export function UserRow({
   showBadge?: boolean
   showHoverCard?: boolean
 }) {
-  const {hoverProps, showCard} = useHoverCard(showHoverCard)
+  const {hoverProps, showCard, cardRef} = useHoverCard(showHoverCard)
 
   const mainContent = (
     <div className="flex flex-row items-center gap-2 justify-between">
@@ -62,6 +62,7 @@ export function UserRow({
     <div className="relative" {...hoverProps}>
       {linkToProfile ? <Link to={link}>{mainContent}</Link> : mainContent}
       <div
+        ref={cardRef}
         onClick={(e) => {
           e.preventDefault()
           e.stopPropagation()

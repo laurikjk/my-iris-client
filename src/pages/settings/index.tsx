@@ -144,7 +144,7 @@ function Settings() {
   ]
 
   return (
-    <div className="flex flex-1 h-full relative">
+    <div className="flex flex-1 h-full relative overflow-y-auto overflow-x-hidden">
       <nav
         className={`sticky top-0 w-full lg:w-64 p-4 lg:h-screen ${
           isSettingsRoot ? "block" : "hidden"

@@ -1,13 +1,16 @@
 import ProfileCard from "@/shared/components/user/ProfileCard"
+import {RefObject} from "react"
 
 interface ProfileHoverCardProps {
   pubKey: string
   showCard: boolean
+  cardRef?: RefObject<HTMLDivElement>
 }
 
-export const ProfileHoverCard = ({pubKey, showCard}: ProfileHoverCardProps) => {
+export const ProfileHoverCard = ({pubKey, showCard, cardRef}: ProfileHoverCardProps) => {
   return (
     <div
+      ref={cardRef}
       onClick={(e) => {
         e.preventDefault()
         e.stopPropagation()

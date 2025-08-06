@@ -1,4 +1,4 @@
-import {useLocation, useNavigate, useNavigation} from "@/navigation"
+import {useLocation, useNavigate} from "@/navigation"
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import NavSideBar from "@/shared/components/nav/NavSideBar"
@@ -25,7 +25,6 @@ interface ServiceWorkerMessage {
 
 const Layout = ({children}: {children: ReactNode}) => {
   const middleColumnRef = useRef<HTMLDivElement>(null)
-  const outletColumnRef = useRef<HTMLDivElement>(null)
   const newPostOpen = useUIStore((state) => state.newPostOpen)
   const setNewPostOpen = useUIStore((state) => state.setNewPostOpen)
   const navItemClicked = useUIStore((state) => state.navItemClicked)
@@ -69,22 +68,8 @@ const Layout = ({children}: {children: ReactNode}) => {
     }
   }, [navigate, goToNotifications])
 
-  // Register scroll container with navigation system
-  const {registerScrollContainer} = useNavigation()
-
-  useEffect(() => {
-    registerScrollContainer(outletColumnRef.current)
-  }, [])
-
-  // Handle nav item clicks to reset scroll when navigating to same route
-  useEffect(() => {
-    if (navItemClicked.signal === 0) return
-
-    // If clicking on current path, scroll outlet to top
-    if (navItemClicked.path === location.pathname && outletColumnRef.current) {
-      outletColumnRef.current.scrollTo({top: 0, behavior: "instant"})
-    }
-  }, [navItemClicked, location.pathname])
+  // Handle nav item clicks - no longer needed for scroll since each component manages its own
+  // Keep this for potential future use with navItemClicked signal
 
   useEffect(() => {
     const isMessagesRoute = location.pathname.startsWith("/chats/")
@@ -144,41 +129,32 @@ const Layout = ({children}: {children: ReactNode}) => {
   }, [])
 
   return (
-    <div className="relative flex flex-col w-full min-h-screen overscroll-none overflow-x-hidden">
-      <div
-        className="flex relative min-h-screen flex-1 overscroll-none overflow-x-hidden"
-        id="main-content"
-      >
+    <div className="relative flex flex-col w-full h-screen overflow-hidden">
+      <div className="flex relative flex-1 overflow-hidden" id="main-content">
         <NavSideBar />
         {appearance.alwaysShowMainFeed && isLargeScreen && (
           <div
             ref={middleColumnRef}
-            className={`flex-1 border-r border-base-300 overflow-y-auto overflow-x-hidden h-screen ${
+            className={`flex-1 border-r border-base-300 overflow-y-auto overflow-x-hidden ${
               shouldShowMainFeed ? "hidden lg:block" : "hidden"
             }`}
           >
             <HomeFeedEvents />
           </div>
         )}
-        <div
-          ref={outletColumnRef}
-          data-outlet-column
-          className="flex-1 overflow-y-auto overflow-x-hidden h-screen pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
-        >
-          <ErrorBoundary>
-            {children}
-            {activeProviderType !== "disabled" && (
-              <iframe
-                id="cashu-wallet"
-                title="Background Cashu Wallet"
-                src="/cashu/index.html#/"
-                className="fixed top-0 left-0 w-0 h-0 border-none"
-                style={{zIndex: -1}}
-                referrerPolicy="no-referrer"
-                sandbox="allow-scripts allow-same-origin allow-forms"
-              />
-            )}
-          </ErrorBoundary>
+        <div className="flex-1 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+          {children}
+          {activeProviderType !== "disabled" && (
+            <iframe
+              id="cashu-wallet"
+              title="Background Cashu Wallet"
+              src="/cashu/index.html#/"
+              className="fixed top-0 left-0 w-0 h-0 border-none"
+              style={{zIndex: -1}}
+              referrerPolicy="no-referrer"
+              sandbox="allow-scripts allow-same-origin allow-forms"
+            />
+          )}
         </div>
       </div>
       <ErrorBoundary>

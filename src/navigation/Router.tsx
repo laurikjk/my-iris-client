@@ -42,7 +42,10 @@ export const Router = () => {
           <div
             key={routeKey} // Use cache key for stable component instances
             style={{
-              display: index === currentIndex ? "block" : "none",
+              display: index === currentIndex ? "flex" : "none",
+              flexDirection: "column",
+              flex: 1,
+              minHeight: 0, // Important for flex children to not overflow
             }}
           >
             <RouteProvider params={params} url={item.url}>

@@ -22,8 +22,6 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
     currentIndex: -1,
   })
   const stackIndexRef = useRef(0)
-  const scrollContainerRef = useRef<HTMLElement | null>(null)
-  const scrollPositionsRef = useRef(new Map<string, number>())
 
   // Initialize with current URL
   useEffect(() => {
@@ -177,140 +175,123 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
     return false
   }
 
-  const saveCurrentScrollPosition = useCallback(() => {
-    const container = scrollContainerRef.current
-    const currentPath = navState.stack[navState.currentIndex]?.url
-    if (container && currentPath) {
-      scrollPositionsRef.current.set(currentPath, container.scrollTop)
-      console.log(`Saved scroll for ${currentPath}: ${container.scrollTop}`)
-    }
-  }, [navState])
-
-  const navigate = useCallback(
-    (path: string, options?: NavigateOptions) => {
-      // Save scroll position before navigating
-      saveCurrentScrollPosition()
-
-      if (options?.replace) {
-        // Handle replace inline
-        setNavState((prevState) => {
-          const newStack = [...prevState.stack]
-          const {currentIndex} = prevState
-
-          if (currentIndex >= 0 && currentIndex < newStack.length) {
-            newStack[currentIndex] = {
-              ...newStack[currentIndex],
-              url: path,
-              component: null,
-              state: options.state,
-            }
-          }
-
-          window.history.replaceState(
-            {index: newStack[currentIndex]?.index || 0, url: path, state: options.state},
-            "",
-            path
-          )
-
-          return {...prevState, stack: newStack}
-        })
-        return
-      }
-
+  const navigate = useCallback((path: string, options?: NavigateOptions) => {
+    if (options?.replace) {
+      // Handle replace inline
       setNavState((prevState) => {
-        const updatedStack = [...prevState.stack]
+        const newStack = [...prevState.stack]
+        const {currentIndex} = prevState
 
-        // If state is provided, always create a new stack item (no caching)
-        if (options?.state) {
-          // Don't remove forward history for stateful navigation
-          // This preserves cached components
-          const newIndex = ++stackIndexRef.current
-          const newStack = updatedStack
-
-          const newItem: StackItem = {
-            index: newIndex,
+        if (currentIndex >= 0 && currentIndex < newStack.length) {
+          newStack[currentIndex] = {
+            ...newStack[currentIndex],
             url: path,
             component: null,
             state: options.state,
           }
-
-          // Insert at current position + 1, keeping any forward history
-          newStack.splice(prevState.currentIndex + 1, 0, newItem)
-
-          window.history.pushState(
-            {index: newIndex, url: path, state: options.state},
-            "",
-            path
-          )
-          currentUrlRef.current = path
-
-          return {
-            stack: newStack,
-            currentIndex: prevState.currentIndex + 1,
-          }
         }
 
-        // For routes without state, use URL as cache key
-        const existingIndex = updatedStack.findIndex(
-          (item) => item.url === path && !item.state
+        window.history.replaceState(
+          {index: newStack[currentIndex]?.index || 0, url: path, state: options.state},
+          "",
+          path
         )
 
-        if (existingIndex !== -1) {
-          // Reuse existing stack item with same URL (and no state)
-          const existingItem = updatedStack[existingIndex]
+        return {...prevState, stack: newStack}
+      })
+      return
+    }
 
-          // Move to this existing item
-          window.history.pushState({index: existingItem.index, url: path}, "", path)
-          currentUrlRef.current = path
+    setNavState((prevState) => {
+      const updatedStack = [...prevState.stack]
 
-          // Scroll restoration is now handled by Layout component for outlet column
-
-          return {
-            stack: updatedStack,
-            currentIndex: existingIndex,
-          }
-        }
-
-        // No cached item found, create new one
+      // If state is provided, always create a new stack item (no caching)
+      if (options?.state) {
+        // Don't remove forward history for stateful navigation
+        // This preserves cached components
         const newIndex = ++stackIndexRef.current
+        const newStack = updatedStack
 
-        // Remove forward history for non-stateful navigation
-        const newStack = updatedStack.slice(0, prevState.currentIndex + 1)
-
-        // Add new item with URL as implicit cache key
         const newItem: StackItem = {
           index: newIndex,
           url: path,
           component: null,
-        }
-        newStack.push(newItem)
-
-        // Memory management: remove old cached components
-        if (newStack.length > MAX_STACK_SIZE) {
-          const itemsToKeep = MAX_STACK_SIZE
-          for (let i = 0; i < newStack.length - itemsToKeep; i++) {
-            // Skip routes marked with alwaysKeep
-            if (shouldAlwaysKeep(newStack[i].url)) {
-              continue
-            }
-            // Clear components that should not be cached
-            if (newStack[i].component && !shouldCachePage(newStack[i].url)) {
-              newStack[i].component = null
-            }
-          }
+          state: options.state,
         }
 
-        window.history.pushState({index: newIndex, url: path}, "", path)
+        // Insert at current position + 1, keeping any forward history
+        newStack.splice(prevState.currentIndex + 1, 0, newItem)
+
+        window.history.pushState(
+          {index: newIndex, url: path, state: options.state},
+          "",
+          path
+        )
         currentUrlRef.current = path
 
         return {
           stack: newStack,
-          currentIndex: newStack.length - 1,
+          currentIndex: prevState.currentIndex + 1,
         }
-      })
-    },
-    [saveCurrentScrollPosition]
-  )
+      }
+
+      // For routes without state, use URL as cache key
+      const existingIndex = updatedStack.findIndex(
+        (item) => item.url === path && !item.state
+      )
+
+      if (existingIndex !== -1) {
+        // Reuse existing stack item with same URL (and no state)
+        const existingItem = updatedStack[existingIndex]
+
+        // Move to this existing item
+        window.history.pushState({index: existingItem.index, url: path}, "", path)
+        currentUrlRef.current = path
+
+        return {
+          stack: updatedStack,
+          currentIndex: existingIndex,
+        }
+      }
+
+      // No cached item found, create new one
+      const newIndex = ++stackIndexRef.current
+
+      // Remove forward history for non-stateful navigation
+      const newStack = updatedStack.slice(0, prevState.currentIndex + 1)
+
+      // Add new item with URL as implicit cache key
+      const newItem: StackItem = {
+        index: newIndex,
+        url: path,
+        component: null,
+      }
+      newStack.push(newItem)
+
+      // Memory management: remove old cached components
+      if (newStack.length > MAX_STACK_SIZE) {
+        const itemsToKeep = MAX_STACK_SIZE
+        for (let i = 0; i < newStack.length - itemsToKeep; i++) {
+          // Skip routes marked with alwaysKeep
+          if (shouldAlwaysKeep(newStack[i].url)) {
+            continue
+          }
+          // Clear components that should not be cached
+          if (newStack[i].component && !shouldCachePage(newStack[i].url)) {
+            newStack[i].component = null
+          }
+        }
+      }
+
+      window.history.pushState({index: newIndex, url: path}, "", path)
+      currentUrlRef.current = path
+
+      return {
+        stack: newStack,
+        currentIndex: newStack.length - 1,
+      }
+    })
+  }, [])
 
   const replace = useCallback((path: string) => {
     setNavState((prevState) => {
@@ -337,21 +318,19 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
   }, [])
 
   const goBack = useCallback(() => {
-    saveCurrentScrollPosition()
     if (navState.currentIndex > 0) {
       window.history.back()
     } else {
       // If at root, navigate to home
       navigate("/")
     }
-  }, [navState.currentIndex, navigate, saveCurrentScrollPosition])
+  }, [navState.currentIndex, navigate])
 
   const goForward = useCallback(() => {
-    saveCurrentScrollPosition()
     if (navState.currentIndex < navState.stack.length - 1) {
       window.history.forward()
     }
-  }, [navState.currentIndex, navState.stack.length, saveCurrentScrollPosition])
+  }, [navState.currentIndex, navState.stack.length])
 
   const clearStack = useCallback(() => {
     setNavState((prevState) => ({
@@ -370,47 +349,6 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
   // Parse current params from path
   const currentParams = getRouteParams(currentPath)
 
-  const registerScrollContainer = useCallback((element: HTMLElement | null) => {
-    scrollContainerRef.current = element
-  }, [])
-
-  const getScrollPosition = useCallback((path: string) => {
-    return scrollPositionsRef.current.get(path)
-  }, [])
-
-  // Track scroll position changes whenever container changes
-  useEffect(() => {
-    const container = scrollContainerRef.current
-    if (!container) return
-
-    const handleScroll = () => {
-      const path = window.location.pathname
-      scrollPositionsRef.current.set(path, container.scrollTop)
-    }
-
-    container.addEventListener("scroll", handleScroll)
-    return () => {
-      container.removeEventListener("scroll", handleScroll)
-    }
-  })
-
-  // Restore scroll position when path changes
-  useEffect(() => {
-    const container = scrollContainerRef.current
-    if (container) {
-      const savedPosition = scrollPositionsRef.current.get(currentPath)
-      console.log(`Restoring scroll for ${currentPath}: ${savedPosition}`)
-      if (savedPosition !== undefined && savedPosition > 0) {
-        // Use setTimeout to ensure content has loaded
-        setTimeout(() => {
-          container.scrollTop = savedPosition
-        }, 0)
-      } else {
-        container.scrollTop = 0
-      }
-    }
-  }, [currentPath])
-
   const value: NavigationContextType = {
     currentPath,
     currentParams,
@@ -424,8 +362,6 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
     canGoForward,
     replace,
     clearStack,
-    registerScrollContainer,
-    getScrollPosition,
   }
 
   return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>

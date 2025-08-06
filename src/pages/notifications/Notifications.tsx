@@ -18,7 +18,7 @@ function Notifications() {
   })
 
   return (
-    <section className="flex flex-1 relative">
+    <section className="flex relative overflow-y-auto overflow-x-hidden h-full">
       <div className="flex flex-col flex-1 gap-2">
         <Header title="Notifications" />
         <NotificationsFeed />
