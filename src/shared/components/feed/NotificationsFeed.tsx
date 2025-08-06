@@ -15,7 +15,7 @@ const DISPLAY_INCREMENT = 10
 function NotificationsFeed() {
   const notificationsSeenAt = useNotificationsStore((state) => state.notificationsSeenAt)
   const publicKey = useUserStore((state) => state.publicKey)
-  const [animationSeenAt, setAnimationSeenAt] = useState(0) // Start with 0 to keep highlights
+  const [animationSeenAt, setAnimationSeenAt] = useState(notificationsSeenAt) // Initialize with current seen time
   const location = useLocation()
 
   useEffect(() => {

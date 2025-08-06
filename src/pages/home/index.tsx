@@ -4,9 +4,7 @@ import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import Widget from "@/shared/components/ui/Widget.tsx"
 import {useSettingsStore} from "@/stores/settings"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
-import irisConnectingPeople from "@/assets/iris-connecting-people.png"
-import {Link} from "@/navigation"
-import SearchBox from "@/shared/components/ui/SearchBox"
+import {HomeRightColumn} from "@/pages/home/components/HomeRightColumn"
 
 function Index() {
   const {appearance} = useSettingsStore()
@@ -26,24 +24,7 @@ function Index() {
   // When two-column layout is enabled on desktop (singleColumnLayout is false), HomeFeedEvents is shown in Layout
   // So here we just show a placeholder message
   if (!appearance.singleColumnLayout) {
-    return (
-      <div className="flex flex-1 flex-col w-full">
-        <div className="w-full px-4 pt-4 max-w-full">
-          <div className="w-full">
-            <SearchBox searchNotes={true} className="w-full max-w-full" />
-          </div>
-        </div>
-        <div className="flex flex-1 items-center justify-center">
-          <Link to="/about">
-            <img
-              src={irisConnectingPeople}
-              alt="Iris — Connecting People"
-              className="max-w-md cursor-pointer hover:opacity-90 transition-opacity duration-300 ease-in-out"
-            />
-          </Link>
-        </div>
-      </div>
-    )
+    return <HomeRightColumn />
   }
 
   // When single column layout is enabled on desktop, show the normal home layout
