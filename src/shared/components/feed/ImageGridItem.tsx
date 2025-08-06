@@ -254,7 +254,6 @@ const ImageGridItem = memo(function ImageGridItem({
         className={`aspect-square cursor-pointer relative bg-neutral-300 hover:opacity-80 ${
           shouldBlur ? "blur-xl" : ""
         }`}
-        data-event-id={event.id}
         onClick={() => {
           if (window.innerWidth > 767) {
             setActiveItemIndex(event, url)
