@@ -353,9 +353,7 @@ function FeedEditor({
       </div>
 
       {/* Checkboxes */}
-      <div className="flex flex-col gap-2">
-        {renderCommonCheckboxes(updateConfig)}
-      </div>
+      <div className="flex flex-col gap-2">{renderCommonCheckboxes(updateConfig)}</div>
 
       {/* Action Buttons */}
       <div className="flex justify-between gap-2 pt-2 border-t border-base-300">
