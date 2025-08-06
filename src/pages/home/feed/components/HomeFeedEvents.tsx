@@ -154,7 +154,7 @@ function HomeFeedEvents() {
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full">
+    <div ref={containerRef} className="relative w-full">
       <Header showBack={false} inColumn={true}>
         <div className="flex items-center justify-between w-full">
           <span className="md:px-3 md:py-2">{feedName}</span>
