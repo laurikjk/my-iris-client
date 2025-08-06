@@ -141,8 +141,26 @@ const Header = ({
     )
       return
 
-    // Use cached scrollable container or find it
-    const scrollableParent = scrollContainer || findScrollableParent(headerRef.current)
+    // First try to find scrollable parent (works for nested headers)
+    let scrollableParent = scrollContainer || findScrollableParent(headerRef.current)
+
+    // If not found, look for the outlet column (for profile/thread pages where header is outside)
+    if (!scrollableParent) {
+      // Find the outlet column - it's the overflow-y-auto element that's not the sidebar
+      const scrollableElements = document.querySelectorAll(".overflow-y-auto")
+      for (const element of scrollableElements) {
+        const htmlElement = element as HTMLElement
+        // Skip sidebar and right column
+        if (
+          !htmlElement.classList.contains("lg:block") &&
+          !htmlElement.classList.contains("xl:block") &&
+          htmlElement.scrollHeight > htmlElement.clientHeight
+        ) {
+          scrollableParent = htmlElement
+          break
+        }
+      }
+    }
 
     if (scrollableParent) {
       scrollableParent.scrollTo({
@@ -171,7 +189,7 @@ const Header = ({
     <header
       ref={headerRef}
       onClick={handleHeaderClick}
-      style={{transform: `translateY(0px)`}}
+      style={slideUp ? {transform: `translateY(0px)`} : undefined}
       className="pt-[env(safe-area-inset-top)] min-h-16 flex sticky top-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none w-full cursor-pointer"
     >
       <div ref={contentRef} className="flex justify-between items-center flex-1 w-full">

@@ -95,6 +95,15 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
       createDefaultInvites: async () => {
         const myPubKey = useUserStore.getState().publicKey
+        const myPrivKey = useUserStore.getState().privateKey
+        const nip07Login = useUserStore.getState().nip07Login
+        
+        // Skip all DM functionality if no signer (view-only mode)
+        if (!myPrivKey && !nip07Login) {
+          console.log("No private key or NIP-07 extension - skipping DM initialization (view-only mode)")
+          return
+        }
+        
         if (!myPubKey) {
           throw new Error("No public key")
         }
@@ -140,6 +149,14 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
       createInvite: (_label: string, inviteId?: string) => {
         const myPubKey = useUserStore.getState().publicKey
         const myPrivKey = useUserStore.getState().privateKey
+        const nip07Login = useUserStore.getState().nip07Login
+        
+        // Skip if no signer (view-only mode)
+        if (!myPrivKey && !nip07Login) {
+          console.log("No private key or NIP-07 extension - cannot create invite (view-only mode)")
+          return
+        }
+        
         if (!myPubKey) {
           throw new Error("No public key")
         }
@@ -562,6 +579,14 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
       listenToUserDevices: (userPubKey: string) => {
         const myPubKey = useUserStore.getState().publicKey
+        const myPrivKey = useUserStore.getState().privateKey
+        const nip07Login = useUserStore.getState().nip07Login
+        
+        // Skip if no signer (view-only mode)
+        if (!myPrivKey && !nip07Login) {
+          console.log("No private key or NIP-07 extension - skipping device listening (view-only mode)")
+          return
+        }
 
         if (get().deviceInviteListeners.has(userPubKey)) {
           console.log("Already listening to user devices for:", userPubKey)
@@ -748,7 +773,14 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
       initializeListeners: async () => {
         const myPubKey = useUserStore.getState().publicKey
         const myPrivKey = useUserStore.getState().privateKey
+        const nip07Login = useUserStore.getState().nip07Login
         let currentDeviceId = get().deviceId
+
+        // Skip invite listening if no signer (view-only mode)
+        if (!myPrivKey && !nip07Login) {
+          console.log("No private key or NIP-07 extension - skipping invite listeners (view-only mode)")
+          return
+        }
 
         // If deviceId is not in store, try to load from localforage
         if (!currentDeviceId) {

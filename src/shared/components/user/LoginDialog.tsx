@@ -6,7 +6,7 @@ export default function LoginDialog() {
   const [showSignIn, setShowSignIn] = useState(!!window.nostr)
 
   return (
-    <div className="flex flex-row items-center gap-2 justify-between card card-compact">
+    <div className="flex flex-row items-center gap-2 justify-between card card-compact min-w-[320px] max-w-[90vw]">
       <div className="card-body items-center">
         <img src={CONFIG.navLogo} alt={CONFIG.appName} className="w-12 h-12" />
         {showSignIn ? (

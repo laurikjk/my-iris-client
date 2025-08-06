@@ -4,6 +4,8 @@ import classNames from "classnames"
 import RightColumn from "@/shared/components/RightColumn"
 import PopularFeed from "@/shared/components/feed/PopularFeed"
 import Feed from "@/shared/components/feed/Feed.tsx"
+import Header from "@/shared/components/header/Header"
+import {Name} from "@/shared/components/user/Name"
 import {type FeedConfig, useFeedStore} from "@/stores/feed"
 import {shouldHideAuthor} from "@/utils/visibility"
 import Widget from "@/shared/components/ui/Widget"
@@ -156,72 +158,77 @@ function UserPage({pubKey}: {pubKey: string}) {
   )
 
   return (
-    <div className="flex justify-center overflow-y-auto overflow-x-hidden flex-1 relative">
-      <div className="flex flex-1 justify-center">
-        <div className="flex flex-1 flex-col items-center">
-          <ProfileHeader pubKey={pubKey} key={pubKey} />
-          <div className="flex w-full flex-1 mt-2 flex flex-col gap-4">
-            <div className="px-4 flex gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
-              {visibleTabs.map((tab) => (
-                <button
-                  key={tab.path}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setActiveTab(tab.path)
-                  }}
-                  className={classNames(
-                    "btn btn-sm",
-                    activeTab === tab.path ? "btn-primary" : "btn-neutral"
-                  )}
-                >
-                  {tab.name}
-                </button>
-              ))}
+    <div className="flex flex-col h-full">
+      <Header>
+        <Name pubKey={pubKeyHex} />
+      </Header>
+      <div className="flex justify-center overflow-y-auto overflow-x-hidden flex-1 relative">
+        <div className="flex-1">
+          <div className="flex flex-1 flex-col items-center">
+            <ProfileHeader pubKey={pubKey} key={pubKey} showHeader={false} />
+            <div className="flex w-full flex-1 mt-2 flex flex-col gap-4">
+              <div className="px-4 flex gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
+                {visibleTabs.map((tab) => (
+                  <button
+                    key={tab.path}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setActiveTab(tab.path)
+                    }}
+                    className={classNames(
+                      "btn btn-sm",
+                      activeTab === tab.path ? "btn-primary" : "btn-neutral"
+                    )}
+                  >
+                    {tab.name}
+                  </button>
+                ))}
+              </div>
+              {(() => {
+                const activeTabConfig =
+                  visibleTabs.find((tab) => tab.path === activeTab) || visibleTabs[0]
+
+                const baseFeedConfig = activeTabConfig.getFeedConfig(pubKeyHex, myPubKey)
+                const savedConfig = loadFeedConfig(baseFeedConfig.id)
+                const feedConfig = {
+                  ...baseFeedConfig,
+                  displayAs: savedConfig?.displayAs,
+                }
+
+                return (
+                  <Feed
+                    key={`feed-${pubKeyHex}-${activeTabConfig.path}`}
+                    feedConfig={feedConfig}
+                    borderTopFirst={true}
+                  />
+                )
+              })()}
             </div>
-            {(() => {
-              const activeTabConfig =
-                visibleTabs.find((tab) => tab.path === activeTab) || visibleTabs[0]
-
-              const baseFeedConfig = activeTabConfig.getFeedConfig(pubKeyHex, myPubKey)
-              const savedConfig = loadFeedConfig(baseFeedConfig.id)
-              const feedConfig = {
-                ...baseFeedConfig,
-                displayAs: savedConfig?.displayAs,
-              }
-
-              return (
-                <Feed
-                  key={`feed-${pubKeyHex}-${activeTabConfig.path}`}
-                  feedConfig={feedConfig}
-                  borderTopFirst={true}
-                />
-              )
-            })()}
           </div>
         </div>
+        <RightColumn>
+          {() => (
+            <>
+              {filteredFollows.length > 0 && (
+                <Widget title="Follows">
+                  <FollowList follows={filteredFollows} />
+                </Widget>
+              )}
+              {pubKeyHex === myPubKey && (
+                <Widget title="Popular">
+                  <PopularFeed
+                    displayOptions={{
+                      small: true,
+                      showDisplaySelector: false,
+                      randomSort: true,
+                    }}
+                  />
+                </Widget>
+              )}
+            </>
+          )}
+        </RightColumn>
       </div>
-      <RightColumn>
-        {() => (
-          <>
-            {filteredFollows.length > 0 && (
-              <Widget title="Follows">
-                <FollowList follows={filteredFollows} />
-              </Widget>
-            )}
-            {pubKeyHex === myPubKey && (
-              <Widget title="Popular">
-                <PopularFeed
-                  displayOptions={{
-                    small: true,
-                    showDisplaySelector: false,
-                    randomSort: true,
-                  }}
-                />
-              </Widget>
-            )}
-          </>
-        )}
-      </RightColumn>
     </div>
   )
 }

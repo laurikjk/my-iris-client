@@ -11,7 +11,7 @@ import {MessagesNavItem} from "./MessagesNavItem"
 import PublishButton from "../ui/PublishButton"
 import ErrorBoundary from "../ui/ErrorBoundary"
 import {formatAmount} from "@/utils/utils"
-import {usePublicKey} from "@/stores/user"
+import {usePublicKey, useUserStore} from "@/stores/user"
 import {useSettingsStore} from "@/stores/settings"
 import {navItemsConfig} from "./navConfig"
 import {UserRow} from "../user/UserRow"
@@ -24,14 +24,24 @@ const NavSideBar = () => {
   const {isSidebarOpen, setIsSidebarOpen, setShowLoginDialog} = useUIStore()
   const {balance} = useWalletBalance()
   const myPubKey = usePublicKey()
+  const myPrivKey = useUserStore((state) => state.privateKey)
+  const nip07Login = useUserStore((state) => state.nip07Login)
   const {debug} = useSettingsStore()
+  
+  const hasSigner = !!(myPrivKey || nip07Login)
 
   const navItems = useMemo(() => {
     const configItems = navItemsConfig()
     return Object.values(configItems).filter(
-      (item) => !("requireLogin" in item) || (item.requireLogin && myPubKey)
+      (item) => {
+        // Hide Chats if no signer (view-only mode)
+        if (item.label === "Chats" && !hasSigner) {
+          return false
+        }
+        return !("requireLogin" in item) || (item.requireLogin && myPubKey)
+      }
     )
-  }, [myPubKey])
+  }, [myPubKey, hasSigner])
 
   const logoUrl = CONFIG.navLogo
 

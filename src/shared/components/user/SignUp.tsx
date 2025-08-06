@@ -29,6 +29,45 @@ export default function SignUp({onClose}: SignUpProps) {
     const val = e.target.value
     if (val.match(NSEC_NPUB_REGEX)) {
       e.preventDefault()
+      // Handle npub paste - switch to view-only mode
+      if (val.indexOf("npub1") === 0) {
+        try {
+          const decoded = nip19.decode(val)
+          const publicKey = decoded.data as string
+          setState({
+            publicKey,
+            privateKey: "", // No private key for view-only mode
+          })
+          setShowLoginDialog(false)
+          onClose()
+        } catch (error) {
+          console.error("Invalid npub:", error)
+        }
+      }
+      // Handle nsec paste - full login
+      else if (val.indexOf("nsec1") === 0) {
+        try {
+          const decoded = nip19.decode(val)
+          const sk = decoded.data as Uint8Array
+          const privateKeyHex = bytesToHex(sk)
+          const publicKey = getPublicKey(sk)
+
+          setState({
+            privateKey: privateKeyHex,
+            publicKey,
+          })
+
+          localStorage.setItem("cashu.ndk.privateKeySignerPrivateKey", privateKeyHex)
+          localStorage.setItem("cashu.ndk.pubkey", publicKey)
+          const privateKeySigner = new NDKPrivateKeySigner(privateKeyHex)
+          ndk().signer = privateKeySigner
+
+          setShowLoginDialog(false)
+          onClose()
+        } catch (error) {
+          console.error("Invalid nsec:", error)
+        }
+      }
     } else {
       setNewUserName(e.target.value)
     }

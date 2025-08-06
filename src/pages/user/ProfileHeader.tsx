@@ -23,7 +23,13 @@ import Modal from "@/shared/components/ui/Modal.tsx"
 import Icon from "@/shared/components/Icons/Icon"
 import {Helmet} from "react-helmet"
 
-const ProfileHeader = ({pubKey}: {pubKey: string}) => {
+const ProfileHeader = ({
+  pubKey,
+  showHeader = true,
+}: {
+  pubKey: string
+  showHeader?: boolean
+}) => {
   const profile = useProfile(pubKey, true)
   const pubKeyHex = useMemo(
     () => (pubKey ? new PublicKey(pubKey).toString() : ""),
@@ -75,9 +81,11 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
 
   return (
     <>
-      <Header slideUp={false}>
-        <Name pubKey={pubKeyHex} />
-      </Header>
+      {showHeader && (
+        <Header slideUp={false}>
+          <Name pubKey={pubKeyHex} />
+        </Header>
+      )}
       <div className="flex flex-col gap-4 w-full break-all">
         <div className="w-full h-48 md:h-72 bg-gradient-to-r from-primary to-primary-dark">
           {profile?.banner && (

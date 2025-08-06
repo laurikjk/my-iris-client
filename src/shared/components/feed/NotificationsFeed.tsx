@@ -80,7 +80,7 @@ function NotificationsFeed() {
   }, []) // Empty dependency array for initialization
 
   return (
-    <div className="w-full overflow-hidden">
+    <div className="w-full">
       <InfiniteScroll
         onLoadMore={() => {
           if (notifications.size > displayCount) {

@@ -83,84 +83,86 @@ export default function ThreadPage({
   )
 
   return (
-    <div className="flex justify-center overflow-y-auto overflow-x-hidden h-full relative">
-      <div className="flex-1">
-        <Header>
-          {threadAuthor ? (
-            <>
-              Post by <Name className="-ml-3" pubKey={threadAuthor} />
-            </>
-          ) : (
-            "Post"
-          )}
-        </Header>
-        {(() => {
-          if (isNaddr) {
-            if (loading) {
-              return (
-                <div className="flex relative flex-col pt-3 px-4 min-h-[186px] pb-0 transition-colors duration-200 ease-in-out border-custom cursor-pointer border-2 pt-3 pb-3 my-2 rounded hover:bg-[var(--note-hover-color)] break-all">
-                  Loading naddr:{id}
-                </div>
-              )
-            } else if (event) {
+    <div className="flex flex-col h-full">
+      <Header>
+        {threadAuthor ? (
+          <>
+            Post by <Name className="-ml-3" pubKey={threadAuthor} />
+          </>
+        ) : (
+          "Post"
+        )}
+      </Header>
+      <div className="flex justify-center overflow-y-auto overflow-x-hidden flex-1 relative">
+        <div className="flex-1">
+          {(() => {
+            if (isNaddr) {
+              if (loading) {
+                return (
+                  <div className="flex relative flex-col pt-3 px-4 min-h-[186px] pb-0 transition-colors duration-200 ease-in-out border-custom cursor-pointer border-2 pt-3 pb-3 my-2 rounded hover:bg-[var(--note-hover-color)] break-all">
+                    Loading naddr:{id}
+                  </div>
+                )
+              } else if (event) {
+                return (
+                  <FeedItem
+                    event={event}
+                    key={event.id}
+                    standalone={true}
+                    onEvent={addToThread}
+                    showReplies={Infinity}
+                  />
+                )
+              } else {
+                return <div className="p-4">Failed to load naddr:{id}</div>
+              }
+            } else {
               return (
                 <FeedItem
-                  event={event}
-                  key={event.id}
+                  key={id}
+                  eventId={id}
                   standalone={true}
                   onEvent={addToThread}
                   showReplies={Infinity}
                 />
               )
-            } else {
-              return <div className="p-4">Failed to load naddr:{id}</div>
             }
-          } else {
-            return (
-              <FeedItem
-                key={id}
-                eventId={id}
-                standalone={true}
-                onEvent={addToThread}
-                showReplies={Infinity}
-              />
-            )
-          }
-        })()}
-      </div>
-      <RightColumn>
-        {() => (
-          <>
-            {isArticle && threadAuthor ? (
-              <Widget title="More from this author">
-                <AuthorArticlesFeed
-                  authorPubkey={threadAuthor}
-                  currentArticleId={event?.id || id}
-                  maxItems={5}
-                />
-              </Widget>
-            ) : (
-              relevantPeople.size > 0 && (
-                <Widget title="Relevant people">
-                  <FollowList
-                    follows={Array.from(relevantPeople.keys())}
-                    showAbout={true}
+          })()}
+        </div>
+        <RightColumn>
+          {() => (
+            <>
+              {isArticle && threadAuthor ? (
+                <Widget title="More from this author">
+                  <AuthorArticlesFeed
+                    authorPubkey={threadAuthor}
+                    currentArticleId={event?.id || id}
+                    maxItems={5}
                   />
                 </Widget>
-              )
-            )}
-            <Widget title="Popular">
-              <PopularFeed
-                displayOptions={{
-                  small: true,
-                  showDisplaySelector: false,
-                  randomSort: true,
-                }}
-              />
-            </Widget>
-          </>
-        )}
-      </RightColumn>
+              ) : (
+                relevantPeople.size > 0 && (
+                  <Widget title="Relevant people">
+                    <FollowList
+                      follows={Array.from(relevantPeople.keys())}
+                      showAbout={true}
+                    />
+                  </Widget>
+                )
+              )}
+              <Widget title="Popular">
+                <PopularFeed
+                  displayOptions={{
+                    small: true,
+                    showDisplaySelector: false,
+                    randomSort: true,
+                  }}
+                />
+              </Widget>
+            </>
+          )}
+        </RightColumn>
+      </div>
     </div>
   )
 }
