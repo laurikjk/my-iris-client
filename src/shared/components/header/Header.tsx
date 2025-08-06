@@ -126,7 +126,7 @@ const Header = ({
       if (canGoBack) {
         navigate(-1)
       } else {
-        navigate("/chats")
+        navigate("/")
       }
     } else {
       setIsSidebarOpen(!isSidebarOpen)
