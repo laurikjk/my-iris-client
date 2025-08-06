@@ -32,7 +32,7 @@ function RightColumn({children}: RightColumnProps) {
       <div className="hidden lg:block fixed top-3 z-50 right-4 xl:right-[calc((100vw-1280px)/2+16px)]">
         <button
           onClick={() => updateAppearance({showRightColumn: true})}
-          className="bg-base-100 border border-base-300 p-2 rounded-full shadow-lg hover:bg-base-200 transition-colors"
+          className="p-2 bg-base-100 hover:bg-base-200 rounded-full transition-colors"
           title="Show right column"
         >
           <RiArrowLeftSLine className="w-5 h-5" />
@@ -50,7 +50,7 @@ function RightColumn({children}: RightColumnProps) {
           </div>
           <button
             onClick={() => updateAppearance({showRightColumn: false})}
-            className="p-2 hover:bg-base-200 rounded-lg transition-colors flex-shrink-0"
+            className="p-2 bg-base-100 hover:bg-base-200 rounded-full transition-colors flex-shrink-0"
             title="Hide right column"
           >
             <RiArrowRightSLine className="w-5 h-5" />

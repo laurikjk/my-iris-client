@@ -42,18 +42,12 @@ function SearchPage() {
     setForceUpdate((prev) => prev + 1)
   }, [activeTab])
 
-  // Focus search input when search nav item is clicked
+  // Focus search input when search nav item is clicked (for posts/market tabs)
   useEffect(() => {
     if (navItemClicked.path !== "/search") return
 
-    // Focus the appropriate input based on active tab
-    if (activeTab === "people") {
-      // For SearchBox component, we need to find its input
-      const searchBoxInput = document.querySelector(
-        '.dropdown input[type="text"]'
-      ) as HTMLInputElement
-      searchBoxInput?.focus()
-    } else {
+    // Focus the input for posts/market tabs
+    if (activeTab !== "people") {
       searchInputRef.current?.focus()
     }
   }, [navItemClicked, activeTab])
@@ -79,7 +73,7 @@ function SearchPage() {
         <Header title={query ? `Search: "${query}"` : "Search"} />
         <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4">
           {activeTab === "people" ? (
-            <SearchBox searchNotes={true} maxResults={10} />
+            <SearchBox searchNotes={true} maxResults={10} focusOnNav={true} />
           ) : (
             <form onSubmit={handleSubmit} className="flex w-full">
               <input

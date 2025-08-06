@@ -148,7 +148,7 @@ const Header = ({
     if (!scrollableParent) {
       // Find the outlet column - it's the overflow-y-auto element that's not the sidebar
       const scrollableElements = document.querySelectorAll(".overflow-y-auto")
-      for (const element of scrollableElements) {
+      for (const element of Array.from(scrollableElements)) {
         const htmlElement = element as HTMLElement
         // Skip sidebar and right column
         if (

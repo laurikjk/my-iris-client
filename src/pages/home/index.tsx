@@ -6,6 +6,7 @@ import {useSettingsStore} from "@/stores/settings"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
 import irisConnectingPeople from "@/assets/iris-connecting-people.png"
 import {Link} from "@/navigation"
+import SearchBox from "@/shared/components/ui/SearchBox"
 
 function Index() {
   const {appearance} = useSettingsStore()
@@ -26,14 +27,21 @@ function Index() {
   // So here we just show a placeholder message
   if (appearance.twoColumnLayout) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <Link to="/about">
-          <img
-            src={irisConnectingPeople}
-            alt="Iris — Connecting People"
-            className="max-w-md cursor-pointer hover:opacity-90 transition-opacity duration-300 ease-in-out"
-          />
-        </Link>
+      <div className="flex flex-1 flex-col w-full">
+        <div className="w-full px-4 pt-4 max-w-full">
+          <div className="w-full">
+            <SearchBox searchNotes={true} className="w-full max-w-full" />
+          </div>
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <Link to="/about">
+            <img
+              src={irisConnectingPeople}
+              alt="Iris — Connecting People"
+              className="max-w-md cursor-pointer hover:opacity-90 transition-opacity duration-300 ease-in-out"
+            />
+          </Link>
+        </div>
       </div>
     )
   }

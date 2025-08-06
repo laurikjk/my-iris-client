@@ -145,7 +145,7 @@ function HomeFeedEvents() {
           <span className="md:px-3 md:py-2">{feedName}</span>
           {isLargeScreen && (
             <button
-              className="btn btn-ghost btn-sm btn-circle"
+              className="p-2 bg-base-100 hover:bg-base-200 rounded-full transition-colors mt-1"
               onClick={() =>
                 updateAppearance({twoColumnLayout: !appearance.twoColumnLayout})
               }

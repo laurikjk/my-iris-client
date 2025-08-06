@@ -4,7 +4,7 @@ import {RefObject} from "react"
 interface ProfileHoverCardProps {
   pubKey: string
   showCard: boolean
-  cardRef?: RefObject<HTMLDivElement>
+  cardRef?: RefObject<HTMLDivElement | null>
 }
 
 export const ProfileHoverCard = ({pubKey, showCard, cardRef}: ProfileHoverCardProps) => {
