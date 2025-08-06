@@ -1,7 +1,7 @@
 import {useEffect, useState, ChangeEvent, KeyboardEvent} from "react"
 import {RiDeleteBinLine, RiFileCopyLine} from "@remixicon/react"
 import {useFeedStore, type FeedConfig} from "@/stores/feed"
-import RelaySelector from "@/shared/components/ui/RelaySelector"
+import MultiRelaySelector from "@/shared/components/ui/MultiRelaySelector"
 import EventKindsSelector from "@/shared/components/ui/EventKindsSelector"
 
 interface FeedEditorProps {
@@ -349,16 +349,14 @@ function FeedEditor({
 
           {/* Relay Selection */}
           <div className="flex items-start gap-2">
-            <span className="text-sm text-base-content/70 min-w-[7rem] pt-3">Relays</span>
+            <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">Relays</span>
             <div className="flex-1">
-              <RelaySelector
-                selectedRelay={localConfig.relayUrls?.[0] || ""}
-                onRelaySelect={(relay) => {
-                  updateConfig("relayUrls", relay ? [relay] : undefined)
+              <MultiRelaySelector
+                selectedRelays={localConfig.relayUrls || []}
+                onRelaysChange={(relays) => {
+                  updateConfig("relayUrls", relays.length > 0 ? relays : undefined)
                 }}
                 placeholder="Default relays"
-                className="select select-bordered select-sm w-full text-sm"
-                showCustomInput={true}
               />
               <span className="text-xs text-base-content/50 mt-1 block">
                 Leave empty to use default relays
