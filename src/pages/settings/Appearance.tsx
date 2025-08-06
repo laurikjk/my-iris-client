@@ -12,6 +12,10 @@ function AppearanceSettings() {
     updateAppearance({twoColumnLayout: e.target.checked})
   }
 
+  function handleLimitedMaxWidthChange(e: ChangeEvent<HTMLInputElement>) {
+    updateAppearance({limitedMaxWidth: e.target.checked})
+  }
+
   return (
     <div>
       <h1 className="text-2xl mb-4">Appearance</h1>
@@ -43,6 +47,20 @@ function AppearanceSettings() {
           </label>
           <p className="text-sm text-base-content/60 mt-1">
             Show feed and content side by side on large screens
+          </p>
+        </div>
+        <div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-primary"
+              checked={appearance.limitedMaxWidth}
+              onChange={handleLimitedMaxWidthChange}
+            />
+            <span>Limited maximum width</span>
+          </label>
+          <p className="text-sm text-base-content/60 mt-1">
+            Constrain content to a maximum width for better readability on wide screens
           </p>
         </div>
       </div>

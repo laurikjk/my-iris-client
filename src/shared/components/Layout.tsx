@@ -115,7 +115,9 @@ const Layout = ({children}: {children: ReactNode}) => {
   }, [])
 
   return (
-    <div className="relative flex flex-col w-full h-screen overflow-hidden">
+    <div
+      className={`relative flex flex-col w-full h-screen overflow-hidden ${appearance.limitedMaxWidth ? "max-w-screen-2xl mx-auto" : ""}`}
+    >
       <div className="flex relative flex-1 overflow-hidden" id="main-content">
         <NavSideBar />
         {appearance.twoColumnLayout && isLargeScreen && (

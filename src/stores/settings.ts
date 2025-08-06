@@ -9,6 +9,7 @@ interface SettingsState {
     theme: string
     showRightColumn: boolean
     twoColumnLayout: boolean
+    limitedMaxWidth: boolean
   }
   // Content settings
   content: {
@@ -56,6 +57,7 @@ export const useSettingsStore = create<SettingsState>()(
         theme: CONFIG.defaultTheme,
         showRightColumn: true,
         twoColumnLayout: true,
+        limitedMaxWidth: false,
       },
       content: {
         blurNSFW: true,
