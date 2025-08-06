@@ -216,7 +216,6 @@ function HomeFeedEvents() {
         {(() => {
           if (!myPubKey) return <AlgorithmicFeed type="popular" />
 
-          console.error("Rendering feed with type:", activeFeedConfig?.feedStrategy)
           if (activeFeedConfig?.feedStrategy)
             return (
               <AlgorithmicFeed

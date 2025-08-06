@@ -148,6 +148,8 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
   },
 }
 
+const CURRENT_VERSION = 2
+
 export const useFeedStore = create<FeedState>()(
   persist(
     (set, get) => {
@@ -285,28 +287,71 @@ export const useFeedStore = create<FeedState>()(
     },
     {
       name: "feed-storage",
-      migrate: (persistedState: unknown) => {
+      version: CURRENT_VERSION,
+      migrate: (persistedState: unknown, version: number) => {
         // Type guard to check if persistedState is an object with expected properties
         const state = persistedState as Record<string, unknown>
 
-        // Handle migration from old activeHomeTab to activeFeed
-        if (
-          state &&
-          typeof state === "object" &&
-          state.activeHomeTab &&
-          !state.activeFeed
-        ) {
-          state.activeFeed = state.activeHomeTab
+        // Migration from version 0 (no version) to 1
+        if (version < 1) {
+          // Handle migration from old activeHomeTab to activeFeed
+          if (
+            state &&
+            typeof state === "object" &&
+            state.activeHomeTab &&
+            !state.activeFeed
+          ) {
+            state.activeFeed = state.activeHomeTab
+            delete state.activeHomeTab
+          }
+          // Handle migration from old tabConfigs to feedConfigs
+          if (
+            state &&
+            typeof state === "object" &&
+            state.tabConfigs &&
+            !state.feedConfigs
+          ) {
+            state.feedConfigs = state.tabConfigs
+            delete state.tabConfigs
+          }
         }
-        // Handle migration from old tabConfigs to feedConfigs
-        if (
-          state &&
-          typeof state === "object" &&
-          state.tabConfigs &&
-          !state.feedConfigs
-        ) {
-          state.feedConfigs = state.tabConfigs
+
+        // Migration from version 1 to 2: Add feedStrategy to popular and add for-you feed
+        if (version < 2) {
+          if (state && typeof state === "object" && state.feedConfigs) {
+            const feedConfigs = state.feedConfigs as Record<string, FeedConfig>
+
+            // Update popular feed if it exists and doesn't have feedStrategy
+            if (feedConfigs.popular && !feedConfigs.popular.feedStrategy) {
+              feedConfigs.popular = {
+                ...feedConfigs.popular,
+                feedStrategy: "popular",
+              }
+            }
+
+            // Add for-you feed if it doesn't exist
+            if (!feedConfigs["for-you"]) {
+              feedConfigs["for-you"] = defaultFeedConfigs["for-you"]
+            }
+
+            // Update enabledFeedIds to include for-you after popular if not present
+            if (state.enabledFeedIds && Array.isArray(state.enabledFeedIds)) {
+              const enabledIds = state.enabledFeedIds as string[]
+              if (!enabledIds.includes("for-you")) {
+                const popularIndex = enabledIds.indexOf("popular")
+                if (popularIndex !== -1) {
+                  // Insert for-you right after popular
+                  enabledIds.splice(popularIndex + 1, 0, "for-you")
+                } else {
+                  // If no popular feed, add for-you at position 2 (after unseen)
+                  enabledIds.splice(2, 0, "for-you")
+                }
+                state.enabledFeedIds = enabledIds
+              }
+            }
+          }
         }
+
         return state
       },
     }
