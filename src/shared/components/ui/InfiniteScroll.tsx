@@ -19,7 +19,25 @@ const InfiniteScroll = ({onLoadMore, children}: Props) => {
   )
 
   useEffect(() => {
+    // TODO hack to get this working with nested scrollable containers in column layout
+    const findScrollRoot = () => {
+      if (!observerRef.current) return null
+
+      let element = observerRef.current.parentElement
+      while (element) {
+        const style = window.getComputedStyle(element)
+        if (style.overflowY === "scroll" || style.overflowY === "auto") {
+          return element
+        }
+        element = element.parentElement
+      }
+      return null
+    }
+
+    const scrollRoot = findScrollRoot()
+
     const observerOptions = {
+      root: scrollRoot,
       rootMargin: "1000px",
       threshold: 1.0,
     }
