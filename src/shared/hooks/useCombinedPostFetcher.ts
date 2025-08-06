@@ -67,7 +67,6 @@ export default function useCombinedPostFetcher({
     }
 
     const postFilter: NDKFilter = {
-      kinds: [KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT],
       ids: allIds,
     }
 
