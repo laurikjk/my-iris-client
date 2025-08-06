@@ -302,7 +302,6 @@ export const useFeedStore = create<FeedState>()(
             !state.activeFeed
           ) {
             state.activeFeed = state.activeHomeTab
-            delete state.activeHomeTab
           }
           // Handle migration from old tabConfigs to feedConfigs
           if (
@@ -312,7 +311,6 @@ export const useFeedStore = create<FeedState>()(
             !state.feedConfigs
           ) {
             state.feedConfigs = state.tabConfigs
-            delete state.tabConfigs
           }
         }
 
