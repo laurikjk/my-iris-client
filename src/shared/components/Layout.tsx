@@ -1,4 +1,4 @@
-import {useLocation, useNavigate} from "@/navigation"
+import {useLocation, useNavigate, useNavigation} from "@/navigation"
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import NavSideBar from "@/shared/components/nav/NavSideBar"
@@ -69,51 +69,12 @@ const Layout = ({children}: {children: ReactNode}) => {
     }
   }, [navigate, goToNotifications])
 
-  // Track and restore outlet column scroll position
+  // Register scroll container with navigation system
+  const {registerScrollContainer} = useNavigation()
+
   useEffect(() => {
-    const outletColumn = outletColumnRef.current
-    if (!outletColumn) return
-
-    // Save scroll position to current history state before navigation
-    const saveScrollPosition = () => {
-      const currentState = window.history.state
-      if (currentState) {
-        window.history.replaceState(
-          {
-            ...currentState,
-            outletScrollPosition: outletColumn.scrollTop,
-          },
-          ""
-        )
-      }
-    }
-
-    // Restore scroll position from history state
-    const restoreScrollPosition = () => {
-      const state = window.history.state
-      if (state?.outletScrollPosition !== undefined) {
-        // Use requestAnimationFrame to ensure DOM is ready
-        requestAnimationFrame(() => {
-          outletColumn.scrollTo(0, state.outletScrollPosition)
-        })
-      } else {
-        // No saved position, scroll to top
-        outletColumn.scrollTo(0, 0)
-      }
-    }
-
-    // Save scroll position before unload or navigation
-    window.addEventListener("beforeunload", saveScrollPosition)
-
-    // Restore scroll position after navigation
-    restoreScrollPosition()
-
-    // Save scroll position when navigating away
-    return () => {
-      saveScrollPosition()
-      window.removeEventListener("beforeunload", saveScrollPosition)
-    }
-  }, [location.pathname])
+    registerScrollContainer(outletColumnRef.current)
+  }, [])
 
   // Handle nav item clicks to reset scroll when navigating to same route
   useEffect(() => {
@@ -201,6 +162,7 @@ const Layout = ({children}: {children: ReactNode}) => {
         )}
         <div
           ref={outletColumnRef}
+          data-outlet-column
           className="flex-1 overflow-y-auto overflow-x-hidden h-screen pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
         >
           <ErrorBoundary>
