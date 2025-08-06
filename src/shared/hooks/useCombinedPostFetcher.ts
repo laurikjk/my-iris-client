@@ -1,7 +1,6 @@
 import {useState, useEffect, useRef} from "react"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
-import {KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT} from "@/utils/constants"
 import {addSeenEventId} from "@/utils/memcache"
 import shuffle from "lodash/shuffle"
 
