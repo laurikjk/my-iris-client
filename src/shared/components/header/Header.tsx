@@ -38,40 +38,54 @@ const Header = ({
   const {scrollContainer, findScrollableParent} = useScrollableParent(headerRef)
 
   useEffect(() => {
-    const MIN_TRANSLATE_Y = -80
+    if (!slideUp || window.innerWidth >= MOBILE_BREAKPOINT) return
+
+    const HEADER_HEIGHT = 80
+    const MIN_TRANSLATE_Y = -HEADER_HEIGHT
     const MAX_TRANSLATE_Y = 0
     const OPACITY_MIN_POINT = 30
+    const SCROLL_THRESHOLD = 10
+    let scrollElement: Element | Window | null = null
 
     const handleScroll = (e?: Event) => {
-      if (window.innerWidth >= MOBILE_BREAKPOINT || !slideUp) return
+      if (window.innerWidth >= MOBILE_BREAKPOINT) return
 
       const currentScrollY = e ? (e.target as HTMLElement).scrollTop : window.scrollY
       let newTranslateY = 0
-      if (currentScrollY > lastScrollY.current) {
+
+      const currentTranslateY = parseFloat(
+        headerRef.current?.style.transform
+          .replace("translateY(", "")
+          .replace("px)", "") || "0"
+      )
+
+      if (currentScrollY > lastScrollY.current && currentScrollY > SCROLL_THRESHOLD) {
+        // Scrolling down - hide header
         newTranslateY = Math.max(
           MIN_TRANSLATE_Y,
-          parseFloat(
-            headerRef.current?.style.transform
-              .replace("translateY(", "")
-              .replace("px)", "") || "0"
-          ) -
-            (currentScrollY - lastScrollY.current)
+          currentTranslateY - (currentScrollY - lastScrollY.current)
         )
-      } else {
+      } else if (currentScrollY < lastScrollY.current) {
+        // Scrolling up - show header
         newTranslateY = Math.min(
           MAX_TRANSLATE_Y,
-          parseFloat(
-            headerRef.current?.style.transform
-              .replace("translateY(", "")
-              .replace("px)", "") || "0"
-          ) +
-            (lastScrollY.current - currentScrollY)
+          currentTranslateY + (lastScrollY.current - currentScrollY)
         )
+      } else {
+        // At top - ensure header is visible
+        if (currentScrollY <= SCROLL_THRESHOLD) {
+          newTranslateY = 0
+        } else {
+          return // No change needed
+        }
       }
+
       lastScrollY.current = currentScrollY
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(${newTranslateY}px)`
-        contentRef.current!.style.opacity = `${1 - Math.min(1, newTranslateY / -OPACITY_MIN_POINT)}`
+        if (contentRef.current) {
+          contentRef.current.style.opacity = `${1 - Math.min(1, newTranslateY / -OPACITY_MIN_POINT)}`
+        }
       }
     }
 
@@ -81,29 +95,67 @@ const Header = ({
         if (contentRef.current) {
           contentRef.current.style.opacity = "1"
         }
-        lastScrollY.current = 0 // Reset the scroll position reference
+        lastScrollY.current = 0
       }
     }
 
-    // Add scroll listener to the container if found
-    if (scrollContainer) {
-      scrollContainer.addEventListener("scroll", handleScroll)
-    } else {
-      // Fallback to window scroll
-      window.addEventListener("scroll", handleScroll)
+    const attachScrollListener = () => {
+      // Reset scroll position tracking
+      lastScrollY.current = 0
+
+      // Try to find scrollable parent first
+      const scrollableParent = findScrollableParent(headerRef.current)
+
+      if (scrollableParent) {
+        scrollElement = scrollableParent
+        scrollableParent.addEventListener("scroll", handleScroll, {passive: true})
+      } else {
+        // Look for sibling or nearby scrollable element (for profile/thread pages)
+        const parentContainer = headerRef.current?.parentElement
+        const scrollableSibling = parentContainer?.querySelector(".overflow-y-auto")
+
+        if (scrollableSibling) {
+          scrollElement = scrollableSibling
+          scrollableSibling.addEventListener("scroll", handleScroll, {passive: true})
+        } else {
+          // Try to find the main scrollable area (outlet)
+          const outlet = document.querySelector(
+            ".overflow-y-auto:not(.lg\\:block):not(.xl\\:block)"
+          )
+          if (outlet) {
+            scrollElement = outlet
+            outlet.addEventListener("scroll", handleScroll, {passive: true})
+          } else {
+            // Fallback to window scroll
+            scrollElement = window
+            window.addEventListener("scroll", handleScroll, {passive: true})
+          }
+        }
+      }
     }
+
+    // Attach immediately
+    attachScrollListener()
+
+    // Re-attach after a short delay to catch dynamically rendered elements
+    const REATTACH_DELAY_MS = 100
+    const timeoutId = setTimeout(() => {
+      if (scrollElement) {
+        scrollElement.removeEventListener("scroll", handleScroll)
+      }
+      attachScrollListener()
+    }, REATTACH_DELAY_MS)
 
     window.addEventListener("resize", handleResize)
 
     return () => {
-      if (scrollContainer) {
-        scrollContainer.removeEventListener("scroll", handleScroll)
-      } else {
-        window.removeEventListener("scroll", handleScroll)
+      clearTimeout(timeoutId)
+      if (scrollElement) {
+        scrollElement.removeEventListener("scroll", handleScroll)
       }
       window.removeEventListener("resize", handleResize)
     }
-  }, [slideUp, scrollContainer])
+  }, [slideUp, findScrollableParent])
 
   const getButtonContent = () => {
     if (showBack) return <RiArrowLeftLine className="w-6 h-6" />
@@ -189,8 +241,8 @@ const Header = ({
     <header
       ref={headerRef}
       onClick={handleHeaderClick}
-      style={slideUp ? {transform: `translateY(0px)`} : undefined}
-      className="pt-[env(safe-area-inset-top)] min-h-16 flex sticky top-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none w-full cursor-pointer"
+      style={slideUp ? {transform: "translateY(0px)"} : undefined}
+      className="pt-[env(safe-area-inset-top)] min-h-16 flex fixed top-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none w-full cursor-pointer md:sticky"
     >
       <div ref={contentRef} className="flex justify-between items-center flex-1 w-full">
         <div className="flex items-center gap-2 w-full">
