@@ -40,10 +40,15 @@ function RelayPage() {
   )
 
   return (
-    <div className="flex flex-row">
-      <div className="flex flex-col items-center flex-1">
-        <Header title={decodedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"} />
-        <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
+    <div className="flex flex-row h-screen">
+      <div className="flex flex-col items-center flex-1 h-full relative">
+        <div className="w-full max-w-screen-lg">
+          <Header
+            title={decodedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"}
+            inColumn={true}
+          />
+        </div>
+        <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-16 lg:pt-2 md:pb-0 overflow-y-auto">
           <RelaySelector
             selectedRelay={selectedRelayUrl}
             onRelaySelect={(newRelay) => {
