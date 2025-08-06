@@ -8,8 +8,8 @@ function AppearanceSettings() {
     updateAppearance({theme: e.target.value})
   }
 
-  function handleAlwaysShowMainFeedChange(e: ChangeEvent<HTMLInputElement>) {
-    updateAppearance({alwaysShowMainFeed: e.target.checked})
+  function handleTwoColumnLayoutChange(e: ChangeEvent<HTMLInputElement>) {
+    updateAppearance({twoColumnLayout: e.target.checked})
   }
 
   return (
@@ -36,13 +36,13 @@ function AppearanceSettings() {
             <input
               type="checkbox"
               className="checkbox checkbox-primary"
-              checked={appearance.alwaysShowMainFeed}
-              onChange={handleAlwaysShowMainFeedChange}
+              checked={appearance.twoColumnLayout}
+              onChange={handleTwoColumnLayoutChange}
             />
-            <span>Always show main feed</span>
+            <span>Two column layout</span>
           </label>
           <p className="text-sm text-base-content/60 mt-1">
-            Show the main feed as a middle column with content on the right
+            Show feed and content side by side on large screens
           </p>
         </div>
       </div>

@@ -1,4 +1,3 @@
-import {trackEvent} from "@/utils/IrisAPI"
 import {Component, ReactNode, ErrorInfo} from "react"
 
 interface ErrorBoundaryState {
@@ -26,10 +25,6 @@ export default class ErrorBoundary extends Component<
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Caught an error:", error, errorInfo)
-    trackEvent("error_boundary", {
-      error_message: error.message,
-      component_stack: errorInfo.componentStack || "unknown",
-    })
   }
 
   render() {

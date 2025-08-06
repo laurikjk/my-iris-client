@@ -22,9 +22,9 @@ function Index() {
     )
   }
 
-  // When alwaysShowMainFeed is enabled on desktop, HomeFeedEvents is shown in Layout
+  // When twoColumnLayout is enabled on desktop, HomeFeedEvents is shown in Layout
   // So here we just show a placeholder message
-  if (appearance.alwaysShowMainFeed) {
+  if (appearance.twoColumnLayout) {
     return (
       <div className="flex flex-1 items-center justify-center">
         <Link to="/about">
@@ -38,7 +38,7 @@ function Index() {
     )
   }
 
-  // When alwaysShowMainFeed is disabled on desktop, show the normal home layout
+  // When twoColumnLayout is disabled on desktop, show the normal home layout
   return (
     <section className="flex w-full justify-center overflow-y-auto overflow-x-hidden h-full">
       <div className="flex-1">

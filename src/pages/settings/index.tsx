@@ -13,7 +13,6 @@ import Account from "@/pages/settings/Account"
 import WalletSettings from "./WalletSettings"
 import SystemSettings from "./SystemSettings"
 import Backup from "@/pages/settings/Backup"
-import PrivacySettings from "./Privacy"
 import ChatSettings from "./ChatSettings"
 import {Helmet} from "react-helmet"
 import classNames from "classnames"
@@ -86,12 +85,6 @@ function Settings() {
           iconBg: "bg-green-500",
           message: "Notifications",
           path: "/settings/notifications",
-        },
-        {
-          icon: "closedeye",
-          iconBg: "bg-red-500",
-          message: "Privacy",
-          path: "/settings/privacy",
         },
         {
           icon: "gear",
@@ -221,8 +214,6 @@ function Settings() {
                 return <SocialGraphSettings />
               case "notifications":
                 return <NotificationSettings />
-              case "privacy":
-                return <PrivacySettings />
               case "system":
                 return <SystemSettings />
               case "chat":

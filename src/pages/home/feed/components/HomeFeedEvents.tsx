@@ -1,4 +1,5 @@
 import {useMemo, useState} from "react"
+import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
@@ -8,6 +9,8 @@ import Feed from "@/shared/components/feed/Feed.tsx"
 import useFollows from "@/shared/hooks/useFollows"
 import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {usePublicKey} from "@/stores/user"
+import {useSettingsStore} from "@/stores/settings"
+import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
 import {
   useFeedStore,
   useEnabledFeedIds,
@@ -31,6 +34,8 @@ const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
 function HomeFeedEvents() {
   const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true) // to update on follows change
+  const {appearance, updateAppearance} = useSettingsStore()
+  const isLargeScreen = useIsLargeScreen()
   const {
     activeFeed,
     setActiveFeed,
@@ -136,7 +141,28 @@ function HomeFeedEvents() {
   return (
     <>
       <Header showBack={false}>
-        <span className="md:px-3 md:py-2">{feedName}</span>
+        <div className="flex items-center justify-between w-full">
+          <span className="md:px-3 md:py-2">{feedName}</span>
+          {isLargeScreen && (
+            <button
+              className="btn btn-ghost btn-sm btn-circle"
+              onClick={() =>
+                updateAppearance({twoColumnLayout: !appearance.twoColumnLayout})
+              }
+              title={
+                appearance.twoColumnLayout
+                  ? "Collapse to single column"
+                  : "Expand to two columns"
+              }
+            >
+              {appearance.twoColumnLayout ? (
+                <RiArrowRightSLine className="w-5 h-5" />
+              ) : (
+                <RiArrowLeftSLine className="w-5 h-5" />
+              )}
+            </button>
+          )}
+        </div>
       </Header>
       {follows.length > 1 && myPubKey && (
         <FeedTabs

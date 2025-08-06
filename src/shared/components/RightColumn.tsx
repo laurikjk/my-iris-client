@@ -17,8 +17,8 @@ function RightColumn({children}: RightColumnProps) {
   const isTestEnvironment =
     typeof window !== "undefined" && window.location.href.includes("localhost:5173")
 
-  // Don't show right column when alwaysShowMainFeed is enabled
-  if (appearance.alwaysShowMainFeed) {
+  // Don't show right column when twoColumnLayout is enabled
+  if (appearance.twoColumnLayout) {
     return null
   }
 

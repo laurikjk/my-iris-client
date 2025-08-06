@@ -8,7 +8,6 @@ import Modal from "@/shared/components/ui/Modal.tsx"
 import Footer from "@/shared/components/Footer.tsx"
 import {useSettingsStore} from "@/stores/settings"
 import ErrorBoundary from "./ui/ErrorBoundary"
-import {trackEvent} from "@/utils/IrisAPI"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useUIStore} from "@/stores/ui"
 import {Helmet} from "react-helmet"
@@ -28,7 +27,7 @@ const Layout = ({children}: {children: ReactNode}) => {
   const newPostOpen = useUIStore((state) => state.newPostOpen)
   const setNewPostOpen = useUIStore((state) => state.setNewPostOpen)
   const navItemClicked = useUIStore((state) => state.navItemClicked)
-  const {privacy, appearance} = useSettingsStore()
+  const {appearance} = useSettingsStore()
   const goToNotifications = useUIStore((state) => state.goToNotifications)
   const showLoginDialog = useUIStore((state) => state.showLoginDialog)
   const setShowLoginDialog = useUIStore((state) => state.setShowLoginDialog)
@@ -39,7 +38,7 @@ const Layout = ({children}: {children: ReactNode}) => {
   const isLargeScreen = useIsLargeScreen()
 
   const shouldShowMainFeed =
-    appearance.alwaysShowMainFeed &&
+    appearance.twoColumnLayout &&
     isLargeScreen &&
     !location.pathname.startsWith("/settings") &&
     !location.pathname.startsWith("/chats")
@@ -70,19 +69,6 @@ const Layout = ({children}: {children: ReactNode}) => {
 
   // Handle nav item clicks - no longer needed for scroll since each component manages its own
   // Keep this for potential future use with navItemClicked signal
-
-  useEffect(() => {
-    const isMessagesRoute = location.pathname.startsWith("/chats/")
-    const isSearchRoute = location.pathname.startsWith("/search/")
-    if (
-      CONFIG.features.analytics &&
-      privacy.enableAnalytics &&
-      !isMessagesRoute &&
-      !isSearchRoute
-    ) {
-      trackEvent("pageview")
-    }
-  }, [location, privacy.enableAnalytics])
 
   useEffect(() => {
     const handleServiceWorkerMessage = (event: MessageEvent<ServiceWorkerMessage>) => {
@@ -132,7 +118,7 @@ const Layout = ({children}: {children: ReactNode}) => {
     <div className="relative flex flex-col w-full h-screen overflow-hidden">
       <div className="flex relative flex-1 overflow-hidden" id="main-content">
         <NavSideBar />
-        {appearance.alwaysShowMainFeed && isLargeScreen && (
+        {appearance.twoColumnLayout && isLargeScreen && (
           <div
             ref={middleColumnRef}
             className={`flex-1 border-r border-base-300 overflow-y-auto overflow-x-hidden ${

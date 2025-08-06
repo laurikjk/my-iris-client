@@ -8,7 +8,7 @@ interface SettingsState {
   appearance: {
     theme: string
     showRightColumn: boolean
-    alwaysShowMainFeed: boolean
+    twoColumnLayout: boolean
   }
   // Content settings
   content: {
@@ -36,10 +36,6 @@ interface SettingsState {
   notifications: {
     server: string
   }
-  // Privacy settings
-  privacy: {
-    enableAnalytics: boolean
-  }
   // Debug settings
   debug: {
     enabled: boolean
@@ -50,7 +46,6 @@ interface SettingsState {
   updateContent: (settings: Partial<SettingsState["content"]>) => void
   updateImgproxy: (settings: Partial<SettingsState["imgproxy"]>) => void
   updateNotifications: (settings: Partial<SettingsState["notifications"]>) => void
-  updatePrivacy: (settings: Partial<SettingsState["privacy"]>) => void
   updateDebug: (settings: Partial<SettingsState["debug"]>) => void
 }
 
@@ -60,7 +55,7 @@ export const useSettingsStore = create<SettingsState>()(
       appearance: {
         theme: CONFIG.defaultTheme,
         showRightColumn: true,
-        alwaysShowMainFeed: true,
+        twoColumnLayout: true,
       },
       content: {
         blurNSFW: true,
@@ -85,9 +80,6 @@ export const useSettingsStore = create<SettingsState>()(
       notifications: {
         server: CONFIG.defaultSettings.notificationServer,
       },
-      privacy: {
-        enableAnalytics: true,
-      },
       debug: {
         enabled: false,
         privateKey: null,
@@ -109,10 +101,6 @@ export const useSettingsStore = create<SettingsState>()(
       updateNotifications: (settings) =>
         set((state) => ({
           notifications: {...state.notifications, ...settings},
-        })),
-      updatePrivacy: (settings) =>
-        set((state) => ({
-          privacy: {...state.privacy, ...settings},
         })),
       updateDebug: (settings) =>
         set((state) => ({

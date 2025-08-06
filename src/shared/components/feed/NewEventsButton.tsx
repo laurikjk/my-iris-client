@@ -18,7 +18,7 @@ const NewEventsButton = ({
 }: NewEventsButtonProps) => {
   const {appearance} = useSettingsStore()
   const isLargeScreen = typeof window !== "undefined" && window.innerWidth >= 1024
-  const isColumnLayout = appearance.alwaysShowMainFeed && isLargeScreen
+  const isColumnLayout = appearance.twoColumnLayout && isLargeScreen
   const buttonRef = useRef<HTMLDivElement>(null)
   const [columnBounds, setColumnBounds] = useState<{left: number; width: number} | null>(
     null

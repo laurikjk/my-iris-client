@@ -97,13 +97,15 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const myPubKey = useUserStore.getState().publicKey
         const myPrivKey = useUserStore.getState().privateKey
         const nip07Login = useUserStore.getState().nip07Login
-        
+
         // Skip all DM functionality if no signer (view-only mode)
         if (!myPrivKey && !nip07Login) {
-          console.log("No private key or NIP-07 extension - skipping DM initialization (view-only mode)")
+          console.log(
+            "No private key or NIP-07 extension - skipping DM initialization (view-only mode)"
+          )
           return
         }
-        
+
         if (!myPubKey) {
           throw new Error("No public key")
         }
@@ -150,13 +152,15 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const myPubKey = useUserStore.getState().publicKey
         const myPrivKey = useUserStore.getState().privateKey
         const nip07Login = useUserStore.getState().nip07Login
-        
+
         // Skip if no signer (view-only mode)
         if (!myPrivKey && !nip07Login) {
-          console.log("No private key or NIP-07 extension - cannot create invite (view-only mode)")
+          console.log(
+            "No private key or NIP-07 extension - cannot create invite (view-only mode)"
+          )
           return
         }
-        
+
         if (!myPubKey) {
           throw new Error("No public key")
         }
@@ -581,10 +585,12 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const myPubKey = useUserStore.getState().publicKey
         const myPrivKey = useUserStore.getState().privateKey
         const nip07Login = useUserStore.getState().nip07Login
-        
+
         // Skip if no signer (view-only mode)
         if (!myPrivKey && !nip07Login) {
-          console.log("No private key or NIP-07 extension - skipping device listening (view-only mode)")
+          console.log(
+            "No private key or NIP-07 extension - skipping device listening (view-only mode)"
+          )
           return
         }
 
@@ -778,7 +784,9 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
         // Skip invite listening if no signer (view-only mode)
         if (!myPrivKey && !nip07Login) {
-          console.log("No private key or NIP-07 extension - skipping invite listeners (view-only mode)")
+          console.log(
+            "No private key or NIP-07 extension - skipping invite listeners (view-only mode)"
+          )
           return
         }
 

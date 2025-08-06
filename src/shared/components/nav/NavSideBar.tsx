@@ -27,20 +27,18 @@ const NavSideBar = () => {
   const myPrivKey = useUserStore((state) => state.privateKey)
   const nip07Login = useUserStore((state) => state.nip07Login)
   const {debug} = useSettingsStore()
-  
+
   const hasSigner = !!(myPrivKey || nip07Login)
 
   const navItems = useMemo(() => {
     const configItems = navItemsConfig()
-    return Object.values(configItems).filter(
-      (item) => {
-        // Hide Chats if no signer (view-only mode)
-        if (item.label === "Chats" && !hasSigner) {
-          return false
-        }
-        return !("requireLogin" in item) || (item.requireLogin && myPubKey)
+    return Object.values(configItems).filter((item) => {
+      // Hide Chats if no signer (view-only mode)
+      if (item.label === "Chats" && !hasSigner) {
+        return false
       }
-    )
+      return !("requireLogin" in item) || (item.requireLogin && myPubKey)
+    })
   }, [myPubKey, hasSigner])
 
   const logoUrl = CONFIG.navLogo

@@ -180,31 +180,3 @@ export default class IrisAPI {
     }
   }
 }
-
-export function trackEvent(
-  event: string,
-  props?: Record<string, string | boolean>,
-  e?: {destination?: {url: string}}
-) {
-  if (
-    !import.meta.env.DEV &&
-    CONFIG.features.analytics &&
-    window.location.hostname.endsWith("iris.to")
-  ) {
-    fetch("https://pa.v0l.io/api/event", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        d: CONFIG.hostname,
-        n: event,
-        r: document.referrer === window.location.href ? null : document.referrer,
-        p: props,
-        u:
-          e?.destination?.url ??
-          `${window.location.protocol}//${window.location.host}${window.location.pathname}`,
-      }),
-    })
-  }
-}
