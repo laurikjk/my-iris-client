@@ -1,6 +1,8 @@
 import NotificationsFeed from "@/shared/components/feed/NotificationsFeed.tsx"
 import RightColumn from "@/shared/components/RightColumn"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
+import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
+import {RelayStats} from "@/shared/components/RelayStats"
 import Header from "@/shared/components/header/Header"
 import Widget from "@/shared/components/ui/Widget"
 
@@ -27,6 +29,8 @@ function Notifications() {
         <RightColumn>
           {() => (
             <>
+              <SocialGraphWidget />
+              <RelayStats />
               <Widget title="Popular">
                 <AlgorithmicFeed
                   type="popular"

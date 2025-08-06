@@ -3,6 +3,8 @@ import RightColumn from "@/shared/components/RightColumn.tsx"
 import Header from "@/shared/components/header/Header"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
+import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
+import {RelayStats} from "@/shared/components/RelayStats"
 import {NDKFilter} from "@nostr-dev-kit/ndk"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import {useParams} from "@/navigation"
@@ -103,6 +105,8 @@ function RelayPage() {
       <RightColumn>
         {() => (
           <>
+            <SocialGraphWidget />
+            <RelayStats />
             <Widget title="Popular">
               <AlgorithmicFeed
                 type="popular"

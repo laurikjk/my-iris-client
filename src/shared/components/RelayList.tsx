@@ -35,6 +35,11 @@ export function RelayList({
   const {relayConfigs, toggleRelayConnection, addRelay, removeRelay} = useUserStore()
   const [ndkRelays, setNdkRelays] = useState(new Map())
 
+  const normalizeRelayUrl = (url: string) => {
+    // Normalize URL for comparison: remove trailing slash and ensure lowercase
+    return url.replace(/\/$/, "").toLowerCase()
+  }
+
   useEffect(() => {
     const updateStats = () => {
       const ndk = getNdk()
@@ -45,6 +50,12 @@ export function RelayList({
     const interval = setInterval(updateStats, 2000)
     return () => clearInterval(interval)
   }, [])
+
+  // Get discovered relays (in NDK but not in configs)
+  const discoveredRelays = Array.from(ndkRelays.entries()).filter(([url]) => {
+    const normalizedNdkUrl = normalizeRelayUrl(url)
+    return !relayConfigs?.some((c) => normalizeRelayUrl(c.url) === normalizedNdkUrl)
+  })
 
   // Sort relays by enabled status, then connection status, then alphabetically
   const sortedRelayConfigs = [...(relayConfigs || [])].sort((a, b) => {
@@ -217,7 +228,7 @@ export function RelayList({
           )
         })}
 
-        {showDiscovered && (
+        {showDiscovered && discoveredRelays.length > 0 && (
           <>
             <button
               onClick={() => setShowDiscoveredRelays(!showDiscoveredRelays)}
@@ -225,22 +236,13 @@ export function RelayList({
             >
               <span>
                 {showDiscoveredRelays ? "▼" : "▶"} Discovered relays (
-                {ndkRelays.size - sortedRelayConfigs.length})
+                {discoveredRelays.length})
               </span>
             </button>
 
             {showDiscoveredRelays && (
               <>
-                {Array.from(ndkRelays.entries())
-                  .filter(([url]) => {
-                    // Filter out relays that are already in user's configs
-                    return !relayConfigs?.some(
-                      (c) =>
-                        c.url === url ||
-                        c.url === url + "/" ||
-                        c.url === url.replace(/\/$/, "")
-                    )
-                  })
+                {discoveredRelays
                   .sort(([urlA, relayA], [urlB, relayB]) => {
                     // Sort by connection status, then alphabetically
                     if (relayA.connected !== relayB.connected) {

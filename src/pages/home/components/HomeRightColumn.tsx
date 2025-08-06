@@ -19,10 +19,10 @@ export function HomeRightColumn() {
           />
         </Link>
         <div className="w-full max-w-xs">
-          <SocialGraphWidget />
+          <SocialGraphWidget background={false} />
         </div>
         <div className="w-full max-w-xs">
-          <RelayStats />
+          <RelayStats background={false} />
         </div>
       </div>
     </div>

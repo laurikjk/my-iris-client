@@ -17,8 +17,6 @@ interface ChatContainerProps {
   onSendReaction?: (messageId: string, emoji: string) => Promise<void>
 }
 
-const root = document.documentElement
-
 const ChatContainer = ({
   messages,
   sessionId,
@@ -42,7 +40,10 @@ const ChatContainer = ({
   const messageGroups = groupMessages(messages, undefined, isPublicChat)
 
   const handleScroll = () => {
-    const isBottom = root.scrollTop + root.clientHeight >= root.scrollHeight - 1
+    const container = chatContainerRef.current
+    if (!container) return
+    const isBottom =
+      container.scrollTop + container.clientHeight >= container.scrollHeight - 1
     setShowScrollDown(!isBottom)
     wasAtBottomRef.current = isBottom
   }
@@ -52,7 +53,9 @@ const ChatContainer = ({
     requestAnimationFrame(() => {
       // Add a small delay to ensure all content is fully rendered
       setTimeout(() => {
-        root.scrollTop = root.scrollHeight
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+        }
       }, 10)
     })
   }
@@ -62,8 +65,11 @@ const ChatContainer = ({
   }, [messages.size])
 
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    const container = chatContainerRef.current
+    if (!container) return
+
+    container.addEventListener("scroll", handleScroll)
+    return () => container.removeEventListener("scroll", handleScroll)
   }, [])
 
   // Handle scroll behavior for new messages and height changes
@@ -130,7 +136,7 @@ const ChatContainer = ({
     <>
       <div
         ref={chatContainerRef}
-        className="flex flex-col justify-end flex-1 space-y-4 p-4 relative"
+        className="flex flex-col flex-1 space-y-4 p-4 relative overflow-y-auto"
       >
         {messages.size === 0 ? (
           <div className="text-center text-base-content/70 my-8">

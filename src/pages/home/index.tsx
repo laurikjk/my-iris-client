@@ -1,6 +1,8 @@
 import HomeFeedEvents from "@/pages/home/feed/components/HomeFeedEvents.tsx"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
+import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
+import {RelayStats} from "@/shared/components/RelayStats"
 import Widget from "@/shared/components/ui/Widget.tsx"
 import {useSettingsStore} from "@/stores/settings"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
@@ -36,6 +38,8 @@ function Index() {
       <RightColumn>
         {() => (
           <>
+            <SocialGraphWidget />
+            <RelayStats />
             <Widget title="Popular">
               <AlgorithmicFeed
                 type="popular"
