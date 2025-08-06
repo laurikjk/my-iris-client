@@ -8,8 +8,11 @@ test("can open QR code on own profile", async ({page}) => {
   // Click on user avatar in sidebar to go to own profile
   await page.getByTestId("sidebar-user-row").locator("img").first().click()
 
-  // Click QR code button in profile header
-  await page.getByRole("button", {name: "Show QR Code"}).click()
+  // Click QR code button in profile header (specifically in the profile header actions)
+  await page
+    .getByTestId("profile-header-actions")
+    .getByRole("button", {name: "Show QR Code"})
+    .click()
 
   await expect(page.getByRole("img", {name: "QR Code"})).toBeVisible({timeout: 10000})
 

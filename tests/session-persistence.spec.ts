@@ -49,13 +49,14 @@ test.describe("Session persistence", () => {
     // Refresh the page
     await page.reload()
 
-    // Like the post
+    // Like the post - find the specific post we created
     await page.waitForSelector('[data-testid="like-button"]', {timeout: 5000})
-    const likeButton = page.getByTestId("like-button")
+    const postElement = page.getByText(postContent).first().locator("..").locator("..")
+    const likeButton = postElement.getByTestId("like-button").first()
     await expect(likeButton).toBeVisible()
     await likeButton.click()
 
     // Verify like count increased
-    await expect(page.getByTestId("like-count")).toHaveText("1")
+    await expect(postElement.getByTestId("like-count").first()).toHaveText("1")
   })
 })

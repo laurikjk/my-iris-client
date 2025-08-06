@@ -18,13 +18,14 @@ test.describe("Post liking", () => {
     // Wait for the post to be fully loaded and like button to appear
     await page.waitForSelector('[data-testid="like-button"]', {timeout: 5000})
 
-    // Find and click the like button
-    const likeButton = page.getByTestId("like-button")
+    // Find and click the like button for the specific post we created
+    const postElement = page.getByText(postContent).first().locator("..").locator("..")
+    const likeButton = postElement.getByTestId("like-button").first()
     await expect(likeButton).toBeVisible()
     await likeButton.click()
 
     // Verify like count increased and heart is filled
-    await expect(page.getByTestId("like-count")).toHaveText("1")
-    await expect(page.getByTestId("like-button")).toHaveClass(/text-error/)
+    await expect(postElement.getByTestId("like-count").first()).toHaveText("1")
+    await expect(likeButton).toHaveClass(/text-error/)
   })
 })
