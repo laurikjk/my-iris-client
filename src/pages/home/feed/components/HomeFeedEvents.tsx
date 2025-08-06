@@ -3,7 +3,8 @@ import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
-import PopularFeed from "@/shared/components/feed/PopularFeed"
+import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
+import {feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import useFollows from "@/shared/hooks/useFollows"
@@ -124,7 +125,7 @@ function HomeFeedEvents() {
     if (confirm("Reset all feeds to defaults?")) {
       console.log("User confirmed reset")
       setEditMode(false)
-      // Stack navigation will handle caching
+      feedCache.clear()
       resetAllFeedsToDefaults()
       console.log("Reset function called")
     }
@@ -140,7 +141,7 @@ function HomeFeedEvents() {
     return `feed-${getFeedCacheKey(activeFeedConfig)}`
   }, [activeFeedConfig])
 
-  if (!activeFeedConfig?.filter) {
+  if (!activeFeedConfig?.filter && !activeFeedConfig?.feedStrategy) {
     return null
   }
 
@@ -187,35 +188,61 @@ function HomeFeedEvents() {
             onEditModeToggle={toggleEditMode}
           />
         )}
-        {editMode && follows.length > 1 && myPubKey && (
-          <FeedEditor
-            key={activeFeed}
-            activeTab={activeFeed}
-            tabs={feeds}
-            onEditModeToggle={toggleEditMode}
-            onDeleteFeed={handleDeleteFeed}
-            onResetFeeds={handleResetFeeds}
-            onCloneFeed={handleCloneFeed}
-          />
+        {editMode && follows.length > 1 && myPubKey && activeFeedConfig?.feedStrategy && (
+          <div className="mt-4 p-4 border border-base-300 rounded-lg bg-base-50">
+            <div className="text-sm text-base-content/50 italic">
+              {activeFeedConfig.feedStrategy === "popular"
+                ? "Popular feeds use a fixed algorithm to calculate the most popular posts first."
+                : "For You feeds use personalized algorithms to curate content based on your interests."}{" "}
+              Editing functionality is under construction.
+            </div>
+          </div>
         )}
+        {editMode &&
+          follows.length > 1 &&
+          myPubKey &&
+          !activeFeedConfig?.feedStrategy && (
+            <FeedEditor
+              key={activeFeed}
+              activeTab={activeFeed}
+              tabs={feeds}
+              onEditModeToggle={toggleEditMode}
+              onDeleteFeed={handleDeleteFeed}
+              onResetFeeds={handleResetFeeds}
+              onCloneFeed={handleCloneFeed}
+            />
+          )}
         <NotificationPrompt />
-        {activeFeedConfig?.feedType === "popular" || !myPubKey ? (
-          <PopularFeed />
-        ) : (
-          <Feed
-            key={feedKey}
-            feedConfig={activeFeedConfig}
-            showDisplayAsSelector={follows.length > 1}
-            forceUpdate={0}
-            emptyPlaceholder={""}
-            refreshSignal={feedRefreshSignal}
-          />
-        )}
+        {(() => {
+          if (!myPubKey) return <AlgorithmicFeed type="popular" />
+
+          if (activeFeedConfig?.feedStrategy)
+            return (
+              <AlgorithmicFeed
+                key={activeFeedConfig.feedStrategy}
+                type={activeFeedConfig.feedStrategy}
+              />
+            )
+
+          return (
+            <Feed
+              key={feedKey}
+              feedConfig={activeFeedConfig}
+              showDisplayAsSelector={follows.length > 1}
+              forceUpdate={0}
+              emptyPlaceholder={""}
+              refreshSignal={feedRefreshSignal}
+            />
+          )
+        })()}
         {follows.length <= 1 && myPubKey && (
           <>
             <NoFollows myPubKey={myPubKey} />
-            {activeFeedConfig?.feedType !== "popular" && (
-              <PopularFeed displayOptions={{showDisplaySelector: false}} />
+            {!activeFeedConfig?.feedStrategy && (
+              <AlgorithmicFeed
+                type="popular"
+                displayOptions={{showDisplaySelector: false}}
+              />
             )}
           </>
         )}

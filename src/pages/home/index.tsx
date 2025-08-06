@@ -1,6 +1,6 @@
 import HomeFeedEvents from "@/pages/home/feed/components/HomeFeedEvents.tsx"
 import RightColumn from "@/shared/components/RightColumn.tsx"
-import PopularFeed from "@/shared/components/feed/PopularFeed"
+import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import Widget from "@/shared/components/ui/Widget.tsx"
 import {useSettingsStore} from "@/stores/settings"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
@@ -37,7 +37,8 @@ function Index() {
         {() => (
           <>
             <Widget title="Popular">
-              <PopularFeed
+              <AlgorithmicFeed
+                type="popular"
                 displayOptions={{
                   small: true,
                   showDisplaySelector: false,

@@ -3,8 +3,8 @@ import socialGraph, {DEFAULT_SOCIAL_GRAPH_ROOT} from "@/utils/socialGraph"
 import useFollows from "@/shared/hooks/useFollows"
 import {useUserStore} from "@/stores/user"
 
-const BASE_TIME_RANGE = 24 * 60 * 60
-const BASE_LIMIT = 300
+const BASE_TIME_RANGE = 48 * 60 * 60 // Start with 2 days instead of 1
+const BASE_LIMIT = 500 // Increase initial limit
 
 export interface PopularityFilters {
   timeRange: number

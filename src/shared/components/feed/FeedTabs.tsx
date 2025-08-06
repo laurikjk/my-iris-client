@@ -62,7 +62,6 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
       showRepliedTo: true,
       hideReplies: false,
       followDistance: 1,
-      feedType: "chronological" as const,
       filter: {
         limit: 100,
         kinds: [KIND_TEXT_NOTE],

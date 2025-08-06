@@ -5,9 +5,10 @@ import {KIND_REACTION, KIND_REPOST} from "@/utils/constants"
 import {getTag} from "@/utils/nostr"
 import {PopularityFilters} from "./usePopularityFilters"
 import {useSocialGraphLoaded} from "@/utils/socialGraph"
+import {seenEventIds} from "@/utils/memcache"
 
-const LOW_THRESHOLD = 30
-const INITIAL_DATA_THRESHOLD = 10
+const LOW_THRESHOLD = 20
+const INITIAL_DATA_THRESHOLD = 5
 
 interface ReactionSubscriptionCache {
   hasInitialData?: boolean
@@ -18,14 +19,14 @@ interface ReactionSubscriptionCache {
 export default function useReactionSubscription(
   currentFilters: PopularityFilters,
   expandFilters: () => void,
-  cache: ReactionSubscriptionCache
+  cache: ReactionSubscriptionCache,
+  filterSeen?: boolean
 ) {
   const isSocialGraphLoaded = useSocialGraphLoaded()
   const showingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const pendingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const [hasInitialData, setHasInitialData] = useState(cache.hasInitialData || false)
 
-  // Initialize refs from cache on mount
   useEffect(() => {
     if (cache.pendingReactionCounts) {
       pendingReactionCounts.current = cache.pendingReactionCounts
@@ -60,6 +61,8 @@ export default function useReactionSubscription(
 
       if (!originalPostId) return
 
+      if (filterSeen && seenEventIds.has(originalPostId)) return
+
       if (showingReactionCounts.current.has(originalPostId)) {
         showingReactionCounts.current.get(originalPostId)?.add(event.id)
       } else if (pendingReactionCounts.current.has(originalPostId)) {
@@ -68,7 +71,6 @@ export default function useReactionSubscription(
         pendingReactionCounts.current.set(originalPostId, new Set([event.id]))
       }
 
-      // Check if we have enough initial data
       if (
         !hasInitialData &&
         pendingReactionCounts.current.size >= INITIAL_DATA_THRESHOLD
