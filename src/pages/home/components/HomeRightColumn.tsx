@@ -15,7 +15,7 @@ export function HomeRightColumn() {
           <img
             src={irisConnectingPeople}
             alt="Iris — Connecting People"
-            className="w-full cursor-pointer hover:opacity-90 transition-opacity"
+            className="mx-auto cursor-pointer hover:opacity-90 transition-opacity"
           />
         </Link>
         <div className="w-full max-w-xs">

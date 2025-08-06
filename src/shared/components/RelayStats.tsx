@@ -8,10 +8,23 @@ export function RelayStats() {
   useEffect(() => {
     const updateStats = () => {
       const ndk = getNdk()
-      const relayList = Array.from(ndk.pool.relays.entries()).map(([url, relay]) => ({
-        url: url.replace(/^wss?:\/\//, "").replace(/\/$/, ""),
-        connected: relay.connected || false,
-      }))
+      const relayList = Array.from(ndk.pool.relays.entries())
+        .map(([url, relay]) => ({
+          url: url.replace(/^wss?:\/\//, "").replace(/\/$/, ""),
+          connected: relay.connected || false,
+        }))
+        .sort((a, b) => {
+          // Sort by connection status first (connected relays first)
+          const connectedA = a.connected ? 1 : 0
+          const connectedB = b.connected ? 1 : 0
+          const statusDiff = connectedB - connectedA
+
+          if (statusDiff !== 0) {
+            return statusDiff
+          }
+          // Secondary sort by URL alphabetically
+          return a.url.localeCompare(b.url)
+        })
       setRelays(relayList)
     }
 
