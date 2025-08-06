@@ -33,7 +33,8 @@ const useFollows = (pubKey: string | null | undefined, includeSelf = false) => {
       if (pubKeyHex) {
         const filter = {kinds: [3], authors: [pubKeyHex]}
 
-        const sub = ndk().subscribe(filter, {closeOnEose: true})
+        // Don't use closeOnEose so we can receive real-time updates when user follows/unfollows
+        const sub = ndk().subscribe(filter)
         subscriptionRef.current = sub
 
         let latestTimestamp = 0
