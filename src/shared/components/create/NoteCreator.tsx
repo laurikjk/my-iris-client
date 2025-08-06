@@ -304,7 +304,7 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
         </button>
       </div>
 
-      <div className="mt-4 min-h-16 max-h-96 overflow-y-scroll">
+      <div className="mt-4 min-h-16 max-h-96 overflow-y-scroll scrollbar-hide">
         <div className="text-sm uppercase text-gray-500 mb-2 font-bold">Preview</div>
         <HyperText>{noteContent}</HyperText>
       </div>

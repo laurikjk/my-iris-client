@@ -14,7 +14,7 @@ body {
 
 /* Common page container styles */
 .page-container {
-  @apply flex flex-1 overflow-y-auto overflow-x-hidden;
+  @apply flex flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide;
 }
 
 .btn,

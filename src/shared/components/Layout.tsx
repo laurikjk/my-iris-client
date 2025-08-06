@@ -118,19 +118,22 @@ const Layout = ({children}: {children: ReactNode}) => {
     <div
       className={`relative flex flex-col w-full h-screen overflow-hidden ${appearance.limitedMaxWidth ? "max-w-screen-2xl mx-auto" : ""}`}
     >
-      <div className="flex relative flex-1 overflow-hidden" id="main-content">
+      <div
+        className="flex relative flex-1 overflow-hidden min-w-0 w-full"
+        id="main-content"
+      >
         <NavSideBar />
         {!appearance.singleColumnLayout && isLargeScreen && (
           <div
             ref={middleColumnRef}
-            className={`flex-1 border-r border-base-300 overflow-y-auto overflow-x-hidden ${
+            className={`flex-1 min-w-0 border-r border-base-300 overflow-y-auto overflow-x-hidden scrollbar-hide ${
               shouldShowMainFeed ? "hidden lg:block" : "hidden"
             }`}
           >
             <HomeFeedEvents />
           </div>
         )}
-        <div className="flex-1 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           {children}
           {activeProviderType !== "disabled" && (
             <iframe

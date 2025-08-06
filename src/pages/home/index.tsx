@@ -15,8 +15,8 @@ function Index() {
   // On mobile, always show HomeFeedEvents regardless of settings
   if (!isLargeScreen) {
     return (
-      <section className="flex w-full justify-center overflow-y-auto overflow-x-hidden flex-1 relative">
-        <div className="flex-1">
+      <section className="flex w-full overflow-y-auto overflow-x-hidden scrollbar-hide flex-1 relative">
+        <div className="w-full">
           <HomeFeedEvents />
         </div>
       </section>
@@ -48,7 +48,7 @@ function Index() {
 
   // When single column layout is enabled on desktop, show the normal home layout
   return (
-    <section className="flex w-full justify-center overflow-y-auto overflow-x-hidden h-full">
+    <section className="flex w-full justify-center overflow-y-auto overflow-x-hidden scrollbar-hide h-full">
       <div className="flex-1">
         <HomeFeedEvents />
       </div>
