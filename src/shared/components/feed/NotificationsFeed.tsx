@@ -1,9 +1,10 @@
 import {notifications} from "@/utils/notifications"
 import NotificationsFeedItem from "@/pages/notifications/NotificationsFeedItem"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
-import {useEffect, useCallback, Suspense} from "react"
+import {useEffect, useCallback, Suspense, useState} from "react"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {useNotificationsStore} from "@/stores/notifications"
+import {useLocation} from "@/navigation/hooks"
 import runningOstrich from "@/assets/running-ostrich.gif"
 import {useUserStore} from "@/stores/user"
 import {startNotificationsSubscription} from "./notificationsSubscription"
@@ -14,6 +15,8 @@ const DISPLAY_INCREMENT = 10
 function NotificationsFeed() {
   const notificationsSeenAt = useNotificationsStore((state) => state.notificationsSeenAt)
   const publicKey = useUserStore((state) => state.publicKey)
+  const [animationSeenAt, setAnimationSeenAt] = useState(0) // Start with 0 to keep highlights
+  const location = useLocation()
 
   useEffect(() => {
     if (publicKey) {
@@ -37,18 +40,38 @@ function NotificationsFeed() {
   const {latestNotification: latestNotificationTime} = useNotificationsStore()
 
   const updateSeenAt = useCallback(() => {
-    if (document.hasFocus()) {
+    // Only update seen time if we're actually on the notifications page
+    if (document.hasFocus() && location.pathname === "/notifications") {
+      // Set seen time immediately
+      const newSeenTime = Math.round(Date.now() / 1000)
+      useNotificationsStore.getState().setNotificationsSeenAt(newSeenTime)
+
+      // Delay animation fade by 10 seconds
       setTimeout(() => {
-        useNotificationsStore
-          .getState()
-          .setNotificationsSeenAt(Math.round(Date.now() / 1000))
+        setAnimationSeenAt(newSeenTime)
       }, 10000)
     }
-  }, [latestNotificationTime, notificationsSeenAt])
+  }, [latestNotificationTime, notificationsSeenAt, location.pathname])
 
   useEffect(() => {
     updateSeenAt()
   }, [latestNotificationTime, updateSeenAt])
+
+  // When navigating to notifications page, set seen time immediately but delay animation
+  useEffect(() => {
+    if (location.pathname === "/notifications") {
+      // Set seen time immediately
+      const newSeenTime = Math.round(Date.now() / 1000)
+      useNotificationsStore.getState().setNotificationsSeenAt(newSeenTime)
+
+      // Start fade animation after 10 seconds
+      const timer = setTimeout(() => {
+        setAnimationSeenAt(newSeenTime)
+      }, 10000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [location.pathname]) // Run when pathname changes
 
   useEffect(() => {
     const handleUpdate = () => updateSeenAt()
@@ -94,7 +117,7 @@ function NotificationsFeed() {
             .slice(0, displayCount)
             .map((entry) => (
               <NotificationsFeedItem
-                highlight={entry[1].time > notificationsSeenAt}
+                highlight={entry[1].time > animationSeenAt}
                 key={entry[0]}
                 notification={entry[1]}
               />
