@@ -14,7 +14,7 @@ export function useScrollableParent(elementRef: RefObject<HTMLElement | null>) {
       const style = window.getComputedStyle(parent)
       if (
         (style.overflowY === "auto" || style.overflowY === "scroll") &&
-        parent.scrollHeight > parent.clientHeight
+        (parent.scrollHeight > parent.clientHeight || style.overflowY === "scroll")
       ) {
         return parent
       }

@@ -137,7 +137,7 @@ function Settings() {
   ]
 
   return (
-    <div className="flex flex-1 h-full relative overflow-y-auto overflow-x-hidden">
+    <div className="flex flex-1 h-full relative">
       <div className="pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 flex w-full">
         <nav
           className={`sticky top-0 w-full lg:w-64 p-4 lg:h-screen ${

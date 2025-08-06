@@ -3,6 +3,9 @@ import Icon from "@/shared/components/Icons/Icon"
 import {useUIStore} from "@/stores/ui"
 import classNames from "classnames"
 import NavLink from "./NavLink"
+import {useLocation} from "@/navigation/hooks"
+import {useFeedStore} from "@/stores/feed"
+import {seenEventIds} from "@/utils/memcache"
 
 interface NavItemProps {
   to: string
@@ -28,9 +31,20 @@ export const NavItem = ({
   badge,
 }: NavItemProps) => {
   const {setIsSidebarOpen} = useUIStore()
+  const location = useLocation()
+  const {activeFeed, triggerFeedRefresh} = useFeedStore()
 
   const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
     setIsSidebarOpen(false)
+
+    // If clicking home while already on home and viewing unseen feed, clear seen events
+    if (to === "/" && location.pathname === "/" && activeFeed === "unseen") {
+      // Clear the seen events cache to force refresh of unseen feed
+      seenEventIds.clear()
+      // Trigger feed refresh without reloading the page
+      triggerFeedRefresh()
+    }
+
     onClick?.(e)
   }
 

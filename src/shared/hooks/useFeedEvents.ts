@@ -288,6 +288,32 @@ export default function useFeedEvents({
     }
   }, [filters])
 
+  // Handle refresh signal for unseen feed
+  useEffect(() => {
+    if (refreshSignal && feedConfig.id === "unseen" && feedConfig.excludeSeen) {
+      // Clear existing events
+      eventsRef.current.clear()
+      setNewEvents(new Map())
+      setNewEventsFrom(new Set())
+
+      // Clear future events
+      for (const futureEvent of futureEventsRef.current.values()) {
+        clearTimeout(futureEvent.timer)
+      }
+      futureEventsRef.current.clear()
+
+      // Reset state
+      oldestRef.current = undefined
+      setUntilTimestamp(undefined)
+      initialLoadDoneRef.current = false
+      setInitialLoadDoneState(false)
+      hasReceivedEventsRef.current = false
+
+      // Trigger re-render
+      setEventsVersion((prev) => prev + 1)
+    }
+  }, [refreshSignal, feedConfig.id, feedConfig.excludeSeen])
+
   useEffect(() => {
     if (filters.authors && filters.authors.length === 0) {
       return

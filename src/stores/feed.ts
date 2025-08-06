@@ -48,6 +48,7 @@ interface FeedState {
   feedDisplayAs: "list" | "grid"
   enabledFeedIds: string[]
   feedConfigs: Record<string, FeedConfig>
+  feedRefreshSignal: number
 
   setActiveFeed: (feedId: string) => void
   setDisplayCount: (count: number) => void
@@ -62,6 +63,7 @@ interface FeedState {
   loadFeedConfig: (feedId: string) => FeedConfig | undefined
   getAllFeedConfigs: () => FeedConfig[]
   resetAllFeedsToDefaults: () => void
+  triggerFeedRefresh: () => void
 }
 
 const defaultFeedConfigs: Record<string, FeedConfig> = {
@@ -164,6 +166,7 @@ export const useFeedStore = create<FeedState>()(
           "adventure",
         ],
         feedConfigs: defaultFeedConfigs,
+        feedRefreshSignal: 0,
       }
 
       const actions = {
@@ -268,6 +271,9 @@ export const useFeedStore = create<FeedState>()(
               "adventure",
             ],
           })
+        },
+        triggerFeedRefresh: () => {
+          set({feedRefreshSignal: Date.now()})
         },
       }
 

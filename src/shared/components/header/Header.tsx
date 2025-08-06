@@ -38,6 +38,7 @@ const Header = ({
   const {scrollContainer, findScrollableParent} = useScrollableParent(headerRef)
 
   useEffect(() => {
+    // Only enable slideUp on mobile
     if (!slideUp || window.innerWidth >= MOBILE_BREAKPOINT) return
 
     const HEADER_HEIGHT = 80
@@ -48,6 +49,7 @@ const Header = ({
     let scrollElement: Element | Window | null = null
 
     const handleScroll = (e?: Event) => {
+      // Only handle scroll on mobile
       if (window.innerWidth >= MOBILE_BREAKPOINT) return
 
       const currentScrollY = e ? (e.target as HTMLElement).scrollTop : window.scrollY
@@ -112,7 +114,9 @@ const Header = ({
       } else {
         // Look for sibling or nearby scrollable element (for profile/thread pages)
         const parentContainer = headerRef.current?.parentElement
-        const scrollableSibling = parentContainer?.querySelector(".overflow-y-auto")
+        const scrollableSibling = parentContainer?.querySelector(
+          ".overflow-y-auto, .overflow-y-scroll"
+        )
 
         if (scrollableSibling) {
           scrollElement = scrollableSibling
@@ -120,7 +124,7 @@ const Header = ({
         } else {
           // Try to find the main scrollable area (outlet)
           const outlet = document.querySelector(
-            ".overflow-y-auto:not(.lg\\:block):not(.xl\\:block)"
+            ".overflow-y-scroll:not(.lg\\:block):not(.xl\\:block), .overflow-y-auto:not(.lg\\:block):not(.xl\\:block)"
           )
           if (outlet) {
             scrollElement = outlet
@@ -242,7 +246,7 @@ const Header = ({
       ref={headerRef}
       onClick={handleHeaderClick}
       style={slideUp ? {transform: "translateY(0px)"} : undefined}
-      className="pt-[env(safe-area-inset-top)] min-h-16 flex fixed top-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none w-full cursor-pointer md:sticky"
+      className="pt-[env(safe-area-inset-top)] min-h-16 flex fixed top-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none w-full cursor-pointer"
     >
       <div ref={contentRef} className="flex justify-between items-center flex-1 w-full">
         <div className="flex items-center gap-2 w-full">

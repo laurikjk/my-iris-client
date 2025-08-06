@@ -44,6 +44,7 @@ function HomeFeedEvents() {
     deleteFeed,
     cloneFeed,
     resetAllFeedsToDefaults,
+    feedRefreshSignal,
   } = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
   const feedConfigs = useFeedConfigs()
@@ -192,6 +193,7 @@ function HomeFeedEvents() {
           showDisplayAsSelector={follows.length > 1}
           forceUpdate={0}
           emptyPlaceholder={""}
+          refreshSignal={feedRefreshSignal}
         />
       )}
       {follows.length <= 1 && myPubKey && (
