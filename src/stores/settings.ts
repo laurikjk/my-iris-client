@@ -115,6 +115,10 @@ export const useSettingsStore = create<SettingsState>()(
         if (state?.imgproxy) {
           localforage.setItem("imgproxy-settings", state.imgproxy)
         }
+        // Migrate twoColumnLayout to true if undefined
+        if (state?.appearance && state.appearance.twoColumnLayout === undefined) {
+          state.appearance.twoColumnLayout = true
+        }
       },
     }
   )
