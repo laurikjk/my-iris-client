@@ -156,7 +156,7 @@ function UserPage({pubKey}: {pubKey: string}) {
   )
 
   return (
-    <div className="flex justify-center overflow-y-auto overflow-x-hidden flex-1">
+    <div className="flex justify-center overflow-y-auto overflow-x-hidden flex-1 relative">
       <div className="flex flex-1 justify-center">
         <div className="flex flex-1 flex-col items-center">
           <ProfileHeader pubKey={pubKey} key={pubKey} />

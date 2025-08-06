@@ -1,6 +1,6 @@
 import {AvatarGroup} from "@/shared/components/user/AvatarGroup.tsx"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {RefObject} from "react"
+import {RefObject, useEffect, useState, useRef} from "react"
 import {useSettingsStore} from "@/stores/settings"
 
 interface NewEventsButtonProps {
@@ -19,13 +19,64 @@ const NewEventsButton = ({
   const {appearance} = useSettingsStore()
   const isLargeScreen = typeof window !== "undefined" && window.innerWidth >= 1024
   const isColumnLayout = appearance.alwaysShowMainFeed && isLargeScreen
+  const buttonRef = useRef<HTMLDivElement>(null)
+  const [columnBounds, setColumnBounds] = useState<{left: number; width: number} | null>(
+    null
+  )
+
+  useEffect(() => {
+    // Find the scrollable parent column
+    const findScrollableParent = () => {
+      let element = buttonRef.current?.parentElement
+      while (element) {
+        const style = window.getComputedStyle(element)
+        if (
+          (style.overflowY === "auto" || style.overflowY === "scroll") &&
+          element.scrollHeight > element.clientHeight
+        ) {
+          return element
+        }
+        element = element.parentElement
+      }
+      return null
+    }
+
+    const updatePosition = () => {
+      const scrollableParent = findScrollableParent()
+      if (scrollableParent) {
+        const rect = scrollableParent.getBoundingClientRect()
+        setColumnBounds({
+          left: rect.left,
+          width: rect.width,
+        })
+      }
+    }
+
+    updatePosition()
+    window.addEventListener("resize", updatePosition)
+    return () => window.removeEventListener("resize", updatePosition)
+  }, [])
 
   if (newEventsFiltered.length === 0) return null
 
+  const buttonStyle = columnBounds
+    ? {
+        left: `${columnBounds.left + columnBounds.width / 2}px`,
+        transform: "translateX(-50%)",
+        visibility: "visible" as const,
+      }
+    : {
+        visibility: "hidden" as const,
+      }
+
   return (
-    <div className="absolute bottom-20 md:bottom-10 left-0 right-0 z-30 flex justify-center pb-[env(safe-area-inset-bottom)] pointer-events-none">
+    <div
+      ref={buttonRef}
+      className="fixed bottom-20 md:bottom-10 z-30 pb-[env(safe-area-inset-bottom)] pointer-events-none"
+      style={buttonStyle}
+    >
       <button
-        className="btn btn-info shadow-xl rounded-full pointer-events-auto"
+        className="btn btn-info shadow-xl rounded-full pointer-events-auto flex items-center gap-2 whitespace-nowrap"
         onClick={() => {
           showNewEvents()
 

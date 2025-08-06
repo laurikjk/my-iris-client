@@ -14,7 +14,7 @@ function Index() {
   // On mobile, always show HomeFeedEvents regardless of settings
   if (!isLargeScreen) {
     return (
-      <section className="flex w-full justify-center overflow-y-auto overflow-x-hidden flex-1">
+      <section className="flex w-full justify-center overflow-y-auto overflow-x-hidden flex-1 relative">
         <div className="flex-1">
           <HomeFeedEvents />
         </div>

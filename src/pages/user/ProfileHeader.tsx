@@ -75,7 +75,7 @@ const ProfileHeader = ({pubKey}: {pubKey: string}) => {
 
   return (
     <>
-      <Header>
+      <Header slideUp={false}>
         <Name pubKey={pubKeyHex} />
       </Header>
       <div className="flex flex-col gap-4 w-full break-all">
