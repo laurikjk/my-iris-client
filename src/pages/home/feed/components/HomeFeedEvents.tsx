@@ -147,18 +147,18 @@ function HomeFeedEvents() {
             <button
               className="p-2 bg-base-100 hover:bg-base-200 rounded-full transition-colors mt-1"
               onClick={() =>
-                updateAppearance({twoColumnLayout: !appearance.twoColumnLayout})
+                updateAppearance({singleColumnLayout: !appearance.singleColumnLayout})
               }
               title={
-                appearance.twoColumnLayout
-                  ? "Collapse to single column"
-                  : "Expand to two columns"
+                appearance.singleColumnLayout
+                  ? "Expand to two columns"
+                  : "Collapse to single column"
               }
             >
-              {appearance.twoColumnLayout ? (
-                <RiArrowRightSLine className="w-5 h-5" />
-              ) : (
+              {appearance.singleColumnLayout ? (
                 <RiArrowLeftSLine className="w-5 h-5" />
+              ) : (
+                <RiArrowRightSLine className="w-5 h-5" />
               )}
             </button>
           )}

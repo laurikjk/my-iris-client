@@ -38,7 +38,7 @@ const Layout = ({children}: {children: ReactNode}) => {
   const isLargeScreen = useIsLargeScreen()
 
   const shouldShowMainFeed =
-    appearance.twoColumnLayout &&
+    !appearance.singleColumnLayout &&
     isLargeScreen &&
     !location.pathname.startsWith("/settings") &&
     !location.pathname.startsWith("/chats")
@@ -120,7 +120,7 @@ const Layout = ({children}: {children: ReactNode}) => {
     >
       <div className="flex relative flex-1 overflow-hidden" id="main-content">
         <NavSideBar />
-        {appearance.twoColumnLayout && isLargeScreen && (
+        {!appearance.singleColumnLayout && isLargeScreen && (
           <div
             ref={middleColumnRef}
             className={`flex-1 border-r border-base-300 overflow-y-auto overflow-x-hidden ${

@@ -8,7 +8,7 @@ interface SettingsState {
   appearance: {
     theme: string
     showRightColumn: boolean
-    twoColumnLayout: boolean
+    singleColumnLayout: boolean
     limitedMaxWidth: boolean
   }
   // Content settings
@@ -56,7 +56,7 @@ export const useSettingsStore = create<SettingsState>()(
       appearance: {
         theme: CONFIG.defaultTheme,
         showRightColumn: true,
-        twoColumnLayout: true,
+        singleColumnLayout: false,
         limitedMaxWidth: false,
       },
       content: {
@@ -114,10 +114,6 @@ export const useSettingsStore = create<SettingsState>()(
       onRehydrateStorage: () => (state) => {
         if (state?.imgproxy) {
           localforage.setItem("imgproxy-settings", state.imgproxy)
-        }
-        // Migrate twoColumnLayout to true if undefined
-        if (state?.appearance && state.appearance.twoColumnLayout === undefined) {
-          state.appearance.twoColumnLayout = true
         }
       },
     }

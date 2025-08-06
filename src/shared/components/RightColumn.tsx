@@ -17,8 +17,8 @@ function RightColumn({children}: RightColumnProps) {
   const isTestEnvironment =
     typeof window !== "undefined" && window.location.href.includes("localhost:5173")
 
-  // Don't show right column when twoColumnLayout is enabled
-  if (appearance.twoColumnLayout) {
+  // Don't show right column when two-column layout is enabled (singleColumnLayout is false)
+  if (!appearance.singleColumnLayout) {
     return null
   }
 

@@ -23,9 +23,9 @@ function Index() {
     )
   }
 
-  // When twoColumnLayout is enabled on desktop, HomeFeedEvents is shown in Layout
+  // When two-column layout is enabled on desktop (singleColumnLayout is false), HomeFeedEvents is shown in Layout
   // So here we just show a placeholder message
-  if (appearance.twoColumnLayout) {
+  if (!appearance.singleColumnLayout) {
     return (
       <div className="flex flex-1 flex-col w-full">
         <div className="w-full px-4 pt-4 max-w-full">
@@ -46,7 +46,7 @@ function Index() {
     )
   }
 
-  // When twoColumnLayout is disabled on desktop, show the normal home layout
+  // When single column layout is enabled on desktop, show the normal home layout
   return (
     <section className="flex w-full justify-center overflow-y-auto overflow-x-hidden h-full">
       <div className="flex-1">

@@ -8,8 +8,8 @@ function AppearanceSettings() {
     updateAppearance({theme: e.target.value})
   }
 
-  function handleTwoColumnLayoutChange(e: ChangeEvent<HTMLInputElement>) {
-    updateAppearance({twoColumnLayout: e.target.checked})
+  function handleSingleColumnLayoutChange(e: ChangeEvent<HTMLInputElement>) {
+    updateAppearance({singleColumnLayout: e.target.checked})
   }
 
   function handleLimitedMaxWidthChange(e: ChangeEvent<HTMLInputElement>) {
@@ -40,13 +40,13 @@ function AppearanceSettings() {
             <input
               type="checkbox"
               className="checkbox checkbox-primary"
-              checked={appearance.twoColumnLayout}
-              onChange={handleTwoColumnLayoutChange}
+              checked={appearance.singleColumnLayout}
+              onChange={handleSingleColumnLayoutChange}
             />
-            <span>Two column layout</span>
+            <span>Single column layout</span>
           </label>
           <p className="text-sm text-base-content/60 mt-1">
-            Show feed and content side by side on large screens
+            Show content in a single column instead of side by side on large screens
           </p>
         </div>
         <div>
