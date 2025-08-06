@@ -53,7 +53,9 @@ function RelayPage() {
             selectedRelay={selectedRelayUrl}
             onRelaySelect={(newRelay) => {
               setSelectedRelayUrl(newRelay)
-              const cleanUrl = newRelay.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "")
+              const cleanUrl = newRelay
+                .replace(/^(https?:\/\/)?(wss?:\/\/)?/, "")
+                .replace(/\/$/, "") // Remove trailing slash
               window.location.href = `/relay/${encodeURIComponent(cleanUrl)}`
             }}
             placeholder="Select a relay"
