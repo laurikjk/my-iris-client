@@ -84,7 +84,7 @@ export function SocialGraphWidget() {
             {distance1 > 0 && (
               <button
                 onClick={() => pickRandomAtDistance(1)}
-                className="text-[10px] text-primary hover:underline mt-1"
+                className="text-[10px] link link-info mt-1"
               >
                 pick random
               </button>
@@ -96,7 +96,7 @@ export function SocialGraphWidget() {
             {distance2 > 0 && (
               <button
                 onClick={() => pickRandomAtDistance(2)}
-                className="text-[10px] text-primary hover:underline mt-1"
+                className="text-[10px] link link-info mt-1"
               >
                 pick random
               </button>
@@ -108,7 +108,7 @@ export function SocialGraphWidget() {
             {distance3Plus > 0 && (
               <button
                 onClick={pickRandomAtDistance3Plus}
-                className="text-[10px] text-primary hover:underline mt-1"
+                className="text-[10px] link link-info mt-1"
               >
                 pick random
               </button>

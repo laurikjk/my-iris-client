@@ -153,29 +153,63 @@ function watchLocalSettings(instance: NDK) {
       instance.signer = privateKeySigner
     }
 
-    if (state.relays !== prevState.relays) {
-      if (Array.isArray(state.relays)) {
-        // Normalize relay URLs for consistent comparison
-        const normalizedNewRelays = state.relays.map(normalizeRelayUrl)
+    // Handle both legacy relays array and new relayConfigs
+    const shouldUpdateRelays =
+      state.relays !== prevState.relays || state.relayConfigs !== prevState.relayConfigs
+
+    if (shouldUpdateRelays) {
+      // Use relayConfigs if available, otherwise fall back to relays array
+      const relayList =
+        state.relayConfigs && state.relayConfigs.length > 0
+          ? state.relayConfigs
+          : state.relays.map((url) => ({url})) // No disabled flag means enabled
+
+      if (Array.isArray(relayList)) {
         const normalizedPoolUrls = Array.from(instance.pool.relays.keys()).map(
           normalizeRelayUrl
         )
 
-        // Add new relays
-        state.relays.forEach((url) => {
-          const normalizedUrl = normalizeRelayUrl(url)
-          if (!normalizedPoolUrls.includes(normalizedUrl)) {
-            const relay = new NDKRelay(url, undefined, instance)
+        // Process each relay config
+        relayList.forEach((config) => {
+          const relayConfig = typeof config === "string" ? {url: config} : config // No disabled flag means enabled
+
+          const isEnabled = !("disabled" in relayConfig) || !relayConfig.disabled // If no disabled flag, it's enabled
+          const normalizedUrl = normalizeRelayUrl(relayConfig.url)
+          const existsInPool = normalizedPoolUrls.includes(normalizedUrl)
+
+          if (isEnabled && !existsInPool) {
+            // Add and connect to new relay
+            const relay = new NDKRelay(relayConfig.url, undefined, instance)
             instance.pool.addRelay(relay)
-            // Explicitly connect to the new relay
             relay.connect()
+          } else if (!isEnabled && existsInPool) {
+            // Disconnect from relay but keep it in the pool
+            const relay =
+              instance.pool.relays.get(relayConfig.url) ||
+              instance.pool.relays.get(normalizedUrl)
+            if (relay) {
+              relay.disconnect()
+            }
+          } else if (isEnabled && existsInPool) {
+            // Ensure enabled relay is connected
+            const relay =
+              instance.pool.relays.get(relayConfig.url) ||
+              instance.pool.relays.get(normalizedUrl)
+            if (relay && relay.status !== 1) {
+              // 1 = connected
+              relay.connect()
+            }
           }
         })
 
-        // Remove relays not in the new list
+        // Remove relays that are no longer in the config list
+        const configUrls = relayList.map((c) =>
+          normalizeRelayUrl(typeof c === "string" ? c : c.url)
+        )
+
         for (const poolUrl of instance.pool.relays.keys()) {
           const normalizedPoolUrl = normalizeRelayUrl(poolUrl)
-          if (!normalizedNewRelays.includes(normalizedPoolUrl)) {
+          if (!configUrls.includes(normalizedPoolUrl)) {
             instance.pool.removeRelay(poolUrl)
           }
         }

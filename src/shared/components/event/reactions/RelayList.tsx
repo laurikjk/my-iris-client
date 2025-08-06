@@ -28,7 +28,7 @@ export default function RelayList({relays}: {relays: NDKRelay[]}) {
         <Link
           key={relay.url + i}
           to={`/relay/${normalizeUrl(relay.url)}`}
-          className="truncate max-w-full text-primary hover:underline"
+          className="truncate max-w-full link link-info"
           onClick={(e: MouseEvent) => e.stopPropagation()}
         >
           {normalizeUrl(relay.url)}
@@ -36,7 +36,7 @@ export default function RelayList({relays}: {relays: NDKRelay[]}) {
       ))}
       {dedupedRelays.length > maxToShow && (
         <button
-          className="text-primary hover:underline mt-1 text-xs"
+          className="link link-info mt-1 text-xs"
           onClick={(e) => {
             e.stopPropagation()
             setShowAll((v) => !v)

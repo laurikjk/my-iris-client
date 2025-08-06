@@ -10,6 +10,11 @@ interface MediaServer {
   isDefault?: boolean
 }
 
+export interface RelayConfig {
+  url: string
+  disabled?: boolean // If not set, relay is enabled by default
+}
+
 interface UserState {
   publicKey: string
   privateKey: string
@@ -20,6 +25,7 @@ interface UserState {
   DHTPrivateKey: string
 
   relays: string[]
+  relayConfigs: RelayConfig[]
   mediaservers: MediaServer[]
   defaultMediaserver: MediaServer | null
 
@@ -35,6 +41,10 @@ interface UserState {
   setDHTPublicKey: (DHTPublicKey: string) => void
   setDHTPrivateKey: (DHTPrivateKey: string) => void
   setRelays: (relays: string[]) => void
+  setRelayConfigs: (configs: RelayConfig[]) => void
+  toggleRelayConnection: (url: string) => void
+  addRelay: (url: string, disabled?: boolean) => void
+  removeRelay: (url: string) => void
   setMediaservers: (mediaservers: MediaServer[]) => void
   setDefaultMediaserver: (server: MediaServer) => void
   addMediaserver: (server: MediaServer) => void
@@ -60,6 +70,7 @@ export const useUserStore = create<UserState>()(
         DHTPublicKey: "",
         DHTPrivateKey: "",
         relays: [],
+        relayConfigs: [],
         mediaservers: [],
         defaultMediaserver: null,
         walletConnect: false,
@@ -74,7 +85,50 @@ export const useUserStore = create<UserState>()(
         setNip07Login: (nip07Login: boolean) => set({nip07Login}),
         setDHTPublicKey: (DHTPublicKey: string) => set({DHTPublicKey}),
         setDHTPrivateKey: (DHTPrivateKey: string) => set({DHTPrivateKey}),
-        setRelays: (relays: string[]) => set({relays}),
+        setRelays: (relays: string[]) => {
+          // When setting relays, update both old relays array and new relayConfigs
+          // Keep existing configs for known relays, add new ones as enabled (no disabled flag)
+          set((state) => {
+            const existingConfigs = new Map(state.relayConfigs.map((c) => [c.url, c]))
+            const newConfigs = relays.map(
+              (url) => existingConfigs.get(url) || {url} // No disabled flag means enabled
+            )
+            return {relays, relayConfigs: newConfigs}
+          })
+        },
+        setRelayConfigs: (configs: RelayConfig[]) => {
+          // Update both relayConfigs and relays array (for backward compatibility)
+          const enabledRelays = configs.filter((c) => !c.disabled).map((c) => c.url)
+          set({relayConfigs: configs, relays: enabledRelays})
+        },
+        toggleRelayConnection: (url: string) => {
+          set((state) => {
+            const configs = state.relayConfigs.map((c) =>
+              c.url === url ? {...c, disabled: !c.disabled} : c
+            )
+            const enabledRelays = configs.filter((c) => !c.disabled).map((c) => c.url)
+            return {relayConfigs: configs, relays: enabledRelays}
+          })
+        },
+        addRelay: (url: string, disabled: boolean = false) => {
+          set((state) => {
+            // Check if relay already exists
+            if (state.relayConfigs.some((c) => c.url === url)) {
+              return state
+            }
+            const newConfig = disabled ? {url, disabled} : {url}
+            const configs = [...state.relayConfigs, newConfig]
+            const enabledRelays = configs.filter((c) => !c.disabled).map((c) => c.url)
+            return {relayConfigs: configs, relays: enabledRelays}
+          })
+        },
+        removeRelay: (url: string) => {
+          set((state) => {
+            const configs = state.relayConfigs.filter((c) => c.url !== url)
+            const enabledRelays = configs.filter((c) => !c.disabled).map((c) => c.url)
+            return {relayConfigs: configs, relays: enabledRelays}
+          })
+        },
         setMediaservers: (mediaservers: MediaServer[]) => set({mediaservers}),
         setDefaultMediaserver: (server: MediaServer) => set({defaultMediaserver: server}),
         addMediaserver: (server: MediaServer) =>
