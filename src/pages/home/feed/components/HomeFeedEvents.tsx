@@ -4,7 +4,6 @@ import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
-import {useRefreshRouteSignal} from "@/stores/notifications"
 import {feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
 import Feed from "@/shared/components/feed/Feed.tsx"
@@ -38,7 +37,6 @@ function HomeFeedEvents() {
   const containerRef = useRef<HTMLDivElement>(null)
   const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true) // to update on follows change
-  const refreshSignal = useRefreshRouteSignal()
   const {appearance, updateAppearance} = useSettingsStore()
   const isLargeScreen = useIsLargeScreen()
   const navItemClicked = useUIStore((state) => state.navItemClicked)
@@ -137,22 +135,11 @@ function HomeFeedEvents() {
     cloneFeed(feedId)
   }
 
-  const openedAt = useMemo(() => Date.now(), [])
-
   // Create a comprehensive key that changes when any relevant config changes
   const feedKey = useMemo(() => {
     if (!activeFeedConfig) return "feed-null"
     return `feed-${getFeedCacheKey(activeFeedConfig)}`
   }, [activeFeedConfig])
-
-  useEffect(() => {
-    if (activeFeed !== "unseen") {
-      feedCache.delete("unseen")
-    }
-    if (activeFeed === "unseen" && refreshSignal > openedAt) {
-      feedCache.delete("unseen")
-    }
-  }, [activeFeedItem, openedAt, refreshSignal, activeFeed])
 
   if (!activeFeedConfig?.filter && !activeFeedConfig?.feedStrategy) {
     return null
