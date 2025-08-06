@@ -7,8 +7,8 @@ import {PopularityFilters} from "./usePopularityFilters"
 import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {seenEventIds} from "@/utils/memcache"
 
-const LOW_THRESHOLD = 30
-const INITIAL_DATA_THRESHOLD = 10
+const LOW_THRESHOLD = 20
+const INITIAL_DATA_THRESHOLD = 5
 
 interface ReactionSubscriptionCache {
   hasInitialData?: boolean

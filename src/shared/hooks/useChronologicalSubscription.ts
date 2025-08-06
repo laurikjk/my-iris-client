@@ -7,9 +7,9 @@ import useFollows from "./useFollows"
 import {useUserStore} from "@/stores/user"
 import {seenEventIds} from "@/utils/memcache"
 
-const LOW_THRESHOLD = 20
-const INITIAL_DATA_THRESHOLD = 10
-const INITIAL_TIME_RANGE = 24 * 60 * 60
+const LOW_THRESHOLD = 15
+const INITIAL_DATA_THRESHOLD = 5
+const INITIAL_TIME_RANGE = 48 * 60 * 60 // Start with 2 days instead of 1
 const TIME_RANGE_INCREMENT = 24 * 60 * 60
 
 interface ChronologicalSubscriptionCache {

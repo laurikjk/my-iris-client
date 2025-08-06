@@ -48,7 +48,19 @@ export default function useCombinedPostFetcher({
       ? getNextChronological(chronologicalCount)
       : []
 
-    const allIds = [...new Set([...popularIds, ...chronologicalIds])]
+    let allIds = [...new Set([...popularIds, ...chronologicalIds])]
+
+    // If we don't have enough events, try to get more from whichever source has data
+    if (allIds.length < batchSize) {
+      const remainingNeeded = batchSize - allIds.length
+      if (hasPopularData && popularIds.length < remainingNeeded) {
+        const extraPopular = getNextPopular(remainingNeeded)
+        allIds = [...new Set([...allIds, ...extraPopular])]
+      } else if (hasChronologicalData && chronologicalIds.length < remainingNeeded) {
+        const extraChronological = getNextChronological(remainingNeeded)
+        allIds = [...new Set([...allIds, ...extraChronological])]
+      }
+    }
 
     if (allIds.length === 0) {
       return []

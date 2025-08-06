@@ -1,7 +1,6 @@
 import useReactionSubscription from "./useReactionSubscription"
 import useChronologicalSubscription from "./useChronologicalSubscription"
 import useCombinedPostFetcher from "./useCombinedPostFetcher"
-import usePostFetcher from "./usePostFetcher"
 import usePopularityFilters from "./usePopularityFilters"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
