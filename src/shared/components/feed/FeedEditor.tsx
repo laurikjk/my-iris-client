@@ -190,174 +190,172 @@ function FeedEditor({
       </div>
 
       {/* Basic Settings */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-base-content/70 min-w-[7rem]">Name</span>
+        <input
+          type="text"
+          value={editingName}
+          onChange={handleNameChange}
+          onKeyDown={handleKeyDown}
+          className="input input-sm flex-1 text-sm"
+          placeholder={localConfig.name}
+        />
+      </div>
+
+      {/* Follow Distance */}
+      <div className="flex items-start gap-2">
+        <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">
+          Follow Distance
+        </span>
+        <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-base-content/70 min-w-[7rem]">Name</span>
             <input
-              type="text"
-              value={editingName}
-              onChange={handleNameChange}
-              onKeyDown={handleKeyDown}
-              className="input input-sm flex-1 text-sm"
-              placeholder={localConfig.name}
+              type="checkbox"
+              checked={localConfig.followDistance !== undefined}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  // Enable with default value of 1
+                  updateConfig("followDistance", 1)
+                } else {
+                  // Disable by setting to undefined
+                  updateConfig("followDistance", undefined)
+                }
+              }}
+              className="checkbox checkbox-sm"
+            />
+            <input
+              type="number"
+              min="0"
+              max="10"
+              value={localConfig.followDistance ?? ""}
+              onChange={(e) =>
+                updateConfig(
+                  "followDistance",
+                  e.target.value ? parseInt(e.target.value) : undefined
+                )
+              }
+              className="input input-sm w-20 text-sm"
+              disabled={localConfig.followDistance === undefined}
             />
           </div>
+          <span className="text-xs text-base-content/50 mt-1 block">
+            Max degrees of separation (0=only yourself, 1=follows only, 2=friends of
+            friends, etc.)
+          </span>
+        </div>
+      </div>
 
-          {/* Follow Distance */}
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">
-              Follow Distance
-            </span>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={localConfig.followDistance !== undefined}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      // Enable with default value of 1
-                      updateConfig("followDistance", 1)
-                    } else {
-                      // Disable by setting to undefined
-                      updateConfig("followDistance", undefined)
-                    }
-                  }}
-                  className="checkbox checkbox-sm"
-                />
-                <input
-                  type="number"
-                  min="0"
-                  max="10"
-                  value={localConfig.followDistance ?? ""}
-                  onChange={(e) =>
-                    updateConfig(
-                      "followDistance",
-                      e.target.value ? parseInt(e.target.value) : undefined
-                    )
-                  }
-                  className="input input-sm w-20 text-sm"
-                  disabled={localConfig.followDistance === undefined}
-                />
-              </div>
-              <span className="text-xs text-base-content/50 mt-1 block">
-                Max degrees of separation (0=only yourself, 1=follows only, 2=friends of
-                friends, etc.)
-              </span>
-            </div>
-          </div>
+      {/* Filter Kinds */}
+      <div className="flex items-start gap-2">
+        <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">
+          Event Kinds
+        </span>
+        <div className="flex-1">
+          <EventKindsSelector
+            selectedKinds={localConfig.filter?.kinds || []}
+            onKindsChange={(kinds) => {
+              const currentFilter = localConfig.filter || {}
+              if (kinds.length === 0) {
+                // Remove kinds property if no kinds selected
+                const filterWithoutKinds = Object.fromEntries(
+                  Object.entries(currentFilter).filter(([key]) => key !== "kinds")
+                )
+                updateConfig(
+                  "filter",
+                  Object.keys(filterWithoutKinds).length > 0
+                    ? filterWithoutKinds
+                    : undefined
+                )
+              } else {
+                updateConfig("filter", {...currentFilter, kinds})
+              }
+            }}
+          />
+          <span className="text-xs text-base-content/50 mt-1 block">
+            Select event types to include in this feed. Select none to display all.
+          </span>
+        </div>
+      </div>
 
-          {/* Filter Kinds */}
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">
-              Event Kinds
-            </span>
-            <div className="flex-1">
-              <EventKindsSelector
-                selectedKinds={localConfig.filter?.kinds || []}
-                onKindsChange={(kinds) => {
-                  const currentFilter = localConfig.filter || {}
-                  if (kinds.length === 0) {
-                    // Remove kinds property if no kinds selected
-                    const filterWithoutKinds = Object.fromEntries(
-                      Object.entries(currentFilter).filter(([key]) => key !== "kinds")
-                    )
-                    updateConfig(
-                      "filter",
-                      Object.keys(filterWithoutKinds).length > 0
-                        ? filterWithoutKinds
-                        : undefined
-                    )
-                  } else {
-                    updateConfig("filter", {...currentFilter, kinds})
-                  }
-                }}
-              />
-              <span className="text-xs text-base-content/50 mt-1 block">
-                Select event types to include in this feed. Select none to display all.
-              </span>
-            </div>
-          </div>
+      {/* Search Term */}
+      <div className="flex items-start gap-2">
+        <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">Search</span>
+        <div className="flex-1">
+          <input
+            type="text"
+            value={localConfig.filter?.search || ""}
+            onChange={(e) => {
+              const inputValue = e.target.value.trim()
+              const currentFilter = localConfig.filter || {}
+              if (inputValue === "") {
+                // Remove search property if input is empty
+                const filterWithoutSearch = Object.fromEntries(
+                  Object.entries(currentFilter).filter(([key]) => key !== "search")
+                )
+                updateConfig(
+                  "filter",
+                  Object.keys(filterWithoutSearch).length > 0
+                    ? filterWithoutSearch
+                    : undefined
+                )
+              } else {
+                updateConfig("filter", {...currentFilter, search: inputValue})
+              }
+            }}
+            className="input input-sm w-full text-sm"
+            placeholder="Search terms"
+          />
+          <span className="text-xs text-base-content/50 mt-1 block">
+            Text to search for in posts
+          </span>
+        </div>
+      </div>
 
-          {/* Search Term */}
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">Search</span>
-            <div className="flex-1">
-              <input
-                type="text"
-                value={localConfig.filter?.search || ""}
-                onChange={(e) => {
-                  const inputValue = e.target.value.trim()
-                  const currentFilter = localConfig.filter || {}
-                  if (inputValue === "") {
-                    // Remove search property if input is empty
-                    const filterWithoutSearch = Object.fromEntries(
-                      Object.entries(currentFilter).filter(([key]) => key !== "search")
-                    )
-                    updateConfig(
-                      "filter",
-                      Object.keys(filterWithoutSearch).length > 0
-                        ? filterWithoutSearch
-                        : undefined
-                    )
-                  } else {
-                    updateConfig("filter", {...currentFilter, search: inputValue})
-                  }
-                }}
-                className="input input-sm w-full text-sm"
-                placeholder="Search terms"
-              />
-              <span className="text-xs text-base-content/50 mt-1 block">
-                Text to search for in posts
-              </span>
-            </div>
-          </div>
+      {/* Limit */}
+      <div className="flex items-start gap-2">
+        <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">Limit</span>
+        <div className="flex-1">
+          <input
+            type="number"
+            min="10"
+            max="1000"
+            value={localConfig.filter?.limit || ""}
+            onChange={(e) =>
+              updateConfig("filter", {
+                ...(localConfig.filter || {}),
+                limit: e.target.value ? parseInt(e.target.value) : undefined,
+              })
+            }
+            className="input input-sm w-24 text-sm"
+            placeholder="100"
+          />
+          <span className="text-xs text-base-content/50 mt-1 block">
+            Max events to initially fetch
+          </span>
+        </div>
+      </div>
 
-          {/* Limit */}
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">Limit</span>
-            <div className="flex-1">
-              <input
-                type="number"
-                min="10"
-                max="1000"
-                value={localConfig.filter?.limit || ""}
-                onChange={(e) =>
-                  updateConfig("filter", {
-                    ...(localConfig.filter || {}),
-                    limit: e.target.value ? parseInt(e.target.value) : undefined,
-                  })
-                }
-                className="input input-sm w-24 text-sm"
-                placeholder="100"
-              />
-              <span className="text-xs text-base-content/50 mt-1 block">
-                Max events to initially fetch
-              </span>
-            </div>
-          </div>
+      {/* Relay Selection */}
+      <div className="flex items-start gap-2">
+        <span className="text-sm text-base-content/70 min-w-[7rem] pt-3">Relays</span>
+        <div className="flex-1">
+          <RelaySelector
+            selectedRelay={localConfig.relayUrls?.[0] || ""}
+            onRelaySelect={(relay) => {
+              updateConfig("relayUrls", relay ? [relay] : undefined)
+            }}
+            placeholder="Default relays"
+            className="select select-bordered select-sm w-full text-sm"
+            showCustomInput={true}
+          />
+          <span className="text-xs text-base-content/50 mt-1 block">
+            Leave empty to use default relays
+          </span>
+        </div>
+      </div>
 
-          {/* Relay Selection */}
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-base-content/70 min-w-[7rem] pt-3">Relays</span>
-            <div className="flex-1">
-              <RelaySelector
-                selectedRelay={localConfig.relayUrls?.[0] || ""}
-                onRelaySelect={(relay) => {
-                  updateConfig("relayUrls", relay ? [relay] : undefined)
-                }}
-                placeholder="Default relays"
-                className="select select-bordered select-sm w-full text-sm"
-                showCustomInput={true}
-              />
-              <span className="text-xs text-base-content/50 mt-1 block">
-                Leave empty to use default relays
-              </span>
-            </div>
-          </div>
-
-          {/* Checkboxes */}
-          <div className="flex flex-col gap-2">
-            {renderCommonCheckboxes(updateConfig)}
-          </div>
+      {/* Checkboxes */}
+      <div className="flex flex-col gap-2">{renderCommonCheckboxes(updateConfig)}</div>
 
       {/* Action Buttons */}
       <div className="flex justify-between gap-2 pt-2 border-t border-base-300">
