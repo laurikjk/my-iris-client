@@ -6,6 +6,7 @@ import NavLink from "./NavLink"
 import {useLocation} from "@/navigation/hooks"
 import {useFeedStore} from "@/stores/feed"
 import {seenEventIds} from "@/utils/memcache"
+import {findMainScrollContainer, isMainContentAtTop} from "@/shared/utils/scrollUtils"
 
 interface NavItemProps {
   to: string
@@ -37,12 +38,24 @@ export const NavItem = ({
   const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
     setIsSidebarOpen(false)
 
-    // If clicking home while already on home and viewing unseen feed, clear seen events
-    if (to === "/" && location.pathname === "/" && activeFeed === "unseen") {
-      // Clear the seen events cache to force refresh of unseen feed
-      seenEventIds.clear()
-      // Trigger feed refresh without reloading the page
-      triggerFeedRefresh()
+    // If already at the same URL, scroll to top
+    if (location.pathname === to) {
+      e.preventDefault()
+
+      const scrollContainer = findMainScrollContainer()
+
+      if (scrollContainer && scrollContainer.scrollTop > 0) {
+        // Scroll to top if not already at top
+        scrollContainer.scrollTo({top: 0, behavior: "instant"})
+      } else if (to === "/" && isMainContentAtTop()) {
+        // Special handling for home button when already at top - reload feed
+        if (activeFeed === "unseen") {
+          // Clear the seen events cache for unseen feed
+          seenEventIds.clear()
+        }
+        // Trigger feed refresh
+        triggerFeedRefresh()
+      }
     }
 
     onClick?.(e)

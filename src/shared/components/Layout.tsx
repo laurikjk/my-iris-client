@@ -129,6 +129,7 @@ const Layout = ({children}: {children: ReactNode}) => {
             className={`flex-1 min-w-0 border-r border-base-300 overflow-y-scroll overflow-x-hidden scrollbar-hide ${
               shouldShowMainFeed ? "hidden lg:block" : "hidden"
             }`}
+            data-main-scroll-container="middle-column"
           >
             <HomeFeedEvents />
           </div>

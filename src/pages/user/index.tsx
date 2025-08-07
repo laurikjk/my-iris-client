@@ -159,7 +159,10 @@ function UserPage({pubKey}: {pubKey: string}) {
   )
 
   return (
-    <div className="flex flex-col h-full overflow-y-scroll overflow-x-hidden">
+    <div
+      className="flex flex-col h-full overflow-y-scroll overflow-x-hidden"
+      data-main-scroll-container="true"
+    >
       <Header>
         <Name pubKey={pubKeyHex} />
       </Header>

@@ -68,7 +68,10 @@ function SearchPage() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-y-scroll overflow-x-hidden">
+    <div
+      className="flex flex-col h-full overflow-y-scroll overflow-x-hidden"
+      data-main-scroll-container="true"
+    >
       <Header title={query ? `Search: "${query}"` : "Search"} />
       <div className="flex flex-1 flex-row relative">
         <div className="flex flex-col items-center flex-1">
