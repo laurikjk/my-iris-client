@@ -12,6 +12,7 @@ interface FeedDisplayOptions {
 interface AlgorithmicFeedProps {
   type: FeedType
   displayOptions?: FeedDisplayOptions
+  refreshSignal?: number
 }
 
 const defaultDisplayOptions: FeedDisplayOptions = {
@@ -38,6 +39,7 @@ const feedConfigs = {
 const AlgorithmicFeed = function AlgorithmicFeed({
   type,
   displayOptions = {},
+  refreshSignal,
 }: AlgorithmicFeedProps) {
   const {small, showDisplaySelector, randomSort} = {
     ...defaultDisplayOptions,
@@ -48,12 +50,13 @@ const AlgorithmicFeed = function AlgorithmicFeed({
 
   const cache = getOrCreateAlgorithmicFeedCache(type)
 
+  const {feedDisplayAs: displayAs, setFeedDisplayAs: setDisplayAs} = useFeedStore()
+
   const {events, loadMore, loading} = useAlgorithmicFeed(cache, {
     filterSeen: config.filterSeen,
     popularRatio: config.includeChronological ? 0.5 : 1.0,
+    refreshSignal,
   })
-
-  const {feedDisplayAs: displayAs, setFeedDisplayAs: setDisplayAs} = useFeedStore()
 
   if (loading && events.length === 0) {
     return null

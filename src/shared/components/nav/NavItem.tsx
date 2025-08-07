@@ -3,10 +3,6 @@ import Icon from "@/shared/components/Icons/Icon"
 import {useUIStore} from "@/stores/ui"
 import classNames from "classnames"
 import NavLink from "./NavLink"
-import {useLocation} from "@/navigation/hooks"
-import {useFeedStore} from "@/stores/feed"
-import {seenEventIds} from "@/utils/memcache"
-import {findMainScrollContainer, isMainContentAtTop} from "@/shared/utils/scrollUtils"
 
 interface NavItemProps {
   to: string
@@ -32,32 +28,9 @@ export const NavItem = ({
   badge,
 }: NavItemProps) => {
   const {setIsSidebarOpen} = useUIStore()
-  const location = useLocation()
-  const {activeFeed, triggerFeedRefresh} = useFeedStore()
 
   const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
     setIsSidebarOpen(false)
-
-    // If already at the same URL, scroll to top
-    if (location.pathname === to) {
-      e.preventDefault()
-
-      const scrollContainer = findMainScrollContainer()
-
-      if (scrollContainer && scrollContainer.scrollTop > 0) {
-        // Scroll to top if not already at top
-        scrollContainer.scrollTo({top: 0, behavior: "instant"})
-      } else if (to === "/" && isMainContentAtTop()) {
-        // Special handling for home button when already at top - reload feed
-        if (activeFeed === "unseen") {
-          // Clear the seen events cache for unseen feed
-          seenEventIds.clear()
-        }
-        // Trigger feed refresh
-        triggerFeedRefresh()
-      }
-    }
-
     onClick?.(e)
   }
 

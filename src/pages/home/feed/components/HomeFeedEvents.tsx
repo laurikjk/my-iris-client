@@ -4,7 +4,6 @@ import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
-import {feedCache} from "@/utils/memcache"
 import Header from "@/shared/components/header/Header"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import useFollows from "@/shared/hooks/useFollows"
@@ -48,23 +47,21 @@ function HomeFeedEvents() {
     deleteFeed,
     cloneFeed,
     resetAllFeedsToDefaults,
-    feedRefreshSignal,
+    triggerFeedRefresh,
   } = useFeedStore()
+  const feedRefreshSignal = useFeedStore((state) => state.feedRefreshSignal)
   const enabledFeedIds = useEnabledFeedIds()
   const feedConfigs = useFeedConfigs()
   const socialGraphLoaded = useSocialGraphLoaded()
   const [editMode, setEditMode] = useState(false)
 
-  // Handle home nav click to scroll to top
+  // Handle home nav click - trigger refresh (NavLink already checked if at top)
   useEffect(() => {
     if (navItemClicked.signal === 0 || navItemClicked.path !== "/") return
 
-    // Find the scrollable container
-    const scrollContainer = containerRef.current?.closest(".overflow-y-scroll")
-    if (scrollContainer) {
-      scrollContainer.scrollTo({top: 0, behavior: "instant"})
-    }
-  }, [navItemClicked])
+    // NavLink only sends signal when already at top, so just trigger refresh
+    triggerFeedRefresh()
+  }, [navItemClicked, triggerFeedRefresh])
 
   // Get all feed configs from store
   const allFeeds = useMemo(() => {
@@ -123,11 +120,8 @@ function HomeFeedEvents() {
 
   const handleResetFeeds = () => {
     if (confirm("Reset all feeds to defaults?")) {
-      console.log("User confirmed reset")
       setEditMode(false)
-      feedCache.clear()
       resetAllFeedsToDefaults()
-      console.log("Reset function called")
     }
   }
 
@@ -221,6 +215,7 @@ function HomeFeedEvents() {
               <AlgorithmicFeed
                 key={activeFeedConfig.feedStrategy}
                 type={activeFeedConfig.feedStrategy}
+                refreshSignal={feedRefreshSignal}
               />
             )
 

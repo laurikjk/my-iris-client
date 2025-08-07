@@ -1,6 +1,7 @@
 import {NavLink as RouterNavLink, useLocation} from "@/navigation"
 import {useUIStore} from "@/stores/ui"
 import {MouseEvent, ComponentProps} from "react"
+import {findMainScrollContainer} from "@/shared/utils/scrollUtils"
 
 type NavLinkProps = ComponentProps<typeof RouterNavLink>
 
@@ -11,14 +12,28 @@ export default function NavLink(props: NavLinkProps) {
   const isActive = location.pathname === to.toString()
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (onClick) {
-      onClick(event)
+    // If clicking on the current route, handle scroll and refresh
+    if (isActive) {
+      event.preventDefault()
+
+      const scrollContainer = findMainScrollContainer()
+      if (scrollContainer) {
+        const isAtTop = scrollContainer.scrollTop < 50
+
+        // If already at top, trigger refresh signal
+        if (isAtTop && to.toString() === "/") {
+          const {triggerNavItemClick} = useUIStore.getState()
+          triggerNavItemClick(to.toString())
+        } else {
+          // Not at top, just scroll up
+          scrollContainer.scrollTo({top: 0, behavior: "instant"})
+        }
+      }
     }
 
-    if (isActive) {
-      // Signal that the active nav item was clicked with its path
-      const {triggerNavItemClick} = useUIStore.getState()
-      triggerNavItemClick(to.toString())
+    // Call the provided onClick handler if any
+    if (onClick) {
+      onClick(event)
     }
   }
 

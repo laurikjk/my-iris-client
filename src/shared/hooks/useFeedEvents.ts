@@ -4,7 +4,7 @@ import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {shouldHideAuthor} from "@/utils/visibility"
 import socialGraph from "@/utils/socialGraph"
-import {replyFeedCache, seenEventIds} from "@/utils/memcache"
+import {seenEventIds} from "@/utils/memcache"
 import {useUserStore} from "@/stores/user"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
@@ -52,16 +52,13 @@ export default function useFeedEvents({
   const myPubKey = useUserStore((state) => state.publicKey)
   const [newEventsFrom, setNewEventsFrom] = useState(new Set<string>())
   const [newEvents, setNewEvents] = useState(new Map<string, NDKEvent>())
-  const isReplyFeed = !!feedConfig.repliesTo
-  const cache = isReplyFeed ? replyFeedCache : null
   const eventsRef = useRef(
-    (cache && cache.get(cacheKey)) ||
-      new SortedMap(
-        [],
-        sortFn
-          ? ([, a]: [string, NDKEvent], [, b]: [string, NDKEvent]) => sortFn(a, b)
-          : eventComparator
-      )
+    new SortedMap(
+      [],
+      sortFn
+        ? ([, a]: [string, NDKEvent], [, b]: [string, NDKEvent]) => sortFn(a, b)
+        : eventComparator
+    )
   )
   // Buffer for future events (max 20 entries, sorted by timestamp)
   const futureEventsRef = useRef(
@@ -267,31 +264,77 @@ export default function useFeedEvents({
     }
   }, [filters])
 
-  // Handle refresh signal for unseen feed
+  // Handle refresh signal - decide what to do based on feed configuration
   useEffect(() => {
-    if (refreshSignal && feedConfig.id === "unseen" && feedConfig.excludeSeen) {
-      // Clear existing events
-      eventsRef.current.clear()
-      setNewEvents(new Map())
-      setNewEventsFrom(new Set())
+    console.log(
+      "[useFeedEvents] refreshSignal:",
+      refreshSignal,
+      "feedConfig:",
+      feedConfig
+    )
+    if (refreshSignal && refreshSignal > 0) {
+      console.log(
+        "[useFeedEvents] Processing refresh for feed:",
+        feedConfig.id,
+        "excludeSeen:",
+        feedConfig.excludeSeen
+      )
+      if (feedConfig.excludeSeen) {
+        // For feeds that exclude seen events, just remove them from existing events
+        const seenEventIdsToRemove: string[] = []
+        for (const [id] of eventsRef.current.entries()) {
+          if (seenEventIds.has(id)) {
+            seenEventIdsToRemove.push(id)
+          }
+        }
+        console.log("[useFeedEvents] Removing seen events:", seenEventIdsToRemove.length)
 
-      // Clear future events
-      for (const futureEvent of futureEventsRef.current.values()) {
-        clearTimeout(futureEvent.timer)
+        // Remove the seen events
+        for (const id of seenEventIdsToRemove) {
+          eventsRef.current.delete(id)
+        }
+
+        // Also remove from new events
+        const updatedNewEvents = new Map(newEvents)
+        for (const id of seenEventIdsToRemove) {
+          updatedNewEvents.delete(id)
+        }
+        if (seenEventIdsToRemove.length > 0) {
+          setNewEvents(updatedNewEvents)
+        }
+
+        // Trigger re-render to update the filtered events
+        if (seenEventIdsToRemove.length > 0) {
+          console.log("[useFeedEvents] Triggering re-render after removing seen events")
+          setEventsVersion((prev) => prev + 1)
+        } else {
+          console.log("[useFeedEvents] No seen events to remove")
+        }
+      } else {
+        console.log("[useFeedEvents] Doing full refresh for feed without excludeSeen")
+        // For other feeds, do a full refresh
+        eventsRef.current.clear()
+        setNewEvents(new Map())
+        setNewEventsFrom(new Set())
+
+        // Clear future events
+        for (const futureEvent of futureEventsRef.current.values()) {
+          clearTimeout(futureEvent.timer)
+        }
+        futureEventsRef.current.clear()
+
+        // Reset state
+        oldestRef.current = undefined
+        setUntilTimestamp(undefined)
+        initialLoadDoneRef.current = false
+        setInitialLoadDoneState(false)
+        hasReceivedEventsRef.current = false
+
+        // Trigger re-render
+        setEventsVersion((prev) => prev + 1)
       }
-      futureEventsRef.current.clear()
-
-      // Reset state
-      oldestRef.current = undefined
-      setUntilTimestamp(undefined)
-      initialLoadDoneRef.current = false
-      setInitialLoadDoneState(false)
-      hasReceivedEventsRef.current = false
-
-      // Trigger re-render
-      setEventsVersion((prev) => prev + 1)
     }
-  }, [refreshSignal, feedConfig.id, feedConfig.excludeSeen])
+  }, [refreshSignal, feedConfig.excludeSeen])
 
   useEffect(() => {
     if (filters.authors && filters.authors.length === 0) {
@@ -406,13 +449,6 @@ export default function useFeedEvents({
       futureEventsRef.current.clear()
     }
   }, [])
-
-  useEffect(() => {
-    eventsRef.current.size &&
-      cache &&
-      !cache.has(cacheKey) &&
-      cache.set(cacheKey, eventsRef.current)
-  }, [cacheKey, eventsVersion, cache])
 
   const loadMoreItems = () => {
     if (filteredEvents.length > displayCount) {
