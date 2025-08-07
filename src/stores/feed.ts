@@ -1,11 +1,6 @@
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
-import {
-  KIND_TEXT_NOTE,
-  KIND_REPOST,
-  KIND_CLASSIFIED,
-  KIND_LONG_FORM_CONTENT,
-} from "@/utils/constants"
+import {KIND_TEXT_NOTE, KIND_CLASSIFIED, KIND_LONG_FORM_CONTENT} from "@/utils/constants"
 
 export type FeedType = "popular" | "for-you"
 
@@ -68,18 +63,6 @@ interface FeedState {
 }
 
 const defaultFeedConfigs: Record<string, FeedConfig> = {
-  unseen: {
-    name: "Unseen",
-    id: "unseen",
-    showRepliedTo: false,
-    excludeSeen: true,
-    hideReplies: true,
-    filter: {
-      kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_LONG_FORM_CONTENT],
-      limit: 100,
-    },
-    followDistance: 1,
-  },
   popular: {
     name: "Popular",
     id: "popular",
@@ -150,23 +133,25 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
 
 const CURRENT_VERSION = 2
 
+// Default enabled feed IDs in order
+const DEFAULT_ENABLED_FEED_IDS = [
+  "for-you",
+  "latest",
+  "popular",
+  "adventure",
+  "articles",
+  "market",
+  "media",
+]
+
 export const useFeedStore = create<FeedState>()(
   persist(
     (set, get) => {
       const initialState = {
-        activeFeed: "unseen",
+        activeFeed: "for-you",
         displayCount: 20,
         feedDisplayAs: "list" as const,
-        enabledFeedIds: [
-          "unseen",
-          "popular",
-          "for-you",
-          "articles",
-          "latest",
-          "market",
-          "media",
-          "adventure",
-        ],
+        enabledFeedIds: DEFAULT_ENABLED_FEED_IDS,
         feedConfigs: defaultFeedConfigs,
         feedRefreshSignal: 0,
       }
@@ -263,16 +248,8 @@ export const useFeedStore = create<FeedState>()(
           console.log("Resetting feeds to defaults")
           set({
             feedConfigs: {...defaultFeedConfigs},
-            enabledFeedIds: [
-              "unseen",
-              "popular",
-              "for-you",
-              "latest",
-              "market",
-              "articles",
-              "media",
-              "adventure",
-            ],
+            enabledFeedIds: DEFAULT_ENABLED_FEED_IDS,
+            activeFeed: "for-you",
           })
         },
         triggerFeedRefresh: () => {

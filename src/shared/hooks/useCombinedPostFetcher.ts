@@ -3,6 +3,8 @@ import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 import {addSeenEventId} from "@/utils/memcache"
 import shuffle from "lodash/shuffle"
+import {useUserStore} from "@/stores/user"
+import {getEventReplyingTo} from "@/utils/nostr"
 
 interface CombinedPostFetcherCache {
   events?: NDKEvent[]
@@ -29,6 +31,7 @@ export default function useCombinedPostFetcher({
   const [events, setEvents] = useState<NDKEvent[]>(cache.events || [])
   const [loading, setLoading] = useState<boolean>(false)
   const hasLoadedInitial = useRef(cache.hasLoadedInitial || false)
+  const myPubKey = useUserStore((state) => state.publicKey)
 
   useEffect(() => {
     cache.events = events
@@ -72,7 +75,19 @@ export default function useCombinedPostFetcher({
     const fetchedEvents = await ndk().fetchEvents(postFilter)
     const eventsArray = Array.from(fetchedEvents)
 
-    const shuffledEvents = shuffle(eventsArray)
+    // Filter out replies and own posts
+    const filteredEvents = eventsArray.filter((event) => {
+      // Filter out own posts
+      if (event.pubkey === myPubKey) return false
+
+      // Filter out replies using the existing utility function
+      const replyingTo = getEventReplyingTo(event)
+      if (replyingTo) return false
+
+      return true
+    })
+
+    const shuffledEvents = shuffle(filteredEvents)
 
     return shuffledEvents
   }
