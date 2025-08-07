@@ -17,6 +17,7 @@ export default function PullToRefresh({
   const containerRef = useRef<HTMLDivElement>(null)
   const startY = useRef(0)
   const isPulling = useRef(false)
+  const rafId = useRef<number>()
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     const scrollEl = containerRef.current?.querySelector(
@@ -46,9 +47,18 @@ export default function PullToRefresh({
 
       if (diff > 0) {
         e.preventDefault()
-        const resistance = 0.5
-        const actualDistance = diff * resistance
-        setPullDistance(Math.min(actualDistance, threshold * 1.5))
+
+        // Cancel any pending RAF
+        if (rafId.current) {
+          cancelAnimationFrame(rafId.current)
+        }
+
+        // Schedule update on next frame
+        rafId.current = requestAnimationFrame(() => {
+          const resistance = 0.5
+          const actualDistance = diff * resistance
+          setPullDistance(Math.min(actualDistance, threshold * 1.5))
+        })
       }
     },
     [threshold]
@@ -58,6 +68,11 @@ export default function PullToRefresh({
     if (!isPulling.current) return
 
     isPulling.current = false
+
+    // Cancel any pending RAF
+    if (rafId.current) {
+      cancelAnimationFrame(rafId.current)
+    }
 
     if (pullDistance >= threshold && !isRefreshing) {
       setIsRefreshing(true)
@@ -89,13 +104,12 @@ export default function PullToRefresh({
 
   const showIndicator = pullDistance > 0 || isRefreshing
   const opacity = Math.min(pullDistance / threshold, 1)
-  const scale = 0.8 + 0.2 * Math.min(pullDistance / threshold, 1)
 
   return (
     <div ref={containerRef} className="relative h-full overflow-hidden">
       {showIndicator && (
         <div
-          className="absolute top-0 left-0 right-0 flex justify-center items-center pointer-events-none z-50"
+          className="absolute top-0 left-0 right-0 flex justify-center items-center pointer-events-none z-50 will-change-transform"
           style={{
             height: `${isRefreshing ? threshold : pullDistance}px`,
             transition: isRefreshing ? "height 0.2s ease" : "none",
@@ -107,15 +121,15 @@ export default function PullToRefresh({
             className="w-12 h-12"
             style={{
               opacity,
-              transform: `scale(${scale}) rotate(${-90 + pullDistance * 2}deg)`,
-              transition: isRefreshing ? "transform 0.2s ease" : "none",
+              transition: isRefreshing ? "opacity 0.2s ease" : "none",
             }}
           />
         </div>
       )}
       <div
+        className="will-change-transform"
         style={{
-          transform: `translateY(${isRefreshing ? threshold : pullDistance}px)`,
+          transform: `translateZ(0) translateY(${isRefreshing ? threshold : pullDistance}px)`,
           transition: isRefreshing ? "transform 0.2s ease" : "none",
         }}
       >
