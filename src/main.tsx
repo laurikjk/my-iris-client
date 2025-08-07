@@ -30,8 +30,12 @@ if (state.publicKey) {
   subscribeToDMNotifications()
   migratePublicChats()
   socialGraph().recalculateFollowDistances()
-  useUserRecordsStore.getState().createDefaultInvites()
-  subscribeToOwnDeviceInvites().catch(console.error)
+
+  // Only initialize DM sessions if not in readonly mode
+  if (state.privateKey || state.nip07Login) {
+    useUserRecordsStore.getState().createDefaultInvites()
+    subscribeToOwnDeviceInvites().catch(console.error)
+  }
 }
 
 document.title = CONFIG.appName
@@ -74,8 +78,12 @@ useUserStore.subscribe((state) => {
     subscribeToNotifications()
     subscribeToDMNotifications()
     migratePublicChats()
-    useUserRecordsStore.getState().createDefaultInvites()
-    subscribeToOwnDeviceInvites().catch(console.error)
+
+    // Only initialize DM sessions if not in readonly mode
+    if (state.privateKey || state.nip07Login) {
+      useUserRecordsStore.getState().createDefaultInvites()
+      subscribeToOwnDeviceInvites().catch(console.error)
+    }
   }
 })
 
