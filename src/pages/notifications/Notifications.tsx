@@ -31,7 +31,7 @@ function Notifications() {
             <>
               <SocialGraphWidget />
               <RelayStats />
-              <Widget title="Popular">
+              <Widget title="Popular" className="h-96">
                 <AlgorithmicFeed
                   type="popular"
                   displayOptions={{

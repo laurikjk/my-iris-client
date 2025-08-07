@@ -133,7 +133,7 @@ export default function ThreadPage({
           {() => (
             <>
               {isArticle && threadAuthor ? (
-                <Widget title="More from this author">
+                <Widget title="More from this author" className="h-96">
                   <AuthorArticlesFeed
                     authorPubkey={threadAuthor}
                     currentArticleId={event?.id || id}
@@ -142,7 +142,7 @@ export default function ThreadPage({
                 </Widget>
               ) : (
                 relevantPeople.size > 0 && (
-                  <Widget title="Relevant people">
+                  <Widget title="Relevant people" className="h-96">
                     <FollowList
                       follows={Array.from(relevantPeople.keys())}
                       showAbout={true}
@@ -150,7 +150,7 @@ export default function ThreadPage({
                   </Widget>
                 )
               )}
-              <Widget title="Popular">
+              <Widget title="Popular" className="h-96">
                 <AlgorithmicFeed
                   type="popular"
                   displayOptions={{

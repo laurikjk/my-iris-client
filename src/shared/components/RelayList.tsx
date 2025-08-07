@@ -32,6 +32,7 @@ export function RelayList({
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customRelay, setCustomRelay] = useState("")
   const [showDiscoveredRelays, setShowDiscoveredRelays] = useState(false)
+  const [showSavedRelays, setShowSavedRelays] = useState(true)
   const {relayConfigs, toggleRelayConnection, addRelay, removeRelay} = useUserStore()
   const [ndkRelays, setNdkRelays] = useState(new Map())
 
@@ -186,70 +187,85 @@ export function RelayList({
           </>
         )}
 
-        {sortedRelayConfigs.map((config) => {
-          const relay = getRelay(config)
-          const isEnabled = !config.disabled
-          const isConnected = isEnabled && relay?.connected
-          const displayUrl = config.url.replace(/^wss?:\/\//, "").replace(/\/$/, "")
-
-          return (
-            <div
-              key={config.url}
-              className={`flex items-center justify-between ${padding} ${itemClassName}`}
+        {/* Saved relays section */}
+        {sortedRelayConfigs.length > 0 && (
+          <>
+            <button
+              onClick={() => setShowSavedRelays(!showSavedRelays)}
+              className={`flex items-center gap-2 ${textSize} ${padding} text-base-content/60 font-semibold hover:opacity-100 transition-opacity w-full text-left hover:underline`}
             >
-              <Link
-                to={`/relay/${encodeURIComponent(displayUrl)}`}
-                className={`${textSize} font-medium link link-info flex-1 ${
-                  compact && (isEnabled ? "opacity-80" : "opacity-40")
-                }`}
-              >
-                {displayUrl}
-              </Link>
-              <div className={`flex items-center ${compact ? "gap-2" : "gap-4"}`}>
-                <button
-                  onClick={() => toggleRelayConnection(config.url)}
-                  className={`${buttonPadding} hover:bg-base-${compact ? "300" : "200"} rounded transition-colors flex-shrink-0`}
-                  title={isEnabled ? "Disconnect from relay" : "Connect to relay"}
-                >
-                  {isEnabled ? (
-                    <RiLinkUnlinkM className={`${iconSize} text-error`} />
-                  ) : (
-                    <RiLinkM className={`${iconSize} text-success`} />
-                  )}
-                </button>
-                {showDelete && (
-                  <RiDeleteBinLine
-                    className={`${iconSize} cursor-pointer`}
-                    onClick={() => removeRelay(config.url)}
-                  />
-                )}
-                {compact ? (
+              <span>
+                {showSavedRelays ? "▼" : "▶"} Saved relays ({sortedRelayConfigs.length})
+              </span>
+            </button>
+
+            {showSavedRelays &&
+              sortedRelayConfigs.map((config) => {
+                const relay = getRelay(config)
+                const isEnabled = !config.disabled
+                const isConnected = isEnabled && relay?.connected
+                const displayUrl = config.url.replace(/^wss?:\/\//, "").replace(/\/$/, "")
+
+                return (
                   <div
-                    className={`w-2 h-2 rounded-full flex-shrink-0 ${(() => {
-                      if (isConnected) return "bg-success"
-                      if (isEnabled) return "bg-warning"
-                      return "bg-error"
-                    })()}`}
-                  />
-                ) : (
-                  <span
-                    className={`badge ${(() => {
-                      if (isConnected) return "badge-success"
-                      if (isEnabled) return "badge-warning"
-                      return "badge-error"
-                    })()}`}
-                  ></span>
-                )}
-              </div>
-            </div>
-          )
-        })}
+                    key={config.url}
+                    className={`flex items-center justify-between ${padding} ${itemClassName}`}
+                  >
+                    <Link
+                      to={`/relay/${encodeURIComponent(displayUrl)}`}
+                      className={`${textSize} font-medium link link-info flex-1 ${
+                        compact && (isEnabled ? "opacity-80" : "opacity-40")
+                      }`}
+                    >
+                      {displayUrl}
+                    </Link>
+                    <div className={`flex items-center ${compact ? "gap-2" : "gap-4"}`}>
+                      <button
+                        onClick={() => toggleRelayConnection(config.url)}
+                        className={`${buttonPadding} hover:bg-base-${compact ? "300" : "200"} rounded transition-colors flex-shrink-0`}
+                        title={isEnabled ? "Disconnect from relay" : "Connect to relay"}
+                      >
+                        {isEnabled ? (
+                          <RiLinkUnlinkM className={`${iconSize} text-error`} />
+                        ) : (
+                          <RiLinkM className={`${iconSize} text-success`} />
+                        )}
+                      </button>
+                      {showDelete && (
+                        <RiDeleteBinLine
+                          className={`${iconSize} cursor-pointer`}
+                          onClick={() => removeRelay(config.url)}
+                        />
+                      )}
+                      {compact ? (
+                        <div
+                          className={`w-2 h-2 rounded-full flex-shrink-0 ${(() => {
+                            if (isConnected) return "bg-success"
+                            if (isEnabled) return "bg-warning"
+                            return "bg-error"
+                          })()}`}
+                        />
+                      ) : (
+                        <span
+                          className={`badge ${(() => {
+                            if (isConnected) return "badge-success"
+                            if (isEnabled) return "badge-warning"
+                            return "badge-error"
+                          })()}`}
+                        ></span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+          </>
+        )}
 
         {showDiscovered && discoveredRelays.length > 0 && (
           <>
             <button
               onClick={() => setShowDiscoveredRelays(!showDiscoveredRelays)}
-              className={`flex items-center gap-2 ${textSize} hover:opacity-100 transition-opacity group ${padding} w-full text-left text-base-content/60 hover:underline`}
+              className={`flex items-center gap-2 ${textSize} ${padding} text-base-content/60 font-semibold hover:opacity-100 transition-opacity w-full text-left hover:underline`}
             >
               <span>
                 {showDiscoveredRelays ? "▼" : "▶"} Discovered relays (

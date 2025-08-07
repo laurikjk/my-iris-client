@@ -210,12 +210,12 @@ function UserPage({pubKey}: {pubKey: string}) {
           {() => (
             <>
               {filteredFollows.length > 0 && (
-                <Widget title="Follows">
+                <Widget title="Follows" className="h-96">
                   <FollowList follows={filteredFollows} />
                 </Widget>
               )}
               {pubKeyHex === myPubKey && (
-                <Widget title="Popular">
+                <Widget title="Popular" className="h-96">
                   <AlgorithmicFeed
                     type="popular"
                     displayOptions={{
