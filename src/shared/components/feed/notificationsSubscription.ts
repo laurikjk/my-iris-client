@@ -73,7 +73,10 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
       const existing = notification.users.get(user)
       if (!existing || existing.time < event.created_at) {
         let content: string | undefined = undefined
-        if (event.kind === 7) {
+        if (event.kind === 1) {
+          // Text note (reply) content
+          content = event.content
+        } else if (event.kind === 7) {
           // Reaction content (emoji)
           content = event.content
         } else if (event.kind === 9735) {
@@ -89,6 +92,11 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
       }
       if (event.created_at > notification.time) {
         notification.time = event.created_at
+        // Update notification content with the latest reply/reaction
+        if (event.kind === 1 && event.content) {
+          // For text notes (replies), update the notification content to show the latest reply
+          notification.content = event.content
+        }
       }
 
       notifications.set(key, notification)
