@@ -21,6 +21,7 @@ import {
 } from "@/stores/feed"
 import FeedTabs from "@/shared/components/feed/FeedTabs"
 import FeedEditor from "@/shared/components/feed/FeedEditor"
+import PullToRefresh from "@/shared/components/ui/PullToRefresh"
 
 const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
   myPubKey ? (
@@ -207,40 +208,44 @@ function HomeFeedEvents() {
             />
           )}
         <NotificationPrompt />
-        {(() => {
-          if (!myPubKey) return <AlgorithmicFeed type="popular" />
+        <PullToRefresh onRefresh={triggerFeedRefresh}>
+          <div data-scrollable className="overflow-y-auto">
+            {(() => {
+              if (!myPubKey) return <AlgorithmicFeed type="popular" />
 
-          if (activeFeedConfig?.feedStrategy)
-            return (
-              <AlgorithmicFeed
-                key={activeFeedConfig.feedStrategy}
-                type={activeFeedConfig.feedStrategy}
-                refreshSignal={feedRefreshSignal}
-              />
-            )
+              if (activeFeedConfig?.feedStrategy)
+                return (
+                  <AlgorithmicFeed
+                    key={activeFeedConfig.feedStrategy}
+                    type={activeFeedConfig.feedStrategy}
+                    refreshSignal={feedRefreshSignal}
+                  />
+                )
 
-          return (
-            <Feed
-              key={feedKey}
-              feedConfig={activeFeedConfig}
-              showDisplayAsSelector={follows.length > 1}
-              forceUpdate={0}
-              emptyPlaceholder={""}
-              refreshSignal={feedRefreshSignal}
-            />
-          )
-        })()}
-        {follows.length <= 1 && myPubKey && (
-          <>
-            <NoFollows myPubKey={myPubKey} />
-            {!activeFeedConfig?.feedStrategy && (
-              <AlgorithmicFeed
-                type="popular"
-                displayOptions={{showDisplaySelector: false}}
-              />
+              return (
+                <Feed
+                  key={feedKey}
+                  feedConfig={activeFeedConfig}
+                  showDisplayAsSelector={follows.length > 1}
+                  forceUpdate={0}
+                  emptyPlaceholder={""}
+                  refreshSignal={feedRefreshSignal}
+                />
+              )
+            })()}
+            {follows.length <= 1 && myPubKey && (
+              <>
+                <NoFollows myPubKey={myPubKey} />
+                {!activeFeedConfig?.feedStrategy && (
+                  <AlgorithmicFeed
+                    type="popular"
+                    displayOptions={{showDisplaySelector: false}}
+                  />
+                )}
+              </>
             )}
-          </>
-        )}
+          </div>
+        </PullToRefresh>
       </div>
     </div>
   )
