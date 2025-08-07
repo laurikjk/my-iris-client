@@ -45,7 +45,7 @@ export function RelayStats({background = true}: RelayStatsProps = {}) {
         </Link>
         <RelayList
           compact={true}
-          showDelete={false}
+          showDelete={true}
           showAddRelay={true}
           showDiscovered={true}
           itemClassName="hover:opacity-100 transition-opacity group"

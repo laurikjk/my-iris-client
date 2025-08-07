@@ -49,7 +49,7 @@ export function Network() {
         showAddRelay={true}
         showDiscovered={true}
         className="mt-4"
-        maxHeight="max-h-96"
+        maxHeight="max-h-none"
       />
       {!hasDefaultRelays && (
         <div className="mt-4">

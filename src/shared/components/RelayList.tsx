@@ -300,11 +300,34 @@ export function RelayList({
                           className={`flex items-center ${compact ? "gap-2" : "gap-4"}`}
                         >
                           <button
+                            onClick={() => {
+                              // Toggle connection for discovered relay
+                              const ndk = getNdk()
+                              if (relay.connected) {
+                                relay.disconnect()
+                              } else {
+                                ndk.addExplicitRelay(url)
+                              }
+                            }}
+                            className={`${buttonPadding} hover:bg-base-${compact ? "300" : "200"} rounded transition-colors flex-shrink-0`}
+                            title={
+                              relay.connected
+                                ? "Disconnect from relay"
+                                : "Connect to relay"
+                            }
+                          >
+                            {relay.connected ? (
+                              <RiLinkUnlinkM className={`${iconSize} text-error`} />
+                            ) : (
+                              <RiLinkM className={`${iconSize} text-success`} />
+                            )}
+                          </button>
+                          <button
                             onClick={() => addRelay(url, false)}
                             className={`${buttonPadding} hover:bg-base-${compact ? "300" : "200"} rounded transition-colors flex-shrink-0`}
-                            title="Add to your relays"
+                            title="Save to your relays"
                           >
-                            <RiAddLine className={`${iconSize} text-success`} />
+                            <RiAddLine className={`${iconSize} text-info`} />
                           </button>
                           {compact ? (
                             <div
