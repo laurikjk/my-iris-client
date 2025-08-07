@@ -17,7 +17,7 @@ export default function PullToRefresh({
   const containerRef = useRef<HTMLDivElement>(null)
   const startY = useRef(0)
   const isPulling = useRef(false)
-  const rafId = useRef<number>()
+  const rafId = useRef<number | undefined>(undefined)
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     const scrollEl = containerRef.current?.querySelector(

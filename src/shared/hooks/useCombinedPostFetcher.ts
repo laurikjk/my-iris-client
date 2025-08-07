@@ -35,24 +35,29 @@ export default function useCombinedPostFetcher({
   const hasLoadedInitial = useRef(cache.hasLoadedInitial || false)
   const myPubKey = useUserStore((state) => state.publicKey)
   const lastRefreshSignal = useRef(refreshSignal)
+  const isLoadingRef = useRef(false) // Track loading state in ref to prevent concurrent calls
 
   useEffect(() => {
     cache.events = events
-  }, [events])
+  }, [events, cache])
 
   useEffect(() => {
     cache.hasLoadedInitial = hasLoadedInitial.current
-  }, [hasLoadedInitial.current])
+  }, [cache])
 
   const loadBatch = useCallback(
     async (batchSize: number = 10) => {
       const popularCount = Math.floor(batchSize * popularRatio)
       const chronologicalCount = batchSize - popularCount
 
+      console.log("loadBatch - requesting", popularCount, "popular and", chronologicalCount, "chronological")
+      
       const popularIds = hasPopularData ? getNextPopular(popularCount) : []
       const chronologicalIds = hasChronologicalData
         ? getNextChronological(chronologicalCount)
         : []
+
+      console.log("loadBatch - got", popularIds.length, "popular IDs and", chronologicalIds.length, "chronological IDs")
 
       let allIds = [...new Set([...popularIds, ...chronologicalIds])]
 
@@ -127,7 +132,12 @@ export default function useCombinedPostFetcher({
         loadBatch(10).then((newEvents) => {
           if (newEvents.length > 0) {
             newEvents.forEach((event) => addSeenEventId(event.id))
-            setEvents((prev) => [...prev, ...newEvents])
+            setEvents((prev) => {
+              // Only deduplicate if there might be duplicates
+              const existingIds = new Set(prev.map((e) => e.id))
+              const uniqueNewEvents = newEvents.filter((e) => !existingIds.has(e.id))
+              return uniqueNewEvents.length > 0 ? [...prev, ...uniqueNewEvents] : prev
+            })
           }
         })
       }
@@ -147,13 +157,48 @@ export default function useCombinedPostFetcher({
   }, [loadBatch])
 
   const loadMore = useCallback(async () => {
+    // Prevent concurrent calls
+    if (isLoadingRef.current) {
+      console.log("loadMore skipped - already loading")
+      return
+    }
+    
+    console.log("loadMore called in useCombinedPostFetcher")
+    isLoadingRef.current = true
     setLoading(true)
-    const newEvents = await loadBatch(10)
+    
+    try {
+      const newEvents = await loadBatch(10)
+      console.log("loadMore fetched", newEvents.length, "new events")
 
-    newEvents.forEach((event) => addSeenEventId(event.id))
+      // If no new events, stop trying to load more for a bit
+      if (newEvents.length === 0) {
+        console.log("No new events available, stopping infinite scroll temporarily")
+        // Keep loading state true for a moment to prevent immediate retrigger
+        setTimeout(() => {
+          isLoadingRef.current = false
+          setLoading(false)
+        }, 1000) // Wait 1 second before allowing another load attempt
+        return
+      }
 
-    setEvents((prevEvents) => [...prevEvents, ...newEvents])
-    setLoading(false)
+      newEvents.forEach((event) => addSeenEventId(event.id))
+
+      setEvents((prevEvents) => {
+        // Only deduplicate if there might be duplicates
+        const existingIds = new Set(prevEvents.map((e) => e.id))
+        const uniqueNewEvents = newEvents.filter((e) => !existingIds.has(e.id))
+        console.log("loadMore adding", uniqueNewEvents.length, "unique events, had", prevEvents.length, "total")
+        return uniqueNewEvents.length > 0 ? [...prevEvents, ...uniqueNewEvents] : prevEvents
+      })
+      
+      isLoadingRef.current = false
+      setLoading(false)
+    } catch (error) {
+      console.error("Error loading more events:", error)
+      isLoadingRef.current = false
+      setLoading(false)
+    }
   }, [loadBatch])
 
   useEffect(() => {

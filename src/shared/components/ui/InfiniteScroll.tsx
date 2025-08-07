@@ -11,6 +11,7 @@ const InfiniteScroll = ({onLoadMore, children}: Props) => {
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
       const target = entries[0]
+      console.log("InfiniteScroll observer triggered, isIntersecting:", target.isIntersecting)
       if (target.isIntersecting) {
         onLoadMore()
       }

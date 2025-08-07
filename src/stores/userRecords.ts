@@ -628,6 +628,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
               return
             }
 
+            // The invite ID is actually the deviceId for device invites
             const inviteDeviceId = invite.deviceId || "unknown"
 
             // Get device ID the same way createDefaultInvites does
@@ -641,9 +642,18 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
               }
             }
 
-            console.log("ourDeviceId", ourDeviceId)
+            console.log("Checking device invite:", {
+              inviteDeviceId,
+              ourDeviceId,
+              isOurDevice: inviteDeviceId === ourDeviceId,
+              inviter: invite.inviter,
+              isOurself: invite.inviter === myPubKey,
+            })
 
-            if (userPubKey === myPubKey && inviteDeviceId === ourDeviceId) {
+            if (
+              userPubKey === myPubKey &&
+              inviteDeviceId === ourDeviceId
+            ) {
               console.log(
                 "Skipping invite from our own device to prevent loop:",
                 inviteDeviceId
