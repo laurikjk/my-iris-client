@@ -261,7 +261,7 @@ export function RelayList({
           </>
         )}
 
-        {showDiscovered && discoveredRelays.length > 0 && (
+        {showDiscovered && (
           <>
             <button
               onClick={() => setShowDiscoveredRelays(!showDiscoveredRelays)}
@@ -275,77 +275,60 @@ export function RelayList({
 
             {showDiscoveredRelays && (
               <>
-                {discoveredRelays
-                  .sort(([urlA, relayA], [urlB, relayB]) => {
-                    // Sort by connection status, then alphabetically
-                    if (relayA.connected !== relayB.connected) {
-                      return relayA.connected ? -1 : 1
-                    }
-                    return urlA.localeCompare(urlB)
-                  })
-                  .map(([url, relay]) => {
-                    const displayUrl = url.replace(/^wss?:\/\//, "").replace(/\/$/, "")
-                    return (
-                      <div
-                        key={url}
-                        className={`flex items-center justify-between ${padding} ${itemClassName} opacity-60`}
-                      >
-                        <Link
-                          to={`/relay/${encodeURIComponent(displayUrl)}`}
-                          className={`${textSize} font-medium link link-info flex-1`}
-                        >
-                          {displayUrl}
-                        </Link>
+                {discoveredRelays.length > 0 ? (
+                  discoveredRelays
+                    .sort(([urlA, relayA], [urlB, relayB]) => {
+                      // Sort by connection status, then alphabetically
+                      if (relayA.connected !== relayB.connected) {
+                        return relayA.connected ? -1 : 1
+                      }
+                      return urlA.localeCompare(urlB)
+                    })
+                    .map(([url, relay]) => {
+                      const displayUrl = url.replace(/^wss?:\/\//, "").replace(/\/$/, "")
+                      return (
                         <div
-                          className={`flex items-center ${compact ? "gap-2" : "gap-4"}`}
+                          key={url}
+                          className={`flex items-center justify-between ${padding} ${itemClassName} opacity-60`}
                         >
-                          <button
-                            onClick={() => {
-                              // Toggle connection for discovered relay
-                              const ndk = getNdk()
-                              if (relay.connected) {
-                                relay.disconnect()
-                              } else {
-                                ndk.addExplicitRelay(url)
-                              }
-                            }}
-                            className={`${buttonPadding} hover:bg-base-${compact ? "300" : "200"} rounded transition-colors flex-shrink-0`}
-                            title={
-                              relay.connected
-                                ? "Disconnect from relay"
-                                : "Connect to relay"
-                            }
+                          <Link
+                            to={`/relay/${encodeURIComponent(displayUrl)}`}
+                            className={`${textSize} font-medium link link-info flex-1`}
                           >
-                            {relay.connected ? (
-                              <RiLinkUnlinkM className={`${iconSize} text-error`} />
+                            {displayUrl}
+                          </Link>
+                          <div
+                            className={`flex items-center ${compact ? "gap-2" : "gap-4"}`}
+                          >
+                            <button
+                              onClick={() => addRelay(url, false)}
+                              className={`${buttonPadding} hover:bg-base-${compact ? "300" : "200"} rounded transition-colors flex-shrink-0`}
+                              title="Add to your saved relays"
+                            >
+                              <RiAddLine className={`${iconSize} text-success`} />
+                            </button>
+                            {compact ? (
+                              <div
+                                className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                  relay.connected ? "bg-success" : "bg-base-300"
+                                }`}
+                              />
                             ) : (
-                              <RiLinkM className={`${iconSize} text-success`} />
+                              <span
+                                className={`badge ${
+                                  relay.connected ? "badge-success" : "badge-ghost"
+                                }`}
+                              ></span>
                             )}
-                          </button>
-                          <button
-                            onClick={() => addRelay(url, false)}
-                            className={`${buttonPadding} hover:bg-base-${compact ? "300" : "200"} rounded transition-colors flex-shrink-0`}
-                            title="Save to your relays"
-                          >
-                            <RiAddLine className={`${iconSize} text-info`} />
-                          </button>
-                          {compact ? (
-                            <div
-                              className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                                relay.connected ? "bg-success" : "bg-base-300"
-                              }`}
-                            />
-                          ) : (
-                            <span
-                              className={`badge ${
-                                relay.connected ? "badge-success" : "badge-ghost"
-                              }`}
-                            ></span>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })
+                ) : (
+                  <div className={`${textSize} ${padding} text-base-content/40 italic`}>
+                    No new relays discovered
+                  </div>
+                )}
               </>
             )}
           </>

@@ -16,6 +16,7 @@ import socialGraph from "@/utils/socialGraph"
 import ProfileHeader from "./ProfileHeader"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
+import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
 import {
   KIND_TEXT_NOTE,
   KIND_REPOST,
@@ -215,16 +216,19 @@ function UserPage({pubKey}: {pubKey: string}) {
                 </Widget>
               )}
               {pubKeyHex === myPubKey && (
-                <Widget title="Popular" className="h-96">
-                  <AlgorithmicFeed
-                    type="popular"
-                    displayOptions={{
-                      small: true,
-                      showDisplaySelector: false,
-                      randomSort: true,
-                    }}
-                  />
-                </Widget>
+                <>
+                  <SocialGraphWidget />
+                  <Widget title="Popular" className="h-96">
+                    <AlgorithmicFeed
+                      type="popular"
+                      displayOptions={{
+                        small: true,
+                        showDisplaySelector: false,
+                        randomSort: true,
+                      }}
+                    />
+                  </Widget>
+                </>
               )}
             </>
           )}

@@ -181,17 +181,8 @@ function watchLocalSettings(instance: NDK) {
           }
         })
 
-        // Remove relays that are no longer in the config list
-        const configUrls = relayList.map((c) =>
-          normalizeRelayUrl(typeof c === "string" ? c : c.url)
-        )
-
-        for (const poolUrl of instance.pool.relays.keys()) {
-          const normalizedPoolUrl = normalizeRelayUrl(poolUrl)
-          if (!configUrls.includes(normalizedPoolUrl)) {
-            instance.pool.removeRelay(poolUrl)
-          }
-        }
+        // Don't remove relays from the pool - they might be discovered relays
+        // We only disconnect them if they're explicitly disabled in config
       }
     }
 
