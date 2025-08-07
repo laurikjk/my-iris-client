@@ -36,7 +36,7 @@ export function RelayStats({background = true}: RelayStatsProps = {}) {
   const totalEnabled = relayConfigs?.filter((c) => !c.disabled).length || 0
 
   return (
-    <Widget title={false} background={background}>
+    <Widget title={false} background={background} className="h-auto">
       <div className="p-3">
         <Link to="/settings/network" className="inline-block mb-2">
           <h3 className="font-semibold text-sm opacity-80 hover:opacity-100 cursor-pointer transition-opacity underline decoration-dotted underline-offset-2">

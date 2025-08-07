@@ -4,9 +4,10 @@ interface WidgetProps {
   title?: string | null | false
   children: ReactNode
   background?: boolean
+  className?: string
 }
 
-function Widget({title, children, background = true}: WidgetProps) {
+function Widget({title, children, background = true, className = ""}: WidgetProps) {
   return (
     <div className={background ? "bg-base-100 rounded-lg" : ""}>
       {title && (
@@ -14,7 +15,7 @@ function Widget({title, children, background = true}: WidgetProps) {
           {title}
         </h2>
       )}
-      <div className="h-96 overflow-y-auto px-4 py-1">{children}</div>
+      <div className={`overflow-y-auto px-4 py-1 ${className}`}>{children}</div>
     </div>
   )
 }
