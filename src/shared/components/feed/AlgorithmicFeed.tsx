@@ -2,7 +2,6 @@ import FeedWidget from "./FeedWidget"
 import useAlgorithmicFeed from "@/shared/hooks/useAlgorithmicFeed"
 import {useFeedStore, type FeedType} from "@/stores/feed"
 import {getOrCreateAlgorithmicFeedCache} from "@/utils/memcache"
-import runningOstrich from "@/assets/running-ostrich.gif"
 
 interface FeedDisplayOptions {
   small?: boolean
@@ -57,13 +56,7 @@ const AlgorithmicFeed = function AlgorithmicFeed({
   const {feedDisplayAs: displayAs, setFeedDisplayAs: setDisplayAs} = useFeedStore()
 
   if (loading && events.length === 0) {
-    return (
-      <div className={small ? "px-4 py-2" : "p-8 flex items-center justify-center"}>
-        <div className="flex flex-col items-center gap-2">
-          <img src={runningOstrich} alt="Loading..." className="w-16 h-16" />
-        </div>
-      </div>
-    )
+    return null
   }
 
   return (
