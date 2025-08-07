@@ -8,6 +8,7 @@ import NDK, {
 } from "@nostr-dev-kit/ndk"
 import NDKCacheAdapterDexie from "@nostr-dev-kit/ndk-cache-dexie"
 import {useUserStore} from "@/stores/user"
+import {DEFAULT_RELAYS} from "@/shared/constants/relays"
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
@@ -18,29 +19,7 @@ function normalizeRelayUrl(url: string): string {
   return url.endsWith("/") ? url : url + "/"
 }
 
-const LOCAL_RELAY = ["ws://localhost:7777"]
-
-const PRODUCTION_RELAYS = [
-  "wss://temp.iris.to/",
-  "wss://vault.iris.to/",
-  "wss://relay.damus.io/",
-  "wss://relay.nostr.band/",
-  "wss://relay.snort.social/",
-]
-
-const TEST_RELAY = ["wss://temp.iris.to/"]
-
-function getDefaultRelays() {
-  if (import.meta.env.VITE_USE_TEST_RELAY) {
-    return TEST_RELAY
-  }
-  if (import.meta.env.VITE_USE_LOCAL_RELAY) {
-    return LOCAL_RELAY
-  }
-  return PRODUCTION_RELAYS
-}
-
-export const DEFAULT_RELAYS = getDefaultRelays()
+export {DEFAULT_RELAYS}
 
 /**
  * Get a singleton "default" NDK instance to get started quickly. If you want to init NDK with e.g. your own relays, pass them on the first call.
@@ -54,7 +33,7 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
     const relays = opts?.explicitRelayUrls || DEFAULT_RELAYS
 
     // Log when using test relay
-    if (relays === TEST_RELAY) {
+    if (import.meta.env.VITE_USE_TEST_RELAY) {
       console.log("🧪 Using test relay only: wss://temp.iris.to/")
     }
 

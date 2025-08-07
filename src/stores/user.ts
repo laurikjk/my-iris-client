@@ -1,6 +1,7 @@
 import {getDefaultServers} from "@/pages/settings/mediaservers-utils"
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
+import {DEFAULT_RELAYS} from "@/shared/constants/relays"
 
 type MediaServerProtocol = "blossom" | "nip96"
 
@@ -69,8 +70,8 @@ export const useUserStore = create<UserState>()(
         nip07Login: false,
         DHTPublicKey: "",
         DHTPrivateKey: "",
-        relays: [],
-        relayConfigs: [],
+        relays: DEFAULT_RELAYS,
+        relayConfigs: DEFAULT_RELAYS.map((url) => ({url})),
         mediaservers: [],
         defaultMediaserver: null,
         walletConnect: false,
@@ -172,8 +173,16 @@ export const useUserStore = create<UserState>()(
     },
     {
       name: "user-storage",
+      version: 2, // Bump version to trigger migration
       onRehydrateStorage: () => (state) => {
         if (state) {
+          // Migration: Initialize relayConfigs with DEFAULT_RELAYS if empty
+          if (!state.relayConfigs || state.relayConfigs.length === 0) {
+            console.log("Migrating: Adding default relays to relayConfigs")
+            state.relayConfigs = DEFAULT_RELAYS.map((url) => ({url}))
+            state.relays = DEFAULT_RELAYS
+          }
+
           state.hasHydrated = true
           if (resolveHydration) {
             resolveHydration()
@@ -181,6 +190,18 @@ export const useUserStore = create<UserState>()(
             hydrationPromise = null
           }
         }
+      },
+      migrate: (persistedState: unknown, version: number) => {
+        const state = persistedState as Record<string, unknown>
+        if (version === 0 || version === 1) {
+          // Migrate from version 0/1 to 2
+          const configs = state.relayConfigs as RelayConfig[] | undefined
+          if (!configs || configs.length === 0) {
+            state.relayConfigs = DEFAULT_RELAYS.map((url: string) => ({url}))
+            state.relays = DEFAULT_RELAYS
+          }
+        }
+        return state
       },
     }
   )

@@ -47,6 +47,7 @@ export function RelayStats({background = true}: RelayStatsProps = {}) {
           compact={true}
           showDelete={false}
           showAddRelay={true}
+          showDiscovered={true}
           itemClassName="hover:opacity-100 transition-opacity group"
         />
       </div>

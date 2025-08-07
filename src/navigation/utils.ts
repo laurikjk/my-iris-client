@@ -46,11 +46,3 @@ export function matchPath(
 
   return {params}
 }
-
-export function createPath(pattern: string, params: Record<string, string>): string {
-  let path = pattern
-  Object.entries(params).forEach(([key, value]) => {
-    path = path.replace(`:${key}`, value).replace(`:${key}?`, value)
-  })
-  return path
-}

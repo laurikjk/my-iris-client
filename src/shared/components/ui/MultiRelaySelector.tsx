@@ -1,5 +1,5 @@
 import {useState, useRef, useEffect} from "react"
-import {DEFAULT_RELAYS} from "@/utils/ndk"
+import {DEFAULT_RELAYS} from "@/shared/constants/relays"
 import {RiAddLine, RiCloseLine} from "@remixicon/react"
 
 interface MultiRelaySelectorProps {

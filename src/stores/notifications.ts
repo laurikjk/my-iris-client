@@ -55,6 +55,3 @@ if (typeof window !== "undefined") {
     }
   ).useNotificationsStore = useNotificationsStore
 }
-
-export const useRefreshRouteSignal = () =>
-  useNotificationsStore((state) => state.refreshRouteSignal)

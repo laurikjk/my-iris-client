@@ -51,10 +51,16 @@ export function RelayList({
     return () => clearInterval(interval)
   }, [])
 
-  // Get discovered relays (in NDK but not in configs)
+  // Get discovered relays (in NDK pool but not in saved configs)
   const discoveredRelays = Array.from(ndkRelays.entries()).filter(([url]) => {
     const normalizedNdkUrl = normalizeRelayUrl(url)
-    return !relayConfigs?.some((c) => normalizeRelayUrl(c.url) === normalizedNdkUrl)
+    const isInConfigs = relayConfigs?.some(
+      (c) => normalizeRelayUrl(c.url) === normalizedNdkUrl
+    )
+
+    // Show all relays in NDK pool that aren't in saved configs
+    // (regardless of connection status - they can still be connecting)
+    return !isInConfigs
   })
 
   // Sort relays by enabled status, then connection status, then alphabetically
@@ -69,8 +75,19 @@ export function RelayList({
       ndkRelays.get(b.url + "/")
 
     // Sort by enabled+connected, enabled, disabled
-    const statusA = !a.disabled && relayA?.connected ? 2 : !a.disabled ? 1 : 0
-    const statusB = !b.disabled && relayB?.connected ? 2 : !b.disabled ? 1 : 0
+    let statusA = 0
+    if (!a.disabled && relayA?.connected) {
+      statusA = 2
+    } else if (!a.disabled) {
+      statusA = 1
+    }
+
+    let statusB = 0
+    if (!b.disabled && relayB?.connected) {
+      statusB = 2
+    } else if (!b.disabled) {
+      statusB = 1
+    }
     const statusDiff = statusB - statusA
 
     if (statusDiff !== 0) return statusDiff
@@ -183,7 +200,7 @@ export function RelayList({
               <Link
                 to={`/relay/${encodeURIComponent(displayUrl)}`}
                 className={`${textSize} font-medium link link-info flex-1 ${
-                  compact ? (isEnabled ? "opacity-80" : "opacity-40") : ""
+                  compact && (isEnabled ? "opacity-80" : "opacity-40")
                 }`}
               >
                 {displayUrl}
@@ -208,19 +225,19 @@ export function RelayList({
                 )}
                 {compact ? (
                   <div
-                    className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      isConnected ? "bg-success" : isEnabled ? "bg-warning" : "bg-error"
-                    }`}
+                    className={`w-2 h-2 rounded-full flex-shrink-0 ${(() => {
+                      if (isConnected) return "bg-success"
+                      if (isEnabled) return "bg-warning"
+                      return "bg-error"
+                    })()}`}
                   />
                 ) : (
                   <span
-                    className={`badge ${
-                      isConnected
-                        ? "badge-success"
-                        : isEnabled
-                          ? "badge-warning"
-                          : "badge-error"
-                    }`}
+                    className={`badge ${(() => {
+                      if (isConnected) return "badge-success"
+                      if (isEnabled) return "badge-warning"
+                      return "badge-error"
+                    })()}`}
                   ></span>
                 )}
               </div>
