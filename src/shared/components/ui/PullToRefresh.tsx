@@ -12,12 +12,14 @@ export default function PullToRefresh({
   children,
   threshold = 80,
 }: PullToRefreshProps) {
-  const [pullDistance, setPullDistance] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const indicatorRef = useRef<HTMLDivElement>(null)
+  const ostrichRef = useRef<HTMLImageElement>(null)
   const startY = useRef(0)
   const isPulling = useRef(false)
-  const rafId = useRef<number | undefined>(undefined)
+  const currentPullDistance = useRef(0)
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     const scrollEl = containerRef.current?.querySelector(
@@ -38,7 +40,14 @@ export default function PullToRefresh({
       ) as HTMLElement
       if (!scrollEl || scrollEl.scrollTop > 0) {
         isPulling.current = false
-        setPullDistance(0)
+        currentPullDistance.current = 0
+        if (contentRef.current) {
+          contentRef.current.style.transform = "translate3d(0, 0, 0)"
+        }
+        if (indicatorRef.current) {
+          indicatorRef.current.style.height = "0px"
+          indicatorRef.current.style.display = "none"
+        }
         return
       }
 
@@ -47,18 +56,21 @@ export default function PullToRefresh({
 
       if (diff > 0) {
         e.preventDefault()
+        const resistance = 0.5
+        const actualDistance = Math.min(diff * resistance, threshold * 1.5)
+        currentPullDistance.current = actualDistance
 
-        // Cancel any pending RAF
-        if (rafId.current) {
-          cancelAnimationFrame(rafId.current)
+        if (contentRef.current) {
+          contentRef.current.style.transform = `translate3d(0, ${actualDistance}px, 0)`
         }
-
-        // Schedule update on next frame
-        rafId.current = requestAnimationFrame(() => {
-          const resistance = 0.5
-          const actualDistance = diff * resistance
-          setPullDistance(Math.min(actualDistance, threshold * 1.5))
-        })
+        if (indicatorRef.current) {
+          indicatorRef.current.style.display = "flex"
+          indicatorRef.current.style.height = `${actualDistance}px`
+        }
+        if (ostrichRef.current) {
+          const opacity = Math.min(actualDistance / threshold, 1)
+          ostrichRef.current.style.opacity = `${opacity}`
+        }
       }
     },
     [threshold]
@@ -69,23 +81,39 @@ export default function PullToRefresh({
 
     isPulling.current = false
 
-    // Cancel any pending RAF
-    if (rafId.current) {
-      cancelAnimationFrame(rafId.current)
-    }
-
-    if (pullDistance >= threshold && !isRefreshing) {
+    if (currentPullDistance.current >= threshold && !isRefreshing) {
       setIsRefreshing(true)
       onRefresh()
 
+      if (contentRef.current) {
+        contentRef.current.style.transform = `translate3d(0, ${threshold}px, 0)`
+      }
+      if (indicatorRef.current) {
+        indicatorRef.current.style.height = `${threshold}px`
+      }
+
       setTimeout(() => {
         setIsRefreshing(false)
-        setPullDistance(0)
+        currentPullDistance.current = 0
+        if (contentRef.current) {
+          contentRef.current.style.transform = "translate3d(0, 0, 0)"
+        }
+        if (indicatorRef.current) {
+          indicatorRef.current.style.height = "0px"
+          indicatorRef.current.style.display = "none"
+        }
       }, 1000)
     } else {
-      setPullDistance(0)
+      currentPullDistance.current = 0
+      if (contentRef.current) {
+        contentRef.current.style.transform = "translate3d(0, 0, 0)"
+      }
+      if (indicatorRef.current) {
+        indicatorRef.current.style.height = "0px"
+        indicatorRef.current.style.display = "none"
+      }
     }
-  }, [pullDistance, threshold, isRefreshing, onRefresh])
+  }, [threshold, isRefreshing, onRefresh])
 
   useEffect(() => {
     const container = containerRef.current
@@ -102,35 +130,31 @@ export default function PullToRefresh({
     }
   }, [handleTouchStart, handleTouchMove, handleTouchEnd])
 
-  const showIndicator = pullDistance > 0 || isRefreshing
-  const opacity = Math.min(pullDistance / threshold, 1)
-
   return (
     <div ref={containerRef} className="relative h-full overflow-hidden">
-      {showIndicator && (
-        <div
-          className="absolute top-0 left-0 right-0 flex justify-center items-center pointer-events-none z-50 will-change-transform"
-          style={{
-            height: `${isRefreshing ? threshold : pullDistance}px`,
-            transition: isRefreshing ? "height 0.2s ease" : "none",
-          }}
-        >
-          <img
-            src={ostrichGif}
-            alt="Loading..."
-            className="w-12 h-12"
-            style={{
-              opacity,
-              transition: isRefreshing ? "opacity 0.2s ease" : "none",
-            }}
-          />
-        </div>
-      )}
       <div
+        ref={indicatorRef}
+        className="absolute top-0 left-0 right-0 justify-center items-center pointer-events-none z-50 will-change-transform"
+        style={{
+          display: "none",
+          height: "0px",
+        }}
+      >
+        <img
+          ref={ostrichRef}
+          src={ostrichGif}
+          alt="Loading..."
+          className="w-12 h-12"
+          style={{
+            opacity: 0,
+          }}
+        />
+      </div>
+      <div
+        ref={contentRef}
         className="will-change-transform"
         style={{
-          transform: `translateZ(0) translateY(${isRefreshing ? threshold : pullDistance}px)`,
-          transition: isRefreshing ? "transform 0.2s ease" : "none",
+          transform: "translate3d(0, 0, 0)",
         }}
       >
         {children}
