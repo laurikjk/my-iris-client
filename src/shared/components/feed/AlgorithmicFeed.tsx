@@ -28,7 +28,7 @@ const feedConfigs = {
     loadingMessage: "Loading popular posts...",
   },
   "for-you": {
-    filterSeen: true,
+    filterSeen: false,
     includeChronological: true,
     emptyMessage: "No posts found for you",
     loadingMessage: "Loading your personalized feed...",
