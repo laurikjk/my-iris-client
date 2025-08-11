@@ -1,4 +1,5 @@
 import {RiMoreLine} from "@remixicon/react"
+import {nip19} from "nostr-tools"
 
 type FeedItemDropdownProps = {
   eventId: string
@@ -6,7 +7,7 @@ type FeedItemDropdownProps = {
 
 function SimpleFeedItemDropdown({eventId}: FeedItemDropdownProps) {
   const handleCopyNoteID = () => {
-    navigator.clipboard.writeText(eventId)
+    navigator.clipboard.writeText(nip19.noteEncode(eventId))
   }
 
   return (

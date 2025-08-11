@@ -47,7 +47,7 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
     onClose()
   }
   const handleCopyNoteID = () => {
-    navigator.clipboard.writeText(event.encode())
+    navigator.clipboard.writeText(nip19.noteEncode(event.id))
     onClose()
   }
   const handleMute = async () => {
