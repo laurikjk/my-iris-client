@@ -97,7 +97,7 @@ export default function ZapsBar({event}: ZapsBarProps) {
               onClick={(e) => e.stopPropagation()}
               className="hover:underline truncate max-w-[120px]"
             >
-              <Name pubKey={zap.pubkey} displayNameOnly />
+              <Name pubKey={zap.pubkey} />
             </Link>
             {zap.comment && (
               <span className="text-base-content/50 text-xs max-w-[150px] truncate">
