@@ -14,6 +14,7 @@ import {Helmet} from "react-helmet"
 import {useEffect, ReactNode, useRef} from "react"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
 import HomeFeedEvents from "@/pages/home/feed/components/HomeFeedEvents"
+import {ScrollProvider} from "@/contexts/ScrollContext"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -129,9 +130,10 @@ const Layout = ({children}: {children: ReactNode}) => {
             className={`flex-1 min-w-0 border-r border-base-300 overflow-y-scroll overflow-x-hidden scrollbar-hide ${
               shouldShowMainFeed ? "hidden lg:block" : "hidden"
             }`}
-            data-main-scroll-container="middle-column"
           >
-            <HomeFeedEvents />
+            <ScrollProvider scrollContainerRef={middleColumnRef}>
+              <HomeFeedEvents />
+            </ScrollProvider>
           </div>
         )}
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
