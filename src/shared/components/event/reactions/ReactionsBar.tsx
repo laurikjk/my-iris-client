@@ -1,6 +1,5 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
-import {Name} from "@/shared/components/user/Name"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {ndk} from "@/utils/ndk"
 
@@ -65,21 +64,6 @@ export default function ReactionsBar({event}: ReactionsBarProps) {
               {reaction.emoji === "+" ? "❤️" : reaction.emoji}
             </span>
             <span className="font-semibold">{reaction.pubkeys.size}</span>
-            <div className="flex items-center gap-1 text-xs truncate max-w-[200px]">
-              {Array.from(reaction.pubkeys)
-                .slice(0, 2)
-                .map((pubkey, index) => (
-                  <span key={pubkey} className="truncate">
-                    {index > 0 && ", "}
-                    <Name pubKey={pubkey} displayNameOnly />
-                  </span>
-                ))}
-              {reaction.pubkeys.size > 2 && (
-                <span className="text-base-content/50 flex-shrink-0">
-                  +{reaction.pubkeys.size - 2}
-                </span>
-              )}
-            </div>
           </div>
         ))
       )}
