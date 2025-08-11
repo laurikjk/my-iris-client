@@ -12,6 +12,9 @@ import {
 import {getEventIdHex, handleEventContent} from "@/shared/components/event/utils.ts"
 import RepostHeader from "@/shared/components/event/RepostHeader.tsx"
 import FeedItemActions from "../reactions/FeedItemActions.tsx"
+import ZapsBar from "../reactions/ZapsBar.tsx"
+import ReactionsBar from "../reactions/ReactionsBar.tsx"
+import {useSettingsStore} from "@/stores/settings"
 import FeedItemPlaceholder from "./FeedItemPlaceholder.tsx"
 import ErrorBoundary from "../../ui/ErrorBoundary.tsx"
 import Feed from "@/shared/components/feed/Feed.tsx"
@@ -63,6 +66,7 @@ function FeedItem({
   const [hasActualReplies, setHasActualReplies] = useState(false)
   const navigate = useNavigate()
   const subscriptionRef = useRef<NDKSubscription | null>(null)
+  const {content} = useSettingsStore()
 
   // Handle highlight animation with lightning-like flash
   useEffect(() => {
@@ -302,12 +306,22 @@ function FeedItem({
                 event.kind !== KIND_ZAP_RECEIPT &&
                 !isRepost(event)) ||
                 referredEvent) && (
-                <FeedItemActions
-                  feedItemRef={feedItemRef}
-                  event={referredEvent ? undefined : event}
-                  eventId={referredEvent?.id}
-                  standalone={standalone}
-                />
+                <>
+                  {standalone && content.showReactionsBar && (
+                    <>
+                      {content.showZaps && <ZapsBar event={referredEvent || event} />}
+                      {content.showLikes && (
+                        <ReactionsBar event={referredEvent || event} />
+                      )}
+                    </>
+                  )}
+                  <FeedItemActions
+                    feedItemRef={feedItemRef}
+                    event={referredEvent ? undefined : event}
+                    eventId={referredEvent?.id}
+                    standalone={standalone}
+                  />
+                </>
               )}
           </div>
         </div>

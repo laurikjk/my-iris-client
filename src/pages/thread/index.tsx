@@ -97,7 +97,7 @@ export default function ThreadPage({
         )}
       </Header>
       <div className="flex justify-center flex-1 relative">
-        <div className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-16 md:pb-0">
+        <div className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-16 md:pb-0 max-w-full overflow-hidden">
           {(() => {
             if (isNaddr) {
               if (loading) {
