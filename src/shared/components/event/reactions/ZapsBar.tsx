@@ -5,6 +5,8 @@ import {decode} from "light-bolt11-decoder"
 import {getZappingUser} from "@/utils/nostr"
 import {Name} from "@/shared/components/user/Name"
 import {ndk} from "@/utils/ndk"
+import {Link} from "@/navigation"
+import {nip19} from "nostr-tools"
 
 interface ZapInfo {
   amount: number
@@ -90,7 +92,13 @@ export default function ZapsBar({event}: ZapsBarProps) {
             <span className="text-orange-500 font-semibold">
               ⚡ {formatAmount(zap.amount)}
             </span>
-            <Name pubKey={zap.pubkey} displayNameOnly />
+            <Link
+              to={`/${nip19.npubEncode(zap.pubkey)}`}
+              onClick={(e) => e.stopPropagation()}
+              className="hover:underline truncate max-w-[120px]"
+            >
+              <Name pubKey={zap.pubkey} displayNameOnly />
+            </Link>
             {zap.comment && (
               <span className="text-base-content/50 text-xs max-w-[150px] truncate">
                 &ldquo;{zap.comment}&rdquo;

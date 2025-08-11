@@ -65,20 +65,20 @@ export default function ReactionsBar({event}: ReactionsBarProps) {
               {reaction.emoji === "+" ? "❤️" : reaction.emoji}
             </span>
             <span className="font-semibold">{reaction.pubkeys.size}</span>
-            <div className="flex -space-x-1">
+            <div className="flex items-center gap-1 text-xs truncate max-w-[200px]">
               {Array.from(reaction.pubkeys)
-                .slice(0, 3)
-                .map((pubkey) => (
-                  <div key={pubkey} className="text-xs">
+                .slice(0, 2)
+                .map((pubkey, index) => (
+                  <span key={pubkey} className="truncate">
+                    {index > 0 && ", "}
                     <Name pubKey={pubkey} displayNameOnly />
-                    {reaction.pubkeys.size > 3 &&
-                      Array.from(reaction.pubkeys).indexOf(pubkey) === 2 && (
-                        <span className="ml-1 text-base-content/50">
-                          +{reaction.pubkeys.size - 3}
-                        </span>
-                      )}
-                  </div>
+                  </span>
                 ))}
+              {reaction.pubkeys.size > 2 && (
+                <span className="text-base-content/50 flex-shrink-0">
+                  +{reaction.pubkeys.size - 2}
+                </span>
+              )}
             </div>
           </div>
         ))
