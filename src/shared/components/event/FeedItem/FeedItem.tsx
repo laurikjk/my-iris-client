@@ -309,8 +309,10 @@ function FeedItem({
                 <>
                   {standalone && content.showReactionsBar && (
                     <>
-                      {content.showZaps && <ZapsBar event={referredEvent || event} />}
-                      {content.showLikes && (
+                      {content.showZaps && !content.hideZapsBarInStandalone && (
+                        <ZapsBar event={referredEvent || event} />
+                      )}
+                      {content.showLikes && !content.hideReactionsBarInStandalone && (
                         <ReactionsBar event={referredEvent || event} />
                       )}
                     </>

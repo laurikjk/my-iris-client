@@ -24,6 +24,8 @@ interface SettingsState {
     showReactionsBar: boolean
     showReactionCounts: boolean
     showReactionCountsInStandalone: boolean
+    hideReactionsBarInStandalone: boolean
+    hideZapsBarInStandalone: boolean
   }
   // Imgproxy settings
   imgproxy: {
@@ -71,6 +73,8 @@ export const useSettingsStore = create<SettingsState>()(
         showReactionsBar: true,
         showReactionCounts: !isTouchDevice, // Hide in feed on mobile by default
         showReactionCountsInStandalone: true, // Always show in post view by default
+        hideReactionsBarInStandalone: false, // Hide reactions bar in standalone posts
+        hideZapsBarInStandalone: false, // Hide zaps bar in standalone posts
       },
       imgproxy: {
         url: "https://imgproxy.coracle.social",

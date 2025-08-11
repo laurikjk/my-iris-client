@@ -56,6 +56,18 @@ function Content() {
             label="Show reaction counts in post view"
           />
           <SettingToggle
+            checked={!content.hideReactionsBarInStandalone}
+            onChange={() => handleToggleChange("hideReactionsBarInStandalone")}
+            label="Show reactions bar in standalone posts"
+            disabled={!content.showReactionsBar || !content.showLikes}
+          />
+          <SettingToggle
+            checked={!content.hideZapsBarInStandalone}
+            onChange={() => handleToggleChange("hideZapsBarInStandalone")}
+            label="Show zaps bar in standalone posts"
+            disabled={!content.showReactionsBar || !content.showZaps}
+          />
+          <SettingToggle
             checked={content.showLikes}
             onChange={() => handleToggleChange("showLikes")}
             label="Show likes"
