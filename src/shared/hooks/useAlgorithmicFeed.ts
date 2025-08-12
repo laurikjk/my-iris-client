@@ -4,24 +4,17 @@ import useCombinedPostFetcher from "./useCombinedPostFetcher"
 import usePopularityFilters from "./usePopularityFilters"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
-interface PostFetcherCache {
-  events?: NDKEvent[]
-  hasLoadedInitial?: boolean
-}
-
 interface CombinedPostFetcherCache {
   events?: NDKEvent[]
   hasLoadedInitial?: boolean
 }
 
 interface ReactionSubscriptionCache {
-  hasInitialData?: boolean
   pendingReactionCounts?: Map<string, Set<string>>
   showingReactionCounts?: Map<string, Set<string>>
 }
 
 interface ChronologicalSubscriptionCache {
-  hasInitialData?: boolean
   pendingPosts?: Map<string, number>
   showingPosts?: Map<string, number>
   timeRange?: number
@@ -32,7 +25,6 @@ interface PopularityFiltersCache {
 }
 
 interface FeedCache {
-  postFetcher?: PostFetcherCache
   combinedPostFetcher?: CombinedPostFetcherCache
   reactionSubscription: ReactionSubscriptionCache
   chronologicalSubscription?: ChronologicalSubscriptionCache
@@ -49,24 +41,37 @@ export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig 
 
   const {currentFilters, expandFilters} = usePopularityFilters(cache.popularityFilters)
 
-  const {getNextMostPopular, hasInitialData: hasPopularData} = useReactionSubscription(
+  const {getNextMostPopular} = useReactionSubscription(
     currentFilters,
     expandFilters,
     cache.reactionSubscription,
     filterSeen
   )
 
-  const {getNextChronological, hasInitialData: hasChronologicalData} =
-    useChronologicalSubscription(cache.chronologicalSubscription || {}, filterSeen)
+  const {getNextChronological} = useChronologicalSubscription(
+    cache.chronologicalSubscription || {},
+    filterSeen
+  )
 
   const result = useCombinedPostFetcher({
     getNextPopular: getNextMostPopular,
     getNextChronological,
-    hasPopularData,
-    hasChronologicalData,
     cache: cache.combinedPostFetcher || {},
     popularRatio,
   })
 
-  return result
+  const getPopularPendingCount = () => {
+    return cache.reactionSubscription.pendingReactionCounts?.size || 0
+  }
+
+  const getChronologicalPendingCount = () => {
+    return cache.chronologicalSubscription?.pendingPosts?.size || 0
+  }
+
+  const isStuck =
+    result.events.length === 0 &&
+    !result.loading &&
+    (getPopularPendingCount() > 0 || getChronologicalPendingCount() > 0)
+
+  return {...result, isStuck}
 }

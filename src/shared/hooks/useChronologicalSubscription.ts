@@ -8,12 +8,10 @@ import {useUserStore} from "@/stores/user"
 import {seenEventIds} from "@/utils/memcache"
 
 const LOW_THRESHOLD = 15
-const INITIAL_DATA_THRESHOLD = 5
 const INITIAL_TIME_RANGE = 48 * 60 * 60 // Start with 2 days instead of 1
 const TIME_RANGE_INCREMENT = 24 * 60 * 60
 
 interface ChronologicalSubscriptionCache {
-  hasInitialData?: boolean
   pendingPosts?: Map<string, number>
   showingPosts?: Map<string, number>
   timeRange?: number
@@ -30,7 +28,6 @@ export default function useChronologicalSubscription(
   const showingPosts = useRef<Map<string, number>>(new Map())
   const pendingPosts = useRef<Map<string, number>>(new Map())
   const [timeRange, setTimeRange] = useState(cache.timeRange || INITIAL_TIME_RANGE)
-  const [hasInitialData, setHasInitialData] = useState(cache.hasInitialData || false)
 
   useEffect(() => {
     if (cache.pendingPosts) {
@@ -58,16 +55,10 @@ export default function useChronologicalSubscription(
 
     sub.on("event", (event) => {
       if (!event.created_at || !event.id) return
-
       if (filterSeen && seenEventIds.has(event.id)) return
 
       if (!showingPosts.current.has(event.id) && !pendingPosts.current.has(event.id)) {
         pendingPosts.current.set(event.id, event.created_at)
-      }
-
-      if (!hasInitialData && pendingPosts.current.size >= INITIAL_DATA_THRESHOLD) {
-        setHasInitialData(true)
-        cache.hasInitialData = true
       }
 
       cache.pendingPosts = pendingPosts.current
@@ -108,6 +99,5 @@ export default function useChronologicalSubscription(
 
   return {
     getNextChronological,
-    hasInitialData,
   }
 }
