@@ -12,10 +12,6 @@ export interface PopularityFilters {
   authors: string[] | undefined
 }
 
-interface PopularityFiltersCache {
-  filterLevel?: number
-}
-
 function calculateFilters(level: number, baseAuthors: string[]): PopularityFilters {
   const timeMultiplier = Math.pow(2, level) // 1x, 2x, 4x, 8x days
   const limitMultiplier = Math.pow(1.5, level) // 1x, 1.5x, 2.25x, 3.375x limit
@@ -42,10 +38,8 @@ function calculateFilters(level: number, baseAuthors: string[]): PopularityFilte
   }
 }
 
-export default function usePopularityFilters(cache: PopularityFiltersCache) {
-  const [filterLevel, setFilterLevel] = useState(
-    typeof cache.filterLevel === "number" ? cache.filterLevel : 0
-  )
+export default function usePopularityFilters() {
+  const [filterLevel, setFilterLevel] = useState(0)
   const [currentFilters, setCurrentFilters] = useState<PopularityFilters>({
     timeRange: BASE_TIME_RANGE,
     limit: BASE_LIMIT,
@@ -68,11 +62,7 @@ export default function usePopularityFilters(cache: PopularityFiltersCache) {
   }, [filterLevel, baseAuthors])
 
   const expandFilters = useCallback(() => {
-    setFilterLevel((prev) => {
-      const newLevel = prev + 1
-      cache.filterLevel = newLevel
-      return newLevel
-    })
+    setFilterLevel((prev) => prev + 1)
   }, [])
 
   return {

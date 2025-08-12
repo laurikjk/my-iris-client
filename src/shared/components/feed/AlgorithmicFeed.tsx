@@ -1,7 +1,7 @@
 import FeedWidget from "./FeedWidget"
 import useAlgorithmicFeed from "@/shared/hooks/useAlgorithmicFeed"
 import {useFeedStore, type FeedType} from "@/stores/feed"
-import {getOrCreateAlgorithmicFeedCache} from "@/utils/memcache"
+import {useEffect} from "react"
 import {useScrollContainer} from "@/contexts/useScrollContainer"
 
 interface FeedDisplayOptions {
@@ -22,12 +22,14 @@ const defaultDisplayOptions: FeedDisplayOptions = {
 const feedConfigs = {
   popular: {
     filterSeen: false,
+    showReplies: false,
     includeChronological: false,
     emptyMessage: "No popular posts found",
     loadingMessage: "Loading popular posts...",
   },
   "for-you": {
-    filterSeen: false,
+    filterSeen: true,
+    showReplies: false,
     includeChronological: true,
     emptyMessage: "No posts found for you",
     loadingMessage: "Loading your personalized feed...",
@@ -47,14 +49,17 @@ const AlgorithmicFeed = function AlgorithmicFeed({
 
   const config = feedConfigs[type]
 
-  const cache = getOrCreateAlgorithmicFeedCache(type)
-
   const {feedDisplayAs: displayAs, setFeedDisplayAs: setDisplayAs} = useFeedStore()
 
-  const {events, loadMore, loading} = useAlgorithmicFeed(cache, {
+  const {events, loadMore, loading} = useAlgorithmicFeed({
     filterSeen: config.filterSeen,
+    showReplies: config.showReplies,
     popularRatio: config.includeChronological ? 0.5 : 1.0,
   })
+
+  useEffect(() => {
+    loadMore() // Initial load
+  }, [loadMore])
 
   return (
     <FeedWidget
