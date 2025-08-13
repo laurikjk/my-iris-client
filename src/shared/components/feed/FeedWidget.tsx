@@ -18,6 +18,7 @@ interface FeedWidgetProps {
   loadingMessage?: string
   maxItems?: number
   small?: boolean
+  scrollContainer?: HTMLDivElement | null
 }
 
 const FeedWidget = memo(function FeedWidget({
@@ -31,6 +32,7 @@ const FeedWidget = memo(function FeedWidget({
   loadingMessage = "",
   maxItems,
   small = true,
+  scrollContainer = null,
 }: FeedWidgetProps) {
   const displayEvents = maxItems ? events.slice(0, maxItems) : events
 
@@ -88,6 +90,7 @@ const FeedWidget = memo(function FeedWidget({
             console.warn("FeedWidget loadMore triggered (with events)")
             loadMore()
           }}
+          scrollContainer={scrollContainer}
         >
           {renderEvents()}
         </InfiniteScroll>

@@ -1,14 +1,13 @@
 import {ReactNode, useCallback, useEffect, useRef} from "react"
-import {useMainScrollContainer} from "@/contexts/ScrollContext"
 
 type Props = {
   onLoadMore: () => void
   children: ReactNode
+  scrollContainer?: HTMLDivElement | null
 }
 
-const InfiniteScroll = ({onLoadMore, children}: Props) => {
+const InfiniteScroll = ({onLoadMore, children, scrollContainer}: Props) => {
   const observerRef = useRef<HTMLDivElement | null>(null)
-  const scrollContainer = useMainScrollContainer()
 
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
