@@ -214,7 +214,7 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
     }
   }
 
-  const publish = () => {
+  const publish = async () => {
     const event = new NDKEvent(ndk())
     event.kind = 1
     event.content = noteContent
@@ -235,12 +235,19 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
     console.log("event tags:", event.tags)
 
     addTags(event, repliedEvent, quotedEvent)
-    event.sign().then(() => {
-      eventsByIdCache.set(event.id, event)
-      resetDraft()
-      handleClose()
+    await event.sign()
+
+    // Cache the event
+    eventsByIdCache.set(event.id, event)
+    resetDraft()
+    handleClose()
+
+    // Navigate to the post if not a reply
+    if (!repliedEvent) {
       navigate(`/${nip19.noteEncode(event.id)}`)
-    })
+    }
+
+    // Publish in the background
     event.publish().catch((error) => {
       console.warn(`Note could not be published: ${error}`)
     })

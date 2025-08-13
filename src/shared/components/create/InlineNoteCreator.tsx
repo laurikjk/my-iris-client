@@ -1,6 +1,8 @@
 import {ChangeEvent, useState, useRef, useEffect, KeyboardEvent} from "react"
 import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
 import {RiSendPlaneFill, RiAttachment2} from "@remixicon/react"
+import {nip19} from "nostr-tools"
+import {useNavigate} from "@/navigation"
 
 import UploadButton from "@/shared/components/button/UploadButton"
 import EmojiButton from "@/shared/components/emoji/EmojiButton"
@@ -31,6 +33,7 @@ function InlineNoteCreator({
   useDraftStore: useDraft = true,
 }: InlineNoteCreatorProps) {
   const myPubKey = usePublicKey()
+  const navigate = useNavigate()
   const [isFocused, setIsFocused] = useState(false)
 
   // Use draft store or local state based on prop
@@ -217,13 +220,24 @@ function InlineNoteCreator({
       resetDraft()
       setIsFocused(false)
 
+      // Blur the textarea to close the form
+      textareaRef.current?.blur()
+
       if (onPublish) {
         onPublish(event)
       }
 
-      await event.publish()
+      // Navigate to the post if not a reply
+      if (!repliedEvent) {
+        navigate(`/${nip19.noteEncode(event.id)}`)
+      }
+
+      // Publish in the background
+      event.publish().catch((error) => {
+        console.warn(`Note could not be published: ${error}`)
+      })
     } catch (error) {
-      console.warn(`Note could not be published: ${error}`)
+      console.warn(`Note could not be signed: ${error}`)
     }
   }
 
