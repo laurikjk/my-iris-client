@@ -117,6 +117,7 @@ export default function useCombinedPostFetcher({
     newEvents.forEach((event) => addSeenEventId(event.id))
 
     setEvents(newEvents)
+    hasLoadedInitial.current = true
     setLoading(false)
   }, [loadBatch])
 
@@ -176,14 +177,22 @@ export default function useCombinedPostFetcher({
   useEffect(() => {
     const hasAnyData = hasPopularData || hasChronologicalData
     if (hasAnyData && !hasLoadedInitial.current) {
-      hasLoadedInitial.current = true
       loadInitial()
     }
   }, [hasPopularData, hasChronologicalData, loadInitial])
 
+  // Consider loading if:
+  // 1. We're actively loading
+  // 2. We haven't loaded initial data yet and have data sources
+  // 3. We don't have any data sources ready yet (prevents flash on startup)
+  const isInitializing =
+    !hasLoadedInitial.current && (hasPopularData || hasChronologicalData)
+  const waitingForDataSources =
+    !hasLoadedInitial.current && !hasPopularData && !hasChronologicalData
+
   return {
     events,
-    loading,
+    loading: loading || isInitializing || waitingForDataSources,
     loadMore,
   }
 }

@@ -5,7 +5,6 @@ import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import MediaFeed from "./MediaFeed"
 import {DisplayAsSelector} from "./DisplayAsSelector"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import runningOstrich from "@/assets/running-ostrich.gif"
 
 interface FeedWidgetProps {
   events: NDKEvent[]
@@ -39,21 +38,19 @@ const FeedWidget = memo(function FeedWidget({
   if (loading && events.length === 0) {
     return loadingMessage ? (
       <div className={small ? "px-4 py-2" : "p-8 flex items-center justify-center"}>
-        <div className="flex flex-col items-center gap-2">
-          <img src={runningOstrich} alt="Loading..." className="w-16 h-16" />
-          <span className="text-base-content/50 text-sm">{loadingMessage}</span>
-        </div>
+        <span className="text-base-content/50 text-sm">{loadingMessage}</span>
       </div>
     ) : null
   }
 
   if (displayEvents.length === 0) {
     // Don't wrap empty content in InfiniteScroll - it causes endless loops
-    return (
+    // Only show empty message if we're not currently loading
+    return !loading ? (
       <div className={small ? "px-4 py-2" : "p-8 flex items-center justify-center"}>
         <span className="text-base-content/50 text-sm">{emptyMessage}</span>
       </div>
-    )
+    ) : null
   }
 
   const renderEvents = () => {

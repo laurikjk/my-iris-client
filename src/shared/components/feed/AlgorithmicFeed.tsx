@@ -56,10 +56,6 @@ const AlgorithmicFeed = function AlgorithmicFeed({
     popularRatio: config.includeChronological ? 0.5 : 1.0,
   })
 
-  if (loading && events.length === 0) {
-    return null
-  }
-
   return (
     <FeedWidget
       events={events}
