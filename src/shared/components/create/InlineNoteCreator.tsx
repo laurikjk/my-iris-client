@@ -2,7 +2,7 @@ import {ChangeEvent, useState, useRef, useEffect, KeyboardEvent} from "react"
 import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
 import {RiSendPlaneFill, RiAttachment2} from "@remixicon/react"
 import {nip19} from "nostr-tools"
-import {useNavigate} from "@/navigation"
+import {useNavigate, Link} from "@/navigation"
 
 import UploadButton from "@/shared/components/button/UploadButton"
 import EmojiButton from "@/shared/components/emoji/EmojiButton"
@@ -259,7 +259,9 @@ function InlineNoteCreator({
   return (
     <div ref={containerRef} className={`border-b border-custom ${className}`}>
       <div className="flex gap-3 px-4 py-3">
-        <Avatar pubKey={myPubKey} width={40} showBadge={false} />
+        <Link href={`/${nip19.npubEncode(myPubKey)}`} className="flex-shrink-0">
+          <Avatar pubKey={myPubKey} width={40} showBadge={false} />
+        </Link>
         <div className="flex-1">
           <textarea
             ref={textareaRef}
