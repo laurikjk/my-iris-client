@@ -83,7 +83,6 @@ export default function PullToRefresh({
 
     if (currentPullDistance.current >= threshold && !isRefreshing) {
       setIsRefreshing(true)
-      onRefresh()
 
       if (contentRef.current) {
         contentRef.current.style.transform = `translate3d(0, ${threshold}px, 0)`
@@ -91,6 +90,13 @@ export default function PullToRefresh({
       if (indicatorRef.current) {
         indicatorRef.current.style.height = `${threshold}px`
       }
+
+      // Delay the refresh callback to allow animation to complete smoothly
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          onRefresh()
+        }, 100)
+      })
 
       setTimeout(() => {
         setIsRefreshing(false)
