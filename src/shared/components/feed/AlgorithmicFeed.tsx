@@ -2,11 +2,11 @@ import FeedWidget from "./FeedWidget"
 import useAlgorithmicFeed from "@/shared/hooks/useAlgorithmicFeed"
 import {useFeedStore, type FeedType} from "@/stores/feed"
 import {getOrCreateAlgorithmicFeedCache} from "@/utils/memcache"
+import {useScrollContainer} from "@/contexts/ScrollContext"
 
 interface FeedDisplayOptions {
   small?: boolean
   showDisplaySelector?: boolean
-  randomSort?: boolean
 }
 
 interface AlgorithmicFeedProps {
@@ -17,7 +17,6 @@ interface AlgorithmicFeedProps {
 const defaultDisplayOptions: FeedDisplayOptions = {
   small: false,
   showDisplaySelector: true,
-  randomSort: false,
 }
 
 const feedConfigs = {
@@ -39,7 +38,9 @@ const AlgorithmicFeed = function AlgorithmicFeed({
   type,
   displayOptions = {},
 }: AlgorithmicFeedProps) {
-  const {small, showDisplaySelector, randomSort} = {
+  const scrollContainer = useScrollContainer()
+
+  const {small, showDisplaySelector} = {
     ...defaultDisplayOptions,
     ...displayOptions,
   }
@@ -70,7 +71,7 @@ const AlgorithmicFeed = function AlgorithmicFeed({
       emptyMessage={config.emptyMessage}
       loadingMessage={config.loadingMessage}
       small={small}
-      randomSort={randomSort}
+      scrollContainer={scrollContainer}
     />
   )
 }

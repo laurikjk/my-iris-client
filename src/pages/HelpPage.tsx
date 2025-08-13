@@ -148,7 +148,6 @@ export const AboutPage = () => {
                 displayOptions={{
                   small: true,
                   showDisplaySelector: false,
-                  randomSort: true,
                 }}
               />
             </Widget>

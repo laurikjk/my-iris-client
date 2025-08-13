@@ -159,7 +159,6 @@ export default function ThreadPage({
                   displayOptions={{
                     small: true,
                     showDisplaySelector: false,
-                    randomSort: true,
                   }}
                 />
               </Widget>

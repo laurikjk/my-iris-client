@@ -18,7 +18,7 @@ interface FeedWidgetProps {
   loadingMessage?: string
   maxItems?: number
   small?: boolean
-  randomSort?: boolean
+  scrollContainer?: HTMLDivElement | null
 }
 
 const FeedWidget = memo(function FeedWidget({
@@ -32,11 +32,9 @@ const FeedWidget = memo(function FeedWidget({
   loadingMessage = "",
   maxItems,
   small = true,
-  randomSort = false,
+  scrollContainer = null,
 }: FeedWidgetProps) {
-  // Apply randomization if requested
-  const sortedEvents = randomSort ? [...events].sort(() => Math.random() - 0.5) : events
-  const displayEvents = maxItems ? sortedEvents.slice(0, maxItems) : sortedEvents
+  const displayEvents = maxItems ? events.slice(0, maxItems) : events
 
   if (loading && events.length === 0) {
     return loadingMessage ? (
@@ -92,6 +90,7 @@ const FeedWidget = memo(function FeedWidget({
             console.warn("FeedWidget loadMore triggered (with events)")
             loadMore()
           }}
+          scrollContainer={scrollContainer}
         >
           {renderEvents()}
         </InfiniteScroll>

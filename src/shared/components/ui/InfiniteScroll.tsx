@@ -3,18 +3,15 @@ import {ReactNode, useCallback, useEffect, useRef} from "react"
 type Props = {
   onLoadMore: () => void
   children: ReactNode
+  scrollContainer?: HTMLDivElement | null
 }
 
-const InfiniteScroll = ({onLoadMore, children}: Props) => {
+const InfiniteScroll = ({onLoadMore, children, scrollContainer}: Props) => {
   const observerRef = useRef<HTMLDivElement | null>(null)
 
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
       const target = entries[0]
-      console.log(
-        "InfiniteScroll observer triggered, isIntersecting:",
-        target.isIntersecting
-      )
       if (target.isIntersecting) {
         onLoadMore()
       }
@@ -23,30 +20,8 @@ const InfiniteScroll = ({onLoadMore, children}: Props) => {
   )
 
   useEffect(() => {
-    // TODO hack to get this working with nested scrollable containers in column layout
-    const findScrollRoot = () => {
-      if (!observerRef.current) return null
-
-      let element = observerRef.current.parentElement
-      while (element) {
-        const style = window.getComputedStyle(element)
-        if (style.overflowY === "scroll" || style.overflowY === "auto") {
-          // Skip the PullToRefresh data-scrollable div to find the actual scroll container
-          if (element.hasAttribute("data-scrollable")) {
-            element = element.parentElement
-            continue
-          }
-          return element
-        }
-        element = element.parentElement
-      }
-      return null
-    }
-
-    const scrollRoot = findScrollRoot()
-
     const observerOptions = {
-      root: scrollRoot,
+      root: scrollContainer,
       rootMargin: "1000px",
       threshold: 1.0,
     }
@@ -61,7 +36,7 @@ const InfiniteScroll = ({onLoadMore, children}: Props) => {
         observer.unobserve(observerRef.current)
       }
     }
-  }, [handleObserver])
+  }, [handleObserver, scrollContainer])
 
   return (
     <>
