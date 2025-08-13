@@ -1,4 +1,4 @@
-import HomeFeedEvents from "@/pages/home/feed/components/HomeFeedEvents.tsx"
+import HomeFeed from "@/pages/home/feed/components/HomeFeed.tsx"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
@@ -12,7 +12,7 @@ function Index() {
   const {appearance} = useSettingsStore()
   const isLargeScreen = useIsLargeScreen()
 
-  // On mobile, always show HomeFeedEvents regardless of settings
+  // On mobile, always show HomeFeed regardless of settings
   if (!isLargeScreen) {
     return (
       <section
@@ -20,13 +20,13 @@ function Index() {
         data-main-scroll-container="mobile"
       >
         <div className="w-full pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]">
-          <HomeFeedEvents />
+          <HomeFeed />
         </div>
       </section>
     )
   }
 
-  // When two-column layout is enabled on desktop (singleColumnLayout is false), HomeFeedEvents is shown in Layout
+  // When two-column layout is enabled on desktop (singleColumnLayout is false), HomeFeed is shown in Layout
   // So here we just show a placeholder message
   if (!appearance.singleColumnLayout) {
     return <HomeRightColumn />
@@ -39,7 +39,7 @@ function Index() {
       data-main-scroll-container="single-column"
     >
       <div className="flex-1">
-        <HomeFeedEvents />
+        <HomeFeed />
       </div>
       <RightColumn>
         {() => (

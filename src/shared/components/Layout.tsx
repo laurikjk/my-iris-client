@@ -13,7 +13,7 @@ import {useUIStore} from "@/stores/ui"
 import {Helmet} from "react-helmet"
 import {useEffect, ReactNode, useRef} from "react"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
-import HomeFeedEvents from "@/pages/home/feed/components/HomeFeedEvents"
+import HomeFeed from "@/pages/home/feed/components/HomeFeed"
 import {ScrollProvider} from "@/contexts/ScrollContext"
 
 const openedAt = Math.floor(Date.now() / 1000)
@@ -133,7 +133,7 @@ const Layout = ({children}: {children: ReactNode}) => {
             data-main-scroll-container="middle-column"
           >
             <ScrollProvider scrollContainerRef={middleColumnRef}>
-              <HomeFeedEvents />
+              <HomeFeed />
             </ScrollProvider>
           </div>
         )}

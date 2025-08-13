@@ -33,7 +33,7 @@ const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
     </div>
   ) : null
 
-function HomeFeedEvents() {
+function HomeFeed() {
   const containerRef = useRef<HTMLDivElement>(null)
   const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true) // to update on follows change
@@ -249,4 +249,4 @@ function HomeFeedEvents() {
   )
 }
 
-export default HomeFeedEvents
+export default HomeFeed
