@@ -2,6 +2,7 @@ import {ChangeEvent, DragEvent, useEffect, useState} from "react"
 import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
 import {useNavigate} from "@/navigation"
 import {nip19} from "nostr-tools"
+import {RiAttachment2} from "@remixicon/react"
 
 import UploadButton from "@/shared/components/button/UploadButton.tsx"
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
@@ -292,15 +293,20 @@ function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps)
 
       <div className="flex justify-between items-center">
         <div className="flex gap-2">
-          <UploadButton onUpload={handleUpload} multiple={true} />
+          <UploadButton
+            onUpload={handleUpload}
+            multiple={true}
+            className="btn btn-ghost btn-circle btn-sm md:btn-md left-2"
+            text={<RiAttachment2 className="w-6 h-6" />}
+          />
           {!isTouchDevice && <EmojiButton onEmojiSelect={handleEmojiSelect} />}
         </div>
         <button
-          className="btn btn-primary"
+          className="btn btn-primary btn-sm"
           onClick={publish}
           disabled={!noteContent.trim()}
         >
-          Publish
+          Post
         </button>
       </div>
 

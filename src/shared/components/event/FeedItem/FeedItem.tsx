@@ -28,6 +28,8 @@ import ZapReceiptHeader from "../ZapReceiptHeader"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 import {KIND_TEXT_NOTE, KIND_REACTION, KIND_ZAP_RECEIPT} from "@/utils/constants"
+import InlineNoteCreator from "@/shared/components/create/InlineNoteCreator"
+import {usePublicKey} from "@/stores/user"
 
 type FeedItemProps = {
   event?: NDKEvent
@@ -67,6 +69,7 @@ function FeedItem({
   const navigate = useNavigate()
   const subscriptionRef = useRef<NDKSubscription | null>(null)
   const {content} = useSettingsStore()
+  const myPubKey = usePublicKey()
 
   // Handle highlight animation with lightning-like flash
   useEffect(() => {
@@ -331,6 +334,13 @@ function FeedItem({
       </div>
       {showReplies > 0 && (eventId || event?.id) && (
         <div className="flex flex-col justify-center">
+          {standalone && myPubKey && (
+            <InlineNoteCreator
+              repliedEvent={event}
+              placeholder="Reply to this post..."
+              useDraftStore={false}
+            />
+          )}
           <Feed
             asReply={true}
             feedConfig={{

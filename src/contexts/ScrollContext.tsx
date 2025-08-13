@@ -1,11 +1,5 @@
-import {ReactNode, createContext, useContext, RefObject} from "react"
-
-const ScrollContext = createContext<RefObject<HTMLDivElement | null> | null>(null)
-
-export const useScrollContainer = () => {
-  const ref = useContext(ScrollContext)
-  return ref?.current || null
-}
+import {ReactNode, RefObject} from "react"
+import {ScrollContext} from "./ScrollContextValue"
 
 export const ScrollProvider = ({
   children,

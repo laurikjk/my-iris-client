@@ -22,6 +22,7 @@ import {
 import FeedTabs from "@/shared/components/feed/FeedTabs"
 import FeedEditor from "@/shared/components/feed/FeedEditor"
 import PullToRefresh from "@/shared/components/ui/PullToRefresh"
+import InlineNoteCreator from "@/shared/components/create/InlineNoteCreator"
 
 const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
   myPubKey ? (
@@ -210,6 +211,12 @@ function HomeFeed() {
         <NotificationPrompt />
         <PullToRefresh onRefresh={triggerFeedRefresh}>
           <div data-scrollable className="overflow-y-auto">
+            {myPubKey && (
+              <InlineNoteCreator
+                onPublish={() => triggerFeedRefresh()}
+                placeholder="What's on your mind?"
+              />
+            )}
             {(() => {
               if (!myPubKey) return <AlgorithmicFeed type="popular" />
 
