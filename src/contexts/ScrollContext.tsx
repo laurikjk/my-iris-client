@@ -2,7 +2,7 @@ import {ReactNode, createContext, useContext, RefObject} from "react"
 
 const ScrollContext = createContext<RefObject<HTMLDivElement | null> | null>(null)
 
-export const useMainScrollContainer = () => {
+export const useScrollContainer = () => {
   const ref = useContext(ScrollContext)
   return ref?.current || null
 }
