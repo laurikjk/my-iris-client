@@ -259,7 +259,7 @@ function InlineNoteCreator({
   return (
     <div ref={containerRef} className={`border-b border-custom ${className}`}>
       <div className="flex gap-3 px-4 py-3">
-        <Link href={`/${nip19.npubEncode(myPubKey)}`} className="flex-shrink-0">
+        <Link to={`/${nip19.npubEncode(myPubKey)}`} className="flex-shrink-0">
           <Avatar pubKey={myPubKey} width={40} showBadge={false} />
         </Link>
         <div className="flex-1">

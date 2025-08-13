@@ -7,7 +7,6 @@ import NotificationButton from "./NotificationButton"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "@/navigation"
 import {useUIStore} from "@/stores/ui"
-import {Avatar} from "../user/Avatar"
 import classNames from "classnames"
 
 interface HeaderProps {
@@ -167,11 +166,7 @@ const Header = ({
 
   const getButtonContent = () => {
     if (showBack) return <RiArrowLeftLine className="w-6 h-6" />
-    return myPubKey ? (
-      <Avatar pubKey={myPubKey} width={32} showBadge={false} />
-    ) : (
-      <RiMenuLine className="w-6 h-6" />
-    )
+    return <RiMenuLine className="w-6 h-6" />
   }
 
   const handleButtonClick = () => {
