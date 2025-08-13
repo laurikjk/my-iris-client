@@ -42,9 +42,11 @@ export default function PullToRefresh({
         isPulling.current = false
         currentPullDistance.current = 0
         if (contentRef.current) {
+          contentRef.current.style.transition = "transform 0.3s ease"
           contentRef.current.style.transform = "translate3d(0, 0, 0)"
         }
         if (indicatorRef.current) {
+          indicatorRef.current.style.transition = "height 0.3s ease"
           indicatorRef.current.style.height = "0px"
           indicatorRef.current.style.display = "none"
         }
@@ -61,14 +63,17 @@ export default function PullToRefresh({
         currentPullDistance.current = actualDistance
 
         if (contentRef.current) {
+          contentRef.current.style.transition = "none"
           contentRef.current.style.transform = `translate3d(0, ${actualDistance}px, 0)`
         }
         if (indicatorRef.current) {
           indicatorRef.current.style.display = "flex"
+          indicatorRef.current.style.transition = "none"
           indicatorRef.current.style.height = `${actualDistance}px`
         }
         if (ostrichRef.current) {
           const opacity = Math.min(actualDistance / threshold, 1)
+          ostrichRef.current.style.transition = "none"
           ostrichRef.current.style.opacity = `${opacity}`
         }
       }
@@ -84,39 +89,55 @@ export default function PullToRefresh({
     if (currentPullDistance.current >= threshold && !isRefreshing) {
       setIsRefreshing(true)
 
+      // Immediately start rolling up
+      currentPullDistance.current = 0
       if (contentRef.current) {
-        contentRef.current.style.transform = `translate3d(0, ${threshold}px, 0)`
+        contentRef.current.style.transition = "transform 0.3s ease"
+        contentRef.current.style.transform = "translate3d(0, 0, 0)"
       }
       if (indicatorRef.current) {
-        indicatorRef.current.style.height = `${threshold}px`
+        indicatorRef.current.style.transition = "height 0.3s ease"
+        indicatorRef.current.style.height = "0px"
+        setTimeout(() => {
+          if (indicatorRef.current) {
+            indicatorRef.current.style.display = "none"
+          }
+        }, 300)
+      }
+      if (ostrichRef.current) {
+        ostrichRef.current.style.transition = "opacity 0.3s ease"
+        ostrichRef.current.style.opacity = "0"
       }
 
-      // Delay the refresh callback to allow animation to complete smoothly
+      // Trigger refresh after animation starts
       requestAnimationFrame(() => {
         setTimeout(() => {
           onRefresh()
         }, 100)
       })
 
+      // Reset the refreshing state after a delay
       setTimeout(() => {
         setIsRefreshing(false)
-        currentPullDistance.current = 0
-        if (contentRef.current) {
-          contentRef.current.style.transform = "translate3d(0, 0, 0)"
-        }
-        if (indicatorRef.current) {
-          indicatorRef.current.style.height = "0px"
-          indicatorRef.current.style.display = "none"
-        }
-      }, 1000)
+      }, 500)
     } else {
       currentPullDistance.current = 0
       if (contentRef.current) {
+        contentRef.current.style.transition = "transform 0.3s ease"
         contentRef.current.style.transform = "translate3d(0, 0, 0)"
       }
       if (indicatorRef.current) {
+        indicatorRef.current.style.transition = "height 0.3s ease"
         indicatorRef.current.style.height = "0px"
-        indicatorRef.current.style.display = "none"
+        setTimeout(() => {
+          if (indicatorRef.current) {
+            indicatorRef.current.style.display = "none"
+          }
+        }, 300)
+      }
+      if (ostrichRef.current) {
+        ostrichRef.current.style.transition = "opacity 0.3s ease"
+        ostrichRef.current.style.opacity = "0"
       }
     }
   }, [threshold, isRefreshing, onRefresh])
