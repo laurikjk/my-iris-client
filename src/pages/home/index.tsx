@@ -52,7 +52,6 @@ function Index() {
                 displayOptions={{
                   small: true,
                   showDisplaySelector: false,
-                  randomSort: true,
                 }}
               />
             </Widget>

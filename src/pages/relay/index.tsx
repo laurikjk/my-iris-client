@@ -113,7 +113,6 @@ function RelayPage() {
                 displayOptions={{
                   small: true,
                   showDisplaySelector: false,
-                  randomSort: true,
                 }}
               />
             </Widget>

@@ -227,7 +227,6 @@ function UserPage({pubKey}: {pubKey: string}) {
                       displayOptions={{
                         small: true,
                         showDisplaySelector: false,
-                        randomSort: true,
                       }}
                     />
                   </Widget>

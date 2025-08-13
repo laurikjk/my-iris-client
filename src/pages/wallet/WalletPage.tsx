@@ -61,7 +61,6 @@ export default function WalletPage() {
                 displayOptions={{
                   small: true,
                   showDisplaySelector: false,
-                  randomSort: true,
                 }}
               />
             </Widget>
