@@ -1,24 +1,17 @@
 import {
   MouseEvent as ReactMouseEvent,
   TouchEvent as ReactTouchEvent,
-  useEffect,
+  useMemo,
   useState,
 } from "react"
 import {FloatingEmojiPicker} from "@/shared/components/emoji/FloatingEmojiPicker"
-import {shouldHideAuthor} from "@/utils/visibility"
-import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
 import {useScrollAwareLongPress} from "@/shared/hooks/useScrollAwareLongPress"
-import debounce from "lodash/debounce"
 import EmojiType from "@/types/emoji"
 import Icon from "../../Icons/Icon"
-import {ndk} from "@/utils/ndk"
-
-const likeCache = new LRUCache<string, Set<string>>({
-  maxSize: 100,
-})
+import {useReactionsByAuthor} from "@/shared/hooks/useReactions"
 
 export const FeedItemLike = ({
   event,
@@ -28,12 +21,20 @@ export const FeedItemLike = ({
   showReactionCounts?: boolean
 }) => {
   const myPubKey = useUserStore((state) => state.publicKey)
-  const cachedLikes = likeCache.get(event.id)
-  const [likesByAuthor, setLikesByAuthor] = useState<Set<string>>(
-    cachedLikes || new Set()
-  )
-  const [likeCount, setLikeCount] = useState(likesByAuthor.size)
-  const [myReaction, setMyReaction] = useState<string>("+")
+  const reactionsByAuthor = useReactionsByAuthor(event.id)
+
+  const likesByAuthor = useMemo(() => {
+    if (!showReactionCounts) return new Set<string>()
+    const likesSet = new Set<string>()
+    for (const [pubkey] of reactionsByAuthor) {
+      likesSet.add(pubkey)
+    }
+    return likesSet
+  }, [reactionsByAuthor, showReactionCounts])
+
+  const myReactionEvent = reactionsByAuthor.get(myPubKey || "")
+  const myReaction = myReactionEvent?.content || "+"
+
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [pickerPosition, setPickerPosition] = useState<{clientY?: number}>({})
   const {
@@ -65,15 +66,7 @@ export const FeedItemLike = ({
   const like = async () => {
     if (!myPubKey || likesByAuthor.has(myPubKey)) return
     try {
-      event.react("+")
-      setMyReaction("+")
-      setLikesByAuthor((prev) => {
-        const newSet = new Set(prev)
-        newSet.add(myPubKey)
-        likeCache.set(event.id, newSet)
-        setLikeCount(newSet.size)
-        return newSet
-      })
+      await event.react("+")
     } catch (error) {
       console.warn(`Could not publish reaction: ${error}`)
     }
@@ -83,15 +76,7 @@ export const FeedItemLike = ({
     if (!myPubKey) return
     try {
       await event.react(emoji.native)
-      setMyReaction(emoji.native)
       setShowEmojiPicker(false)
-      setLikesByAuthor((prev) => {
-        const newSet = new Set(prev)
-        newSet.add(myPubKey)
-        likeCache.set(event.id, newSet)
-        setLikeCount(newSet.size)
-        return newSet
-      })
     } catch (error) {
       console.warn(`Could not publish reaction: ${error}`)
     }
@@ -102,43 +87,6 @@ export const FeedItemLike = ({
       like()
     }
   }
-
-  useEffect(() => {
-    if (!showReactionCounts) return
-
-    const filter = {
-      kinds: [7],
-      ["#e"]: [event.id],
-    }
-
-    try {
-      const sub = ndk().subscribe(filter)
-      const debouncedUpdate = debounce((likesSet: Set<string>) => {
-        setLikeCount(likesSet.size)
-      }, 300)
-
-      sub?.on("event", (likeEvent: NDKEvent) => {
-        if (shouldHideAuthor(likeEvent.author.pubkey)) return
-        if (likeEvent.pubkey === myPubKey) {
-          setMyReaction(likeEvent.content)
-        }
-        setLikesByAuthor((prev) => {
-          const newSet = new Set(prev)
-          newSet.add(likeEvent.pubkey)
-          likeCache.set(event.id, newSet)
-          debouncedUpdate(newSet)
-          return newSet
-        })
-      })
-
-      return () => {
-        sub.stop()
-        debouncedUpdate.cancel()
-      }
-    } catch (error) {
-      console.warn(error)
-    }
-  }, [showReactionCounts])
 
   const liked = likesByAuthor.has(myPubKey)
 
@@ -166,7 +114,7 @@ export const FeedItemLike = ({
     >
       {getReactionIcon()}
       <span data-testid="like-count">
-        {showReactionCounts ? formatAmount(likeCount) : ""}
+        {showReactionCounts ? formatAmount(likesByAuthor.size) : ""}
       </span>
 
       <FloatingEmojiPicker

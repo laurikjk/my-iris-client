@@ -1,81 +1,16 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {useEffect, useState, useMemo, ReactNode, useRef} from "react"
-import {shouldHideAuthor} from "@/utils/visibility"
-import {ndk} from "@/utils/ndk"
+import {useMemo, ReactNode, useRef, useState} from "react"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {Name} from "@/shared/components/user/Name"
-
-interface ReactionInfo {
-  emoji: string
-  pubkeys: Set<string>
-  event?: NDKEvent // Store one event to get emoji tags from
-  isCustom?: boolean
-  emojiUrl?: string
-}
+import {useUserStore} from "@/stores/user"
+import {useReactions, ReactionInfo} from "@/shared/hooks/useReactions"
 
 interface ReactionsBarProps {
   event: NDKEvent
 }
 
 export default function ReactionsBar({event}: ReactionsBarProps) {
-  const [reactions, setReactions] = useState<Map<string, ReactionInfo>>(new Map())
-
-  useEffect(() => {
-    const filter = {
-      kinds: [7],
-      ["#e"]: [event.id],
-    }
-
-    const sub = ndk().subscribe(filter)
-
-    sub?.on("event", (reactionEvent: NDKEvent) => {
-      if (shouldHideAuthor(reactionEvent.author.pubkey)) return
-
-      const content = reactionEvent.content || "+"
-
-      // Check if it's a custom emoji
-      const customEmojiMatch = content.match(/^:([a-zA-Z0-9_-]+):$/)
-      let key = content
-      let emojiUrl: string | undefined
-      let isCustom = false
-
-      if (customEmojiMatch) {
-        const shortcode = customEmojiMatch[1]
-        const emojiTag = reactionEvent.tags.find(
-          (tag) => tag[0] === "emoji" && tag[1] === shortcode && tag[2]
-        )
-
-        if (emojiTag && emojiTag[2]) {
-          // Key by URL for custom emojis
-          key = emojiTag[2]
-          emojiUrl = emojiTag[2]
-          isCustom = true
-        }
-      }
-
-      setReactions((prev) => {
-        const newMap = new Map(prev)
-        const existing = newMap.get(key) || {
-          emoji: content,
-          pubkeys: new Set(),
-          event: reactionEvent,
-          isCustom,
-          emojiUrl,
-        }
-        existing.pubkeys.add(reactionEvent.pubkey)
-        // Keep the first reaction event for custom emoji rendering
-        if (!existing.event) {
-          existing.event = reactionEvent
-        }
-        newMap.set(key, existing)
-        return newMap
-      })
-    })
-
-    return () => {
-      sub.stop()
-    }
-  }, [event.id])
+  const reactions = useReactions(event.id)
 
   // Sort reactions by count
   const sortedReactions = Array.from(reactions.values()).sort(
@@ -100,6 +35,12 @@ export default function ReactionsBar({event}: ReactionsBarProps) {
       )
     }
 
+    // Check if it looks like a custom emoji shortcode that wasn't matched
+    if (emoji.startsWith(":") && emoji.endsWith(":")) {
+      // Return the shortcode as text if no URL was found
+      return emoji
+    }
+
     // Default emoji rendering
     return emoji
   }
@@ -118,6 +59,7 @@ export default function ReactionsBar({event}: ReactionsBarProps) {
               key={reaction.emojiUrl || reaction.emoji || index}
               reaction={reaction}
               renderEmoji={renderEmoji}
+              event={event}
             />
           ))
         )}
@@ -129,13 +71,15 @@ export default function ReactionsBar({event}: ReactionsBarProps) {
 interface ReactionItemProps {
   reaction: ReactionInfo
   renderEmoji: (reaction: ReactionInfo) => ReactNode
+  event: NDKEvent
 }
 
-function ReactionItem({reaction, renderEmoji}: ReactionItemProps) {
+function ReactionItem({reaction, renderEmoji, event}: ReactionItemProps) {
   const [showTooltip, setShowTooltip] = useState(false)
   const [tooltipPosition, setTooltipPosition] = useState({top: 0, left: 0})
-  const buttonRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const pubkeysArray = useMemo(() => Array.from(reaction.pubkeys), [reaction.pubkeys])
+  const myPubKey = useUserStore((state) => state.publicKey)
 
   const handleMouseEnter = () => {
     if (buttonRef.current) {
@@ -152,21 +96,64 @@ function ReactionItem({reaction, renderEmoji}: ReactionItemProps) {
     setShowTooltip(false)
   }
 
+  const handleClick = async () => {
+    if (!myPubKey) return
+
+    try {
+      // Send reaction with the same emoji
+      const emojiToSend = reaction.emoji
+
+      // Handle custom emoji - send in :shortcode: format
+      if (reaction.isCustom && reaction.event) {
+        const customEmojiMatch = reaction.emoji.match(/^:([a-zA-Z0-9_-]+):$/)
+        if (customEmojiMatch) {
+          const shortcode = customEmojiMatch[1]
+          const emojiTag = reaction.event.tags.find(
+            (tag) => tag[0] === "emoji" && tag[1] === shortcode
+          )
+          if (emojiTag) {
+            // Create a new event with custom emoji tags
+            const reactionEvent = await event.react(reaction.emoji)
+            if (reactionEvent && emojiTag[2]) {
+              // Add emoji tag to the reaction event
+              reactionEvent.tags.push(["emoji", shortcode, emojiTag[2]])
+              await reactionEvent.publish()
+              return
+            }
+          }
+        }
+      }
+
+      // For regular emojis and "+"
+      await event.react(emojiToSend)
+    } catch (error) {
+      console.warn(`Could not publish reaction: ${error}`)
+    }
+  }
+
   const maxToShow = 10
   const toShow = pubkeysArray.slice(0, maxToShow)
   const remaining = pubkeysArray.length - maxToShow
 
+  const hasReacted = myPubKey && reaction.pubkeys.has(myPubKey)
+
   return (
     <>
-      <div
+      <button
         ref={buttonRef}
-        className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-base-content/5 border border-base-content/10 text-sm cursor-default"
+        className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm cursor-pointer transition-all ${
+          hasReacted
+            ? "bg-primary/20 border-primary/30 text-primary"
+            : "bg-base-content/5 border-base-content/10 hover:bg-base-content/10"
+        }`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onClick={handleClick}
+        disabled={!myPubKey}
       >
         <span className="text-base align-middle">{renderEmoji(reaction)}</span>
         <span className="font-semibold">{reaction.pubkeys.size}</span>
-      </div>
+      </button>
       {showTooltip && (
         <div
           className="fixed px-3 py-2 bg-neutral text-neutral-content rounded-lg shadow-xl text-sm z-[9999] pointer-events-none"

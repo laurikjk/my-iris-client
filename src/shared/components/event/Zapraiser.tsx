@@ -30,12 +30,6 @@ function Zapraiser({event}: ZapraiserProps) {
 
   return (
     <div className="flex flex-col gap-2 px-4">
-      <h1 className="flex gap-2">
-        <b>{event.tagValue("title")}</b>
-        <span className="text-gray-500">
-          in repository <b>{event.tagValue("repo")}</b>
-        </span>
-      </h1>
       <HyperText>{event.content}</HyperText>
       <div className="flex flex-col gap-2 mt-4 mb-2">
         <p className="self-center">Zap Goal {zapProgress} %</p>
