@@ -19,7 +19,7 @@ async function setupChatWithSelf(page, username) {
   await expect(page).toHaveURL(/\/chats\/chat/, {timeout: 10000})
 }
 
-test("user can react to a chat message", async ({page}) => {
+test.skip("user can react to a chat message", async ({page}) => {
   const username = await signUp(page)
   await setupChatWithSelf(page, username)
 

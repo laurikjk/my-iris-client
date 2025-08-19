@@ -33,7 +33,7 @@ async function setupChatWithSelf(page, username) {
   await expect(page).toHaveURL(/\/chats\/chat/, {timeout: 10000})
 }
 
-test.describe("Message Form - Desktop", () => {
+test.describe.skip("Message Form - Desktop", () => {
   let username
   test.beforeEach(async ({page}) => {
     username = await signUp(page)

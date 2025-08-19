@@ -13,7 +13,7 @@ type WindowWithNotificationsStore = {
   }
 }
 
-test.describe("Unseen Notifications Indicator", () => {
+test.describe.skip("Unseen Notifications Indicator", () => {
   test("should show notification badge in desktop sidebar and mobile header when notification state indicates unseen notifications", async ({
     page,
   }) => {

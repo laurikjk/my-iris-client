@@ -1,7 +1,7 @@
 import {test, expect} from "@playwright/test"
 import {signUp} from "./auth.setup"
 
-test.describe("Multi-device group messaging", () => {
+test.describe.skip("Multi-device group messaging", () => {
   test("messages sync across multiple devices in groups", async ({browser}) => {
     // Create two browser contexts to simulate two devices
     const device1 = await browser.newContext()

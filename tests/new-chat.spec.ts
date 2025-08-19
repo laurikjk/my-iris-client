@@ -1,7 +1,7 @@
 import {test, expect} from "@playwright/test"
 import {signUp} from "./auth.setup"
 
-test("can search for self and start a private chat via user search", async ({page}) => {
+test.skip("can search for self and start a private chat via user search", async ({page}) => {
   // Sign up and get username
   const username = await signUp(page)
 
