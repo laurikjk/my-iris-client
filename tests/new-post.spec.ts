@@ -10,7 +10,10 @@ test("user can create a new post", async ({page}) => {
 
   // Fill in the post content
   const postContent = "Hello, this is my first post!"
-  await page.getByRole("dialog").getByPlaceholder("What's on your mind?").fill(postContent)
+  await page
+    .getByRole("dialog")
+    .getByPlaceholder("What's on your mind?")
+    .fill(postContent)
 
   // Click publish (button text is "Post" not "Publish")
   await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()

@@ -1,7 +1,9 @@
 import {test, expect} from "@playwright/test"
 import {signUp} from "./auth.setup"
 
-test.skip("can search for self and start a private chat via user search", async ({page}) => {
+test.skip("can search for self and start a private chat via user search", async ({
+  page,
+}) => {
   // Sign up and get username
   const username = await signUp(page)
 
@@ -59,7 +61,7 @@ test.skip("can search for self and start a private chat via user search", async 
   // Find the last (most likely visible) message input
   // Use last() since there are multiple and the visible one is likely the last one
   const messageInput = page.getByPlaceholder("Message").last()
-  
+
   // Wait for it to be visible and fill it
   await expect(messageInput).toBeVisible({timeout: 5000})
   await messageInput.fill("Hello")
@@ -67,7 +69,7 @@ test.skip("can search for self and start a private chat via user search", async 
 
   // Verify message appears in chat - wait a bit for message to be processed
   await page.waitForTimeout(1000)
-  
+
   // Look for the message text anywhere in the page
   // The message might be wrapped in various components
   await expect(page.getByText("Hello").first()).toBeVisible({timeout: 5000})
