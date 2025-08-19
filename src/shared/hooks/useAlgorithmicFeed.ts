@@ -60,18 +60,5 @@ export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig 
     popularRatio,
   })
 
-  const getPopularPendingCount = () => {
-    return cache.reactionSubscription.pendingReactionCounts?.size || 0
-  }
-
-  const getChronologicalPendingCount = () => {
-    return cache.chronologicalSubscription?.pendingPosts?.size || 0
-  }
-
-  const isStuck =
-    result.events.length === 0 &&
-    !result.loading &&
-    (getPopularPendingCount() > 0 || getChronologicalPendingCount() > 0)
-
-  return {...result, isStuck}
+  return result
 }

@@ -28,6 +28,8 @@ export default function useChronologicalSubscription(
   const showingPosts = useRef<Map<string, number>>(new Map())
   const pendingPosts = useRef<Map<string, number>>(new Map())
   const [timeRange, setTimeRange] = useState(cache.timeRange || INITIAL_TIME_RANGE)
+  const subscriptionPromise = useRef<Promise<void> | null>(null)
+  const resolveSubscription = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     if (cache.pendingPosts) {
@@ -51,6 +53,11 @@ export default function useChronologicalSubscription(
       limit: 300,
     }
 
+    // Create a new promise for this subscription
+    subscriptionPromise.current = new Promise<void>((resolve) => {
+      resolveSubscription.current = resolve
+    })
+
     const sub = ndk().subscribe(chronologicalFilter)
 
     sub.on("event", (event) => {
@@ -65,6 +72,13 @@ export default function useChronologicalSubscription(
       cache.showingPosts = showingPosts.current
     })
 
+    sub.on("eose", () => {
+      if (resolveSubscription.current) {
+        resolveSubscription.current()
+        resolveSubscription.current = null
+      }
+    })
+
     return () => sub.stop()
   }, [follows, isSocialGraphLoaded, timeRange])
 
@@ -76,10 +90,14 @@ export default function useChronologicalSubscription(
     })
   }, [])
 
-  const getNextChronological = (n: number): string[] => {
+  const getNextChronological = async (n: number): Promise<string[]> => {
     const currentPendingCount = pendingPosts.current.size
     if (currentPendingCount <= LOW_THRESHOLD) {
       expandTimeRange()
+      // Wait for the subscription to complete before proceeding
+      if (subscriptionPromise.current) {
+        await subscriptionPromise.current
+      }
     }
 
     const top = Array.from(pendingPosts.current.entries())

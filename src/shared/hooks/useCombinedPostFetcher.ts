@@ -10,8 +10,8 @@ interface CombinedPostFetcherCache {
 }
 
 interface CombinedPostFetcherProps {
-  getNextPopular: (n: number) => string[]
-  getNextChronological: (n: number) => string[]
+  getNextPopular: (n: number) => Promise<string[]>
+  getNextChronological: (n: number) => Promise<string[]>
   cache: CombinedPostFetcherCache
   popularRatio?: number
 }
@@ -36,18 +36,18 @@ export default function useCombinedPostFetcher({
       const popularCount = Math.floor(batchSize * popularRatio)
       const chronologicalCount = batchSize - popularCount
 
-      const popularIds = getNextPopular(popularCount)
-      const chronologicalIds = getNextChronological(chronologicalCount)
+      const popularIds = await getNextPopular(popularCount)
+      const chronologicalIds = await getNextChronological(chronologicalCount)
 
       let allIds = [...new Set([...popularIds, ...chronologicalIds])]
 
       if (allIds.length < batchSize) {
         const remainingNeeded = batchSize - allIds.length
         if (popularIds.length < remainingNeeded) {
-          const extraPopular = getNextPopular(remainingNeeded)
+          const extraPopular = await getNextPopular(remainingNeeded)
           allIds = [...new Set([...allIds, ...extraPopular])]
         } else if (chronologicalIds.length < remainingNeeded) {
-          const extraChronological = getNextChronological(remainingNeeded)
+          const extraChronological = await getNextChronological(remainingNeeded)
           allIds = [...new Set([...allIds, ...extraChronological])]
         }
       }
@@ -77,9 +77,15 @@ export default function useCombinedPostFetcher({
     try {
       const newEvents = await loadBatch(10)
 
+      console.warn(
+        `useCombinedPostFetcher.loadMore fetched ${newEvents.length} new events`
+      )
       newEvents.forEach((event) => addSeenEventId(event.id))
 
       setEvents((prevEvents) => {
+        console.warn(
+          `useCombinedPostFetcher.loadMore updating events from ${prevEvents.length} to ${prevEvents.length + newEvents.length}`
+        )
         return [...prevEvents, ...newEvents]
       })
 

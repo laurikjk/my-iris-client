@@ -52,19 +52,15 @@ const AlgorithmicFeed = function AlgorithmicFeed({
 
   const {feedDisplayAs: displayAs, setFeedDisplayAs: setDisplayAs} = useFeedStore()
 
-  const {events, loadMore, loading, isStuck} = useAlgorithmicFeed(cache, {
+  const {events, loadMore, loading} = useAlgorithmicFeed(cache, {
     filterSeen: config.filterSeen,
     popularRatio: config.includeChronological ? 0.5 : 1.0,
   })
 
   useEffect(() => {
     if (events.length === 0 && !loading) loadMore()
-    if (isStuck) loadMore()
-  }, [isStuck])
+  }, [])
 
-  if (loading && events.length === 0) {
-    return null
-  }
   return (
     <FeedWidget
       events={events}

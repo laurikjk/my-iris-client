@@ -23,6 +23,8 @@ export default function useReactionSubscription(
   const isSocialGraphLoaded = useSocialGraphLoaded()
   const showingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const pendingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
+  const subscriptionPromise = useRef<Promise<void> | null>(null)
+  const resolveSubscription = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     if (cache.pendingReactionCounts) {
@@ -49,6 +51,11 @@ export default function useReactionSubscription(
       limit,
     }
 
+    // Create a new promise for this subscription
+    subscriptionPromise.current = new Promise<void>((resolve) => {
+      resolveSubscription.current = resolve
+    })
+
     const sub = ndk().subscribe(reactionFilter)
 
     sub.on("event", (event) => {
@@ -72,13 +79,24 @@ export default function useReactionSubscription(
       cache.showingReactionCounts = showingReactionCounts.current
     })
 
+    sub.on("eose", () => {
+      if (resolveSubscription.current) {
+        resolveSubscription.current()
+        resolveSubscription.current = null
+      }
+    })
+
     return () => sub.stop()
   }, [currentFilters, isSocialGraphLoaded])
 
-  const getNextMostPopular = (n: number): string[] => {
+  const getNextMostPopular = async (n: number): Promise<string[]> => {
     const currentPendingCount = pendingReactionCounts.current.size
     if (currentPendingCount <= LOW_THRESHOLD) {
       expandFilters()
+      // Wait for the subscription to complete before proceeding
+      if (subscriptionPromise.current) {
+        await subscriptionPromise.current
+      }
     }
 
     const top = Array.from(pendingReactionCounts.current.entries())
