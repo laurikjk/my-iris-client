@@ -29,7 +29,7 @@ const feedConfigs = {
     loadingMessage: "Loading popular posts...",
   },
   "for-you": {
-    filterSeen: true,
+    filterSeen: false,
     showReplies: false,
     includeChronological: true,
     emptyMessage: "No posts found for you",
@@ -54,7 +54,7 @@ const AlgorithmicFeed = function AlgorithmicFeed({
 
   const {feedDisplayAs: displayAs, setFeedDisplayAs: setDisplayAs} = useFeedStore()
 
-  const {events, loadMore, loading, isStuck} = useAlgorithmicFeed(cache, {
+  const {events, loadMore, loading} = useAlgorithmicFeed(cache, {
     filterSeen: config.filterSeen,
     showReplies: config.showReplies,
     popularRatio: config.includeChronological ? 0.5 : 1.0,
@@ -62,8 +62,7 @@ const AlgorithmicFeed = function AlgorithmicFeed({
 
   useEffect(() => {
     if (events.length === 0 && !loading) loadMore()
-    if (isStuck) loadMore()
-  }, [isStuck])
+  }, [])
 
   if (loading && events.length === 0) {
     return null

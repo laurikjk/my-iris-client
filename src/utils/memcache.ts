@@ -22,58 +22,27 @@ export const imgproxyFailureCache = new LRUCache<string, boolean>({maxSize: 100}
 export const loadedImageCache = new LRUCache<string, string>({maxSize: 200})
 
 // Special feed cache interfaces
-
-interface ReactionSubscriptionCache {
-  pendingReactionCounts?: Map<string, Set<string>>
-  showingReactionCounts?: Map<string, Set<string>>
-}
-
-interface PopularityFiltersCache {
-  filterLevel?: number
-}
-
-interface ChronologicalSubscriptionCache {
-  pendingPosts?: Map<string, number>
-  showingPosts?: Map<string, number>
-  timeRange?: number
-}
+import type {SubscriptionCache} from "@/shared/hooks/useNostrSubscriptions"
 
 interface CombinedPostFetcherCache {
   events?: NDKEvent[]
 }
 
-interface PostFetcherCache {
-  events?: NDKEvent[]
-}
-
-interface PopularHomeFeedCache {
-  postFetcher: PostFetcherCache
-  reactionSubscription: ReactionSubscriptionCache
-  popularityFilters: PopularityFiltersCache
-  chronologicalSubscription?: ChronologicalSubscriptionCache
-}
-
-interface ForYouFeedCache {
-  combinedPostFetcher: CombinedPostFetcherCache
-  reactionSubscription: ReactionSubscriptionCache
-  chronologicalSubscription: ChronologicalSubscriptionCache
-  popularityFilters: PopularityFiltersCache
+interface AlgorithmicFeedCache {
+  combinedPostFetcher?: CombinedPostFetcherCache
+  subscriptionCache: SubscriptionCache
 }
 
 // Simple cache for popular home feed - no LRU needed since there's only one instance
-export const popularHomeFeedCache: PopularHomeFeedCache = {
-  postFetcher: {},
-  reactionSubscription: {},
-  popularityFilters: {},
-  chronologicalSubscription: {},
+export const popularHomeFeedCache: AlgorithmicFeedCache = {
+  combinedPostFetcher: {},
+  subscriptionCache: {},
 }
 
 // Cache for for-you feed
-export const forYouFeedCache: ForYouFeedCache = {
+export const forYouFeedCache: AlgorithmicFeedCache = {
   combinedPostFetcher: {},
-  reactionSubscription: {},
-  chronologicalSubscription: {},
-  popularityFilters: {},
+  subscriptionCache: {},
 }
 
 export const getOrCreateAlgorithmicFeedCache = (feedId: FeedType) => {
@@ -110,14 +79,10 @@ export const addSeenEventId = (id: string) => {
 
 export const clearAlgorithmicFeedCaches = () => {
   // Clear popular feed cache
-  popularHomeFeedCache.postFetcher = {}
-  popularHomeFeedCache.reactionSubscription = {}
-  popularHomeFeedCache.popularityFilters = {}
-  popularHomeFeedCache.chronologicalSubscription = {}
+  popularHomeFeedCache.combinedPostFetcher = {}
+  popularHomeFeedCache.subscriptionCache = {}
 
   // Clear for-you feed cache
   forYouFeedCache.combinedPostFetcher = {}
-  forYouFeedCache.reactionSubscription = {}
-  forYouFeedCache.chronologicalSubscription = {}
-  forYouFeedCache.popularityFilters = {}
+  forYouFeedCache.subscriptionCache = {}
 }

@@ -1,6 +1,5 @@
 import {useState, useEffect, useRef, useCallback} from "react"
-import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
-import {ndk} from "@/utils/ndk"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {addSeenEventId} from "@/utils/memcache"
 import shuffle from "lodash/shuffle"
 import {useUserStore} from "@/stores/user"
@@ -10,8 +9,8 @@ interface CombinedPostFetcherCache {
 }
 
 interface CombinedPostFetcherProps {
-  getNextPopular: (n: number) => string[]
-  getNextChronological: (n: number) => string[]
+  getNextPopular: (n: number) => Promise<NDKEvent[]>
+  getNextChronological: (n: number) => Promise<NDKEvent[]>
   cache: CombinedPostFetcherCache
   popularRatio?: number
 }
@@ -36,34 +35,18 @@ export default function useCombinedPostFetcher({
       const popularCount = Math.floor(batchSize * popularRatio)
       const chronologicalCount = batchSize - popularCount
 
-      const popularIds = getNextPopular(popularCount)
-      const chronologicalIds = getNextChronological(chronologicalCount)
+      const [popularEvents, chronologicalEvents] = await Promise.all([
+        getNextPopular(popularCount),
+        getNextChronological(chronologicalCount),
+      ])
 
-      let allIds = [...new Set([...popularIds, ...chronologicalIds])]
+      // Combine and deduplicate events
+      const eventMap = new Map<string, NDKEvent>()
+      popularEvents.forEach((e) => eventMap.set(e.id, e))
+      chronologicalEvents.forEach((e) => eventMap.set(e.id, e))
 
-      if (allIds.length < batchSize) {
-        const remainingNeeded = batchSize - allIds.length
-        if (popularIds.length < remainingNeeded) {
-          const extraPopular = getNextPopular(remainingNeeded)
-          allIds = [...new Set([...allIds, ...extraPopular])]
-        } else if (chronologicalIds.length < remainingNeeded) {
-          const extraChronological = getNextChronological(remainingNeeded)
-          allIds = [...new Set([...allIds, ...extraChronological])]
-        }
-      }
-
-      if (allIds.length === 0) {
-        return []
-      }
-
-      const postFilter: NDKFilter = {
-        ids: allIds,
-      }
-
-      const fetchedEvents = await ndk().fetchEvents(postFilter)
-      const eventsArray = Array.from(fetchedEvents)
-
-      const shuffledEvents = shuffle(eventsArray)
+      const combinedEvents = Array.from(eventMap.values())
+      const shuffledEvents = shuffle(combinedEvents)
 
       return shuffledEvents
     },
@@ -71,6 +54,9 @@ export default function useCombinedPostFetcher({
   )
 
   const loadMore = useCallback(async () => {
+    if (isLoadingRef.current || loading) {
+      return
+    }
     isLoadingRef.current = true
     setLoading(true)
 
