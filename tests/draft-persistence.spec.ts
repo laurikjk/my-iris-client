@@ -11,7 +11,10 @@ test.describe("Note draft persistence", () => {
 
     // Type some content
     const testContent = "This is a test draft that should persist"
-    await page.getByPlaceholder("What's on your mind?").fill(testContent)
+    await page
+      .getByRole("dialog")
+      .getByPlaceholder("What's on your mind?")
+      .fill(testContent)
 
     // Close the note creator
     await page.keyboard.press("Escape")
@@ -23,7 +26,9 @@ test.describe("Note draft persistence", () => {
     await page.locator("#main-content").getByTestId("new-post-button").click()
 
     // Verify the content is still there
-    await expect(page.getByPlaceholder("What's on your mind?")).toHaveValue(testContent)
+    await expect(
+      page.getByRole("dialog").getByPlaceholder("What's on your mind?")
+    ).toHaveValue(testContent)
   })
 
   test("should clear draft after publishing", async ({page}) => {
@@ -35,18 +40,25 @@ test.describe("Note draft persistence", () => {
 
     // Type some content
     const testContent = "This is a test post that will be published"
-    await page.getByPlaceholder("What's on your mind?").fill(testContent)
+    await page
+      .getByRole("dialog")
+      .getByPlaceholder("What's on your mind?")
+      .fill(testContent)
 
     // Publish the post
-    await page.getByRole("button", {name: "Publish"}).click()
+    await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
     // Wait for the note creator to close
-    await expect(page.getByPlaceholder("What's on your mind?")).not.toBeVisible()
+    await expect(
+      page.getByRole("dialog").getByPlaceholder("What's on your mind?")
+    ).not.toBeVisible()
 
     // Open note creator again
     await page.locator("#main-content").getByTestId("new-post-button").click()
 
     // Verify the content is cleared
-    await expect(page.getByPlaceholder("What's on your mind?")).toHaveValue("")
+    await expect(
+      page.getByRole("dialog").getByPlaceholder("What's on your mind?")
+    ).toHaveValue("")
   })
 })

@@ -9,23 +9,28 @@ test.describe("Post liking", () => {
     // Create a post to like
     await page.locator("#main-content").getByTestId("new-post-button").click()
     const postContent = "Test post for liking"
-    await page.getByPlaceholder("What's on your mind?").fill(postContent)
-    await page.getByRole("button", {name: "Publish"}).click()
+    await page
+      .getByRole("dialog")
+      .getByPlaceholder("What's on your mind?")
+      .fill(postContent)
+    await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
     // Verify post is visible
     await expect(page.getByText(postContent).first()).toBeVisible({timeout: 10000})
 
-    // Wait for the post to be fully loaded and like button to appear
-    await page.waitForSelector('[data-testid="like-button"]', {timeout: 5000})
+    // Find the feed item containing our post text
+    const postElement = page
+      .getByTestId("feed-item")
+      .filter({hasText: postContent})
+      .first()
 
-    // Find and click the like button for the specific post we created
-    const postElement = page.getByText(postContent).first().locator("..").locator("..")
-    const likeButton = postElement.getByTestId("like-button").first()
-    await expect(likeButton).toBeVisible()
+    // Wait for the like button within this specific post
+    const likeButton = postElement.getByTestId("like-button")
+    await expect(likeButton).toBeVisible({timeout: 5000})
     await likeButton.click()
 
     // Verify like count increased and heart is filled
-    await expect(postElement.getByTestId("like-count").first()).toHaveText("1")
+    await expect(postElement.getByTestId("like-count")).toHaveText("1")
     await expect(likeButton).toHaveClass(/text-error/)
   })
 })

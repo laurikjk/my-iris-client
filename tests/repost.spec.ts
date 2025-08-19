@@ -6,8 +6,8 @@ test("user can create a post", async ({page}) => {
 
   await page.locator("#main-content").getByTestId("new-post-button").click()
   const postContent = "Test post for basic functionality"
-  await page.getByPlaceholder("What's on your mind?").fill(postContent)
-  await page.getByRole("button", {name: "Publish"}).click()
+  await page.getByRole("dialog").getByPlaceholder("What's on your mind?").fill(postContent)
+  await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
   await expect(page.getByText(postContent).first()).toBeVisible()
 

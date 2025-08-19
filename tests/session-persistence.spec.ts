@@ -28,8 +28,8 @@ test.describe("Session persistence", () => {
     // Create a post
     await page.locator("#main-content").getByTestId("new-post-button").click()
     const postContent = "Test post after refresh"
-    await page.getByPlaceholder("What's on your mind?").fill(postContent)
-    await page.getByRole("button", {name: "Publish"}).click()
+    await page.getByRole("dialog").getByPlaceholder("What's on your mind?").fill(postContent)
+    await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
     // Wait for the post to appear in the feed
     await expect(
@@ -43,8 +43,8 @@ test.describe("Session persistence", () => {
     // Create a post first
     await page.locator("#main-content").getByTestId("new-post-button").click()
     const postContent = "Test post for liking after refresh"
-    await page.getByPlaceholder("What's on your mind?").fill(postContent)
-    await page.getByRole("button", {name: "Publish"}).click()
+    await page.getByRole("dialog").getByPlaceholder("What's on your mind?").fill(postContent)
+    await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
     // Refresh the page
     await page.reload()

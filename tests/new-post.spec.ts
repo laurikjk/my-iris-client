@@ -10,10 +10,10 @@ test("user can create a new post", async ({page}) => {
 
   // Fill in the post content
   const postContent = "Hello, this is my first post!"
-  await page.getByPlaceholder("What's on your mind?").fill(postContent)
+  await page.getByRole("dialog").getByPlaceholder("What's on your mind?").fill(postContent)
 
-  // Click publish
-  await page.getByRole("button", {name: "Publish"}).click()
+  // Click publish (button text is "Post" not "Publish")
+  await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
   // Verify we're redirected to the new post page and content is visible (use first in case of duplicates)
   await expect(page.getByText(postContent).first()).toBeVisible()
