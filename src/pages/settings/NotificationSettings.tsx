@@ -169,7 +169,7 @@ const NotificationSettings = () => {
 
   const handleDeleteSubscription = async (subscriptionId: string) => {
     try {
-      const api = new IrisAPI()
+      const api = new IrisAPI(notifications.server)
       await api.deleteSubscription(subscriptionId)
       console.log(`Deleted subscription with ID: ${subscriptionId}`)
       // Optionally, update the local state to reflect the deletion
