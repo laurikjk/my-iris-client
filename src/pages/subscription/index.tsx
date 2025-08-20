@@ -146,7 +146,7 @@ export default function SubscriptionPage() {
   const handleSubscribe = async () => {
     try {
       const irisAPI = new IrisAPI()
-      const response = await irisAPI.createSubscription({
+      const response = await irisAPI.createIrisSubscription({
         subscription_plan: plan,
         pricing_option: plans.find((x) => x.id === plan)!.price[duration as Duration]
           .pricingOptionId,

@@ -19,7 +19,7 @@ export interface Invoice {
   btcpayserver_invoice_url?: string
 }
 
-export interface Subscription {
+export interface NotificationSubscription {
   id?: string
   webhooks: unknown[]
   web_push_subscriptions: PushNotifications[]
@@ -34,8 +34,27 @@ export interface Subscription {
   subscriber: string
 }
 
-export interface SubscriptionResponse {
-  [key: string]: Subscription
+export interface CustomerSubscription {
+  id?: string
+  webhooks: unknown[]
+  web_push_subscriptions: PushNotifications[]
+  filter: {
+    ids?: string[]
+    authors?: string[]
+    kinds: number[]
+    search?: string
+    "#p"?: string[]
+    "#e"?: string[]
+  }
+  subscriber: string
+}
+
+export interface CustomerSubscriptionResponse {
+  [key: string]: CustomerSubscription
+}
+
+export interface NotificationSubscriptionResponse {
+  [key: string]: NotificationSubscription
 }
 
 export interface SubscriptionCreateResponse {
@@ -69,11 +88,11 @@ export default class IrisAPI {
     return this.#getJson<{vapid_public_key: string}>("info")
   }
 
-  getSubscriptions() {
-    return this.getJsonAuthd<SubscriptionResponse>("subscriptions/")
+  getNotificationSubscriptions() {
+    return this.getJsonAuthd<NotificationSubscriptionResponse>("subscriptions/")
   }
 
-  createSubscription(subscriptionData: {
+  createIrisSubscription(subscriptionData: {
     subscription_plan: number
     pricing_option: number
     currency: string
@@ -113,11 +132,11 @@ export default class IrisAPI {
     })
   }
 
-  updateSubscription(id: string, subscription: Subscription) {
+  updateNotificationSubscription(id: string, subscription: NotificationSubscription) {
     return this.getJsonAuthd<void>(`subscriptions/${id}`, "POST", subscription)
   }
 
-  deleteSubscription(id: string) {
+  deleteNotificationSubscription(id: string) {
     return this.getJsonAuthd<void>(`subscriptions/${id}`, "DELETE")
   }
 

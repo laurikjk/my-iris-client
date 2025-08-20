@@ -172,7 +172,7 @@ export const subscribeToDMNotifications = debounce(async () => {
 
   const store = useSettingsStore.getState()
   const api = new IrisAPI(store.notifications.server)
-  const currentSubscriptions = await api.getSubscriptions()
+  const currentSubscriptions = await api.getNotificationSubscriptions()
 
   // Create/update subscription for session authors
   if (sessionAuthors.length > 0) {
@@ -190,7 +190,7 @@ export const subscribeToDMNotifications = debounce(async () => {
       const [id, sub] = sessionSub
       const existingAuthors = sub.filter.authors || []
       if (!arrayEqual(existingAuthors, sessionAuthors)) {
-        await api.updateSubscription(id, {
+        await api.updateNotificationSubscription(id, {
           filter: messageFilter,
           web_push_subscriptions: [webPushData],
           webhooks: [],
@@ -219,7 +219,7 @@ export const subscribeToDMNotifications = debounce(async () => {
       const [id, sub] = inviteSub
       const existinginviteRecipients = sub.filter["#p"] || []
       if (!arrayEqual(existinginviteRecipients, inviteRecipients)) {
-        await api.updateSubscription(id, {
+        await api.updateNotificationSubscription(id, {
           filter: inviteFilter,
           web_push_subscriptions: [webPushData],
           webhooks: [],
@@ -262,7 +262,7 @@ export const subscribeToNotifications = debounce(async () => {
     }
 
     // Check for existing subscription on notification server
-    const currentSubscriptions = await api.getSubscriptions()
+    const currentSubscriptions = await api.getNotificationSubscriptions()
 
     // Find and delete any existing subscription with kinds [1,6,7]. remove at some point
     const oldSub = Object.entries(currentSubscriptions).find(
@@ -278,7 +278,7 @@ export const subscribeToNotifications = debounce(async () => {
     )
 
     if (oldSub) {
-      await api.deleteSubscription(oldSub[0])
+      await api.deleteNotificationSubscription(oldSub[0])
     }
 
     // Check for existing subscription with new filter
@@ -336,7 +336,7 @@ export const unsubscribeAll = async () => {
 
   const store = useSettingsStore.getState()
   const api = new IrisAPI(store.notifications.server)
-  const currentSubscriptions = await api.getSubscriptions()
+  const currentSubscriptions = await api.getNotificationSubscriptions()
 
   // Delete all matching subscriptions simultaneously
   const deletePromises = Object.entries(currentSubscriptions)
@@ -345,7 +345,7 @@ export const unsubscribeAll = async () => {
         (s) => s.endpoint === pushSubscription.endpoint
       )
     )
-    .map(([id]) => api.deleteSubscription(id))
+    .map(([id]) => api.deleteNotificationSubscription(id))
 
   await Promise.all(deletePromises)
 

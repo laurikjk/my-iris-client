@@ -3,12 +3,15 @@ import {
   subscribeToDMNotifications,
   subscribeToNotifications,
 } from "@/utils/notifications"
-import IrisAPI, {SubscriptionResponse, PushNotifications} from "@/utils/IrisAPI"
+import IrisAPI, {
+  NotificationSubscriptionResponse,
+  PushNotifications,
+} from "@/utils/IrisAPI"
+import NotificationSubscriptionItem from "./NotificationSubscriptionItem"
 import {useEffect, useState, ChangeEvent} from "react"
 import {useSettingsStore} from "@/stores/settings"
 import Icon from "@/shared/components/Icons/Icon"
 import debounce from "lodash/debounce"
-import {getEventKindInfo} from "@/utils/eventKinds.tsx"
 
 interface StatusIndicatorProps {
   status: boolean
@@ -49,10 +52,10 @@ const NotificationSettings = () => {
 
   const [isValidUrl, setIsValidUrl] = useState(true)
   const [currentEndpoint, setCurrentEndpoint] = useState<string | null>(null)
-  const [subscriptionsData, setSubscriptionsData] = useState<SubscriptionResponse>({})
+  const [subscriptionsData, setSubscriptionsData] =
+    useState<NotificationSubscriptionResponse>({})
   const [showDebugData, setShowDebugData] = useState(false)
   const [inputValue, setInputValue] = useState(notifications.server)
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
   const [debouncedValidation] = useState(() =>
     debounce((url: string) => {
@@ -157,7 +160,7 @@ const NotificationSettings = () => {
     const fetchSubscriptionsData = async () => {
       try {
         const api = new IrisAPI(notifications.server)
-        const data = await api.getSubscriptions()
+        const data = await api.getNotificationSubscriptions()
         setSubscriptionsData(data)
       } catch (error) {
         console.error("Failed to fetch subscriptions:", error)
@@ -170,7 +173,7 @@ const NotificationSettings = () => {
   const handleDeleteSubscription = async (subscriptionId: string) => {
     try {
       const api = new IrisAPI(notifications.server)
-      await api.deleteSubscription(subscriptionId)
+      await api.deleteNotificationSubscription(subscriptionId)
       console.log(`Deleted subscription with ID: ${subscriptionId}`)
       // Optionally, update the local state to reflect the deletion
       setSubscriptionsData((prevData) => {
@@ -200,18 +203,6 @@ const NotificationSettings = () => {
     setSelectedRows(new Set())
   }
 
-  const toggleRow = (id: string) => {
-    setExpandedRows((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(id)) {
-        newSet.delete(id)
-      } else {
-        newSet.add(id)
-      }
-      return newSet
-    })
-  }
-
   const toggleSelection = (id: string) => {
     setSelectedRows((prev) => {
       const newSet = new Set(prev)
@@ -225,20 +216,13 @@ const NotificationSettings = () => {
   }
 
   const toggleSelectAll = () => {
-    const allIds = Object.entries(subscriptionsData).flatMap(([id, subscription]) => {
-      if (!subscription?.web_push_subscriptions) return []
-      return subscription.web_push_subscriptions.map(() => id)
-    })
+    const allIds = Object.keys(subscriptionsData)
 
     if (selectedRows.size === allIds.length) {
       setSelectedRows(new Set())
     } else {
       setSelectedRows(new Set(allIds))
     }
-  }
-
-  const removeNullValues = (obj: Record<string, unknown>) => {
-    return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== null))
   }
 
   return (
@@ -328,11 +312,7 @@ const NotificationSettings = () => {
                   className="checkbox checkbox-sm"
                   checked={
                     selectedRows.size > 0 &&
-                    selectedRows.size ===
-                      Object.entries(subscriptionsData).flatMap(([id, subscription]) => {
-                        if (!subscription?.web_push_subscriptions) return []
-                        return subscription.web_push_subscriptions.map(() => id)
-                      }).length
+                    selectedRows.size === Object.keys(subscriptionsData).length
                   }
                   onChange={toggleSelectAll}
                 />
@@ -343,136 +323,58 @@ const NotificationSettings = () => {
           <div className="flex flex-col space-y-2 w-full">
             {Object.entries(subscriptionsData)
               .flatMap(([id, subscription]) => {
-                if (!subscription?.web_push_subscriptions) return []
-                return subscription.web_push_subscriptions.map(
-                  (pushSubscription: PushNotifications, index: number) => {
-                    const isCurrentDevice = currentEndpoint === pushSubscription.endpoint
-                    return {
-                      id,
-                      subscription,
-                      pushSubscription,
-                      index,
-                      isCurrentDevice,
+                type SubscriptionItem = {
+                  id: string
+                  subscription: typeof subscription
+                  pushSubscription: PushNotifications | null
+                  index: number
+                  isCurrentDevice: boolean
+                }
+
+                const items: SubscriptionItem[] = []
+
+                if (
+                  !subscription?.web_push_subscriptions ||
+                  subscription.web_push_subscriptions.length === 0
+                ) {
+                  items.push({
+                    id,
+                    subscription,
+                    pushSubscription: null,
+                    index: 0,
+                    isCurrentDevice: false,
+                  })
+                } else {
+                  subscription.web_push_subscriptions.forEach(
+                    (pushSubscription: PushNotifications, index: number) => {
+                      const isCurrentDevice =
+                        currentEndpoint === pushSubscription.endpoint
+                      items.push({
+                        id,
+                        subscription,
+                        pushSubscription,
+                        index,
+                        isCurrentDevice,
+                      })
                     }
-                  }
-                )
+                  )
+                }
+
+                return items
               })
               .sort((a, b) => (b.isCurrentDevice ? 1 : 0) - (a.isCurrentDevice ? 1 : 0))
-              .map(({id, subscription, pushSubscription, index, isCurrentDevice}) => {
-                const isExpanded = expandedRows.has(`${id}-${index}`)
-                const isSelected = selectedRows.has(id)
-                return (
-                  <div
-                    key={`${id}-${index}`}
-                    className={`flex flex-col w-full border rounded ${
-                      isCurrentDevice ? "border-primary bg-primary/5" : ""
-                    }`}
-                  >
-                    <div className="flex w-full items-center gap-2 p-3">
-                      <input
-                        type="checkbox"
-                        className="checkbox checkbox-sm shrink-0"
-                        checked={isSelected}
-                        onChange={() => toggleSelection(id)}
-                      />
-                      <button
-                        className="flex-1 flex items-start gap-2 text-left min-w-0"
-                        onClick={() => toggleRow(`${id}-${index}`)}
-                      >
-                        <Icon
-                          name={isExpanded ? "chevron-down" : "chevron-right"}
-                          size={16}
-                          className="shrink-0 mt-0.5"
-                        />
-                        <div className="flex-1 min-w-0 flex flex-col gap-1">
-                          <div className="flex flex-wrap items-center gap-1">
-                            <span className="break-all">
-                              {(() => {
-                                const url = new URL(pushSubscription.endpoint)
-                                const path = url.pathname
-                                const last4 = path.length > 4 ? path.slice(-4) : path
-                                return `${url.host}/...${last4}`
-                              })()}
-                            </span>
-                            {isCurrentDevice && (
-                              <span className="badge badge-primary text-xs shrink-0">
-                                This device
-                              </span>
-                            )}
-                          </div>
-                          {subscription.filter?.kinds &&
-                            subscription.filter.kinds.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {subscription.filter.kinds
-                                  .slice(0, 5)
-                                  .map((kind: number) => {
-                                    const info = getEventKindInfo(kind)
-                                    return (
-                                      <span
-                                        key={kind}
-                                        className="badge badge-xs badge-ghost flex items-center gap-0.5"
-                                        title={`Kind ${kind}`}
-                                      >
-                                        {info.icon && (
-                                          <span className={info.color}>{info.icon}</span>
-                                        )}
-                                        {info.label}
-                                      </span>
-                                    )
-                                  })}
-                                {subscription.filter.kinds.length > 5 && (
-                                  <span className="badge badge-xs badge-ghost">
-                                    +{subscription.filter.kinds.length - 5}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                        </div>
-                      </button>
-                      <button
-                        className="btn btn-ghost btn-sm btn-square shrink-0"
-                        onClick={() => handleDeleteSubscription(id)}
-                        title="Delete subscription"
-                      >
-                        <Icon name="trash" size={16} className="text-error" />
-                      </button>
-                    </div>
-                    {isExpanded && (
-                      <div className="px-3 pb-3 border-t">
-                        {subscription.filter?.kinds &&
-                          subscription.filter.kinds.length > 0 && (
-                            <div className="mt-2">
-                              <strong className="text-sm">Event Kinds:</strong>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {subscription.filter.kinds.map((kind: number) => {
-                                  const info = getEventKindInfo(kind)
-                                  return (
-                                    <span
-                                      key={kind}
-                                      className="badge badge-sm badge-neutral flex items-center gap-1"
-                                      title={`Kind ${kind}`}
-                                    >
-                                      {info.icon && (
-                                        <span className={info.color}>{info.icon}</span>
-                                      )}
-                                      {info.label}
-                                    </span>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        <div className="mt-2">
-                          <strong className="text-sm">Full Filter:</strong>
-                        </div>
-                        <pre className="w-full overflow-x-auto whitespace-pre-wrap break-all bg-base-200 p-2 rounded text-sm mt-1">
-                          {JSON.stringify(removeNullValues(subscription.filter), null, 2)}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+              .map(({id, subscription, pushSubscription, index}) => (
+                <NotificationSubscriptionItem
+                  key={`${id}-${index}`}
+                  id={id}
+                  subscription={subscription}
+                  pushSubscription={pushSubscription}
+                  currentEndpoint={currentEndpoint}
+                  onDelete={handleDeleteSubscription}
+                  isSelected={selectedRows.has(id)}
+                  onToggleSelect={toggleSelection}
+                />
+              ))}
           </div>
         </div>
 
