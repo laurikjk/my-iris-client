@@ -4,11 +4,6 @@ import useCombinedPostFetcher from "./useCombinedPostFetcher"
 import usePopularityFilters from "./usePopularityFilters"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
-interface PostFetcherCache {
-  events?: NDKEvent[]
-  hasLoadedInitial?: boolean
-}
-
 interface CombinedPostFetcherCache {
   events?: NDKEvent[]
   hasLoadedInitial?: boolean
@@ -32,7 +27,6 @@ interface PopularityFiltersCache {
 }
 
 interface FeedCache {
-  postFetcher?: PostFetcherCache
   combinedPostFetcher?: CombinedPostFetcherCache
   reactionSubscription: ReactionSubscriptionCache
   chronologicalSubscription?: ChronologicalSubscriptionCache
