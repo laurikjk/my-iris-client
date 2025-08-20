@@ -1,14 +1,21 @@
-import {useEffect, useRef, useState} from "react"
+import {useEffect, useRef, useState, useCallback} from "react"
 import {NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 import {KIND_REACTION, KIND_REPOST} from "@/utils/constants"
 import {getTag} from "@/utils/nostr"
-import {PopularityFilters} from "./usePopularityFilters"
-import {useSocialGraphLoaded} from "@/utils/socialGraph"
+import socialGraph, {
+  DEFAULT_SOCIAL_GRAPH_ROOT,
+  useSocialGraphLoaded,
+} from "@/utils/socialGraph"
 import {seenEventIds} from "@/utils/memcache"
+import {createTimestampStorage} from "@/utils/utils"
+import useFollows from "./useFollows"
+import {useUserStore} from "@/stores/user"
 
 const LOW_THRESHOLD = 20
 const INITIAL_DATA_THRESHOLD = 5
+const INITIAL_TIME_RANGE = 48 * 60 * 60 // Start with 2 days
+const TIME_RANGE_INCREMENT = 24 * 60 * 60 // Add 1 day per expansion
 
 interface ReactionSubscriptionCache {
   hasInitialData?: boolean
@@ -17,8 +24,6 @@ interface ReactionSubscriptionCache {
 }
 
 export default function useReactionSubscription(
-  currentFilters: PopularityFilters,
-  expandFilters: () => void,
   cache: ReactionSubscriptionCache,
   filterSeen?: boolean
 ) {
@@ -26,6 +31,40 @@ export default function useReactionSubscription(
   const showingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const pendingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const [hasInitialData, setHasInitialData] = useState(cache.hasInitialData || false)
+  const timeRangeStorage = createTimestampStorage(
+    "reaction_subscription_time_range",
+    INITIAL_TIME_RANGE
+  )
+  const [timeRange, setTimeRange] = useState(timeRangeStorage.get)
+
+  const myPubKey = useUserStore((state) => state.publicKey)
+  const myFollows = useFollows(myPubKey, false)
+  const shouldUseFallback = myFollows.length === 0
+
+  // Get authors with fixed follow distance (always second degree)
+  const getAuthors = () => {
+    if (!isSocialGraphLoaded) return []
+
+    const baseAuthors = shouldUseFallback
+      ? Array.from(socialGraph().getFollowedByUser(DEFAULT_SOCIAL_GRAPH_ROOT))
+      : myFollows
+
+    const expandedAuthors = new Set(baseAuthors)
+    baseAuthors.forEach((pubkey) => {
+      const secondDegreeFollows = socialGraph().getFollowedByUser(pubkey)
+      secondDegreeFollows.forEach((follow) => expandedAuthors.add(follow))
+    })
+
+    return Array.from(expandedAuthors)
+  }
+
+  const expandTimeRange = useCallback(() => {
+    setTimeRange((prev) => {
+      const newRange = prev + TIME_RANGE_INCREMENT
+      timeRangeStorage.set(newRange)
+      return newRange
+    })
+  }, [timeRangeStorage])
 
   useEffect(() => {
     if (cache.pendingReactionCounts) {
@@ -41,15 +80,17 @@ export default function useReactionSubscription(
       return
     }
 
-    const {timeRange, limit, authors: filterAuthors} = currentFilters
+    const authors = getAuthors()
+    if (!authors.length) return
+
     const now = Math.floor(Date.now() / 1000)
     const since = now - timeRange
 
     const reactionFilter: NDKFilter = {
       kinds: [KIND_REACTION, KIND_REPOST],
       since,
-      authors: filterAuthors,
-      limit,
+      authors,
+      limit: 1000, // Fixed limit
     }
 
     const sub = ndk().subscribe(reactionFilter)
@@ -83,12 +124,19 @@ export default function useReactionSubscription(
     })
 
     return () => sub.stop()
-  }, [currentFilters, hasInitialData, isSocialGraphLoaded])
+  }, [
+    timeRange,
+    hasInitialData,
+    isSocialGraphLoaded,
+    filterSeen,
+    shouldUseFallback,
+    myFollows,
+  ])
 
   const getNextMostPopular = (n: number): string[] => {
     const currentPendingCount = pendingReactionCounts.current.size
     if (currentPendingCount <= LOW_THRESHOLD) {
-      expandFilters()
+      expandTimeRange()
     }
 
     const top = Array.from(pendingReactionCounts.current.entries())
@@ -99,6 +147,9 @@ export default function useReactionSubscription(
       pendingReactionCounts.current.delete(eventId)
       showingReactionCounts.current.set(eventId, reactions)
     })
+
+    cache.pendingReactionCounts = pendingReactionCounts.current
+    cache.showingReactionCounts = showingReactionCounts.current
 
     return top.map(([eventId]) => eventId)
   }

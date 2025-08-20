@@ -29,15 +29,10 @@ interface ReactionSubscriptionCache {
   showingReactionCounts?: Map<string, Set<string>>
 }
 
-interface PopularityFiltersCache {
-  filterLevel?: number
-}
-
 interface ChronologicalSubscriptionCache {
   hasInitialData?: boolean
   pendingPosts?: Map<string, number>
   showingPosts?: Map<string, number>
-  timeRange?: number
 }
 
 interface CombinedPostFetcherCache {
@@ -53,7 +48,6 @@ interface PostFetcherCache {
 interface PopularHomeFeedCache {
   postFetcher: PostFetcherCache
   reactionSubscription: ReactionSubscriptionCache
-  popularityFilters: PopularityFiltersCache
   chronologicalSubscription?: ChronologicalSubscriptionCache
 }
 
@@ -61,14 +55,12 @@ interface ForYouFeedCache {
   combinedPostFetcher: CombinedPostFetcherCache
   reactionSubscription: ReactionSubscriptionCache
   chronologicalSubscription: ChronologicalSubscriptionCache
-  popularityFilters: PopularityFiltersCache
 }
 
 // Simple cache for popular home feed - no LRU needed since there's only one instance
 export const popularHomeFeedCache: PopularHomeFeedCache = {
   postFetcher: {},
   reactionSubscription: {},
-  popularityFilters: {},
   chronologicalSubscription: {},
 }
 
@@ -77,7 +69,6 @@ export const forYouFeedCache: ForYouFeedCache = {
   combinedPostFetcher: {},
   reactionSubscription: {},
   chronologicalSubscription: {},
-  popularityFilters: {},
 }
 
 export const getOrCreateAlgorithmicFeedCache = (feedId: FeedType) => {
@@ -102,10 +93,38 @@ localforage
     console.error("failed to load seenEventIds:", e)
   })
 
-const throttledSave = throttle(
-  () => localforage.setItem("seenEventIds", [...seenEventIds.keys()]),
-  5000
-)
+// Load timeranges for algorithmic feeds from localForage
+localforage
+  .getItem<{timeRange: number}>("reactionSubscriptionCache")
+  .then((cache) => {
+    if (cache) {
+      forYouFeedCache.reactionSubscription.timeRange = cache.timeRange
+    }
+  })
+  .catch((e) => {
+    console.error("failed to load reactionSubscriptionCache:", e)
+  })
+
+localforage
+  .getItem<{timeRange: number}>("chronologicalSubscriptionCache")
+  .then((cache) => {
+    if (cache) {
+      forYouFeedCache.reactionSubscription.timeRange = cache.timeRange
+    }
+  })
+  .catch((e) => {
+    console.error("failed to load reactionSubscriptionCache:", e)
+  })
+
+const throttledSave = throttle(() => {
+  localforage.setItem("seenEventIds", [...seenEventIds.keys()])
+  localforage.setItem("reactionSubscriptionCache", {
+    timeRange: forYouFeedCache.reactionSubscription.timeRange,
+  })
+  localforage.setItem("chronologicalSubscriptionCache", {
+    timeRange: forYouFeedCache.chronologicalSubscription.timeRange,
+  })
+}, 5000)
 
 export const addSeenEventId = (id: string) => {
   seenEventIds.set(id, true)
@@ -116,12 +135,10 @@ export const clearAlgorithmicFeedCaches = () => {
   // Clear popular feed cache
   popularHomeFeedCache.postFetcher = {}
   popularHomeFeedCache.reactionSubscription = {}
-  popularHomeFeedCache.popularityFilters = {}
   popularHomeFeedCache.chronologicalSubscription = {}
 
   // Clear for-you feed cache
   forYouFeedCache.combinedPostFetcher = {}
   forYouFeedCache.reactionSubscription = {}
   forYouFeedCache.chronologicalSubscription = {}
-  forYouFeedCache.popularityFilters = {}
 }

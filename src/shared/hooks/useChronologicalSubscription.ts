@@ -6,6 +6,7 @@ import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import useFollows from "./useFollows"
 import {useUserStore} from "@/stores/user"
 import {seenEventIds} from "@/utils/memcache"
+import {createTimestampStorage} from "@/utils/utils"
 import {getEventReplyingTo} from "@/utils/nostr"
 
 const LOW_THRESHOLD = 15
@@ -17,7 +18,6 @@ interface ChronologicalSubscriptionCache {
   hasInitialData?: boolean
   pendingPosts?: Map<string, number>
   showingPosts?: Map<string, number>
-  timeRange?: number
 }
 
 export default function useChronologicalSubscription(
@@ -31,7 +31,11 @@ export default function useChronologicalSubscription(
 
   const showingPosts = useRef<Map<string, number>>(new Map())
   const pendingPosts = useRef<Map<string, number>>(new Map())
-  const [timeRange, setTimeRange] = useState(cache.timeRange || INITIAL_TIME_RANGE)
+  const timeRangeStorage = createTimestampStorage(
+    "chronological_subscription_time_range",
+    INITIAL_TIME_RANGE
+  )
+  const [timeRange, setTimeRange] = useState(timeRangeStorage.get)
   const [hasInitialData, setHasInitialData] = useState(cache.hasInitialData || false)
 
   useEffect(() => {
@@ -86,10 +90,10 @@ export default function useChronologicalSubscription(
   const expandTimeRange = useCallback(() => {
     setTimeRange((prev) => {
       const newRange = prev + TIME_RANGE_INCREMENT
-      cache.timeRange = newRange
+      timeRangeStorage.set(newRange)
       return newRange
     })
-  }, [])
+  }, [timeRangeStorage])
 
   const getNextChronological = (n: number): string[] => {
     const currentPendingCount = pendingPosts.current.size
