@@ -59,20 +59,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 )
 
 // Subscribe to public key changes from the user store
-useUserStore.subscribe((state) => {
-  const prevPublicKey = localStorage.getItem("localState/user/publicKey")
-  let parsedPrevKey = ""
-  if (prevPublicKey) {
-    try {
-      const parsed = JSON.parse(prevPublicKey)
-      parsedPrevKey =
-        parsed && typeof parsed === "object" && "value" in parsed ? parsed.value : parsed
-    } catch (e) {
-      console.error("Error parsing prevPublicKey:", e)
-    }
-  }
-
-  if (state.publicKey && state.publicKey !== parsedPrevKey) {
+useUserStore.subscribe((state, prevState) => {
+  // Only proceed if public key actually changed
+  if (state.publicKey && state.publicKey !== prevState.publicKey) {
     console.log("Public key changed, initializing chat modules")
     resetDeviceInvitesInitialization() // Reset to allow re-initialization
     subscribeToNotifications()
