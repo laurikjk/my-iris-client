@@ -1,4 +1,4 @@
-import {useEffect, useRef} from "react"
+import {useEffect, useRef, useState} from "react"
 import {NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 import {KIND_REACTION, KIND_REPOST} from "@/utils/constants"
@@ -8,8 +8,10 @@ import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {seenEventIds} from "@/utils/memcache"
 
 const LOW_THRESHOLD = 20
+const INITIAL_DATA_THRESHOLD = 5
 
 interface ReactionSubscriptionCache {
+  hasInitialData?: boolean
   pendingReactionCounts?: Map<string, Set<string>>
   showingReactionCounts?: Map<string, Set<string>>
 }
@@ -23,6 +25,7 @@ export default function useReactionSubscription(
   const isSocialGraphLoaded = useSocialGraphLoaded()
   const showingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const pendingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
+  const [hasInitialData, setHasInitialData] = useState(cache.hasInitialData || false)
 
   useEffect(() => {
     if (cache.pendingReactionCounts) {
@@ -68,12 +71,19 @@ export default function useReactionSubscription(
         pendingReactionCounts.current.set(originalPostId, new Set([event.id]))
       }
 
+      if (
+        !hasInitialData &&
+        pendingReactionCounts.current.size >= INITIAL_DATA_THRESHOLD
+      ) {
+        setHasInitialData(true)
+        cache.hasInitialData = true
+      }
       cache.pendingReactionCounts = pendingReactionCounts.current
       cache.showingReactionCounts = showingReactionCounts.current
     })
 
     return () => sub.stop()
-  }, [currentFilters, isSocialGraphLoaded])
+  }, [currentFilters, hasInitialData, isSocialGraphLoaded])
 
   const getNextMostPopular = (n: number): string[] => {
     const currentPendingCount = pendingReactionCounts.current.size
@@ -95,5 +105,6 @@ export default function useReactionSubscription(
 
   return {
     getNextMostPopular,
+    hasInitialData,
   }
 }

@@ -24,6 +24,7 @@ export const loadedImageCache = new LRUCache<string, string>({maxSize: 200})
 // Special feed cache interfaces
 
 interface ReactionSubscriptionCache {
+  hasInitialData?: boolean
   pendingReactionCounts?: Map<string, Set<string>>
   showingReactionCounts?: Map<string, Set<string>>
 }
@@ -33,6 +34,7 @@ interface PopularityFiltersCache {
 }
 
 interface ChronologicalSubscriptionCache {
+  hasInitialData?: boolean
   pendingPosts?: Map<string, number>
   showingPosts?: Map<string, number>
   timeRange?: number
@@ -40,10 +42,12 @@ interface ChronologicalSubscriptionCache {
 
 interface CombinedPostFetcherCache {
   events?: NDKEvent[]
+  hasLoadedInitial?: boolean
 }
 
 interface PostFetcherCache {
   events?: NDKEvent[]
+  hasLoadedInitial?: boolean
 }
 
 interface PopularHomeFeedCache {
