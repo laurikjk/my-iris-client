@@ -47,7 +47,7 @@ Inside container:
 - `yarn test` - Run Playwright tests
 - `yarn lint` - Run linter
 - `nvim` - Neovim with your config
-- `claude --dangerously-skip-permissions` - Claude CLI (use this flag in Docker)
+- `claude` - Claude CLI (auto-aliased with --dangerously-skip-permissions)
 
 ## Syncing Changes Without GitHub
 
@@ -66,17 +66,44 @@ docker cp $(docker-compose ps -q iris-dev):/tmp/changes.patch ./changes.patch
 git apply changes.patch
 ```
 
-### Quick aliases
+### Quick commands
 
-Add to your shell config:
+Add to your ~/.zshrc:
 
-```bash
-# Extract patch from docker
-alias iris-patch-out='docker exec $(docker-compose ps -q iris-dev) git diff > /tmp/changes.patch && docker cp $(docker-compose ps -q iris-dev):/tmp/changes.patch ./changes.patch && echo "Patch saved to ./changes.patch"'
+```zsh
+# Extract patch from docker (uncommitted changes)
+iris-patch-out() {
+  local project=${1:+-p $1}
+  docker exec $(docker-compose $project ps -q iris-dev) sh -c "cd /home/developer/iris-client && git diff" > ./changes.patch && \
+  echo "Patch saved to ./changes.patch"
+}
 
 # Apply patch in docker
-alias iris-patch-in='docker cp ./changes.patch $(docker-compose ps -q iris-dev):/tmp/changes.patch && docker exec $(docker-compose ps -q iris-dev) git apply /tmp/changes.patch'
+iris-patch-in() {
+  local project=${1:+-p $1}
+  docker cp ./changes.patch $(docker-compose $project ps -q iris-dev):/tmp/changes.patch && \
+  docker exec $(docker-compose $project ps -q iris-dev) sh -c "cd /home/developer/iris-client && git apply /tmp/changes.patch"
+}
 
-# Commit from docker and push to host
-alias iris-commit-out='docker exec $(docker-compose ps -q iris-dev) git format-patch HEAD~1 --stdout > last-commit.patch && git am last-commit.patch'
+# Pull latest commit(s) from docker and apply to host
+iris-commit-pull() {
+  local project=""
+  local n=1
+  
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -n) n=$2; shift 2;;
+      *) project="-p $1"; shift;;
+    esac
+  done
+  
+  docker exec $(docker-compose $project ps -q iris-dev) sh -c "cd /home/developer/iris-client && git format-patch HEAD~$n --stdout" | git am
+}
+
+# Usage:
+# iris-commit-pull                # pull 1 commit from default project
+# iris-commit-pull iris2          # pull 1 commit from iris2 project
+# iris-commit-pull -n 3           # pull 3 commits from default project
+# iris-commit-pull iris2 -n 2     # pull 2 commits from iris2 project
 ```

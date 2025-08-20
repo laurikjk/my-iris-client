@@ -88,6 +88,12 @@ FROM npm-tools AS dev
 # Create developer user
 RUN useradd -m -s /bin/zsh developer
 
+# Add claude alias for both users
+RUN echo 'alias claude="claude --dangerously-skip-permissions"' >> /root/.bashrc && \
+    echo 'alias claude="claude --dangerously-skip-permissions"' >> /root/.zshrc && \
+    echo 'alias claude="claude --dangerously-skip-permissions"' >> /home/developer/.bashrc && \
+    echo 'alias claude="claude --dangerously-skip-permissions"' >> /home/developer/.zshrc
+
 # Clone the repository as developer user
 RUN git clone https://github.com/irislib/iris-client.git /home/developer/iris-client && \
     chown -R developer:developer /home/developer/iris-client
