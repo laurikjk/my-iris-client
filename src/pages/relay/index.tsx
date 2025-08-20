@@ -12,6 +12,7 @@ import Widget from "@/shared/components/ui/Widget"
 import {useSettingsStore} from "@/stores/settings"
 import {Helmet} from "react-helmet"
 import RelaySelector from "@/shared/components/ui/RelaySelector"
+import RelayDetails from "@/shared/components/relay/RelayDetails"
 import {KIND_TEXT_NOTE} from "@/utils/constants"
 
 function RelayPage() {
@@ -62,6 +63,8 @@ function RelayPage() {
 
           {selectedRelayUrl && (
             <>
+              <RelayDetails relayUrl={selectedRelayUrl} />
+
               <div className="flex items-center gap-2 p-2">
                 <input
                   type="checkbox"
