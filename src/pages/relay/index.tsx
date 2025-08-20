@@ -1,4 +1,4 @@
-import {useMemo, useState, useEffect} from "react"
+import {useMemo, useState, useEffect, useRef} from "react"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import Header from "@/shared/components/header/Header"
 import useHistoryState from "@/shared/hooks/useHistoryState"
@@ -20,6 +20,7 @@ function RelayPage() {
   const decodedRelay = url ? decodeURIComponent(url) : ""
   const initialRelayUrl = decodedRelay ? `wss://${decodedRelay}` : ""
   const relayDisplayName = decodedRelay || ""
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   const [selectedRelayUrl, setSelectedRelayUrl] = useState(initialRelayUrl)
 
@@ -45,10 +46,18 @@ function RelayPage() {
   return (
     <div className="flex flex-row h-screen">
       <div className="flex flex-col items-center flex-1 h-full relative">
-        <div className="w-full max-w-screen-lg">
+        <div
+          className="w-full max-w-screen-lg"
+          onClick={() =>
+            scrollContainerRef.current?.scrollTo({top: 0, behavior: "instant"})
+          }
+        >
           <Header title={decodedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"} />
         </div>
-        <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-16 lg:pt-2 md:pb-0 overflow-y-auto">
+        <div
+          ref={scrollContainerRef}
+          className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-16 lg:pt-2 md:pb-0 overflow-y-auto"
+        >
           <RelaySelector
             selectedRelay={selectedRelayUrl}
             onRelaySelect={(newRelay) => {
