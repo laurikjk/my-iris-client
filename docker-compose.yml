@@ -1,13 +1,13 @@
 version: "3.8"
 
 services:
-  app:
-    build: .
+  iris-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     ports:
-      - "5173:5173"
-    volumes:
-      - .:/app
-      - /app/node_modules
+      - "${PORT:-5173}:5173"
     environment:
-      NODE_ENV: development
-    command: ["yarn", "start", "--", "--host"]
+      - NODE_ENV=development
+    stdin_open: true
+    tty: true

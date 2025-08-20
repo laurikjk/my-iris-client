@@ -1,6 +1,7 @@
 import {AvatarGroup} from "@/shared/components/user/AvatarGroup.tsx"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {RefObject, useEffect, useState, useRef} from "react"
+import {RefObject, useEffect, useState} from "react"
+import {createPortal} from "react-dom"
 
 interface NewEventsButtonProps {
   newEventsFiltered: NDKEvent[]
@@ -13,73 +14,58 @@ const NewEventsButton = ({
   newEventsFiltered,
   newEventsFrom,
   showNewEvents,
+  firstFeedItemRef,
 }: NewEventsButtonProps) => {
-  const buttonRef = useRef<HTMLDivElement>(null)
-  const [columnBounds, setColumnBounds] = useState<{left: number; width: number} | null>(
-    null
-  )
+  const [scrollContainer, setScrollContainer] = useState<Element | null>(null)
+  const [feedBounds, setFeedBounds] = useState<{left: number; width: number} | null>(null)
 
   useEffect(() => {
-    // Find the scrollable parent column
-    const findScrollableParent = () => {
-      let element = buttonRef.current?.parentElement
-      while (element) {
-        const style = window.getComputedStyle(element)
-        if (
-          (style.overflowY === "auto" || style.overflowY === "scroll") &&
-          element.scrollHeight > element.clientHeight
-        ) {
-          return element
+    // Find the scrollable parent container and get feed bounds
+    const findScrollContainer = () => {
+      const containers = document.querySelectorAll(".overflow-y-auto, .overflow-y-scroll")
+      for (const container of containers) {
+        if (container.scrollHeight > container.clientHeight) {
+          return container
         }
-        element = element.parentElement
       }
       return null
     }
 
-    const updatePosition = () => {
-      const scrollableParent = findScrollableParent()
-      if (scrollableParent) {
-        const rect = scrollableParent.getBoundingClientRect()
-        setColumnBounds({
+    const updateBounds = () => {
+      const container = findScrollContainer()
+      setScrollContainer(container)
+
+      // Get the feed column bounds
+      if (container) {
+        const rect = container.getBoundingClientRect()
+        setFeedBounds({
           left: rect.left,
           width: rect.width,
         })
       }
     }
 
-    updatePosition()
-    window.addEventListener("resize", updatePosition)
-    return () => window.removeEventListener("resize", updatePosition)
-  }, [])
+    updateBounds()
+    window.addEventListener("resize", updateBounds)
 
-  if (newEventsFiltered.length === 0) return null
+    return () => window.removeEventListener("resize", updateBounds)
+  }, [firstFeedItemRef])
 
-  const buttonStyle = columnBounds
-    ? {
-        left: `${columnBounds.left + columnBounds.width / 2}px`,
-        transform: "translateX(-50%)",
-        visibility: "visible" as const,
-      }
-    : {
-        visibility: "hidden" as const,
-      }
+  if (newEventsFiltered.length === 0 || !scrollContainer || !feedBounds) return null
 
-  return (
+  const button = (
     <div
-      ref={buttonRef}
-      className="fixed bottom-20 md:bottom-10 z-30 pb-[env(safe-area-inset-bottom)] pointer-events-none"
-      style={buttonStyle}
+      className="fixed bottom-20 md:bottom-10 z-30 pb-[env(safe-area-inset-bottom)]"
+      style={{
+        left: `${feedBounds.left + feedBounds.width / 2}px`,
+        transform: "translateX(-50%)",
+      }}
     >
       <button
-        className="btn btn-info shadow-xl rounded-full pointer-events-auto flex items-center gap-2 px-4 min-w-max"
+        className="btn btn-info shadow-xl rounded-full flex items-center gap-2 px-4 min-w-max"
         onClick={() => {
           showNewEvents()
-
-          // Find and scroll the container
-          const scrollContainer = buttonRef.current?.closest(".overflow-y-scroll")
-          if (scrollContainer) {
-            scrollContainer.scrollTo({top: 0, behavior: "instant"})
-          }
+          scrollContainer.scrollTo({top: 0, behavior: "instant"})
         }}
       >
         <AvatarGroup pubKeys={Array.from(newEventsFrom).slice(0, 3)} />
@@ -87,6 +73,8 @@ const NewEventsButton = ({
       </button>
     </div>
   )
+
+  return createPortal(button, document.body)
 }
 
 export default NewEventsButton

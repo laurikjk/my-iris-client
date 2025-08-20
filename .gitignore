@@ -39,6 +39,7 @@ src-tauri/target
 
 # Docker dev setup
 nvim-config
+.env
 
 # Dev relay data
 dev-relay/*.jsonl

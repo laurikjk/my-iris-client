@@ -1,8 +1,0 @@
-{
-  "name": "Node.js & TypeScript",
-  "dockerComposeFile": "../docker-compose.yml",
-  "service": "app",
-  "workspaceFolder": "/app",
-  "forwardPorts": [5173],
-  "shutdownAction": "stopCompose"
-}
