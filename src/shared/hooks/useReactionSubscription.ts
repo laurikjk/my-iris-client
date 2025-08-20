@@ -8,7 +8,6 @@ import socialGraph, {
   useSocialGraphLoaded,
 } from "@/utils/socialGraph"
 import {seenEventIds} from "@/utils/memcache"
-import {createTimestampStorage} from "@/utils/utils"
 import useFollows from "./useFollows"
 import {useUserStore} from "@/stores/user"
 
@@ -31,11 +30,7 @@ export default function useReactionSubscription(
   const showingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const pendingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const [hasInitialData, setHasInitialData] = useState(cache.hasInitialData || false)
-  const timeRangeStorage = createTimestampStorage(
-    "reaction_subscription_time_range",
-    INITIAL_TIME_RANGE
-  )
-  const [timeRange, setTimeRange] = useState(timeRangeStorage.get)
+  const [timeRange, setTimeRange] = useState(INITIAL_TIME_RANGE)
 
   const myPubKey = useUserStore((state) => state.publicKey)
   const myFollows = useFollows(myPubKey, false)
@@ -59,12 +54,8 @@ export default function useReactionSubscription(
   }
 
   const expandTimeRange = useCallback(() => {
-    setTimeRange((prev) => {
-      const newRange = prev + TIME_RANGE_INCREMENT
-      timeRangeStorage.set(newRange)
-      return newRange
-    })
-  }, [timeRangeStorage])
+    setTimeRange((prev) => prev + TIME_RANGE_INCREMENT)
+  }, [])
 
   useEffect(() => {
     if (cache.pendingReactionCounts) {

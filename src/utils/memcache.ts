@@ -93,38 +93,10 @@ localforage
     console.error("failed to load seenEventIds:", e)
   })
 
-// Load timeranges for algorithmic feeds from localForage
-localforage
-  .getItem<{timeRange: number}>("reactionSubscriptionCache")
-  .then((cache) => {
-    if (cache) {
-      forYouFeedCache.reactionSubscription.timeRange = cache.timeRange
-    }
-  })
-  .catch((e) => {
-    console.error("failed to load reactionSubscriptionCache:", e)
-  })
-
-localforage
-  .getItem<{timeRange: number}>("chronologicalSubscriptionCache")
-  .then((cache) => {
-    if (cache) {
-      forYouFeedCache.reactionSubscription.timeRange = cache.timeRange
-    }
-  })
-  .catch((e) => {
-    console.error("failed to load reactionSubscriptionCache:", e)
-  })
-
-const throttledSave = throttle(() => {
-  localforage.setItem("seenEventIds", [...seenEventIds.keys()])
-  localforage.setItem("reactionSubscriptionCache", {
-    timeRange: forYouFeedCache.reactionSubscription.timeRange,
-  })
-  localforage.setItem("chronologicalSubscriptionCache", {
-    timeRange: forYouFeedCache.chronologicalSubscription.timeRange,
-  })
-}, 5000)
+const throttledSave = throttle(
+  () => localforage.setItem("seenEventIds", [...seenEventIds.keys()]),
+  5000
+)
 
 export const addSeenEventId = (id: string) => {
   seenEventIds.set(id, true)
