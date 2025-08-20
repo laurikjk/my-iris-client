@@ -1,6 +1,7 @@
 import {useEffect, useState} from "react"
 import {fetchRelayInformation, type RelayInformation} from "nostr-tools/nip11"
 import Widget from "@/shared/components/ui/Widget"
+import {UserRow} from "@/shared/components/user/UserRow"
 
 interface ExtendedRelayInformation extends RelayInformation {
   terms_of_service?: string
@@ -70,6 +71,18 @@ function RelayDetails({relayUrl}: RelayDetailsProps) {
         </div>
 
         <div className="divider my-4"></div>
+
+        {relayInfo.pubkey && (
+          <div className="mb-4">
+            <p className="font-semibold text-sm mb-2">Relay Admin:</p>
+            <UserRow
+              pubKey={relayInfo.pubkey}
+              linkToProfile={true}
+              showBadge={true}
+              avatarWidth={40}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           {relayInfo.contact && (
