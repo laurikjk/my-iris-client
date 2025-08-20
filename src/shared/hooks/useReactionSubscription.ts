@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState, useCallback, useMemo} from "react"
+import {useEffect, useRef, useState, useCallback} from "react"
 import {NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 import {KIND_REACTION, KIND_REPOST} from "@/utils/constants"
@@ -13,16 +13,14 @@ import {useUserStore} from "@/stores/user"
 
 const LOW_THRESHOLD = 20
 const INITIAL_DATA_THRESHOLD = 5
-const BASE_TIME_RANGE = 48 * 60 * 60 // Start with 2 days
-const BASE_LIMIT = 500 // Initial limit
-const TIME_RANGE_INCREMENT = 24 * 60 * 60 // Add 1 day per level
-const LIMIT_INCREMENT = 250 // Add 250 per level
+const INITIAL_TIME_RANGE = 48 * 60 * 60 // Start with 2 days
+const TIME_RANGE_INCREMENT = 24 * 60 * 60 // Add 1 day per expansion
 
 interface ReactionSubscriptionCache {
   hasInitialData?: boolean
   pendingReactionCounts?: Map<string, Set<string>>
   showingReactionCounts?: Map<string, Set<string>>
-  filterLevel?: number
+  timeRange?: number
 }
 
 export default function useReactionSubscription(
@@ -33,16 +31,16 @@ export default function useReactionSubscription(
   const showingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const pendingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const [hasInitialData, setHasInitialData] = useState(cache.hasInitialData || false)
-  const [filterLevel, setFilterLevel] = useState(
-    typeof cache.filterLevel === "number" ? cache.filterLevel : 0
-  )
+  const [timeRange, setTimeRange] = useState(cache.timeRange || INITIAL_TIME_RANGE)
 
   const myPubKey = useUserStore((state) => state.publicKey)
   const myFollows = useFollows(myPubKey, false)
   const shouldUseFallback = myFollows.length === 0
 
-  // Use fixed follow distance - always include second degree follows
-  const fixedAuthors = useMemo(() => {
+  // Get authors with fixed follow distance (always second degree)
+  const getAuthors = () => {
+    if (!isSocialGraphLoaded) return []
+
     const baseAuthors = shouldUseFallback
       ? Array.from(socialGraph().getFollowedByUser(DEFAULT_SOCIAL_GRAPH_ROOT))
       : myFollows
@@ -54,25 +52,13 @@ export default function useReactionSubscription(
     })
 
     return Array.from(expandedAuthors)
-  }, [shouldUseFallback, myFollows])
+  }
 
-  const currentFilters = useMemo(() => {
-    // Linear expansion: add TIME_RANGE_INCREMENT and LIMIT_INCREMENT per level
-    const timeRange = BASE_TIME_RANGE + TIME_RANGE_INCREMENT * filterLevel
-    const limit = BASE_LIMIT + LIMIT_INCREMENT * filterLevel
-
-    return {
-      timeRange,
-      limit,
-      authors: fixedAuthors.length > 0 ? fixedAuthors : undefined,
-    }
-  }, [filterLevel, fixedAuthors])
-
-  const expandFilters = useCallback(() => {
-    setFilterLevel((prev) => {
-      const newLevel = prev + 1
-      cache.filterLevel = newLevel
-      return newLevel
+  const expandTimeRange = useCallback(() => {
+    setTimeRange((prev) => {
+      const newRange = prev + TIME_RANGE_INCREMENT
+      cache.timeRange = newRange
+      return newRange
     })
   }, [])
 
@@ -90,15 +76,17 @@ export default function useReactionSubscription(
       return
     }
 
-    const {timeRange, limit, authors: filterAuthors} = currentFilters
+    const authors = getAuthors()
+    if (!authors.length) return
+
     const now = Math.floor(Date.now() / 1000)
     const since = now - timeRange
 
     const reactionFilter: NDKFilter = {
       kinds: [KIND_REACTION, KIND_REPOST],
       since,
-      authors: filterAuthors,
-      limit,
+      authors,
+      limit: 1000, // Fixed limit
     }
 
     const sub = ndk().subscribe(reactionFilter)
@@ -132,12 +120,19 @@ export default function useReactionSubscription(
     })
 
     return () => sub.stop()
-  }, [currentFilters, hasInitialData, isSocialGraphLoaded, filterSeen])
+  }, [
+    timeRange,
+    hasInitialData,
+    isSocialGraphLoaded,
+    filterSeen,
+    shouldUseFallback,
+    myFollows,
+  ])
 
   const getNextMostPopular = (n: number): string[] => {
     const currentPendingCount = pendingReactionCounts.current.size
     if (currentPendingCount <= LOW_THRESHOLD) {
-      expandFilters()
+      expandTimeRange()
     }
 
     const top = Array.from(pendingReactionCounts.current.entries())
@@ -149,12 +144,14 @@ export default function useReactionSubscription(
       showingReactionCounts.current.set(eventId, reactions)
     })
 
+    cache.pendingReactionCounts = pendingReactionCounts.current
+    cache.showingReactionCounts = showingReactionCounts.current
+
     return top.map(([eventId]) => eventId)
   }
 
   return {
     getNextMostPopular,
     hasInitialData,
-    expandFilters,
   }
 }

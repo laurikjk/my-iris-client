@@ -12,6 +12,7 @@ interface ReactionSubscriptionCache {
   hasInitialData?: boolean
   pendingReactionCounts?: Map<string, Set<string>>
   showingReactionCounts?: Map<string, Set<string>>
+  timeRange?: number
 }
 
 interface ChronologicalSubscriptionCache {
