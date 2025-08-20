@@ -23,7 +23,8 @@ const NewEventsButton = ({
     // Find the scrollable parent container and get feed bounds
     const findScrollContainer = () => {
       const containers = document.querySelectorAll(".overflow-y-auto, .overflow-y-scroll")
-      for (const container of containers) {
+      for (let i = 0; i < containers.length; i++) {
+        const container = containers[i]
         if (container.scrollHeight > container.clientHeight) {
           return container
         }
