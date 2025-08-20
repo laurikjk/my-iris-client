@@ -25,6 +25,9 @@ export default function useReactionSubscription(
   const isSocialGraphLoaded = useSocialGraphLoaded()
   const showingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const pendingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
+  const oldestEventAt = useRef<number | null>(null)
+  const unfilteredEventsReceivedAfterFilterChange = useRef(0)
+  const expansionsWithoutNewEvents = useRef(0)
   const [hasInitialData, setHasInitialData] = useState(cache.hasInitialData || false)
 
   useEffect(() => {
@@ -41,27 +44,30 @@ export default function useReactionSubscription(
       return
     }
 
-    const {timeRange, limit, authors: filterAuthors} = currentFilters
+    const {since, limit, authors: filterAuthors} = currentFilters
     const now = Math.floor(Date.now() / 1000)
-    const since = now - timeRange
 
     const reactionFilter: NDKFilter = {
       kinds: [KIND_REACTION, KIND_REPOST],
       since,
+      until: oldestEventAt.current || now,
       authors: filterAuthors,
       limit,
     }
 
+    unfilteredEventsReceivedAfterFilterChange.current = 0
+
     const sub = ndk().subscribe(reactionFilter)
 
     sub.on("event", (event) => {
+      if (!event.created_at || !event.id) return
       if (event.kind !== KIND_REACTION) return
-
       const originalPostId = getTag("e", event.tags)
-
       if (!originalPostId) return
 
       if (filterSeen && seenEventIds.has(originalPostId)) return
+
+      unfilteredEventsReceivedAfterFilterChange.current += 1
 
       if (showingReactionCounts.current.has(originalPostId)) {
         showingReactionCounts.current.get(originalPostId)?.add(event.id)
@@ -82,7 +88,21 @@ export default function useReactionSubscription(
       cache.showingReactionCounts = showingReactionCounts.current
     })
 
-    return () => sub.stop()
+    const timeout = setTimeout(() => {
+      if (pendingReactionCounts.current.size <= LOW_THRESHOLD) {
+        if (unfilteredEventsReceivedAfterFilterChange.current === 0) {
+          expansionsWithoutNewEvents.current += 1
+        }
+        if (expansionsWithoutNewEvents.current < 3) {
+          expandFilters()
+        }
+      }
+    }, 5000)
+
+    return () => {
+      clearTimeout(timeout)
+      sub.stop()
+    }
   }, [currentFilters, hasInitialData, isSocialGraphLoaded])
 
   const getNextMostPopular = (n: number): string[] => {

@@ -29,15 +29,10 @@ interface ReactionSubscriptionCache {
   showingReactionCounts?: Map<string, Set<string>>
 }
 
-interface PopularityFiltersCache {
-  filterLevel?: number
-}
-
 interface ChronologicalSubscriptionCache {
   hasInitialData?: boolean
   pendingPosts?: Map<string, number>
   showingPosts?: Map<string, number>
-  timeRange?: number
 }
 
 interface CombinedPostFetcherCache {
@@ -45,49 +40,23 @@ interface CombinedPostFetcherCache {
   hasLoadedInitial?: boolean
 }
 
-interface PostFetcherCache {
-  events?: NDKEvent[]
-  hasLoadedInitial?: boolean
-}
-
-interface PopularHomeFeedCache {
-  postFetcher: PostFetcherCache
-  reactionSubscription: ReactionSubscriptionCache
-  popularityFilters: PopularityFiltersCache
-  chronologicalSubscription?: ChronologicalSubscriptionCache
-}
-
-interface ForYouFeedCache {
+interface AlgorithmicFeedCache {
   combinedPostFetcher: CombinedPostFetcherCache
   reactionSubscription: ReactionSubscriptionCache
   chronologicalSubscription: ChronologicalSubscriptionCache
-  popularityFilters: PopularityFiltersCache
 }
 
-// Simple cache for popular home feed - no LRU needed since there's only one instance
-export const popularHomeFeedCache: PopularHomeFeedCache = {
-  postFetcher: {},
-  reactionSubscription: {},
-  popularityFilters: {},
-  chronologicalSubscription: {},
-}
-
-// Cache for for-you feed
-export const forYouFeedCache: ForYouFeedCache = {
-  combinedPostFetcher: {},
-  reactionSubscription: {},
-  chronologicalSubscription: {},
-  popularityFilters: {},
-}
+export const feedCaches: Partial<Record<FeedType, AlgorithmicFeedCache>> = {}
 
 export const getOrCreateAlgorithmicFeedCache = (feedId: FeedType) => {
-  if (feedId === "popular") {
-    return popularHomeFeedCache
-  } else if (feedId === "for-you") {
-    return forYouFeedCache
-  } else {
-    throw new Error(`Unknown feed type: ${feedId}`)
+  if (!feedCaches[feedId]) {
+    feedCaches[feedId] = {
+      combinedPostFetcher: {},
+      reactionSubscription: {},
+      chronologicalSubscription: {},
+    }
   }
+  return feedCaches[feedId]
 }
 
 // Load seenEventIds from localForage
@@ -113,15 +82,19 @@ export const addSeenEventId = (id: string) => {
 }
 
 export const clearAlgorithmicFeedCaches = () => {
-  // Clear popular feed cache
-  popularHomeFeedCache.postFetcher = {}
-  popularHomeFeedCache.reactionSubscription = {}
-  popularHomeFeedCache.popularityFilters = {}
-  popularHomeFeedCache.chronologicalSubscription = {}
-
-  // Clear for-you feed cache
-  forYouFeedCache.combinedPostFetcher = {}
-  forYouFeedCache.reactionSubscription = {}
-  forYouFeedCache.chronologicalSubscription = {}
-  forYouFeedCache.popularityFilters = {}
+  // Clear all algorithmic feed caches but keep pending lists to refresh fast
+  Object.keys(feedCaches).forEach((key) => {
+    const cache = feedCaches[key as FeedType]
+    if (cache) {
+      cache.combinedPostFetcher.events = []
+      cache.combinedPostFetcher.hasLoadedInitial = false
+      cache.reactionSubscription.hasInitialData = false
+      cache.reactionSubscription.pendingReactionCounts?.clear()
+      cache.reactionSubscription.showingReactionCounts?.clear()
+      cache.chronologicalSubscription.hasInitialData = false
+      cache.chronologicalSubscription.pendingPosts?.clear()
+      cache.chronologicalSubscription.showingPosts?.clear()
+      console.warn(`Cleared algorithmic feed cache for ${key}`, cache)
+    }
+  })
 }

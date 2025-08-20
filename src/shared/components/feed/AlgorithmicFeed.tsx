@@ -22,12 +22,14 @@ const defaultDisplayOptions: FeedDisplayOptions = {
 const feedConfigs = {
   popular: {
     filterSeen: false,
+    showReplies: false,
     includeChronological: false,
     emptyMessage: "No popular posts found",
     loadingMessage: "Loading popular posts...",
   },
   "for-you": {
-    filterSeen: false,
+    filterSeen: true,
+    showReplies: false,
     includeChronological: true,
     emptyMessage: "No posts found for you",
     loadingMessage: "Loading your personalized feed...",
@@ -53,9 +55,13 @@ const AlgorithmicFeed = function AlgorithmicFeed({
 
   const {events, loadMore, loading} = useAlgorithmicFeed(cache, {
     filterSeen: config.filterSeen,
+    showReplies: config.showReplies,
     popularRatio: config.includeChronological ? 0.5 : 1.0,
   })
 
+  if (loading && events.length === 0) {
+    return null
+  }
   return (
     <FeedWidget
       events={events}

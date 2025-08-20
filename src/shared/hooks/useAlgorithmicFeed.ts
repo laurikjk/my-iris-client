@@ -4,11 +4,6 @@ import useCombinedPostFetcher from "./useCombinedPostFetcher"
 import usePopularityFilters from "./usePopularityFilters"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
-interface PostFetcherCache {
-  events?: NDKEvent[]
-  hasLoadedInitial?: boolean
-}
-
 interface CombinedPostFetcherCache {
   events?: NDKEvent[]
   hasLoadedInitial?: boolean
@@ -24,30 +19,24 @@ interface ChronologicalSubscriptionCache {
   hasInitialData?: boolean
   pendingPosts?: Map<string, number>
   showingPosts?: Map<string, number>
-  timeRange?: number
-}
-
-interface PopularityFiltersCache {
-  filterLevel?: number
 }
 
 interface FeedCache {
-  postFetcher?: PostFetcherCache
   combinedPostFetcher?: CombinedPostFetcherCache
   reactionSubscription: ReactionSubscriptionCache
   chronologicalSubscription?: ChronologicalSubscriptionCache
-  popularityFilters: PopularityFiltersCache
 }
 
 interface FeedConfig {
   filterSeen?: boolean
+  showReplies?: boolean
   popularRatio?: number
 }
 
 export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig = {}) {
-  const {filterSeen = false, popularRatio = 0.5} = config
+  const {showReplies = false, filterSeen = false, popularRatio = 0.5} = config
 
-  const {currentFilters, expandFilters} = usePopularityFilters(cache.popularityFilters)
+  const {currentFilters, expandFilters} = usePopularityFilters(filterSeen)
 
   const {getNextMostPopular, hasInitialData: hasPopularData} = useReactionSubscription(
     currentFilters,
@@ -57,7 +46,11 @@ export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig 
   )
 
   const {getNextChronological, hasInitialData: hasChronologicalData} =
-    useChronologicalSubscription(cache.chronologicalSubscription || {}, filterSeen)
+    useChronologicalSubscription(
+      cache.chronologicalSubscription || {},
+      filterSeen,
+      showReplies
+    )
 
   const result = useCombinedPostFetcher({
     getNextPopular: getNextMostPopular,
