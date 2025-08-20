@@ -1,82 +1,6 @@
-import {useState, ReactNode} from "react"
-import {
-  RiAddLine,
-  RiChat1Fill,
-  RiHeartFill,
-  RiRepeatFill,
-  RiFlashlightFill,
-  RiArticleFill,
-  RiStoreFill,
-} from "@remixicon/react"
-import {
-  KIND_TEXT_NOTE,
-  KIND_REPOST,
-  KIND_REACTION,
-  KIND_ZAP_RECEIPT,
-  KIND_LONG_FORM_CONTENT,
-  KIND_CHANNEL_MESSAGE,
-  KIND_CLASSIFIED,
-} from "@/utils/constants"
-
-interface EventKind {
-  kind: number
-  name: string
-  description: string
-  icon: ReactNode
-  color: string
-}
-
-const COMMON_EVENT_KINDS: EventKind[] = [
-  {
-    kind: KIND_TEXT_NOTE,
-    name: "Post",
-    description: "Text notes",
-    icon: <RiChat1Fill className="w-4 h-4" />,
-    color: "text-blue-500",
-  },
-  {
-    kind: KIND_REPOST,
-    name: "Repost",
-    description: "Reposts",
-    icon: <RiRepeatFill className="w-4 h-4" />,
-    color: "text-green-500",
-  },
-  {
-    kind: KIND_REACTION,
-    name: "Like",
-    description: "Reactions",
-    icon: <RiHeartFill className="w-4 h-4" />,
-    color: "text-pink-500",
-  },
-  {
-    kind: KIND_ZAP_RECEIPT,
-    name: "Zap",
-    description: "Lightning zaps",
-    icon: <RiFlashlightFill className="w-4 h-4" />,
-    color: "text-yellow-500",
-  },
-  {
-    kind: KIND_LONG_FORM_CONTENT,
-    name: "Article",
-    description: "Long-form content",
-    icon: <RiArticleFill className="w-4 h-4" />,
-    color: "text-purple-500",
-  },
-  {
-    kind: KIND_CHANNEL_MESSAGE,
-    name: "Chat",
-    description: "Channel messages",
-    icon: <RiChat1Fill className="w-4 h-4" />,
-    color: "text-cyan-500",
-  },
-  {
-    kind: KIND_CLASSIFIED,
-    name: "Market",
-    description: "Classified listings",
-    icon: <RiStoreFill className="w-4 h-4" />,
-    color: "text-orange-500",
-  },
-]
+import {useState} from "react"
+import {RiAddLine} from "@remixicon/react"
+import {getEventKindInfo, COMMON_EVENT_KINDS} from "@/utils/eventKinds.tsx"
 
 interface EventKindsSelectorProps {
   selectedKinds: number[]
@@ -95,10 +19,8 @@ function EventKindsSelector({
   // Calculate ordered event kinds only on mount, keep order fixed after that
   const [orderedEventKinds] = useState(() => {
     const selectedKindsSet = new Set(selectedKinds)
-    const selected = COMMON_EVENT_KINDS.filter((kind) => selectedKindsSet.has(kind.kind))
-    const unselected = COMMON_EVENT_KINDS.filter(
-      (kind) => !selectedKindsSet.has(kind.kind)
-    )
+    const selected = COMMON_EVENT_KINDS.filter((kind) => selectedKindsSet.has(kind))
+    const unselected = COMMON_EVENT_KINDS.filter((kind) => !selectedKindsSet.has(kind))
     return [...selected, ...unselected]
   })
 
@@ -173,32 +95,36 @@ function EventKindsSelector({
 
         {/* Show selected custom kinds (that aren't in common kinds) */}
         {selectedKinds
-          .filter((kind) => !COMMON_EVENT_KINDS.some((ek) => ek.kind === kind))
-          .map((kind) => (
+          .filter((kind) => !COMMON_EVENT_KINDS.includes(kind))
+          .map((kind) => {
+            const info = getEventKindInfo(kind)
+            return (
+              <button
+                key={kind}
+                onClick={() => toggleKind(kind)}
+                className="btn btn-sm btn-primary whitespace-nowrap flex-shrink-0"
+                title={`Custom event kind ${kind}`}
+              >
+                {info.label}
+              </button>
+            )
+          })}
+
+        {/* Common event kinds */}
+        {orderedEventKinds.map((kind) => {
+          const isSelected = selectedKinds.includes(kind)
+          const info = getEventKindInfo(kind)
+          return (
             <button
               key={kind}
               onClick={() => toggleKind(kind)}
-              className="btn btn-sm btn-primary whitespace-nowrap flex-shrink-0"
-              title={`Custom event kind ${kind}`}
-            >
-              {kind}
-            </button>
-          ))}
-
-        {/* Common event kinds */}
-        {orderedEventKinds.map((eventKind) => {
-          const isSelected = selectedKinds.includes(eventKind.kind)
-          return (
-            <button
-              key={eventKind.kind}
-              onClick={() => toggleKind(eventKind.kind)}
               className={`btn btn-sm whitespace-nowrap flex-shrink-0 gap-1 ${
                 isSelected ? "btn-primary" : "btn-neutral"
               }`}
-              title={`${eventKind.description} (kind ${eventKind.kind})`}
+              title={`${info.description || info.label} (kind ${kind})`}
             >
-              <span className={eventKind.color}>{eventKind.icon}</span>
-              {eventKind.name}
+              {info.iconLarge && <span className={info.color}>{info.iconLarge}</span>}
+              {info.label}
             </button>
           )
         })}

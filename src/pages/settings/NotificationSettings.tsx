@@ -8,6 +8,7 @@ import {useEffect, useState, ChangeEvent} from "react"
 import {useSettingsStore} from "@/stores/settings"
 import Icon from "@/shared/components/Icons/Icon"
 import debounce from "lodash/debounce"
+import {getEventKindInfo} from "@/utils/eventKinds.tsx"
 
 interface StatusIndicatorProps {
   status: boolean
@@ -383,20 +384,49 @@ const NotificationSettings = () => {
                           size={16}
                           className="shrink-0 mt-0.5"
                         />
-                        <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1">
-                          <span className="break-all">
-                            {(() => {
-                              const url = new URL(pushSubscription.endpoint)
-                              const path = url.pathname
-                              const last4 = path.length > 4 ? path.slice(-4) : path
-                              return `${url.host}/...${last4}`
-                            })()}
-                          </span>
-                          {isCurrentDevice && (
-                            <span className="badge badge-primary text-xs shrink-0">
-                              This device
+                        <div className="flex-1 min-w-0 flex flex-col gap-1">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="break-all">
+                              {(() => {
+                                const url = new URL(pushSubscription.endpoint)
+                                const path = url.pathname
+                                const last4 = path.length > 4 ? path.slice(-4) : path
+                                return `${url.host}/...${last4}`
+                              })()}
                             </span>
-                          )}
+                            {isCurrentDevice && (
+                              <span className="badge badge-primary text-xs shrink-0">
+                                This device
+                              </span>
+                            )}
+                          </div>
+                          {subscription.filter?.kinds &&
+                            subscription.filter.kinds.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {subscription.filter.kinds
+                                  .slice(0, 5)
+                                  .map((kind: number) => {
+                                    const info = getEventKindInfo(kind)
+                                    return (
+                                      <span
+                                        key={kind}
+                                        className="badge badge-xs badge-ghost flex items-center gap-0.5"
+                                        title={`Kind ${kind}`}
+                                      >
+                                        {info.icon && (
+                                          <span className={info.color}>{info.icon}</span>
+                                        )}
+                                        {info.label}
+                                      </span>
+                                    )
+                                  })}
+                                {subscription.filter.kinds.length > 5 && (
+                                  <span className="badge badge-xs badge-ghost">
+                                    +{subscription.filter.kinds.length - 5}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                         </div>
                       </button>
                       <button
@@ -409,8 +439,31 @@ const NotificationSettings = () => {
                     </div>
                     {isExpanded && (
                       <div className="px-3 pb-3 border-t">
+                        {subscription.filter?.kinds &&
+                          subscription.filter.kinds.length > 0 && (
+                            <div className="mt-2">
+                              <strong className="text-sm">Event Kinds:</strong>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {subscription.filter.kinds.map((kind: number) => {
+                                  const info = getEventKindInfo(kind)
+                                  return (
+                                    <span
+                                      key={kind}
+                                      className="badge badge-sm badge-neutral flex items-center gap-1"
+                                      title={`Kind ${kind}`}
+                                    >
+                                      {info.icon && (
+                                        <span className={info.color}>{info.icon}</span>
+                                      )}
+                                      {info.label}
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
                         <div className="mt-2">
-                          <strong>Filters:</strong>
+                          <strong className="text-sm">Full Filter:</strong>
                         </div>
                         <pre className="w-full overflow-x-auto whitespace-pre-wrap break-all bg-base-200 p-2 rounded text-sm mt-1">
                           {JSON.stringify(removeNullValues(subscription.filter), null, 2)}
