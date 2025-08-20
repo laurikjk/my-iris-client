@@ -37,8 +37,16 @@ const NewEventsButton = ({
       const container = findScrollContainer()
       setScrollContainer(container)
 
-      // Get the feed column bounds
-      if (container) {
+      // Get the feed column bounds from the first feed item for more accurate positioning
+      if (firstFeedItemRef.current) {
+        const feedItemRect = firstFeedItemRef.current.getBoundingClientRect()
+        // Use the feed item's horizontal position and width
+        setFeedBounds({
+          left: feedItemRect.left,
+          width: feedItemRect.width,
+        })
+      } else if (container) {
+        // Fallback to container bounds if no feed item
         const rect = container.getBoundingClientRect()
         setFeedBounds({
           left: rect.left,
