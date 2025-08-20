@@ -68,7 +68,7 @@ function HomeFeed() {
   // Get all feed configs from store
   const allFeeds = useMemo(() => {
     return getAllFeedConfigs()
-  }, [getAllFeedConfigs, feedConfigs, activeFeed])
+  }, [feedConfigs, enabledFeedIds])
 
   // Filter and order feeds based on enabled feed IDs from store
   const feeds = useMemo(() => {

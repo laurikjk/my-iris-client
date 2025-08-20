@@ -30,7 +30,7 @@ export {DEFAULT_RELAYS}
 export const ndk = (opts?: NDKConstructorParams): NDK => {
   if (!ndkInstance) {
     const store = useUserStore.getState()
-    const relays = opts?.explicitRelayUrls || DEFAULT_RELAYS
+    const relays = opts?.explicitRelayUrls || store.relays
 
     // Log when using test relay
     if (import.meta.env.VITE_USE_TEST_RELAY) {
