@@ -27,9 +27,6 @@ interface ReactionSubscriptionCache {
   hasInitialData?: boolean
   pendingReactionCounts?: Map<string, Set<string>>
   showingReactionCounts?: Map<string, Set<string>>
-}
-
-interface PopularityFiltersCache {
   filterLevel?: number
 }
 
@@ -53,7 +50,6 @@ interface PostFetcherCache {
 interface PopularHomeFeedCache {
   postFetcher: PostFetcherCache
   reactionSubscription: ReactionSubscriptionCache
-  popularityFilters: PopularityFiltersCache
   chronologicalSubscription?: ChronologicalSubscriptionCache
 }
 
@@ -61,14 +57,12 @@ interface ForYouFeedCache {
   combinedPostFetcher: CombinedPostFetcherCache
   reactionSubscription: ReactionSubscriptionCache
   chronologicalSubscription: ChronologicalSubscriptionCache
-  popularityFilters: PopularityFiltersCache
 }
 
 // Simple cache for popular home feed - no LRU needed since there's only one instance
 export const popularHomeFeedCache: PopularHomeFeedCache = {
   postFetcher: {},
   reactionSubscription: {},
-  popularityFilters: {},
   chronologicalSubscription: {},
 }
 
@@ -77,7 +71,6 @@ export const forYouFeedCache: ForYouFeedCache = {
   combinedPostFetcher: {},
   reactionSubscription: {},
   chronologicalSubscription: {},
-  popularityFilters: {},
 }
 
 export const getOrCreateAlgorithmicFeedCache = (feedId: FeedType) => {

@@ -1,7 +1,6 @@
 import useReactionSubscription from "./useReactionSubscription"
 import useChronologicalSubscription from "./useChronologicalSubscription"
 import useCombinedPostFetcher from "./useCombinedPostFetcher"
-import usePopularityFilters from "./usePopularityFilters"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 interface CombinedPostFetcherCache {
@@ -22,15 +21,10 @@ interface ChronologicalSubscriptionCache {
   timeRange?: number
 }
 
-interface PopularityFiltersCache {
-  filterLevel?: number
-}
-
 interface FeedCache {
   combinedPostFetcher?: CombinedPostFetcherCache
   reactionSubscription: ReactionSubscriptionCache
   chronologicalSubscription?: ChronologicalSubscriptionCache
-  popularityFilters: PopularityFiltersCache
 }
 
 interface FeedConfig {
@@ -42,11 +36,7 @@ interface FeedConfig {
 export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig = {}) {
   const {showReplies = false, filterSeen = false, popularRatio = 0.5} = config
 
-  const {currentFilters, expandFilters} = usePopularityFilters(cache.popularityFilters)
-
   const {getNextMostPopular, hasInitialData: hasPopularData} = useReactionSubscription(
-    currentFilters,
-    expandFilters,
     cache.reactionSubscription,
     filterSeen
   )
