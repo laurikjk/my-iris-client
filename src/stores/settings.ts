@@ -58,7 +58,7 @@ export const useSettingsStore = create<SettingsState>()(
       appearance: {
         theme: CONFIG.defaultTheme,
         showRightColumn: true,
-        singleColumnLayout: false,
+        singleColumnLayout: true,
         limitedMaxWidth: false,
       },
       content: {

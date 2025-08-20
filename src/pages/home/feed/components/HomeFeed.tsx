@@ -178,14 +178,17 @@ function HomeFeed() {
       </Header>
       <div>
         <PullToRefresh onRefresh={triggerFeedRefresh}>
-            {follows.length > 1 && myPubKey && (
-              <FeedTabs
-                allTabs={allFeeds}
-                editMode={editMode}
-                onEditModeToggle={toggleEditMode}
-              />
-            )}
-            {editMode && follows.length > 1 && myPubKey && activeFeedConfig?.feedStrategy && (
+          {follows.length > 1 && myPubKey && (
+            <FeedTabs
+              allTabs={allFeeds}
+              editMode={editMode}
+              onEditModeToggle={toggleEditMode}
+            />
+          )}
+          {editMode &&
+            follows.length > 1 &&
+            myPubKey &&
+            activeFeedConfig?.feedStrategy && (
               <div className="mt-4 p-4 border border-base-300 rounded-lg bg-base-50">
                 <div className="text-sm text-base-content/50 italic">
                   {activeFeedConfig.feedStrategy === "popular"
@@ -195,21 +198,21 @@ function HomeFeed() {
                 </div>
               </div>
             )}
-            {editMode &&
-              follows.length > 1 &&
-              myPubKey &&
-              !activeFeedConfig?.feedStrategy && (
-                <FeedEditor
-                  key={activeFeed}
-                  activeTab={activeFeed}
-                  tabs={feeds}
-                  onEditModeToggle={toggleEditMode}
-                  onDeleteFeed={handleDeleteFeed}
-                  onResetFeeds={handleResetFeeds}
-                  onCloneFeed={handleCloneFeed}
-                />
-              )}
-            <NotificationPrompt />
+          {editMode &&
+            follows.length > 1 &&
+            myPubKey &&
+            !activeFeedConfig?.feedStrategy && (
+              <FeedEditor
+                key={activeFeed}
+                activeTab={activeFeed}
+                tabs={feeds}
+                onEditModeToggle={toggleEditMode}
+                onDeleteFeed={handleDeleteFeed}
+                onResetFeeds={handleResetFeeds}
+                onCloneFeed={handleCloneFeed}
+              />
+            )}
+          <NotificationPrompt />
           <div data-scrollable className="overflow-y-auto">
             {myPubKey && (
               <InlineNoteCreator
