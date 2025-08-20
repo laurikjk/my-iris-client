@@ -73,7 +73,7 @@ export const AboutPage = () => {
                   href="https://soapbox.pub/blog/nostr101/"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 w-fit"
                 >
                   <RiInformationLine className="inline" /> What is Nostr?
                 </a>
@@ -81,14 +81,14 @@ export const AboutPage = () => {
               <p>
                 <Link
                   to="/chats/1d2f13b495d7425b70298a8acd375897a632562043d461e89b63499363eaf8e7"
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 w-fit"
                 >
                   <RiMessage3Line className="inline" /> Iris feedback, support and
                   discussion chat
                 </Link>
               </p>
               <p>
-                <a href={CONFIG.repository} className="flex items-center gap-1">
+                <a href={CONFIG.repository} className="flex items-center gap-1 w-fit">
                   <RiGithubLine className="inline" /> Source code
                 </a>
               </p>
@@ -97,7 +97,7 @@ export const AboutPage = () => {
                   href="https://following.space/"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 w-fit"
                 >
                   <RiUserFollowLine className="inline" /> Find people to follow
                 </a>
@@ -107,13 +107,13 @@ export const AboutPage = () => {
                   href="https://github.com/irislib/iris-client/releases"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 w-fit"
                 >
                   <RiDownload2Line className="inline" /> Download Iris for desktop
                 </a>
               </p>
               <p>
-                <Link to="/subscribe" className="flex items-center gap-1">
+                <Link to="/subscribe" className="flex items-center gap-1 w-fit">
                   <RiHeartLine className="inline" /> Subscribe to support Iris development
                 </Link>
               </p>

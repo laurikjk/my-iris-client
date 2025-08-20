@@ -159,15 +159,15 @@ function UserPage({pubKey}: {pubKey: string}) {
   )
 
   return (
-    <div
-      className="flex flex-col h-full overflow-y-scroll overflow-x-hidden"
-      data-main-scroll-container="true"
-    >
-      <Header>
-        <Name pubKey={pubKeyHex} />
-      </Header>
-      <div className="flex justify-center flex-1 relative">
-        <div className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-16 md:pb-0">
+    <div className="flex justify-center flex-1 relative h-full">
+      <div
+        className="flex-1 flex flex-col h-full overflow-y-scroll overflow-x-hidden"
+        data-main-scroll-container="true"
+      >
+        <Header>
+          <Name pubKey={pubKeyHex} />
+        </Header>
+        <div className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
           <div className="flex flex-1 flex-col items-center">
             <ProfileHeader pubKey={pubKey} key={pubKey} showHeader={false} />
             <div className="flex w-full flex-1 mt-2 flex flex-col gap-4">
@@ -210,32 +210,32 @@ function UserPage({pubKey}: {pubKey: string}) {
             </div>
           </div>
         </div>
-        <RightColumn>
-          {() => (
-            <>
-              {filteredFollows.length > 0 && (
-                <Widget title="Follows" className="h-96">
-                  <FollowList follows={filteredFollows} />
-                </Widget>
-              )}
-              {pubKeyHex === myPubKey && (
-                <>
-                  <SocialGraphWidget />
-                  <Widget title="Popular" className="h-96">
-                    <AlgorithmicFeed
-                      type="popular"
-                      displayOptions={{
-                        small: true,
-                        showDisplaySelector: false,
-                      }}
-                    />
-                  </Widget>
-                </>
-              )}
-            </>
-          )}
-        </RightColumn>
       </div>
+      <RightColumn>
+        {() => (
+          <>
+            {filteredFollows.length > 0 && (
+              <Widget title="Follows" className="h-96">
+                <FollowList follows={filteredFollows} />
+              </Widget>
+            )}
+            {pubKeyHex === myPubKey && (
+              <>
+                <SocialGraphWidget />
+                <Widget title="Popular" className="h-96">
+                  <AlgorithmicFeed
+                    type="popular"
+                    displayOptions={{
+                      small: true,
+                      showDisplaySelector: false,
+                    }}
+                  />
+                </Widget>
+              </>
+            )}
+          </>
+        )}
+      </RightColumn>
     </div>
   )
 }

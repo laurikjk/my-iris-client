@@ -68,14 +68,14 @@ function SearchPage() {
   }
 
   return (
-    <div
-      className="flex flex-col h-full overflow-y-scroll overflow-x-hidden"
-      data-main-scroll-container="true"
-    >
-      <Header title={query ? `Search: "${query}"` : "Search"} />
-      <div className="flex flex-1 flex-row relative">
+    <div className="flex flex-1 flex-row relative h-full">
+      <div
+        className="flex flex-col flex-1 h-full overflow-y-scroll overflow-x-hidden"
+        data-main-scroll-container="true"
+      >
+        <Header title={query ? `Search: "${query}"` : "Search"} />
         <div className="flex flex-col items-center flex-1">
-          <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-16 md:pb-0">
+          <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-2 md:pb-0">
             {activeTab === "people" ? (
               <SearchBox searchNotes={true} maxResults={10} focusOnNav={true} />
             ) : (
@@ -151,22 +151,22 @@ function SearchPage() {
             <title>{query ? `Search: ${query}` : `Search`} / Iris</title>
           </Helmet>
         </div>
-        <RightColumn>
-          {() => (
-            <>
-              <Widget title="Popular" className="h-96">
-                <AlgorithmicFeed
-                  type="popular"
-                  displayOptions={{
-                    small: true,
-                    showDisplaySelector: false,
-                  }}
-                />
-              </Widget>
-            </>
-          )}
-        </RightColumn>
       </div>
+      <RightColumn>
+        {() => (
+          <>
+            <Widget title="Popular" className="h-96">
+              <AlgorithmicFeed
+                type="popular"
+                displayOptions={{
+                  small: true,
+                  showDisplaySelector: false,
+                }}
+              />
+            </Widget>
+          </>
+        )}
+      </RightColumn>
     </div>
   )
 }

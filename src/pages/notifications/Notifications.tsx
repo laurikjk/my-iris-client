@@ -20,34 +20,34 @@ function Notifications() {
   })
 
   return (
-    <section
-      className="flex flex-col h-full overflow-y-scroll overflow-x-hidden"
-      data-main-scroll-container="true"
-    >
-      <Header title="Notifications" />
-      <div className="flex flex-1 relative">
-        <div className="flex flex-col flex-1 gap-2 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-16 md:pb-0">
+    <div className="flex flex-1 relative h-full">
+      <section
+        className="flex flex-col flex-1 h-full overflow-y-scroll overflow-x-hidden"
+        data-main-scroll-container="true"
+      >
+        <Header title="Notifications" />
+        <div className="flex flex-col flex-1 gap-2 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
           <NotificationsFeed />
         </div>
-        <RightColumn>
-          {() => (
-            <>
-              <SocialGraphWidget />
-              <RelayStats />
-              <Widget title="Popular" className="h-96">
-                <AlgorithmicFeed
-                  type="popular"
-                  displayOptions={{
-                    small: true,
-                    showDisplaySelector: false,
-                  }}
-                />
-              </Widget>
-            </>
-          )}
-        </RightColumn>
-      </div>
-    </section>
+      </section>
+      <RightColumn>
+        {() => (
+          <>
+            <SocialGraphWidget />
+            <RelayStats />
+            <Widget title="Popular" className="h-96">
+              <AlgorithmicFeed
+                type="popular"
+                displayOptions={{
+                  small: true,
+                  showDisplaySelector: false,
+                }}
+              />
+            </Widget>
+          </>
+        )}
+      </RightColumn>
+    </div>
   )
 }
 

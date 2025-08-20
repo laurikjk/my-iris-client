@@ -17,7 +17,6 @@ interface HeaderProps {
   scrollDown?: boolean
   slideUp?: boolean
   bold?: boolean
-  inColumn?: boolean
 }
 
 const Header = ({
@@ -28,7 +27,6 @@ const Header = ({
   scrollDown = false,
   slideUp = true,
   bold = true,
-  inColumn = false,
 }: HeaderProps) => {
   const {isSidebarOpen, setIsSidebarOpen, setShowLoginDialog} = useUIStore()
   const myPubKey = useUserStore((state) => state.publicKey)
@@ -245,7 +243,7 @@ const Header = ({
       style={slideUp ? {transform: "translateY(0px)"} : undefined}
       className={classNames(
         "pt-[env(safe-area-inset-top)] min-h-16 flex top-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none w-full cursor-pointer",
-        inColumn && isLargeScreen ? "sticky" : "fixed"
+        isLargeScreen ? "sticky" : "fixed"
       )}
     >
       <div ref={contentRef} className="flex justify-between items-center flex-1 w-full">
