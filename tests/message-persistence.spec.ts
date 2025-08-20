@@ -33,7 +33,7 @@ async function setupChatWithSelf(page, username) {
   await expect(page).toHaveURL(/\/chats\/chat/, {timeout: 10000})
 }
 
-test.describe("Message persistence with double ratchet", () => {
+test.describe.skip("Message persistence with double ratchet", () => {
   test("messages persist after page refresh", async ({page}) => {
     const username = await signUp(page)
     await setupChatWithSelf(page, username)

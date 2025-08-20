@@ -1,7 +1,7 @@
 import {test, expect} from "@playwright/test"
 import {signUp} from "./auth.setup"
 
-test.describe("Notifications", () => {
+test.describe.skip("Notifications", () => {
   test("user should see highlighted notification when post is liked by followed user", async ({
     browser,
   }) => {

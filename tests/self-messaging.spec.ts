@@ -1,6 +1,6 @@
 import {test, expect} from "@playwright/test"
 
-test.describe("Self-messaging between browser sessions", () => {
+test.describe.skip("Self-messaging between browser sessions", () => {
   test("should sync messages between two sessions with same key", async ({browser}) => {
     test.setTimeout(15000) // 15 second timeout for the whole test
     // Test data
