@@ -138,7 +138,7 @@ function Settings() {
 
   return (
     <div
-      className="flex flex-1 h-full overflow-y-scroll overflow-x-hidden relative"
+      className="flex flex-1 h-full overflow-y-scroll overflow-x-hidden scrollbar-hide relative"
       data-main-scroll-container="true"
     >
       <div className="pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 flex w-full">

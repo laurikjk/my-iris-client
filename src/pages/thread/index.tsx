@@ -84,7 +84,7 @@ export default function ThreadPage({
 
   return (
     <div
-      className="flex flex-col h-full overflow-y-scroll overflow-x-hidden"
+      className="flex flex-col h-full overflow-y-scroll overflow-x-hidden scrollbar-hide"
       data-main-scroll-container="true"
     >
       <Header>

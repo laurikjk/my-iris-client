@@ -16,7 +16,7 @@ function Index() {
   if (!isLargeScreen) {
     return (
       <section
-        className="flex w-full flex-1 relative overflow-y-auto"
+        className="flex w-full flex-1 relative overflow-y-auto scrollbar-hide"
         data-main-scroll-container="mobile"
         data-scrollable
       >
@@ -36,7 +36,7 @@ function Index() {
   // When single column layout is enabled on desktop, show the normal home layout
   return (
     <section
-      className="flex w-full justify-center h-full overflow-y-auto"
+      className="flex w-full justify-center h-full overflow-y-auto scrollbar-hide"
       data-main-scroll-container="single-column"
       data-scrollable
     >

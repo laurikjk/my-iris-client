@@ -161,7 +161,7 @@ function UserPage({pubKey}: {pubKey: string}) {
   return (
     <div className="flex justify-center flex-1 relative h-full">
       <div
-        className="flex-1 flex flex-col h-full overflow-y-scroll overflow-x-hidden"
+        className="flex-1 flex flex-col h-full overflow-y-scroll overflow-x-hidden scrollbar-hide"
         data-main-scroll-container="true"
       >
         <Header>
