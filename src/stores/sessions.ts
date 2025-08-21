@@ -5,7 +5,7 @@ import {
 } from "nostr-double-ratchet/src"
 import {createJSONStorage, persist} from "zustand/middleware"
 import type {MessageType} from "@/pages/chats/message/Message"
-import {Filter, UnsignedEvent, VerifiedEvent} from "nostr-tools"
+import {UnsignedEvent} from "nostr-tools"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {KIND_REACTION} from "@/utils/constants"
 import {ndk} from "@/utils/ndk"
@@ -21,72 +21,16 @@ import {useUserRecordsStore} from "./userRecords"
 import {UserRecord} from "./UserRecord"
 import throttle from "lodash/throttle"
 
-// Route events to the appropriate store based on message content and tags
-const routeEventToStore = (
-  message: MessageType,
-  userPubKey: string,
-  ourPubKey: string
-) => {
-  console.log("=== ROUTE EVENT TO STORE ===")
-  const groupLabelTag = message.tags?.find((tag: string[]) => tag[0] === "l")
-  const pTag = message.tags?.find((tag: string[]) => tag[0] === "p")
-  console.log("Has group tag:", !!groupLabelTag)
-  console.log("Has p tag:", !!pTag, pTag?.[1])
-  console.log("Message from us:", message.pubkey === ourPubKey)
+// Import refactored modules
+import {routeEventToStore} from "./sessions/eventRouter"
+import {sessionSubscribe} from "./sessions/utils"
+import type {SessionData} from "./sessions/types"
 
-  let chatId
+// routeEventToStore is now imported from ./sessions/eventRouter
 
-  if (groupLabelTag && groupLabelTag[1]) {
-    // Group message - store by group ID
-    chatId = groupLabelTag[1]
-    console.log("Routing to group:", chatId)
-  } else {
-    // Private message - check if it's from us
-    if (message.pubkey === ourPubKey) {
-      // For our own messages, route by the p tag (who we sent it to)
-      chatId = pTag?.[1] || userPubKey
-      console.log("Our message, routing to p tag recipient:", chatId)
-    } else {
-      // For messages from others, route by the sender (userPubKey)
-      chatId = userPubKey
-      console.log("Their message, routing to sender:", chatId)
-    }
-  }
+// sessionSubscribe is now imported from ./sessions/utils
 
-  console.log("Final chatId:", chatId)
-  usePrivateMessagesStore.getState().upsert(chatId, message)
-}
-
-// Helper subscribe implementation for Session reconstruction
-const sessionSubscribe = (
-  filter: Filter,
-  onEvent: (event: VerifiedEvent) => void
-): (() => void) => {
-  console.log("sessionSubscribe called with filter:", filter)
-  const sub = ndk().subscribe(filter)
-  sub.on("event", (e: unknown) => {
-    const event = e as VerifiedEvent
-    console.log("sessionSubscribe received event:", {
-      id: event?.id,
-      kind: event?.kind,
-      pubkey: event?.pubkey,
-      authors: filter?.authors,
-      filterMatch: filter?.authors?.includes(event?.pubkey),
-      kindMatch: filter?.kinds?.includes(event?.kind),
-    })
-    onEvent(event)
-  })
-  return () => {
-    console.log("sessionSubscribe unsubscribing from filter:", filter)
-    sub.stop()
-  }
-}
-
-interface SessionData {
-  session: Session
-  userPubKey: string
-  deviceId: string
-}
+// SessionData type is now imported from ./sessions/types
 
 interface SessionsStoreState {
   sessions: Map<string, SessionData> // sessionId -> SessionData

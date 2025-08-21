@@ -133,10 +133,6 @@ export function getEventKindInfo(kind: number): EventKindInfo {
   return EVENT_KIND_INFO[kind] || {label: kind.toString()}
 }
 
-export function getEventKindLabel(kind: number): string {
-  return getEventKindInfo(kind).label
-}
-
 // Common event kinds for selector UI
 export const COMMON_EVENT_KINDS = [
   KIND_TEXT_NOTE,

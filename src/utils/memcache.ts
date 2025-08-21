@@ -1,15 +1,10 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {SortedMap} from "./SortedMap/SortedMap"
 import {LRUCache} from "typescript-lru-cache"
 import throttle from "lodash/throttle"
 import localforage from "localforage"
 import {FeedType} from "@/stores/feed"
 
 export const eventsByIdCache = new LRUCache({maxSize: 500})
-export const feedCache = new LRUCache<string, SortedMap<string, NDKEvent>>({maxSize: 10})
-export const replyFeedCache = new LRUCache<string, SortedMap<string, NDKEvent>>({
-  maxSize: 20,
-})
 export const seenEventIds = new LRUCache<string, boolean>({maxSize: 10000})
 
 // Cache for NIP-05 verification results

@@ -34,25 +34,6 @@ export interface NotificationSubscription {
   subscriber: string
 }
 
-export interface CustomerSubscription {
-  id?: string
-  webhooks: unknown[]
-  web_push_subscriptions: PushNotifications[]
-  filter: {
-    ids?: string[]
-    authors?: string[]
-    kinds: number[]
-    search?: string
-    "#p"?: string[]
-    "#e"?: string[]
-  }
-  subscriber: string
-}
-
-export interface CustomerSubscriptionResponse {
-  [key: string]: CustomerSubscription
-}
-
 export interface NotificationSubscriptionResponse {
   [key: string]: NotificationSubscription
 }

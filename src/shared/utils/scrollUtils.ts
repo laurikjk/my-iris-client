@@ -17,23 +17,3 @@ export const findMainScrollContainer = (): HTMLElement | null => {
 
   return null
 }
-
-/**
- * Scroll the main content container to top
- */
-export const scrollMainContentToTop = (): boolean => {
-  const container = findMainScrollContainer()
-  if (container) {
-    container.scrollTo({top: 0, behavior: "instant"})
-    return true
-  }
-  return false
-}
-
-/**
- * Check if the main content container is scrolled to top
- */
-export const isMainContentAtTop = (): boolean => {
-  const container = findMainScrollContainer()
-  return !container || container.scrollTop === 0
-}
