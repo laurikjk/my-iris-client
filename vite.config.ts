@@ -44,8 +44,15 @@ export default defineConfig({
         debug: "debug.html",
       },
       output: {
-        manualChunks: {
-          vendor: [
+        manualChunks: (id) => {
+          if (
+            id.includes("utils/AnimalName") ||
+            id.includes("utils/data/animals") ||
+            id.includes("utils/data/adjectives")
+          ) {
+            return "animalname"
+          }
+          const vendorLibs = [
             "react",
             "react-dom/client",
             "react-helmet",
@@ -74,7 +81,10 @@ export default defineConfig({
             "typescript-lru-cache",
             "zustand",
             "blurhash",
-          ],
+          ]
+          if (vendorLibs.some((lib) => id.includes(`node_modules/${lib}`))) {
+            return "vendor"
+          }
         },
       },
     },
