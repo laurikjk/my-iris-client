@@ -11,10 +11,15 @@ import ErrorBoundary from "./ui/ErrorBoundary"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useUIStore} from "@/stores/ui"
 import {Helmet} from "react-helmet"
-import {useEffect, ReactNode, useRef} from "react"
+import {useEffect, ReactNode, useRef, useMemo} from "react"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
 import HomeFeed from "@/pages/home/feed/components/HomeFeed"
 import {ScrollProvider} from "@/contexts/ScrollContext"
+import Header from "@/shared/components/header/Header"
+import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
+import useFollows from "@/shared/hooks/useFollows"
+import {usePublicKey} from "@/stores/user"
+import {useFeedStore, useFeedConfigs, useEnabledFeedIds, type FeedConfig} from "@/stores/feed"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -28,7 +33,7 @@ const Layout = ({children}: {children: ReactNode}) => {
   const newPostOpen = useUIStore((state) => state.newPostOpen)
   const setNewPostOpen = useUIStore((state) => state.setNewPostOpen)
   const navItemClicked = useUIStore((state) => state.navItemClicked)
-  const {appearance} = useSettingsStore()
+  const {appearance, updateAppearance} = useSettingsStore()
   const goToNotifications = useUIStore((state) => state.goToNotifications)
   const showLoginDialog = useUIStore((state) => state.showLoginDialog)
   const setShowLoginDialog = useUIStore((state) => state.setShowLoginDialog)
@@ -37,6 +42,39 @@ const Layout = ({children}: {children: ReactNode}) => {
   const navigate = useNavigate()
   const location = useLocation()
   const isLargeScreen = useIsLargeScreen()
+  
+  // Feed header logic for two-column layout
+  const myPubKey = usePublicKey()
+  const follows = useFollows(myPubKey, true)
+  const {activeFeed, getAllFeedConfigs, loadFeedConfig} = useFeedStore()
+  const enabledFeedIds = useEnabledFeedIds()
+  const feedConfigs = useFeedConfigs()
+  
+  const allFeeds = useMemo(() => {
+    return getAllFeedConfigs()
+  }, [feedConfigs, enabledFeedIds, getAllFeedConfigs])
+
+  const feeds = useMemo(() => {
+    const feedsMap = new Map(allFeeds.map((feed) => [feed.id, feed]))
+    return enabledFeedIds
+      .map((id) => feedsMap.get(id))
+      .filter((feed): feed is FeedConfig => feed !== undefined)
+  }, [allFeeds, enabledFeedIds])
+
+  const activeFeedItem = useMemo(
+    () => feeds.find((f) => f.id === activeFeed) || feeds[0] || null,
+    [activeFeed, feeds]
+  )
+
+  const activeFeedConfig = useMemo(
+    () => loadFeedConfig(activeFeed),
+    [loadFeedConfig, activeFeed, feedConfigs]
+  )
+  
+  const feedName =
+    follows.length <= 1
+      ? "Home"
+      : activeFeedConfig?.customName || activeFeedItem?.name || "Following"
 
   const shouldShowMainFeed =
     !appearance.singleColumnLayout &&
@@ -126,15 +164,42 @@ const Layout = ({children}: {children: ReactNode}) => {
         <NavSideBar />
         {!appearance.singleColumnLayout && isLargeScreen && (
           <div
-            ref={middleColumnRef}
-            className={`flex-1 min-w-0 border-r border-base-300 overflow-y-scroll overflow-x-hidden scrollbar-hide ${
-              shouldShowMainFeed ? "hidden lg:block" : "hidden"
+            className={`flex-1 min-w-0 border-r border-base-300 flex flex-col ${
+              shouldShowMainFeed ? "hidden lg:flex" : "hidden"
             }`}
-            data-main-scroll-container="middle-column"
           >
-            <ScrollProvider scrollContainerRef={middleColumnRef}>
-              <HomeFeed />
-            </ScrollProvider>
+            <Header showBack={false}>
+              <div className="flex items-center justify-between w-full">
+                <span className="md:px-3 md:py-2">{feedName}</span>
+                <button
+                  className="p-2 bg-base-100 hover:bg-base-200 rounded-full transition-colors mt-1"
+                  onClick={() =>
+                    updateAppearance({singleColumnLayout: !appearance.singleColumnLayout})
+                  }
+                  title={
+                    appearance.singleColumnLayout
+                      ? "Expand to two columns"
+                      : "Collapse to single column"
+                  }
+                >
+                  {appearance.singleColumnLayout ? (
+                    <RiArrowLeftSLine className="w-5 h-5" />
+                  ) : (
+                    <RiArrowRightSLine className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </Header>
+            <div
+              ref={middleColumnRef}
+              className="flex-1 overflow-y-scroll overflow-x-hidden scrollbar-hide"
+              data-main-scroll-container="middle-column"
+              data-header-scroll-target
+            >
+              <ScrollProvider scrollContainerRef={middleColumnRef}>
+                <HomeFeed />
+              </ScrollProvider>
+            </div>
           </div>
         )}
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">

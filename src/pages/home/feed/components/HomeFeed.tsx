@@ -1,16 +1,12 @@
 import {useMemo, useState, useEffect, useRef} from "react"
-import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
-import Header from "@/shared/components/header/Header"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import useFollows from "@/shared/hooks/useFollows"
 import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {usePublicKey} from "@/stores/user"
-import {useSettingsStore} from "@/stores/settings"
-import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
 import {useUIStore} from "@/stores/ui"
 import {
   useFeedStore,
@@ -21,7 +17,6 @@ import {
 } from "@/stores/feed"
 import FeedTabs from "@/shared/components/feed/FeedTabs"
 import FeedEditor from "@/shared/components/feed/FeedEditor"
-import PullToRefresh from "@/shared/components/ui/PullToRefresh"
 import InlineNoteCreator from "@/shared/components/create/InlineNoteCreator"
 
 const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
@@ -38,8 +33,6 @@ function HomeFeed() {
   const containerRef = useRef<HTMLDivElement>(null)
   const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true) // to update on follows change
-  const {appearance, updateAppearance} = useSettingsStore()
-  const isLargeScreen = useIsLargeScreen()
   const navItemClicked = useUIStore((state) => state.navItemClicked)
   const {
     activeFeed,
@@ -77,11 +70,6 @@ function HomeFeed() {
       .map((id) => feedsMap.get(id))
       .filter((feed): feed is FeedConfig => feed !== undefined)
   }, [allFeeds, enabledFeedIds])
-
-  const activeFeedItem = useMemo(
-    () => feeds.find((f) => f.id === activeFeed) || feeds[0] || null,
-    [activeFeed, feeds]
-  )
 
   const activeFeedConfig = useMemo(
     () => loadFeedConfig(activeFeed),
@@ -141,120 +129,84 @@ function HomeFeed() {
     return null
   }
 
-  const feedName =
-    follows.length <= 1
-      ? "Home"
-      : activeFeedConfig?.customName || activeFeedItem?.name || "Following"
-
   if (!socialGraphLoaded) {
     return null
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full flex flex-col">
-      <Header showBack={false}>
-        <div className="flex items-center justify-between w-full">
-          <span className="md:px-3 md:py-2">{feedName}</span>
-          {isLargeScreen && (
-            <button
-              className="p-2 bg-base-100 hover:bg-base-200 rounded-full transition-colors mt-1"
-              onClick={() =>
-                updateAppearance({singleColumnLayout: !appearance.singleColumnLayout})
-              }
-              title={
-                appearance.singleColumnLayout
-                  ? "Expand to two columns"
-                  : "Collapse to single column"
-              }
-            >
-              {appearance.singleColumnLayout ? (
-                <RiArrowLeftSLine className="w-5 h-5" />
-              ) : (
-                <RiArrowRightSLine className="w-5 h-5" />
-              )}
-            </button>
-          )}
-        </div>
-      </Header>
-      <div className="flex-1 overflow-hidden">
-        <PullToRefresh onRefresh={triggerFeedRefresh}>
-          {follows.length > 1 && myPubKey && (
-            <FeedTabs
-              allTabs={allFeeds}
-              editMode={editMode}
+    <div ref={containerRef}>
+        {follows.length > 1 && myPubKey && (
+          <FeedTabs
+            allTabs={allFeeds}
+            editMode={editMode}
+            onEditModeToggle={toggleEditMode}
+          />
+        )}
+        {editMode && follows.length > 1 && myPubKey && activeFeedConfig?.feedStrategy && (
+          <div className="mt-4 p-4 border border-base-300 rounded-lg bg-base-50">
+            <div className="text-sm text-base-content/50 italic">
+              {activeFeedConfig.feedStrategy === "popular"
+                ? "Popular feeds use a fixed algorithm to calculate the most popular posts first."
+                : "For You feeds use personalized algorithms to curate content based on your interests."}{" "}
+              Editing functionality is under construction.
+            </div>
+          </div>
+        )}
+        {editMode &&
+          follows.length > 1 &&
+          myPubKey &&
+          !activeFeedConfig?.feedStrategy && (
+            <FeedEditor
+              key={activeFeed}
+              activeTab={activeFeed}
+              tabs={feeds}
               onEditModeToggle={toggleEditMode}
+              onDeleteFeed={handleDeleteFeed}
+              onResetFeeds={handleResetFeeds}
+              onCloneFeed={handleCloneFeed}
             />
           )}
-          {editMode &&
-            follows.length > 1 &&
-            myPubKey &&
-            activeFeedConfig?.feedStrategy && (
-              <div className="mt-4 p-4 border border-base-300 rounded-lg bg-base-50">
-                <div className="text-sm text-base-content/50 italic">
-                  {activeFeedConfig.feedStrategy === "popular"
-                    ? "Popular feeds use a fixed algorithm to calculate the most popular posts first."
-                    : "For You feeds use personalized algorithms to curate content based on your interests."}{" "}
-                  Editing functionality is under construction.
-                </div>
-              </div>
-            )}
-          {editMode &&
-            follows.length > 1 &&
-            myPubKey &&
-            !activeFeedConfig?.feedStrategy && (
-              <FeedEditor
-                key={activeFeed}
-                activeTab={activeFeed}
-                tabs={feeds}
-                onEditModeToggle={toggleEditMode}
-                onDeleteFeed={handleDeleteFeed}
-                onResetFeeds={handleResetFeeds}
-                onCloneFeed={handleCloneFeed}
-              />
-            )}
-          <NotificationPrompt />
-          <div data-scrollable className="overflow-y-auto scrollbar-hide flex-1">
-            {myPubKey && (
-              <InlineNoteCreator
-                onPublish={() => triggerFeedRefresh()}
-                placeholder="What's on your mind?"
-              />
-            )}
-            {(() => {
-              if (!myPubKey) return <AlgorithmicFeed type="popular" />
+        <NotificationPrompt />
+        <div>
+          {myPubKey && (
+            <InlineNoteCreator
+              onPublish={() => triggerFeedRefresh()}
+              placeholder="What's on your mind?"
+            />
+          )}
+          {(() => {
+            if (!myPubKey) return <AlgorithmicFeed type="popular" />
 
-              if (activeFeedConfig?.feedStrategy)
-                return (
-                  <AlgorithmicFeed
-                    key={`${activeFeedConfig.feedStrategy}-${feedRefreshSignal}`}
-                    type={activeFeedConfig.feedStrategy}
-                  />
-                )
-
+            if (activeFeedConfig?.feedStrategy)
               return (
-                <Feed
-                  key={feedKey}
-                  feedConfig={activeFeedConfig}
-                  showDisplayAsSelector={follows.length > 1}
-                  forceUpdate={0}
-                  emptyPlaceholder={""}
+                <AlgorithmicFeed
+                  key={`${activeFeedConfig.feedStrategy}-${feedRefreshSignal}`}
+                  type={activeFeedConfig.feedStrategy}
                 />
               )
-            })()}
-            {follows.length <= 1 && myPubKey && (
-              <>
-                <NoFollows myPubKey={myPubKey} />
-                {!activeFeedConfig?.feedStrategy && (
-                  <AlgorithmicFeed
-                    type="popular"
-                    displayOptions={{showDisplaySelector: false}}
-                  />
-                )}
-              </>
-            )}
-          </div>
-        </PullToRefresh>
-      </div>
+
+            return (
+              <Feed
+                key={feedKey}
+                feedConfig={activeFeedConfig}
+                showDisplayAsSelector={follows.length > 1}
+                forceUpdate={0}
+                emptyPlaceholder={""}
+              />
+            )
+          })()}
+          {follows.length <= 1 && myPubKey && (
+            <>
+              <NoFollows myPubKey={myPubKey} />
+              {!activeFeedConfig?.feedStrategy && (
+                <AlgorithmicFeed
+                  type="popular"
+                  displayOptions={{showDisplaySelector: false}}
+                />
+              )}
+            </>
+          )}
+        </div>
     </div>
   )
 }

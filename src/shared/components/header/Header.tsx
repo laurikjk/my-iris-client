@@ -106,34 +106,42 @@ const Header = ({
       // Reset scroll position tracking
       lastScrollY.current = 0
 
-      // Try to find scrollable parent first
-      const scrollableParent = findScrollableParent(headerRef.current)
-
-      if (scrollableParent) {
-        scrollElement = scrollableParent
-        scrollableParent.addEventListener("scroll", handleScroll, {passive: true})
+      // First, look for explicitly marked scroll target
+      const markedScrollTarget = document.querySelector('[data-header-scroll-target]')
+      
+      if (markedScrollTarget) {
+        scrollElement = markedScrollTarget
+        markedScrollTarget.addEventListener("scroll", handleScroll, {passive: true})
       } else {
-        // Look for sibling or nearby scrollable element (for profile/thread pages)
-        const parentContainer = headerRef.current?.parentElement
-        const scrollableSibling = parentContainer?.querySelector(
-          ".overflow-y-auto, .overflow-y-scroll"
-        )
+        // Try to find scrollable parent first
+        const scrollableParent = findScrollableParent(headerRef.current)
 
-        if (scrollableSibling) {
-          scrollElement = scrollableSibling
-          scrollableSibling.addEventListener("scroll", handleScroll, {passive: true})
+        if (scrollableParent) {
+          scrollElement = scrollableParent
+          scrollableParent.addEventListener("scroll", handleScroll, {passive: true})
         } else {
-          // Try to find the main scrollable area (outlet)
-          const outlet = document.querySelector(
-            ".overflow-y-scroll:not(.lg\\:block):not(.xl\\:block), .overflow-y-auto:not(.lg\\:block):not(.xl\\:block)"
+          // Look for sibling or nearby scrollable element (for profile/thread pages)
+          const parentContainer = headerRef.current?.parentElement
+          const scrollableSibling = parentContainer?.querySelector(
+            ".overflow-y-auto, .overflow-y-scroll"
           )
-          if (outlet) {
-            scrollElement = outlet
-            outlet.addEventListener("scroll", handleScroll, {passive: true})
+
+          if (scrollableSibling) {
+            scrollElement = scrollableSibling
+            scrollableSibling.addEventListener("scroll", handleScroll, {passive: true})
           } else {
-            // Fallback to window scroll
-            scrollElement = window
-            window.addEventListener("scroll", handleScroll, {passive: true})
+            // Try to find the main scrollable area (outlet)
+            const outlet = document.querySelector(
+              ".overflow-y-scroll:not(.lg\\:block):not(.xl\\:block), .overflow-y-auto:not(.lg\\:block):not(.xl\\:block)"
+            )
+            if (outlet) {
+              scrollElement = outlet
+              outlet.addEventListener("scroll", handleScroll, {passive: true})
+            } else {
+              // Fallback to window scroll
+              scrollElement = window
+              window.addEventListener("scroll", handleScroll, {passive: true})
+            }
           }
         }
       }
@@ -192,8 +200,13 @@ const Header = ({
     )
       return
 
-    // First try to find scrollable parent (works for nested headers)
-    let scrollableParent = scrollContainer || findScrollableParent(headerRef.current)
+    // First check for explicitly marked scroll target
+    let scrollableParent = document.querySelector('[data-header-scroll-target]') as HTMLElement
+    
+    // If not found, try to find scrollable parent (works for nested headers)
+    if (!scrollableParent) {
+      scrollableParent = scrollContainer || findScrollableParent(headerRef.current)
+    }
 
     // If not found, look for the outlet column (for profile/thread pages where header is outside)
     if (!scrollableParent) {
