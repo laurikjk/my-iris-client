@@ -98,7 +98,7 @@ export default function ThreadPage({
         data-main-scroll-container="true"
         data-header-scroll-target
       >
-        <div className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 max-w-full overflow-hidden">
+        <div className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 max-w-full">
           {(() => {
             if (isNaddr) {
               if (loading) {
