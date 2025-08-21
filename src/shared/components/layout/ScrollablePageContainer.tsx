@@ -42,7 +42,7 @@ export function ScrollablePageContainer({
       data-header-scroll-target
     >
       <div
-        className={classNames("flex-1", {
+        className={classNames("flex-1 max-w-full", {
           "pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0": withHeaderPadding,
         })}
       >
