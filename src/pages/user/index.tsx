@@ -23,6 +23,7 @@ import {
   KIND_REPOST,
   KIND_REACTION,
   KIND_CLASSIFIED,
+  KIND_PICTURE_FIRST,
 } from "@/utils/constants"
 
 type Tab = {
@@ -40,7 +41,10 @@ const tabs: Tab[] = [
       id: `profile-posts`,
       hideReplies: true,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
+      filter: {
+        kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_PICTURE_FIRST],
+        authors: [pubKey],
+      },
     }),
   },
   {
@@ -61,7 +65,10 @@ const tabs: Tab[] = [
       name: "Replies",
       id: `profile-replies`,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
+      filter: {
+        kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_PICTURE_FIRST],
+        authors: [pubKey],
+      },
       showRepliedTo: true,
     }),
   },
@@ -73,7 +80,10 @@ const tabs: Tab[] = [
       id: `profile-media`,
       requiresMedia: true,
       showEventsByUnknownUsers: true,
-      filter: {kinds: [KIND_TEXT_NOTE, KIND_REPOST], authors: [pubKey]},
+      filter: {
+        kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_PICTURE_FIRST],
+        authors: [pubKey],
+      },
     }),
   },
   {
@@ -94,7 +104,7 @@ const tabs: Tab[] = [
       id: `profile-you`,
       showEventsByUnknownUsers: true,
       filter: {
-        kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_REACTION],
+        kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_REACTION, KIND_PICTURE_FIRST],
         authors: [pubKey],
         "#p": [myPubKey],
       },
