@@ -197,7 +197,7 @@ async function setupSubscription(publicKey: string) {
 export const saveToFile = async () => {
   const data = await instance.toBinary()
   const url = URL.createObjectURL(
-    new File([data], "social_graph.bin", {
+    new File([data.slice()], "social_graph.bin", {
       type: "application/octet-stream",
     })
   )

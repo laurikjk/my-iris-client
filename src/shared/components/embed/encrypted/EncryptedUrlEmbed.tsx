@@ -142,7 +142,7 @@ async function streamAndDecryptChunksToDownload({
     while (!(result = await reader.read()).done) {
       chunks.push(result.value)
     }
-    const blob = new Blob(chunks)
+    const blob = new Blob(chunks.map(chunk => chunk.slice()))
     const a = document.createElement("a")
     const blobUrl = URL.createObjectURL(blob)
     a.href = blobUrl

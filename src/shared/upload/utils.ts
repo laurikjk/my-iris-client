@@ -14,7 +14,7 @@ export async function encryptFileWithAesGcm(
   const key = keyOverride || crypto.getRandomValues(new Uint8Array(32)) // 256-bit key
   const iv = crypto.getRandomValues(new Uint8Array(12)) // 96-bit IV
   const algo = {name: "AES-GCM", iv}
-  const cryptoKey = await crypto.subtle.importKey("raw", key, algo, false, ["encrypt"])
+  const cryptoKey = await crypto.subtle.importKey("raw", key.slice(), algo, false, ["encrypt"])
   const data = await file.arrayBuffer()
   const encrypted = await crypto.subtle.encrypt(algo, cryptoKey, data)
   // Compose: [IV (12 bytes)] + [encrypted data]
