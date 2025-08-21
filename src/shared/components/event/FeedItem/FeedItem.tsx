@@ -25,6 +25,7 @@ import FeedItemTitle from "./FeedItemTitle.tsx"
 import {Link, useNavigate} from "@/navigation"
 import LikeHeader from "../LikeHeader"
 import ZapReceiptHeader from "../ZapReceiptHeader"
+import ReplyHeader from "../ReplyHeader"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 import {KIND_TEXT_NOTE, KIND_REACTION, KIND_ZAP_RECEIPT} from "@/utils/constants"
@@ -282,6 +283,15 @@ function FeedItem({
               <ZapReceiptHeader event={event} />
             </div>
           )}
+          {event.kind === KIND_TEXT_NOTE &&
+            !standalone &&
+            !asRepliedTo &&
+            !asReply &&
+            repliedToEventId && (
+              <div className="flex flex-row select-none mb-2 px-4">
+                <ReplyHeader />
+              </div>
+            )}
           <div className="flex flex-row gap-4 flex-1">
             <div className={classNames("flex-1 w-full", {"text-lg": standalone})}>
               <FeedItemHeader
