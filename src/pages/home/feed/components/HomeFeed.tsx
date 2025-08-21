@@ -213,7 +213,7 @@ function HomeFeed() {
               />
             )}
           <NotificationPrompt />
-          <div data-scrollable className="overflow-y-auto">
+          <div>
             {myPubKey && (
               <InlineNoteCreator
                 onPublish={() => triggerFeedRefresh()}

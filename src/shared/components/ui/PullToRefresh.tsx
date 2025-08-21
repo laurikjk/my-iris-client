@@ -25,7 +25,7 @@ export default function PullToRefresh({
     const scrollEl = containerRef.current?.querySelector(
       "[data-scrollable]"
     ) as HTMLElement
-    if (scrollEl && scrollEl.scrollTop === 0) {
+    if (scrollEl && scrollEl.scrollTop <= 1) {
       startY.current = e.touches[0].clientY
       isPulling.current = true
     }
@@ -38,7 +38,7 @@ export default function PullToRefresh({
       const scrollEl = containerRef.current?.querySelector(
         "[data-scrollable]"
       ) as HTMLElement
-      if (!scrollEl || scrollEl.scrollTop > 0) {
+      if (!scrollEl || scrollEl.scrollTop > 1) {
         isPulling.current = false
         currentPullDistance.current = 0
         if (contentRef.current) {
@@ -56,7 +56,7 @@ export default function PullToRefresh({
       const currentY = e.touches[0].clientY
       const diff = currentY - startY.current
 
-      if (diff > 0) {
+      if (diff > 0 && scrollEl.scrollTop <= 1) {
         e.preventDefault()
         const resistance = 0.5
         const actualDistance = Math.min(diff * resistance, threshold * 1.5)
