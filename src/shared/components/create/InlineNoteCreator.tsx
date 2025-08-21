@@ -12,6 +12,7 @@ import {eventsByIdCache} from "@/utils/memcache"
 import {usePublicKey} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
 import {useDraftStore} from "@/stores/draft"
+import {useReplyDraftsStore} from "@/stores/replyDrafts"
 
 interface InlineNoteCreatorProps {
   onPublish?: (event: NDKEvent) => void
@@ -20,7 +21,6 @@ interface InlineNoteCreatorProps {
   placeholder?: string
   className?: string
   showButtonsAlways?: boolean
-  useDraftStore?: boolean
 }
 
 function InlineNoteCreator({
@@ -30,29 +30,43 @@ function InlineNoteCreator({
   placeholder = "What's on your mind?",
   className = "",
   showButtonsAlways = false,
-  useDraftStore: useDraft = true,
 }: InlineNoteCreatorProps) {
   const myPubKey = usePublicKey()
   const navigate = useNavigate()
   const [isFocused, setIsFocused] = useState(false)
 
-  // Use draft store or local state based on prop
+  // Use appropriate draft store based on context
   const draftStore = useDraftStore()
-  const [localContent, setLocalContent] = useState("")
-  const [localImageMetadata, setLocalImageMetadata] = useState<
-    Record<string, {width: number; height: number; blurhash: string}>
-  >({})
+  const isReply = !!repliedEvent
+  const replyDraft = useReplyDraftsStore((state) =>
+    isReply ? state.drafts[repliedEvent.id] : undefined
+  )
 
-  const content = useDraft ? draftStore.content : localContent
-  const imageMetadata = useDraft ? draftStore.imageMetadata : localImageMetadata
-  const setContent = useDraft ? draftStore.setContent : setLocalContent
-  const setImageMetadata = useDraft ? draftStore.setImageMetadata : setLocalImageMetadata
-  const resetDraft = useDraft
-    ? draftStore.reset
-    : () => {
-        setLocalContent("")
-        setLocalImageMetadata({})
+  const content = isReply ? replyDraft?.content || "" : draftStore.content
+
+  const imageMetadata = isReply
+    ? replyDraft?.imageMetadata || {}
+    : draftStore.imageMetadata
+
+  const setContent = isReply
+    ? (newContent: string | ((prev: string) => string)) => {
+        const actualContent =
+          typeof newContent === "function" ? newContent(content) : newContent
+        useReplyDraftsStore.getState().setDraft(repliedEvent.id, {content: actualContent})
       }
+    : draftStore.setContent
+
+  const setImageMetadata = isReply
+    ? (metadata: Record<string, {width: number; height: number; blurhash: string}>) => {
+        useReplyDraftsStore
+          .getState()
+          .setDraft(repliedEvent.id, {imageMetadata: metadata})
+      }
+    : draftStore.setImageMetadata
+
+  const resetDraft = isReply
+    ? () => useReplyDraftsStore.getState().deleteDraft(repliedEvent.id)
+    : draftStore.reset
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 

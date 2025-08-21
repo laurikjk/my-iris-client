@@ -12,6 +12,7 @@ import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import HyperText from "@/shared/components/HyperText.tsx"
 import {eventsByIdCache} from "@/utils/memcache"
 import {useDraftStore} from "@/stores/draft"
+import {useReplyDraftsStore} from "@/stores/replyDrafts"
 import {processFile} from "@/shared/upload"
 import {usePublicKey} from "@/stores/user"
 import Textarea from "./Textarea"
@@ -110,13 +111,39 @@ function addTags(event: NDKEvent, repliedEvent?: NDKEvent, quotedEvent?: NDKEven
 function NoteCreator({handleClose, quotedEvent, repliedEvent}: NoteCreatorProps) {
   const myPubKey = usePublicKey()
   const navigate = useNavigate()
-  const {
-    content: noteContent,
-    imageMetadata,
-    setContent: setNoteContent,
-    setImageMetadata,
-    reset: resetDraft,
-  } = useDraftStore()
+
+  // Use reply draft store for replies, main draft store for new posts
+  const isReply = !!repliedEvent
+  const mainDraftStore = useDraftStore()
+  const replyDraft = useReplyDraftsStore((state) =>
+    isReply ? state.drafts[repliedEvent.id] : undefined
+  )
+
+  const noteContent = isReply ? replyDraft?.content || "" : mainDraftStore.content
+
+  const imageMetadata = isReply
+    ? replyDraft?.imageMetadata || {}
+    : mainDraftStore.imageMetadata
+
+  const setNoteContent = isReply
+    ? (content: string | ((prev: string) => string)) => {
+        const actualContent =
+          typeof content === "function" ? content(noteContent) : content
+        useReplyDraftsStore.getState().setDraft(repliedEvent.id, {content: actualContent})
+      }
+    : mainDraftStore.setContent
+
+  const setImageMetadata = isReply
+    ? (metadata: Record<string, {width: number; height: number; blurhash: string}>) => {
+        useReplyDraftsStore
+          .getState()
+          .setDraft(repliedEvent.id, {imageMetadata: metadata})
+      }
+    : mainDraftStore.setImageMetadata
+
+  const resetDraft = isReply
+    ? () => useReplyDraftsStore.getState().deleteDraft(repliedEvent.id)
+    : mainDraftStore.reset
 
   const [textarea, setTextarea] = useState<HTMLTextAreaElement | null>(null)
   const [uploading, setUploading] = useState(false)

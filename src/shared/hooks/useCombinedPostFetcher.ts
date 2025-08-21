@@ -97,7 +97,16 @@ export default function useCombinedPostFetcher({
 
     setEvents(newEvents)
     hasLoadedInitial.current = true
-    setLoading(false)
+    // Only set loading to false if we actually got events or tried multiple times
+    if (newEvents.length > 0) {
+      setLoading(false)
+    } else {
+      // Try one more batch before giving up
+      const secondBatch = await loadBatch(10)
+      secondBatch.forEach((event) => addSeenEventId(event.id))
+      setEvents(secondBatch)
+      setLoading(false)
+    }
   }, [loadBatch])
 
   const loadMore = useCallback(async () => {

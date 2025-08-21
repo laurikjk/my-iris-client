@@ -32,7 +32,7 @@ const feedConfigs = {
     showReplies: false,
     includeChronological: true,
     emptyMessage: "No posts found for you",
-    loadingMessage: "Loading your personalized feed...",
+    loadingMessage: "Loading...",
   },
 }
 
@@ -59,9 +59,6 @@ const AlgorithmicFeed = function AlgorithmicFeed({
     popularRatio: config.includeChronological ? 0.5 : 1.0,
   })
 
-  if (loading && events.length === 0) {
-    return null
-  }
   return (
     <FeedWidget
       events={events}

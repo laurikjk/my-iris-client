@@ -1,5 +1,6 @@
-import {persist} from "zustand/middleware"
+import {persist, createJSONStorage} from "zustand/middleware"
 import {create} from "zustand"
+import localforage from "localforage"
 
 interface DraftState {
   content: string
@@ -46,6 +47,7 @@ export const useDraftStore = create<DraftState>()(
     },
     {
       name: "draft-storage",
+      storage: createJSONStorage(() => localforage),
     }
   )
 )
