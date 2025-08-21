@@ -94,76 +94,78 @@ export default function ThreadPage({
           "Post"
         )}
       </Header>
-      <ScrollablePageContainer className="flex justify-center">
-        <div className="flex-1 max-w-full">
-          {(() => {
-            if (isNaddr) {
-              if (loading) {
-                return (
-                  <div className="flex relative flex-col pt-3 px-4 min-h-[186px] pb-0 transition-colors duration-200 ease-in-out border-custom cursor-pointer border-2 pt-3 pb-3 my-2 rounded hover:bg-[var(--note-hover-color)] break-all">
-                    Loading naddr:{id}
-                  </div>
-                )
-              } else if (event) {
+      <div className="flex flex-1 overflow-hidden">
+        <ScrollablePageContainer className="flex justify-center flex-1">
+          <div className="flex-1 max-w-full">
+            {(() => {
+              if (isNaddr) {
+                if (loading) {
+                  return (
+                    <div className="flex relative flex-col pt-3 px-4 min-h-[186px] pb-0 transition-colors duration-200 ease-in-out border-custom cursor-pointer border-2 pt-3 pb-3 my-2 rounded hover:bg-[var(--note-hover-color)] break-all">
+                      Loading naddr:{id}
+                    </div>
+                  )
+                } else if (event) {
+                  return (
+                    <FeedItem
+                      event={event}
+                      key={event.id}
+                      standalone={true}
+                      onEvent={addToThread}
+                      showReplies={Infinity}
+                    />
+                  )
+                } else {
+                  return <div className="p-4">Failed to load naddr:{id}</div>
+                }
+              } else {
                 return (
                   <FeedItem
-                    event={event}
-                    key={event.id}
+                    key={id}
+                    eventId={id}
                     standalone={true}
                     onEvent={addToThread}
                     showReplies={Infinity}
                   />
                 )
-              } else {
-                return <div className="p-4">Failed to load naddr:{id}</div>
               }
-            } else {
-              return (
-                <FeedItem
-                  key={id}
-                  eventId={id}
-                  standalone={true}
-                  onEvent={addToThread}
-                  showReplies={Infinity}
-                />
-              )
-            }
-          })()}
-        </div>
-      </ScrollablePageContainer>
-      <RightColumn>
-        {() => (
-          <>
-            {isArticle && threadAuthor ? (
-              <Widget title="More from this author" className="h-96">
-                <AuthorArticlesFeed
-                  authorPubkey={threadAuthor}
-                  currentArticleId={event?.id || id}
-                  maxItems={5}
-                />
-              </Widget>
-            ) : (
-              relevantPeople.size > 0 && (
-                <Widget title="Relevant people" className="h-96">
-                  <FollowList
-                    follows={Array.from(relevantPeople.keys())}
-                    showAbout={true}
+            })()}
+          </div>
+        </ScrollablePageContainer>
+        <RightColumn>
+          {() => (
+            <>
+              {isArticle && threadAuthor ? (
+                <Widget title="More from this author" className="h-96">
+                  <AuthorArticlesFeed
+                    authorPubkey={threadAuthor}
+                    currentArticleId={event?.id || id}
+                    maxItems={5}
                   />
                 </Widget>
-              )
-            )}
-            <Widget title="Popular" className="h-96">
-              <AlgorithmicFeed
-                type="popular"
-                displayOptions={{
-                  small: true,
-                  showDisplaySelector: false,
-                }}
-              />
-            </Widget>
-          </>
-        )}
-      </RightColumn>
+              ) : (
+                relevantPeople.size > 0 && (
+                  <Widget title="Relevant people" className="h-96">
+                    <FollowList
+                      follows={Array.from(relevantPeople.keys())}
+                      showAbout={true}
+                    />
+                  </Widget>
+                )
+              )}
+              <Widget title="Popular" className="h-96">
+                <AlgorithmicFeed
+                  type="popular"
+                  displayOptions={{
+                    small: true,
+                    showDisplaySelector: false,
+                  }}
+                />
+              </Widget>
+            </>
+          )}
+        </RightColumn>
+      </div>
     </div>
   )
 }

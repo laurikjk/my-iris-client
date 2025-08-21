@@ -68,7 +68,7 @@ function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps
         {urls.map((url, index) => (
           <div key={index} className="flex justify-start items-center">
             {hasError ? (
-              <div className="my-2 text-sm break-all">{url}</div>
+              <div className="my-2 text-sm break-all select-all cursor-text">{url}</div>
             ) : (
               <ProxyImg
                 square={true}

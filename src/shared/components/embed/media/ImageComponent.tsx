@@ -64,7 +64,7 @@ const ImageComponent = ({
             backgroundPosition: "center",
           }}
         >
-          <span className="relative z-10">{match}</span>
+          <span className="relative z-10 select-all cursor-text">{match}</span>
         </div>
       ) : (
         <div className="relative">
