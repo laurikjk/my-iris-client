@@ -21,6 +21,12 @@ export function getEventReplyingTo(event: NDKEvent) {
   if (replyTag) {
     return replyTag[1]
   }
+  // If there's a root tag and it's the only e tag (besides mentions),
+  // it's a direct reply to the root
+  const rootTag = event.tags?.find((tag) => tag[0] === "e" && tag[3] === "root")
+  if (rootTag && replyTags.length === 1) {
+    return rootTag[1]
+  }
   return undefined
 }
 
