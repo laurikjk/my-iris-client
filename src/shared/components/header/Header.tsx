@@ -201,11 +201,11 @@ const Header = ({
       return
 
     // First check for explicitly marked scroll target
-    let scrollableParent = document.querySelector('[data-header-scroll-target]') as HTMLElement
+    let scrollableParent = document.querySelector('[data-header-scroll-target]') as HTMLElement | null
     
     // If not found, try to find scrollable parent (works for nested headers)
     if (!scrollableParent) {
-      scrollableParent = scrollContainer || findScrollableParent(headerRef.current)
+      scrollableParent = scrollContainer || findScrollableParent(headerRef.current) || null
     }
 
     // If not found, look for the outlet column (for profile/thread pages where header is outside)
