@@ -10,7 +10,7 @@ import {useUserStore} from "@/stores/user"
 import Icon from "../../Icons/Icon"
 
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
-import {getEventReplyingTo} from "@/utils/nostr"
+import {getEventReplyingTo, getEventRoot} from "@/utils/nostr"
 import {LRUCache} from "typescript-lru-cache"
 import {KIND_TEXT_NOTE} from "@/utils/constants"
 
@@ -56,8 +56,9 @@ function FeedItemComment({event, showReactionCounts = true}: FeedItemCommentProp
       const sub = ndk().subscribe(filter)
 
       sub?.on("event", (e: NDKEvent) => {
-        if (shouldHideAuthor(e.author.pubkey) || getEventReplyingTo(e) !== event.id)
-          return
+        if (shouldHideAuthor(e.author.pubkey)) return
+        // Count if this event has current as root or is replying to it
+        if (getEventRoot(e) !== event.id && getEventReplyingTo(e) !== event.id) return
         replies.add(e.id)
         debouncedSetReplyCount(replies.size)
       })
