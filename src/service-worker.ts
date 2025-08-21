@@ -30,6 +30,18 @@ clientsClaim()
 // Prevent caching of graph-api.iris.to requests
 registerRoute(({url}) => url.origin === "https://graph-api.iris.to", new NetworkOnly())
 
+// Cache icons.svg for faster loading on mobile
+registerRoute(
+  ({url}) => url.pathname.endsWith("/icons.svg"),
+  new StaleWhileRevalidate({
+    cacheName: "icons-cache",
+    plugins: [
+      new ExpirationPlugin({maxEntries: 1, maxAgeSeconds: 7 * 24 * 60 * 60}), // 7 days
+      new CacheableResponsePlugin({statuses: [0, 200]}),
+    ],
+  })
+)
+
 registerRoute(
   ({url}) => url.pathname.endsWith("/.well-known/nostr.json"),
   new StaleWhileRevalidate({
