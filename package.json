@@ -22,6 +22,7 @@
     "start": "vite",
     "build": "tsc && vite build --mode production",
     "build:dev": "tsx ./scripts/updateSocialGraph.ts && tsc && vite build --mode development",
+    "build:analyze": "tsc && vite build --mode production && echo '\n📦 Bundle Analysis:' && cat build/stats-list.txt",
     "knip": "knip",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --fix",
     "preview": "vite preview",
@@ -134,10 +135,11 @@
     "vitest": "^3.2.4"
   },
   "resolutions": {
-    "@noble/curves": "^1.9.4",
+    "@noble/curves": "^1.9.7",
     "@noble/hashes": "^1.8.0",
     "@scure/base": "^1.2.6",
     "@scure/bip32": "^1.7.0",
-    "@scure/bip39": "^1.6.0"
+    "@scure/bip39": "^1.6.0",
+    "nostr-tools": "^2.16.2"
   }
 }

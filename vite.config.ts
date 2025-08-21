@@ -31,6 +31,12 @@ export default defineConfig({
       gzipSize: true,
       filename: "build/stats.html",
     }),
+    visualizer({
+      open: false,
+      gzipSize: true,
+      filename: "build/stats-list.txt",
+      template: "list",
+    }),
   ],
   resolve: {
     alias: {
@@ -38,12 +44,18 @@ export default defineConfig({
     },
   },
   build: {
+    reportCompressedSize: true,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       input: {
         main: "index.html",
         debug: "debug.html",
       },
       external: [],
+      onLog(level, log, handler) {
+        if (log.code === "CIRCULAR_DEPENDENCY") return
+        handler(level, log)
+      },
       output: {
         manualChunks: (id) => {
           if (id.includes("nostr-social-graph/data/profileData.json")) {
