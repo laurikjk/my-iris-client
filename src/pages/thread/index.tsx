@@ -4,6 +4,7 @@ import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import AuthorArticlesFeed from "@/shared/components/feed/AuthorArticlesFeed"
 import FollowList from "@/pages/user/components/FollowList"
 import Header from "@/shared/components/header/Header"
+import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import {Name} from "@/shared/components/user/Name"
 import Widget from "@/shared/components/ui/Widget"
 import {useSettingsStore} from "@/stores/settings"
@@ -93,12 +94,8 @@ export default function ThreadPage({
           "Post"
         )}
       </Header>
-      <div
-        className="flex justify-center flex-1 relative overflow-y-scroll overflow-x-hidden scrollbar-hide"
-        data-main-scroll-container="true"
-        data-header-scroll-target
-      >
-        <div className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 max-w-full">
+      <ScrollablePageContainer className="flex justify-center">
+        <div className="flex-1 max-w-full">
           {(() => {
             if (isNaddr) {
               if (loading) {
@@ -133,40 +130,40 @@ export default function ThreadPage({
             }
           })()}
         </div>
-        <RightColumn>
-          {() => (
-            <>
-              {isArticle && threadAuthor ? (
-                <Widget title="More from this author" className="h-96">
-                  <AuthorArticlesFeed
-                    authorPubkey={threadAuthor}
-                    currentArticleId={event?.id || id}
-                    maxItems={5}
-                  />
-                </Widget>
-              ) : (
-                relevantPeople.size > 0 && (
-                  <Widget title="Relevant people" className="h-96">
-                    <FollowList
-                      follows={Array.from(relevantPeople.keys())}
-                      showAbout={true}
-                    />
-                  </Widget>
-                )
-              )}
-              <Widget title="Popular" className="h-96">
-                <AlgorithmicFeed
-                  type="popular"
-                  displayOptions={{
-                    small: true,
-                    showDisplaySelector: false,
-                  }}
+      </ScrollablePageContainer>
+      <RightColumn>
+        {() => (
+          <>
+            {isArticle && threadAuthor ? (
+              <Widget title="More from this author" className="h-96">
+                <AuthorArticlesFeed
+                  authorPubkey={threadAuthor}
+                  currentArticleId={event?.id || id}
+                  maxItems={5}
                 />
               </Widget>
-            </>
-          )}
-        </RightColumn>
-      </div>
+            ) : (
+              relevantPeople.size > 0 && (
+                <Widget title="Relevant people" className="h-96">
+                  <FollowList
+                    follows={Array.from(relevantPeople.keys())}
+                    showAbout={true}
+                  />
+                </Widget>
+              )
+            )}
+            <Widget title="Popular" className="h-96">
+              <AlgorithmicFeed
+                type="popular"
+                displayOptions={{
+                  small: true,
+                  showDisplaySelector: false,
+                }}
+              />
+            </Widget>
+          </>
+        )}
+      </RightColumn>
     </div>
   )
 }

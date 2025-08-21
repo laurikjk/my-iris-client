@@ -4,6 +4,7 @@ import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import SearchBox from "@/shared/components/ui/SearchBox"
 import Header from "@/shared/components/header/Header"
+import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import {NDKFilter} from "@nostr-dev-kit/ndk"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import {useParams, useNavigate} from "@/navigation"
@@ -71,12 +72,8 @@ function SearchPage() {
     <div className="flex flex-1 flex-row relative h-full">
       <div className="flex flex-col flex-1 h-full relative">
         <Header title={query ? `Search: "${query}"` : "Search"} />
-        <div
-          className="flex flex-col items-center flex-1 overflow-y-scroll overflow-x-hidden scrollbar-hide"
-          data-main-scroll-container="true"
-          data-header-scroll-target
-        >
-          <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-2 md:pb-0">
+        <ScrollablePageContainer className="flex flex-col items-center">
+          <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4 md:pt-2">
             {activeTab === "people" ? (
               <SearchBox searchNotes={true} maxResults={10} focusOnNav={true} />
             ) : (
@@ -151,7 +148,7 @@ function SearchPage() {
           <Helmet>
             <title>{query ? `Search: ${query}` : `Search`} / Iris</title>
           </Helmet>
-        </div>
+        </ScrollablePageContainer>
       </div>
       <RightColumn>
         {() => (

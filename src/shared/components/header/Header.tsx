@@ -54,6 +54,15 @@ const Header = ({
     // Only enable slideUp on mobile
     if (!slideUp || window.innerWidth >= MOBILE_BREAKPOINT) return
 
+    // Check if this is a main page header (not inside a feed item)
+    // Feed item headers are usually inside elements with specific classes
+    const isInFeedItem = headerRef.current?.closest(
+      '.feed-item, [class*="FeedItem"], .note-content'
+    )
+    if (isInFeedItem) {
+      return
+    }
+
     const HEADER_HEIGHT = 80
     const MIN_TRANSLATE_Y = -HEADER_HEIGHT
     const MAX_TRANSLATE_Y = 0
@@ -126,8 +135,36 @@ const Header = ({
         }
       }
 
-      // First, look for explicitly marked scroll target
-      const markedScrollTarget = document.querySelector("[data-header-scroll-target]")
+      // Check if this header is visible (not in a display:none container)
+      if (headerRef.current) {
+        let checkParent: HTMLElement | null = headerRef.current
+        while (checkParent) {
+          const styles = window.getComputedStyle(checkParent)
+          if (styles.display === "none") {
+            return
+          }
+          checkParent = checkParent.parentElement
+        }
+      }
+
+      // Look for scroll target within the same page context (not globally)
+      // This is important because the router keeps all pages mounted with display:none
+      // Find the closest parent that contains data-header-scroll-target
+      let pageRoot = headerRef.current?.parentElement
+      let markedScrollTarget: HTMLElement | null = null
+
+      while (pageRoot) {
+        // Check if this container has the scroll target
+        const target = pageRoot.querySelector(
+          "[data-header-scroll-target]"
+        ) as HTMLElement | null
+        if (target) {
+          markedScrollTarget = target
+          break
+        }
+        // Keep going up until we find a scroll target or reach the top
+        pageRoot = pageRoot.parentElement
+      }
 
       if (markedScrollTarget) {
         scrollElementRef.current = markedScrollTarget
@@ -180,15 +217,32 @@ const Header = ({
     attachScrollListener()
 
     // Re-attach after a short delay to catch dynamically rendered elements
+    // But only if we didn't already find a scroll target
     const REATTACH_DELAY_MS = 100
     const timeoutId = setTimeout(() => {
-      cleanup()
-      attachScrollListener()
+      if (!scrollElementRef.current) {
+        cleanup()
+        attachScrollListener()
+      }
     }, REATTACH_DELAY_MS)
 
     // Watch for new scroll targets being added to DOM
     const observer = new MutationObserver(() => {
-      const newScrollTarget = document.querySelector("[data-header-scroll-target]")
+      // Find the closest parent that contains data-header-scroll-target
+      let pageRoot = headerRef.current?.parentElement
+      let newScrollTarget: HTMLElement | null = null
+
+      while (pageRoot) {
+        const target = pageRoot.querySelector(
+          "[data-header-scroll-target]"
+        ) as HTMLElement | null
+        if (target) {
+          newScrollTarget = target
+          break
+        }
+        pageRoot = pageRoot.parentElement
+      }
+
       if (newScrollTarget && newScrollTarget !== scrollElementRef.current) {
         cleanup()
         attachScrollListener()
@@ -242,10 +296,20 @@ const Header = ({
     )
       return
 
-    // First check for explicitly marked scroll target
-    let scrollableParent = document.querySelector(
-      "[data-header-scroll-target]"
-    ) as HTMLElement | null
+    // Find scroll target within the same page context
+    let pageRoot = headerRef.current?.parentElement
+    let scrollableParent: HTMLElement | null = null
+
+    while (pageRoot) {
+      const target = pageRoot.querySelector(
+        "[data-header-scroll-target]"
+      ) as HTMLElement | null
+      if (target) {
+        scrollableParent = target
+        break
+      }
+      pageRoot = pageRoot.parentElement
+    }
 
     // If not found, try to find scrollable parent (works for nested headers)
     if (!scrollableParent) {

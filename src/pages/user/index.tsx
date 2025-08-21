@@ -5,6 +5,7 @@ import RightColumn from "@/shared/components/RightColumn"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import Header from "@/shared/components/header/Header"
+import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import {Name} from "@/shared/components/user/Name"
 import {type FeedConfig, useFeedStore} from "@/stores/feed"
 import {shouldHideAuthor} from "@/utils/visibility"
@@ -164,12 +165,8 @@ function UserPage({pubKey}: {pubKey: string}) {
         <Header>
           <Name pubKey={pubKeyHex} />
         </Header>
-        <div
-          className="flex-1 overflow-y-scroll overflow-x-hidden scrollbar-hide"
-          data-main-scroll-container="true"
-          data-header-scroll-target
-        >
-          <div className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
+        <ScrollablePageContainer>
+          <div className="flex-1">
             <div className="flex flex-1 flex-col items-center">
               <ProfileHeader pubKey={pubKey} key={pubKey} showHeader={false} />
               <div className="flex w-full flex-1 mt-2 flex flex-col gap-4">
@@ -215,7 +212,7 @@ function UserPage({pubKey}: {pubKey: string}) {
               </div>
             </div>
           </div>
-        </div>
+        </ScrollablePageContainer>
       </div>
       <RightColumn>
         {() => (
