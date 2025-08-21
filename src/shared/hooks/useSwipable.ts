@@ -168,7 +168,10 @@ export function useSwipable({
       // Only handle horizontal movement
       if (direction === "horizontal") {
         // Always prevent default for horizontal movement to avoid page scroll
-        e.preventDefault()
+        // Check if this is a native event (from addEventListener) or React event
+        if ("preventDefault" in e && typeof e.preventDefault === "function") {
+          e.preventDefault()
+        }
 
         // Mark as dragged if moved horizontally
         const timeSinceStart = Date.now() - (touchStartTime.current || 0)
@@ -182,7 +185,9 @@ export function useSwipable({
 
       // For mouse events, always preventDefault
       if (!("touches" in e)) {
-        e.preventDefault()
+        if ("preventDefault" in e && typeof e.preventDefault === "function") {
+          e.preventDefault()
+        }
         wasDragged.current = true
         setDragX(deltaX)
         dragLastX.current = clientX

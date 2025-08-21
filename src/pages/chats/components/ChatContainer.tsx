@@ -137,6 +137,7 @@ const ChatContainer = ({
       <div
         ref={chatContainerRef}
         className="flex flex-col flex-1 space-y-4 p-4 relative overflow-y-auto"
+        data-header-scroll-target
       >
         {messages.size === 0 ? (
           <div className="text-center text-base-content/70 my-8">

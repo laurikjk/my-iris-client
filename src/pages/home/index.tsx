@@ -8,13 +8,17 @@ import {useSettingsStore} from "@/stores/settings"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
 import {HomeRightColumn} from "@/pages/home/components/HomeRightColumn"
 import PullToRefresh from "@/shared/components/ui/PullToRefresh"
-import {useFeedStore} from "@/stores/feed"
+import {
+  useFeedStore,
+  useFeedConfigs,
+  useEnabledFeedIds,
+  type FeedConfig,
+} from "@/stores/feed"
 import Header from "@/shared/components/header/Header"
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import {useMemo} from "react"
 import useFollows from "@/shared/hooks/useFollows"
 import {usePublicKey} from "@/stores/user"
-import {useFeedConfigs, useEnabledFeedIds, type FeedConfig} from "@/stores/feed"
 
 function Index() {
   const {appearance, updateAppearance} = useSettingsStore()
@@ -25,7 +29,7 @@ function Index() {
   const {activeFeed, getAllFeedConfigs, loadFeedConfig} = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
   const feedConfigs = useFeedConfigs()
-  
+
   const allFeeds = useMemo(() => {
     return getAllFeedConfigs()
   }, [feedConfigs, enabledFeedIds, getAllFeedConfigs])
@@ -46,7 +50,7 @@ function Index() {
     () => loadFeedConfig(activeFeed),
     [loadFeedConfig, activeFeed, feedConfigs]
   )
-  
+
   const feedName =
     follows.length <= 1
       ? "Home"
@@ -114,27 +118,31 @@ function Index() {
         className="flex w-full justify-center h-full overflow-hidden"
         data-main-scroll-container="single-column"
       >
-        <div data-scrollable data-header-scroll-target className="flex-1 overflow-y-auto scrollbar-hide">
+        <div
+          data-scrollable
+          data-header-scroll-target
+          className="flex-1 overflow-y-auto scrollbar-hide"
+        >
           <HomeFeed />
         </div>
-      <RightColumn>
-        {() => (
-          <>
-            <SocialGraphWidget />
-            <RelayStats />
-            <Widget title="Popular" className="h-96">
-              <AlgorithmicFeed
-                type="popular"
-                displayOptions={{
-                  small: true,
-                  showDisplaySelector: false,
-                }}
-              />
-            </Widget>
-          </>
-        )}
-      </RightColumn>
-    </section>
+        <RightColumn>
+          {() => (
+            <>
+              <SocialGraphWidget />
+              <RelayStats />
+              <Widget title="Popular" className="h-96">
+                <AlgorithmicFeed
+                  type="popular"
+                  displayOptions={{
+                    small: true,
+                    showDisplaySelector: false,
+                  }}
+                />
+              </Widget>
+            </>
+          )}
+        </RightColumn>
+      </section>
     </>
   )
 }

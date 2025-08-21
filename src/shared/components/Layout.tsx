@@ -19,7 +19,12 @@ import Header from "@/shared/components/header/Header"
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import useFollows from "@/shared/hooks/useFollows"
 import {usePublicKey} from "@/stores/user"
-import {useFeedStore, useFeedConfigs, useEnabledFeedIds, type FeedConfig} from "@/stores/feed"
+import {
+  useFeedStore,
+  useFeedConfigs,
+  useEnabledFeedIds,
+  type FeedConfig,
+} from "@/stores/feed"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -42,14 +47,14 @@ const Layout = ({children}: {children: ReactNode}) => {
   const navigate = useNavigate()
   const location = useLocation()
   const isLargeScreen = useIsLargeScreen()
-  
+
   // Feed header logic for two-column layout
   const myPubKey = usePublicKey()
   const follows = useFollows(myPubKey, true)
   const {activeFeed, getAllFeedConfigs, loadFeedConfig} = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
   const feedConfigs = useFeedConfigs()
-  
+
   const allFeeds = useMemo(() => {
     return getAllFeedConfigs()
   }, [feedConfigs, enabledFeedIds, getAllFeedConfigs])
@@ -70,7 +75,7 @@ const Layout = ({children}: {children: ReactNode}) => {
     () => loadFeedConfig(activeFeed),
     [loadFeedConfig, activeFeed, feedConfigs]
   )
-  
+
   const feedName =
     follows.length <= 1
       ? "Home"

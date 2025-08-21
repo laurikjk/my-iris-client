@@ -21,15 +21,18 @@ function Notifications() {
 
   return (
     <div className="flex flex-1 relative h-full">
-      <section
-        className="flex flex-col flex-1 h-full overflow-y-scroll overflow-x-hidden scrollbar-hide"
-        data-main-scroll-container="true"
-      >
+      <div className="flex flex-col flex-1 h-full relative">
         <Header title="Notifications" />
-        <div className="flex flex-col flex-1 gap-2 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
-          <NotificationsFeed />
-        </div>
-      </section>
+        <section
+          className="flex flex-col flex-1 overflow-y-scroll overflow-x-hidden scrollbar-hide"
+          data-main-scroll-container="true"
+          data-header-scroll-target
+        >
+          <div className="flex flex-col flex-1 gap-2 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
+            <NotificationsFeed />
+          </div>
+        </section>
+      </div>
       <RightColumn>
         {() => (
           <>

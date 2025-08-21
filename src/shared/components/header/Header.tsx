@@ -5,7 +5,7 @@ import {useScrollableParent} from "@/shared/hooks/useScrollableParent"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
 import NotificationButton from "./NotificationButton"
 import {useUserStore} from "@/stores/user"
-import {useNavigate} from "@/navigation"
+import {useNavigate, useLocation} from "@/navigation"
 import {useUIStore} from "@/stores/ui"
 import classNames from "classnames"
 
@@ -31,12 +31,24 @@ const Header = ({
   const {isSidebarOpen, setIsSidebarOpen, setShowLoginDialog} = useUIStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const navigate = useNavigate()
+  const location = useLocation()
   const isLargeScreen = useIsLargeScreen()
 
   const headerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const lastScrollY = useRef(0)
+  const scrollElementRef = useRef<Element | Window | null>(null)
   const {scrollContainer, findScrollableParent} = useScrollableParent(headerRef)
+
+  // Initialize header transform on mount and navigation
+  useEffect(() => {
+    if (headerRef.current && slideUp) {
+      headerRef.current.style.transform = "translateY(0px)"
+      if (contentRef.current) {
+        contentRef.current.style.opacity = "1"
+      }
+    }
+  }, [slideUp, location.pathname])
 
   useEffect(() => {
     // Only enable slideUp on mobile
@@ -47,11 +59,13 @@ const Header = ({
     const MAX_TRANSLATE_Y = 0
     const OPACITY_MIN_POINT = 30
     const SCROLL_THRESHOLD = 10
-    let scrollElement: Element | Window | null = null
 
     const handleScroll = (e?: Event) => {
       // Only handle scroll on mobile
       if (window.innerWidth >= MOBILE_BREAKPOINT) return
+
+      // Verify the header still exists in DOM
+      if (!headerRef.current) return
 
       const currentScrollY = e ? (e.target as HTMLElement).scrollTop : window.scrollY
       let newTranslateY = 0
@@ -103,21 +117,27 @@ const Header = ({
     }
 
     const attachScrollListener = () => {
-      // Reset scroll position tracking
+      // Reset scroll position tracking and header position
       lastScrollY.current = 0
+      if (headerRef.current) {
+        headerRef.current.style.transform = "translateY(0px)"
+        if (contentRef.current) {
+          contentRef.current.style.opacity = "1"
+        }
+      }
 
       // First, look for explicitly marked scroll target
-      const markedScrollTarget = document.querySelector('[data-header-scroll-target]')
-      
+      const markedScrollTarget = document.querySelector("[data-header-scroll-target]")
+
       if (markedScrollTarget) {
-        scrollElement = markedScrollTarget
+        scrollElementRef.current = markedScrollTarget
         markedScrollTarget.addEventListener("scroll", handleScroll, {passive: true})
       } else {
         // Try to find scrollable parent first
         const scrollableParent = findScrollableParent(headerRef.current)
 
         if (scrollableParent) {
-          scrollElement = scrollableParent
+          scrollElementRef.current = scrollableParent
           scrollableParent.addEventListener("scroll", handleScroll, {passive: true})
         } else {
           // Look for sibling or nearby scrollable element (for profile/thread pages)
@@ -127,7 +147,7 @@ const Header = ({
           )
 
           if (scrollableSibling) {
-            scrollElement = scrollableSibling
+            scrollElementRef.current = scrollableSibling
             scrollableSibling.addEventListener("scroll", handleScroll, {passive: true})
           } else {
             // Try to find the main scrollable area (outlet)
@@ -135,11 +155,11 @@ const Header = ({
               ".overflow-y-scroll:not(.lg\\:block):not(.xl\\:block), .overflow-y-auto:not(.lg\\:block):not(.xl\\:block)"
             )
             if (outlet) {
-              scrollElement = outlet
+              scrollElementRef.current = outlet
               outlet.addEventListener("scroll", handleScroll, {passive: true})
             } else {
               // Fallback to window scroll
-              scrollElement = window
+              scrollElementRef.current = window
               window.addEventListener("scroll", handleScroll, {passive: true})
             }
           }
@@ -147,28 +167,50 @@ const Header = ({
       }
     }
 
+    // Clean up any existing listeners first
+    const cleanup = () => {
+      if (scrollElementRef.current) {
+        scrollElementRef.current.removeEventListener("scroll", handleScroll)
+        scrollElementRef.current = null
+      }
+    }
+
     // Attach immediately
+    cleanup()
     attachScrollListener()
 
     // Re-attach after a short delay to catch dynamically rendered elements
     const REATTACH_DELAY_MS = 100
     const timeoutId = setTimeout(() => {
-      if (scrollElement) {
-        scrollElement.removeEventListener("scroll", handleScroll)
-      }
+      cleanup()
       attachScrollListener()
     }, REATTACH_DELAY_MS)
+
+    // Watch for new scroll targets being added to DOM
+    const observer = new MutationObserver(() => {
+      const newScrollTarget = document.querySelector("[data-header-scroll-target]")
+      if (newScrollTarget && newScrollTarget !== scrollElementRef.current) {
+        cleanup()
+        attachScrollListener()
+      }
+    })
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-header-scroll-target"],
+    })
 
     window.addEventListener("resize", handleResize)
 
     return () => {
       clearTimeout(timeoutId)
-      if (scrollElement) {
-        scrollElement.removeEventListener("scroll", handleScroll)
-      }
+      cleanup()
+      observer.disconnect()
       window.removeEventListener("resize", handleResize)
     }
-  }, [slideUp, findScrollableParent])
+  }, [slideUp, findScrollableParent, location.pathname])
 
   const getButtonContent = () => {
     if (showBack) return <RiArrowLeftLine className="w-6 h-6" />
@@ -201,11 +243,14 @@ const Header = ({
       return
 
     // First check for explicitly marked scroll target
-    let scrollableParent = document.querySelector('[data-header-scroll-target]') as HTMLElement | null
-    
+    let scrollableParent = document.querySelector(
+      "[data-header-scroll-target]"
+    ) as HTMLElement | null
+
     // If not found, try to find scrollable parent (works for nested headers)
     if (!scrollableParent) {
-      scrollableParent = scrollContainer || findScrollableParent(headerRef.current) || null
+      scrollableParent =
+        scrollContainer || findScrollableParent(headerRef.current) || null
     }
 
     // If not found, look for the outlet column (for profile/thread pages where header is outside)

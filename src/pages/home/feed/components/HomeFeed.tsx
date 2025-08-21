@@ -135,78 +135,75 @@ function HomeFeed() {
 
   return (
     <div ref={containerRef}>
-        {follows.length > 1 && myPubKey && (
-          <FeedTabs
-            allTabs={allFeeds}
-            editMode={editMode}
-            onEditModeToggle={toggleEditMode}
+      {follows.length > 1 && myPubKey && (
+        <FeedTabs
+          allTabs={allFeeds}
+          editMode={editMode}
+          onEditModeToggle={toggleEditMode}
+        />
+      )}
+      {editMode && follows.length > 1 && myPubKey && activeFeedConfig?.feedStrategy && (
+        <div className="mt-4 p-4 border border-base-300 rounded-lg bg-base-50">
+          <div className="text-sm text-base-content/50 italic">
+            {activeFeedConfig.feedStrategy === "popular"
+              ? "Popular feeds use a fixed algorithm to calculate the most popular posts first."
+              : "For You feeds use personalized algorithms to curate content based on your interests."}{" "}
+            Editing functionality is under construction.
+          </div>
+        </div>
+      )}
+      {editMode && follows.length > 1 && myPubKey && !activeFeedConfig?.feedStrategy && (
+        <FeedEditor
+          key={activeFeed}
+          activeTab={activeFeed}
+          tabs={feeds}
+          onEditModeToggle={toggleEditMode}
+          onDeleteFeed={handleDeleteFeed}
+          onResetFeeds={handleResetFeeds}
+          onCloneFeed={handleCloneFeed}
+        />
+      )}
+      <NotificationPrompt />
+      <div>
+        {myPubKey && (
+          <InlineNoteCreator
+            onPublish={() => triggerFeedRefresh()}
+            placeholder="What's on your mind?"
           />
         )}
-        {editMode && follows.length > 1 && myPubKey && activeFeedConfig?.feedStrategy && (
-          <div className="mt-4 p-4 border border-base-300 rounded-lg bg-base-50">
-            <div className="text-sm text-base-content/50 italic">
-              {activeFeedConfig.feedStrategy === "popular"
-                ? "Popular feeds use a fixed algorithm to calculate the most popular posts first."
-                : "For You feeds use personalized algorithms to curate content based on your interests."}{" "}
-              Editing functionality is under construction.
-            </div>
-          </div>
-        )}
-        {editMode &&
-          follows.length > 1 &&
-          myPubKey &&
-          !activeFeedConfig?.feedStrategy && (
-            <FeedEditor
-              key={activeFeed}
-              activeTab={activeFeed}
-              tabs={feeds}
-              onEditModeToggle={toggleEditMode}
-              onDeleteFeed={handleDeleteFeed}
-              onResetFeeds={handleResetFeeds}
-              onCloneFeed={handleCloneFeed}
-            />
-          )}
-        <NotificationPrompt />
-        <div>
-          {myPubKey && (
-            <InlineNoteCreator
-              onPublish={() => triggerFeedRefresh()}
-              placeholder="What's on your mind?"
-            />
-          )}
-          {(() => {
-            if (!myPubKey) return <AlgorithmicFeed type="popular" />
+        {(() => {
+          if (!myPubKey) return <AlgorithmicFeed type="popular" />
 
-            if (activeFeedConfig?.feedStrategy)
-              return (
-                <AlgorithmicFeed
-                  key={`${activeFeedConfig.feedStrategy}-${feedRefreshSignal}`}
-                  type={activeFeedConfig.feedStrategy}
-                />
-              )
-
+          if (activeFeedConfig?.feedStrategy)
             return (
-              <Feed
-                key={feedKey}
-                feedConfig={activeFeedConfig}
-                showDisplayAsSelector={follows.length > 1}
-                forceUpdate={0}
-                emptyPlaceholder={""}
+              <AlgorithmicFeed
+                key={`${activeFeedConfig.feedStrategy}-${feedRefreshSignal}`}
+                type={activeFeedConfig.feedStrategy}
               />
             )
-          })()}
-          {follows.length <= 1 && myPubKey && (
-            <>
-              <NoFollows myPubKey={myPubKey} />
-              {!activeFeedConfig?.feedStrategy && (
-                <AlgorithmicFeed
-                  type="popular"
-                  displayOptions={{showDisplaySelector: false}}
-                />
-              )}
-            </>
-          )}
-        </div>
+
+          return (
+            <Feed
+              key={feedKey}
+              feedConfig={activeFeedConfig}
+              showDisplayAsSelector={follows.length > 1}
+              forceUpdate={0}
+              emptyPlaceholder={""}
+            />
+          )
+        })()}
+        {follows.length <= 1 && myPubKey && (
+          <>
+            <NoFollows myPubKey={myPubKey} />
+            {!activeFeedConfig?.feedStrategy && (
+              <AlgorithmicFeed
+                type="popular"
+                displayOptions={{showDisplaySelector: false}}
+              />
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }

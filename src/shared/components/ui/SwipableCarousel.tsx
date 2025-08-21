@@ -127,10 +127,7 @@ export function SwipableCarousel({
     }
 
     const handleTouchMove = (e: TouchEvent) => {
-      // Always try to prevent default on touchmove during potential horizontal swipes
-      if (isDragging) {
-        e.preventDefault()
-      }
+      // Let the drag handler decide whether to prevent default based on scroll direction
       handlers.onDragMove(e as unknown as ReactTouchEvent | ReactMouseEvent)
     }
 

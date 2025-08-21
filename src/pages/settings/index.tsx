@@ -140,6 +140,7 @@ function Settings() {
     <div
       className="flex flex-1 h-full overflow-y-scroll overflow-x-hidden scrollbar-hide relative"
       data-main-scroll-container="true"
+      data-header-scroll-target
     >
       <div className="pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 flex w-full">
         <nav
@@ -185,10 +186,10 @@ function Settings() {
           </div>
         </nav>
         <div className="md:hidden">
-          <Header title="Settings" slideUp={false} />
+          <Header title="Settings" />
         </div>
         <div className={`flex-1 ${isSettingsRoot ? "hidden lg:block" : "block"}`}>
-          <Header title="Settings" slideUp={false} />
+          <Header title="Settings" />
           <div className="p-4 mx-4 md:p-8 md:mt-16 rounded-lg bg-base-100 shadow">
             {(() => {
               // Determine which component to show based on the path

@@ -69,12 +69,13 @@ function SearchPage() {
 
   return (
     <div className="flex flex-1 flex-row relative h-full">
-      <div
-        className="flex flex-col flex-1 h-full overflow-y-scroll overflow-x-hidden scrollbar-hide"
-        data-main-scroll-container="true"
-      >
+      <div className="flex flex-col flex-1 h-full relative">
         <Header title={query ? `Search: "${query}"` : "Search"} />
-        <div className="flex flex-col items-center flex-1">
+        <div
+          className="flex flex-col items-center flex-1 overflow-y-scroll overflow-x-hidden scrollbar-hide"
+          data-main-scroll-container="true"
+          data-header-scroll-target
+        >
           <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-2 md:pb-0">
             {activeTab === "people" ? (
               <SearchBox searchNotes={true} maxResults={10} focusOnNav={true} />
