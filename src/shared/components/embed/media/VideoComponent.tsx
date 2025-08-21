@@ -4,6 +4,7 @@ import {generateProxyUrl} from "../../../utils/imgproxy"
 import {useSettingsStore} from "@/stores/settings"
 import classNames from "classnames"
 import {EmbedEvent} from "../index"
+import {parseImetaTag} from "@/shared/utils/imetaUtils"
 
 interface HlsVideoComponentProps {
   match: string
@@ -33,14 +34,15 @@ function HlsVideoComponent({
         event?.tags.some((t) => t[0] === "content-warning"))
   )
 
-  // Extract dimensions from imeta tag if available
-  const dimensions = imeta?.find((tag) => tag.startsWith("dim "))?.split(" ")[1]
-  const [originalWidth, originalHeight] = dimensions
-    ? dimensions.split("x").map(Number)
-    : [null, null]
+  // Parse imeta data
+  const imetaData = useMemo(() => {
+    if (!imeta) return undefined
+    return parseImetaTag(imeta)
+  }, [imeta])
 
-  // Extract blurhash from imeta tag if available
-  const blurhash = imeta?.find((tag) => tag.startsWith("blurhash "))?.split(" ")[1]
+  const originalWidth = imetaData?.width || null
+  const originalHeight = imetaData?.height || null
+  const blurhash = imetaData?.blurhash
 
   const calculatedDimensions = calculateDimensions(
     originalWidth,
@@ -110,7 +112,7 @@ function HlsVideoComponent({
   return (
     <div
       className={classNames("relative w-full justify-center flex object-contain my-2", {
-        "h-[600px]": limitHeight || !dimensions,
+        "h-[600px]": limitHeight || !originalWidth || !originalHeight,
       })}
     >
       <video
@@ -128,8 +130,8 @@ function HlsVideoComponent({
         ref={videoRef}
         className={classNames("max-w-full object-contain", {
           "blur-xl": blur,
-          "h-full max-h-[600px]": limitHeight || !dimensions,
-          "max-h-[90vh] lg:h-[600px]": !limitHeight && dimensions,
+          "h-full max-h-[600px]": limitHeight || !originalWidth || !originalHeight,
+          "max-h-[90vh] lg:h-[600px]": !limitHeight && originalWidth && originalHeight,
         })}
         style={{
           ...calculatedDimensions,

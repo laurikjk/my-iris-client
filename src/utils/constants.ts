@@ -47,5 +47,8 @@ export const KIND_CLASSIFIED = 30402
 // Highlights
 export const KIND_HIGHLIGHT = 9802
 
+// NIP-68: Picture-first feeds
+export const KIND_PICTURE_FIRST = 20
+
 // Additional kinds found in codebase
 export const KIND_WALLET_CONNECT = 6927

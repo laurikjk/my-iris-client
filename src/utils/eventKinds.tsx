@@ -13,6 +13,7 @@ import {
   RiPushpinFill,
   RiServerFill,
   RiBookmarkFill,
+  RiImageFill,
 } from "@remixicon/react"
 import {
   KIND_TEXT_NOTE,
@@ -22,6 +23,7 @@ import {
   KIND_LONG_FORM_CONTENT,
   KIND_CHANNEL_MESSAGE,
   KIND_CLASSIFIED,
+  KIND_PICTURE_FIRST,
 } from "@/utils/constants"
 
 export interface EventKindInfo {
@@ -81,6 +83,13 @@ export const EVENT_KIND_INFO: Record<number, EventKindInfo> = {
     icon: <RiStoreFill className="w-3 h-3" />,
     iconLarge: <RiStoreFill className="w-4 h-4" />,
     color: "text-orange-500",
+  },
+  [KIND_PICTURE_FIRST]: {
+    label: "Picture",
+    description: "Picture-first posts",
+    icon: <RiImageFill className="w-3 h-3" />,
+    iconLarge: <RiImageFill className="w-4 h-4" />,
+    color: "text-blue-600",
   },
   3: {
     label: "Follows",
@@ -142,4 +151,5 @@ export const COMMON_EVENT_KINDS = [
   KIND_LONG_FORM_CONTENT,
   KIND_CHANNEL_MESSAGE,
   KIND_CLASSIFIED,
+  KIND_PICTURE_FIRST,
 ]

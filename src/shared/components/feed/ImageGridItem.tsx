@@ -14,6 +14,8 @@ import ProxyImg from "../ProxyImg"
 import Icon from "../Icons/Icon"
 import {LRUCache} from "typescript-lru-cache"
 import {ndk} from "@/utils/ndk"
+import {KIND_PICTURE_FIRST} from "@/utils/constants"
+import {extractImetaImages} from "@/shared/utils/imetaUtils"
 
 interface ImageGridItemProps {
   event: NDKEvent | {id: string}
@@ -149,10 +151,17 @@ const ImageGridItem = memo(function ImageGridItem({
   const videoMatch = event?.content.match(VIDEO_REGEX)?.[0]
 
   const urls = useMemo(() => {
+    // For kind 20 events, extract images from imeta tags
+    if (event?.kind === KIND_PICTURE_FIRST) {
+      const images = extractImetaImages(event)
+      return images.map((img) => img.url)
+    }
+
+    // For other events, extract from content
     return imageMatch
       ? imageMatch.trim().split(/\s+/)
       : videoMatch?.trim().split(/\s+/) || []
-  }, [imageMatch, videoMatch])
+  }, [imageMatch, videoMatch, event?.kind, event?.tags])
 
   // Use smaller sizes for better mobile performance
   const isMobile = window.innerWidth <= 767
@@ -226,7 +235,13 @@ const ImageGridItem = memo(function ImageGridItem({
     return <div className="aspect-square bg-neutral-300 animate-pulse" />
   }
 
-  if (event.kind !== 30402 && !hasImageOrVideo(event.content)) {
+  // Always show kind 20 (picture-first) and kind 30402 (market listings)
+  // For other kinds, check if content has media
+  if (
+    event.kind !== KIND_PICTURE_FIRST &&
+    event.kind !== 30402 &&
+    !hasImageOrVideo(event.content)
+  ) {
     return null
   }
 
@@ -240,7 +255,11 @@ const ImageGridItem = memo(function ImageGridItem({
   }
 
   return urls.map((url, i) => {
-    const isVideo = !imageMatch
+    // For kind 20 events, all media are images (not videos)
+    // For other events, check if it's a video URL
+    const isVideo =
+      event?.kind !== KIND_PICTURE_FIRST &&
+      (videoMatch?.includes(url) || (!imageMatch && videoMatch))
     const hasError = loadErrors[i]
 
     const shouldBlur =

@@ -10,11 +10,13 @@ import {
   KIND_LONG_FORM_CONTENT,
   KIND_CLASSIFIED,
   KIND_CHANNEL_CREATE,
+  KIND_PICTURE_FIRST,
 } from "@/utils/constants"
 import Zapraiser from "../Zapraiser.tsx"
 import Highlight from "../Highlight.tsx"
 import TextNote from "../TextNote.tsx"
 import LongForm from "../LongForm.tsx"
+import PictureFirst from "../PictureFirst.tsx"
 import {memo} from "react"
 
 type ContentProps = {
@@ -60,6 +62,8 @@ const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentPr
     )
   } else if (event.kind === KIND_CHANNEL_CREATE) {
     return <ChannelCreation event={event} />
+  } else if (event.kind === KIND_PICTURE_FIRST) {
+    return <PictureFirst event={event} truncate={truncate} standalone={standalone} />
   } else {
     return <TextNote event={event} truncate={truncate} />
   }

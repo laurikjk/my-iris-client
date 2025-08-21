@@ -8,6 +8,14 @@ import {useNotificationsStore} from "@/stores/notifications"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
 import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
+import {
+  KIND_REACTION,
+  KIND_REPOST,
+  KIND_TEXT_NOTE,
+  KIND_ZAP_RECEIPT,
+  KIND_HIGHLIGHT,
+  KIND_PICTURE_FIRST,
+} from "@/utils/constants"
 
 let sub: NDKSubscription | undefined
 
@@ -17,11 +25,12 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
   sub?.stop()
 
   const kinds: number[] = [
-    7, // reactions
-    6, // reposts
-    1, // replies
-    9735, // zap receipts
-    9802, // highlights
+    KIND_REACTION,
+    KIND_REPOST,
+    KIND_TEXT_NOTE, // replies
+    KIND_ZAP_RECEIPT,
+    KIND_HIGHLIGHT,
+    KIND_PICTURE_FIRST, // when tagged
   ]
 
   const filters = {
@@ -38,7 +47,7 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
   const hideEventsByUnknownUsers = settings.content?.hideEventsByUnknownUsers
 
   sub.on("event", async (event: NDKEvent) => {
-    if (event.kind !== 9735) {
+    if (event.kind !== KIND_ZAP_RECEIPT) {
       // allow zap notifs from self & unknown users
       if (event.pubkey === myPubKey) return
       if (hideEventsByUnknownUsers && socialGraph().getFollowDistance(event.pubkey) > 5)
@@ -65,7 +74,7 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
           content: event.content,
           tags: event.tags,
         } as IrisNotification)
-      const user = event.kind === 9735 ? getZappingUser(event) : event.pubkey
+      const user = event.kind === KIND_ZAP_RECEIPT ? getZappingUser(event) : event.pubkey
       if (!user) {
         console.warn("no user for event", event)
         return
@@ -73,16 +82,19 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
       const existing = notification.users.get(user)
       if (!existing || existing.time < event.created_at) {
         let content: string | undefined = undefined
-        if (event.kind === 1) {
+        if (event.kind === KIND_TEXT_NOTE) {
           // Text note (reply) content
           content = event.content
-        } else if (event.kind === 7) {
+        } else if (event.kind === KIND_REACTION) {
           // Reaction content (emoji)
           content = event.content
-        } else if (event.kind === 9735) {
+        } else if (event.kind === KIND_ZAP_RECEIPT) {
           // Zap receipt - extract zap amount
           const zapAmount = await getZapAmount(event)
           content = zapAmount > 0 ? zapAmount.toString() : undefined
+        } else if (event.kind === KIND_PICTURE_FIRST) {
+          // Picture-first post content
+          content = event.content
         }
 
         notification.users.set(user, {
@@ -93,8 +105,11 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
       if (event.created_at > notification.time) {
         notification.time = event.created_at
         // Update notification content with the latest reply/reaction
-        if (event.kind === 1 && event.content) {
+        if (event.kind === KIND_TEXT_NOTE && event.content) {
           // For text notes (replies), update the notification content to show the latest reply
+          notification.content = event.content
+        } else if (event.kind === KIND_PICTURE_FIRST && event.content) {
+          // For picture-first posts, update the notification content
           notification.content = event.content
         }
       }

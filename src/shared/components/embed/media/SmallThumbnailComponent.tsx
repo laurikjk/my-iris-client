@@ -6,6 +6,7 @@ import classNames from "classnames"
 import {EmbedEvent} from "../index"
 import {generateBlurhashUrl, calculateDimensions, getAllEventMedia} from "./mediaUtils"
 import MediaModal from "../../media/MediaModal"
+import {getImetaDataForUrl} from "@/shared/utils/imetaUtils"
 
 interface SmallThumbnailComponentProps {
   match: string
@@ -22,30 +23,22 @@ function SmallThumbnailComponent({match, event}: SmallThumbnailComponentProps) {
   const [error, setError] = useState(false)
   const [showModal, setShowModal] = useState(false)
 
-  // Extract imeta tag for this URL
-  const imetaTag = useMemo(() => {
-    if (!event?.tags) return undefined
-    return event.tags.find(
-      (tag) => tag[0] === "imeta" && tag[1] && tag[1].includes(match)
-    )
-  }, [event?.tags, match])
+  // Extract imeta data for this URL using utility
+  const imetaData = useMemo(() => {
+    if (!event) return undefined
+    return getImetaDataForUrl(event, match)
+  }, [event, match])
 
-  // Extract dimensions from imeta tag if available
-  const dimensions = imetaTag?.find((tag) => tag.startsWith("dim "))?.split(" ")[1]
-  const [originalWidth, originalHeight] = dimensions
-    ? dimensions.split("x").map(Number)
-    : [null, null]
-
-  // Extract blurhash from imeta tag if available
-  const blurhash = imetaTag?.find((tag) => tag.startsWith("blurhash "))?.split(" ")[1]
+  const originalWidth = imetaData?.width || null
+  const originalHeight = imetaData?.height || null
+  const blurhash = imetaData?.blurhash
 
   // Extract alt text from imeta name field and truncate it
   const altText = useMemo(() => {
-    const namePart = imetaTag?.find((tag) => tag.startsWith("name "))
-    if (!namePart) return "thumbnail"
-    const name = namePart.substring(5) // Remove "name " prefix
+    const name = imetaData?.name || imetaData?.alt
+    if (!name) return "thumbnail"
     return name.length > 30 ? name.substring(0, 30) + "..." : name
-  }, [imetaTag])
+  }, [imetaData])
 
   // Generate blurhash URL for placeholder (use original dimensions for better aspect ratio)
   const blurhashDimensions =

@@ -13,7 +13,7 @@ import {hasMedia} from "@/shared/components/embed"
 import {hasImageOrVideo} from "@/shared/utils/mediaUtils"
 import {type FeedConfig} from "@/stores/feed"
 import DebugManager from "@/utils/DebugManager"
-import {KIND_TEXT_NOTE} from "@/utils/constants"
+import {KIND_TEXT_NOTE, KIND_PICTURE_FIRST} from "@/utils/constants"
 
 interface FutureEvent {
   event: NDKEvent
@@ -84,7 +84,9 @@ export default function useFeedEvents({
     if (feedConfig.hideReplies && getEventReplyingTo(event)) return false
 
     // Feed-specific display filtering (from displayFilterFn)
-    if (feedConfig.requiresMedia && !hasMedia(event)) return false
+    // Kind 20 events always contain media (picture-first posts)
+    if (feedConfig.requiresMedia && event.kind !== KIND_PICTURE_FIRST && !hasMedia(event))
+      return false
     if (feedConfig.requiresReplies && !getEventReplyingTo(event)) return false
     if (feedConfig.repliesTo && getEventReplyingTo(event) !== feedConfig.repliesTo)
       return false

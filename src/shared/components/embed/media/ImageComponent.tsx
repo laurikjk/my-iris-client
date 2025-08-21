@@ -2,6 +2,7 @@ import {calculateDimensions, generateBlurhashUrl} from "./mediaUtils"
 import {useState, MouseEvent, useMemo, memo} from "react"
 import ProxyImg from "../../ProxyImg"
 import classNames from "classnames"
+import {parseImetaTag} from "@/shared/utils/imetaUtils"
 
 interface ImageComponentProps {
   match: string
@@ -20,14 +21,15 @@ const ImageComponent = ({
 }: ImageComponentProps) => {
   const [hasError, setHasError] = useState(false)
 
-  // Extract dimensions from imeta tag if available
-  const dimensions = imeta?.find((tag) => tag.startsWith("dim "))?.split(" ")[1]
-  const [originalWidth, originalHeight] = dimensions
-    ? dimensions.split("x").map(Number)
-    : [null, null]
+  // Parse imeta data
+  const imetaData = useMemo(() => {
+    if (!imeta) return undefined
+    return parseImetaTag(imeta)
+  }, [imeta])
 
-  // Extract blurhash from imeta tag if available
-  const blurhash = imeta?.find((tag) => tag.startsWith("blurhash "))?.split(" ")[1]
+  const originalWidth = imetaData?.width || null
+  const originalHeight = imetaData?.height || null
+  const blurhash = imetaData?.blurhash
 
   const calculatedDimensions = calculateDimensions(
     originalWidth,
@@ -49,7 +51,7 @@ const ImageComponent = ({
   return (
     <div
       className={classNames("flex justify-center items-center my-2", {
-        "h-[600px]": limitHeight || !dimensions,
+        "h-[600px]": limitHeight || !originalWidth || !originalHeight,
       })}
     >
       {hasError ? (
@@ -72,8 +74,9 @@ const ImageComponent = ({
             onClick={onClick}
             className={classNames("my-2 max-w-full cursor-pointer object-contain", {
               "blur-md": blur,
-              "h-full max-h-[600px]": limitHeight || !dimensions,
-              "max-h-[90vh] lg:max-h-[600px]": !limitHeight && dimensions,
+              "h-full max-h-[600px]": limitHeight || !originalWidth || !originalHeight,
+              "max-h-[90vh] lg:max-h-[600px]":
+                !limitHeight && originalWidth && originalHeight,
             })}
             style={{
               ...calculatedDimensions,

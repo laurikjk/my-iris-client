@@ -1,6 +1,11 @@
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
-import {KIND_TEXT_NOTE, KIND_CLASSIFIED, KIND_LONG_FORM_CONTENT} from "@/utils/constants"
+import {
+  KIND_TEXT_NOTE,
+  KIND_CLASSIFIED,
+  KIND_LONG_FORM_CONTENT,
+  KIND_PICTURE_FIRST,
+} from "@/utils/constants"
 import {clearAlgorithmicFeedCaches} from "@/utils/memcache"
 
 export type FeedType = "popular" | "for-you"
@@ -76,7 +81,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     followDistance: 1,
     hideReplies: false,
     filter: {
-      kinds: [KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT],
+      kinds: [KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT, KIND_PICTURE_FIRST],
       limit: 100,
     },
   },
@@ -110,7 +115,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     hideReplies: true,
     followDistance: 1,
     filter: {
-      kinds: [KIND_TEXT_NOTE],
+      kinds: [KIND_TEXT_NOTE, KIND_PICTURE_FIRST],
       limit: 100,
     },
   },
@@ -119,7 +124,7 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
     id: "adventure",
     showRepliedTo: false,
     filter: {
-      kinds: [KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT],
+      kinds: [KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT, KIND_PICTURE_FIRST],
       limit: 100,
     },
     followDistance: 5,

@@ -1,6 +1,8 @@
 import {useCallback, useRef} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {IMAGE_REGEX, VIDEO_REGEX} from "@/shared/components/embed/media/MediaEmbed"
+import {KIND_PICTURE_FIRST} from "@/utils/constants"
+import {extractImetaImages} from "@/shared/utils/imetaUtils"
 
 export interface MediaItem {
   type: "image" | "video"
@@ -20,8 +22,15 @@ export function useMediaExtraction() {
 
     const media: MediaItem[] = []
 
-    // Only process if content exists and might contain media
-    if (
+    // Handle kind 20 (picture-first) events
+    if (event.kind === KIND_PICTURE_FIRST) {
+      const images = extractImetaImages(event)
+      images.forEach((img) => {
+        media.push({type: "image" as const, url: img.url, event})
+      })
+    }
+    // Handle other events with media in content
+    else if (
       event.content &&
       (event.content.includes("http") || event.content.includes("."))
     ) {

@@ -250,7 +250,7 @@ function FeedEditor({
         <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">
           Event Kinds
         </span>
-        <div className="flex-1">
+        <div className="flex-1 overflow-hidden">
           <EventKindsSelector
             selectedKinds={localConfig.filter?.kinds || []}
             onKindsChange={(kinds) => {
