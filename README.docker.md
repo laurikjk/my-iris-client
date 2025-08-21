@@ -10,6 +10,7 @@ CLAUDE_API_KEY=your_key_here
 ```
 
 Then add to docker-compose.yml under the service:
+
 ```yaml
 env_file:
   - .env
@@ -89,7 +90,7 @@ iris-patch-in() {
 iris-commit-pull() {
   local project=""
   local n=1
-  
+
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -97,7 +98,7 @@ iris-commit-pull() {
       *) project="-p $1"; shift;;
     esac
   done
-  
+
   docker exec $(docker-compose $project ps -q iris-dev) sh -c "cd /home/developer/iris-client && git format-patch HEAD~$n --stdout" | git am
 }
 

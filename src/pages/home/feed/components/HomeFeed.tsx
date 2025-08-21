@@ -151,7 +151,7 @@ function HomeFeed() {
   }
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className="relative w-full h-full flex flex-col">
       <Header showBack={false}>
         <div className="flex items-center justify-between w-full">
           <span className="md:px-3 md:py-2">{feedName}</span>
@@ -176,7 +176,7 @@ function HomeFeed() {
           )}
         </div>
       </Header>
-      <div>
+      <div className="flex-1 overflow-hidden">
         <PullToRefresh onRefresh={triggerFeedRefresh}>
           {follows.length > 1 && myPubKey && (
             <FeedTabs
@@ -213,7 +213,7 @@ function HomeFeed() {
               />
             )}
           <NotificationPrompt />
-          <div>
+          <div data-scrollable className="overflow-y-auto scrollbar-hide flex-1">
             {myPubKey && (
               <InlineNoteCreator
                 onPublish={() => triggerFeedRefresh()}

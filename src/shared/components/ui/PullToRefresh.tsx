@@ -179,7 +179,7 @@ export default function PullToRefresh({
       </div>
       <div
         ref={contentRef}
-        className="will-change-transform"
+        className="will-change-transform h-full flex flex-col"
         style={{
           transform: "translate3d(0, 0, 0)",
         }}
