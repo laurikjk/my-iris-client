@@ -43,8 +43,12 @@ export default defineConfig({
         main: "index.html",
         debug: "debug.html",
       },
+      external: [],
       output: {
         manualChunks: (id) => {
+          if (id.includes("nostr-social-graph/data/profileData.json")) {
+            return "profileData"
+          }
           if (
             id.includes("utils/AnimalName") ||
             id.includes("utils/data/animals") ||
