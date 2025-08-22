@@ -10,6 +10,9 @@ const MAX_SIZE = 100000
 
 export const profileCache = new LRUCache<string, NDKUserProfile>({maxSize: MAX_SIZE})
 
+// Track if we've loaded profiles from storage (localforage or JSON)
+let profilesLoaded = false
+
 // Helper functions for profile data sanitization
 const shouldRejectNip05 = (nip05: string, name: string): boolean => {
   return (
@@ -79,6 +82,11 @@ const profileToArray = (pubkey: string, profile: NDKUserProfile): string[] => {
 }
 
 const throttledSaveProfiles = throttle(() => {
+  // Don't save if profiles haven't been loaded yet
+  if (!profilesLoaded) {
+    return
+  }
+
   const profileData: string[][] = []
   profileCache.forEach((profile, pubkey) => {
     const arrayData = profileToArray(String(pubkey), profile)
@@ -124,6 +132,7 @@ export const loadProfileCache = (): Promise<void> => {
           })
           console.log(`Loaded ${loadedCount} profiles from localforage cache`)
           validData = true
+          profilesLoaded = true
         } else if (
           Array.isArray(firstItem) &&
           firstItem.length === 2 &&
@@ -150,6 +159,7 @@ export const loadProfileCache = (): Promise<void> => {
             addCachedProfile(v[0], {username: v[1], picture: pictureUrl || undefined})
           }
         })
+        profilesLoaded = true
       }
     })
     .catch((e) => {
@@ -165,7 +175,10 @@ export const addCachedProfile = (pubkey: string, profile: NDKUserProfile) => {
   )
   if (name) {
     profileCache.set(pubkey, profile)
-    throttledSaveProfiles()
+    // Only trigger save if profiles have been loaded
+    if (profilesLoaded) {
+      throttledSaveProfiles()
+    }
   }
 }
 
