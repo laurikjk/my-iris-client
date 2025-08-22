@@ -31,10 +31,10 @@ export default function MutedBy({pubkey}: {pubkey: string}) {
   const renderMutedByLinks = () => {
     return mutedByArray.map((a, index) => (
       <Fragment key={a}>
-        <Link to={`/${nip19.npubEncode(a)}`} className="link inline">
+        <Link to={`/${nip19.npubEncode(a)}`} className="link">
           <Name pubKey={a} />
         </Link>
-        {index < mutedByArray.length - 1 && ","}{" "}
+        {index < mutedByArray.length - 1 && ", "}
       </Fragment>
     ))
   }
@@ -42,15 +42,14 @@ export default function MutedBy({pubkey}: {pubkey: string}) {
   return (
     <div className="text-base-content/50">
       {showMutedWarning && totalMutedBy > 0 && (
-        <div className="flex items-center gap-1 text-warning">
+        <div className="text-warning">
           <span role="img" aria-label="warning" className="text-warning">
             ⚠️
-          </span>
-          <span className="mr-1">Muted by</span>
-          {renderMutedByLinks()}
+          </span>{" "}
+          Muted by {renderMutedByLinks()}
           {totalMutedBy > MAX_MUTED_BY_DISPLAY && (
             <>
-              and{" "}
+              {" and "}
               <span
                 className="link cursor-pointer"
                 onClick={() => setShowMuterList(true)}
