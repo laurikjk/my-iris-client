@@ -18,6 +18,7 @@ import {
 interface ReactedTime {
   time: number
   content?: string
+  eventId?: string
 }
 
 export interface Notification {

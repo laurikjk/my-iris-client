@@ -86,7 +86,6 @@ export const handleSocialGraphEvent = (evs: NostrEvent | Array<NostrEvent>) => {
   instance.handleEvent(evs)
   throttledSave()
 
-  // Emit throttled event if mute list was updated
   if (hasMuteListUpdate) {
     throttledMuteListUpdate()
   }

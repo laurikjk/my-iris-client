@@ -1,6 +1,6 @@
 import {useSettingsStore} from "@/stores/settings"
 import {useUserStore} from "@/stores/user"
-import socialGraph, {socialGraphEvents} from "@/utils/socialGraph"
+import socialGraph, {socialGraphEvents, socialGraphLoaded} from "@/utils/socialGraph"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {getTag, getZappingUser, getZapAmount} from "@/utils/nostr.ts"
 import {notifications, Notification as IrisNotification} from "@/utils/notifications"
@@ -57,6 +57,26 @@ const cleanupMutedNotifications = () => {
     // If no users left, mark notification for removal
     if (notification.users.size === 0) {
       toRemove.push(key)
+    } else if (usersToRemove.length > 0 && notification.kind === KIND_TEXT_NOTE) {
+      // Update notification content to show the latest non-muted reply
+      let latestTime = 0
+      let latestContent = ""
+      let latestEventId = ""
+
+      for (const [, userInfo] of notification.users) {
+        if (userInfo.time > latestTime && userInfo.content) {
+          latestTime = userInfo.time
+          latestContent = userInfo.content
+          latestEventId = userInfo.eventId || ""
+        }
+      }
+
+      // Update the notification to show the latest non-muted user's message
+      if (latestContent && latestEventId) {
+        notification.content = latestContent
+        notification.time = latestTime
+        notification.id = latestEventId
+      }
     }
   }
 
@@ -72,12 +92,13 @@ const cleanupMutedNotifications = () => {
   }
 }
 
-export const startNotificationsSubscription = debounce((myPubKey?: string) => {
+export const startNotificationsSubscription = debounce(async (myPubKey?: string) => {
   if (!myPubKey || typeof myPubKey !== "string") return
+
+  await socialGraphLoaded
 
   sub?.stop()
 
-  // Listen for mute list updates and clean up notifications
   const handleMuteListUpdate = () => {
     cleanupMutedNotifications()
   }
@@ -85,6 +106,8 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
   // Remove old listener if exists and add new one
   socialGraphEvents.removeListener("muteListUpdated", handleMuteListUpdate)
   socialGraphEvents.on("muteListUpdated", handleMuteListUpdate)
+
+  cleanupMutedNotifications()
 
   const kinds: number[] = [
     KIND_REACTION,
@@ -114,7 +137,6 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
       if (event.pubkey === myPubKey) return
       if (hideEventsByUnknownUsers && socialGraph().getFollowDistance(event.pubkey) > 5)
         return
-      // Skip notifications from authors that should be hidden (includes muted users)
       if (shouldHideAuthor(event.pubkey)) return
 
       // Skip notifications from events that mention muted users
@@ -149,6 +171,12 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
         console.warn("no user for event", event)
         return
       }
+
+      // Don't add muted users to existing notifications either
+      if (shouldHideAuthor(user)) {
+        return
+      }
+
       const existing = notification.users.get(user)
       if (!existing || existing.time < event.created_at) {
         let content: string | undefined = undefined
@@ -170,6 +198,7 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
         notification.users.set(user, {
           time: event.created_at,
           content,
+          eventId: event.id,
         })
       }
       if (event.created_at > notification.time) {
