@@ -38,10 +38,10 @@ export const FloatingEmojiPicker = ({
   }, [isOpen, emojiData])
 
   useEffect(() => {
-    if (position?.clientY && isDesktop) {
+    if (isOpen && position?.clientY && isDesktop) {
       setPickerDirection(position.clientY < window.innerHeight / 2 ? "down" : "up")
     }
-  }, [position?.clientY])
+  }, [isOpen, isDesktop])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
