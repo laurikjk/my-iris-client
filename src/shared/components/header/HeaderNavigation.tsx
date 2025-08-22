@@ -25,7 +25,7 @@ export const HeaderNavigation = ({showBack}: HeaderNavigationProps) => {
   return (
     <button
       onClick={handleBack}
-      className="flex items-center justify-center text-foreground p-2 hover:bg-accent rounded-lg transition-colors"
+      className="flex items-center justify-center text-foreground p-2 rounded-lg transition-colors"
       aria-label="Go back"
     >
       <RiArrowLeftLine className="w-6 h-6" />
