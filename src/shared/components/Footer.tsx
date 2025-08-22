@@ -2,13 +2,14 @@ import classNames from "classnames"
 import {ReactNode} from "react"
 import {RiLockLine} from "@remixicon/react"
 
-import UnseenMessagesBadge from "@/shared/components/messages/UnseenMessagesBadge"
 import PublishButton from "@/shared/components/ui/PublishButton"
 import {useWalletBalance} from "@/shared/hooks/useWalletBalance"
 import NavLink from "@/shared/components/nav/NavLink" // Adjusted import path
 import Icon from "@/shared/components/Icons/Icon" // Add this import
+import {Avatar} from "@/shared/components/user/Avatar"
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {formatAmount} from "@/utils/utils"
+import {nip19} from "nostr-tools"
 import {useUserStore} from "@/stores/user"
 import {useLocation} from "@/navigation"
 import {ndk} from "@/utils/ndk"
@@ -73,9 +74,10 @@ const Footer = () => {
                 <FooterNavItem key={index} item={item} readonly={readonly} />
               )
           )}
+          <FooterNavItem item={{link: "/search", icon: "search"}} readonly={readonly} />
           {myPubKey && (
             <NavLink
-              to="/chats"
+              to={`/${nip19.npubEncode(myPubKey)}`}
               onClick={() => useUIStore.getState().setIsSidebarOpen(false)}
               className={({isActive}) =>
                 classNames(
@@ -85,17 +87,16 @@ const Footer = () => {
               }
             >
               {({isActive}) => (
-                <span className="indicator">
-                  <UnseenMessagesBadge />
-                  <Icon
-                    className="w-5 h-5"
-                    name={`mail-${isActive ? "solid" : "outline"}`}
-                  />
-                </span>
+                <div
+                  className={classNames("rounded-full", {
+                    "ring-2 ring-primary": isActive,
+                  })}
+                >
+                  <Avatar pubKey={myPubKey} width={24} showBadge={false} />
+                </div>
               )}
             </NavLink>
           )}
-          <FooterNavItem item={{link: "/search", icon: "search"}} readonly={readonly} />
         </div>
       </footer>
     </ErrorBoundary>

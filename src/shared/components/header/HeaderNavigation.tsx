@@ -4,10 +4,9 @@ import {useNavigate} from "@/navigation"
 
 interface HeaderNavigationProps {
   showBack: boolean
-  isLargeScreen: boolean
 }
 
-export const HeaderNavigation = ({showBack, isLargeScreen}: HeaderNavigationProps) => {
+export const HeaderNavigation = ({showBack}: HeaderNavigationProps) => {
   const navigate = useNavigate()
 
   const handleBack = (e: MouseEvent<HTMLButtonElement>) => {
@@ -21,7 +20,7 @@ export const HeaderNavigation = ({showBack, isLargeScreen}: HeaderNavigationProp
     }
   }
 
-  if (!showBack || isLargeScreen) return null
+  if (!showBack) return null
 
   return (
     <button
