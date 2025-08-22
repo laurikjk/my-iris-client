@@ -3,6 +3,7 @@ import {nip19} from "nostr-tools"
 import socialGraph from "@/utils/socialGraph"
 import {Link, useNavigate} from "@/navigation"
 import Widget from "@/shared/components/ui/Widget"
+import {formatAmount} from "@/utils/utils"
 
 interface SocialGraphWidgetProps {
   background?: boolean
@@ -64,19 +65,19 @@ export function SocialGraphWidget({background = true}: SocialGraphWidgetProps = 
         <div className="grid grid-cols-3 gap-3 text-xs mb-3">
           <div>
             <div className="font-bold text-xl">
-              {socialGraphSize.users.toLocaleString()}
+              {formatAmount(socialGraphSize.users, 3)}
             </div>
             <div className="opacity-60">Users</div>
           </div>
           <div>
             <div className="font-bold text-xl">
-              {socialGraphSize.follows.toLocaleString()}
+              {formatAmount(socialGraphSize.follows, 3)}
             </div>
             <div className="opacity-60">Follows</div>
           </div>
           <div>
             <div className="font-bold text-xl">
-              {socialGraphSize.mutes.toLocaleString()}
+              {formatAmount(socialGraphSize.mutes, 3)}
             </div>
             <div className="opacity-60">Mutes</div>
           </div>
@@ -85,7 +86,7 @@ export function SocialGraphWidget({background = true}: SocialGraphWidgetProps = 
           <div className="text-xs opacity-80 mb-2">Distance from you</div>
           <div className="grid grid-cols-3 gap-3 text-xs">
             <div>
-              <div className="font-bold text-lg">{distance1.toLocaleString()}</div>
+              <div className="font-bold text-lg">{formatAmount(distance1, 3)}</div>
               <div className="opacity-60">1 hop</div>
               {distance1 > 0 && (
                 <button
@@ -97,7 +98,7 @@ export function SocialGraphWidget({background = true}: SocialGraphWidgetProps = 
               )}
             </div>
             <div>
-              <div className="font-bold text-lg">{distance2.toLocaleString()}</div>
+              <div className="font-bold text-lg">{formatAmount(distance2, 3)}</div>
               <div className="opacity-60">2 hops</div>
               {distance2 > 0 && (
                 <button
@@ -109,7 +110,7 @@ export function SocialGraphWidget({background = true}: SocialGraphWidgetProps = 
               )}
             </div>
             <div>
-              <div className="font-bold text-lg">{distance3Plus.toLocaleString()}</div>
+              <div className="font-bold text-lg">{formatAmount(distance3Plus, 3)}</div>
               <div className="opacity-60">3+ hops</div>
               {distance3Plus > 0 && (
                 <button
