@@ -92,7 +92,7 @@ const Footer = () => {
                     "ring-2 ring-primary": isActive,
                   })}
                 >
-                  <Avatar pubKey={myPubKey} width={24} showBadge={false} />
+                  <Avatar pubKey={myPubKey} width={28} showBadge={false} />
                 </div>
               )}
             </NavLink>

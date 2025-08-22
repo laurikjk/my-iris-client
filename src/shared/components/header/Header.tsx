@@ -91,25 +91,27 @@ const Header = ({
           </div>
         </div>
         <div className="flex items-center gap-2 mr-2">
-          {myPubKey && location.pathname === "/" && (
+          {myPubKey && (
             <>
-              <button
-                onClick={() => navigate("/chats")}
-                className="md:hidden btn btn-ghost btn-circle relative"
-                title="Messages"
-              >
-                <span className="indicator">
-                  <UnseenMessagesBadge />
-                  <Icon
-                    className="w-5 h-5"
-                    name={
-                      location.pathname.startsWith("/chats")
-                        ? "mail-solid"
-                        : "mail-outline"
-                    }
-                  />
-                </span>
-              </button>
+              {location.pathname === "/" && (
+                <button
+                  onClick={() => navigate("/chats")}
+                  className="md:hidden btn btn-ghost btn-circle relative"
+                  title="Messages"
+                >
+                  <span className="indicator">
+                    <UnseenMessagesBadge />
+                    <Icon
+                      className="w-5 h-5"
+                      name={
+                        location.pathname.startsWith("/chats")
+                          ? "mail-solid"
+                          : "mail-outline"
+                      }
+                    />
+                  </span>
+                </button>
+              )}
               {showNotifications && (
                 <div className="md:hidden">
                   <NotificationButton />
