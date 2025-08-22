@@ -8,12 +8,17 @@ import localForage from "localforage"
 import {ndk} from "@/utils/ndk"
 import {useEffect, useState} from "react"
 import {KIND_CONTACTS, KIND_MUTE_LIST} from "@/utils/constants"
+import {EventEmitter} from "events"
 
 export const DEFAULT_SOCIAL_GRAPH_ROOT =
   "4523be58d395b1b196a9b8c82b038b6895cb02b683d0c253a955068dba1facd0"
 
 let instance = new SocialGraph(DEFAULT_SOCIAL_GRAPH_ROOT)
 let isInitialized = false
+
+// Event emitter for social graph changes
+export const socialGraphEvents = new EventEmitter()
+socialGraphEvents.setMaxListeners(100) // Increase limit for multiple subscribers
 
 async function loadPreCrawledGraph(publicKey: string): Promise<SocialGraph> {
   const binaryUrl = (await import("nostr-social-graph/data/socialGraph.bin?url")).default
@@ -69,9 +74,22 @@ const debouncedRemoveNonFollowed = debounce(() => {
   throttledSave()
 }, 11000)
 
+// Throttled mute list update event
+const throttledMuteListUpdate = throttle(() => {
+  socialGraphEvents.emit("muteListUpdated")
+}, 1000)
+
 export const handleSocialGraphEvent = (evs: NostrEvent | Array<NostrEvent>) => {
+  const events = Array.isArray(evs) ? evs : [evs]
+  const hasMuteListUpdate = events.some((e) => e.kind === KIND_MUTE_LIST)
+
   instance.handleEvent(evs)
   throttledSave()
+
+  // Emit throttled event if mute list was updated
+  if (hasMuteListUpdate) {
+    throttledMuteListUpdate()
+  }
 }
 
 let sub: NDKSubscription | undefined

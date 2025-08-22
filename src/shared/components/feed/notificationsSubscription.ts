@@ -1,5 +1,6 @@
 import {useSettingsStore} from "@/stores/settings"
-import socialGraph from "@/utils/socialGraph"
+import {useUserStore} from "@/stores/user"
+import socialGraph, {socialGraphEvents} from "@/utils/socialGraph"
 import {shouldHideAuthor} from "@/utils/visibility"
 import {getTag, getZappingUser, getZapAmount} from "@/utils/nostr.ts"
 import {notifications, Notification as IrisNotification} from "@/utils/notifications"
@@ -19,10 +20,71 @@ import {
 
 let sub: NDKSubscription | undefined
 
+// Clean up notifications from muted users
+const cleanupMutedNotifications = () => {
+  const toRemove: string[] = []
+  let totalUsersRemoved = 0
+  const myPubKey = useUserStore.getState().publicKey
+
+  for (const [key, notification] of notifications) {
+    // Check if notification mentions any muted users in p tags
+    if (notification.tags) {
+      const hasMutedMention = notification.tags.some(
+        (tag) =>
+          tag[0] === "p" && tag[1] && tag[1] !== myPubKey && shouldHideAuthor(tag[1])
+      )
+
+      if (hasMutedMention) {
+        toRemove.push(key)
+        continue // Skip to next notification
+      }
+    }
+
+    // Check each user in the notification
+    const usersToRemove: string[] = []
+    for (const [userPubKey] of notification.users) {
+      if (shouldHideAuthor(userPubKey)) {
+        usersToRemove.push(userPubKey)
+      }
+    }
+
+    // Remove muted users from this notification
+    usersToRemove.forEach((user) => {
+      notification.users.delete(user)
+    })
+    totalUsersRemoved += usersToRemove.length
+
+    // If no users left, mark notification for removal
+    if (notification.users.size === 0) {
+      toRemove.push(key)
+    }
+  }
+
+  // Remove empty notifications
+  toRemove.forEach((key) => {
+    notifications.delete(key)
+  })
+
+  if (toRemove.length > 0 || totalUsersRemoved > 0) {
+    console.log(
+      `Cleaned up ${toRemove.length} notifications and ${totalUsersRemoved} users after mute list update`
+    )
+  }
+}
+
 export const startNotificationsSubscription = debounce((myPubKey?: string) => {
   if (!myPubKey || typeof myPubKey !== "string") return
 
   sub?.stop()
+
+  // Listen for mute list updates and clean up notifications
+  const handleMuteListUpdate = () => {
+    cleanupMutedNotifications()
+  }
+
+  // Remove old listener if exists and add new one
+  socialGraphEvents.removeListener("muteListUpdated", handleMuteListUpdate)
+  socialGraphEvents.on("muteListUpdated", handleMuteListUpdate)
 
   const kinds: number[] = [
     KIND_REACTION,
@@ -52,8 +114,16 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
       if (event.pubkey === myPubKey) return
       if (hideEventsByUnknownUsers && socialGraph().getFollowDistance(event.pubkey) > 5)
         return
-      // Skip notifications from authors that should be hidden
+      // Skip notifications from authors that should be hidden (includes muted users)
       if (shouldHideAuthor(event.pubkey)) return
+
+      // Skip notifications from events that mention muted users
+      const hasMutedMention = event.tags.some(
+        (tag) =>
+          tag[0] === "p" && tag[1] && tag[1] !== myPubKey && shouldHideAuthor(tag[1])
+      )
+
+      if (hasMutedMention) return
     } else {
       // For zap notifications, check the zapping user
       const zappingUser = getZappingUser(event)

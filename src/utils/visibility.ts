@@ -18,7 +18,7 @@ export const shouldHideAuthor = (
   const instance = socialGraph()
 
   // Check if the result is already in the cache
-  const cacheKey = `${pubKey}-${threshold}`
+  const cacheKey = `${pubKey}-${threshold}-${allowUnknown}`
   if (cache.has(cacheKey)) {
     return cache.get(cacheKey)!
   }
@@ -34,6 +34,7 @@ export const shouldHideAuthor = (
     return true
   }
 
+  // SocialGraphUtils.isOvermuted already checks if root user (current user) has muted
   if (SocialGraphUtils.isOvermuted(instance, pubKey, threshold)) {
     cache.set(cacheKey, true)
     return true
@@ -45,5 +46,6 @@ export const shouldHideAuthor = (
 
 export const isOvermuted = (pubKey: string, threshold = 1): boolean => {
   const instance = socialGraph()
+  // SocialGraphUtils.isOvermuted already checks if root user (current user) has muted
   return SocialGraphUtils.isOvermuted(instance, pubKey, threshold)
 }
