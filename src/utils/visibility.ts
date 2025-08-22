@@ -42,3 +42,8 @@ export const shouldHideAuthor = (
   cache.set(cacheKey, false)
   return false
 }
+
+export const isOvermuted = (pubKey: string, threshold = 1): boolean => {
+  const instance = socialGraph()
+  return SocialGraphUtils.isOvermuted(instance, pubKey, threshold)
+}

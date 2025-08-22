@@ -6,8 +6,9 @@ import localforage from "localforage"
 // Constants for profile data sanitization
 const PROFILE_NAME_MAX_LENGTH = 50
 const PROFILE_PICTURE_URL_MAX_LENGTH = 500
+const MAX_SIZE = 100000
 
-export const profileCache = new LRUCache<string, NDKUserProfile>({maxSize: 100000})
+export const profileCache = new LRUCache<string, NDKUserProfile>({maxSize: MAX_SIZE})
 
 // Helper functions for profile data sanitization
 const shouldRejectNip05 = (nip05: string, name: string): boolean => {
@@ -86,6 +87,7 @@ const throttledSaveProfiles = throttle(() => {
     }
   })
   localforage.setItem("profileCache", profileData)
+  console.log("Saved", profileData.length, "profiles")
 }, 5000)
 
 // Load profileCache from localForage

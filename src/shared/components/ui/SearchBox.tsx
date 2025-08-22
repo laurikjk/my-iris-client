@@ -8,7 +8,7 @@ import {
 } from "react"
 import {useSearchStore, CustomSearchResult} from "@/stores/search"
 import {UserRow} from "@/shared/components/user/UserRow"
-import {shouldHideAuthor} from "@/utils/visibility"
+import {isOvermuted} from "@/utils/visibility"
 import {searchIndex} from "@/utils/profileSearch"
 import socialGraph from "@/utils/socialGraph"
 import {useNavigate} from "@/navigation"
@@ -124,7 +124,7 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
       const query = v.toLowerCase()
       const results = searchIndex.search(query)
       const resultsWithAdjustedScores = results
-        .filter((result) => !shouldHideAuthor(result.item.pubKey))
+        .filter((result) => !isOvermuted(result.item.pubKey))
         .map((result) => {
           const fuseScore = 1 - (result.score ?? 1)
           const followDistance =
