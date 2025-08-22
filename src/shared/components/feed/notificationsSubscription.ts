@@ -106,8 +106,9 @@ export const startNotificationsSubscription = debounce((myPubKey?: string) => {
         notification.time = event.created_at
         // Update notification content with the latest reply/reaction
         if (event.kind === KIND_TEXT_NOTE && event.content) {
-          // For text notes (replies), update the notification content to show the latest reply
+          // For text notes (replies), update the notification content and ID to show the latest reply
           notification.content = event.content
+          notification.id = event.id
         } else if (event.kind === KIND_PICTURE_FIRST && event.content) {
           // For picture-first posts, update the notification content
           notification.content = event.content

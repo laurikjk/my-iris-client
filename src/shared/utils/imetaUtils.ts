@@ -72,13 +72,6 @@ export function extractImetaImages(event: NDKEvent): ImetaMediaItem[] {
 }
 
 /**
- * Finds imeta tag for a specific URL
- */
-export function findImetaTagForUrl(event: NDKEvent, url: string): string[] | undefined {
-  return event.tags.find((tag) => tag[0] === "imeta" && tag[1] && tag[1].includes(url))
-}
-
-/**
  * Gets parsed imeta data for a specific URL
  */
 export function getImetaDataForUrl(
