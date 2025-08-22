@@ -1,7 +1,6 @@
 import {useSettingsStore} from "@/stores/settings"
-import {useUserStore} from "@/stores/user"
 import socialGraph, {socialGraphEvents, socialGraphLoaded} from "@/utils/socialGraph"
-import {shouldHideAuthor} from "@/utils/visibility"
+import {shouldHideAuthor, shouldHideEvent} from "@/utils/visibility"
 import {getTag, getZappingUser, getZapAmount} from "@/utils/nostr.ts"
 import {notifications, Notification as IrisNotification} from "@/utils/notifications"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
@@ -20,74 +19,63 @@ import {
 
 let sub: NDKSubscription | undefined
 
-// Clean up notifications from muted users
+// Clean up notifications from muted users by filtering out muted events
 const cleanupMutedNotifications = () => {
+  let cleanedCount = 0
   const toRemove: string[] = []
-  let totalUsersRemoved = 0
-  const myPubKey = useUserStore.getState().publicKey
 
   for (const [key, notification] of notifications) {
-    // Check if notification mentions any muted users in p tags
-    if (notification.tags) {
-      const hasMutedMention = notification.tags.some(
-        (tag) =>
-          tag[0] === "p" && tag[1] && tag[1] !== myPubKey && shouldHideAuthor(tag[1])
-      )
-
-      if (hasMutedMention) {
-        toRemove.push(key)
-        continue // Skip to next notification
-      }
+    // Skip if no events array (old cached notifications)
+    if (!notification.events || notification.events.length === 0) {
+      continue
     }
 
-    // Check each user in the notification
-    const usersToRemove: string[] = []
-    for (const [userPubKey] of notification.users) {
-      if (shouldHideAuthor(userPubKey)) {
-        usersToRemove.push(userPubKey)
+    // Filter events array to remove muted users and events mentioning muted users
+    const cleanedEvents = notification.events.filter((notifEvent) => {
+      // Check if we should hide this event (author or mentions)
+      if (shouldHideEvent(notifEvent.event)) {
+        cleanedCount++
+        return false
       }
-    }
-
-    // Remove muted users from this notification
-    usersToRemove.forEach((user) => {
-      notification.users.delete(user)
+      return true
     })
-    totalUsersRemoved += usersToRemove.length
 
-    // If no users left, mark notification for removal
-    if (notification.users.size === 0) {
+    if (cleanedEvents.length === 0) {
+      // No valid events left, remove entire notification
       toRemove.push(key)
-    } else if (usersToRemove.length > 0 && notification.kind === KIND_TEXT_NOTE) {
-      // Update notification content to show the latest non-muted reply
-      let latestTime = 0
-      let latestContent = ""
-      let latestEventId = ""
+    } else if (cleanedEvents.length !== notification.events.length) {
+      // Some events were filtered, update the notification
+      notification.events = cleanedEvents
 
-      for (const [, userInfo] of notification.users) {
-        if (userInfo.time > latestTime && userInfo.content) {
-          latestTime = userInfo.time
-          latestContent = userInfo.content
-          latestEventId = userInfo.eventId || ""
-        }
+      // Find the latest event for TEXT_NOTE notifications
+      if (notification.kind === KIND_TEXT_NOTE) {
+        const latestEvent = cleanedEvents.reduce((latest, current) =>
+          current.time > latest.time ? current : latest
+        )
+
+        notification.content = latestEvent.content || ""
+        notification.time = latestEvent.time
+        notification.id = latestEvent.event.id
       }
 
-      // Update the notification to show the latest non-muted user's message
-      if (latestContent && latestEventId) {
-        notification.content = latestContent
-        notification.time = latestTime
-        notification.id = latestEventId
+      // Rebuild users map from cleaned events for backward compatibility
+      notification.users.clear()
+      for (const notifEvent of cleanedEvents) {
+        notification.users.set(notifEvent.user, {
+          time: notifEvent.time,
+          content: notifEvent.content,
+          eventId: notifEvent.event.id,
+        })
       }
     }
   }
 
   // Remove empty notifications
-  toRemove.forEach((key) => {
-    notifications.delete(key)
-  })
+  toRemove.forEach((key) => notifications.delete(key))
 
-  if (toRemove.length > 0 || totalUsersRemoved > 0) {
+  if (cleanedCount > 0 || toRemove.length > 0) {
     console.log(
-      `Cleaned up ${toRemove.length} notifications and ${totalUsersRemoved} users after mute list update`
+      `Cleaned ${cleanedCount} events and removed ${toRemove.length} notifications`
     )
   }
 }
@@ -137,15 +125,8 @@ export const startNotificationsSubscription = debounce(async (myPubKey?: string)
       if (event.pubkey === myPubKey) return
       if (hideEventsByUnknownUsers && socialGraph().getFollowDistance(event.pubkey) > 5)
         return
-      if (shouldHideAuthor(event.pubkey)) return
-
-      // Skip notifications from events that mention muted users
-      const hasMutedMention = event.tags.some(
-        (tag) =>
-          tag[0] === "p" && tag[1] && tag[1] !== myPubKey && shouldHideAuthor(tag[1])
-      )
-
-      if (hasMutedMention) return
+      // Use shouldHideEvent which checks both author and mentions
+      if (shouldHideEvent(event)) return
     } else {
       // For zap notifications, check the zapping user
       const zappingUser = getZappingUser(event)
@@ -161,6 +142,7 @@ export const startNotificationsSubscription = debounce(async (myPubKey?: string)
           id: event.id,
           originalEventId: eTag,
           users: new SortedMap([], "time"),
+          events: [], // Initialize events array
           kind: event.kind,
           time: event.created_at,
           content: event.content,
@@ -177,24 +159,38 @@ export const startNotificationsSubscription = debounce(async (myPubKey?: string)
         return
       }
 
-      const existing = notification.users.get(user)
-      if (!existing || existing.time < event.created_at) {
+      // Add event to the events array
+      const existingEventIndex = notification.events.findIndex((e) => e.user === user)
+      if (
+        existingEventIndex === -1 ||
+        notification.events[existingEventIndex].time < event.created_at
+      ) {
         let content: string | undefined = undefined
         if (event.kind === KIND_TEXT_NOTE) {
-          // Text note (reply) content
           content = event.content
         } else if (event.kind === KIND_REACTION) {
-          // Reaction content (emoji)
           content = event.content
         } else if (event.kind === KIND_ZAP_RECEIPT) {
-          // Zap receipt - extract zap amount
           const zapAmount = await getZapAmount(event)
           content = zapAmount > 0 ? zapAmount.toString() : undefined
         } else if (event.kind === KIND_PICTURE_FIRST) {
-          // Picture-first post content
           content = event.content
         }
 
+        const notificationEvent = {
+          event,
+          user,
+          time: event.created_at,
+          content,
+        }
+
+        if (existingEventIndex !== -1) {
+          notification.events[existingEventIndex] = notificationEvent
+        } else {
+          notification.events.push(notificationEvent)
+        }
+
+        // Also update the old users map for backward compatibility
         notification.users.set(user, {
           time: event.created_at,
           content,

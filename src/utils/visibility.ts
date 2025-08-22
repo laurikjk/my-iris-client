@@ -49,3 +49,20 @@ export const isOvermuted = (pubKey: string, threshold = 1): boolean => {
   // SocialGraphUtils.isOvermuted already checks if root user (current user) has muted
   return SocialGraphUtils.isOvermuted(instance, pubKey, threshold)
 }
+
+export const shouldHideEvent = (event: {
+  pubkey: string
+  tags: Array<Array<string>>
+}): boolean => {
+  // Hide if author should be hidden
+  if (shouldHideAuthor(event.pubkey)) {
+    return true
+  }
+
+  // Hide if event mentions any user that should be hidden
+  const mentionedUsers = event.tags
+    .filter((tag) => tag[0] === "p" && tag[1])
+    .map((tag) => tag[1])
+
+  return mentionedUsers.some((pubkey) => shouldHideAuthor(pubkey))
+}

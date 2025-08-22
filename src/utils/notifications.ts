@@ -4,7 +4,7 @@ import {useUserRecordsStore} from "@/stores/userRecords"
 import {useSessionsStore} from "@/stores/sessions"
 import {SortedMap} from "./SortedMap/SortedMap"
 import {useUserStore} from "@/stores/user"
-import {NDKTag} from "@nostr-dev-kit/ndk"
+import {NDKTag, NDKEvent} from "@nostr-dev-kit/ndk"
 import debounce from "lodash/debounce"
 import {base64} from "@scure/base"
 import IrisAPI from "./IrisAPI"
@@ -21,10 +21,18 @@ interface ReactedTime {
   eventId?: string
 }
 
+export interface NotificationEvent {
+  event: NDKEvent
+  user: string // pubkey of the user (author or zapper)
+  time: number
+  content?: string
+}
+
 export interface Notification {
   id: string
   originalEventId: string
-  users: SortedMap<string, ReactedTime>
+  users: SortedMap<string, ReactedTime> // Keep for backward compat, will migrate
+  events: NotificationEvent[] // New: store full events
   kind: number
   time: number
   content: string

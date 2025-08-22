@@ -86,6 +86,15 @@ const throttledSaveProfiles = throttle(() => {
       profileData.push(arrayData)
     }
   })
+
+  // Don't save if we have too few profiles (likely an error or data loss)
+  if (profileData.length < 10) {
+    console.warn(
+      `Not saving profile cache with only ${profileData.length} profiles (minimum: 10)`
+    )
+    return
+  }
+
   localforage.setItem("profileCache", profileData)
   console.log("Saved", profileData.length, "profiles")
 }, 5000)
