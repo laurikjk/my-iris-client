@@ -16,6 +16,7 @@ interface FeedFilter {
   limit?: number
   search?: string
   "#e"?: string[]
+  "#g"?: string[]
 }
 
 interface FeedConfig {

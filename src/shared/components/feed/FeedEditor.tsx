@@ -214,8 +214,8 @@ function FeedEditor({
               checked={localConfig.followDistance !== undefined}
               onChange={(e) => {
                 if (e.target.checked) {
-                  // Enable with default value of 1
-                  updateConfig("followDistance", 1)
+                  // Enable with default value of 3
+                  updateConfig("followDistance", 3)
                 } else {
                   // Disable by setting to undefined
                   updateConfig("followDistance", undefined)
@@ -348,6 +348,46 @@ function FeedEditor({
           />
           <span className="text-xs text-base-content/50 mt-1 block">
             Leave empty to use default relays
+          </span>
+        </div>
+      </div>
+
+      {/* Geohash Filter */}
+      <div className="flex items-start gap-2">
+        <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">Geohash</span>
+        <div className="flex-1">
+          <input
+            type="text"
+            value={(localConfig.filter?.["#g"] || []).join(", ")}
+            onChange={(e) => {
+              const inputValue = e.target.value.trim()
+              const currentFilter = localConfig.filter || {}
+              if (inputValue === "") {
+                // Remove #g property if input is empty
+                const filterWithoutGeohash = Object.fromEntries(
+                  Object.entries(currentFilter).filter(([key]) => key !== "#g")
+                )
+                updateConfig(
+                  "filter",
+                  Object.keys(filterWithoutGeohash).length > 0
+                    ? filterWithoutGeohash
+                    : undefined
+                )
+              } else {
+                // Split by comma and trim each value
+                const geohashes = inputValue
+                  .split(",")
+                  .map((g) => g.trim())
+                  .filter((g) => g.length > 0)
+                updateConfig("filter", {...currentFilter, "#g": geohashes})
+              }
+            }}
+            className="input input-sm w-full text-sm"
+            placeholder="e.g. u2mwdd, u2mw (comma-separated)"
+          />
+          <span className="text-xs text-base-content/50 mt-1 block">
+            Filter posts by geohash location tags (NIP-52). Use comma to separate multiple
+            geohashes.
           </span>
         </div>
       </div>
