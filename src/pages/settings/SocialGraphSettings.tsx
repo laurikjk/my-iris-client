@@ -6,6 +6,8 @@ import socialGraph, {
   downloadLargeGraph,
   clearGraph,
   resetGraph,
+  stopRecrawl,
+  isRecrawling,
 } from "@/utils/socialGraph"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {useState, useEffect} from "react"
@@ -30,10 +32,12 @@ function SocialGraphSettings() {
   const [isDownloading, setIsDownloading] = useState<boolean>(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
   const [downloadTimeout, setDownloadTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [isCrawling, setIsCrawling] = useState<boolean>(false)
 
   useEffect(() => {
     const interval = setInterval(() => {
       setSocialGraphSize(socialGraph().size())
+      setIsCrawling(isRecrawling())
     }, 2000)
 
     return () => clearInterval(interval)
@@ -199,12 +203,30 @@ function SocialGraphSettings() {
         >
           Recalculate Follow Distances (fast, no bandwith usage)
         </button>
-        <button
-          onClick={() => getFollowLists(socialGraph().getRoot(), false, 2)}
-          className="btn btn-neutral btn-sm"
-        >
-          Recrawl follow lists (slow, bandwidth intensive)
-        </button>
+        <div className="flex flex-row gap-2">
+          <button
+            onClick={() => {
+              setIsCrawling(true)
+              getFollowLists(socialGraph().getRoot(), false, 2)
+            }}
+            className="btn btn-neutral btn-sm"
+            disabled={isCrawling}
+          >
+            {isCrawling
+              ? "Recrawling..."
+              : "Recrawl follow lists (slow, bandwidth intensive)"}
+          </button>
+          <button
+            onClick={() => {
+              stopRecrawl()
+              setIsCrawling(false)
+            }}
+            className="btn btn-error btn-sm"
+            disabled={!isCrawling}
+          >
+            Stop
+          </button>
+        </div>
 
         <div className="bg-base-200/50 border border-base-300 rounded-lg p-4 pt-0 mt-2">
           <h3 className="text-lg font-semibold mb-4 text-base-content">

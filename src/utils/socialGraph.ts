@@ -92,11 +92,16 @@ export const handleSocialGraphEvent = (evs: NostrEvent | Array<NostrEvent>) => {
 }
 
 let sub: NDKSubscription | undefined
+let isManualRecrawling = false
 
-export function getFollowLists(myPubKey: string, missingOnly = true, upToDistance = 1) {
+function getFollowListsInternal(
+  myPubKey: string,
+  missingOnly = true,
+  upToDistance = 1,
+  isManual = false
+) {
   const toFetch = new Set<string>()
 
-  // Function to add users to toFetch set
   const addUsersToFetch = (users: Set<string>, currentDistance: number) => {
     for (const user of users) {
       if (!missingOnly || instance.getFollowedByUser(user).size === 0) {
@@ -104,7 +109,6 @@ export function getFollowLists(myPubKey: string, missingOnly = true, upToDistanc
       }
     }
 
-    // If we haven't reached the upToDistance, continue to the next level
     if (currentDistance < upToDistance) {
       for (const user of users) {
         const nextLevelUsers = instance.getFollowedByUser(user)
@@ -113,13 +117,14 @@ export function getFollowLists(myPubKey: string, missingOnly = true, upToDistanc
     }
   }
 
-  // Start with the user's direct follows
   const myFollows = instance.getFollowedByUser(myPubKey)
   addUsersToFetch(myFollows, 1)
 
   console.log("fetching", toFetch.size, missingOnly ? "missing" : "total", "follow lists")
 
   const fetchBatch = (authors: string[]) => {
+    if (isManual && !isManualRecrawling) return
+
     const sub = ndk().subscribe(
       {
         kinds: [KIND_CONTACTS, KIND_MUTE_LIST],
@@ -127,6 +132,7 @@ export function getFollowLists(myPubKey: string, missingOnly = true, upToDistanc
       },
       {closeOnEose: true}
     )
+
     sub.on("event", (e) => {
       handleSocialGraphEvent(e as unknown as VerifiedEvent)
       debouncedRemoveNonFollowed()
@@ -134,21 +140,36 @@ export function getFollowLists(myPubKey: string, missingOnly = true, upToDistanc
   }
 
   const processBatch = () => {
+    if (isManual && !isManualRecrawling) {
+      return
+    }
+
     const batch = [...toFetch].slice(0, 500)
     if (batch.length > 0) {
       fetchBatch(batch)
       batch.forEach((author) => toFetch.delete(author))
       if (toFetch.size > 0) {
-        setTimeout(processBatch, 5000)
+        setTimeout(() => {
+          processBatch()
+        }, 5000)
+      } else if (isManual) {
+        isManualRecrawling = false
       }
+    } else if (isManual) {
+      isManualRecrawling = false
     }
   }
 
   processBatch()
 }
 
+export function getFollowLists(myPubKey: string, missingOnly = true, upToDistance = 1) {
+  isManualRecrawling = true
+  getFollowListsInternal(myPubKey, missingOnly, upToDistance, true)
+}
+
 function getMissingFollowLists(myPubKey: string) {
-  getFollowLists(myPubKey, true)
+  getFollowListsInternal(myPubKey, true, 1)
 }
 
 let isLoaded = false
@@ -331,11 +352,10 @@ export const downloadLargeGraph = (options: DownloadGraphOptions = {}) => {
       await instance.recalculateFollowDistances()
       throttledSave()
 
-      // Re-query our own follow list
       setupSubscription(instance.getRoot())
       const root = instance.getRoot()
       if (root && root !== DEFAULT_SOCIAL_GRAPH_ROOT) {
-        getFollowLists(root, false, 1)
+        getFollowListsInternal(root, false, 1)
       }
     })
     .catch((error) => {
@@ -356,6 +376,17 @@ export const resetGraph = async () => {
   instance = await loadPreCrawledGraph(root)
   await saveToLocalForage()
   console.log("Reset social graph to default")
+}
+
+export const stopRecrawl = () => {
+  if (isManualRecrawling) {
+    isManualRecrawling = false
+    throttledSave()
+  }
+}
+
+export const isRecrawling = () => {
+  return isManualRecrawling
 }
 
 export default () => instance
