@@ -54,6 +54,10 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
 }
 
 const saveToLocalForage = async () => {
+  if (!isInitialized) {
+    return
+  }
+
   try {
     const serialized = await instance.toBinary()
     await localForage.setItem("socialGraph", serialized)
