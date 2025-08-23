@@ -173,7 +173,7 @@ const Layout = ({children}: {children: ReactNode}) => {
               shouldShowMainFeed ? "hidden lg:flex" : "hidden"
             }`}
           >
-            <Header showBack={false}>
+            <Header showBack={false} showNotifications={true}>
               <div className="flex items-center justify-between w-full">
                 <span className="md:px-3 md:py-2">{feedName}</span>
                 <button

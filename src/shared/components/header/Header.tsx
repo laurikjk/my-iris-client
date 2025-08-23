@@ -27,7 +27,7 @@ const Header = ({
   title,
   children,
   showBack = true,
-  showNotifications = true,
+  showNotifications = false,
   scrollDown = false,
   slideUp = true,
   bold = true,

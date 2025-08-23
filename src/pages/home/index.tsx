@@ -60,7 +60,7 @@ function Index() {
   if (!isLargeScreen) {
     return (
       <div className="relative h-full">
-        <Header showBack={false}>
+        <Header showBack={false} showNotifications={true}>
           <div className="flex items-center justify-between w-full">
             <span className="md:px-3 md:py-2">{feedName}</span>
           </div>
@@ -90,7 +90,7 @@ function Index() {
   // When single column layout is enabled on desktop, show the normal home layout
   return (
     <>
-      <Header showBack={false}>
+      <Header showBack={false} showNotifications={true}>
         <div className="flex items-center justify-between w-full">
           <span className="md:px-3 md:py-2">{feedName}</span>
           {isLargeScreen && (
