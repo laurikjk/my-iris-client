@@ -97,38 +97,38 @@ export default function ThreadPage({
       <div className="flex flex-1 overflow-hidden">
         <ScrollablePageContainer className="flex flex-col flex-1">
           {(() => {
-              if (isNaddr) {
-                if (loading) {
-                  return (
-                    <div className="flex relative flex-col pt-3 px-4 min-h-[186px] pb-0 transition-colors duration-200 ease-in-out border-custom cursor-pointer border-2 pt-3 pb-3 my-2 rounded hover:bg-[var(--note-hover-color)] break-all">
-                      Loading naddr:{id}
-                    </div>
-                  )
-                } else if (event) {
-                  return (
-                    <FeedItem
-                      event={event}
-                      key={event.id}
-                      standalone={true}
-                      onEvent={addToThread}
-                      showReplies={Infinity}
-                    />
-                  )
-                } else {
-                  return <div className="p-4">Failed to load naddr:{id}</div>
-                }
-              } else {
+            if (isNaddr) {
+              if (loading) {
+                return (
+                  <div className="flex relative flex-col pt-3 px-4 min-h-[186px] pb-0 transition-colors duration-200 ease-in-out border-custom cursor-pointer border-2 pt-3 pb-3 my-2 rounded hover:bg-[var(--note-hover-color)] break-all">
+                    Loading naddr:{id}
+                  </div>
+                )
+              } else if (event) {
                 return (
                   <FeedItem
-                    key={id}
-                    eventId={id}
+                    event={event}
+                    key={event.id}
                     standalone={true}
                     onEvent={addToThread}
                     showReplies={Infinity}
                   />
                 )
+              } else {
+                return <div className="p-4">Failed to load naddr:{id}</div>
               }
-            })()}
+            } else {
+              return (
+                <FeedItem
+                  key={id}
+                  eventId={id}
+                  standalone={true}
+                  onEvent={addToThread}
+                  showReplies={Infinity}
+                />
+              )
+            }
+          })()}
         </ScrollablePageContainer>
         <RightColumn>
           {() => (

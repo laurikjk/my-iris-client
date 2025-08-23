@@ -161,38 +161,27 @@ function Carousel({media, event}: CarouselProps) {
   }
 
   return (
-    <>
-      <div className="w-full my-2 flex flex-col items-center gap-2">
-        <div
-          className={classNames(
-            `relative w-full flex flex-col items-center justify-center`,
-            {
-              "h-[600px]": limitHeight,
-            }
-          )}
-        >
-          <SwipableCarousel
-            items={swipeItems}
-            renderItem={renderMediaComponent}
-            initialIndex={currentIndex}
-            onIndexChange={setCurrentIndex}
-            className="w-full h-full"
-            showArrows={media.length > 1}
-            arrowClassName="bg-gray-800 rounded-full opacity-50 text-white p-2"
-          />
-          {showModal && (
-            <MediaModal
-              onClose={onCloseModal}
-              media={swipeItems}
-              currentIndex={currentIndex}
-            />
-          )}
-        </div>
-        {media.length > 1 && (
-          <ImageIndicators images={media} currentIndex={currentIndex} />
-        )}
-      </div>
-    </>
+    <div className="w-full my-2 flex flex-col items-center gap-2">
+      <SwipableCarousel
+        items={swipeItems}
+        renderItem={renderMediaComponent}
+        initialIndex={currentIndex}
+        onIndexChange={setCurrentIndex}
+        className={classNames("w-full", {
+          "h-[600px]": limitHeight,
+        })}
+        showArrows={media.length > 1}
+        arrowClassName="bg-gray-800 rounded-full opacity-50 text-white p-2"
+      />
+      {media.length > 1 && <ImageIndicators images={media} currentIndex={currentIndex} />}
+      {showModal && (
+        <MediaModal
+          onClose={onCloseModal}
+          media={swipeItems}
+          currentIndex={currentIndex}
+        />
+      )}
+    </div>
   )
 }
 

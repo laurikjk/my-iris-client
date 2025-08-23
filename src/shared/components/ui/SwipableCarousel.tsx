@@ -153,10 +153,7 @@ export function SwipableCarousel({
   const renderCarouselItems = () => {
     if (items.length === 1) {
       return (
-        <div
-          key={items[0].url}
-          className="w-full flex-shrink-0 flex-grow-0 flex justify-center items-center"
-        >
+        <div className="w-full flex justify-center items-center">
           {renderItem(items[0], 0, wasDragged)}
         </div>
       )
@@ -170,19 +167,19 @@ export function SwipableCarousel({
       <>
         <div
           key={prev.url === next.url ? `${prev.url}-prev` : prev.url}
-          className="w-full flex-shrink-0 flex-grow-0 flex justify-center items-center"
+          className="w-full flex-shrink-0 flex justify-center items-center"
         >
           {renderItem(prev, navigation.getPrevIndex(), wasDragged)}
         </div>
         <div
           key={curr.url}
-          className="w-full flex-shrink-0 flex-grow-0 flex justify-center items-center"
+          className="w-full flex-shrink-0 flex justify-center items-center"
         >
           {renderItem(curr, currentIndex, wasDragged)}
         </div>
         <div
           key={next.url}
-          className="w-full flex-shrink-0 flex-grow-0 flex justify-center items-center"
+          className="w-full flex-shrink-0 flex justify-center items-center"
         >
           {renderItem(next, navigation.getNextIndex(), wasDragged)}
         </div>
