@@ -1,38 +1,35 @@
 import {useEffect, useState, ChangeEvent, KeyboardEvent} from "react"
 import {RiDeleteBinLine, RiFileCopyLine, RiMapPinLine} from "@remixicon/react"
-import {useFeedStore, type FeedConfig} from "@/stores/feed"
+import {type FeedConfig} from "@/stores/feed"
 import MultiRelaySelector from "@/shared/components/ui/MultiRelaySelector"
 import EventKindsSelector from "@/shared/components/ui/EventKindsSelector"
 import {getCurrentLocationGeohash} from "@/utils/geohash"
 
 interface FeedEditorProps {
-  activeTab: string
-  tabs: FeedConfig[]
-  onEditModeToggle: () => void
-  onDeleteFeed: (feedId: string) => void
-  onResetFeeds: () => void
-  onCloneFeed: (feedId: string) => void
+  feedConfig: FeedConfig
+  onConfigChange: (config: FeedConfig) => void
+  onClose: () => void
+  onDelete?: () => void
+  onReset?: () => void
+  onClone?: () => void
+  showDeleteButton?: boolean
+  showResetButton?: boolean
+  showCloneButton?: boolean
 }
 
 function FeedEditor({
-  activeTab,
-  tabs,
-  onEditModeToggle,
-  onDeleteFeed,
-  onResetFeeds,
-  onCloneFeed,
+  feedConfig,
+  onConfigChange,
+  onClose,
+  onDelete,
+  onReset,
+  onClone,
+  showDeleteButton = true,
+  showResetButton = true,
+  showCloneButton = true,
 }: FeedEditorProps) {
-  const {saveFeedConfig, loadFeedConfig} = useFeedStore()
-  const [editingName, setEditingName] = useState("")
-  const [localConfig, setLocalConfig] = useState<FeedConfig | null>(null)
-
-  const activeTabConfig = loadFeedConfig(activeTab)
-
-  // Helper function to get display name
-  const getDisplayName = (feedId: string, defaultName: string) => {
-    const config = loadFeedConfig(feedId)
-    return config?.customName || defaultName
-  }
+  const [editingName, setEditingName] = useState(feedConfig.customName || feedConfig.name)
+  const [localConfig, setLocalConfig] = useState<FeedConfig>(feedConfig)
 
   // Helper function for common checkboxes
   const renderCommonCheckboxes = (
@@ -108,46 +105,28 @@ function FeedEditor({
     )
   }
 
-  // Update editing name and local config when active tab changes
+  // Update local config when feedConfig prop changes
   useEffect(() => {
-    const activeTabData = tabs.find((t) => t.id === activeTab)
-    if (activeTabData) {
-      const config = loadFeedConfig(activeTab)
-      if (config) {
-        const displayName = config.customName || activeTabData.name
-        setEditingName(displayName)
-        setLocalConfig(config)
-      }
+    setLocalConfig(feedConfig)
+    setEditingName(feedConfig.customName || feedConfig.name)
+  }, [feedConfig])
+
+  // Notify parent of config changes
+  useEffect(() => {
+    if (JSON.stringify(localConfig) !== JSON.stringify(feedConfig)) {
+      const timer = setTimeout(() => {
+        onConfigChange(localConfig)
+      }, 500)
+      return () => clearTimeout(timer)
     }
-  }, [activeTab, tabs])
-
-  // Helper function to save config if changed
-  const saveConfigIfChanged = () => {
-    if (
-      localConfig &&
-      activeTabConfig &&
-      JSON.stringify(localConfig) !== JSON.stringify(activeTabConfig)
-    ) {
-      saveFeedConfig(activeTab, localConfig)
-    }
-  }
-
-  // Debounced commit to store
-  useEffect(() => {
-    if (!localConfig || !activeTabConfig) return
-
-    const timer = setTimeout(saveConfigIfChanged, 1000)
-    return () => clearTimeout(timer)
-  }, [localConfig, activeTab, activeTabConfig])
-
-  // Apply changes immediately when component unmounts (editor closes)
-  useEffect(() => {
-    return saveConfigIfChanged
-  }, [localConfig, activeTab, activeTabConfig])
+  }, [localConfig, feedConfig, onConfigChange])
 
   // Update local config immediately
   const updateLocalConfig = (field: keyof FeedConfig, value: unknown) => {
-    setLocalConfig((prev) => (prev ? {...prev, [field]: value} : null))
+    setLocalConfig((prev) => {
+      if (!prev) return prev
+      return {...prev, [field]: value}
+    })
   }
 
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -159,35 +138,28 @@ function FeedEditor({
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
-      const activeTabData = tabs.find((t) => t.id === activeTab)
-      if (activeTabData) {
-        setEditingName(getDisplayName(activeTab, activeTabData.name))
-      }
+      setEditingName(feedConfig.customName || feedConfig.name)
     }
   }
 
-  const handleClone = () => {
-    onCloneFeed(activeTab)
-  }
-
   const updateConfig = updateLocalConfig
-
-  if (!localConfig) return null
 
   return (
     <div className="flex flex-col gap-4 mt-4 p-4 border border-base-300 rounded-lg">
       <div className="flex justify-between items-center">
         <div className="text-lg font-semibold">
-          Edit &quot;{getDisplayName(activeTab, localConfig.name)}&quot;
+          Edit &quot;{localConfig.customName || localConfig.name}&quot;
         </div>
-        <button
-          onClick={handleClone}
-          className="btn btn-sm btn-neutral"
-          title="Clone this feed"
-        >
-          <RiFileCopyLine className="w-4 h-4" />
-          Clone
-        </button>
+        {showCloneButton && onClone && (
+          <button
+            onClick={onClone}
+            className="btn btn-sm btn-neutral"
+            title="Clone this feed"
+          >
+            <RiFileCopyLine className="w-4 h-4" />
+            Clone
+          </button>
+        )}
       </div>
 
       {/* Basic Settings */}
@@ -440,30 +412,29 @@ function FeedEditor({
 
       {/* Action Buttons */}
       <div className="flex justify-between gap-2 pt-2 border-t border-base-300">
-        <button
-          onClick={onEditModeToggle}
-          className="btn btn-sm btn-primary"
-          title="Done editing"
-        >
+        <button onClick={onClose} className="btn btn-sm btn-primary" title="Done editing">
           Done
         </button>
         <div className="flex flex-row gap-2">
-          <button
-            onClick={onResetFeeds}
-            className="btn btn-sm btn-neutral"
-            title="Reset all feeds"
-          >
-            Reset all feeds
-          </button>
-          <button
-            onClick={() => onDeleteFeed(activeTab)}
-            className="btn btn-sm btn-neutral"
-            title="Delete feed"
-            disabled={tabs.length <= 1}
-          >
-            <RiDeleteBinLine className="w-4 h-4" />
-            Delete feed
-          </button>
+          {showResetButton && onReset && (
+            <button
+              onClick={onReset}
+              className="btn btn-sm btn-neutral"
+              title="Reset feed"
+            >
+              Reset
+            </button>
+          )}
+          {showDeleteButton && onDelete && (
+            <button
+              onClick={onDelete}
+              className="btn btn-sm btn-neutral"
+              title="Delete feed"
+            >
+              <RiDeleteBinLine className="w-4 h-4" />
+              Delete
+            </button>
+          )}
         </div>
       </div>
     </div>

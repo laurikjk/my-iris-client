@@ -7,43 +7,7 @@ import {
   KIND_PICTURE_FIRST,
 } from "@/utils/constants"
 import {clearAlgorithmicFeedCaches} from "@/utils/memcache"
-
-export type FeedType = "popular" | "for-you"
-
-interface FeedFilter {
-  kinds?: number[]
-  since?: number
-  limit?: number
-  search?: string
-  "#e"?: string[]
-  "#g"?: string[]
-}
-
-interface FeedConfig {
-  name: string
-  id: string
-  customName?: string
-  showRepliedTo?: boolean
-  hideReplies?: boolean
-  filter?: FeedFilter
-  // Store filter criteria as serializable data
-  followDistance?: number // undefined = no follow distance filtering, number = max degrees
-  requiresMedia?: boolean
-  requiresReplies?: boolean
-  excludeSeen?: boolean
-  showEventsByUnknownUsers?: boolean // Deprecated in feed configs, used only in global settings
-  relayUrls?: string[]
-  // For reply feeds - only show replies to this specific event
-  repliesTo?: string
-  // Sort type for events
-  sortType?: "chronological" | "followDistance" | "liked"
-  // Show new events automatically without the dialog
-  autoShowNewEvents?: boolean
-  // Display mode for this specific feed
-  displayAs?: "list" | "grid"
-  // Feed strategy for popular feeds
-  feedStrategy?: FeedType
-}
+import type {FeedConfig} from "@/types/feed"
 
 interface FeedState {
   activeFeed: string
@@ -355,4 +319,5 @@ export const getFeedCacheKey = (feedConfig: FeedConfig): string => {
 }
 
 // Export types
-export type {FeedConfig, FeedFilter}
+// Re-export types from types/feed for backward compatibility
+export type {FeedConfig, FeedFilter, FeedType} from "@/types/feed"

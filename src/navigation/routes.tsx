@@ -14,6 +14,7 @@ const ChatsPage = lazy(() => import("@/pages/chats"))
 const SettingsPage = lazy(() => import("@/pages/settings"))
 const SubscriptionPage = lazy(() => import("@/pages/subscription"))
 const RelayPage = lazy(() => import("@/pages/relay"))
+const GeohashPage = lazy(() => import("@/pages/geohash"))
 
 export const routes: RouteDefinition[] = [
   {path: "/", component: HomePage, alwaysKeep: true},
@@ -25,6 +26,8 @@ export const routes: RouteDefinition[] = [
   {path: "/search", component: SearchPage},
   {path: "/search/:query", component: SearchPage},
   {path: "/relay/:url?", component: RelayPage},
+  {path: "/geohash", component: GeohashPage},
+  {path: "/geohash/:geohash", component: GeohashPage},
   {path: "/about", component: AboutPage},
   {path: "/:link/*", component: NostrLinkHandler},
   {path: "/:link", component: NostrLinkHandler},

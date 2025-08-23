@@ -16,7 +16,7 @@ import {
   getFeedCacheKey,
 } from "@/stores/feed"
 import FeedTabs from "@/shared/components/feed/FeedTabs"
-import FeedEditor from "@/shared/components/feed/FeedEditor"
+import StoredFeedEditor from "@/shared/components/feed/StoredFeedEditor"
 import InlineNoteCreator from "@/shared/components/create/InlineNoteCreator"
 
 const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
@@ -153,7 +153,7 @@ function HomeFeed() {
         </div>
       )}
       {editMode && follows.length > 1 && myPubKey && !activeFeedConfig?.feedStrategy && (
-        <FeedEditor
+        <StoredFeedEditor
           key={activeFeed}
           activeTab={activeFeed}
           tabs={feeds}

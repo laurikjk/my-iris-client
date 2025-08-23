@@ -24,6 +24,7 @@ import {
   KIND_CHANNEL_MESSAGE,
   KIND_CLASSIFIED,
   KIND_PICTURE_FIRST,
+  KIND_EPHEMERAL,
 } from "@/utils/constants"
 
 export interface EventKindInfo {
@@ -135,6 +136,11 @@ export const EVENT_KIND_INFO: Record<number, EventKindInfo> = {
     label: "Bookmark",
     icon: <RiBookmarkFill className="w-3 h-3" />,
     color: "text-rose-500",
+  },
+  [KIND_EPHEMERAL]: {
+    label: "Ephemeral",
+    description: "Ephemeral events",
+    color: "text-gray-400",
   },
 }
 
