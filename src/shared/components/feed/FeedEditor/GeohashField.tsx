@@ -97,7 +97,7 @@ export function GeohashField({
       {showIframe && (
         <div className="mt-3 border border-base-300 rounded-lg overflow-hidden">
           <iframe
-            src="http://geohash.softeng.co/"
+            src="https://geohash.softeng.co/"
             className="w-full h-96"
             title="Geohash Explorer"
           />
