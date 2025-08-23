@@ -28,6 +28,7 @@ function HlsVideoComponent({
 }: HlsVideoComponentProps) {
   const {content, imgproxy} = useSettingsStore()
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [hasVideoTrack, setHasVideoTrack] = useState(true)
   const [blur, setBlur] = useState(
     content.blurNSFW &&
       (!!event?.content.toLowerCase().includes("#nsfw") ||
@@ -84,9 +85,29 @@ function HlsVideoComponent({
     initVideo()
   }, [initVideo])
 
+  // Check if video has a video track (not audio-only)
+  useEffect(() => {
+    if (!videoRef.current) return
+
+    const checkVideoTrack = () => {
+      if (videoRef.current && videoRef.current.readyState >= 1) {
+        // Check if video has dimensions (audio-only files have 0x0)
+        const hasVideo =
+          videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0
+        setHasVideoTrack(hasVideo)
+      }
+    }
+
+    videoRef.current.addEventListener("loadedmetadata", checkVideoTrack)
+
+    return () => {
+      videoRef.current?.removeEventListener("loadedmetadata", checkVideoTrack)
+    }
+  }, [match])
+
   // Handle autoplay with intersection observer
   useEffect(() => {
-    if (!content.autoplayVideos || !videoRef.current) return
+    if (!content.autoplayVideos || !videoRef.current || !hasVideoTrack) return
 
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
       const entry = entries[0]
@@ -107,7 +128,7 @@ function HlsVideoComponent({
     return () => {
       observer.unobserve(currentVideo)
     }
-  }, [content.autoplayVideos])
+  }, [content.autoplayVideos, hasVideoTrack])
 
   return (
     <div
@@ -140,8 +161,8 @@ function HlsVideoComponent({
           backgroundPosition: "center",
         }}
         controls
-        muted={isMuted}
-        autoPlay={content.autoplayVideos}
+        muted={hasVideoTrack ? isMuted : false}
+        autoPlay={content.autoplayVideos && hasVideoTrack}
         playsInline
         loop
         poster={generateProxyUrl(
