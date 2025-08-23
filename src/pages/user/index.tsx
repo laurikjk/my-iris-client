@@ -180,45 +180,42 @@ function UserPage({pubKey}: {pubKey: string}) {
             <div className="flex flex-1 flex-col items-center">
               <ProfileHeader pubKey={pubKey} key={pubKey} showHeader={false} />
               <div className="flex w-full flex-1 mt-2 flex flex-col gap-4">
-                <div className="px-4 flex gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
-                  {visibleTabs.map((tab) => (
-                    <button
-                      key={tab.path}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        setActiveTab(tab.path)
-                      }}
-                      className={classNames(
-                        "btn btn-sm",
-                        activeTab === tab.path ? "btn-primary" : "btn-neutral"
-                      )}
-                    >
-                      {tab.name}
-                    </button>
-                  ))}
-                </div>
-                {(() => {
-                  const activeTabConfig =
-                    visibleTabs.find((tab) => tab.path === activeTab) || visibleTabs[0]
+            <div className="px-4 flex gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
+              {visibleTabs.map((tab) => (
+                <button
+                  key={tab.path}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setActiveTab(tab.path)
+                  }}
+                  className={classNames(
+                    "btn btn-sm",
+                    activeTab === tab.path ? "btn-primary" : "btn-neutral"
+                  )}
+                >
+                  {tab.name}
+                </button>
+              ))}
+            </div>
+            {(() => {
+              const activeTabConfig =
+                visibleTabs.find((tab) => tab.path === activeTab) || visibleTabs[0]
 
-                  const baseFeedConfig = activeTabConfig.getFeedConfig(
-                    pubKeyHex,
-                    myPubKey
-                  )
-                  const savedConfig = loadFeedConfig(baseFeedConfig.id)
-                  const feedConfig = {
-                    ...baseFeedConfig,
-                    displayAs: savedConfig?.displayAs,
-                  }
+              const baseFeedConfig = activeTabConfig.getFeedConfig(pubKeyHex, myPubKey)
+              const savedConfig = loadFeedConfig(baseFeedConfig.id)
+              const feedConfig = {
+                ...baseFeedConfig,
+                displayAs: savedConfig?.displayAs,
+              }
 
-                  return (
-                    <Feed
-                      key={`feed-${pubKeyHex}-${activeTabConfig.path}`}
-                      feedConfig={feedConfig}
-                      borderTopFirst={true}
-                    />
-                  )
-                })()}
+              return (
+                <Feed
+                  key={`feed-${pubKeyHex}-${activeTabConfig.path}`}
+                  feedConfig={feedConfig}
+                  borderTopFirst={true}
+                />
+              )
+            })()}
               </div>
             </div>
           </div>
