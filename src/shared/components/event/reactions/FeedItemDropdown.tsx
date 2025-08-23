@@ -7,7 +7,6 @@ import {unmuteUser} from "@/shared/services/Mute.tsx"
 import Reactions from "@/shared/components/event/reactions/Reactions.tsx"
 import Dropdown from "@/shared/components/ui/Dropdown.tsx"
 import Modal from "@/shared/components/ui/Modal.tsx"
-import ReportUser from "../ReportUser.tsx"
 import {usePublicKey} from "@/stores/user"
 import MuteUser from "../MuteUser.tsx"
 import RawJSON from "../RawJSON.tsx"
@@ -29,7 +28,6 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
   const [showRawJSON, setShowRawJSON] = useState(false)
   const [muted, setMuted] = useState(false)
   const [muting, setMuting] = useState(false)
-  const [reporting, setReporting] = useState(false)
 
   const mutedList: string[] = []
 
@@ -37,10 +35,6 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
     setMuted(mutedList.includes(event.pubkey))
   }, [mutedList, event])
 
-  const handleCopyText = () => {
-    navigator.clipboard.writeText(event.content)
-    onClose()
-  }
   const handleCopyLink = () => {
     const irisUrl = `https://iris.to/${nip19.noteEncode(event.id)}`
     navigator.clipboard.writeText(irisUrl)
@@ -73,10 +67,6 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
     }
   }
 
-  const handleReporting = () => {
-    setReporting(true)
-  }
-
   const handleRebroadcast = async () => {
     await rebroadcast(event.id)
   }
@@ -88,13 +78,6 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
           <div onClick={(e) => e.stopPropagation()}>
             <Modal onClose={() => setShowReactions(false)}>
               <Reactions event={event} />
-            </Modal>
-          </div>
-        )}
-        {reporting && (
-          <div onClick={(e) => e.stopPropagation()}>
-            <Modal onClose={() => setReporting(false)}>
-              <ReportUser user={event.id} event={event} />
             </Modal>
           </div>
         )}
@@ -127,9 +110,6 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
             </button>
           </li>
           <li>
-            <button onClick={handleCopyText}>Copy Note Content</button>
-          </li>
-          <li>
             <button onClick={handleShowRawJson}>Show Raw Data</button>
           </li>
           <li>
@@ -144,16 +124,9 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
             </button>
           </li>
           {myPubKey !== event.pubkey && event.kind !== 9735 && (
-            <>
-              <li>
-                <button onClick={handleMute}>
-                  {muted ? "Unmute User" : "Mute User"}
-                </button>
-              </li>
-              <li>
-                <button onClick={handleReporting}>Report</button>
-              </li>
-            </>
+            <li>
+              <button onClick={handleMute}>{muted ? "Unmute User" : "Mute User"}</button>
+            </li>
           )}
           {event.pubkey === myPubKey && (
             <li>
