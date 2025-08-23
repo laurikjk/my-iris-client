@@ -1,8 +1,9 @@
 import {useEffect, useState, ChangeEvent, KeyboardEvent} from "react"
-import {RiDeleteBinLine, RiFileCopyLine} from "@remixicon/react"
+import {RiDeleteBinLine, RiFileCopyLine, RiMapPinLine} from "@remixicon/react"
 import {useFeedStore, type FeedConfig} from "@/stores/feed"
 import MultiRelaySelector from "@/shared/components/ui/MultiRelaySelector"
 import EventKindsSelector from "@/shared/components/ui/EventKindsSelector"
+import {getCurrentLocationGeohash} from "@/utils/geohash"
 
 interface FeedEditorProps {
   activeTab: string
@@ -356,38 +357,80 @@ function FeedEditor({
       <div className="flex items-start gap-2">
         <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">Geohash</span>
         <div className="flex-1">
-          <input
-            type="text"
-            value={(localConfig.filter?.["#g"] || []).join(", ")}
-            onChange={(e) => {
-              const inputValue = e.target.value.trim()
-              const currentFilter = localConfig.filter || {}
-              if (inputValue === "") {
-                // Remove #g property if input is empty
-                const filterWithoutGeohash = Object.fromEntries(
-                  Object.entries(currentFilter).filter(([key]) => key !== "#g")
-                )
-                updateConfig(
-                  "filter",
-                  Object.keys(filterWithoutGeohash).length > 0
-                    ? filterWithoutGeohash
-                    : undefined
-                )
-              } else {
-                // Split by comma and trim each value
-                const geohashes = inputValue
-                  .split(",")
-                  .map((g) => g.trim())
-                  .filter((g) => g.length > 0)
-                updateConfig("filter", {...currentFilter, "#g": geohashes})
-              }
-            }}
-            className="input input-sm w-full text-sm"
-            placeholder="e.g. u2mwdd, u2mw (comma-separated)"
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={(localConfig.filter?.["#g"] || []).join(", ")}
+              onChange={(e) => {
+                const inputValue = e.target.value.trim()
+                const currentFilter = localConfig.filter || {}
+                if (inputValue === "") {
+                  // Remove #g property if input is empty
+                  const filterWithoutGeohash = Object.fromEntries(
+                    Object.entries(currentFilter).filter(([key]) => key !== "#g")
+                  )
+                  updateConfig(
+                    "filter",
+                    Object.keys(filterWithoutGeohash).length > 0
+                      ? filterWithoutGeohash
+                      : undefined
+                  )
+                } else {
+                  // Split by comma and trim each value
+                  const geohashes = inputValue
+                    .split(",")
+                    .map((g) => g.trim())
+                    .filter((g) => g.length > 0)
+                  updateConfig("filter", {...currentFilter, "#g": geohashes})
+                }
+              }}
+              className="input input-sm flex-1 text-sm"
+              placeholder="e.g. u2mwdd, u2mw (comma-separated)"
+            />
+            <button
+              onClick={async () => {
+                const geohash = await getCurrentLocationGeohash(4) // Get 4-char precision (~40km)
+                if (geohash) {
+                  const currentFilter = localConfig.filter || {}
+                  const currentGeohashes = currentFilter["#g"] || []
+
+                  // Add multiple precision levels for privacy and broader matching
+                  // 3 chars = ~150km, 4 chars = ~40km
+                  const precisions = [
+                    geohash.substring(0, 3), // City/region level
+                    geohash.substring(0, 4), // District level
+                  ]
+
+                  // Only add geohashes that aren't already present
+                  const newGeohashes = precisions.filter(
+                    (gh) => !currentGeohashes.includes(gh)
+                  )
+
+                  if (newGeohashes.length > 0) {
+                    updateConfig("filter", {
+                      ...currentFilter,
+                      "#g": [...currentGeohashes, ...newGeohashes],
+                    })
+                  }
+                }
+              }}
+              className="btn btn-sm btn-neutral"
+              title="Add current location (multiple precision levels)"
+            >
+              <RiMapPinLine className="w-4 h-4" />
+            </button>
+          </div>
           <span className="text-xs text-base-content/50 mt-1 block">
-            Filter posts by geohash location tags (NIP-52). Use comma to separate multiple
-            geohashes.
+            Filter posts by{" "}
+            <a
+              href="https://en.wikipedia.org/wiki/Geohash"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-base-content/80"
+            >
+              geohash
+            </a>{" "}
+            location tags. Shorter = broader area (3 chars ≈ city, 4 chars ≈ district).
           </span>
         </div>
       </div>
