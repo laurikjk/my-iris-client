@@ -129,8 +129,8 @@ export default function GeohashPage() {
             </div>
           )}
 
-          {/* Feed - only show if geohash filter is set */}
-          {!showMoreSettings && feedConfig.filter?.["#g"] && (
+          {/* Feed */}
+          {!showMoreSettings && (
             <Feed
               key={feedKey}
               feedConfig={feedConfig}

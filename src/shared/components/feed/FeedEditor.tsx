@@ -1,9 +1,10 @@
 import {useEffect, useState, ChangeEvent, KeyboardEvent} from "react"
-import {RiDeleteBinLine, RiFileCopyLine, RiMapPinLine} from "@remixicon/react"
+import {RiDeleteBinLine, RiFileCopyLine} from "@remixicon/react"
 import {type FeedConfig} from "@/stores/feed"
 import MultiRelaySelector from "@/shared/components/ui/MultiRelaySelector"
 import EventKindsSelector from "@/shared/components/ui/EventKindsSelector"
-import {getCurrentLocationGeohash} from "@/utils/geohash"
+import {GeohashField} from "./FeedEditor/GeohashField"
+import {FollowDistanceField} from "./FeedEditor/FollowDistanceField"
 
 interface FeedEditorProps {
   feedConfig: FeedConfig
@@ -176,47 +177,11 @@ function FeedEditor({
       </div>
 
       {/* Follow Distance */}
-      <div className="flex items-start gap-2">
-        <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">
-          Follow Distance
-        </span>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={localConfig.followDistance !== undefined}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  // Enable with default value of 3
-                  updateConfig("followDistance", 3)
-                } else {
-                  // Disable by setting to undefined
-                  updateConfig("followDistance", undefined)
-                }
-              }}
-              className="checkbox checkbox-sm"
-            />
-            <input
-              type="number"
-              min="0"
-              max="10"
-              value={localConfig.followDistance ?? ""}
-              onChange={(e) =>
-                updateConfig(
-                  "followDistance",
-                  e.target.value ? parseInt(e.target.value) : undefined
-                )
-              }
-              className="input input-sm w-20 text-sm"
-              disabled={localConfig.followDistance === undefined}
-            />
-          </div>
-          <span className="text-xs text-base-content/50 mt-1 block">
-            Max degrees of separation (0=only yourself, 1=follows only, 2=friends of
-            friends, etc.)
-          </span>
-        </div>
-      </div>
+      <FollowDistanceField
+        value={localConfig.followDistance}
+        onChange={(value) => updateConfig("followDistance", value)}
+        showLabel={true}
+      />
 
       {/* Filter Kinds */}
       <div className="flex items-start gap-2">
@@ -326,86 +291,27 @@ function FeedEditor({
       </div>
 
       {/* Geohash Filter */}
-      <div className="flex items-start gap-2">
-        <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">Geohash</span>
-        <div className="flex-1">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={(localConfig.filter?.["#g"] || []).join(", ")}
-              onChange={(e) => {
-                const inputValue = e.target.value.trim()
-                const currentFilter = localConfig.filter || {}
-                if (inputValue === "") {
-                  // Remove #g property if input is empty
-                  const filterWithoutGeohash = Object.fromEntries(
-                    Object.entries(currentFilter).filter(([key]) => key !== "#g")
-                  )
-                  updateConfig(
-                    "filter",
-                    Object.keys(filterWithoutGeohash).length > 0
-                      ? filterWithoutGeohash
-                      : undefined
-                  )
-                } else {
-                  // Split by comma and trim each value
-                  const geohashes = inputValue
-                    .split(",")
-                    .map((g) => g.trim())
-                    .filter((g) => g.length > 0)
-                  updateConfig("filter", {...currentFilter, "#g": geohashes})
-                }
-              }}
-              className="input input-sm flex-1 text-sm"
-              placeholder="e.g. u2mwdd, u2mw (comma-separated)"
-            />
-            <button
-              onClick={async () => {
-                const geohash = await getCurrentLocationGeohash(4) // Get 4-char precision (~40km)
-                if (geohash) {
-                  const currentFilter = localConfig.filter || {}
-                  const currentGeohashes = currentFilter["#g"] || []
-
-                  // Add multiple precision levels for privacy and broader matching
-                  // 3 chars = ~150km, 4 chars = ~40km
-                  const precisions = [
-                    geohash.substring(0, 3), // City/region level
-                    geohash.substring(0, 4), // District level
-                  ]
-
-                  // Only add geohashes that aren't already present
-                  const newGeohashes = precisions.filter(
-                    (gh) => !currentGeohashes.includes(gh)
-                  )
-
-                  if (newGeohashes.length > 0) {
-                    updateConfig("filter", {
-                      ...currentFilter,
-                      "#g": [...currentGeohashes, ...newGeohashes],
-                    })
-                  }
-                }
-              }}
-              className="btn btn-sm btn-neutral"
-              title="Add current location (multiple precision levels)"
-            >
-              <RiMapPinLine className="w-4 h-4" />
-            </button>
-          </div>
-          <span className="text-xs text-base-content/50 mt-1 block">
-            Filter posts by{" "}
-            <a
-              href="https://en.wikipedia.org/wiki/Geohash"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-base-content/80"
-            >
-              geohash
-            </a>{" "}
-            location tags. Shorter = broader area (3 chars ≈ city, 4 chars ≈ district).
-          </span>
-        </div>
-      </div>
+      <GeohashField
+        value={localConfig.filter?.["#g"]}
+        onChange={(geohashes) => {
+          const currentFilter = localConfig.filter || {}
+          if (geohashes === undefined) {
+            // Remove #g property if no geohashes
+            const filterWithoutGeohash = Object.fromEntries(
+              Object.entries(currentFilter).filter(([key]) => key !== "#g")
+            )
+            updateConfig(
+              "filter",
+              Object.keys(filterWithoutGeohash).length > 0
+                ? filterWithoutGeohash
+                : undefined
+            )
+          } else {
+            updateConfig("filter", {...currentFilter, "#g": geohashes})
+          }
+        }}
+        showLabel={true}
+      />
 
       {/* Checkboxes */}
       <div className="flex flex-col gap-2">{renderCommonCheckboxes(updateConfig)}</div>
