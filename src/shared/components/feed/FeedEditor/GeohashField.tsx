@@ -55,28 +55,30 @@ export function GeohashField({
           <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">{label}</span>
         )}
         <div className="flex-1">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <input
               type="text"
               value={value.join(", ")}
               onChange={(e) => handleInputChange(e.target.value)}
-              className="input input-sm flex-1 text-sm"
-              placeholder="e.g. u2mwdd, u2mw (comma-separated)"
+              className="input input-sm flex-1 min-w-0 text-sm"
+              placeholder="e.g. u2mwdd, u2mw"
             />
-            <button
-              onClick={handleAddLocation}
-              className="btn btn-sm btn-neutral"
-              title="Add current location (multiple precision levels)"
-            >
-              <RiMapPinLine className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setShowIframe(!showIframe)}
-              className={`btn btn-sm ${showIframe ? "btn-primary" : "btn-neutral"}`}
-              title={showIframe ? "Hide geohash explorer" : "Show geohash explorer"}
-            >
-              <RiGlobalLine className="w-4 h-4" />
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAddLocation}
+                className="btn btn-sm btn-neutral"
+                title="Add current location (multiple precision levels)"
+              >
+                <RiMapPinLine className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setShowIframe(!showIframe)}
+                className={`btn btn-sm ${showIframe ? "btn-primary" : "btn-neutral"}`}
+                title={showIframe ? "Hide geohash explorer" : "Show geohash explorer"}
+              >
+                <RiGlobalLine className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           <span className="text-xs text-base-content/50 mt-1 block">
             Filter posts by{" "}
