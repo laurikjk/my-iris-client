@@ -12,10 +12,6 @@ interface ScrollablePageContainerProps {
    * Whether to add padding for mobile footer (default: true)
    */
   withFooterPadding?: boolean
-  /**
-   * Additional content to render at the bottom (before the spacer)
-   */
-  bottomContent?: ReactNode
 }
 
 /**
@@ -30,7 +26,6 @@ export function ScrollablePageContainer({
   className = "",
   withHeaderPadding = true,
   withFooterPadding = true,
-  bottomContent,
 }: ScrollablePageContainerProps) {
   return (
     <div
@@ -38,6 +33,7 @@ export function ScrollablePageContainer({
         "flex-1 w-full max-w-full overflow-y-scroll overflow-x-hidden scrollbar-hide",
         {
           "pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0": withHeaderPadding,
+          "pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0": withFooterPadding,
         },
         className
       )}
@@ -45,11 +41,6 @@ export function ScrollablePageContainer({
       data-header-scroll-target
     >
       {children}
-      {bottomContent}
-      {/* Spacer for mobile footer */}
-      {withFooterPadding && (
-        <div className="h-[calc(4rem+env(safe-area-inset-bottom))] md:hidden" />
-      )}
     </div>
   )
 }
