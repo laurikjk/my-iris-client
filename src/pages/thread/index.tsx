@@ -95,9 +95,8 @@ export default function ThreadPage({
         )}
       </Header>
       <div className="flex flex-1 overflow-hidden">
-        <ScrollablePageContainer className="flex justify-center flex-1">
-          <div className="flex-1 max-w-full">
-            {(() => {
+        <ScrollablePageContainer className="flex flex-col flex-1">
+          {(() => {
               if (isNaddr) {
                 if (loading) {
                   return (
@@ -130,7 +129,6 @@ export default function ThreadPage({
                 )
               }
             })()}
-          </div>
         </ScrollablePageContainer>
         <RightColumn>
           {() => (

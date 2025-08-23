@@ -25,9 +25,7 @@ function Notifications() {
       <div className="flex flex-col flex-1 h-full relative">
         <Header title="Notifications" />
         <ScrollablePageContainer>
-          <div className="flex flex-col flex-1 gap-2">
-            <NotificationsFeed />
-          </div>
+          <NotificationsFeed />
         </ScrollablePageContainer>
       </div>
       <RightColumn>

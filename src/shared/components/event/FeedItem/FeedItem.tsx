@@ -293,21 +293,19 @@ function FeedItem({
                 <ReplyHeader />
               </div>
             )}
-          <div className="flex flex-row gap-4 flex-1">
-            <div className={classNames("flex-1 w-full", {"text-lg": standalone})}>
-              <FeedItemHeader
+          <div className={classNames("flex-1 w-full", {"text-lg": standalone})}>
+            <FeedItemHeader
+              event={event}
+              referredEvent={referredEvent}
+              tight={asReply || asRepliedTo}
+            />
+            <div className={classNames({"pl-12": asReply || asRepliedTo})}>
+              <FeedItemContent
                 event={event}
                 referredEvent={referredEvent}
-                tight={asReply || asRepliedTo}
+                standalone={standalone}
+                truncate={truncate}
               />
-              <div className={classNames({"pl-12": asReply || asRepliedTo})}>
-                <FeedItemContent
-                  event={event}
-                  referredEvent={referredEvent}
-                  standalone={standalone}
-                  truncate={truncate}
-                />
-              </div>
             </div>
           </div>
           <div
