@@ -35,24 +35,21 @@ export function ScrollablePageContainer({
   return (
     <div
       className={classNames(
-        "flex-1 overflow-y-scroll overflow-x-hidden scrollbar-hide",
+        "flex-1 w-full max-w-full overflow-y-scroll overflow-x-hidden scrollbar-hide",
+        {
+          "pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0": withHeaderPadding,
+        },
         className
       )}
       data-main-scroll-container="true"
       data-header-scroll-target
     >
-      <div
-        className={classNames("flex-1 max-w-full", {
-          "pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0": withHeaderPadding,
-        })}
-      >
-        {children}
-        {bottomContent}
-        {/* Spacer for mobile footer */}
-        {withFooterPadding && (
-          <div className="h-[calc(4rem+env(safe-area-inset-bottom))] md:hidden" />
-        )}
-      </div>
+      {children}
+      {bottomContent}
+      {/* Spacer for mobile footer */}
+      {withFooterPadding && (
+        <div className="h-[calc(4rem+env(safe-area-inset-bottom))] md:hidden" />
+      )}
     </div>
   )
 }
