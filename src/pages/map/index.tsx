@@ -120,8 +120,8 @@ export default function MapPage() {
             geohashes={feedConfig.filter?.["#g"]}
             feedEvents={feedEvents}
             onGeohashSelect={(geohash) => {
-              // Replace selection instead of adding to it
-              updateFilter("#g", [geohash])
+              // Replace selection instead of adding to it (ensure lowercase)
+              updateFilter("#g", [geohash.toLowerCase()])
             }}
             height="20rem"
             className="w-full"

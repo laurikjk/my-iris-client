@@ -58,7 +58,7 @@ export function GeohashField({
     } else {
       const geohashes = trimmed
         .split(",")
-        .map((g) => g.trim())
+        .map((g) => g.trim().toLowerCase())
         .filter((g) => g.length > 0)
       onChange(geohashes.length > 0 ? geohashes : undefined)
     }
@@ -77,8 +77,8 @@ export function GeohashField({
   }
 
   const handleGeohashSelect = (geohash: string) => {
-    // Replace current selection with clicked geohash
-    onChange([geohash])
+    // Replace current selection with clicked geohash (ensure lowercase)
+    onChange([geohash.toLowerCase()])
   }
 
   return (

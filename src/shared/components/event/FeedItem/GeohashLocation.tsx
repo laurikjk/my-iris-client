@@ -8,17 +8,17 @@ interface GeohashLocationProps {
 }
 
 export function GeohashLocation({event, className = ""}: GeohashLocationProps) {
-  // Get geohash tags from the event
+  // Get geohash tags from the event and convert to lowercase
   const geohashTags = event.tags.filter((tag) => tag[0] === "g" && tag[1])
 
   if (geohashTags.length === 0) {
     return null
   }
 
-  // Get all unique geohashes and sort by length (most specific first)
-  const uniqueGeohashes = [...new Set(geohashTags.map((tag) => tag[1]))].sort(
-    (a, b) => b.length - a.length
-  )
+  // Get all unique geohashes (lowercase) and sort by length (most specific first)
+  const uniqueGeohashes = [
+    ...new Set(geohashTags.map((tag) => tag[1].toLowerCase())),
+  ].sort((a, b) => b.length - a.length)
 
   // Limit to first 10 geohashes for safety
   const geohashes = uniqueGeohashes.slice(0, 10)
