@@ -62,8 +62,13 @@ test.describe("Session persistence", () => {
       .fill(postContent)
     await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
-    // Wait for the post to appear before refreshing
-    await expect(page.getByText(postContent, {exact: true}).first()).toBeVisible({
+    // Wait for the dialog to close after posting
+    await expect(page.getByRole("dialog")).not.toBeVisible({timeout: 5000})
+
+    // Wait for the post to appear in the feed before refreshing
+    await expect(
+      page.locator('[data-testid="feed-item"]').filter({hasText: postContent}).first()
+    ).toBeVisible({
       timeout: 5000,
     })
 
@@ -71,23 +76,19 @@ test.describe("Session persistence", () => {
     await page.reload()
     await page.waitForLoadState("networkidle")
 
-    // Wait for the post content to appear after refresh
-    await expect(page.getByText(postContent, {exact: true}).first()).toBeVisible({
-      timeout: 10000,
-    })
-
-    // Find the feed item containing our post text
+    // Wait for the feed to load and find our post
     const postElement = page
-      .getByTestId("feed-item")
+      .locator('[data-testid="feed-item"]')
       .filter({hasText: postContent})
       .first()
+    await expect(postElement).toBeVisible({timeout: 10000})
 
-    // Wait for the like button within this specific post
+    // Find and click the like button
     const likeButton = postElement.getByTestId("like-button")
-    await expect(likeButton).toBeVisible({timeout: 5000})
     await likeButton.click()
 
     // Verify like count increased
-    await expect(postElement.getByTestId("like-count")).toHaveText("1")
+    const likeCount = postElement.getByTestId("like-count")
+    await expect(likeCount).toHaveText("1")
   })
 })

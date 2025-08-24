@@ -42,16 +42,16 @@ export function BaseNoteCreator({
 
   const draftKey = replyingTo?.id || ""
   const hasHydrated = draftStore.hasHydrated
-  
+
   const [publishing, setPublishing] = useState(false)
-  
+
   // Initialize state from draft store if available
   const [text, setText] = useState(() => {
     if (!hasHydrated) return ""
     const draft = draftStore.getDraft(draftKey)
     return draft?.content || ""
   })
-  
+
   const [imeta, setImeta] = useState<ImetaTag[]>(() => {
     if (!hasHydrated) return []
     const draft = draftStore.getDraft(draftKey)

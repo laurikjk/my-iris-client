@@ -107,7 +107,7 @@ test.describe("Reply draft persistence", () => {
     // Type and publish reply
     const replyContent = "This reply will be published"
     await page.getByPlaceholder("Write your reply...").fill(replyContent)
-    await page.getByRole("button", {name: "Post"}).click()
+    await page.getByRole("button", {name: "Reply"}).click()
     await page.waitForTimeout(1000)
 
     // Check reply draft is cleared
