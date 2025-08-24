@@ -1,6 +1,6 @@
 import {useState} from "react"
 import {RiMapPinLine, RiGlobalLine} from "@remixicon/react"
-import {getCurrentLocationGeohash} from "@/utils/geohash"
+import {useGeohash} from "@/shared/hooks/useGeohash"
 
 interface GeohashFieldProps {
   value: string[] | undefined
@@ -16,6 +16,8 @@ export function GeohashField({
   showLabel = true,
 }: GeohashFieldProps) {
   const [showIframe, setShowIframe] = useState(false)
+  const {getGeohashPrecisions, loading} = useGeohash()
+
   const handleInputChange = (inputValue: string) => {
     const trimmed = inputValue.trim()
     if (trimmed === "") {
@@ -30,18 +32,9 @@ export function GeohashField({
   }
 
   const handleAddLocation = async () => {
-    const geohash = await getCurrentLocationGeohash(4)
-    if (geohash) {
+    const precisions = await getGeohashPrecisions(4)
+    if (precisions) {
       const currentGeohashes = value || []
-
-      // Add multiple precision levels for privacy
-      const precisions = [
-        geohash.substring(0, 1), // Continent level (~5000km)
-        geohash.substring(0, 2), // Country/state level (~1250km)
-        geohash.substring(0, 3), // City/region level (~150km)
-        geohash.substring(0, 4), // District level (~40km)
-      ]
-
       const newGeohashes = precisions.filter((gh) => !currentGeohashes.includes(gh))
 
       if (newGeohashes.length > 0) {
@@ -68,10 +61,15 @@ export function GeohashField({
             <div className="flex gap-2">
               <button
                 onClick={handleAddLocation}
+                disabled={loading}
                 className="btn btn-sm btn-neutral"
                 title="Add current location (multiple precision levels)"
               >
-                <RiMapPinLine className="w-4 h-4" />
+                {loading ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : (
+                  <RiMapPinLine className="w-4 h-4" />
+                )}
               </button>
               <button
                 onClick={() => setShowIframe(!showIframe)}

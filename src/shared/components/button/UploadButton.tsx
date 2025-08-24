@@ -1,8 +1,18 @@
-import {useRef, useState, ReactNode, ChangeEvent, MouseEvent} from "react"
+import {useRef, useState, ReactNode, ChangeEvent, MouseEvent, useEffect} from "react"
 
 import type {EncryptionMeta} from "@/types/global"
 import {RiLock2Line} from "@remixicon/react"
 import {processFile} from "@/shared/upload"
+
+export type UploadState = {
+  uploading: boolean
+  progress: number
+  currentFile: string | null
+  errorMessage: string | null
+  failedFiles: Array<{name: string; error: string}>
+  totalFiles: number
+  currentFileIndex: number
+}
 
 type Props = {
   onUpload: (
@@ -18,6 +28,7 @@ type Props = {
   accept?: string
   multiple?: boolean
   encrypt?: boolean
+  onStateChange?: (state: UploadState) => void
 }
 
 const UploadButton = ({
@@ -29,6 +40,7 @@ const UploadButton = ({
   accept,
   multiple = false,
   encrypt = false,
+  onStateChange,
 }: Props) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -38,6 +50,41 @@ const UploadButton = ({
   const [failedFiles, setFailedFiles] = useState<Array<{name: string; error: string}>>([])
   const [currentFileIndex, setCurrentFileIndex] = useState(0)
   const [totalFiles, setTotalFiles] = useState(0)
+
+  // Notify parent of state changes
+  useEffect(() => {
+    if (onStateChange) {
+      onStateChange({
+        uploading,
+        progress,
+        currentFile,
+        errorMessage,
+        failedFiles,
+        totalFiles,
+        currentFileIndex,
+      })
+    }
+  }, [
+    uploading,
+    progress,
+    currentFile,
+    errorMessage,
+    failedFiles,
+    totalFiles,
+    currentFileIndex,
+    onStateChange,
+  ])
+
+  // Auto-clear errors after 10 seconds
+  useEffect(() => {
+    if (!uploading && (errorMessage || failedFiles.length > 0)) {
+      const timer = setTimeout(() => {
+        setErrorMessage(null)
+        setFailedFiles([])
+      }, 10000)
+      return () => clearTimeout(timer)
+    }
+  }, [uploading, errorMessage, failedFiles])
 
   const handleFileProcess = async (file: File): Promise<string | null> => {
     try {
@@ -59,6 +106,8 @@ const UploadButton = ({
       const errorMessage = error instanceof Error ? error.message : String(error)
       setErrorMessage(errorMessage)
       setFailedFiles((prev) => [...prev, {name: file.name, error: errorMessage}])
+      setProgress(0) // Reset progress on error
+      setCurrentFile(null) // Clear current file on error
       if (onError) {
         onError(error instanceof Error ? error : new Error(String(error)))
       }
@@ -92,6 +141,10 @@ const UploadButton = ({
       if (fileInputRef.current) {
         fileInputRef.current.value = ""
       }
+      // Clear error message if no failed files
+      if (failedFiles.length === 0) {
+        setErrorMessage(null)
+      }
     }
   }
 
@@ -102,7 +155,7 @@ const UploadButton = ({
   }
 
   return (
-    <div className="flex flex-col items-center relative">
+    <>
       <button
         type="button"
         role="button"
@@ -111,7 +164,7 @@ const UploadButton = ({
         disabled={disabled || uploading}
         style={{position: "relative"}}
       >
-        {uploading ? "Uploading..." : text || "Upload"}
+        {text || "Upload"}
         {encrypt && (
           <span
             style={{
@@ -137,37 +190,7 @@ const UploadButton = ({
         onChange={onChange}
         style={{display: "none"}}
       />
-      {uploading && (
-        <div className="w-full mt-2">
-          {currentFile && (
-            <p className="text-sm text-center mb-1">
-              {totalFiles > 1 ? `[${currentFileIndex}/${totalFiles}] ` : ""}
-              {currentFile}
-            </p>
-          )}
-          <div className="bg-neutral rounded-full h-2.5">
-            <div
-              className="bg-primary h-2.5 rounded-full"
-              style={{width: `${progress}%`}}
-            ></div>
-          </div>
-          <p className="text-sm text-center mt-1">{Math.round(progress)}%</p>
-        </div>
-      )}
-      {errorMessage && <p className="text-sm text-error mt-2">{errorMessage}</p>}
-      {failedFiles.length > 0 && (
-        <div className="w-full mt-2">
-          <p className="text-sm font-semibold text-error mb-1">Failed uploads:</p>
-          <div className="max-h-32 overflow-y-auto">
-            {failedFiles.map((file, index) => (
-              <p key={index} className="text-sm text-error">
-                {file.name}: {file.error}
-              </p>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   )
 }
 
