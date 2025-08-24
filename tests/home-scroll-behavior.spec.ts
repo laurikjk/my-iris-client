@@ -194,12 +194,13 @@ test.describe("Home Feed Scroll Behavior", () => {
     const scrolledPosition = await scrollable.evaluate((el) => el.scrollTop)
     expect(scrolledPosition).toBe(500)
 
-    // Click header (not on buttons)
-    const headerText = await page.locator("header span").first()
-    await headerText.click()
+    // Click header (not on buttons) - click the header element directly
+    const header = await page.locator("header").first()
+    // Click in the middle-left area to avoid buttons
+    await header.click({position: {x: 100, y: 20}})
 
     // Wait for scroll animation
-    await page.waitForTimeout(300)
+    await page.waitForTimeout(500)
 
     // Check if scrolled to top
     const finalPosition = await scrollable.evaluate((el) => el.scrollTop)

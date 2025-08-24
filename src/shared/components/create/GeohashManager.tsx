@@ -5,21 +5,31 @@ import {useGeohash} from "@/shared/hooks/useGeohash"
 interface GeohashManagerProps {
   disabled?: boolean
   displayInline?: boolean
+  draftKey?: string
 }
 
 export function GeohashManager({
   disabled = false,
   displayInline = false,
+  draftKey = "",
 }: GeohashManagerProps) {
-  const {gTags, addGeohash, removeGeohash} = useDraftStore()
+  const draftStore = useDraftStore()
+  const draft = draftStore.getDraft(draftKey)
+  const gTags = draft?.gTags || []
   const {getGeohashPrecisions, loading} = useGeohash()
 
   const handleAddLocation = async () => {
     const precisions = await getGeohashPrecisions(4)
     if (precisions) {
       // Add all precision levels for privacy
-      precisions.forEach((gh) => addGeohash(gh))
+      const newGTags = [...new Set([...gTags, ...precisions])]
+      draftStore.setDraft(draftKey, {gTags: newGTags})
     }
+  }
+
+  const removeGeohash = (gh: string) => {
+    const newGTags = gTags.filter((tag) => tag !== gh)
+    draftStore.setDraft(draftKey, {gTags: newGTags})
   }
 
   if (displayInline) {

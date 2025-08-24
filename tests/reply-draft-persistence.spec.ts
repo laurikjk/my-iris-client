@@ -22,14 +22,14 @@ test.describe("Reply draft persistence", () => {
 
     // Type a draft reply
     const replyDraft = "This is my draft reply that should persist"
-    await page.getByPlaceholder("Reply to this post...").fill(replyDraft)
+    await page.getByPlaceholder("Write your reply...").fill(replyDraft)
 
     // Reload the page
     await page.reload()
     await page.waitForLoadState("networkidle")
 
     // Check that reply draft is preserved
-    await expect(page.getByPlaceholder("Reply to this post...")).toHaveValue(replyDraft)
+    await expect(page.getByPlaceholder("Write your reply...")).toHaveValue(replyDraft)
   })
 
   test("should keep main draft separate from reply drafts", async ({page}) => {
@@ -68,7 +68,7 @@ test.describe("Reply draft persistence", () => {
     await page.getByText("Post to reply to").first().click()
     await page.waitForURL(/\/note/)
     const replyDraft = "This is a reply draft"
-    await page.getByPlaceholder("Reply to this post...").fill(replyDraft)
+    await page.getByPlaceholder("Write your reply...").fill(replyDraft)
 
     // Reload the page
     await page.reload()
@@ -84,7 +84,7 @@ test.describe("Reply draft persistence", () => {
     // Check that reply draft is still there
     await page.getByText("Post to reply to").first().click()
     await page.waitForURL(/\/note/)
-    await expect(page.getByPlaceholder("Reply to this post...")).toHaveValue(replyDraft)
+    await expect(page.getByPlaceholder("Write your reply...")).toHaveValue(replyDraft)
   })
 
   test("should clear reply draft after publishing reply", async ({page}) => {
@@ -106,11 +106,11 @@ test.describe("Reply draft persistence", () => {
 
     // Type and publish reply
     const replyContent = "This reply will be published"
-    await page.getByPlaceholder("Reply to this post...").fill(replyContent)
+    await page.getByPlaceholder("Write your reply...").fill(replyContent)
     await page.getByRole("button", {name: "Post"}).click()
     await page.waitForTimeout(1000)
 
     // Check reply draft is cleared
-    await expect(page.getByPlaceholder("Reply to this post...")).toHaveValue("")
+    await expect(page.getByPlaceholder("Write your reply...")).toHaveValue("")
   })
 })

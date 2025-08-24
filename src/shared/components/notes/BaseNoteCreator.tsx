@@ -40,10 +40,24 @@ export function BaseNoteCreator({
   const draftStore = useDraftStore()
   const navigate = useNavigate()
 
-  const [text, setText] = useState("")
+  const draftKey = replyingTo?.id || ""
+  const hasHydrated = draftStore.hasHydrated
+  
   const [publishing, setPublishing] = useState(false)
+  
+  // Initialize state from draft store if available
+  const [text, setText] = useState(() => {
+    if (!hasHydrated) return ""
+    const draft = draftStore.getDraft(draftKey)
+    return draft?.content || ""
+  })
+  
+  const [imeta, setImeta] = useState<ImetaTag[]>(() => {
+    if (!hasHydrated) return []
+    const draft = draftStore.getDraft(draftKey)
+    return draft?.imeta || []
+  })
   const [isFocused, setIsFocused] = useState(false)
-  const [imeta, setImeta] = useState<ImetaTag[]>([])
   const [previewMode, setPreviewMode] = useState(false)
   const [uploadState, setUploadState] = useState<UploadState>({
     uploading: false,
@@ -57,28 +71,26 @@ export function BaseNoteCreator({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Initialize from draft store for new posts
+  // Load draft when store hydrates
   useEffect(() => {
-    if (!replyingTo) {
-      setText(draftStore.content)
-      setImeta(draftStore.imeta)
-      // Initialize geohashes from store if needed
-      // Note: geohashes are managed by useGeohashLocation hook
+    if (!hasHydrated) return
+    const draft = draftStore.getDraft(draftKey)
+    if (draft) {
+      setText(draft.content)
+      setImeta(draft.imeta)
     }
-  }, [])
+  }, [hasHydrated, draftKey])
 
-  // Save to draft store for new posts
+  // Save to draft store
   useEffect(() => {
-    if (!replyingTo && text !== draftStore.content) {
-      draftStore.setContent(text)
-    }
-  }, [text, replyingTo])
+    if (!hasHydrated) return
+    draftStore.setDraft(draftKey, {content: text})
+  }, [text, draftKey, hasHydrated])
 
   useEffect(() => {
-    if (!replyingTo && imeta !== draftStore.imeta) {
-      draftStore.setImeta(imeta)
-    }
-  }, [imeta, replyingTo])
+    if (!hasHydrated) return
+    draftStore.setDraft(draftKey, {imeta})
+  }, [imeta, draftKey, hasHydrated])
 
   useEffect(() => {
     if (autofocus && textareaRef.current) {
@@ -167,18 +179,19 @@ export function BaseNoteCreator({
       })
 
       // Add geohash tags
-      draftStore.gTags.forEach((hash) => {
-        event.tags.push(["g", hash])
-      })
+      const draft = draftStore.getDraft(draftKey)
+      if (draft?.gTags) {
+        draft.gTags.forEach((hash) => {
+          event.tags.push(["g", hash])
+        })
+      }
 
       await event.publish()
 
       setText("")
       setImeta([])
       setIsFocused(false)
-      if (!replyingTo) {
-        draftStore.reset()
-      }
+      draftStore.clearDraft(draftKey)
       onClose?.()
       onPublishCallback?.()
 
@@ -330,25 +343,31 @@ export function BaseNoteCreator({
       {(isModal || shouldExpand) && (
         <div className={isModal ? "px-4 pb-4" : "px-4 pb-3"}>
           {/* Display geohashes above action bar */}
-          {draftStore.gTags.length > 0 && (
-            <div className="flex items-center gap-2 text-sm text-base-content/70 mb-3">
-              <RiMapPinLine className="w-4 h-4" />
-              <div className="flex gap-2 flex-wrap">
-                {draftStore.gTags.map((gh) => (
-                  <span key={gh} className="badge badge-sm">
-                    {gh}
-                    <button
-                      onClick={() => draftStore.removeGeohash(gh)}
-                      className="ml-1 hover:text-error"
-                      disabled={publishing}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+          {(() => {
+            const draft = draftStore.getDraft(draftKey)
+            return draft?.gTags && draft.gTags.length > 0 ? (
+              <div className="flex items-center gap-2 text-sm text-base-content/70 mb-3">
+                <RiMapPinLine className="w-4 h-4" />
+                <div className="flex gap-2 flex-wrap">
+                  {draft.gTags.map((gh) => (
+                    <span key={gh} className="badge badge-sm">
+                      {gh}
+                      <button
+                        onClick={() => {
+                          const newGTags = draft.gTags.filter((tag) => tag !== gh)
+                          draftStore.setDraft(draftKey, {gTags: newGTags})
+                        }}
+                        className="ml-1 hover:text-error"
+                        disabled={publishing}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            ) : null
+          })()}
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
@@ -360,7 +379,7 @@ export function BaseNoteCreator({
                 text={<RiAttachment2 className="w-6 h-6" />}
                 onStateChange={setUploadState}
               />
-              <GeohashManager disabled={publishing} displayInline />
+              <GeohashManager disabled={publishing} displayInline draftKey={draftKey} />
             </div>
 
             <div className="flex items-center gap-2">

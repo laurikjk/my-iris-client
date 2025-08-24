@@ -50,7 +50,7 @@ function Account() {
 
       // Reset stores with reset methods
       useUserRecordsStore.getState().reset()
-      useDraftStore.getState().reset()
+      useDraftStore.getState().clearAll()
 
       // For stores without reset methods, we'll rely on storage clearing
       console.log("All stores cleaned up")

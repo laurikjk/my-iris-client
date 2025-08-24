@@ -15,96 +15,84 @@ export interface ImetaTag {
   fallback?: string[]
 }
 
-export interface DraftState {
+interface Draft {
   content: string
   imeta: ImetaTag[]
   gTags: string[]
-  repliedEventId?: string
-  quotedEventId?: string
+  timestamp: number
+}
 
-  setContent: (content: string | ((prev: string) => string)) => void
-  setImeta: (imeta: ImetaTag[]) => void
-  setGTags: (gTags: string[]) => void
-  addGeohash: (geohash: string) => void
-  removeGeohash: (geohash: string) => void
-  setRepliedEventId: (id?: string) => void
-  setQuotedEventId: (id?: string) => void
-  setState: (
-    state: Partial<
-      Omit<
-        DraftState,
-        | "setContent"
-        | "setImeta"
-        | "setGTags"
-        | "addGeohash"
-        | "removeGeohash"
-        | "setRepliedEventId"
-        | "setQuotedEventId"
-        | "setState"
-        | "reset"
-      >
-    >
-  ) => void
-  reset: () => void
+const MAX_REPLY_DRAFTS = 20
+
+export interface DraftState {
+  drafts: Record<string, Draft>
+  hasHydrated: boolean
+
+  setDraft: (key: string, draft: Partial<Draft>) => void
+  getDraft: (key: string) => Draft | undefined
+  clearDraft: (key: string) => void
+  clearAll: () => void
 }
 
 export const useDraftStore = create<DraftState>()(
   persist(
-    (set) => {
-      const initialState = {
-        content: "",
-        imeta: [],
-        gTags: [],
-        repliedEventId: undefined,
-        quotedEventId: undefined,
-      }
+    (set, get) => {
+      const evictOldestDrafts = (drafts: Record<string, Draft>) => {
+        // Never evict main draft (empty string key)
+        const mainDraft = drafts[""]
+        const replyDrafts = Object.entries(drafts).filter(([key]) => key !== "")
 
-      const actions = {
-        setContent: (content: string | ((prev: string) => string)) =>
-          set((state) => ({
-            content: typeof content === "function" ? content(state.content) : content,
-          })),
-        setImeta: (imeta: ImetaTag[]) => set({imeta}),
-        setGTags: (gTags: string[]) => set({gTags}),
-        addGeohash: (geohash: string) =>
-          set((state) => ({
-            gTags: state.gTags.includes(geohash)
-              ? state.gTags
-              : [...state.gTags, geohash],
-          })),
-        removeGeohash: (geohash: string) =>
-          set((state) => ({
-            gTags: state.gTags.filter((g) => g !== geohash),
-          })),
-        setRepliedEventId: (repliedEventId?: string) => set({repliedEventId}),
-        setQuotedEventId: (quotedEventId?: string) => set({quotedEventId}),
-        setState: (
-          newState: Partial<
-            Omit<
-              DraftState,
-              | "setContent"
-              | "setImeta"
-              | "setGTags"
-              | "addGeohash"
-              | "removeGeohash"
-              | "setRepliedEventId"
-              | "setQuotedEventId"
-              | "setState"
-              | "reset"
-            >
-          >
-        ) => set(newState),
-        reset: () => set(initialState),
+        if (replyDrafts.length <= MAX_REPLY_DRAFTS) return drafts
+
+        // Sort reply drafts by timestamp and keep newest
+        const sorted = replyDrafts.sort((a, b) => b[1].timestamp - a[1].timestamp)
+        const kept = sorted.slice(0, MAX_REPLY_DRAFTS)
+
+        const result = Object.fromEntries(kept)
+        if (mainDraft) result[""] = mainDraft
+        return result
       }
 
       return {
-        ...initialState,
-        ...actions,
+        drafts: {} as Record<string, Draft>,
+        hasHydrated: false,
+
+        setDraft: (key: string, draft: Partial<Draft>) =>
+          set((state) => {
+            const existing = state.drafts[key]
+            const newDraft: Draft = {
+              content: draft.content ?? existing?.content ?? "",
+              imeta: draft.imeta ?? existing?.imeta ?? [],
+              gTags: draft.gTags ?? existing?.gTags ?? [],
+              timestamp: Date.now(),
+            }
+            const drafts = evictOldestDrafts({
+              ...state.drafts,
+              [key]: newDraft,
+            })
+            return {drafts}
+          }),
+
+        getDraft: (key: string) => get().drafts[key],
+
+        clearDraft: (key: string) =>
+          set((state) => {
+            const newDrafts = {...state.drafts}
+            delete newDrafts[key]
+            return {drafts: newDrafts}
+          }),
+
+        clearAll: () => set({drafts: {}}),
       }
     },
     {
       name: "draft-storage",
       storage: createJSONStorage(() => localforage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.hasHydrated = true
+        }
+      },
     }
   )
 )

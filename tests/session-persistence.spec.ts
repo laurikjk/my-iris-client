@@ -62,11 +62,19 @@ test.describe("Session persistence", () => {
       .fill(postContent)
     await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
+    // Wait for the post to appear before refreshing
+    await expect(page.getByText(postContent, {exact: true}).first()).toBeVisible({
+      timeout: 5000,
+    })
+
     // Refresh the page
     await page.reload()
+    await page.waitForLoadState("networkidle")
 
-    // Like the post - find the specific post we created
-    await page.waitForSelector('[data-testid="like-button"]', {timeout: 5000})
+    // Wait for the post content to appear after refresh
+    await expect(page.getByText(postContent, {exact: true}).first()).toBeVisible({
+      timeout: 10000,
+    })
 
     // Find the feed item containing our post text
     const postElement = page

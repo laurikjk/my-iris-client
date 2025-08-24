@@ -16,7 +16,7 @@ test("user can view post details", async ({page}) => {
 
   await page.getByText(postContent).first().click()
 
-  await expect(page.url()).toContain("/note")
+  await expect(page.url()).toMatch(/\/note[a-z0-9]+/)
 
   await expect(page.getByText(postContent).first()).toBeVisible()
 })
