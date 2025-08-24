@@ -36,8 +36,10 @@ export function GeohashField({
 
       // Add multiple precision levels for privacy
       const precisions = [
-        geohash.substring(0, 3), // City/region level
-        geohash.substring(0, 4), // District level
+        geohash.substring(0, 1), // Continent level (~5000km)
+        geohash.substring(0, 2), // Country/state level (~1250km)
+        geohash.substring(0, 3), // City/region level (~150km)
+        geohash.substring(0, 4), // District level (~40km)
       ]
 
       const newGeohashes = precisions.filter((gh) => !currentGeohashes.includes(gh))

@@ -1,8 +1,8 @@
-import {Hexpubkey, NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 import socialGraph from "@/utils/socialGraph"
 import {NostrEvent} from "nostr-social-graph"
 import {ndk} from "@/utils/ndk"
-import {KIND_MUTE_LIST, KIND_REPORT} from "@/utils/constants"
+import {KIND_MUTE_LIST} from "@/utils/constants"
 import {clearVisibilityCache} from "@/utils/visibility"
 
 export const muteUser = async (pubkey: string): Promise<string[]> => {
@@ -72,31 +72,4 @@ const updateMuteList = async (
   })
 
   return validEntries
-}
-
-export const submitReport = async (
-  reason: string,
-  content: string,
-  pubkey: Hexpubkey, //pubkey needed
-  id?: string //event optional
-) => {
-  const reportEvent = new NDKEvent(ndk())
-  reportEvent.kind = KIND_REPORT
-  reportEvent.content = content
-
-  reportEvent.tags = id
-    ? [
-        ["e", id, reason],
-        ["p", pubkey],
-      ]
-    : [["p", pubkey, reason]]
-  try {
-    reportEvent.publish().catch((error) => {
-      console.warn("Unable to send report", error)
-      return Promise.reject(error)
-    })
-  } catch (error) {
-    console.warn("Unable to send report", error)
-    return Promise.reject(error)
-  }
 }

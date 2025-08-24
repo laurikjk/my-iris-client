@@ -26,9 +26,6 @@ export const KIND_ZAP_RECEIPT = 9735
 // NIP-51: Lists
 export const KIND_MUTE_LIST = 10000 // Mute list (deprecated, use 30000)
 
-// NIP-56: Reporting
-export const KIND_REPORT = 1984
-
 // NIP-78: App-specific data
 export const KIND_APP_DATA = 30078
 

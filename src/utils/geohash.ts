@@ -83,10 +83,3 @@ export async function getCurrentLocationGeohash(
   })
 }
 
-export function getGeohashPrefixes(geohash: string): string[] {
-  const prefixes: string[] = []
-  for (let i = 1; i <= geohash.length; i++) {
-    prefixes.push(geohash.substring(0, i))
-  }
-  return prefixes
-}

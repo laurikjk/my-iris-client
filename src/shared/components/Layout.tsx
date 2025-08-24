@@ -226,7 +226,7 @@ const Layout = ({children}: {children: ReactNode}) => {
         {newPostOpen && (
           <Modal onClose={() => setNewPostOpen(false)} hasBackground={false}>
             <div
-              className="w-full max-w-prose rounded-2xl bg-base-100"
+              className="w-[600px] max-w-[90vw] rounded-2xl bg-base-100"
               onClick={(e) => e.stopPropagation()}
             >
               <NoteCreator handleClose={() => setNewPostOpen(false)} />
