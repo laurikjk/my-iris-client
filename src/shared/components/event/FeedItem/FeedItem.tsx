@@ -299,7 +299,10 @@ function FeedItem({
               referredEvent={referredEvent}
               tight={asReply || asRepliedTo}
             />
-            <GeohashLocation event={referredEvent || event} />
+            <GeohashLocation
+              event={referredEvent || event}
+              className={classNames({"pl-12": asReply || asRepliedTo})}
+            />
             <div className={classNames({"pl-12": asReply || asRepliedTo})}>
               <FeedItemContent
                 event={event}
