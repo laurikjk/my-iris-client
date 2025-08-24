@@ -1,9 +1,44 @@
 /**
- * Minimal geohash implementation for encoding coordinates
+ * Minimal geohash implementation for encoding and decoding coordinates
  * Based on the geohash algorithm
  */
 
 const BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz"
+
+export function decodeGeohash(geohash: string): [number, number, number, number] {
+  let evenBit = true
+  let latMin = -90
+  let latMax = 90
+  let lonMin = -180
+  let lonMax = 180
+
+  for (const char of geohash.toLowerCase()) {
+    const idx = BASE32.indexOf(char)
+    if (idx === -1) continue
+
+    for (let i = 4; i >= 0; i--) {
+      const bit = (idx >> i) & 1
+      if (evenBit) {
+        const mid = (lonMin + lonMax) / 2
+        if (bit === 1) {
+          lonMin = mid
+        } else {
+          lonMax = mid
+        }
+      } else {
+        const mid = (latMin + latMax) / 2
+        if (bit === 1) {
+          latMin = mid
+        } else {
+          latMax = mid
+        }
+      }
+      evenBit = !evenBit
+    }
+  }
+
+  return [latMin, latMax, lonMin, lonMax]
+}
 
 export function encodeGeohash(
   latitude: number,

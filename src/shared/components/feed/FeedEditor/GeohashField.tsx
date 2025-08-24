@@ -1,6 +1,7 @@
 import {useState} from "react"
 import {RiMapPinLine, RiGlobalLine} from "@remixicon/react"
 import {useGeohash} from "@/shared/hooks/useGeohash"
+import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
 
 interface GeohashFieldProps {
   value: string[] | undefined
@@ -15,7 +16,7 @@ export function GeohashField({
   label = "Geohash",
   showLabel = true,
 }: GeohashFieldProps) {
-  const [showIframe, setShowIframe] = useState(false)
+  const [showMap, setShowMap] = useState(false)
   const {getGeohashPrecisions, loading} = useGeohash()
 
   const handleInputChange = (inputValue: string) => {
@@ -41,6 +42,11 @@ export function GeohashField({
         onChange([...currentGeohashes, ...newGeohashes])
       }
     }
+  }
+
+  const handleGeohashSelect = (geohash: string) => {
+    // Replace current selection with clicked geohash
+    onChange([geohash])
   }
 
   return (
@@ -72,9 +78,9 @@ export function GeohashField({
                 )}
               </button>
               <button
-                onClick={() => setShowIframe(!showIframe)}
-                className={`btn btn-sm ${showIframe ? "btn-primary" : "btn-neutral"}`}
-                title={showIframe ? "Hide geohash explorer" : "Show geohash explorer"}
+                onClick={() => setShowMap(!showMap)}
+                className={`btn btn-sm ${showMap ? "btn-primary" : "btn-neutral"}`}
+                title={showMap ? "Hide map" : "Show map"}
               >
                 <RiGlobalLine className="w-4 h-4" />
               </button>
@@ -94,12 +100,12 @@ export function GeohashField({
           </span>
         </div>
       </div>
-      {showIframe && (
-        <div className="mt-3 border border-base-300 rounded-lg overflow-hidden">
-          <iframe
-            src="https://geohash.softeng.co/"
-            className="w-full h-96"
-            title="Geohash Explorer"
+      {showMap && (
+        <div className="mt-3">
+          <GeohashMap
+            geohashes={value}
+            onGeohashSelect={handleGeohashSelect}
+            height="24rem"
           />
         </div>
       )}
