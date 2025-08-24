@@ -26,7 +26,7 @@ export function GeohashManager({
     return (
       <button
         onClick={handleAddLocation}
-        disabled={disabled || loading || gTags.length > 0}
+        disabled={disabled || loading}
         className="btn btn-ghost btn-circle btn-sm md:btn-md"
         title="Add location"
       >
@@ -44,7 +44,7 @@ export function GeohashManager({
       {/* Location button */}
       <button
         onClick={handleAddLocation}
-        disabled={disabled || loading || gTags.length > 0}
+        disabled={disabled || loading}
         className="btn btn-ghost btn-circle btn-sm md:btn-md"
         title="Add location"
       >
