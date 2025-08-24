@@ -12,7 +12,7 @@ import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
 import type {FeedConfig, FeedFilter} from "@/types/feed"
 import {KIND_TEXT_NOTE, KIND_EPHEMERAL} from "@/utils/constants"
 
-export default function GeohashPage() {
+export default function MapPage() {
   const {geohash} = useParams()
   const [showMoreSettings, setShowMoreSettings] = useState(false)
   const [feedConfig, setFeedConfig] = useState<FeedConfig | null>(null)
@@ -53,12 +53,23 @@ export default function GeohashPage() {
   }
 
   const handleConfigUpdate = (updatedConfig: FeedConfig) => {
-    console.log("handleConfigUpdate called with:", updatedConfig.filter?.["#g"])
     setFeedConfig(updatedConfig)
     // Clear events when config changes
     setFeedEvents([])
     // Force Feed component to remount with new config
     setFeedKey((prev) => prev + 1)
+    
+    // Update URL based on selection
+    const geohashes = updatedConfig.filter?.["#g"]
+    if (geohashes && geohashes.length === 1) {
+      // Single geohash selected - update URL
+      const newPath = `/map/${geohashes[0]}`
+      window.history.replaceState(null, "", newPath)
+    } else if (geohashes && geohashes.length === 32) {
+      // Global view - remove geohash from URL
+      window.history.replaceState(null, "", "/map")
+    }
+    // For other cases (multiple non-global selections), keep current URL
   }
 
   const updateFilter = <K extends keyof FeedFilter>(key: K, value: FeedFilter[K]) => {
@@ -101,7 +112,6 @@ export default function GeohashPage() {
             feedEvents={feedEvents}
             onGeohashSelect={(geohash) => {
               // Replace selection instead of adding to it
-              console.log("Map clicked, selecting:", geohash)
               updateFilter("#g", [geohash])
             }}
             height="20rem"
@@ -123,10 +133,7 @@ export default function GeohashPage() {
               <div className="w-full flex flex-col gap-3 p-4 border border-base-300 rounded-lg">
                 <GeohashField
                   value={feedConfig.filter?.["#g"]}
-                  onChange={(value) => {
-                    console.log("GeohashField onChange:", value)
-                    updateFilter("#g", value)
-                  }}
+                  onChange={(value) => updateFilter("#g", value)}
                   showLabel={true}
                 />
 

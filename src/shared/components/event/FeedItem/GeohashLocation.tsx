@@ -32,7 +32,7 @@ export function GeohashLocation({event, className = ""}: GeohashLocationProps) {
       {geohashes.map((geohash, index) => (
         <span key={geohash}>
           <Link
-            to={`/geohash/${geohash}`}
+            to={`/map/${geohash}`}
             className="hover:text-base-content/70 hover:underline"
             onClick={(e) => e.stopPropagation()}
           >
