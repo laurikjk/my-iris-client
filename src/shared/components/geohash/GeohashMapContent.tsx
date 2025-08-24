@@ -176,15 +176,18 @@ export default function GeohashMapContent({
         (gh) => current.geohash.startsWith(gh) && current.geohash !== gh
       )
 
-      const maxDepth = isExactlySelected
-        ? current.geohash.length + 1
-        : isParentOfSelected
-          ? Math.max(
-              ...geohashes
-                .filter((gh) => gh.startsWith(current.geohash))
-                .map((gh) => gh.length)
-            )
-          : targetPrecision
+      let maxDepth
+      if (isExactlySelected) {
+        maxDepth = current.geohash.length + 1
+      } else if (isParentOfSelected) {
+        maxDepth = Math.max(
+          ...geohashes
+            .filter((gh) => gh.startsWith(current.geohash))
+            .map((gh) => gh.length)
+        )
+      } else {
+        maxDepth = targetPrecision
+      }
 
       // Add this cell if it's at the right level or is related to selection
       if (

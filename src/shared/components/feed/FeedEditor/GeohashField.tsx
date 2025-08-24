@@ -19,14 +19,15 @@ export function GeohashField({
   const [showMap, setShowMap] = useState(false)
   const {getGeohashPrecisions, loading} = useGeohash()
 
-  // Check if this is global view (all single-char geohashes)
+  // Check if this is global view (all single-char geohashes or "*")
   const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
   const isGlobalView =
-    value?.length === allGeohashes.length &&
-    allGeohashes.every((gh) => value.includes(gh))
+    (value?.length === 1 && value[0] === "*") ||
+    (value?.length === allGeohashes.length &&
+      allGeohashes.every((gh) => value.includes(gh)))
 
   const [localValue, setLocalValue] = useState(
-    isGlobalView ? "" : (value || []).join(", ")
+    isGlobalView ? "*" : (value || []).join(", ")
   )
   const prevValueRef = useRef(value)
 
@@ -36,7 +37,7 @@ export function GeohashField({
     const prevValueStr = (prevValueRef.current || []).join(", ")
 
     if (currentValueStr !== prevValueStr) {
-      setLocalValue(isGlobalView ? "" : currentValueStr)
+      setLocalValue(isGlobalView ? "*" : currentValueStr)
       prevValueRef.current = value
     }
   }, [value, isGlobalView])
@@ -44,6 +45,12 @@ export function GeohashField({
   const handleInputChange = (inputValue: string) => {
     setLocalValue(inputValue)
     const trimmed = inputValue.trim()
+
+    // Handle "*" as global selection - expand to all geohashes
+    if (trimmed === "*") {
+      onChange(allGeohashes)
+      return
+    }
 
     // Don't trigger onChange if we're in global view and input is empty
     if (trimmed === "" && !isGlobalView) {
@@ -88,7 +95,9 @@ export function GeohashField({
               value={localValue}
               onChange={(e) => handleInputChange(e.target.value)}
               className="input input-sm flex-1 min-w-0 text-sm"
-              placeholder={isGlobalView ? "Global (all locations)" : "e.g. u2mwdd, u2mw"}
+              placeholder={
+                isGlobalView ? "* = all locations" : "e.g. u2mwdd, u2mw (* = all)"
+              }
             />
             <div className="flex gap-2">
               <button
@@ -122,7 +131,8 @@ export function GeohashField({
             >
               geohash
             </a>{" "}
-            location tags. Shorter = broader area (3 chars ≈ city, 4 chars ≈ district).
+            location tags. Shorter = broader area (3 chars ≈ city, 4 chars ≈ district). *
+            = all top-level geohashes.
           </span>
         </div>
       </div>

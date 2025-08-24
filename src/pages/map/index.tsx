@@ -27,9 +27,8 @@ export default function MapPage() {
     const geohashValue = geohash && typeof geohash === "string" ? geohash : ""
 
     // If no geohash specified, use all single-character geohashes
-    const defaultGeohashes = geohashValue
-      ? [geohashValue]
-      : "0123456789bcdefghjkmnpqrstuvwxyz".split("")
+    const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
+    const defaultGeohashes = geohashValue ? [geohashValue] : allGeohashes
 
     setFeedConfig({
       id: geohashValue ? `geohash-${geohashValue}` : "geohash-global",
@@ -62,11 +61,17 @@ export default function MapPage() {
 
     // Update URL based on selection
     const geohashes = updatedConfig.filter?.["#g"]
-    if (geohashes && geohashes.length === 1) {
-      // Single geohash selected - update URL
+    const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
+    const isGlobalSelection =
+      geohashes &&
+      geohashes.length === 32 &&
+      allGeohashes.every((gh) => geohashes.includes(gh))
+
+    if (geohashes && geohashes.length === 1 && !isGlobalSelection) {
+      // Single geohash selected (not global) - update URL
       const newPath = `/map/${geohashes[0]}`
       window.history.replaceState(null, "", newPath)
-    } else if (geohashes && geohashes.length === 32) {
+    } else if (isGlobalSelection) {
       // Global view - remove geohash from URL
       window.history.replaceState(null, "", "/map")
     }
@@ -76,14 +81,14 @@ export default function MapPage() {
   const updateFilter = <K extends keyof FeedFilter>(key: K, value: FeedFilter[K]) => {
     if (!feedConfig) return
     const currentFilter = feedConfig.filter || {}
+    const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
 
-    // Only reset to all geohashes if explicitly cleared (undefined or empty array)
+    // Only reset to all geohashes if explicitly cleared in map view
     if (
       key === "#g" &&
       (value === undefined || (Array.isArray(value) && value.length === 0))
     ) {
-      // For geohash filter, use all single-character geohashes when cleared
-      const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
+      // For geohash filter in map view, use all geohashes when cleared
       handleConfigUpdate({
         ...feedConfig,
         filter: {...currentFilter, "#g": allGeohashes},
