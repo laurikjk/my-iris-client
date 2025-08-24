@@ -52,17 +52,16 @@ export function GeohashField({
       return
     }
 
-    // Don't trigger onChange if we're in global view and input is empty
-    if (trimmed === "" && !isGlobalView) {
+    // Handle empty input
+    if (trimmed === "") {
       onChange(undefined)
-    } else if (trimmed !== "") {
+    } else {
       const geohashes = trimmed
         .split(",")
         .map((g) => g.trim())
         .filter((g) => g.length > 0)
       onChange(geohashes.length > 0 ? geohashes : undefined)
     }
-    // If trimmed === "" && isGlobalView, do nothing (keep current global selection)
   }
 
   const handleAddLocation = async () => {
