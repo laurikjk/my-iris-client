@@ -2,7 +2,7 @@ import {useEffect, useMemo, useRef, useState, useCallback} from "react"
 import {eventComparator} from "../components/feed/utils"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {shouldHideAuthor} from "@/utils/visibility"
+import {shouldHideAuthor, shouldHideEvent} from "@/utils/visibility"
 import socialGraph from "@/utils/socialGraph"
 import {seenEventIds} from "@/utils/memcache"
 import {useUserStore} from "@/stores/user"
@@ -137,7 +137,7 @@ export default function useFeedEvents({
     const inAuthors = filters.authors?.includes(event.pubkey)
     // Pass `allowUnknown` based on the `hideEventsByUnknownUsers` flag so that
     // disabling the flag actually shows posts from users outside the follow graph.
-    if (!inAuthors && shouldHideAuthor(event.pubkey, 3, !hideEventsByUnknownUsers)) {
+    if (!inAuthors && shouldHideEvent(event, 3, !hideEventsByUnknownUsers)) {
       return false
     }
     if (
