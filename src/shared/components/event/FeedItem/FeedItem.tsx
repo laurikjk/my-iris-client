@@ -286,10 +286,9 @@ function FeedItem({
           )}
           {event.kind === KIND_TEXT_NOTE &&
             !standalone &&
-            !asRepliedTo &&
             !asReply &&
-            !showRepliedTo &&
-            repliedToEventId && (
+            repliedToEventId &&
+            !(showRepliedTo && repliedToEventId) && (
               <div className="flex flex-row select-none mb-2 px-4">
                 <ReplyHeader />
               </div>
