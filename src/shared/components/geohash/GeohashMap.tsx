@@ -1,8 +1,10 @@
 import {lazy, Suspense} from "react"
+import type {NDKEvent} from "@nostr-dev-kit/ndk"
 import "leaflet/dist/leaflet.css"
 
 interface GeohashMapProps {
   geohashes?: string[]
+  feedEvents?: NDKEvent[]
   onGeohashSelect?: (geohash: string) => void
   height?: string
   className?: string
@@ -12,6 +14,7 @@ const MapContent = lazy(() => import("./GeohashMapContent"))
 
 export function GeohashMap({
   geohashes = [],
+  feedEvents = [],
   onGeohashSelect,
   height = "24rem",
   className = "",
@@ -27,6 +30,7 @@ export function GeohashMap({
       >
         <MapContent
           geohashes={geohashes}
+          feedEvents={feedEvents}
           onGeohashSelect={onGeohashSelect}
           height={height}
         />

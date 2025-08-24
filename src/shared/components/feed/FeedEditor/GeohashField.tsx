@@ -1,4 +1,4 @@
-import {useState} from "react"
+import {useState, useEffect, useRef} from "react"
 import {RiMapPinLine, RiGlobalLine} from "@remixicon/react"
 import {useGeohash} from "@/shared/hooks/useGeohash"
 import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
@@ -18,18 +18,37 @@ export function GeohashField({
 }: GeohashFieldProps) {
   const [showMap, setShowMap] = useState(false)
   const {getGeohashPrecisions, loading} = useGeohash()
+  const [localValue, setLocalValue] = useState("")
+  const prevValueRef = useRef(value)
+  
+  // Check if this is global view (all single-char geohashes)
+  const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
+  const isGlobalView = value?.length === allGeohashes.length && 
+                       allGeohashes.every(gh => value.includes(gh))
+  
+  // Update local value when prop changes (but not from our own onChange)
+  useEffect(() => {
+    if (value !== prevValueRef.current) {
+      setLocalValue(isGlobalView ? "" : (value || []).join(", "))
+      prevValueRef.current = value
+    }
+  }, [value, isGlobalView])
 
   const handleInputChange = (inputValue: string) => {
+    setLocalValue(inputValue)
     const trimmed = inputValue.trim()
-    if (trimmed === "") {
+    
+    // Don't trigger onChange if we're in global view and input is empty
+    if (trimmed === "" && !isGlobalView) {
       onChange(undefined)
-    } else {
+    } else if (trimmed !== "") {
       const geohashes = trimmed
         .split(",")
         .map((g) => g.trim())
         .filter((g) => g.length > 0)
       onChange(geohashes.length > 0 ? geohashes : undefined)
     }
+    // If trimmed === "" && isGlobalView, do nothing (keep current global selection)
   }
 
   const handleAddLocation = async () => {
@@ -59,10 +78,10 @@ export function GeohashField({
           <div className="flex flex-wrap gap-2">
             <input
               type="text"
-              value={value.join(", ")}
+              value={localValue}
               onChange={(e) => handleInputChange(e.target.value)}
               className="input input-sm flex-1 min-w-0 text-sm"
-              placeholder="e.g. u2mwdd, u2mw"
+              placeholder={isGlobalView ? "Global (all locations)" : "e.g. u2mwdd, u2mw"}
             />
             <div className="flex gap-2">
               <button

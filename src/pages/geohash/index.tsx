@@ -1,5 +1,6 @@
 import {useState, useEffect} from "react"
 import {useParams} from "@/navigation"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 import Feed from "@/shared/components/feed/Feed"
 import FeedEditor from "@/shared/components/feed/FeedEditor"
 import {GeohashField} from "@/shared/components/feed/FeedEditor/GeohashField"
@@ -16,23 +17,32 @@ export default function GeohashPage() {
   const [showMoreSettings, setShowMoreSettings] = useState(false)
   const [feedConfig, setFeedConfig] = useState<FeedConfig | null>(null)
   const [feedKey, setFeedKey] = useState(0)
+  const [feedEvents, setFeedEvents] = useState<NDKEvent[]>([])
 
   useEffect(() => {
+    // Only set initial config, don't override user selections
+    if (feedConfig !== null) return
+    
     // Create a feed config - with or without specific geohash
     const geohashValue = geohash && typeof geohash === "string" ? geohash : ""
+    
+    // If no geohash specified, use all single-character geohashes
+    const defaultGeohashes = geohashValue ? [geohashValue] : 
+      "0123456789bcdefghjkmnpqrstuvwxyz".split("")
+    
     setFeedConfig({
       id: geohashValue ? `geohash-${geohashValue}` : "geohash-global",
       name: geohashValue ? `Location: ${geohashValue}` : "Location Feed",
       filter: {
         kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL], // Text notes and ephemeral events for geohash feeds
-        ...(geohashValue ? {"#g": [geohashValue]} : {}), // Only add geohash filter if provided
+        "#g": defaultGeohashes, // Always include geohash filter
         limit: 100,
       },
       followDistance: 5, // Default follow distance of 5 for geohash feeds
       showRepliedTo: true,
       hideReplies: false,
     })
-  }, [geohash])
+  }, [geohash, feedConfig])
 
   if (!feedConfig) {
     return (
@@ -43,7 +53,10 @@ export default function GeohashPage() {
   }
 
   const handleConfigUpdate = (updatedConfig: FeedConfig) => {
+    console.log("handleConfigUpdate called with:", updatedConfig.filter?.["#g"])
     setFeedConfig(updatedConfig)
+    // Clear events when config changes
+    setFeedEvents([])
     // Force Feed component to remount with new config
     setFeedKey((prev) => prev + 1)
   }
@@ -52,8 +65,16 @@ export default function GeohashPage() {
     if (!feedConfig) return
     const currentFilter = feedConfig.filter || {}
 
-    if (value === undefined) {
-      // Remove the key if value is undefined
+    // Only reset to all geohashes if explicitly cleared (undefined or empty array)
+    if (key === "#g" && (value === undefined || (Array.isArray(value) && value.length === 0))) {
+      // For geohash filter, use all single-character geohashes when cleared
+      const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
+      handleConfigUpdate({
+        ...feedConfig,
+        filter: {...currentFilter, "#g": allGeohashes},
+      })
+    } else if (value === undefined) {
+      // Remove the key if value is undefined for other filters
       const newFilter = {...currentFilter}
       delete newFilter[key]
       handleConfigUpdate({
@@ -61,6 +82,7 @@ export default function GeohashPage() {
         filter: Object.keys(newFilter).length > 0 ? newFilter : undefined,
       })
     } else {
+      // Normal update - just set the value
       handleConfigUpdate({
         ...feedConfig,
         filter: {...currentFilter, [key]: value},
@@ -72,12 +94,14 @@ export default function GeohashPage() {
     <div className="flex flex-col flex-1 h-full relative overflow-hidden">
       <Header title={geohash ? `Location: ${geohash}` : "Location Feed"} />
       <ScrollablePageContainer className="flex flex-col items-center">
-        <div className="flex-1 w-full max-w-screen-lg flex flex-col overflow-x-hidden">
+        <div className="flex-1 w-full flex flex-col overflow-x-hidden">
           {/* Full width map at the top of the column */}
           <GeohashMap
             geohashes={feedConfig.filter?.["#g"]}
+            feedEvents={feedEvents}
             onGeohashSelect={(geohash) => {
               // Replace selection instead of adding to it
+              console.log("Map clicked, selecting:", geohash)
               updateFilter("#g", [geohash])
             }}
             height="20rem"
@@ -99,7 +123,10 @@ export default function GeohashPage() {
               <div className="w-full flex flex-col gap-3 p-4 border border-base-300 rounded-lg">
                 <GeohashField
                   value={feedConfig.filter?.["#g"]}
-                  onChange={(value) => updateFilter("#g", value)}
+                  onChange={(value) => {
+                    console.log("GeohashField onChange:", value)
+                    updateFilter("#g", value)
+                  }}
                   showLabel={true}
                 />
 
@@ -150,6 +177,15 @@ export default function GeohashPage() {
                 showReplies={0}
                 borderTopFirst={true}
                 showDisplayAsSelector={true}
+                onEvent={(event) => {
+                  // Collect events for the map
+                  setFeedEvents((prev) => {
+                    // Avoid duplicates
+                    if (prev.some((e) => e.id === event.id)) return prev
+                    // Keep last 100 events
+                    return [...prev.slice(-99), event]
+                  })
+                }}
               />
             )}
           </div>
