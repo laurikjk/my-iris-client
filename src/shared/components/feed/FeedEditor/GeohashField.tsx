@@ -18,20 +18,23 @@ export function GeohashField({
 }: GeohashFieldProps) {
   const [showMap, setShowMap] = useState(false)
   const {getGeohashPrecisions, loading} = useGeohash()
-  
+
   // Check if this is global view (all single-char geohashes)
   const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
-  const isGlobalView = value?.length === allGeohashes.length && 
-                       allGeohashes.every(gh => value.includes(gh))
-  
-  const [localValue, setLocalValue] = useState(isGlobalView ? "" : (value || []).join(", "))
+  const isGlobalView =
+    value?.length === allGeohashes.length &&
+    allGeohashes.every((gh) => value.includes(gh))
+
+  const [localValue, setLocalValue] = useState(
+    isGlobalView ? "" : (value || []).join(", ")
+  )
   const prevValueRef = useRef(value)
-  
+
   // Update local value when prop changes
   useEffect(() => {
     const currentValueStr = (value || []).join(", ")
     const prevValueStr = (prevValueRef.current || []).join(", ")
-    
+
     if (currentValueStr !== prevValueStr) {
       setLocalValue(isGlobalView ? "" : currentValueStr)
       prevValueRef.current = value
@@ -41,7 +44,7 @@ export function GeohashField({
   const handleInputChange = (inputValue: string) => {
     setLocalValue(inputValue)
     const trimmed = inputValue.trim()
-    
+
     // Don't trigger onChange if we're in global view and input is empty
     if (trimmed === "" && !isGlobalView) {
       onChange(undefined)

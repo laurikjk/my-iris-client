@@ -75,11 +75,14 @@ export default function GeohashMapContent({
   const eventGeohashes = useMemo(() => {
     const geoMap = new Map<string, number>()
     feedEvents.forEach((event) => {
-      const gTags = event.tags.filter((tag) => tag[0] === "g").map((tag) => tag[1]).filter(Boolean)
-      
+      const gTags = event.tags
+        .filter((tag) => tag[0] === "g")
+        .map((tag) => tag[1])
+        .filter(Boolean)
+
       // Find the longest (highest resolution) geohash for this event
       if (gTags.length > 0) {
-        const longestGeohash = gTags.reduce((longest, current) => 
+        const longestGeohash = gTags.reduce((longest, current) =>
           current.length > longest.length ? current : longest
         )
         geoMap.set(longestGeohash, (geoMap.get(longestGeohash) || 0) + 1)
@@ -91,8 +94,10 @@ export default function GeohashMapContent({
   // Check if all geohashes are selected (means empty field / global view)
   const isGlobalView = useMemo(() => {
     const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
-    return geohashes.length === allGeohashes.length && 
-           allGeohashes.every(gh => geohashes.includes(gh))
+    return (
+      geohashes.length === allGeohashes.length &&
+      allGeohashes.every((gh) => geohashes.includes(gh))
+    )
   }, [geohashes])
 
   // Draw grid function
@@ -149,7 +154,7 @@ export default function GeohashMapContent({
             gridCells.push({geohash: current.geohash, bounds: current.bounds})
           }
         }
-        
+
         // Generate children only if we haven't reached single characters yet
         if (current.geohash.length < 1) {
           const children = getGeohashGrid(current.bounds, current.geohash)
@@ -239,15 +244,14 @@ export default function GeohashMapContent({
     // Draw the grid cells
     sortedCells.forEach(({geohash, bounds}) => {
       // Skip drawing parent tiles that are fully covered by their children
-      const isParentOfSelected = !isGlobalView && geohashes.some(
-        (gh) => gh.startsWith(geohash) && gh !== geohash
-      )
-      
+      const isParentOfSelected =
+        !isGlobalView && geohashes.some((gh) => gh.startsWith(geohash) && gh !== geohash)
+
       if (isParentOfSelected) {
         // Check if all children of this parent are in the grid
-        const childrenInGrid = gridCells.filter(cell => 
-          cell.geohash.startsWith(geohash) && 
-          cell.geohash.length === geohash.length + 1
+        const childrenInGrid = gridCells.filter(
+          (cell) =>
+            cell.geohash.startsWith(geohash) && cell.geohash.length === geohash.length + 1
         )
         // If we have all 32 children (or 16 for odd levels), skip drawing the parent
         const expectedChildren = geohash.length % 2 === 0 ? 32 : 32
@@ -255,12 +259,11 @@ export default function GeohashMapContent({
           return // Skip drawing this parent as it's fully covered
         }
       }
-      
+
       const isSelected = !isGlobalView && geohashes.includes(geohash)
       const isHovered = hoveredGeohash === geohash
-      const isChildOfSelected = !isGlobalView && geohashes.some(
-        (gh) => geohash.startsWith(gh) && geohash !== gh
-      )
+      const isChildOfSelected =
+        !isGlobalView && geohashes.some((gh) => geohash.startsWith(gh) && geohash !== gh)
 
       let color = "#4a9eff"
       let weight = 0.5
@@ -318,11 +321,13 @@ export default function GeohashMapContent({
       // Only show dots for geohashes that are children of the selected geohashes
       eventGeohashes.forEach((count, eventGh) => {
         // In global view, show all dots. Otherwise only show within selection
-        const isWithinSelection = isGlobalView || geohashes.some((selectedGh) => 
-          eventGh.startsWith(selectedGh)
-        )
+        const isWithinSelection =
+          isGlobalView || geohashes.some((selectedGh) => eventGh.startsWith(selectedGh))
 
-        if (isWithinSelection && (isGlobalView || eventGh.length > Math.max(...geohashes.map(g => g.length)))) {
+        if (
+          isWithinSelection &&
+          (isGlobalView || eventGh.length > Math.max(...geohashes.map((g) => g.length)))
+        ) {
           const bounds = decodeGeohash(eventGh)
           const lat = (bounds[0] + bounds[1]) / 2
           const lng = (bounds[2] + bounds[3]) / 2
@@ -338,7 +343,7 @@ export default function GeohashMapContent({
             weight: 1,
           })
 
-          circle.bindTooltip(`${eventGh} (${count} post${count > 1 ? 's' : ''})`, {
+          circle.bindTooltip(`${eventGh} (${count} post${count > 1 ? "s" : ""})`, {
             permanent: false,
             direction: "top",
           })
@@ -376,9 +381,12 @@ export default function GeohashMapContent({
       maxZoom: 18,
     }).addTo(map)
 
-    L.control.attribution({
-      prefix: false
-    }).addTo(map).addAttribution('© <a href="https://openstreetmap.org">OpenStreetMap</a>')
+    L.control
+      .attribution({
+        prefix: false,
+      })
+      .addTo(map)
+      .addAttribution('© <a href="https://openstreetmap.org">OpenStreetMap</a>')
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     L.geoJSON(worldGeoJSON as any, {

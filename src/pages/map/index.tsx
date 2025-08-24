@@ -22,14 +22,15 @@ export default function MapPage() {
   useEffect(() => {
     // Only set initial config, don't override user selections
     if (feedConfig !== null) return
-    
+
     // Create a feed config - with or without specific geohash
     const geohashValue = geohash && typeof geohash === "string" ? geohash : ""
-    
+
     // If no geohash specified, use all single-character geohashes
-    const defaultGeohashes = geohashValue ? [geohashValue] : 
-      "0123456789bcdefghjkmnpqrstuvwxyz".split("")
-    
+    const defaultGeohashes = geohashValue
+      ? [geohashValue]
+      : "0123456789bcdefghjkmnpqrstuvwxyz".split("")
+
     setFeedConfig({
       id: geohashValue ? `geohash-${geohashValue}` : "geohash-global",
       name: geohashValue ? `Location: ${geohashValue}` : "Location Feed",
@@ -58,7 +59,7 @@ export default function MapPage() {
     setFeedEvents([])
     // Force Feed component to remount with new config
     setFeedKey((prev) => prev + 1)
-    
+
     // Update URL based on selection
     const geohashes = updatedConfig.filter?.["#g"]
     if (geohashes && geohashes.length === 1) {
@@ -77,7 +78,10 @@ export default function MapPage() {
     const currentFilter = feedConfig.filter || {}
 
     // Only reset to all geohashes if explicitly cleared (undefined or empty array)
-    if (key === "#g" && (value === undefined || (Array.isArray(value) && value.length === 0))) {
+    if (
+      key === "#g" &&
+      (value === undefined || (Array.isArray(value) && value.length === 0))
+    ) {
       // For geohash filter, use all single-character geohashes when cleared
       const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
       handleConfigUpdate({
