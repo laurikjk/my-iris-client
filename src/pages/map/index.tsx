@@ -186,24 +186,22 @@ export default function MapPage() {
             )}
 
             {/* Feed */}
-            {!showMoreSettings && (
-              <Feed
-                key={feedKey}
-                feedConfig={feedConfig}
-                showReplies={0}
-                borderTopFirst={true}
-                showDisplayAsSelector={true}
-                onEvent={(event) => {
-                  // Collect events for the map
-                  setFeedEvents((prev) => {
-                    // Avoid duplicates
-                    if (prev.some((e) => e.id === event.id)) return prev
-                    // Keep last 100 events
-                    return [...prev.slice(-99), event]
-                  })
-                }}
-              />
-            )}
+            <Feed
+              key={feedKey}
+              feedConfig={feedConfig}
+              showReplies={0}
+              borderTopFirst={true}
+              showDisplayAsSelector={true}
+              onEvent={(event) => {
+                // Collect events for the map
+                setFeedEvents((prev) => {
+                  // Avoid duplicates
+                  if (prev.some((e) => e.id === event.id)) return prev
+                  // Keep last 100 events
+                  return [...prev.slice(-99), event]
+                })
+              }}
+            />
           </div>
         </div>
       </ScrollablePageContainer>
