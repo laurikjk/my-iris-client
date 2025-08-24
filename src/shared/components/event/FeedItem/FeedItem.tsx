@@ -22,6 +22,7 @@ import FeedItemContent from "./FeedItemContent.tsx"
 import {onClick, TRUNCATE_LENGTH} from "./utils.ts"
 import FeedItemHeader from "./FeedItemHeader.tsx"
 import FeedItemTitle from "./FeedItemTitle.tsx"
+import {GeohashLocation} from "./GeohashLocation.tsx"
 import {Link, useNavigate} from "@/navigation"
 import LikeHeader from "../LikeHeader"
 import ZapReceiptHeader from "../ZapReceiptHeader"
@@ -299,6 +300,7 @@ function FeedItem({
               referredEvent={referredEvent}
               tight={asReply || asRepliedTo}
             />
+            <GeohashLocation event={referredEvent || event} />
             <div className={classNames({"pl-12": asReply || asRepliedTo})}>
               <FeedItemContent
                 event={event}
