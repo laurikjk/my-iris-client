@@ -97,8 +97,16 @@ function FeedItemRepost({event, showReactionCounts = true}: FeedItemRepostProps)
   return (
     <>
       {showQuoteModal && (
-        <Modal onClose={() => setShowQuoteModal(false)}>
-          <NoteCreator handleClose={() => setShowQuoteModal(false)} quotedEvent={event} />
+        <Modal onClose={() => setShowQuoteModal(false)} hasBackground={false}>
+          <div
+            className="w-[600px] max-w-[90vw] rounded-2xl bg-base-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <NoteCreator
+              handleClose={() => setShowQuoteModal(false)}
+              quotedEvent={event}
+            />
+          </div>
         </Modal>
       )}
       <button

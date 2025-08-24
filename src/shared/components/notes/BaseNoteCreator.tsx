@@ -15,6 +15,7 @@ import HyperText from "@/shared/components/HyperText"
 interface BaseNoteCreatorProps {
   onClose?: () => void
   replyingTo?: NDKEvent
+  quotedEvent?: NDKEvent
   placeholder?: string
   autofocus?: boolean
   className?: string
@@ -27,6 +28,7 @@ interface BaseNoteCreatorProps {
 export function BaseNoteCreator({
   onClose,
   replyingTo,
+  quotedEvent,
   placeholder = "What's happening?",
   autofocus = false,
   className = "",
@@ -40,7 +42,7 @@ export function BaseNoteCreator({
   const draftStore = useDraftStore()
   const navigate = useNavigate()
 
-  const draftKey = replyingTo?.id || ""
+  const draftKey = replyingTo?.id || (quotedEvent ? `quote-${quotedEvent.id}` : "") || ""
   const hasHydrated = draftStore.hasHydrated
 
   const [publishing, setPublishing] = useState(false)
@@ -71,15 +73,19 @@ export function BaseNoteCreator({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Load draft when store hydrates
+  // Load draft when store hydrates, or set quote link for new quotes
   useEffect(() => {
     if (!hasHydrated) return
     const draft = draftStore.getDraft(draftKey)
     if (draft) {
       setText(draft.content)
       setImeta(draft.imeta)
+    } else if (quotedEvent && !text) {
+      // Only set the quote link if there's no existing draft and no text
+      const noteId = nip19.noteEncode(quotedEvent.id)
+      setText(`\n\nnostr:${noteId}`)
     }
-  }, [hasHydrated, draftKey])
+  }, [hasHydrated, draftKey, quotedEvent])
 
   // Save to draft store
   useEffect(() => {
@@ -95,8 +101,14 @@ export function BaseNoteCreator({
   useEffect(() => {
     if (autofocus && textareaRef.current) {
       textareaRef.current.focus()
+      // If we have a quoted event, position cursor at the beginning
+      if (quotedEvent) {
+        setTimeout(() => {
+          textareaRef.current?.setSelectionRange(0, 0)
+        }, 0)
+      }
     }
-  }, [autofocus])
+  }, [autofocus, quotedEvent])
 
   // Handle click outside for inline variant with expandOnFocus
   useEffect(() => {
@@ -157,6 +169,21 @@ export function BaseNoteCreator({
             event.tags.push(["p", pubkey])
           }
         })
+      }
+
+      // Add quote reference if quoting an event
+      if (quotedEvent) {
+        // The nostr: link is already in the text field, no need to add it again
+        // Just add the q tag for the quoted event
+        event.tags.push(["q", quotedEvent.id])
+
+        // Add p tag for the quoted author if not already added
+        if (
+          quotedEvent.pubkey !== myPubKey &&
+          !event.tags.some((tag) => tag[0] === "p" && tag[1] === quotedEvent.pubkey)
+        ) {
+          event.tags.push(["p", quotedEvent.pubkey])
+        }
       }
 
       // Add imeta tags

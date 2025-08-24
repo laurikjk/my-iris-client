@@ -10,11 +10,12 @@ interface NoteCreatorProps {
   reset?: boolean
 }
 
-function NoteCreator({handleClose, repliedEvent}: NoteCreatorProps) {
+function NoteCreator({handleClose, repliedEvent, quotedEvent}: NoteCreatorProps) {
   return (
     <BaseNoteCreator
       onClose={handleClose}
       replyingTo={repliedEvent}
+      quotedEvent={quotedEvent}
       placeholder="What's on your mind?"
       autofocus={true}
       variant="modal"

@@ -86,7 +86,7 @@ function FeedItemComment({event, showReactionCounts = true}: FeedItemCommentProp
       {isPopupOpen && (
         <Modal onClose={handlePopupClose} hasBackground={false}>
           <div
-            className="max-w-prose rounded-2xl bg-base-100"
+            className="w-[600px] max-w-[90vw] rounded-2xl bg-base-100"
             onClick={(e) => e.stopPropagation()}
           >
             <NoteCreator repliedEvent={event} handleClose={handlePopupClose} />
