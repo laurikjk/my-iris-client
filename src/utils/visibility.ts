@@ -69,6 +69,7 @@ export const shouldHideEvent = (
     .map((tag) => tag[1])
 
   return mentionedPubkeys.some((pubkey) =>
-    shouldHideAuthor(pubkey, threshold, allowUnknown)
+    // mentioned users can be unknown but not overmuted
+    shouldHideAuthor(pubkey, threshold, true)
   )
 }
