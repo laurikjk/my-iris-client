@@ -15,13 +15,13 @@ interface DeviceInfo {
 const ChatSettings = () => {
   const {
     invites,
-    sessions,
     lastSeen,
     deleteInvite,
     createDefaultInvites,
     getOwnDeviceInvites,
     deviceId: currentDeviceId,
   } = useUserRecordsStore()
+  const {sessions} = useSessionsStore()
   const {publicKey} = useUserStore()
   const [devices, setDevices] = useState<DeviceInfo[]>([])
 
@@ -33,8 +33,7 @@ const ChatSettings = () => {
       const deviceSessions = new Map<string, number>()
       const deviceLastSeen = new Map<string, number>()
 
-      Array.from(sessions.entries()).forEach(([sessionId]) => {
-        const sessionData = useSessionsStore.getState().sessions.get(sessionId)
+      Array.from(sessions.entries()).forEach(([sessionId, sessionData]) => {
         const userPubKey = sessionData?.userPubKey || sessionId.split(":")[0]
         const deviceId = sessionData?.deviceId || sessionId.split(":", 2)[1] || "unknown"
         if (userPubKey === publicKey) {

@@ -29,7 +29,6 @@ interface UserRecordsStoreState {
 
 interface UserRecordsStoreActions {
   // Core session management
-  createInvite: (label: string, inviteId?: string) => void
   createDefaultInvites: () => void
   acceptInvite: (invite: Invite) => Promise<string>
   sendMessage: (sessionId: string, event: Partial<UnsignedEvent>) => Promise<void>
@@ -40,7 +39,6 @@ interface UserRecordsStoreActions {
 
   // Device management
   listenToUserDevices: (userPubKey: string) => void
-  stopListeningToUserDevices: (userPubKey: string) => void
 
   // Session selection
   getPreferredSession: (userPubKey: string) => string | null
@@ -111,12 +109,54 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         // Create device-specific invite
         if (!get().invites.has(deviceId)) {
           console.log("Creating new device invite for:", deviceId)
-          get().createInvite(`Device ${deviceId.slice(0, 8)}`, deviceId)
-          const invite = get().invites.get(deviceId)
-          if (!invite) {
-            console.error("Failed to create device invite")
-            return
-          }
+
+          const id = deviceId
+          const invite = Invite.createNew(myPubKey, id)
+          const currentInvites = get().invites
+
+          const newInvites = new Map(currentInvites)
+          newInvites.set(id, invite)
+
+          const decrypt = getDecryptFunction(myPrivKey || undefined)
+
+          const unsubscribe = invite.listen(decrypt, subscribe, (session, identity) => {
+            const sessionId = session.state.theirNextNostrPublicKey
+            console.log("got session", sessionId, session)
+            if (!identity || !sessionId) return
+
+            const deviceId = `${identity}:incoming`
+
+            const existingUserRecord = get().userRecords.get(identity)
+            const existingSessionId = existingUserRecord?.getActiveSessionId(deviceId)
+
+            if (existingSessionId) {
+              console.log(
+                "Session already exists with this device in invite listener, skipping",
+                existingSessionId
+              )
+              return
+            }
+
+            useSessionsStore.getState().addSession(sessionId, session, identity, deviceId)
+
+            const userRecords = new Map(get().userRecords)
+            let userRecord = userRecords.get(identity)
+            if (!userRecord) {
+              userRecord = new UserRecord(identity, identity)
+              userRecords.set(identity, userRecord)
+            }
+
+            userRecord.upsertSession(deviceId, sessionId)
+
+            const lastSeen = new Map(get().lastSeen)
+            lastSeen.set(sessionId, Date.now())
+
+            set({userRecords, lastSeen})
+          })
+
+          inviteListeners.set(id, unsubscribe)
+          set({invites: newInvites})
+
           const event = invite.getEvent() as RawEvent
           console.log("Publishing device invite...", {deviceId, eventId: event.id})
           await NDKEventFromRawEvent(event)
@@ -127,79 +167,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
         console.log("Current invites:", Array.from(get().invites.keys()))
         console.log("Current userRecords:", Array.from(get().userRecords.keys()))
-      },
-
-      createInvite: (_label: string, inviteId?: string) => {
-        const myPubKey = useUserStore.getState().publicKey
-        const myPrivKey = useUserStore.getState().privateKey
-        const nip07Login = useUserStore.getState().nip07Login
-
-        // Skip if no signer (view-only mode)
-        if (!myPrivKey && !nip07Login) {
-          console.log(
-            "No private key or NIP-07 extension - cannot create invite (view-only mode)"
-          )
-          return
-        }
-
-        if (!myPubKey) {
-          throw new Error("No public key")
-        }
-
-        const id = inviteId || crypto.randomUUID()
-        const invite = Invite.createNew(myPubKey, id) // Pass deviceId as second parameter
-        const currentInvites = get().invites
-
-        const newInvites = new Map(currentInvites)
-        newInvites.set(id, invite)
-
-        const decrypt = getDecryptFunction(myPrivKey)
-
-        const unsubscribe = invite.listen(decrypt, subscribe, (session, identity) => {
-          // uniquely identify by their initial nostr public key to avoid duplicates. TODO for privacy we might not want to actually store this.
-          const sessionId = session.state.theirNextNostrPublicKey
-          console.log("got session", sessionId, session)
-          if (!identity || !sessionId) return
-
-          const deviceId = `${identity}:incoming` // TODO invite acceptors need to communicate their device id in addition to identity?
-
-          // Check if we already have a session with this device
-          const existingUserRecord = get().userRecords.get(identity)
-          const existingSessionId = existingUserRecord?.getActiveSessionId(deviceId)
-
-          if (existingSessionId) {
-            console.log(
-              "Session already exists with this device in invite listener, skipping",
-              existingSessionId
-            )
-            return
-          }
-
-          // Add session to sessions store and reference in UserRecord
-          useSessionsStore.getState().addSession(sessionId, session, identity, deviceId)
-
-          // Get or create UserRecord
-          const userRecords = new Map(get().userRecords)
-          let userRecord = userRecords.get(identity)
-          if (!userRecord) {
-            userRecord = new UserRecord(identity, identity)
-            userRecords.set(identity, userRecord)
-          }
-
-          userRecord.upsertSession(deviceId, sessionId)
-
-          // Update last seen
-          const lastSeen = new Map(get().lastSeen)
-          lastSeen.set(sessionId, Date.now())
-
-          set({userRecords, lastSeen})
-
-          // Session listener is automatically set up by sessions store
-          // Chat will appear automatically in getChatsList() via userRecords
-        })
-
-        inviteListeners.set(id, unsubscribe)
-        set({invites: newInvites})
       },
 
       deleteInvite: (id: string) => {
@@ -688,21 +655,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         set({deviceInviteListeners: listeners})
       },
 
-      stopListeningToUserDevices: (userPubKey: string) => {
-        const deviceId = get().deviceId
-        const key = `${userPubKey}:${deviceId}`
-        const listeners = get().deviceInviteListeners
-        const unsubscribe = listeners.get(key)
-
-        if (unsubscribe) {
-          unsubscribe()
-          const newListeners = new Map(listeners)
-          newListeners.delete(key)
-          set({deviceInviteListeners: newListeners})
-          console.log("Stopped listening to user devices for:", userPubKey)
-        }
-      },
-
       getPreferredSession: (userPubKey: string) => {
         const userRecord = get().userRecords.get(userPubKey)
         return userRecord?.getPreferredSessionId() || null
@@ -812,6 +764,10 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const decrypt = getDecryptFunction(myPrivKey)
 
         const unsubscribe = invite.listen(decrypt, subscribe, (session, identity) => {
+          console.warn("Device invite listener - got session:", {
+            session,
+            identity,
+          })
           if (!identity) return
 
           // Check if we already have a session with this user from our device

@@ -14,7 +14,6 @@ interface PrivateChatsStoreState {
 }
 
 interface PrivateChatsStoreActions {
-  initPrivateChat: (userPubKey: string) => void
   sendToUser: (userPubKey: string, event: Partial<UnsignedEvent>) => Promise<string>
   updateLastSeen: (userPubKey: string) => void
   getChatsList: () => Array<{
@@ -31,13 +30,6 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()(
   persist(
     (set, get) => ({
       chats: new Map(),
-      initPrivateChat: (userPubKey: string) => {
-        const chats = new Map(get().chats)
-        if (!chats.has(userPubKey)) {
-          chats.set(userPubKey, {lastSeen: 0})
-          set({chats})
-        }
-      },
       sendToUser: async (userPubKey: string, event: Partial<UnsignedEvent>) => {
         const myPubKey = useUserStore.getState().publicKey
         // Always send to recipient

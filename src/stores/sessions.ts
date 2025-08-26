@@ -19,7 +19,6 @@ import {useUserStore} from "./user"
 import {useGroupsStore} from "./groups"
 import {useUserRecordsStore} from "./userRecords"
 import {UserRecord} from "./UserRecord"
-import throttle from "lodash/throttle"
 
 // Import refactored modules
 import {routeEventToStore} from "./sessions/eventRouter"
@@ -49,18 +48,13 @@ interface SessionsStoreActions {
   removeSession: (sessionId: string) => void
   getSession: (sessionId: string) => Session | undefined
   hasSession: (sessionId: string) => boolean
-  getAllSessionIds: () => string[]
 
   // Session state updates (triggers individual persistence)
-  updateSession: (sessionId: string) => void
-  updateSessionthrottled: (sessionId: string) => void
 
   // Send methods
   sendMessage: (sessionId: string, event: Partial<UnsignedEvent>) => Promise<void>
 
   // Event listeners (internal - sessions store handles these automatically)
-  setSessionListener: (sessionId: string, onEvent: (event: MessageType) => void) => void
-  removeSessionListener: (sessionId: string) => void
 
   // Event callbacks (for external stores to get notified)
   onSessionEvent: (
@@ -79,13 +73,6 @@ type SessionsStore = SessionsStoreState & SessionsStoreActions
 export const useSessionsStore = create<SessionsStore>()(
   persist(
     (set, get) => {
-      // Create throttled version of updateSession
-      const throttledUpdateSession = throttle((sessionId: string) => {
-        console.log("throttled persistence trigger for session:", sessionId)
-        const newSessions = new Map(get().sessions)
-        set({sessions: newSessions})
-      }, 100) // 100ms debounce
-
       return {
         sessions: new Map(),
         sessionListeners: new Map(),
@@ -103,9 +90,13 @@ export const useSessionsStore = create<SessionsStore>()(
           set({sessions: newSessions})
 
           // Automatically set up event listener for the new session
-          get().setSessionListener(sessionId, async (event) => {
+          const unsubscribe = session.onEvent(async (event) => {
             await processSessionEvent(get, sessionId, event)
           })
+
+          const newListeners = new Map(get().sessionListeners)
+          newListeners.set(sessionId, unsubscribe)
+          set({sessionListeners: newListeners})
         },
 
         removeSession: (sessionId: string) => {
@@ -120,7 +111,13 @@ export const useSessionsStore = create<SessionsStore>()(
           newSessions.delete(sessionId)
 
           // Remove listener
-          get().removeSessionListener(sessionId)
+          const unsubscribe = get().sessionListeners.get(sessionId)
+          if (unsubscribe) {
+            unsubscribe()
+            const newListeners = new Map(get().sessionListeners)
+            newListeners.delete(sessionId)
+            set({sessionListeners: newListeners})
+          }
 
           set({sessions: newSessions})
         },
@@ -132,20 +129,6 @@ export const useSessionsStore = create<SessionsStore>()(
         hasSession: (sessionId: string) => {
           return get().sessions.has(sessionId)
         },
-
-        getAllSessionIds: () => {
-          return Array.from(get().sessions.keys())
-        },
-
-        updateSession: (sessionId: string) => {
-          // Force persistence for this specific session by recreating the Map
-          // This is more efficient than the current approach of serializing all user records
-          console.log("Triggering persistence for session:", sessionId)
-          const newSessions = new Map(get().sessions)
-          set({sessions: newSessions})
-        },
-
-        updateSessionthrottled: throttledUpdateSession,
 
         sendMessage: async (sessionId: string, event: Partial<UnsignedEvent>) => {
           console.log("sendMessage called for session", sessionId, "event:", event)
@@ -261,44 +244,6 @@ export const useSessionsStore = create<SessionsStore>()(
           } catch (err) {
             console.warn("Error publishing event:", err)
           }
-
-          // Trigger throttled persistence for this session
-          get().updateSessionthrottled(sessionId)
-        },
-
-        setSessionListener: (
-          sessionId: string,
-          onEvent: (event: MessageType) => void
-        ) => {
-          const sessionData = get().sessions.get(sessionId)
-          if (!sessionData) {
-            console.warn("Cannot set listener for non-existent session:", sessionId)
-            return
-          }
-          const session = sessionData.session
-
-          // Remove existing listener if any
-          get().removeSessionListener(sessionId)
-
-          // Set up new listener
-          const unsubscribe = session.onEvent(async (event) => {
-            // Just pass to the onEvent callback - canonical ID will be handled by processSessionEvent
-            onEvent(event)
-          })
-
-          const newListeners = new Map(get().sessionListeners)
-          newListeners.set(sessionId, unsubscribe)
-          set({sessionListeners: newListeners})
-        },
-
-        removeSessionListener: (sessionId: string) => {
-          const unsubscribe = get().sessionListeners.get(sessionId)
-          if (unsubscribe) {
-            unsubscribe()
-            const newListeners = new Map(get().sessionListeners)
-            newListeners.delete(sessionId)
-            set({sessionListeners: newListeners})
-          }
         },
 
         onSessionEvent: (callback: (sessionId: string, event: MessageType) => void) => {
@@ -338,9 +283,13 @@ export const useSessionsStore = create<SessionsStore>()(
                 })
 
                 // Set up listener that calls the provided onEvent callback
-                get().setSessionListener(sessionId, async (event) => {
+                const unsubscribe = session.onEvent(async (event) => {
                   await processSessionEvent(get, sessionId, event)
                 })
+
+                const newListeners = new Map(get().sessionListeners)
+                newListeners.set(sessionId, unsubscribe)
+                set({sessionListeners: newListeners})
                 count++
               }
             }
@@ -462,8 +411,10 @@ const processSessionEvent = async (
   // Now handle the event
   await handleSessionEvent(get, sessionId, event)
 
-  // Trigger persistence for this session
-  get().updateSession(sessionId)
+  // Trigger persistence for this session - force Zustand persistence by recreating the sessions Map
+  const store = useSessionsStore.getState()
+  const newSessions = new Map(store.sessions)
+  useSessionsStore.setState({sessions: newSessions})
 }
 
 // Helper to process any session event consistently
