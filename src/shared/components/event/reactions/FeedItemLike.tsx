@@ -12,6 +12,7 @@ import {useScrollAwareLongPress} from "@/shared/hooks/useScrollAwareLongPress"
 import EmojiType from "@/types/emoji"
 import Icon from "../../Icons/Icon"
 import {useReactionsByAuthor} from "@/shared/hooks/useReactions"
+import {reactWithExpiration} from "@/utils/reaction"
 
 export const FeedItemLike = ({
   event,
@@ -66,7 +67,7 @@ export const FeedItemLike = ({
   const like = async () => {
     if (!myPubKey || likesByAuthor.has(myPubKey)) return
     try {
-      await event.react("+")
+      await reactWithExpiration(event, "+")
     } catch (error) {
       console.warn(`Could not publish reaction: ${error}`)
     }
@@ -75,7 +76,7 @@ export const FeedItemLike = ({
   const handleEmojiSelect = async (emoji: EmojiType) => {
     if (!myPubKey) return
     try {
-      await event.react(emoji.native)
+      await reactWithExpiration(event, emoji.native)
       setShowEmojiPicker(false)
     } catch (error) {
       console.warn(`Could not publish reaction: ${error}`)

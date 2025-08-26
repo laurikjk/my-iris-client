@@ -19,6 +19,7 @@ interface Draft {
   content: string
   imeta: ImetaTag[]
   gTags: string[]
+  expirationDelta?: number | null // Time delta in seconds (e.g., 3600 for 1 hour)
   timestamp: number
 }
 
@@ -64,6 +65,10 @@ export const useDraftStore = create<DraftState>()(
               content: draft.content ?? existing?.content ?? "",
               imeta: draft.imeta ?? existing?.imeta ?? [],
               gTags: draft.gTags ?? existing?.gTags ?? [],
+              expirationDelta:
+                draft.expirationDelta !== undefined
+                  ? draft.expirationDelta
+                  : existing?.expirationDelta,
               timestamp: Date.now(),
             }
             const drafts = evictOldestDrafts({

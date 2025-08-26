@@ -163,6 +163,7 @@ const UploadButton = ({
         onClick={handleClick}
         disabled={disabled || uploading}
         style={{position: "relative"}}
+        title="Upload files"
       >
         {text || "Upload"}
         {encrypt && (

@@ -88,6 +88,7 @@ const EmojiButton = ({onEmojiSelect, position = "auto"}: EmojiButtonProps) => {
         type="button"
         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
         className="btn btn-ghost btn-circle btn-sm md:btn-md"
+        title="Add emoji"
       >
         <RiEmotionLine className="w-6 h-6" />
       </button>

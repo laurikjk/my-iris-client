@@ -26,7 +26,7 @@ export function GeohashLocation({event, className = ""}: GeohashLocationProps) {
 
   return (
     <div
-      className={`flex items-center gap-1 text-xs text-base-content/50 px-4 -mt-1 mb-2 flex-wrap ${className}`}
+      className={`flex items-center gap-1 text-xs text-base-content/50 flex-wrap ${className}`}
     >
       <RiMapPinLine className="w-3 h-3 flex-shrink-0" />
       {geohashes.map((geohash, index) => (

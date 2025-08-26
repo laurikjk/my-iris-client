@@ -46,7 +46,7 @@ function Dropdown({children, onClose, position}: DropdownProps) {
   }, [onClose])
 
   const getPositionClasses = () => {
-    const baseClasses = "dropdown dropdown-open dropdown-container"
+    const baseClasses = "dropdown dropdown-open dropdown-container z-50"
     const alignClass = position?.alignRight ? "dropdown-end" : "dropdown-left"
     const directionClass = direction === "up" ? "dropdown-top" : "dropdown-bottom"
 

@@ -23,6 +23,7 @@ import {onClick, TRUNCATE_LENGTH} from "./utils.ts"
 import FeedItemHeader from "./FeedItemHeader.tsx"
 import FeedItemTitle from "./FeedItemTitle.tsx"
 import {GeohashLocation} from "./GeohashLocation.tsx"
+import {ExpirationDisplay} from "./ExpirationDisplay.tsx"
 import {Link, useNavigate} from "@/navigation"
 import LikeHeader from "../LikeHeader"
 import ZapReceiptHeader from "../ZapReceiptHeader"
@@ -299,10 +300,33 @@ function FeedItem({
               referredEvent={referredEvent}
               tight={asReply || asRepliedTo}
             />
-            <GeohashLocation
-              event={referredEvent || event}
-              className={classNames({"pl-12": asReply || asRepliedTo})}
-            />
+            {(() => {
+              const targetEvent = referredEvent || event
+              const hasGeohash = targetEvent.tags.some((tag) => tag[0] === "g" && tag[1])
+              const hasExpiration = targetEvent.tags.some(
+                (tag) => tag[0] === "expiration" && tag[1]
+              )
+
+              if (!hasGeohash && !hasExpiration) return null
+
+              return (
+                <div
+                  className={classNames(
+                    "flex items-center justify-between px-4 -mt-1 mb-2",
+                    {
+                      "pl-16": asReply || asRepliedTo,
+                    }
+                  )}
+                >
+                  {hasGeohash ? (
+                    <GeohashLocation event={targetEvent} className="" />
+                  ) : (
+                    <div />
+                  )}
+                  <ExpirationDisplay event={targetEvent} className="" />
+                </div>
+              )
+            })()}
             <div className={classNames({"pl-12": asReply || asRepliedTo})}>
               <FeedItemContent
                 event={event}

@@ -4,6 +4,7 @@ import ProxyImg from "@/shared/components/ProxyImg"
 import {Name} from "@/shared/components/user/Name"
 import {useUserStore} from "@/stores/user"
 import {useReactions, ReactionInfo} from "@/shared/hooks/useReactions"
+import {reactWithExpiration} from "@/utils/reaction"
 
 interface ReactionsBarProps {
   event: NDKEvent
@@ -113,7 +114,7 @@ function ReactionItem({reaction, renderEmoji, event}: ReactionItemProps) {
           )
           if (emojiTag) {
             // Create a new event with custom emoji tags
-            const reactionEvent = await event.react(reaction.emoji)
+            const reactionEvent = await reactWithExpiration(event, reaction.emoji)
             if (reactionEvent && emojiTag[2]) {
               // Add emoji tag to the reaction event
               reactionEvent.tags.push(["emoji", shortcode, emojiTag[2]])
@@ -125,7 +126,7 @@ function ReactionItem({reaction, renderEmoji, event}: ReactionItemProps) {
       }
 
       // For regular emojis and "+"
-      await event.react(emojiToSend)
+      await reactWithExpiration(event, emojiToSend)
     } catch (error) {
       console.warn(`Could not publish reaction: ${error}`)
     }

@@ -9,7 +9,9 @@ import {usePublicKey} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
 import UploadButton, {type UploadState} from "@/shared/components/button/UploadButton"
 import {GeohashManager} from "@/shared/components/create/GeohashManager"
-import {RiAttachment2, RiMapPinLine} from "@remixicon/react"
+import {ExpirationSelector} from "@/shared/components/create/ExpirationSelector"
+import {getExpirationLabel} from "@/utils/expiration"
+import {RiAttachment2, RiMapPinLine, RiTimeLine} from "@remixicon/react"
 import HyperText from "@/shared/components/HyperText"
 
 interface BaseNoteCreatorProps {
@@ -61,6 +63,33 @@ export function BaseNoteCreator({
   })
   const [isFocused, setIsFocused] = useState(false)
   const [previewMode, setPreviewMode] = useState(false)
+  const [expirationDelta, setExpirationDelta] = useState<number | null>(() => {
+    // First check if we have a saved expiration delta in draft
+    if (hasHydrated) {
+      const draft = draftStore.getDraft(draftKey)
+      if (draft?.expirationDelta !== undefined) {
+        return draft.expirationDelta
+      }
+    }
+
+    // Otherwise inherit expiration from the event being replied to (convert to delta)
+    if (replyingTo) {
+      const expirationTag = replyingTo.tags.find(
+        (tag) => tag[0] === "expiration" && tag[1]
+      )
+      if (expirationTag) {
+        const timestamp = parseInt(expirationTag[1], 10)
+        if (!isNaN(timestamp)) {
+          // Calculate delta from current time
+          const now = Math.floor(Date.now() / 1000)
+          const delta = timestamp - now
+          // Only use positive deltas
+          return delta > 0 ? delta : null
+        }
+      }
+    }
+    return null
+  })
   const [uploadState, setUploadState] = useState<UploadState>({
     uploading: false,
     progress: 0,
@@ -80,6 +109,9 @@ export function BaseNoteCreator({
     if (draft) {
       setText(draft.content)
       setImeta(draft.imeta)
+      if (draft.expirationDelta !== undefined) {
+        setExpirationDelta(draft.expirationDelta)
+      }
     } else if (quotedEvent && !text) {
       // Only set the quote link if there's no existing draft and no text
       const noteId = nip19.noteEncode(quotedEvent.id)
@@ -97,6 +129,11 @@ export function BaseNoteCreator({
     if (!hasHydrated) return
     draftStore.setDraft(draftKey, {imeta})
   }, [imeta, draftKey, hasHydrated])
+
+  useEffect(() => {
+    if (!hasHydrated) return
+    draftStore.setDraft(draftKey, {expirationDelta})
+  }, [expirationDelta, draftKey, hasHydrated])
 
   useEffect(() => {
     if (autofocus && textareaRef.current) {
@@ -213,10 +250,18 @@ export function BaseNoteCreator({
         })
       }
 
+      // Add expiration tag (calculate timestamp from delta)
+      if (expirationDelta) {
+        const now = Math.floor(Date.now() / 1000)
+        const expirationTimestamp = now + expirationDelta
+        event.tags.push(["expiration", expirationTimestamp.toString()])
+      }
+
       await event.publish()
 
       setText("")
       setImeta([])
+      setExpirationDelta(null)
       setIsFocused(false)
       draftStore.clearDraft(draftKey)
       onClose?.()
@@ -369,31 +414,55 @@ export function BaseNoteCreator({
 
       {(isModal || shouldExpand) && (
         <div className={isModal ? "px-4 pb-4" : "px-4 pb-3"}>
-          {/* Display geohashes above action bar */}
+          {/* Display geohashes and expiration above action bar */}
           {(() => {
             const draft = draftStore.getDraft(draftKey)
-            return draft?.gTags && draft.gTags.length > 0 ? (
-              <div className="flex items-center gap-2 text-sm text-base-content/70 mb-3">
-                <RiMapPinLine className="w-4 h-4" />
-                <div className="flex gap-2 flex-wrap">
-                  {draft.gTags.map((gh) => (
-                    <span key={gh} className="badge badge-sm">
-                      {gh}
-                      <button
-                        onClick={() => {
-                          const newGTags = draft.gTags.filter((tag) => tag !== gh)
-                          draftStore.setDraft(draftKey, {gTags: newGTags})
-                        }}
-                        className="ml-1 hover:text-error"
-                        disabled={publishing}
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
+            const hasGeohash = draft?.gTags && draft.gTags.length > 0
+            const hasExpiration = expirationDelta !== null
+
+            if (!hasGeohash && !hasExpiration) return null
+
+            return (
+              <div className="flex items-center justify-between text-sm text-base-content/70 mb-3">
+                {hasGeohash ? (
+                  <div className="flex items-center gap-2">
+                    <RiMapPinLine className="w-4 h-4" />
+                    <div className="flex gap-2 flex-wrap">
+                      {draft.gTags.map((gh) => (
+                        <span key={gh} className="badge badge-sm">
+                          {gh}
+                          <button
+                            onClick={() => {
+                              const newGTags = draft.gTags.filter((tag) => tag !== gh)
+                              draftStore.setDraft(draftKey, {gTags: newGTags})
+                            }}
+                            className="ml-1 hover:text-error"
+                            disabled={publishing}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div />
+                )}
+
+                {hasExpiration && (
+                  <div
+                    className="flex items-center gap-1 text-sm text-base-content/70"
+                    title={`Expires: ${new Intl.DateTimeFormat(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "long",
+                    }).format((Math.floor(Date.now() / 1000) + expirationDelta) * 1000)}`}
+                  >
+                    <RiTimeLine className="w-4 h-4" />
+                    <span>Expires in {getExpirationLabel(expirationDelta)}</span>
+                  </div>
+                )}
               </div>
-            ) : null
+            )
           })()}
 
           <div className="flex items-center justify-between">
@@ -407,6 +476,11 @@ export function BaseNoteCreator({
                 onStateChange={setUploadState}
               />
               <GeohashManager disabled={publishing} displayInline draftKey={draftKey} />
+              <ExpirationSelector
+                onExpirationChange={setExpirationDelta}
+                disabled={publishing}
+                currentExpirationDelta={expirationDelta}
+              />
             </div>
 
             <div className="flex items-center gap-2">
