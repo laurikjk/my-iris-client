@@ -49,9 +49,6 @@ interface UserRecordsStoreActions {
   reset: () => void
   initializeListeners: () => void
   initializeSessionListeners: () => void
-
-  // Compatibility API (for existing components)
-  sessions: Map<string, string> // Virtual getter for backward compatibility - returns sessionIds
 }
 
 type UserRecordsStore = UserRecordsStoreState & UserRecordsStoreActions
@@ -76,22 +73,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
       deviceId: "",
       deviceInviteListeners: new Map(),
       messageQueue: new Map(),
-
-      // Virtual sessions getter for backward compatibility
-      get sessions() {
-        const virtualSessions = new Map<string, string>()
-        const userRecords = get().userRecords
-
-        for (const [, userRecord] of userRecords.entries()) {
-          for (const device of userRecord.getActiveDevices()) {
-            if (device.activeSessionId) {
-              virtualSessions.set(device.activeSessionId, device.activeSessionId)
-            }
-          }
-        }
-
-        return virtualSessions
-      },
 
       createDefaultInvites: async () => {
         const myPubKey = useUserStore.getState().publicKey

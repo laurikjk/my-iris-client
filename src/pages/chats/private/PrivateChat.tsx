@@ -19,18 +19,13 @@ const Chat = ({id}: {id: string}) => {
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
   // Get all sessions for this user
-  const sessions = useUserRecordsStore((state) => state.sessions)
-  const userSessions = Array.from(sessions.keys()).filter((sessionId) =>
-    sessionId.startsWith(`${id}:`)
-  )
-  const hasAnySessions = userSessions.length > 0
 
   // Get messages reactively from events store - this will update when new messages are added
   const eventsMap = usePrivateMessagesStore((state) => state.events)
   const messages = eventsMap.get(id) ?? new SortedMap<string, MessageType>([], comparator)
 
   useEffect(() => {
-    if (!id || !hasAnySessions) {
+    if (!id) {
       return
     }
 
@@ -45,7 +40,7 @@ const Chat = ({id}: {id: string}) => {
         setHaveSent(true)
       }
     })
-  }, [id, messages, haveReply, haveSent, hasAnySessions])
+  }, [id, messages, haveReply, haveSent])
 
   useEffect(() => {
     if (!id) return

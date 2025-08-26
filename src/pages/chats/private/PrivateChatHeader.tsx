@@ -17,8 +17,7 @@ interface PrivateChatHeaderProps {
 const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const navigate = useNavigate()
-  const {sessions, deleteSession} = useUserRecordsStore()
-  const session = sessions.get(id)
+  const {deleteSession} = useUserRecordsStore()
 
   const handleDeleteChat = () => {
     if (id && confirm("Delete this chat?")) {
@@ -28,28 +27,29 @@ const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
   }
 
   const handleSendFile = () => {
-    if (session) {
-      const peerConnection = getPeerConnection(id, {
-        ask: false,
-        create: true,
-        connect: true,
-      })
-      if (peerConnection) {
-        // Create a hidden file input
-        const fileInput = document.createElement("input")
-        fileInput.type = "file"
-        fileInput.style.display = "none"
-        fileInput.onchange = (e) => {
-          const file = (e.target as HTMLInputElement).files?.[0]
-          if (file) {
-            peerConnection.sendFile(file)
-          }
-        }
-        document.body.appendChild(fileInput)
-        fileInput.click()
-        document.body.removeChild(fileInput)
-      }
-    }
+    // TODO: enable file sending via WebRTC
+    // if (session) {
+    //   const peerConnection = getPeerConnection(id, {
+    //     ask: false,
+    //     create: true,
+    //     connect: true,
+    //   })
+    //   if (peerConnection) {
+    //     // Create a hidden file input
+    //     const fileInput = document.createElement("input")
+    //     fileInput.type = "file"
+    //     fileInput.style.display = "none"
+    //     fileInput.onchange = (e) => {
+    //       const file = (e.target as HTMLInputElement).files?.[0]
+    //       if (file) {
+    //         peerConnection.sendFile(file)
+    //       }
+    //     }
+    //     document.body.appendChild(fileInput)
+    //     fileInput.click()
+    //     document.body.removeChild(fileInput)
+    //   }
+    // }
   }
 
   const user = id.split(":").shift()!
