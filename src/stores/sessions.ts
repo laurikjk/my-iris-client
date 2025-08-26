@@ -55,6 +55,8 @@ interface SessionsStoreActions {
   sendMessage: (sessionId: string, event: Partial<UnsignedEvent>) => Promise<void>
 
   // Event listeners (internal - sessions store handles these automatically)
+  setSessionListener: (sessionId: string, onEvent: (event: MessageType) => void) => void
+  removeSessionListener: (sessionId: string) => void
 
   // Event callbacks (for external stores to get notified)
   onSessionEvent: (
@@ -90,13 +92,9 @@ export const useSessionsStore = create<SessionsStore>()(
           set({sessions: newSessions})
 
           // Automatically set up event listener for the new session
-          const unsubscribe = session.onEvent(async (event) => {
+          get().setSessionListener(sessionId, async (event) => {
             await processSessionEvent(get, sessionId, event)
           })
-
-          const newListeners = new Map(get().sessionListeners)
-          newListeners.set(sessionId, unsubscribe)
-          set({sessionListeners: newListeners})
         },
 
         removeSession: (sessionId: string) => {
@@ -111,13 +109,7 @@ export const useSessionsStore = create<SessionsStore>()(
           newSessions.delete(sessionId)
 
           // Remove listener
-          const unsubscribe = get().sessionListeners.get(sessionId)
-          if (unsubscribe) {
-            unsubscribe()
-            const newListeners = new Map(get().sessionListeners)
-            newListeners.delete(sessionId)
-            set({sessionListeners: newListeners})
-          }
+          get().removeSessionListener(sessionId)
 
           set({sessions: newSessions})
         },
@@ -246,6 +238,41 @@ export const useSessionsStore = create<SessionsStore>()(
           }
         },
 
+        setSessionListener: (
+          sessionId: string,
+          onEvent: (event: MessageType) => void
+        ) => {
+          const sessionData = get().sessions.get(sessionId)
+          if (!sessionData) {
+            console.warn("Cannot set listener for non-existent session:", sessionId)
+            return
+          }
+          const session = sessionData.session
+
+          // Remove existing listener if any
+          get().removeSessionListener(sessionId)
+
+          // Set up new listener
+          const unsubscribe = session.onEvent(async (event) => {
+            // Just pass to the onEvent callback - canonical ID will be handled by processSessionEvent
+            onEvent(event)
+          })
+
+          const newListeners = new Map(get().sessionListeners)
+          newListeners.set(sessionId, unsubscribe)
+          set({sessionListeners: newListeners})
+        },
+
+        removeSessionListener: (sessionId: string) => {
+          const unsubscribe = get().sessionListeners.get(sessionId)
+          if (unsubscribe) {
+            unsubscribe()
+            const newListeners = new Map(get().sessionListeners)
+            newListeners.delete(sessionId)
+            set({sessionListeners: newListeners})
+          }
+        },
+
         onSessionEvent: (callback: (sessionId: string, event: MessageType) => void) => {
           const callbacks = new Set(get().eventCallbacks)
           callbacks.add(callback)
@@ -283,13 +310,9 @@ export const useSessionsStore = create<SessionsStore>()(
                 })
 
                 // Set up listener that calls the provided onEvent callback
-                const unsubscribe = session.onEvent(async (event) => {
+                get().setSessionListener(sessionId, async (event) => {
                   await processSessionEvent(get, sessionId, event)
                 })
-
-                const newListeners = new Map(get().sessionListeners)
-                newListeners.set(sessionId, unsubscribe)
-                set({sessionListeners: newListeners})
                 count++
               }
             }
