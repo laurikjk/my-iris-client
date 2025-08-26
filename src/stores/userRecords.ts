@@ -198,17 +198,14 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           event.created_at = Math.round(Date.now() / 1000)
         }
 
-        // Initialize tags if not present
         if (!event.tags) {
           event.tags = []
         }
 
-        // Add ms tag if not present
         if (!event.tags.some((tag) => tag[0] === "ms")) {
           event.tags.push(["ms", Date.now().toString()])
         }
 
-        // Add p tag if not present
         if (!event.tags.some((tag) => tag[0] === "p")) {
           event.tags.push(["p", userPubKey])
         }
