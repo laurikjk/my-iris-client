@@ -1,9 +1,9 @@
 import {describe, it, expect, vi} from "vitest"
-import SessionManager from "../src/SessionManager"
+import SessionManager from "./SessionManager"
 import {generateSecretKey, getPublicKey} from "nostr-tools"
-import {CHAT_MESSAGE_KIND} from "../src/types"
-import {UserRecord} from "../src/UserRecord"
-import type {Session} from "../src/Session"
+import {CHAT_MESSAGE_KIND} from "nostr-double-ratchet/src"
+import {UserRecord} from "./UserRecord"
+import type {Session} from "nostr-double-ratchet/src"
 
 /**
  * Helper to create a lightweight stub that satisfies the parts of the Session
@@ -66,8 +66,13 @@ describe("SessionManager", () => {
 
     const recipient = "recipientPubKey"
     const session = createStubSession()
-    const userRecord = new UserRecord(recipient, nostrSubscribe)
-    userRecord.upsertSession(undefined, session)
+    const testDeviceId = "test-device"
+    const sessionId = `${recipient}:${testDeviceId}`
+    
+    // Store session in SessionManager and create UserRecord
+    ;(manager as any).sessions.set(sessionId, session)
+    const userRecord = new UserRecord(recipient, recipient)
+    userRecord.upsertSession(testDeviceId, sessionId)
     ;(manager as any).userRecords.set(recipient, userRecord)
 
     const results = await manager.sendText(recipient, "hello")
@@ -90,8 +95,13 @@ describe("SessionManager", () => {
 
     const recipient = "recipientPubKey"
     const session = createStubSession()
-    const userRecord = new UserRecord(recipient, nostrSubscribe)
-    userRecord.upsertSession(undefined, session)
+    const testDeviceId = "test-device"
+    const sessionId = `${recipient}:${testDeviceId}`
+    
+    // Store session in SessionManager and create UserRecord
+    ;(manager as any).sessions.set(sessionId, session)
+    const userRecord = new UserRecord(recipient, recipient)
+    userRecord.upsertSession(testDeviceId, sessionId)
     ;(manager as any).userRecords.set(recipient, userRecord)
 
     const received: any[] = []
@@ -114,14 +124,24 @@ describe("SessionManager", () => {
 
     // Create a session for our own device
     const session = createStubSession()
-    const userRecord = new UserRecord(ourPublicKey, nostrSubscribe)
-    userRecord.upsertSession(undefined, session)
+    const testDeviceId = "test-device"
+    const sessionId = `${ourPublicKey}:${testDeviceId}`
+    
+    // Store session in SessionManager and create UserRecord
+    ;(manager as any).sessions.set(sessionId, session)
+    const userRecord = new UserRecord(ourPublicKey, ourPublicKey)
+    userRecord.upsertSession(testDeviceId, sessionId)
     ;(manager as any).userRecords.set(ourPublicKey, userRecord)
 
     // Verify the session is tracked
     const record = (manager as any).userRecords.get(ourPublicKey)
     expect(record).toBeDefined()
-    expect(record.getActiveSessions()).toContain(session)
+    const sessionIds = record.getActiveSessionIds()
+    expect(sessionIds).toHaveLength(1)
+    expect(sessionIds[0]).toBe(sessionId)
+    // Verify the session is accessible via SessionManager
+    const sessionFromManager = (manager as any).sessions.get(sessionIds[0])
+    expect(sessionFromManager).toBe(session)
   })
 
   it("should remove own device session", () => {
@@ -135,16 +155,26 @@ describe("SessionManager", () => {
 
     // Create a session for our own device
     const session = createStubSession()
-    const userRecord = new UserRecord(ourPublicKey, nostrSubscribe)
-    userRecord.upsertSession(undefined, session)
+    const testDeviceId = "test-device"
+    const sessionId = `${ourPublicKey}:${testDeviceId}`
+    
+    // Store session in SessionManager and create UserRecord
+    ;(manager as any).sessions.set(sessionId, session)
+    const userRecord = new UserRecord(ourPublicKey, ourPublicKey)
+    userRecord.upsertSession(testDeviceId, sessionId)
     ;(manager as any).userRecords.set(ourPublicKey, userRecord)
 
-    // Close the session
-    session.close()
+    // Remove the session from UserRecord
+    userRecord.deleteSession(testDeviceId)
 
-    // Verify the session is still tracked (since it's in extraSessions)
+    // Verify the session is no longer active in UserRecord
     const record = (manager as any).userRecords.get(ourPublicKey)
-    expect(record.getActiveSessions()).toContain(session)
+    const activeSessionIds = record.getActiveSessionIds()
+    expect(activeSessionIds).toHaveLength(0)
+    
+    // Session should still exist in SessionManager until explicitly removed
+    const sessionFromManager = (manager as any).sessions.get(sessionId)
+    expect(sessionFromManager).toBe(session)
   })
 
   it("should track multiple own device sessions", () => {
@@ -159,16 +189,27 @@ describe("SessionManager", () => {
     // Create sessions for two of our devices
     const session1 = createStubSession()
     const session2 = createStubSession()
-    const userRecord = new UserRecord(ourPublicKey, nostrSubscribe)
-    userRecord.upsertSession("device-1", session1)
-    userRecord.upsertSession("device-2", session2)
+    const sessionId1 = `${ourPublicKey}:device-1`
+    const sessionId2 = `${ourPublicKey}:device-2`
+    
+    // Store sessions in SessionManager and create UserRecord
+    ;(manager as any).sessions.set(sessionId1, session1)
+    ;(manager as any).sessions.set(sessionId2, session2)
+    const userRecord = new UserRecord(ourPublicKey, ourPublicKey)
+    userRecord.upsertSession("device-1", sessionId1)
+    userRecord.upsertSession("device-2", sessionId2)
     ;(manager as any).userRecords.set(ourPublicKey, userRecord)
 
     // Verify both sessions are tracked as active (one per device)
     const record = (manager as any).userRecords.get(ourPublicKey)
-    expect(record.getActiveSessions()).toContain(session1)
-    expect(record.getActiveSessions()).toContain(session2)
-    expect(record.getActiveSessions()).toHaveLength(2)
+    const activeSessionIds = record.getActiveSessionIds()
+    expect(activeSessionIds).toHaveLength(2)
+    expect(activeSessionIds).toContain(sessionId1)
+    expect(activeSessionIds).toContain(sessionId2)
+    
+    // Verify sessions are accessible via SessionManager
+    expect((manager as any).sessions.get(sessionId1)).toBe(session1)
+    expect((manager as any).sessions.get(sessionId2)).toBe(session2)
   })
 
   it("should emit sent messages to onEvent listeners", async () => {
@@ -181,8 +222,13 @@ describe("SessionManager", () => {
 
     const recipient = "recipientPubKey"
     const session = createStubSession()
-    const userRecord = new UserRecord(recipient, nostrSubscribe)
-    userRecord.upsertSession(undefined, session)
+    const testDeviceId = "test-device"
+    const sessionId = `${recipient}:${testDeviceId}`
+    
+    // Store session in SessionManager and create UserRecord
+    ;(manager as any).sessions.set(sessionId, session)
+    const userRecord = new UserRecord(recipient, recipient)
+    userRecord.upsertSession(testDeviceId, sessionId)
     ;(manager as any).userRecords.set(recipient, userRecord)
 
     const received: any[] = []
