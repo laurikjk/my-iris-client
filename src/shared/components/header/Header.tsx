@@ -63,7 +63,7 @@ const Header = ({
       onClick={handleHeaderClick}
       style={slideUp ? {transform: "translateY(0px)"} : undefined}
       className={classNames(
-        "pt-[env(safe-area-inset-top)] min-h-16 flex top-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none w-full cursor-pointer",
+        "pt-[env(safe-area-inset-top)] min-h-16 flex top-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content px-2 z-30 select-none w-full cursor-pointer",
         "fixed md:sticky"
       )}
     >
@@ -72,7 +72,7 @@ const Header = ({
           {leftButton}
           <div
             className={classNames("flex items-center gap-4 w-full text-base-content", {
-              "text-lg font-semibold": bold,
+              "text-2xl font-semibold leading-tight": bold,
             })}
           >
             {children || title}
@@ -90,7 +90,7 @@ const Header = ({
                   <span className="indicator">
                     <UnseenMessagesBadge />
                     <Icon
-                      className="w-5 h-5"
+                      className="w-7 h-7"
                       name={
                         location.pathname.startsWith("/chats")
                           ? "mail-solid"

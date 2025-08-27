@@ -139,10 +139,10 @@ const renderIcon = (item: MenuItem, isActive: boolean) => {
   if (item.activeIcon && item.inactiveIcon) {
     const iconName = isActive ? item.activeIcon : item.inactiveIcon
     if (iconName === "RiAddCircleFill") {
-      return <RiAddCircleFill className="w-6 h-6" />
+      return <RiAddCircleFill className="w-7 h-7" />
     }
     if (iconName === "RiAddCircleLine") {
-      return <RiAddCircleLine className="w-6 h-6" />
+      return <RiAddCircleLine className="w-7 h-7" />
     }
   }
 
@@ -154,7 +154,7 @@ const renderIcon = (item: MenuItem, isActive: boolean) => {
     iconName = `${item.icon}-${isActive ? "solid" : "outline"}`
   }
 
-  return (item.icon || item.activeIcon) && <Icon className="w-5 h-5" name={iconName} />
+  return (item.icon || item.activeIcon) && <Icon className="w-6 h-6" name={iconName} />
 }
 
 export default Footer

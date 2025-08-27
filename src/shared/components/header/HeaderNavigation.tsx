@@ -28,7 +28,7 @@ export const HeaderNavigation = ({showBack}: HeaderNavigationProps) => {
       className="flex items-center justify-center text-foreground p-2 rounded-lg transition-colors"
       aria-label="Go back"
     >
-      <RiArrowLeftLine className="w-6 h-6" />
+      <RiArrowLeftLine className="w-7 h-7" />
     </button>
   )
 }

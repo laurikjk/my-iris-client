@@ -18,7 +18,7 @@ export default function NotificationButton() {
           {({isActive}) => (
             <span className="indicator">
               <UnseenNotificationsBadge />
-              <Icon name={isActive ? "bell-solid" : "bell-outline"} className="w-5 h-5" />
+              <Icon name={isActive ? "bell-solid" : "bell-outline"} className="w-6 h-6" />
             </span>
           )}
         </NavLink>

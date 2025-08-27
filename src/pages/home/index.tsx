@@ -76,8 +76,8 @@ function Index() {
               className="flex items-center gap-2 transition-opacity duration-200 md:hidden ml-2 absolute inset-0 opacity-100"
               data-header-logo
             >
-              <img className="w-6 h-6" src={CONFIG.navLogo} alt={CONFIG.appName} />
-              <span className="font-bold text-2xl">{CONFIG.appName}</span>
+              <img className="w-7 h-7" src={CONFIG.navLogo} alt={CONFIG.appName} />
+              <span className="font-bold text-3xl">{CONFIG.appName}</span>
             </div>
           </div>
         </Header>
