@@ -101,7 +101,6 @@ export const useDoubleRatchetUsers = () => {
 
         // Add new partners to doubleRatchetUsers
         newPartners.forEach((partner) => {
-          console.log("Adding new session partner to doubleRatchetUsers:", partner)
           addDoubleRatchetUser(partner)
         })
 

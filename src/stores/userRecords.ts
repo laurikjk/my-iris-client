@@ -100,9 +100,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
         // Skip all DM functionality if no signer (view-only mode)
         if (!myPrivKey && !nip07Login) {
-          console.log(
-            "No private key or NIP-07 extension - skipping DM initialization (view-only mode)"
-          )
           return
         }
 
@@ -110,26 +107,21 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           throw new Error("No public key")
         }
 
-        console.log("createDefaultInvites called for user:", myPubKey)
-
         // Get or create device ID
         let deviceId = get().deviceId
         if (!deviceId) {
           const stored = await localforage.getItem<string>("deviceId")
           if (stored) {
             deviceId = stored
-            console.log("Using existing device ID:", deviceId)
           } else {
             deviceId = generateDeviceId()
             await localforage.setItem("deviceId", deviceId)
-            console.log("Generated new device ID:", deviceId)
           }
           set({deviceId})
         }
 
         // Create device-specific invite
         if (!get().invites.has(deviceId)) {
-          console.log("Creating new device invite for:", deviceId)
           get().createInvite(`Device ${deviceId.slice(0, 8)}`, deviceId)
           const invite = get().invites.get(deviceId)
           if (!invite) {
@@ -137,15 +129,10 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             return
           }
           const event = invite.getEvent() as RawEvent
-          console.log("Publishing device invite...", {deviceId, eventId: event.id})
           await NDKEventFromRawEvent(event)
             .publish()
-            .then((res) => console.log("Successfully published device invite", res))
             .catch((e) => console.warn("Error publishing device invite:", e))
         }
-
-        console.log("Current invites:", Array.from(get().invites.keys()))
-        console.log("Current userRecords:", Array.from(get().userRecords.keys()))
       },
 
       createInvite: (_label: string, inviteId?: string) => {
@@ -155,9 +142,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
         // Skip if no signer (view-only mode)
         if (!myPrivKey && !nip07Login) {
-          console.log(
-            "No private key or NIP-07 extension - cannot create invite (view-only mode)"
-          )
           return
         }
 
@@ -177,7 +161,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const unsubscribe = invite.listen(decrypt, subscribe, (session, identity) => {
           // uniquely identify by their initial nostr public key to avoid duplicates. TODO for privacy we might not want to actually store this.
           const sessionId = session.state.theirNextNostrPublicKey
-          console.log("got session", sessionId, session)
           if (!identity || !sessionId) return
 
           const deviceId = `${identity}:incoming` // TODO invite acceptors need to communicate their device id in addition to identity?
@@ -187,10 +170,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           const existingSessionId = existingUserRecord?.getActiveSessionId(deviceId)
 
           if (existingSessionId) {
-            console.log(
-              "Session already exists with this device in invite listener, skipping",
-              existingSessionId
-            )
             return
           }
 
@@ -242,8 +221,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         userPubKey: string,
         event: Partial<UnsignedEvent>
       ): Promise<void> => {
-        console.log("sendToUser:", {userPubKey, event})
-
         const myPubKey = useUserStore.getState().publicKey
 
         if (!event.created_at) {
@@ -268,35 +245,18 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const fanOutToOwnDevices = async (sentVia: Set<string>) => {
           if (!myPubKey) return
           const myRecord = get().userRecords.get(myPubKey)
-          console.log("fanOutToOwnDevices - myRecord:", myRecord)
           if (!myRecord) {
-            console.log("No user record found for own user:", myPubKey)
             return
           }
 
           const activeDevices = myRecord.getActiveDevices()
-          console.log("=== MY DEVICES ===")
-          console.log("Total active devices:", activeDevices.length)
-          console.log("My device ID:", get().deviceId)
-          console.log(
-            "All my devices:",
-            activeDevices.map((d) => ({
-              deviceId: d.deviceId,
-              hasSession: !!d.activeSessionId,
-              sessionId: d.activeSessionId,
-              isCurrentDevice: d.deviceId === get().deviceId,
-            }))
-          )
 
           for (const device of activeDevices) {
-            console.log(`Checking device ${device.deviceId}:`)
             if (!device.activeSessionId) continue
             if (sentVia.has(device.activeSessionId)) continue
             try {
               const clone = JSON.parse(JSON.stringify(event)) as Partial<UnsignedEvent>
-              console.log(`Sending to own device session ${device.activeSessionId}`)
               await get().sendMessage(device.activeSessionId, clone)
-              console.log(`Successfully sent to ${device.activeSessionId}`)
             } catch (err) {
               console.warn(
                 `Failed to fan-out to own session ${device.activeSessionId}:`,
@@ -310,11 +270,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const sentSessionIds = new Set<string>()
 
         // ALWAYS fan out to our own devices first
-        console.log("=== SEND TO USER ===")
-        console.log("Sending to:", userPubKey)
-        console.log("My pubkey:", myPubKey)
-        console.log("Is sending to self:", userPubKey === myPubKey)
-        console.log("Fanning out to own devices...")
         await fanOutToOwnDevices(sentSessionIds)
 
         // Get UserRecord for this user
@@ -358,7 +313,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
               try {
                 await get().sendMessage(sessionId, event)
                 sentSessionIds.add(sessionId)
-                console.log(`Sent via session ${sessionId}`)
               } catch (err) {
                 console.warn(`Failed sending via session ${sessionId}:`, err)
               }
@@ -376,7 +330,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         }
 
         // No existing sessions - listen for invites and queue message
-        console.log("No existing sessions, queuing message and listening for invites")
 
         // Special case for self-messaging - we can't wait for our own invite
         if (userPubKey === myPubKey) {
@@ -424,7 +377,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
               }
 
               await get().sendMessage(sessionId, event)
-              console.log("sendToUser new sessionId:", sessionId)
 
               resolve()
             } catch (error) {
@@ -465,7 +417,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         const inviteKey = `${invite.inviter}:${invite.deviceId}`
 
         if (pendingInvites.has(inviteKey)) {
-          console.log("Invite already being processed:", inviteKey)
           await new Promise((resolve) => setTimeout(resolve, 1000))
           const userRecord = get().userRecords.get(invite.inviter)
           const existingSessionId = userRecord?.getActiveSessionId(invite.deviceId)
@@ -488,16 +439,10 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             )
           }
 
-          console.log("acceptInvite called:", {
-            inviter: invite.inviter,
-            deviceId: invite.deviceId,
-            actualDeviceId: deviceId,
-          })
           const userRecord = get().userRecords.get(invite.inviter)
           const existingSessionId = userRecord?.getActiveSessionId(deviceId)
 
           if (existingSessionId) {
-            console.log("Session already exists with this device:", inviteKey)
             return inviteKey
           }
 
@@ -511,10 +456,7 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           )
 
           const e = NDKEventFromRawEvent(event)
-          await e
-            .publish()
-            .then((res) => console.log("published", res))
-            .catch((e) => console.warn("Error publishing event:", e))
+          await e.publish().catch((e) => console.warn("Error publishing event:", e))
 
           // Use the actual deviceId from invite, not session.name
           const sessionId = `${invite.inviter}:${deviceId}`
@@ -588,37 +530,20 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
         // Skip if no signer (view-only mode)
         if (!myPrivKey && !nip07Login) {
-          console.log(
-            "No private key or NIP-07 extension - skipping device listening (view-only mode)"
-          )
           return
         }
 
         if (get().deviceInviteListeners.has(userPubKey)) {
-          console.log("Already listening to user devices for:", userPubKey)
           return
         }
-
-        console.log("Starting to listen for device invites from user:", userPubKey)
 
         // Log current state to debug
         const currentUserRecord = get().userRecords.get(userPubKey)
         if (currentUserRecord) {
-          console.log(
-            "Current sessions for user before listening:",
-            currentUserRecord.getActiveDevices().map((d) => ({
-              deviceId: d.deviceId,
-              sessionId: d.activeSessionId,
-            }))
-          )
+          // Current sessions exist for this user
         }
 
         const unsubscribe = Invite.fromUser(userPubKey, subscribe, async (invite) => {
-          console.log("Received invite from user:", {
-            inviter: invite.inviter,
-            deviceId: invite.deviceId,
-            isOurself: invite.inviter === myPubKey,
-          })
           try {
             if (invite.inviter !== userPubKey) {
               console.warn("Received invite from unexpected user:", {
@@ -642,43 +567,14 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
               }
             }
 
-            console.log("Checking device invite:", {
-              inviteDeviceId,
-              ourDeviceId,
-              isOurDevice: inviteDeviceId === ourDeviceId,
-              inviter: invite.inviter,
-              isOurself: invite.inviter === myPubKey,
-            })
-
             if (userPubKey === myPubKey && inviteDeviceId === ourDeviceId) {
-              console.log(
-                "Skipping invite from our own device to prevent loop:",
-                inviteDeviceId
-              )
               return
             }
 
             const userRecord = get().userRecords.get(userPubKey)
-            console.log("Checking for existing session with deviceId:", inviteDeviceId)
-            console.log("UserRecord exists:", !!userRecord)
-            if (userRecord) {
-              console.log(
-                "Active devices:",
-                userRecord.getActiveDevices().map((d) => ({
-                  deviceId: d.deviceId,
-                  hasSession: !!d.activeSessionId,
-                }))
-              )
-            }
             const existingSessionId = userRecord?.getActiveSessionId(inviteDeviceId)
 
             if (existingSessionId) {
-              console.log(
-                "Session already exists with this device, skipping invite",
-                inviteDeviceId,
-                "sessionId:",
-                existingSessionId
-              )
               return
             }
 
@@ -686,14 +582,12 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
             const inviteKey = `${invite.inviter}:${inviteDeviceId}`
 
             if (pendingInvites.has(inviteKey)) {
-              console.log("Invite already being processed:", inviteKey)
               return
             }
 
             pendingInvites.add(inviteKey)
             try {
-              const sessionId = await get().acceptInvite(invite)
-              console.log("Accepted invite from user device:", sessionId)
+              await get().acceptInvite(invite)
             } finally {
               pendingInvites.delete(inviteKey)
             }
@@ -718,7 +612,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           const newListeners = new Map(listeners)
           newListeners.delete(key)
           set({deviceInviteListeners: newListeners})
-          console.log("Stopped listening to user devices for:", userPubKey)
         }
       },
 
@@ -744,8 +637,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
       },
 
       reset: () => {
-        console.log("Resetting user records store...")
-
         // Close all user records
         const userRecords = get().userRecords
         for (const userRecord of userRecords.values()) {
@@ -779,8 +670,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         // Clear global maps
         inviteListeners.clear()
         pendingInvites.clear()
-
-        console.log("User records store reset completed.")
       },
 
       initializeListeners: async () => {
@@ -791,9 +680,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
 
         // Skip invite listening if no signer (view-only mode)
         if (!myPrivKey && !nip07Login) {
-          console.log(
-            "No private key or NIP-07 extension - skipping invite listeners (view-only mode)"
-          )
           return
         }
 
@@ -803,7 +689,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           if (stored) {
             currentDeviceId = stored
             set({deviceId: stored})
-            console.log("Loaded deviceId from storage in initializeListeners:", stored)
           }
         }
 
@@ -812,21 +697,15 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           return
         }
 
-        console.log("Initializing listener for current device invite:", currentDeviceId)
-
         const invite = get().invites.get(currentDeviceId)
         if (!invite || invite.inviter !== myPubKey) {
-          console.log("No invite found for current device or not our invite")
           return
         }
 
         // Skip if already listening
         if (inviteListeners.has(currentDeviceId)) {
-          console.log("Already listening to current device invite")
           return
         }
-
-        console.log("Starting listener for current device invite:", currentDeviceId)
 
         const decrypt = getDecryptFunction(myPrivKey)
 
@@ -838,10 +717,6 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
           const existingSessionId = userRecord?.getActiveSessionId(currentDeviceId)
 
           if (existingSessionId) {
-            console.log(
-              "Session already exists from our device to this user, skipping",
-              existingSessionId
-            )
             return
           }
 
@@ -875,12 +750,9 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
         })
 
         inviteListeners.set(currentDeviceId, unsubscribe)
-        console.log("Initialization of listener completed for device:", currentDeviceId)
       },
 
       initializeSessionListeners: () => {
-        console.log("Initializing session listeners via sessions store...")
-
         // Sessions store now handles event routing automatically
         // Set up callback to trigger UI updates when session events occur
         useSessionsStore.getState().onSessionEvent(() => {
@@ -952,14 +824,12 @@ export const useUserRecordsStore = create<UserRecordsStore>()(
       onRehydrateStorage: () => (state) => {
         // Trigger session listener initialization after rehydration
         if (state) {
-          console.log("Storage rehydrated, scheduling session listener initialization")
           setTimeout(async () => {
             // Ensure deviceId is loaded before initializing listeners
             if (!state.deviceId) {
               const stored = await localforage.getItem<string>("deviceId")
               if (stored) {
                 state.deviceId = stored
-                console.log("Loaded deviceId from storage during rehydration:", stored)
               }
             }
             state.initializeSessionListeners()

@@ -4,7 +4,7 @@ import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import {usePublicChatsStore} from "@/stores/publicChats"
 import {Avatar} from "@/shared/components/user/Avatar"
 import ProxyImg from "@/shared/components/ProxyImg"
-import {shouldHideAuthor} from "@/utils/visibility"
+import {shouldHideUser} from "@/utils/visibility"
 import {Name} from "@/shared/components/user/Name"
 import {KIND_CHANNEL_MESSAGE, KIND_CHANNEL_CREATE} from "@/utils/constants"
 import {useLocation, NavLink} from "@/navigation"
@@ -98,7 +98,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
 
     sub.on("event", (event) => {
       if (!event || !event.id) return
-      if (shouldHideAuthor(event.pubkey)) return
+      if (shouldHideUser(event.pubkey)) return
       if (!latestMessageInMemory || event.created_at > latestMessageInMemory.created_at) {
         latestMessageInMemory = {
           content: event.content,

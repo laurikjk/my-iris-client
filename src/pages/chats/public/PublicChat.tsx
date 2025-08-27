@@ -3,7 +3,7 @@ import {usePublicChatsStore} from "@/stores/publicChats"
 import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "../utils/messageGrouping"
-import {shouldHideAuthor} from "@/utils/visibility"
+import {shouldHideUser} from "@/utils/visibility"
 import {useNavigate, useLocation} from "@/navigation"
 import PublicChatHeader from "./PublicChatHeader"
 import {useEffect, useState, useRef} from "react"
@@ -78,7 +78,7 @@ const PublicChat = () => {
     // Handle new messages
     sub.on("event", (event) => {
       if (!event || !event.id) return
-      if (shouldHideAuthor(event.pubkey)) return
+      if (shouldHideUser(event.pubkey)) return
 
       const newMessage: MessageType = {
         id: event.id,

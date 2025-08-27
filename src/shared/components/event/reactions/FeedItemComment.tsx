@@ -1,5 +1,5 @@
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
-import {shouldHideAuthor} from "@/utils/visibility"
+import {shouldHideUser} from "@/utils/visibility"
 import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
@@ -56,7 +56,7 @@ function FeedItemComment({event, showReactionCounts = true}: FeedItemCommentProp
       const sub = ndk().subscribe(filter)
 
       sub?.on("event", (e: NDKEvent) => {
-        if (shouldHideAuthor(e.author.pubkey)) return
+        if (shouldHideUser(e.author.pubkey)) return
         // Count if this event has current as root or is replying to it
         if (getEventRoot(e) !== event.id && getEventReplyingTo(e) !== event.id) return
         replies.add(e.id)

@@ -1,6 +1,6 @@
 import FollowList from "@/pages/user/components/FollowList"
 import Modal from "@/shared/components/ui/Modal.tsx"
-import {shouldHideAuthor} from "@/utils/visibility"
+import {shouldHideUser} from "@/utils/visibility"
 import {Fragment, useMemo, useState} from "react"
 import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {Link} from "@/navigation"
@@ -23,8 +23,7 @@ export default function MutedBy({pubkey}: {pubkey: string}) {
   const mutedBy = socialGraph().getUserMutedBy(pubkey)
   const isRootMuted = mutedBy.has(root)
 
-  const showMutedWarning =
-    (totalMutedBy > 0 && shouldHideAuthor(pubkey, 3)) || isRootMuted
+  const showMutedWarning = (totalMutedBy > 0 && shouldHideUser(pubkey, 3)) || isRootMuted
 
   const [showMuterList, setShowMuterList] = useState<boolean>(false)
 

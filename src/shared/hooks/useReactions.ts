@@ -1,6 +1,6 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
-import {shouldHideAuthor} from "@/utils/visibility"
+import {shouldHideUser} from "@/utils/visibility"
 import {ndk} from "@/utils/ndk"
 
 export interface ReactionInfo {
@@ -30,7 +30,7 @@ export function useReactionsByAuthor(eventId: string) {
     const sub = ndk().subscribe(filter)
 
     sub?.on("event", (reactionEvent: NDKEvent) => {
-      if (shouldHideAuthor(reactionEvent.author.pubkey)) return
+      if (shouldHideUser(reactionEvent.author.pubkey)) return
 
       const authorPubkey = reactionEvent.pubkey
 

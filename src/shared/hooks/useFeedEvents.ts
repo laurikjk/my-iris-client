@@ -2,7 +2,7 @@ import {useEffect, useMemo, useRef, useState, useCallback} from "react"
 import {eventComparator} from "../components/feed/utils"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {shouldHideAuthor, shouldHideEvent} from "@/utils/visibility"
+import {shouldHideUser, shouldHideEvent} from "@/utils/visibility"
 import socialGraph from "@/utils/socialGraph"
 import {seenEventIds} from "@/utils/memcache"
 import {useUserStore} from "@/stores/user"
@@ -237,7 +237,7 @@ export default function useFeedEvents({
         socialGraph().getFollowDistance(event.pubkey) >= 5 &&
         !(filters.authors && filters.authors.includes(event.pubkey)) &&
         // Only include events that aren't heavily muted
-        !shouldHideAuthor(event.pubkey, undefined, true)
+        !shouldHideUser(event.pubkey, undefined, true)
     )
   }, [eventsVersion, hideEventsByUnknownUsers, filters.authors])
 

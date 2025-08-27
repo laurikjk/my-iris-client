@@ -9,7 +9,7 @@ export const clearVisibilityCache = () => {
   cache.clear()
 }
 
-export const shouldHideAuthor = (
+export const shouldHideUser = (
   pubKey: string,
   threshold = 1,
   allowUnknown = false
@@ -59,7 +59,7 @@ export const shouldHideEvent = (
   allowUnknown = false
 ): boolean => {
   // Hide if author should be hidden
-  if (shouldHideAuthor(event.pubkey, threshold, allowUnknown)) {
+  if (shouldHideUser(event.pubkey, threshold, allowUnknown)) {
     return true
   }
 
@@ -70,6 +70,6 @@ export const shouldHideEvent = (
 
   return mentionedPubkeys.some((pubkey) =>
     // mentioned users can be unknown but not overmuted
-    shouldHideAuthor(pubkey, threshold, true)
+    shouldHideUser(pubkey, threshold, true)
   )
 }

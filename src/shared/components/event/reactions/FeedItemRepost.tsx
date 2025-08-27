@@ -11,7 +11,7 @@ import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
 import Icon from "../../Icons/Icon"
 
-import {shouldHideAuthor} from "@/utils/visibility"
+import {shouldHideUser} from "@/utils/visibility"
 import {useUserStore} from "@/stores/user"
 import {KIND_REPOST} from "@/utils/constants"
 
@@ -75,7 +75,7 @@ function FeedItemRepost({event, showReactionCounts = true}: FeedItemRepostProps)
       }, 300)
 
       sub?.on("event", (repostEvent: NDKEvent) => {
-        if (shouldHideAuthor(repostEvent.author.pubkey)) return
+        if (shouldHideUser(repostEvent.author.pubkey)) return
         setRepostsByAuthor((prev) => {
           const newSet = new Set(prev)
           newSet.add(repostEvent.pubkey)

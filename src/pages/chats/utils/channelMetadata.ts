@@ -1,5 +1,5 @@
 import {updateChannelSearchIndex, getCachedChannel} from "./channelSearch"
-import {shouldHideAuthor} from "@/utils/visibility"
+import {shouldHideUser} from "@/utils/visibility"
 import {ndk} from "@/utils/ndk"
 
 // NIP-28 event kinds
@@ -40,7 +40,7 @@ export const getChannelsByFollowed = async (): Promise<ChannelMetadata[]> => {
     for (const event of Array.from(events)) {
       try {
         // Skip if author should be hidden
-        if (shouldHideAuthor(event.pubkey)) {
+        if (shouldHideUser(event.pubkey)) {
           continue
         }
 

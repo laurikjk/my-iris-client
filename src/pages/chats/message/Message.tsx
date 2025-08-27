@@ -3,7 +3,7 @@ import MessageActionButtons from "../reaction/MessageActionButtons"
 import MessageReactions from "../reaction/MessageReactions"
 import {Avatar} from "@/shared/components/user/Avatar"
 import HyperText from "@/shared/components/HyperText"
-import {shouldHideAuthor} from "@/utils/visibility"
+import {shouldHideUser} from "@/utils/visibility"
 import {Name} from "@/shared/components/user/Name"
 import {useMemo, useEffect, useState} from "react"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
@@ -107,7 +107,7 @@ const Message = ({
 
     sub.on("event", (reactionEvent) => {
       if (!reactionEvent || !reactionEvent.id) return
-      if (shouldHideAuthor(reactionEvent.pubkey)) return
+      if (shouldHideUser(reactionEvent.pubkey)) return
 
       setLocalReactions((prev) => ({
         ...prev,

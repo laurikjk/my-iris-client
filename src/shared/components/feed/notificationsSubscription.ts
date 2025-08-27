@@ -1,6 +1,6 @@
 import {useSettingsStore} from "@/stores/settings"
 import socialGraph, {socialGraphEvents, socialGraphLoaded} from "@/utils/socialGraph"
-import {shouldHideAuthor, shouldHideEvent} from "@/utils/visibility"
+import {shouldHideUser, shouldHideEvent} from "@/utils/visibility"
 import {getTag, getZappingUser, getZapAmount} from "@/utils/nostr.ts"
 import {notifications, Notification as IrisNotification} from "@/utils/notifications"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
@@ -130,7 +130,7 @@ export const startNotificationsSubscription = debounce(async (myPubKey?: string)
     } else {
       // For zap notifications, check the zapping user
       const zappingUser = getZappingUser(event)
-      if (zappingUser && shouldHideAuthor(zappingUser)) return
+      if (zappingUser && shouldHideUser(zappingUser)) return
     }
     const eTag = getTag("e", event.tags)
     if (eTag && event.created_at) {
@@ -155,7 +155,7 @@ export const startNotificationsSubscription = debounce(async (myPubKey?: string)
       }
 
       // Don't add muted users to existing notifications either
-      if (shouldHideAuthor(user)) {
+      if (shouldHideUser(user)) {
         return
       }
 

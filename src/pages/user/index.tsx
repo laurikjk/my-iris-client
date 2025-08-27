@@ -8,7 +8,7 @@ import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import {Name} from "@/shared/components/user/Name"
 import {type FeedConfig, useFeedStore} from "@/stores/feed"
-import {shouldHideAuthor} from "@/utils/visibility"
+import {shouldHideUser} from "@/utils/visibility"
 import Widget from "@/shared/components/ui/Widget"
 import useFollows from "@/shared/hooks/useFollows"
 import {PublicKey} from "@/shared/utils/PublicKey"
@@ -165,7 +165,7 @@ function UserPage({pubKey}: {pubKey: string}) {
 
   const visibleTabs = tabs.filter(
     (tab) =>
-      (tab.path !== "you" || (myPubKey && !shouldHideAuthor(pubKeyHex))) &&
+      (tab.path !== "you" || (myPubKey && !shouldHideUser(pubKeyHex))) &&
       (tab.path !== "market" || hasMarketEvents || activeTab === "market")
   )
 

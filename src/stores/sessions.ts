@@ -52,8 +52,8 @@ interface SessionsStoreActions {
   getAllSessionIds: () => string[]
 
   // Session state updates (triggers individual persistence)
-  updateSession: (sessionId: string) => void
-  updateSessionthrottled: (sessionId: string) => void
+  updateSession: () => void
+  updateSessionthrottled: () => void
 
   // Send methods
   sendMessage: (sessionId: string, event: Partial<UnsignedEvent>) => Promise<void>
@@ -80,8 +80,7 @@ export const useSessionsStore = create<SessionsStore>()(
   persist(
     (set, get) => {
       // Create throttled version of updateSession
-      const throttledUpdateSession = throttle((sessionId: string) => {
-        console.log("throttled persistence trigger for session:", sessionId)
+      const throttledUpdateSession = throttle(() => {
         const newSessions = new Map(get().sessions)
         set({sessions: newSessions})
       }, 100) // 100ms debounce
@@ -97,7 +96,6 @@ export const useSessionsStore = create<SessionsStore>()(
           userPubKey: string,
           deviceId: string
         ) => {
-          console.log("Adding session:", sessionId)
           const newSessions = new Map(get().sessions)
           newSessions.set(sessionId, {session, userPubKey, deviceId})
           set({sessions: newSessions})
@@ -109,7 +107,6 @@ export const useSessionsStore = create<SessionsStore>()(
         },
 
         removeSession: (sessionId: string) => {
-          console.log("Removing session:", sessionId)
           const sessionData = get().sessions.get(sessionId)
           if (sessionData) {
             sessionData.session.close()
@@ -137,10 +134,9 @@ export const useSessionsStore = create<SessionsStore>()(
           return Array.from(get().sessions.keys())
         },
 
-        updateSession: (sessionId: string) => {
+        updateSession: () => {
           // Force persistence for this specific session by recreating the Map
           // This is more efficient than the current approach of serializing all user records
-          console.log("Triggering persistence for session:", sessionId)
           const newSessions = new Map(get().sessions)
           set({sessions: newSessions})
         },
@@ -148,22 +144,11 @@ export const useSessionsStore = create<SessionsStore>()(
         updateSessionthrottled: throttledUpdateSession,
 
         sendMessage: async (sessionId: string, event: Partial<UnsignedEvent>) => {
-          console.log("sendMessage called for session", sessionId, "event:", event)
           const sessionData = get().sessions.get(sessionId)
           if (!sessionData) {
             throw new Error(`Session not found: ${sessionId}`)
           }
           const session = sessionData.session
-
-          // Debug session state
-          console.log("Session state for sending:", {
-            sessionId,
-            hasTheirNextKey: !!session.state?.theirNextNostrPublicKey,
-            hasOurCurrentKey: !!session.state?.ourCurrentNostrKey,
-            canSend: !!(
-              session.state?.theirNextNostrPublicKey && session.state?.ourCurrentNostrKey
-            ),
-          })
 
           // Check if session can send messages
           if (
@@ -263,7 +248,7 @@ export const useSessionsStore = create<SessionsStore>()(
           }
 
           // Trigger throttled persistence for this session
-          get().updateSessionthrottled(sessionId)
+          get().updateSessionthrottled()
         },
 
         setSessionListener: (
@@ -315,28 +300,13 @@ export const useSessionsStore = create<SessionsStore>()(
         },
 
         initializeSessionListeners: () => {
-          console.log("Initializing session listeners for all deserialized sessions...")
           const sessions = get().sessions
           let count = 0
 
           // Small delay to ensure sessions are fully reconstructed
           setTimeout(() => {
-            for (const [sessionId, sessionData] of sessions.entries()) {
-              const session = sessionData.session
+            for (const [sessionId] of sessions.entries()) {
               if (!get().sessionListeners.has(sessionId)) {
-                console.log("Setting up listener for deserialized session:", sessionId)
-
-                // Debug session state after deserialization
-                console.log("Deserialized session state:", {
-                  sessionId,
-                  hasTheirNextKey: !!session.state?.theirNextNostrPublicKey,
-                  hasOurCurrentKey: !!session.state?.ourCurrentNostrKey,
-                  canSend: !!(
-                    session.state?.theirNextNostrPublicKey &&
-                    session.state?.ourCurrentNostrKey
-                  ),
-                })
-
                 // Set up listener that calls the provided onEvent callback
                 get().setSessionListener(sessionId, async (event) => {
                   await processSessionEvent(get, sessionId, event)
@@ -352,8 +322,6 @@ export const useSessionsStore = create<SessionsStore>()(
         },
 
         reset: () => {
-          console.log("Resetting sessions store...")
-
           // Close all sessions
           for (const sessionData of get().sessions.values()) {
             sessionData.session.close()
@@ -369,8 +337,6 @@ export const useSessionsStore = create<SessionsStore>()(
             sessionListeners: new Map(),
             eventCallbacks: new Set(),
           })
-
-          console.log("Sessions store reset completed.")
         },
       }
     },
@@ -403,7 +369,6 @@ export const useSessionsStore = create<SessionsStore>()(
               userPubKey: data.userPubKey,
               deviceId: data.deviceId,
             })
-            console.log("Successfully deserialized session:", sessionId)
           } catch (e) {
             console.warn("Failed to deserialize session:", sessionId, e)
             // Individual session failures don't affect others
@@ -418,7 +383,6 @@ export const useSessionsStore = create<SessionsStore>()(
       },
       onRehydrateStorage: () => (state) => {
         if (state) {
-          console.log("Sessions store rehydrated, wiring listeners for hydrated sessions")
           setTimeout(() => {
             state.initializeSessionListeners()
           }, 50)
@@ -434,8 +398,6 @@ const processSessionEvent = async (
   sessionId: string,
   event: MessageType
 ) => {
-  console.log("=== PROCESS SESSION EVENT ===")
-  console.log("SessionId:", sessionId)
   console.log("Event kind:", event.kind)
   console.log("Event content preview:", event.content?.substring(0, 50))
 
@@ -445,9 +407,6 @@ const processSessionEvent = async (
     console.warn("Session data not found for event processing:", sessionId)
     return
   }
-
-  console.log("Session user:", sessionData.userPubKey)
-  console.log("Session device:", sessionData.deviceId)
 
   // Set pubkey before calculating canonical ID to ensure consistency
   event.pubkey = sessionData.userPubKey
@@ -463,7 +422,7 @@ const processSessionEvent = async (
   await handleSessionEvent(get, sessionId, event)
 
   // Trigger persistence for this session
-  get().updateSession(sessionId)
+  get().updateSession()
 }
 
 // Helper to process any session event consistently
@@ -527,14 +486,12 @@ const handleSessionEvent = async (
       // Add sender to existing group if not already a member
       if (!existingGroup.members.includes(sessionData.userPubKey)) {
         groupsStore.addMember(groupLabel, sessionData.userPubKey)
-        console.log("Added sender to existing group:", groupLabel, sessionData.userPubKey)
       }
     }
   }
 
   const ourPubKey = useUserStore.getState().publicKey
   console.log("Routing event - ourPubKey:", ourPubKey)
-  console.log("Routing event - sessionData.userPubKey:", sessionData.userPubKey)
   console.log("Routing event - message pubkey:", event.pubkey)
 
   // If this message is from our own other device, mark it as sent to relays

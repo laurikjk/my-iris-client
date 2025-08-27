@@ -23,7 +23,7 @@ test.describe("User muting functionality", () => {
 
     // Test that our code changes don't break the app
     // The main test is that muted users are filtered from feeds
-    // which is handled by the shouldHideAuthor function we fixed
+    // which is handled by the shouldHideUser function we fixed
     expect(true).toBe(true)
   })
 
@@ -37,7 +37,7 @@ test.describe("User muting functionality", () => {
     await expect(page.locator("#main-content")).toBeVisible()
 
     // Our fixes should allow proper muting functionality
-    // The core fix is in shouldHideAuthor checking getMutedByUser
+    // The core fix is in shouldHideUser checking getMutedByUser
     expect(true).toBe(true)
   })
 })
