@@ -3,6 +3,7 @@ import {useState} from "react"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll.tsx" // Make sure to import InfiniteScroll
 import ProfileCard from "@/shared/components/user/ProfileCard"
 import useFollows from "@/shared/hooks/useFollows"
+import {shouldHideUser} from "@/utils/visibility"
 
 interface FollowListProps {
   follows?: string[]
@@ -26,10 +27,13 @@ function FollowList({
 
   const localFollows = follows || f
 
+  // Filter out hidden users
+  const visibleFollows = localFollows.filter((pubkey) => !shouldHideUser(pubkey))
+
   const loadMoreFollows = () => {
-    if (displayCount < localFollows.length) {
+    if (displayCount < visibleFollows.length) {
       setDisplayCount((prevCount) =>
-        Math.min(prevCount + initialDisplayCount * 2, localFollows.length)
+        Math.min(prevCount + initialDisplayCount * 2, visibleFollows.length)
       ) // Load 10 more items at a time
     }
   }
@@ -38,7 +42,7 @@ function FollowList({
     <>
       <InfiniteScroll onLoadMore={loadMoreFollows}>
         <div className="flex flex-col gap-2">
-          {localFollows.slice(0, displayCount).map((pubkey) => (
+          {visibleFollows.slice(0, displayCount).map((pubkey) => (
             <ProfileCard key={pubkey} pubKey={pubkey} showAbout={showAbout} />
           ))}
         </div>

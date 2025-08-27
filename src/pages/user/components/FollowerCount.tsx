@@ -4,6 +4,7 @@ import socialGraph from "@/utils/socialGraph.ts"
 import {NostrEvent} from "nostr-social-graph"
 import {formatAmount} from "@/utils/utils.ts"
 import {ndk} from "@/utils/ndk"
+import {shouldHideUser} from "@/utils/visibility"
 
 import Modal from "@/shared/components/ui/Modal.tsx"
 
@@ -12,7 +13,10 @@ import FollowList from "./FollowList.tsx"
 
 const FollowerCount = ({pubKey}: {pubKey: string}) => {
   const initialFollowers = useMemo(
-    () => Array.from(socialGraph().getFollowersByUser(pubKey)),
+    () =>
+      Array.from(socialGraph().getFollowersByUser(pubKey)).filter(
+        (follower) => !shouldHideUser(follower)
+      ),
     [pubKey]
   )
   const [followers, setFollowers] = useState<string[]>(initialFollowers)
@@ -28,7 +32,9 @@ const FollowerCount = ({pubKey}: {pubKey: string}) => {
       const sub = ndk().subscribe(filter)
       sub.on("event", (event) => {
         socialGraph().handleEvent(event as NostrEvent)
-        const newFollowers = Array.from(socialGraph().getFollowersByUser(pubKey))
+        const newFollowers = Array.from(socialGraph().getFollowersByUser(pubKey)).filter(
+          (follower) => !shouldHideUser(follower)
+        )
         setFollowers(newFollowers)
       })
 

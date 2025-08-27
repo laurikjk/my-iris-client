@@ -7,6 +7,7 @@ import {ndk} from "@/utils/ndk"
 import {Link} from "@/navigation"
 import {nip19} from "nostr-tools"
 import {KIND_ZAP_RECEIPT} from "@/utils/constants"
+import {shouldHideUser} from "@/utils/visibility"
 
 interface ZapsBarProps {
   event: NDKEvent
@@ -33,7 +34,7 @@ export default function ZapsBar({event}: ZapsBarProps) {
       processedEvents.add(zapEvent.id)
 
       const zapInfo = parseZapReceipt(zapEvent)
-      if (zapInfo) {
+      if (zapInfo && !shouldHideUser(zapInfo.pubkey)) {
         setZaps((prev) => {
           const exists = prev.some((z) => z.id === zapEvent.id)
           if (exists) return prev

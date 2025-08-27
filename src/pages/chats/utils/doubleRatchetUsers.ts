@@ -5,6 +5,7 @@ import {ndk} from "@/utils/ndk"
 import debounce from "lodash/debounce"
 import Fuse from "fuse.js"
 import {KIND_METADATA} from "@/utils/constants"
+import {shouldHideUser} from "@/utils/visibility"
 
 export interface DoubleRatchetUser {
   pubkey: string
@@ -132,12 +133,15 @@ export const searchDoubleRatchetUsers = (query: string): DoubleRatchetUser[] => 
   }
 
   const results = fuse.search(query)
-  return results.map((result) => result.item)
+  // Filter out hidden users from search results
+  return results
+    .map((result) => result.item)
+    .filter((user) => !shouldHideUser(user.pubkey))
 }
 
 // Get all double ratchet users
 export const getAllDoubleRatchetUsers = (): DoubleRatchetUser[] => {
-  return Array.from(userData.values())
+  return Array.from(userData.values()).filter((user) => !shouldHideUser(user.pubkey))
 }
 
 // Get all pubkeys from the doubleRatchetUsers Set (for cleanup)

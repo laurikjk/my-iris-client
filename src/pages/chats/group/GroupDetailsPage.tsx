@@ -2,6 +2,7 @@ import {UserRow} from "@/shared/components/user/UserRow"
 import {useParams} from "@/navigation"
 import {useGroupsStore} from "@/stores/groups"
 import Header from "@/shared/components/header/Header"
+import {shouldHideUser} from "@/utils/visibility"
 
 const GroupDetailsPage = () => {
   const params = useParams()
@@ -33,11 +34,13 @@ const GroupDetailsPage = () => {
         <div>
           <div className="font-semibold mb-4">Members</div>
           <ul className="space-y-4">
-            {group.members.map((pubkey) => (
-              <li key={pubkey}>
-                <UserRow pubKey={pubkey} avatarWidth={32} />
-              </li>
-            ))}
+            {group.members
+              .filter((pubkey) => !shouldHideUser(pubkey))
+              .map((pubkey) => (
+                <li key={pubkey}>
+                  <UserRow pubKey={pubkey} avatarWidth={32} />
+                </li>
+              ))}
           </ul>
         </div>
       </div>
