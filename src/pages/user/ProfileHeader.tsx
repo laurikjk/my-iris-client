@@ -161,7 +161,7 @@ const ProfileHeader = ({
             externalIdentities={{github: ""}}
           />
         </div>
-        <div className="flex flex-row gap-4 p-4 items-end flex-wrap">
+        <div className="flex flex-row gap-4 px-4 pb-2 items-end flex-wrap">
           <FollowerCount pubKey={pubKeyHex} />
           <FollowsCount pubKey={pubKeyHex} />
         </div>

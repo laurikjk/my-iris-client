@@ -8,7 +8,6 @@ import {shouldHideUser} from "@/utils/visibility"
 
 import Modal from "@/shared/components/ui/Modal.tsx"
 
-import Icon from "@/shared/components/Icons/Icon.tsx"
 import FollowList from "./FollowList.tsx"
 
 const FollowerCount = ({pubKey}: {pubKey: string}) => {
@@ -51,7 +50,7 @@ const FollowerCount = ({pubKey}: {pubKey: string}) => {
   return (
     <>
       <button className="btn btn-sm btn-neutral" onClick={handleFollowersClick}>
-        <Icon name="user-v2" /> <span>Known followers</span>{" "}
+        <span>Known followers</span>{" "}
         <span className="badge">{formatAmount(followers.length)}</span>
       </button>
       {showFollowList && (

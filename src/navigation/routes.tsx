@@ -8,6 +8,7 @@ import WalletPage from "@/pages/wallet/WalletPage"
 import {AboutPage} from "@/pages/HelpPage"
 import SearchPage from "@/pages/search"
 import HomePage from "@/pages/home"
+import NewNote from "@/pages/new"
 
 // Lazy load components
 const ChatsPage = lazy(() => import("@/pages/chats"))
@@ -18,6 +19,7 @@ const MapPage = lazy(() => import("@/pages/map"))
 
 export const routes: RouteDefinition[] = [
   {path: "/", component: HomePage, alwaysKeep: true},
+  {path: "/new", component: NewNote},
   {path: "/notifications", component: Notifications},
   {path: "/wallet", component: WalletPage},
   {path: "/chats/*", component: ChatsPage},

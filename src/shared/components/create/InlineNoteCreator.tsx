@@ -6,6 +6,8 @@ interface InlineNoteCreatorProps {
   repliedEvent?: NDKEvent
   placeholder?: string
   className?: string
+  alwaysExpanded?: boolean
+  showPreview?: boolean
 }
 
 function InlineNoteCreator({
@@ -13,6 +15,8 @@ function InlineNoteCreator({
   repliedEvent,
   placeholder = "What's on your mind?",
   className = "",
+  alwaysExpanded = false,
+  showPreview = false,
 }: InlineNoteCreatorProps) {
   const actualPlaceholder = repliedEvent ? "Write your reply..." : placeholder
 
@@ -24,7 +28,9 @@ function InlineNoteCreator({
       autofocus={false}
       variant="inline"
       className={className}
-      expandOnFocus={true}
+      expandOnFocus={!alwaysExpanded}
+      alwaysExpanded={alwaysExpanded}
+      showPreview={showPreview}
       onPublish={onPublish ? () => onPublish(null as unknown as NDKEvent) : undefined}
     />
   )

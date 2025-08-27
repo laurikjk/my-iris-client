@@ -1,4 +1,3 @@
-import Icon from "@/shared/components/Icons/Icon.tsx"
 import useFollows from "@/shared/hooks/useFollows.ts"
 import Modal from "@/shared/components/ui/Modal"
 import socialGraph from "@/utils/socialGraph"
@@ -27,7 +26,7 @@ function FollowsCount({pubKey}: FollowsCountProps) {
   return (
     <>
       <button className="btn btn-sm btn-neutral" onClick={handleFollowsClick}>
-        <Icon name="stars" /> <span>Follows </span>{" "}
+        <span>Follows </span>{" "}
         <span className="badge">{formatAmount(follows.length)}</span>
       </button>
       {follows?.includes(myPubKey) && (

@@ -1,8 +1,6 @@
 import classNames from "classnames"
 import {ReactNode} from "react"
-import {RiLockLine} from "@remixicon/react"
-
-import PublishButton from "@/shared/components/ui/PublishButton"
+import {RiLockLine, RiAddCircleLine, RiAddCircleFill} from "@remixicon/react"
 import {useWalletBalance} from "@/shared/hooks/useWalletBalance"
 import NavLink from "@/shared/components/nav/NavLink" // Adjusted import path
 import Icon from "@/shared/components/Icons/Icon" // Add this import
@@ -43,11 +41,9 @@ const Footer = () => {
       badge: balance !== null ? formatAmount(balance) : undefined,
     },
     {
-      el: (
-        <div className="flex flex-grow p-4 justify-center items-center cursor-pointer">
-          <PublishButton showLabel={false} />
-        </div>
-      ),
+      link: "/new",
+      activeIcon: "RiAddCircleFill",
+      inactiveIcon: "RiAddCircleLine",
       loggedInOnly: true,
       requireSigner: true,
     },
@@ -139,6 +135,18 @@ const FooterNavItem = ({item}: {item: MenuItem; readonly: boolean}) => {
 }
 
 const renderIcon = (item: MenuItem, isActive: boolean) => {
+  // Handle Remix Icons
+  if (item.activeIcon && item.inactiveIcon) {
+    const iconName = isActive ? item.activeIcon : item.inactiveIcon
+    if (iconName === "RiAddCircleFill") {
+      return <RiAddCircleFill className="w-6 h-6" />
+    }
+    if (iconName === "RiAddCircleLine") {
+      return <RiAddCircleLine className="w-6 h-6" />
+    }
+  }
+
+  // Handle custom icons
   let iconName
   if (item.activeIcon && item.inactiveIcon) {
     iconName = isActive ? item.activeIcon : item.inactiveIcon

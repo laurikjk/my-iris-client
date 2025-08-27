@@ -25,6 +25,7 @@ interface BaseNoteCreatorProps {
   variant?: "inline" | "modal"
   onPublish?: () => void
   expandOnFocus?: boolean
+  alwaysExpanded?: boolean
 }
 
 export function BaseNoteCreator({
@@ -38,6 +39,7 @@ export function BaseNoteCreator({
   variant = "inline",
   onPublish: onPublishCallback,
   expandOnFocus = false,
+  alwaysExpanded = false,
 }: BaseNoteCreatorProps) {
   const myPubKey = usePublicKey()
   const ndkInstance = ndk()
@@ -325,33 +327,33 @@ export function BaseNoteCreator({
   if (!myPubKey) return null
 
   const isModal = variant === "modal"
-  const shouldExpand = !expandOnFocus || isFocused || text.trim()
+  const shouldExpand = alwaysExpanded || !expandOnFocus || isFocused || text.trim()
   const containerClass = isModal
     ? "flex flex-col gap-4 pt-4"
     : `border-b border-custom ${className}`
 
   return (
     <div ref={containerRef} className={containerClass}>
-      {/* Edit/Preview toggle for modal */}
-      {showPreview && isModal && text.trim() && (
+      {/* Edit/Preview toggle */}
+      {showPreview && shouldExpand && (
         <div className="flex gap-2 px-4 pb-3">
           <button
             onClick={() => setPreviewMode(false)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors select-none ${
+            className={
               !previewMode
-                ? "bg-primary text-primary-content"
-                : "bg-base-200 text-base-content/60 hover:text-base-content hover:bg-base-300"
-            }`}
+                ? "px-4 py-1.5 rounded-full text-sm font-medium !bg-primary !text-primary-content hover:!bg-primary hover:!text-primary-content focus:!bg-primary focus:!text-primary-content active:!bg-primary active:!text-primary-content outline-none select-none"
+                : "px-4 py-1.5 rounded-full text-sm font-medium bg-base-200 text-base-content/60 hover:text-base-content hover:bg-base-300 focus:bg-base-300 focus:text-base-content outline-none select-none"
+            }
           >
             Edit
           </button>
           <button
             onClick={() => setPreviewMode(true)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors select-none ${
+            className={
               previewMode
-                ? "bg-primary text-primary-content"
-                : "bg-base-200 text-base-content/60 hover:text-base-content hover:bg-base-300"
-            }`}
+                ? "px-4 py-1.5 rounded-full text-sm font-medium !bg-primary !text-primary-content hover:!bg-primary hover:!text-primary-content focus:!bg-primary focus:!text-primary-content active:!bg-primary active:!text-primary-content outline-none select-none"
+                : "px-4 py-1.5 rounded-full text-sm font-medium bg-base-200 text-base-content/60 hover:text-base-content hover:bg-base-300 focus:bg-base-300 focus:text-base-content outline-none select-none"
+            }
           >
             Preview
           </button>
@@ -388,7 +390,9 @@ export function BaseNoteCreator({
                 onKeyDown={handleKeyDown}
                 placeholder={placeholder}
                 className={`w-full bg-transparent resize-none outline-none placeholder-base-content/50 ${
-                  isModal ? "textarea border-0 focus:outline-none p-0 text-lg h-full" : ""
+                  isModal
+                    ? "textarea border-0 focus:outline-none p-0 text-lg h-full"
+                    : "text-base"
                 }`}
                 style={{
                   minHeight: (() => {
@@ -404,8 +408,17 @@ export function BaseNoteCreator({
                 }}
               />
             ) : (
-              <div className="text-lg">
-                <HyperText>{text}</HyperText>
+              <div
+                className={isModal ? "text-lg" : "text-base"}
+                style={{
+                  minHeight: (() => {
+                    if (isModal) return "100%"
+                    if (shouldExpand) return "80px"
+                    return "32px"
+                  })(),
+                }}
+              >
+                <HyperText textPadding={false}>{text}</HyperText>
               </div>
             )}
           </div>
