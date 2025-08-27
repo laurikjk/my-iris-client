@@ -9,7 +9,9 @@ import config from "config"
 export default defineConfig({
   plugins: [
     nodePolyfills(),
-    react(),
+    react({
+      fastRefresh: true,
+    }),
     VitePWA({
       injectManifest: {
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
@@ -118,6 +120,10 @@ export default defineConfig({
     exclude: ["tests/**/*", "node_modules/**/*"],
   },
   server: {
+    hmr: {
+      overlay: true,
+      port: 5173,
+    },
     proxy: {
       "/user": {
         target: "http://localhost:8000",
@@ -136,5 +142,9 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+  },
+  optimizeDeps: {
+    exclude: ["@vite/client", "@vite/env"],
+    include: ["react", "react-dom"],
   },
 })

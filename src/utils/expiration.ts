@@ -52,20 +52,3 @@ export function formatExpirationTime(expirationTimestamp: number): string {
   if (diff < month * 2.5) return `${Math.round(diff / week)}w`
   return `${Math.round(diff / month)}mo`
 }
-
-/**
- * Get expiration info including formatted text and expired status
- * @param expirationTimestamp - Unix timestamp in seconds
- * @returns Object with text and expired status, or null if invalid
- */
-export function getExpirationInfo(
-  expirationTimestamp: number | undefined | null
-): {text: string; expired: boolean} | null {
-  if (!expirationTimestamp || isNaN(expirationTimestamp)) return null
-
-  const now = Math.floor(Date.now() / 1000)
-  const expired = expirationTimestamp <= now
-  const text = formatExpirationTime(expirationTimestamp)
-
-  return {text, expired}
-}

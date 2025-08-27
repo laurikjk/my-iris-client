@@ -3,7 +3,8 @@ import {eventRegex} from "@/shared/components/embed/nostr/NostrNote"
 import {decode} from "light-bolt11-decoder"
 import {profileCache} from "./profileCache"
 import AnimalName from "./AnimalName"
-import {nip19} from "nostr-tools"
+import {nip19, type NostrEvent} from "nostr-tools"
+import {makeZapRequest} from "nostr-tools/nip57"
 import {ndk, DEFAULT_RELAYS} from "@/utils/ndk"
 import {KIND_REPOST, KIND_TEXT_NOTE, KIND_ZAP_RECEIPT} from "@/utils/constants"
 
@@ -179,9 +180,6 @@ export async function createZapInvoice(
     throw new Error("This lightning address doesn't support Nostr zaps")
   }
 
-  // Create zap request event
-  const nostrTools = await import("nostr-tools/nip57")
-
   // Get relays from NDK pool or use defaults
   const ndkInstance = ndk()
   const connectedRelays = ndkInstance.pool?.connectedRelays()?.map((r) => r.url) || []
@@ -189,11 +187,11 @@ export async function createZapInvoice(
 
   // Get the raw event which has all required properties
   const rawEvent = event.rawEvent ? event.rawEvent() : event
-  
+
   // Create event zap request (not profile zap)
-  const zapRequest = nostrTools.makeZapRequest({
-    event: rawEvent as any,  // nostr-tools expects Event type
-    amount: amountMsats,  // nostr-tools expects number, not string
+  const zapRequest = makeZapRequest({
+    event: rawEvent as NostrEvent, // nostr-tools expects Event type
+    amount: amountMsats, // nostr-tools expects number, not string
     comment: comment || "",
     relays: relaysToUse.slice(0, 4), // Use first 4 relays as per NIP-57
   })
