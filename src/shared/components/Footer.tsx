@@ -7,9 +7,9 @@ import {useWalletBalance} from "@/shared/hooks/useWalletBalance"
 import NavLink from "@/shared/components/nav/NavLink" // Adjusted import path
 import Icon from "@/shared/components/Icons/Icon" // Add this import
 import {Avatar} from "@/shared/components/user/Avatar"
+import {ProfileLink} from "@/shared/components/user/ProfileLink"
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {formatAmount} from "@/utils/utils"
-import {nip19} from "nostr-tools"
 import {useUserStore} from "@/stores/user"
 import {useLocation} from "@/navigation"
 import {ndk} from "@/utils/ndk"
@@ -45,7 +45,7 @@ const Footer = () => {
     },
     {
       el: (
-        <div className="flex flex-grow items-center justify-center">
+        <div className="flex flex-grow p-4 justify-center items-center cursor-pointer">
           <PublishButton showLabel={false} />
         </div>
       ),
@@ -78,8 +78,8 @@ const Footer = () => {
           )}
           <FooterNavItem item={{link: "/search", icon: "search"}} readonly={readonly} />
           {myPubKey && (
-            <NavLink
-              to={`/${nip19.npubEncode(myPubKey)}`}
+            <ProfileLink
+              pubKey={myPubKey}
               onClick={() => useUIStore.getState().setIsSidebarOpen(false)}
               className={({isActive}) =>
                 classNames(
@@ -90,14 +90,15 @@ const Footer = () => {
             >
               {({isActive}) => (
                 <div
-                  className={classNames("rounded-full", {
-                    "ring-2 ring-primary": isActive,
+                  className={classNames("rounded-full border-2", {
+                    "border-base-content": isActive,
+                    "border-transparent": !isActive,
                   })}
                 >
                   <Avatar pubKey={myPubKey} width={28} showBadge={false} />
                 </div>
               )}
-            </NavLink>
+            </ProfileLink>
           )}
         </div>
       </footer>

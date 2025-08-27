@@ -1,5 +1,6 @@
 import {useMemo, useState, useEffect} from "react"
 import classNames from "classnames"
+import {RiSettings3Line} from "@remixicon/react"
 
 import RightColumn from "@/shared/components/RightColumn"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
@@ -7,6 +8,8 @@ import Feed from "@/shared/components/feed/Feed.tsx"
 import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import {Name} from "@/shared/components/user/Name"
+import {Link} from "@/navigation"
+import {useUIStore} from "@/stores/ui"
 import {type FeedConfig, useFeedStore} from "@/stores/feed"
 import {shouldHideUser} from "@/utils/visibility"
 import Widget from "@/shared/components/ui/Widget"
@@ -152,10 +155,15 @@ function UserPage({pubKey}: {pubKey: string}) {
     [pubKey]
   )
   const myPubKey = useUserStore((state) => state.publicKey)
+  const {setIsSidebarOpen, isSidebarOpen} = useUIStore()
   const {loadFeedConfig} = useFeedStore()
   const follows = useFollows(pubKey)
   const hasMarketEvents = useHasMarketEvents(pubKeyHex)
   const [activeTab, setActiveTab] = useState("")
+
+  // Check if this is the user's own profile
+  const isOwnProfile = myPubKey === pubKeyHex
+
   const filteredFollows = useMemo(() => {
     const filtered = myPubKey
       ? follows.filter((follow) => socialGraph().getFollowDistance(follow) > 1)
@@ -173,7 +181,18 @@ function UserPage({pubKey}: {pubKey: string}) {
     <div className="flex justify-center flex-1 relative h-full">
       <div className="flex-1 flex flex-col h-full relative">
         <Header>
-          <Name pubKey={pubKeyHex} />
+          <div className="flex items-center justify-between w-full">
+            <Name pubKey={pubKeyHex} />
+            {isOwnProfile && (
+              <Link
+                to="/settings"
+                className="btn btn-ghost btn-circle md:hidden"
+                title="Settings"
+              >
+                <RiSettings3Line className="w-6 h-6" />
+              </Link>
+            )}
+          </div>
         </Header>
         <ScrollablePageContainer>
           <div className="flex-1">

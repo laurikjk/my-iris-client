@@ -85,17 +85,10 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
   }
 
   const handleOneClickZap = async () => {
-    console.log("Quick zap: starting one-click zap", {
-      defaultZapAmount,
-      hasWallet,
-      activeProviderType,
-      canQuickZap,
-    })
     try {
       setIsZapping(true)
       // Don't flash until payment succeeds
       const amount = Number(defaultZapAmount) * 1000
-      console.log("Quick zap: amount in msats", amount)
 
       // Check if profile has lightning address
       if (!profile?.lud16 && !profile?.lud06) {
@@ -112,7 +105,6 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
         return
       }
 
-      console.log("Quick zap: creating and publishing zap request")
 
       // Use the shared function that publishes the zap request
       const {createAndPublishZapInvoice} = await import("@/utils/nostr")
@@ -124,12 +116,10 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
         signer
       )
 
-      console.log("Quick zap: invoice created", invoice.substring(0, 50) + "...")
 
       // Try to pay with wallet
       try {
         await walletProviderSendPayment(invoice)
-        console.log("Quick zap: payment succeeded")
         // Flash the element on success
         flashElement()
       } catch (error) {
@@ -177,16 +167,8 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
             const newMap = new Map(prev)
             const authorZaps = newMap.get(zapInfo.pubkey) ?? []
             if (!authorZaps.some((e) => e.id === zapEvent.id)) {
-              console.log("Adding zap:", {
-                eventId: zapEvent.id,
-                user:
-                  zapInfo.pubkey === myPubKey ? "you" : zapInfo.pubkey.substring(0, 8),
-                amount: zapInfo.amount,
-                totalZapsFromUser: authorZaps.length + 1,
-              })
               authorZaps.push(zapInfo)
             } else {
-              console.log("Duplicate zap event ignored:", zapEvent.id)
             }
             newMap.set(zapInfo.pubkey, authorZaps)
             zapsByEventCache.set(event.id, newMap)
@@ -207,7 +189,6 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
 
   useEffect(() => {
     calculateZappedAmount(zapsByAuthor).then((amount) => {
-      console.log("Initial zap amount calculation:", amount)
       setZappedAmount(amount)
     })
   }, [zapsByAuthor])

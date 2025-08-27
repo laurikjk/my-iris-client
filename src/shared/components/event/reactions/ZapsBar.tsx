@@ -28,7 +28,6 @@ export default function ZapsBar({event}: ZapsBarProps) {
     sub?.on("event", (zapEvent: NDKEvent) => {
       // Skip if already processed
       if (processedEvents.has(zapEvent.id)) {
-        console.log("ZapsBar: Skipping duplicate event", zapEvent.id)
         return
       }
       processedEvents.add(zapEvent.id)

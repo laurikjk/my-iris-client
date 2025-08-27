@@ -23,7 +23,21 @@ export const useHeaderScroll = ({
   useEffect(() => {
     if (headerRef.current && slideUp) {
       headerRef.current.style.transform = "translateY(0px)"
-      if (contentRef.current) {
+
+      // Initialize logo and feed name opacity for home page
+      const logoElement = headerRef.current.querySelector(
+        "[data-header-logo]"
+      ) as HTMLElement
+      const isHomePage = pathname === "/"
+
+      if (isHomePage && logoElement) {
+        // Initially at top, show logo
+        logoElement.style.opacity = "1"
+        const feedNameElement = logoElement.previousElementSibling as HTMLElement
+        if (feedNameElement) {
+          feedNameElement.style.opacity = "0"
+        }
+      } else if (contentRef.current) {
         contentRef.current.style.opacity = "1"
       }
     }
@@ -87,7 +101,28 @@ export const useHeaderScroll = ({
       lastScrollY.current = currentScrollY
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(${newTranslateY}px)`
-        if (contentRef.current) {
+
+        // Handle logo and feed name opacity for home page
+        const logoElement = headerRef.current.querySelector(
+          "[data-header-logo]"
+        ) as HTMLElement
+        const isHomePage = window.location.pathname === "/"
+
+        if (isHomePage && logoElement) {
+          // Show logo when at top (scroll position 0), show feed name when scrolled
+          // When scrollY is 0 or header is fully visible (translateY = 0), show logo
+          // When scrolled down (currentScrollY > 0), show feed name
+          const showLogo = currentScrollY <= SCROLL_THRESHOLD && newTranslateY === 0
+
+          logoElement.style.opacity = showLogo ? "1" : "0"
+
+          // Find the feed name element (previous sibling of logo)
+          const feedNameElement = logoElement.previousElementSibling as HTMLElement
+          if (feedNameElement) {
+            feedNameElement.style.opacity = showLogo ? "0" : "1"
+          }
+        } else if (contentRef.current) {
+          // Default behavior for other pages
           contentRef.current.style.opacity = `${1 - Math.min(1, newTranslateY / -OPACITY_MIN_POINT)}`
         }
       }
@@ -96,7 +131,21 @@ export const useHeaderScroll = ({
     const handleResize = () => {
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(0px)`
-        if (contentRef.current) {
+
+        // Reset logo and feed name opacity for home page
+        const logoElement = headerRef.current.querySelector(
+          "[data-header-logo]"
+        ) as HTMLElement
+        const isHomePage = window.location.pathname === "/"
+
+        if (isHomePage && logoElement) {
+          // At top/reset, show logo
+          logoElement.style.opacity = "1"
+          const feedNameElement = logoElement.previousElementSibling as HTMLElement
+          if (feedNameElement) {
+            feedNameElement.style.opacity = "0"
+          }
+        } else if (contentRef.current) {
           contentRef.current.style.opacity = "1"
         }
         lastScrollY.current = 0
@@ -108,7 +157,21 @@ export const useHeaderScroll = ({
       lastScrollY.current = 0
       if (headerRef.current) {
         headerRef.current.style.transform = "translateY(0px)"
-        if (contentRef.current) {
+
+        // Reset logo and feed name opacity for home page
+        const logoElement = headerRef.current.querySelector(
+          "[data-header-logo]"
+        ) as HTMLElement
+        const isHomePage = window.location.pathname === "/"
+
+        if (isHomePage && logoElement) {
+          // At top/reset, show logo
+          logoElement.style.opacity = "1"
+          const feedNameElement = logoElement.previousElementSibling as HTMLElement
+          if (feedNameElement) {
+            feedNameElement.style.opacity = "0"
+          }
+        } else if (contentRef.current) {
           contentRef.current.style.opacity = "1"
         }
       }

@@ -3,6 +3,7 @@ import {handleProfile} from "@/utils/profileSearch"
 import {PublicKey} from "@/shared/utils/PublicKey"
 import {useEffect, useMemo, useState, useRef} from "react"
 import {profileCache, addCachedProfile} from "@/utils/profileCache"
+import {addUsernameToCache} from "@/utils/usernameCache"
 import {ndk} from "@/utils/ndk"
 import {KIND_METADATA} from "@/utils/constants"
 
@@ -59,6 +60,10 @@ export default function useProfile(pubKey?: string, subscribe = true) {
         const profile = JSON.parse(event.content)
         profile.created_at = event.created_at
         addCachedProfile(pubKeyHex, profile)
+        // Also add to username cache if iris.to address
+        if (profile.nip05) {
+          addUsernameToCache(pubKeyHex, profile.nip05, true)
+        }
         setProfile(profile)
         handleProfile(pubKeyHex, profile)
       }

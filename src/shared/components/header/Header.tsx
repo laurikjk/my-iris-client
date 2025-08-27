@@ -61,13 +61,16 @@ const Header = ({
     setIsSidebarOpen(!isSidebarOpen)
   }
 
+  // Don't show menu button on home page (path = "/")
+  const showMenuButton = !showBack && location.pathname !== "/"
+
   const leftButton = showBack ? (
     <HeaderNavigation showBack={showBack} />
-  ) : (
+  ) : showMenuButton ? (
     <button onClick={handleMenuClick} className="btn btn-ghost btn-circle md:hidden">
       <RiMenuLine className="w-6 h-6" />
     </button>
-  )
+  ) : null
 
   return (
     <header
@@ -82,6 +85,7 @@ const Header = ({
       <div ref={contentRef} className="flex justify-between items-center flex-1 w-full">
         <div className="flex items-center gap-2 w-full">
           {leftButton}
+          {!leftButton && <div className="ml-2" />}
           <div
             className={classNames("flex items-center gap-4 w-full text-base-content", {
               "text-lg font-semibold": bold,

@@ -3,6 +3,7 @@ import {LRUCache} from "typescript-lru-cache"
 import throttle from "lodash/throttle"
 import localforage from "localforage"
 import AnimalName from "./AnimalName"
+import {addUsernameToCache} from "./usernameCache"
 
 // Constants for profile data sanitization
 const PROFILE_NAME_MAX_LENGTH = 50
@@ -43,9 +44,15 @@ const sanitizePicture = (picture: string): string | undefined => {
 }
 
 // Convert condensed array to NDKUserProfile
-const arrayToProfile = (item: string[]): NDKUserProfile => {
+const arrayToProfile = (item: string[], pubkey?: string): NDKUserProfile => {
   const [, name, nip05, picture] = item
   const profile: NDKUserProfile = {}
+
+  // Add to username cache if we have pubkey and nip05
+  // Assume profiles loaded from cache were previously verified
+  if (pubkey && nip05) {
+    addUsernameToCache(pubkey, nip05, true)
+  }
 
   if (name) {
     profile.name = name
@@ -127,7 +134,7 @@ export const loadProfileCache = (): Promise<void> => {
           let loadedCount = 0
           savedData.forEach((item: string[]) => {
             if (item.length >= 2 && item[0] && item[1]) {
-              profileCache.set(item[0], arrayToProfile(item))
+              profileCache.set(item[0], arrayToProfile(item, item[0]))
               loadedCount++
             }
           })
@@ -176,6 +183,11 @@ export const addCachedProfile = (pubkey: string, profile: NDKUserProfile) => {
   )
   if (name) {
     profileCache.set(pubkey, profile)
+    // Add to username cache if it's an iris.to address
+    // Mark as verified since we're getting it from nostr events
+    if (profile.nip05) {
+      addUsernameToCache(pubkey, profile.nip05, true)
+    }
     // Only trigger save if profiles have been loaded
     if (profilesLoaded) {
       throttledSaveProfiles()
