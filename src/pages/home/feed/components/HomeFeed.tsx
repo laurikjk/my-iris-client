@@ -166,10 +166,12 @@ function HomeFeed() {
       <NotificationPrompt />
       <div>
         {myPubKey && (
-          <InlineNoteCreator
-            onPublish={() => triggerFeedRefresh()}
-            placeholder="What's on your mind?"
-          />
+          <div className="hidden md:block">
+            <InlineNoteCreator
+              onPublish={() => triggerFeedRefresh()}
+              placeholder="What's on your mind?"
+            />
+          </div>
         )}
         {(() => {
           if (!myPubKey) return <AlgorithmicFeed type="popular" />
