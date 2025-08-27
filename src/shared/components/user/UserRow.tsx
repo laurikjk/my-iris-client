@@ -1,12 +1,10 @@
-import {useMemo, ReactNode} from "react"
-import {Link} from "@/navigation"
-import {nip19} from "nostr-tools"
+import {ReactNode} from "react"
 
 import {useHoverCard} from "@/shared/components/user/useHoverCard"
 import {Avatar} from "@/shared/components/user/Avatar"
 import {Name} from "@/shared/components/user/Name"
 import ProfileCard from "./ProfileCard"
-import {HEX_REGEX_STRICT as HEX_REGEX} from "@/utils/validation"
+import {ProfileLink} from "./ProfileLink"
 
 export function UserRow({
   pubKey,
@@ -42,25 +40,13 @@ export function UserRow({
     </div>
   )
 
-  const link = useMemo(() => {
-    if (linkToProfile) {
-      try {
-        if (pubKey.startsWith("npub")) {
-          return `/${pubKey}`
-        } else if (HEX_REGEX.test(pubKey)) {
-          const k = nip19.npubEncode(pubKey)
-          return `/${k}`
-        }
-      } catch (error) {
-        console.warn(error)
-      }
-    }
-    return ""
-  }, [linkToProfile, pubKey])
-
   return (
     <div className="relative" {...hoverProps}>
-      {linkToProfile ? <Link to={link}>{mainContent}</Link> : mainContent}
+      {linkToProfile ? (
+        <ProfileLink pubKey={pubKey}>{mainContent}</ProfileLink>
+      ) : (
+        mainContent
+      )}
       <div
         ref={cardRef}
         onClick={(e) => {

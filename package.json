@@ -62,8 +62,6 @@
     }
   },
   "dependencies": {
-    "@cashu/cashu-ts": "^2.5.3",
-    "@cashu/crypto": "^0.3.4",
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
     "@noble/curves": "^1.9.7",

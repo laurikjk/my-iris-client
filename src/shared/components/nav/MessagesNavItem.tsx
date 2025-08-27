@@ -1,7 +1,6 @@
 import UnseenMessagesBadge from "@/shared/components/messages/UnseenMessagesBadge"
 import Icon from "@/shared/components/Icons/Icon"
 import {MouseEventHandler} from "react"
-import {useUIStore} from "@/stores/ui"
 import classNames from "classnames"
 import NavLink from "./NavLink"
 
@@ -12,10 +11,7 @@ interface MessagesNavItemProps {
 }
 
 export const MessagesNavItem = ({label, to, onClick}: MessagesNavItemProps) => {
-  const {setIsSidebarOpen} = useUIStore()
-
   const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
-    setIsSidebarOpen(false)
     onClick?.(e)
   }
 

@@ -1,7 +1,6 @@
 import UnseenNotificationsBadge from "@/shared/components/header/UnseenNotificationsBadge"
 import Icon from "@/shared/components/Icons/Icon"
 import {MouseEventHandler} from "react"
-import {useUIStore} from "@/stores/ui"
 import classNames from "classnames"
 import NavLink from "./NavLink"
 
@@ -11,10 +10,7 @@ interface NotificationNavItemProps {
 }
 
 export const NotificationNavItem = ({to, onClick}: NotificationNavItemProps) => {
-  const {setIsSidebarOpen} = useUIStore()
-
   const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
-    setIsSidebarOpen(false)
     onClick?.(e)
   }
 

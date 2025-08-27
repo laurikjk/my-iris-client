@@ -4,7 +4,6 @@ import {getSubscriptionIcon} from "@/shared/utils/subscriptionIcons"
 import {MouseEventHandler, useEffect, useState, useRef} from "react"
 import Icon from "@/shared/components/Icons/Icon"
 import {useUserStore} from "@/stores/user"
-import {useUIStore} from "@/stores/ui"
 import classNames from "classnames"
 import NavLink from "./NavLink"
 
@@ -14,7 +13,6 @@ interface SubscriptionNavItemProps {
 }
 
 export const SubscriptionNavItem = ({to, onClick}: SubscriptionNavItemProps) => {
-  const {setIsSidebarOpen} = useUIStore()
   const [pubkey, setPubkey] = useState<string | undefined>(undefined)
   const {isSubscriber, tier} = useSubscriptionStatus(pubkey)
   const setMediaservers = useUserStore((state) => state.setMediaservers)
@@ -47,7 +45,6 @@ export const SubscriptionNavItem = ({to, onClick}: SubscriptionNavItemProps) => 
   }, [isSubscriber, setMediaservers, setDefaultMediaserver])
 
   const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
-    setIsSidebarOpen(false)
     onClick?.(e)
   }
 

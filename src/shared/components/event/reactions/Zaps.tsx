@@ -31,12 +31,6 @@ export default function Zaps({event}: {event: NDKEvent}) {
             allZaps.push(zapInfo)
             const grouped = groupZapsByUser(allZaps)
             setZapsByUser(grouped)
-
-            console.log(
-              `Zaps modal: User ${zapInfo.pubkey.substring(0, 8)} - added ${zapInfo.amount} sats (event ${zapInfo.id.substring(0, 8)})`
-            )
-          } else {
-            console.log(`Zaps modal: Duplicate zap event ${zapInfo.id.substring(0, 8)}`)
           }
         }
       })

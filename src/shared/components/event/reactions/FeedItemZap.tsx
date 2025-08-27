@@ -105,7 +105,6 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
         return
       }
 
-
       // Use the shared function that publishes the zap request
       const {createAndPublishZapInvoice} = await import("@/utils/nostr")
       const invoice = await createAndPublishZapInvoice(
@@ -115,7 +114,6 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
         profile.lud16 || profile.lud06!,
         signer
       )
-
 
       // Try to pay with wallet
       try {
@@ -168,7 +166,6 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
             const authorZaps = newMap.get(zapInfo.pubkey) ?? []
             if (!authorZaps.some((e) => e.id === zapEvent.id)) {
               authorZaps.push(zapInfo)
-            } else {
             }
             newMap.set(zapInfo.pubkey, authorZaps)
             zapsByEventCache.set(event.id, newMap)

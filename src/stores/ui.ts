@@ -2,7 +2,6 @@ import {persist} from "zustand/middleware"
 import {create} from "zustand"
 
 interface UIState {
-  isSidebarOpen: boolean
   newPostOpen: boolean
   showLoginDialog: boolean
   goToNotifications: number
@@ -10,7 +9,6 @@ interface UIState {
   isMediaModalSidebarVisible: boolean
   navItemClicked: {signal: number; path: string}
 
-  setIsSidebarOpen: (isOpen: boolean) => void
   setNewPostOpen: (isOpen: boolean) => void
   setShowLoginDialog: (isOpen: boolean) => void
   incrementGoToNotifications: () => void
@@ -23,7 +21,6 @@ export const useUIStore = create<UIState>()(
   persist(
     (set, get) => {
       const initialState = {
-        isSidebarOpen: false,
         newPostOpen: false,
         showLoginDialog: false,
         goToNotifications: 0,
@@ -33,7 +30,6 @@ export const useUIStore = create<UIState>()(
       }
 
       const actions = {
-        setIsSidebarOpen: (isSidebarOpen: boolean) => set({isSidebarOpen}),
         setNewPostOpen: (newPostOpen: boolean) => set({newPostOpen}),
         setShowLoginDialog: (showLoginDialog: boolean) => set({showLoginDialog}),
         incrementGoToNotifications: () =>
@@ -53,7 +49,6 @@ export const useUIStore = create<UIState>()(
     {
       name: "ui-storage",
       partialize: (state) => ({
-        isSidebarOpen: state.isSidebarOpen,
         newPostOpen: state.newPostOpen,
         showLoginDialog: state.showLoginDialog,
         goToNotifications: state.goToNotifications,

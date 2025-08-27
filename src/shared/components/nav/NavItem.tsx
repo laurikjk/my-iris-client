@@ -1,6 +1,5 @@
 import {ReactNode, MouseEventHandler} from "react"
 import Icon from "@/shared/components/Icons/Icon"
-import {useUIStore} from "@/stores/ui"
 import classNames from "classnames"
 import NavLink from "./NavLink"
 
@@ -27,10 +26,7 @@ export const NavItem = ({
   className,
   badge,
 }: NavItemProps) => {
-  const {setIsSidebarOpen} = useUIStore()
-
   const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
-    setIsSidebarOpen(false)
     onClick?.(e)
   }
 

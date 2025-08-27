@@ -195,7 +195,7 @@ function Settings() {
               </div>
             </nav>
             <div className={`flex-1 ${isSettingsRoot ? "hidden lg:block" : "block"}`}>
-              <div className="p-4 mx-4 md:p-8 md:mt-16 rounded-lg bg-base-100 shadow">
+              <div className="p-4 mx-4 md:p-8 rounded-lg bg-base-100 shadow">
                 {(() => {
                   // Determine which component to show based on the path
                   const pathSegments = location.pathname.split("/").filter(Boolean)

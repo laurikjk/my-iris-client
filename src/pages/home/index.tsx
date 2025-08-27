@@ -61,19 +61,23 @@ function Index() {
     return (
       <div className="relative h-full">
         <Header showBack={false} showNotifications={true}>
-          <div className="flex items-center justify-between w-full relative">
-            {/* Feed name - hidden initially, shows when scrolled */}
-            <div className="absolute inset-0 flex items-center" style={{opacity: 0}}>
-              <span className="transition-opacity duration-200">{feedName}</span>
-            </div>
-            {/* Iris logo - shown initially at top */}
+          <div className="flex items-center justify-between w-full relative md:static">
+            {/* Feed name - hidden initially on mobile, always shown on desktop */}
             <div
-              className="flex items-center gap-2 transition-opacity duration-200"
-              style={{opacity: 1}}
+              className="absolute inset-0 flex items-center md:static opacity-0 md:opacity-100"
+              data-header-feed-name
+            >
+              <span className="transition-opacity duration-200 ml-2 md:px-3 md:py-2">
+                {feedName}
+              </span>
+            </div>
+            {/* Iris logo - shown initially at top on mobile, hidden on desktop */}
+            <div
+              className="flex items-center gap-2 transition-opacity duration-200 md:hidden ml-2 absolute inset-0 opacity-100"
               data-header-logo
             >
               <img className="w-6 h-6" src={CONFIG.navLogo} alt={CONFIG.appName} />
-              <span className="font-bold text-xl">{CONFIG.appName}</span>
+              <span className="font-bold text-2xl">{CONFIG.appName}</span>
             </div>
           </div>
         </Header>
@@ -107,7 +111,7 @@ function Index() {
     <>
       <Header showBack={false} showNotifications={true}>
         <div className="flex items-center justify-between w-full">
-          <span className="md:px-3 md:py-2">{feedName}</span>
+          <span className="px-3 py-2">{feedName}</span>
           {isLargeScreen && (
             <button
               className="p-2 bg-base-100 hover:bg-base-200 rounded-full transition-colors mt-1"

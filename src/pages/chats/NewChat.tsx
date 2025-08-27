@@ -58,14 +58,17 @@ const NewChat = () => {
 
   return (
     <>
-      <Header title="New Chat">
-        <Link
-          to="/settings/chat"
-          className="btn btn-circle btn-ghost btn-sm ml-auto"
-          title="Chat Settings"
-        >
-          <Icon name="gear" className="w-5 h-5" />
-        </Link>
+      <Header>
+        <div className="flex items-center justify-between w-full min-w-0">
+          <span className="truncate">New Chat</span>
+          <Link
+            to="/settings/chat"
+            className="btn btn-circle btn-ghost btn-sm flex-shrink-0 ml-2"
+            title="Chat Settings"
+          >
+            <Icon name="gear" className="w-5 h-5" />
+          </Link>
+        </div>
       </Header>
       <div className="pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
         <NotificationPrompt />

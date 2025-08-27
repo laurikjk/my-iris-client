@@ -9,7 +9,6 @@ import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import {Name} from "@/shared/components/user/Name"
 import {Link} from "@/navigation"
-import {useUIStore} from "@/stores/ui"
 import {type FeedConfig, useFeedStore} from "@/stores/feed"
 import {shouldHideUser} from "@/utils/visibility"
 import Widget from "@/shared/components/ui/Widget"
@@ -155,7 +154,6 @@ function UserPage({pubKey}: {pubKey: string}) {
     [pubKey]
   )
   const myPubKey = useUserStore((state) => state.publicKey)
-  const {setIsSidebarOpen, isSidebarOpen} = useUIStore()
   const {loadFeedConfig} = useFeedStore()
   const follows = useFollows(pubKey)
   const hasMarketEvents = useHasMarketEvents(pubKeyHex)

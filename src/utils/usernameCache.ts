@@ -10,6 +10,9 @@ interface CachedUsername {
 // Stores iris.to usernames with verification status
 const usernameCache = new LRUCache<string, CachedUsername>({maxSize: 1000})
 
+// Reverse lookup: username -> pubkey (only for verified usernames)
+const usernameToPubkey = new Map<string, string>()
+
 /**
  * Add a username to cache if it's a valid iris.to address
  * @param verified - Whether the NIP-05 has been verified
@@ -24,18 +27,21 @@ export const addUsernameToCache = (
   // Check if it's an iris.to address
   const match = nip05.match(/^([^@]+)@iris\.to$/i)
   if (match) {
-    const username = match[1]
-    usernameCache.set(pubkey, {username, verified})
-  }
-}
+    const username = match[1].toLowerCase()
 
-/**
- * Mark a cached username as verified
- */
-export const markUsernameVerified = (pubkey: string) => {
-  const cached = usernameCache.get(pubkey)
-  if (cached) {
-    usernameCache.set(pubkey, {...cached, verified: true})
+    // Remove old reverse mapping if exists
+    const oldCache = usernameCache.get(pubkey)
+    if (oldCache?.verified && oldCache.username) {
+      usernameToPubkey.delete(oldCache.username.toLowerCase())
+    }
+
+    // Set new cache
+    usernameCache.set(pubkey, {username, verified})
+
+    // Add reverse mapping if verified
+    if (verified) {
+      usernameToPubkey.set(username, pubkey)
+    }
   }
 }
 
@@ -130,15 +136,10 @@ export const toPubkey = (identifier: string): string | null => {
     return identifier.toLowerCase()
   }
 
-  // It might be a username - check cache in reverse
-  // This is inefficient but cache is small enough
-  // LRUCache doesn't have entries(), we need to iterate differently
-  const keys = usernameCache.keys()
-  for (const pubkey of keys) {
-    const cached = usernameCache.get(pubkey)
-    if (cached && cached.username === identifier && cached.verified) {
-      return pubkey
-    }
+  // It might be a username - check reverse index
+  const pubkeyFromUsername = usernameToPubkey.get(identifier.toLowerCase())
+  if (pubkeyFromUsername) {
+    return pubkeyFromUsername
   }
 
   return null

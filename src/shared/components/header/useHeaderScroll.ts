@@ -24,17 +24,17 @@ export const useHeaderScroll = ({
     if (headerRef.current && slideUp) {
       headerRef.current.style.transform = "translateY(0px)"
 
-      // Initialize logo and feed name opacity for home page
-      const logoElement = headerRef.current.querySelector(
-        "[data-header-logo]"
-      ) as HTMLElement
-      const isHomePage = pathname === "/"
-
-      if (isHomePage && logoElement) {
-        // Initially at top, show logo
-        logoElement.style.opacity = "1"
-        const feedNameElement = logoElement.previousElementSibling as HTMLElement
-        if (feedNameElement) {
+      // Initialize logo and feed name opacity for home page (mobile only)
+      if (pathname === "/" && window.innerWidth < MOBILE_BREAKPOINT) {
+        const logoElement = headerRef.current.querySelector(
+          "[data-header-logo]"
+        ) as HTMLElement
+        const feedNameElement = headerRef.current.querySelector(
+          "[data-header-feed-name]"
+        ) as HTMLElement
+        if (logoElement && feedNameElement) {
+          // Initially at top, show logo
+          logoElement.style.opacity = "1"
           feedNameElement.style.opacity = "0"
         }
       } else if (contentRef.current) {
@@ -102,23 +102,20 @@ export const useHeaderScroll = ({
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(${newTranslateY}px)`
 
-        // Handle logo and feed name opacity for home page
-        const logoElement = headerRef.current.querySelector(
-          "[data-header-logo]"
-        ) as HTMLElement
+        // Handle logo and feed name opacity for home page (mobile only)
         const isHomePage = window.location.pathname === "/"
+        if (isHomePage && window.innerWidth < MOBILE_BREAKPOINT) {
+          const logoElement = headerRef.current.querySelector(
+            "[data-header-logo]"
+          ) as HTMLElement
+          const feedNameElement = headerRef.current.querySelector(
+            "[data-header-feed-name]"
+          ) as HTMLElement
 
-        if (isHomePage && logoElement) {
-          // Show logo when at top (scroll position 0), show feed name when scrolled
-          // When scrollY is 0 or header is fully visible (translateY = 0), show logo
-          // When scrolled down (currentScrollY > 0), show feed name
-          const showLogo = currentScrollY <= SCROLL_THRESHOLD && newTranslateY === 0
-
-          logoElement.style.opacity = showLogo ? "1" : "0"
-
-          // Find the feed name element (previous sibling of logo)
-          const feedNameElement = logoElement.previousElementSibling as HTMLElement
-          if (feedNameElement) {
+          if (logoElement && feedNameElement) {
+            // Show logo when at top (scroll position 0), show feed name when scrolled
+            const showLogo = currentScrollY <= SCROLL_THRESHOLD && newTranslateY === 0
+            logoElement.style.opacity = showLogo ? "1" : "0"
             feedNameElement.style.opacity = showLogo ? "0" : "1"
           }
         } else if (contentRef.current) {
@@ -132,17 +129,17 @@ export const useHeaderScroll = ({
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(0px)`
 
-        // Reset logo and feed name opacity for home page
-        const logoElement = headerRef.current.querySelector(
-          "[data-header-logo]"
-        ) as HTMLElement
+        // Reset logo and feed name opacity for home page (mobile only)
         const isHomePage = window.location.pathname === "/"
-
-        if (isHomePage && logoElement) {
-          // At top/reset, show logo
-          logoElement.style.opacity = "1"
-          const feedNameElement = logoElement.previousElementSibling as HTMLElement
-          if (feedNameElement) {
+        if (isHomePage && window.innerWidth < MOBILE_BREAKPOINT) {
+          const logoElement = headerRef.current.querySelector(
+            "[data-header-logo]"
+          ) as HTMLElement
+          const feedNameElement = headerRef.current.querySelector(
+            "[data-header-feed-name]"
+          ) as HTMLElement
+          if (logoElement && feedNameElement) {
+            logoElement.style.opacity = "1"
             feedNameElement.style.opacity = "0"
           }
         } else if (contentRef.current) {
@@ -158,17 +155,17 @@ export const useHeaderScroll = ({
       if (headerRef.current) {
         headerRef.current.style.transform = "translateY(0px)"
 
-        // Reset logo and feed name opacity for home page
-        const logoElement = headerRef.current.querySelector(
-          "[data-header-logo]"
-        ) as HTMLElement
+        // Reset logo and feed name opacity for home page (mobile only)
         const isHomePage = window.location.pathname === "/"
-
-        if (isHomePage && logoElement) {
-          // At top/reset, show logo
-          logoElement.style.opacity = "1"
-          const feedNameElement = logoElement.previousElementSibling as HTMLElement
-          if (feedNameElement) {
+        if (isHomePage && window.innerWidth < MOBILE_BREAKPOINT) {
+          const logoElement = headerRef.current.querySelector(
+            "[data-header-logo]"
+          ) as HTMLElement
+          const feedNameElement = headerRef.current.querySelector(
+            "[data-header-feed-name]"
+          ) as HTMLElement
+          if (logoElement && feedNameElement) {
+            logoElement.style.opacity = "1"
             feedNameElement.style.opacity = "0"
           }
         } else if (contentRef.current) {

@@ -1,7 +1,5 @@
 import {ReactNode, useRef} from "react"
-import {RiMenuLine} from "@remixicon/react"
 import {useScrollableParent} from "@/shared/hooks/useScrollableParent"
-import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
 import NotificationButton from "./NotificationButton"
 import UnseenMessagesBadge from "@/shared/components/messages/UnseenMessagesBadge"
 import Icon from "@/shared/components/Icons/Icon"
@@ -32,11 +30,10 @@ const Header = ({
   slideUp = true,
   bold = true,
 }: HeaderProps) => {
-  const {isSidebarOpen, setIsSidebarOpen, setShowLoginDialog} = useUIStore()
+  const {setShowLoginDialog} = useUIStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const location = useLocation()
   const navigate = useNavigate()
-  const isLargeScreen = useIsLargeScreen()
 
   const headerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -57,20 +54,8 @@ const Header = ({
     scrollDown,
   })
 
-  const handleMenuClick = () => {
-    setIsSidebarOpen(!isSidebarOpen)
-  }
-
-  // Don't show menu button on home page (path = "/")
-  const showMenuButton = !showBack && location.pathname !== "/"
-
-  const leftButton = showBack ? (
-    <HeaderNavigation showBack={showBack} />
-  ) : showMenuButton ? (
-    <button onClick={handleMenuClick} className="btn btn-ghost btn-circle md:hidden">
-      <RiMenuLine className="w-6 h-6" />
-    </button>
-  ) : null
+  // Only show back button if showBack is true, otherwise no left button
+  const leftButton = showBack ? <HeaderNavigation showBack={showBack} /> : null
 
   return (
     <header
@@ -79,13 +64,12 @@ const Header = ({
       style={slideUp ? {transform: "translateY(0px)"} : undefined}
       className={classNames(
         "pt-[env(safe-area-inset-top)] min-h-16 flex top-0 bg-base-200 md:bg-opacity-80 md:backdrop-blur-sm text-base-content p-2 z-30 select-none w-full cursor-pointer",
-        isLargeScreen ? "sticky" : "fixed"
+        "fixed md:sticky"
       )}
     >
       <div ref={contentRef} className="flex justify-between items-center flex-1 w-full">
         <div className="flex items-center gap-2 w-full">
           {leftButton}
-          {!leftButton && <div className="ml-2" />}
           <div
             className={classNames("flex items-center gap-4 w-full text-base-content", {
               "text-lg font-semibold": bold,

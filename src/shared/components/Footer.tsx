@@ -13,7 +13,6 @@ import {formatAmount} from "@/utils/utils"
 import {useUserStore} from "@/stores/user"
 import {useLocation} from "@/navigation"
 import {ndk} from "@/utils/ndk"
-import {useUIStore} from "@/stores/ui"
 
 type MenuItem = {
   label?: string
@@ -80,7 +79,6 @@ const Footer = () => {
           {myPubKey && (
             <ProfileLink
               pubKey={myPubKey}
-              onClick={() => useUIStore.getState().setIsSidebarOpen(false)}
               className={({isActive}) =>
                 classNames(
                   {active: isActive},
@@ -107,14 +105,12 @@ const Footer = () => {
 }
 
 const FooterNavItem = ({item}: {item: MenuItem; readonly: boolean}) => {
-  const {setIsSidebarOpen} = useUIStore()
-
   if (item.el) {
     return item.el
   }
 
   const handleClick = () => {
-    setIsSidebarOpen(false)
+    // Navigation handled by NavLink
   }
 
   return (

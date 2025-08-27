@@ -1,9 +1,7 @@
 import {RiLoginBoxLine, RiLockLine, RiBugLine} from "@remixicon/react"
 import {useRef, useMemo} from "react"
-import classNames from "classnames"
 import NavLink from "./NavLink"
 
-import PublicKeyQRCodeButton from "../user/PublicKeyQRCodeButton"
 import {useWalletBalance} from "../../hooks/useWalletBalance"
 import {NotificationNavItem} from "./NotificationNavItem"
 import {SubscriptionNavItem} from "./SubscriptionNavItem"
@@ -21,7 +19,7 @@ import {ndk} from "@/utils/ndk"
 
 const NavSideBar = () => {
   const ref = useRef<HTMLDivElement>(null)
-  const {isSidebarOpen, setIsSidebarOpen, setShowLoginDialog} = useUIStore()
+  const {setShowLoginDialog} = useUIStore()
   const {balance} = useWalletBalance()
   const myPubKey = usePublicKey()
   const myPrivKey = useUserStore((state) => state.privateKey)
@@ -45,21 +43,9 @@ const NavSideBar = () => {
 
   return (
     <ErrorBoundary>
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black opacity-50 md:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
       <div
         ref={ref}
-        className={classNames(
-          "bg-base-200 transition-transform duration-300 fixed md:sticky md:translate-x-0 top-0 select-none w-56 md:w-20 xl:w-64 h-screen z-40 flex flex-col md:justify-between border-r border-custom overflow-y-scroll scrollbar-hide pt-[env(safe-area-inset-top)] flex-shrink-0",
-          {
-            "translate-x-0": isSidebarOpen,
-            "-translate-x-full": !isSidebarOpen,
-          }
-        )}
+        className="bg-base-200 hidden md:sticky md:flex top-0 select-none md:w-20 xl:w-64 h-screen z-40 flex-col md:justify-between border-r border-custom overflow-y-scroll scrollbar-hide pt-[env(safe-area-inset-top)] flex-shrink-0"
       >
         <div className="flex flex-col items-start md:items-center xl:items-start gap-4 md:gap-2 xl:gap-4">
           <NavLink
@@ -83,7 +69,6 @@ const NavSideBar = () => {
               to="/settings/system"
               title="Debug mode active - Click to manage"
               className="px-4 py-2 mx-2 md:mx-0 xl:mx-2 flex items-center gap-2 text-warning text-xl hover:bg-base-300 rounded-full"
-              onClick={() => setIsSidebarOpen(false)}
             >
               <RiBugLine className="w-6 h-6" />
               <span className="hidden xl:inline">Debug mode</span>
@@ -149,7 +134,6 @@ const NavSideBar = () => {
           <>
             <div
               className="flex flex-col p-4 mb-2 xl:mb-6 gap-4"
-              onClick={() => setIsSidebarOpen(false)}
               data-testid="sidebar-user-row"
             >
               <UserRow
@@ -158,9 +142,6 @@ const NavSideBar = () => {
                 textClassName="md:hidden xl:inline font-bold"
                 avatarWidth={45}
               />
-              <div className="md:hidden text-center" onClick={(e) => e.stopPropagation()}>
-                <PublicKeyQRCodeButton publicKey={myPubKey} />
-              </div>
             </div>
           </>
         )}
