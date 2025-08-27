@@ -110,11 +110,25 @@ export default function MapPage() {
     }
   }
 
+  // Derive title from current feedConfig geohashes
+  const currentGeohashes = feedConfig.filter?.["#g"] || []
+  const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
+  const isGlobalView =
+    currentGeohashes.length === 32 &&
+    allGeohashes.every((gh) => currentGeohashes.includes(gh))
+
+  let headerTitle = "Location Feed"
+  if (!isGlobalView && currentGeohashes.length === 1) {
+    headerTitle = `Location: ${currentGeohashes[0]}`
+  } else if (!isGlobalView && currentGeohashes.length > 1) {
+    headerTitle = `Location: ${currentGeohashes.length} sectors`
+  }
+
   return (
-    <div className="flex flex-col flex-1 h-full relative overflow-hidden">
-      <Header title={geohash ? `Location: ${geohash}` : "Location Feed"} />
+    <div className="flex w-full flex-col flex-1 h-full relative overflow-hidden">
+      <Header title={headerTitle} />
       <ScrollablePageContainer className="flex flex-col items-center">
-        <div className="flex-1 w-full flex flex-col overflow-x-hidden">
+        <div className="flex-1 w-full max-w-full flex flex-col">
           {/* Full width map at the top of the column */}
           <GeohashMap
             geohashes={feedConfig.filter?.["#g"]}
@@ -124,10 +138,10 @@ export default function MapPage() {
               updateFilter("#g", [geohash.toLowerCase()])
             }}
             height="20rem"
-            className="w-full"
+            className="w-full max-w-full"
           />
 
-          <div className="p-2 flex flex-col gap-4 md:pt-2">
+          <div className="p-2 flex flex-col gap-4 md:pt-2 w-full max-w-full">
             {/* Show either inline controls or full editor */}
             {showMoreSettings ? (
               <FeedEditor
@@ -139,18 +153,18 @@ export default function MapPage() {
                 showCloneButton={false}
               />
             ) : (
-              <div className="w-full flex flex-col gap-3 p-4 border border-base-300 rounded-lg">
+              <div className="w-full max-w-full flex flex-col gap-3 p-4 border border-base-300 rounded-lg">
                 <GeohashField
                   value={feedConfig.filter?.["#g"]}
                   onChange={(value) => updateFilter("#g", value)}
                   showLabel={true}
                 />
 
-                <div className="flex items-start gap-2 overflow-hidden">
+                <div className="flex items-start gap-2 w-full max-w-full overflow-hidden">
                   <span className="text-sm text-base-content/70 min-w-[7rem] pt-2 flex-shrink-0">
                     Event Kinds
                   </span>
-                  <div className="flex-1 min-w-0 overflow-hidden">
+                  <div className="flex-1 min-w-0 w-full max-w-full">
                     <EventKindsSelector
                       selectedKinds={feedConfig.filter?.kinds || []}
                       onKindsChange={(kinds) =>

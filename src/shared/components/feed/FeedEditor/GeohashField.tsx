@@ -83,11 +83,13 @@ export function GeohashField({
 
   return (
     <>
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2 w-full max-w-full">
         {showLabel && (
-          <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">{label}</span>
+          <span className="text-sm text-base-content/70 min-w-[7rem] pt-2 flex-shrink-0">
+            {label}
+          </span>
         )}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex flex-wrap gap-2">
             <input
               type="text"

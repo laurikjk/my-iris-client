@@ -20,10 +20,10 @@ export function GeohashMap({
   className = "",
 }: GeohashMapProps) {
   return (
-    <div className={`relative ${className}`} style={{height}}>
+    <div className={`relative w-full ${className}`} style={{height}}>
       <Suspense
         fallback={
-          <div className="flex items-center justify-center h-full bg-base-200">
+          <div className="flex items-center justify-center h-full bg-base-200 w-full">
             <span className="loading loading-spinner loading-md"></span>
           </div>
         }
