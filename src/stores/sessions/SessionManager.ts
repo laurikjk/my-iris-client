@@ -36,6 +36,14 @@ export interface SessionManagerConfig {
   publishEvent: PublishFunction
 }
 
+//
+// Helper fucntions
+//
+
+//
+// SessionManager
+//
+
 export class SessionManager {
   private myPublicKey: string
   private myPrivateKey: string
@@ -47,8 +55,14 @@ export class SessionManager {
   private publishEvent: PublishFunction | undefined
   private storage: StorageAdapter
 
+  // Chats
+  //private users: Record<string, string> = {} // user record -> device records
+  //private devices: Record<string, Session> = {} // device record -> session
+  //private oldSessions: Record<string, Session[]> = {} // device record -> old sessions
+
   // unsubs
   private inviteUnsubs: Map<string, () => void> = new Map()
+  private sessionUnsubs: Map<string, () => void> = new Map()
 
   constructor(config: SessionManagerConfig) {
     const {myPublicKey, myPrivateKey, subscribe, storageAdapter} = config
@@ -59,23 +73,19 @@ export class SessionManager {
     this.storage = storageAdapter
   }
 
-  private async listenToUserInvites(userPubKey: string) {
+  async listenToUser(userPubKey: string) {
     const myPubKeyHex = this.myPublicKey ? new PublicKey(this.myPublicKey).toString() : ""
     const unsubInvite = Invite.fromUser(myPubKeyHex, this.subscribe, (invite) => {
       const encrypt = getEncryptFunction(this.myPrivateKey)
       invite
-        .accept(
-          (filter, onEvent) => this.subscribe(filter, onEvent),
-          this.myPublicKey,
-          encrypt
-        )
+        .accept(this.subscribe, this.myPublicKey, encrypt)
         .then(({session, event}) => {
           if (!invite.deviceId) {
             return
           }
-          const sessionId = `${invite.inviter}:${invite.deviceId}`
+          const deviceRecord = `${userPubKey}/${invite.deviceId}`
           this.storage.setItem(
-            `session:${sessionId}`,
+            `session/${deviceRecord}`,
             serializeSessionState(session.state)
           )
         })
