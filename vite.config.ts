@@ -75,7 +75,6 @@ export default defineConfig({
             "react-dom/client",
             "react-helmet",
             "@nostr-dev-kit/ndk",
-            "@nostr-dev-kit/ndk-wallet",
             "markdown-to-jsx",
             "@nostr-dev-kit/ndk-cache-dexie",
             "@remixicon/react",

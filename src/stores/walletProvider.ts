@@ -1,7 +1,6 @@
 import {create} from "zustand"
 import {persist} from "zustand/middleware"
-import {NDKWebLNWallet} from "@nostr-dev-kit/ndk-wallet"
-import {ndk} from "@/utils/ndk"
+import {SimpleWebLNWallet} from "@/utils/webln"
 import {SimpleNWCWallet} from "@/utils/nwc"
 import throttle from "lodash/throttle"
 
@@ -23,8 +22,8 @@ interface WalletProviderState {
   activeNWCId?: string
 
   // Provider instances
-  nativeWallet: NDKWebLNWallet | null
-  activeWallet: NDKWebLNWallet | SimpleNWCWallet | null
+  nativeWallet: SimpleWebLNWallet | null
+  activeWallet: SimpleWebLNWallet | SimpleNWCWallet | null
 
   // Saved NWC connections
   nwcConnections: NWCConnection[]
@@ -32,8 +31,8 @@ interface WalletProviderState {
   // Actions
   setActiveProviderType: (type: WalletProviderType) => void
   setActiveNWCId: (id: string) => void
-  setNativeWallet: (wallet: NDKWebLNWallet | null) => void
-  setActiveWallet: (wallet: NDKWebLNWallet | SimpleNWCWallet | null) => void
+  setNativeWallet: (wallet: SimpleWebLNWallet | null) => void
+  setActiveWallet: (wallet: SimpleWebLNWallet | SimpleNWCWallet | null) => void
 
   // NWC connection management
   addNWCConnection: (connection: Omit<NWCConnection, "id">) => string
@@ -80,14 +79,14 @@ export const useWalletProviderStore = create<WalletProviderState>()(
         get().refreshActiveProvider()
       },
 
-      setNativeWallet: (wallet: NDKWebLNWallet | null) => {
+      setNativeWallet: (wallet: SimpleWebLNWallet | null) => {
         set({nativeWallet: wallet})
         if (get().activeProviderType === "native") {
           set({activeWallet: wallet})
         }
       },
 
-      setActiveWallet: (wallet: NDKWebLNWallet | SimpleNWCWallet | null) => {
+      setActiveWallet: (wallet: SimpleWebLNWallet | SimpleNWCWallet | null) => {
         set({activeWallet: wallet})
       },
 
@@ -149,9 +148,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
         })
 
         try {
-          // Initialize NDK if not already done
-          // Use global NDK instance
-          ndk()
+          // No longer need NDK for NWC connection
 
           // Parse the NWC connection string
           // Format: nostr+walletconnect://<pubkey>?relay=<relay>&secret=<secret>
@@ -264,9 +261,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
           hasNativeWallet: !!state.nativeWallet,
         })
 
-        // Use the global NDK instance - it's already initialized and connected
-        const ndkInstance = ndk()
-        console.log("🔍 Using global NDK instance:", !!ndkInstance)
+        // No longer need NDK instance for WebLN
 
         // Start delayed Cashu NWC checking to give Cashu wallet time to initialize
         console.log("🔍 About to call startCashuNWCChecking...")
@@ -280,10 +275,9 @@ export const useWalletProviderStore = create<WalletProviderState>()(
           // Check for native WebLN first
           if (window.webln) {
             try {
-              const enabled = await window.webln.isEnabled()
-              if (enabled) {
-                const nativeWallet = new NDKWebLNWallet(ndk())
-
+              const nativeWallet = new SimpleWebLNWallet()
+              const connected = await nativeWallet.connect()
+              if (connected) {
                 console.log("🔍 Found native WebLN, setting as active")
                 set({
                   nativeWallet,
@@ -314,9 +308,9 @@ export const useWalletProviderStore = create<WalletProviderState>()(
           // Provider already selected, just update providers
           if (window.webln && !state.nativeWallet) {
             try {
-              const enabled = await window.webln.isEnabled()
-              if (enabled) {
-                const nativeWallet = new NDKWebLNWallet(ndk())
+              const nativeWallet = new SimpleWebLNWallet()
+              const connected = await nativeWallet.connect()
+              if (connected) {
                 set({nativeWallet})
                 if (state.activeProviderType === "native") {
                   set({activeWallet: nativeWallet})
@@ -530,13 +524,11 @@ export const useWalletProviderStore = create<WalletProviderState>()(
         }
 
         // Handle native WebLN wallets (only if explicitly active)
-        if (activeProviderType === "native" && nativeWallet) {
-          if (
-            "sendPayment" in nativeWallet &&
-            typeof nativeWallet.sendPayment === "function"
-          ) {
-            return await nativeWallet.sendPayment(invoice)
-          }
+        if (
+          activeProviderType === "native" &&
+          nativeWallet instanceof SimpleWebLNWallet
+        ) {
+          return await nativeWallet.sendPayment(invoice)
         }
 
         throw new Error("No active wallet configured for payment")
@@ -556,6 +548,14 @@ export const useWalletProviderStore = create<WalletProviderState>()(
             return result
           }
           throw new Error("Failed to create invoice")
+        }
+
+        // Handle native WebLN wallets
+        if (
+          activeProviderType === "native" &&
+          activeWallet instanceof SimpleWebLNWallet
+        ) {
+          return await activeWallet.makeInvoice(amount, description)
         }
 
         throw new Error("Invoice creation not supported for this wallet type")
@@ -584,29 +584,14 @@ export const useWalletProviderStore = create<WalletProviderState>()(
               return balance
             }
 
-            // For NDK wallets, try balance property and updateBalance method
-            if (activeWallet instanceof NDKWebLNWallet) {
-              const walletWithBalance = activeWallet as NDKWebLNWallet & {
-                balance?: {amount: number}
-                updateBalance?: () => Promise<void>
-              }
-              const balance = walletWithBalance.balance
-              if (balance && typeof balance === "object" && "amount" in balance) {
-                return balance.amount || 0
-              }
-
-              // If NDK wallet doesn't have balance yet, try to update it
-              if (walletWithBalance.updateBalance) {
-                await walletWithBalance.updateBalance()
-                const updatedBalance = walletWithBalance.balance
-                if (
-                  updatedBalance &&
-                  typeof updatedBalance === "object" &&
-                  "amount" in updatedBalance
-                ) {
-                  return updatedBalance.amount || 0
-                }
-              }
+            // Handle native WebLN wallets
+            if (
+              activeProviderType === "native" &&
+              activeWallet instanceof SimpleWebLNWallet
+            ) {
+              console.log("🔍 Using SimpleWebLNWallet for balance request")
+              const balance = await activeWallet.getBalance()
+              return balance
             }
 
             return 0

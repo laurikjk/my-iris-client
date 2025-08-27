@@ -6,11 +6,16 @@ declare global {
 }
 
 export interface WebLNProvider {
+  enable?: () => Promise<void>
   isEnabled: () => Promise<boolean>
-  sendPayment: (pr: string) => Promise<void>
-  getBalance: () => Promise<{balance: number}>
-  on: (eventName: "accountChanged", listener: () => void) => void
-  off: (eventName: "accountChanged", listener: () => void) => void
+  sendPayment: (pr: string) => Promise<{preimage?: string}>
+  makeInvoice?: (args: {
+    amount: string
+    defaultMemo?: string
+  }) => Promise<{paymentRequest: string}>
+  getBalance?: () => Promise<{balance: number}>
+  on?: (eventName: "accountChanged", listener: () => void) => void
+  off?: (eventName: "accountChanged", listener: () => void) => void
 }
 
 export interface EncryptionMeta {
