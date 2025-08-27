@@ -159,11 +159,11 @@ export class SimpleNWCWallet {
 
     // Create a promise for the response
     const responsePromise = new Promise<NWCResponse>((resolve, reject) => {
-      // 10 second timeout for all requests
+      // 15 second timeout for all requests
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(event.id)
         reject(new Error(`NWC request ${method} timed out`))
-      }, 10000)
+      }, 15000)
 
       this.pendingRequests.set(event.id, {resolve, reject, timeout})
     })
