@@ -17,6 +17,7 @@ export type OnEventCallback = (event: Rumor, from: string) => void
 
 export default class SessionManager {
   private userRecords: Map<string, UserRecord> = new Map()
+  private sessions: Map<string, Session> = new Map() // sessionId -> Session
   private nostrSubscribe: NostrSubscribe
   private nostrPublish: NostrPublish
   private ourIdentityKey: Uint8Array
@@ -26,7 +27,7 @@ export default class SessionManager {
   private storage: StorageAdapter
   private messageQueue: Map<
     string,
-    Array<{event: Partial<Rumor>; resolve: (results: any[]) => void}>
+    Array<{event: Partial<Rumor>; resolve: (results: string[]) => void}>
   > = new Map()
 
   constructor(
@@ -37,6 +38,7 @@ export default class SessionManager {
     storage: StorageAdapter = new InMemoryStorageAdapter()
   ) {
     this.userRecords = new Map()
+    this.sessions = new Map()
     this.nostrSubscribe = nostrSubscribe
     this.nostrPublish = nostrPublish
     this.ourIdentityKey = ourIdentityKey
@@ -101,12 +103,16 @@ export default class SessionManager {
         try {
           let userRecord = this.userRecords.get(targetUserKey)
           if (!userRecord) {
-            userRecord = new UserRecord(targetUserKey, this.nostrSubscribe)
+            userRecord = new UserRecord(targetUserKey, targetUserKey)
             this.userRecords.set(targetUserKey, userRecord)
           }
 
           const deviceKey = session.name || "unknown"
-          userRecord.upsertSession(deviceKey, session)
+          const sessionId = `${targetUserKey}:${deviceKey}`
+
+          // Store session
+          this.sessions.set(sessionId, session)
+          userRecord.upsertSession(deviceKey, sessionId)
           this.saveSession(targetUserKey, deviceKey, session)
 
           session.onEvent((_event: Rumor) => {
@@ -127,11 +133,7 @@ export default class SessionManager {
         }
 
         const existingRecord = this.userRecords.get(ourPublicKey)
-        if (
-          existingRecord
-            ?.getActiveSessions()
-            .some((session) => session.name === inviteDeviceId)
-        ) {
+        if (existingRecord?.getActiveSessionId(inviteDeviceId)) {
           return
         }
 
@@ -142,22 +144,23 @@ export default class SessionManager {
         )
         this.nostrPublish(event)?.catch(() => {})
 
+        const sessionId = `${ourPublicKey}:${inviteDeviceId}`
+        this.sessions.set(sessionId, session)
         this.saveSession(ourPublicKey, inviteDeviceId, session)
 
         let userRecord = this.userRecords.get(ourPublicKey)
         if (!userRecord) {
-          userRecord = new UserRecord(ourPublicKey, this.nostrSubscribe)
+          userRecord = new UserRecord(ourPublicKey, ourPublicKey)
           this.userRecords.set(ourPublicKey, userRecord)
         }
-        const deviceId = invite["deviceId"] || event.id || "unknown"
-        userRecord.upsertSession(deviceId, session)
+        const deviceId = invite["deviceId"] || "unknown"
+        userRecord.upsertSession(deviceId, sessionId)
         this.saveSession(ourPublicKey, deviceId, session)
 
         session.onEvent((_event: Rumor) => {
           this.internalSubscriptions.forEach((cb) => cb(_event, ourPublicKey))
         })
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error("Own-invite accept failed", err)
       }
     })
@@ -181,12 +184,15 @@ export default class SessionManager {
         const state = deserializeSessionState(data)
         const session = new Session(this.nostrSubscribe, state)
 
+        const sessionId = `${ownerPubKey}:${deviceId}`
+        this.sessions.set(sessionId, session)
+
         let userRecord = this.userRecords.get(ownerPubKey)
         if (!userRecord) {
-          userRecord = new UserRecord(ownerPubKey, this.nostrSubscribe)
+          userRecord = new UserRecord(ownerPubKey, ownerPubKey)
           this.userRecords.set(ownerPubKey, userRecord)
         }
-        userRecord.upsertSession(deviceId, session)
+        userRecord.upsertSession(deviceId, sessionId)
         this.saveSession(ownerPubKey, deviceId, session)
 
         session.onEvent((_event: Rumor) => {
@@ -231,13 +237,13 @@ export default class SessionManager {
     // Immediately notify local subscribers so that UI can render sent message optimistically
     this.internalSubscriptions.forEach((cb) => cb(event as Rumor, recipientIdentityKey))
 
-    const results = []
-    const publishPromises: Promise<any>[] = []
+    const results: string[] = []
+    const publishPromises: Promise<void>[] = []
 
     // Send to recipient's devices
     const userRecord = this.userRecords.get(recipientIdentityKey)
     if (!userRecord) {
-      return new Promise<any[]>((resolve) => {
+      return new Promise<string[]>((resolve) => {
         if (!this.messageQueue.has(recipientIdentityKey)) {
           this.messageQueue.set(recipientIdentityKey, [])
         }
@@ -246,13 +252,21 @@ export default class SessionManager {
       })
     }
 
-    const activeSessions = userRecord.getActiveSessions()
-    const sendableSessions = activeSessions.filter(
-      (s) => !!(s.state?.theirNextNostrPublicKey && s.state?.ourCurrentNostrKey)
-    )
+    const activeSessionIds = userRecord.getActiveSessionIds()
+    const sendableSessions: Session[] = []
+    for (const sessionId of activeSessionIds) {
+      const session = this.sessions.get(sessionId)
+      if (
+        session &&
+        session.state?.theirNextNostrPublicKey &&
+        session.state?.ourCurrentNostrKey
+      ) {
+        sendableSessions.push(session)
+      }
+    }
 
     if (sendableSessions.length === 0) {
-      return new Promise<any[]>((resolve) => {
+      return new Promise<string[]>((resolve) => {
         if (!this.messageQueue.has(recipientIdentityKey)) {
           this.messageQueue.set(recipientIdentityKey, [])
         }
@@ -264,23 +278,34 @@ export default class SessionManager {
     // Send to all sendable sessions with recipient
     for (const session of sendableSessions) {
       const {event: encryptedEvent} = session.sendEvent(event)
-      results.push(encryptedEvent)
-      publishPromises.push(this.nostrPublish(encryptedEvent).catch(() => {}))
+      results.push(encryptedEvent.id || "")
+      publishPromises.push(
+        this.nostrPublish(encryptedEvent)
+          .then(() => {})
+          .catch(() => {})
+      )
     }
 
     // Send to our own devices (for multi-device sync)
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
     const ownUserRecord = this.userRecords.get(ourPublicKey)
     if (ownUserRecord) {
-      const ownSendableSessions = ownUserRecord
-        .getActiveSessions()
-        .filter(
-          (s) => !!(s.state?.theirNextNostrPublicKey && s.state?.ourCurrentNostrKey)
-        )
-      for (const session of ownSendableSessions) {
-        const {event: encryptedEvent} = session.sendEvent(event)
-        results.push(encryptedEvent)
-        publishPromises.push(this.nostrPublish(encryptedEvent).catch(() => {}))
+      const ownActiveSessionIds = ownUserRecord.getActiveSessionIds()
+      for (const sessionId of ownActiveSessionIds) {
+        const session = this.sessions.get(sessionId)
+        if (
+          session &&
+          session.state?.theirNextNostrPublicKey &&
+          session.state?.ourCurrentNostrKey
+        ) {
+          const {event: encryptedEvent} = session.sendEvent(event)
+          results.push(encryptedEvent.id || "")
+          publishPromises.push(
+            this.nostrPublish(encryptedEvent)
+              .then(() => {})
+              .catch(() => {})
+          )
+        }
       }
     }
 
@@ -305,11 +330,8 @@ export default class SessionManager {
             _invite instanceof Invite && _invite.deviceId ? _invite.deviceId : "unknown"
 
           const userRecord = this.userRecords.get(userPubkey)
-          if (userRecord) {
-            const existingSessions = userRecord.getActiveSessions()
-            if (existingSessions.some((session) => session.name === deviceId)) {
-              return // Already have session with this device
-            }
+          if (userRecord && userRecord.getActiveSessionId(deviceId)) {
+            return // Already have session with this device
           }
 
           const {session, event} = await _invite.accept(
@@ -320,12 +342,15 @@ export default class SessionManager {
           this.nostrPublish(event)?.catch(() => {})
 
           // Store the new session
+          const sessionId = `${userPubkey}:${deviceId}`
+          this.sessions.set(sessionId, session)
+
           let currentUserRecord = this.userRecords.get(userPubkey)
           if (!currentUserRecord) {
-            currentUserRecord = new UserRecord(userPubkey, this.nostrSubscribe)
+            currentUserRecord = new UserRecord(userPubkey, userPubkey)
             this.userRecords.set(userPubkey, currentUserRecord)
           }
-          currentUserRecord.upsertSession(deviceId, session)
+          currentUserRecord.upsertSession(deviceId, sessionId)
           this.saveSession(userPubkey, deviceId, session)
 
           // Register all existing callbacks on the new session
@@ -351,7 +376,9 @@ export default class SessionManager {
 
           // Return the event to be published
           return event
-        } catch {}
+        } catch {
+          // ignore errors
+        }
       }
     )
 
@@ -374,10 +401,13 @@ export default class SessionManager {
 
     // Subscribe to existing sessions
     for (const [pubkey, userRecord] of this.userRecords.entries()) {
-      for (const session of userRecord.getActiveSessions()) {
-        session.onEvent((event: Rumor) => {
-          callback(event, pubkey)
-        })
+      for (const sessionId of userRecord.getActiveSessionIds()) {
+        const session = this.sessions.get(sessionId)
+        if (session) {
+          session.onEvent((event: Rumor) => {
+            callback(event, pubkey)
+          })
+        }
       }
     }
 
@@ -395,11 +425,10 @@ export default class SessionManager {
     this.inviteUnsubscribes.clear()
 
     // Close all sessions
-    for (const userRecord of this.userRecords.values()) {
-      for (const session of userRecord.getActiveSessions()) {
-        session.close()
-      }
+    for (const session of this.sessions.values()) {
+      session.close()
     }
+    this.sessions.clear()
     this.userRecords.clear()
     this.internalSubscriptions.clear()
   }
@@ -415,13 +444,18 @@ export default class SessionManager {
       ourPublicKey,
       this.ourIdentityKey
     )
+
+    const deviceId = session.name || "unknown"
+    const sessionId = `${ourPublicKey}:${deviceId}`
+    this.sessions.set(sessionId, session)
+
     let userRecord = this.userRecords.get(ourPublicKey)
     if (!userRecord) {
-      userRecord = new UserRecord(ourPublicKey, this.nostrSubscribe)
+      userRecord = new UserRecord(ourPublicKey, ourPublicKey)
       this.userRecords.set(ourPublicKey, userRecord)
     }
-    userRecord.upsertSession(session.name || "unknown", session)
-    await this.saveSession(ourPublicKey, session.name || "unknown", session)
+    userRecord.upsertSession(deviceId, sessionId)
+    await this.saveSession(ourPublicKey, deviceId, session)
     this.nostrPublish(event)?.catch(() => {})
   }
 }

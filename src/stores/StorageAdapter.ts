@@ -33,11 +33,11 @@ export class InMemoryStorageAdapter implements StorageAdapter {
     this.store.delete(key)
   }
 
-  async list(prefix = ''): Promise<string[]> {
+  async list(prefix = ""): Promise<string[]> {
     const keys: string[] = []
     for (const k of this.store.keys()) {
       if (k.startsWith(prefix)) keys.push(k)
     }
     return keys
   }
-} 
+}
