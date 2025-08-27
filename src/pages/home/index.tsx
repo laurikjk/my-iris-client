@@ -70,10 +70,13 @@ function Index() {
             <section
               data-scrollable
               data-header-scroll-target
-              className="h-full overflow-y-auto scrollbar-hide pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]"
+              className="h-full overflow-y-auto scrollbar-hide relative"
               data-main-scroll-container="mobile"
             >
-              <HomeFeed />
+              <div className="pt-[calc(4rem+env(safe-area-inset-top))]">
+                <HomeFeed />
+                <div className="h-44" aria-hidden="true" />
+              </div>
             </section>
           </PullToRefresh>
         </div>

@@ -8,10 +8,6 @@ interface ScrollablePageContainerProps {
    * Whether to add padding for mobile header (default: true)
    */
   withHeaderPadding?: boolean
-  /**
-   * Whether to add padding for mobile footer (default: true)
-   */
-  withFooterPadding?: boolean
 }
 
 /**
@@ -25,22 +21,24 @@ export function ScrollablePageContainer({
   children,
   className = "",
   withHeaderPadding = true,
-  withFooterPadding = true,
 }: ScrollablePageContainerProps) {
   return (
     <div
       className={classNames(
-        "flex-1 w-full max-w-full overflow-y-scroll overflow-x-hidden scrollbar-hide",
-        {
-          "pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0": withHeaderPadding,
-          "pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0": withFooterPadding,
-        },
+        "flex-1 w-full max-w-full overflow-y-scroll overflow-x-hidden scrollbar-hide relative",
         className
       )}
       data-main-scroll-container="true"
       data-header-scroll-target
     >
-      {children}
+      <div
+        className={classNames({
+          "pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0": withHeaderPadding,
+        })}
+      >
+        {children}
+        <div className="h-44 md:hidden" aria-hidden="true" />
+      </div>
     </div>
   )
 }
