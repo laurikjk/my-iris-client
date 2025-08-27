@@ -230,6 +230,7 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
             setFailedInvoice("")
           }}
           event={event}
+          profile={profile}
           setZapped={() => {
             flashElement()
           }}

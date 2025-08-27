@@ -6,7 +6,7 @@ import {
   useEffect,
   useState,
 } from "react"
-import {LnPayCb, NDKEvent, zapInvoiceFromEvent, NDKZapper} from "@nostr-dev-kit/ndk"
+import {LnPayCb, NDKEvent, zapInvoiceFromEvent, NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {RiCheckLine, RiFileCopyLine} from "@remixicon/react"
 import {decode} from "light-bolt11-decoder"
 
@@ -20,6 +20,7 @@ import {ndk} from "@/utils/ndk"
 interface ZapModalProps {
   onClose: () => void
   event: NDKEvent
+  profile: NDKUserProfile | null
   setZapped: Dispatch<SetStateAction<boolean>>
   initialInvoice?: string
   initialAmount?: string
@@ -29,6 +30,7 @@ interface ZapModalProps {
 function ZapModal({
   onClose,
   event,
+  profile,
   setZapped,
   initialInvoice,
   initialAmount,
@@ -102,15 +104,18 @@ function ZapModal({
     try {
       if (Number(zapAmount) < 1) {
         setError("Zap amount must be greater than 0")
+        setIsProcessing(false)
         return
       }
     } catch (error) {
       setError("Zap amount must be a valid number")
       console.warn("Zap amount must be a number: ", error)
+      setIsProcessing(false)
+      return
     }
-    try {
-      const amount = Number(zapAmount) * 1000
+    const amount = Number(zapAmount) * 1000
 
+    try {
       if (shouldSetDefault) {
         setDefaultZapAmount(Number(zapAmount))
       }
@@ -140,20 +145,36 @@ function ZapModal({
         return undefined
       }
 
-      const zapper = new NDKZapper(event, amount, "msat", {
-        comment: zapMessage,
-        ndk: ndk(),
-        lnPay,
-        tags: [
-          ["e", event.id],
-          ["p", event.pubkey],
-        ],
-      })
+      // Check if we have a lightning address from the passed profile
+      if (!profile?.lud16 && !profile?.lud06) {
+        setNoAddress(true)
+        setIsProcessing(false)
+        return
+      }
 
-      // Don't await zap publish - let it succeed on any available relays
-      zapper.zap().catch((error) => {
-        console.warn("Zap publish failed on some relays (this is okay):", error)
-        // Don't throw the error - the payment flow should continue
+      // Create zap invoice manually
+      const {createZapInvoice} = await import("@/utils/nostr")
+      const ndkInstance = ndk()
+      const signer = ndkInstance.signer
+      if (!signer) {
+        throw new Error("No signer available")
+      }
+
+      const invoice = await createZapInvoice(
+        event,
+        amount,
+        zapMessage || "",
+        profile.lud16!, // We already checked it exists above
+        signer
+      )
+
+      // Call the lnPay callback with the invoice
+      await lnPay({
+        pr: invoice,
+        target: event,
+        recipientPubkey: event.pubkey,
+        amount,
+        unit: "msat",
       })
     } catch (error) {
       console.warn("Zap failed: ", error)
@@ -259,6 +280,7 @@ function ZapModal({
           {Object.entries(amounts).map(([amount, emoji]) => (
             <button
               key={amount}
+              type="button"
               onClick={() => handleZapAmountChange(amount)}
               className={`btn ${
                 zapAmount === amount ? "btn-primary" : "btn-neutral"

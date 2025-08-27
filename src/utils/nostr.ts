@@ -1,10 +1,10 @@
-import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKTag, NDKSigner} from "@nostr-dev-kit/ndk"
 import {eventRegex} from "@/shared/components/embed/nostr/NostrNote"
 import {decode} from "light-bolt11-decoder"
 import {profileCache} from "./profileCache"
 import AnimalName from "./AnimalName"
 import {nip19} from "nostr-tools"
-import {ndk} from "@/utils/ndk"
+import {ndk, DEFAULT_RELAYS} from "@/utils/ndk"
 import {KIND_REPOST, KIND_TEXT_NOTE, KIND_ZAP_RECEIPT} from "@/utils/constants"
 
 export function getEventReplyingTo(event: NDKEvent) {
@@ -147,6 +147,81 @@ export const fetchZappedAmount = async (event: NDKEvent): Promise<number> => {
 //     return []
 //   }
 // }
+
+/**
+ * Creates a zap invoice manually by fetching LNURL data and creating a zap request
+ * @param event - The event to zap
+ * @param amountMsats - Amount in millisatoshis
+ * @param comment - Optional zap comment
+ * @param lud16 - Lightning address (e.g. user@domain.com)
+ * @param signer - NDK signer to sign the zap request
+ * @returns Lightning invoice string
+ */
+export async function createZapInvoice(
+  event: NDKEvent,
+  amountMsats: number,
+  comment: string,
+  lud16: string,
+  signer: NDKSigner
+): Promise<string> {
+  // Fetch LNURL data
+  const [name, domain] = lud16.split("@")
+  const lnurlEndpoint = `https://${domain}/.well-known/lnurlp/${name}`
+
+  const lnurlResponse = await fetch(lnurlEndpoint)
+  if (!lnurlResponse.ok) {
+    throw new Error(`Failed to fetch LNURL endpoint: ${lnurlResponse.status}`)
+  }
+
+  const lnurlData = await lnurlResponse.json()
+
+  if (!lnurlData.allowsNostr) {
+    throw new Error("This lightning address doesn't support Nostr zaps")
+  }
+
+  // Create zap request event
+  const nostrTools = await import("nostr-tools/nip57")
+
+  // Get relays from NDK pool or use defaults
+  const ndkInstance = ndk()
+  const connectedRelays = ndkInstance.pool?.connectedRelays()?.map((r) => r.url) || []
+  const relaysToUse = connectedRelays.length > 0 ? connectedRelays : DEFAULT_RELAYS
+
+  // Get the raw event which has all required properties
+  const rawEvent = event.rawEvent ? event.rawEvent() : event
+  
+  // Create event zap request (not profile zap)
+  const zapRequest = nostrTools.makeZapRequest({
+    event: rawEvent as any,  // nostr-tools expects Event type
+    amount: amountMsats,  // nostr-tools expects number, not string
+    comment: comment || "",
+    relays: relaysToUse.slice(0, 4), // Use first 4 relays as per NIP-57
+  })
+
+  // Sign the zap request
+  const {NDKEvent: NDKEventImport} = await import("@nostr-dev-kit/ndk")
+  const zapRequestEvent = new NDKEventImport(ndk(), zapRequest)
+  await zapRequestEvent.sign(signer)
+
+  // Get the invoice from the LNURL endpoint
+  const invoiceUrl = new URL(lnurlData.callback)
+  invoiceUrl.searchParams.append("amount", amountMsats.toString())
+  invoiceUrl.searchParams.append("nostr", JSON.stringify(zapRequestEvent.rawEvent()))
+
+  const invoiceResponse = await fetch(invoiceUrl.toString())
+  if (!invoiceResponse.ok) {
+    throw new Error(`Failed to fetch invoice: ${invoiceResponse.status}`)
+  }
+
+  const invoiceData = await invoiceResponse.json()
+  const invoice = invoiceData.pr
+
+  if (!invoice) {
+    throw new Error("No invoice returned from LNURL endpoint")
+  }
+
+  return invoice
+}
 
 export type RawEvent = {
   id: string
