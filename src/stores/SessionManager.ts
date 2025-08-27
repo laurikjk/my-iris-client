@@ -1,14 +1,17 @@
-import {
-  CHAT_MESSAGE_KIND,
-  NostrPublish,
-  NostrSubscribe,
-  Rumor,
-  Unsubscribe,
-} from "./types"
 import {UserRecord} from "./UserRecord"
 import {getPublicKey} from "nostr-tools"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
-import {serializeSessionState, deserializeSessionState} from "./utils"
+import {
+  CHAT_MESSAGE_KIND,
+  deserializeSessionState,
+  Invite,
+  NostrPublish,
+  NostrSubscribe,
+  Rumor,
+  serializeSessionState,
+  Session,
+  Unsubscribe,
+} from "nostr-double-ratchet/src"
 
 export type OnEventCallback = (event: Rumor, from: string) => void
 
@@ -45,8 +48,6 @@ export default class SessionManager {
     this.init()
   }
 
-  private _initialised = false
-
   /**
    * Perform asynchronous initialisation steps: create (or load) our invite,
    * publish it, hydrate sessions from storage and subscribe to new invites.
@@ -54,11 +55,10 @@ export default class SessionManager {
    */
   public async init(): Promise<void> {
     console.log("Initialising SessionManager")
-    if (this._initialised) return
 
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
 
-    // 1. Hydrate existing sessions (placeholder for future implementation)
+    // 1. Hydrate existing sessions
     await this.loadSessions()
 
     // 2. Create or load our own invite
@@ -162,7 +162,6 @@ export default class SessionManager {
       }
     })
 
-    this._initialised = true
     await this.nostrPublish(this.invite.getEvent()).catch(() => {})
   }
 
