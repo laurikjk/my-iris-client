@@ -236,7 +236,7 @@ function Settings() {
             </div>
           </div>
           {/* Spacer for mobile footer */}
-          <div className="h-[calc(4rem+env(safe-area-inset-bottom))] md:hidden" />
+          <div className="h-44 md:hidden" aria-hidden="true" />
         </div>
       </div>
       <Helmet>
