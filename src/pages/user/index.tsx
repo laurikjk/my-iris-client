@@ -187,7 +187,7 @@ function UserPage({pubKey}: {pubKey: string}) {
                 className="btn btn-ghost btn-circle md:hidden"
                 title="Settings"
               >
-                <RiSettings3Line className="w-6 h-6" />
+                <RiSettings3Line className="w-7 h-7" />
               </Link>
             )}
           </div>

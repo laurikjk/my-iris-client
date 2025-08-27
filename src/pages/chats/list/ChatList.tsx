@@ -60,11 +60,12 @@ const ChatList = ({className}: ChatListProps) => {
   ].sort((a, b) => getLatest(b.id, b.type) - getLatest(a.id, a.type))
 
   return (
-    <nav className={className}>
+    <nav className={classNames("flex flex-col h-full", className)}>
       <div className="md:hidden">
         <Header title="Chats" slideUp={false} />
       </div>
-      <div className="flex flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <NavLink
           to="/chats/new"
           end
@@ -75,14 +76,12 @@ const ChatList = ({className}: ChatListProps) => {
             })
           }
         >
-          <div className="flex flex-col">
-            <span className="text-base font-semibold">New Chat</span>
-            <span className="text-sm text-base-content/70">Start a new conversation</span>
-          </div>
+          <span className="text-base font-semibold">New Chat</span>
         </NavLink>
         {allChatItems.map(({id, type}) => (
           <ChatListItem key={id} id={id} isPublic={type === "public"} type={type} />
         ))}
+        </div>
       </div>
     </nav>
   )

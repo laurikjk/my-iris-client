@@ -90,7 +90,7 @@ const Header = ({
                   <span className="indicator">
                     <UnseenMessagesBadge />
                     <Icon
-                      className="w-7 h-7"
+                      className="w-6 h-6"
                       name={
                         location.pathname.startsWith("/chats")
                           ? "mail-solid"
