@@ -5,6 +5,7 @@ import ChatListItem from "./ChatListItem"
 import {NavLink} from "@/navigation"
 import classNames from "classnames"
 import {useEffect} from "react"
+import {RiChatNewLine} from "@remixicon/react"
 import {useGroupsStore} from "@/stores/groups"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
@@ -76,7 +77,10 @@ const ChatList = ({className}: ChatListProps) => {
             })
           }
         >
-          <span className="text-base font-semibold">New Chat</span>
+          <div className="flex items-center gap-3">
+            <RiChatNewLine className="w-5 h-5" />
+            <span className="text-base font-semibold">New Chat</span>
+          </div>
         </NavLink>
         {allChatItems.map(({id, type}) => (
           <ChatListItem key={id} id={id} isPublic={type === "public"} type={type} />
