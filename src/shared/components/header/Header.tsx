@@ -101,7 +101,7 @@ const Header = ({
                 </button>
               )}
               {showNotifications && (
-                <div className="md:hidden">
+                <div className="md:hidden ml-2">
                   <NotificationButton />
                 </div>
               )}

@@ -78,7 +78,7 @@ const Footer = () => {
               className={({isActive}) =>
                 classNames(
                   {active: isActive},
-                  "flex flex-grow p-4 justify-center items-center cursor-pointer"
+                  "flex flex-grow p-3 justify-center items-center cursor-pointer"
                 )
               }
             >
@@ -116,7 +116,7 @@ const FooterNavItem = ({item}: {item: MenuItem; readonly: boolean}) => {
       className={({isActive}) =>
         classNames(
           {active: isActive},
-          "flex flex-grow p-4 justify-center items-center cursor-pointer"
+          "flex flex-grow p-3 justify-center items-center cursor-pointer"
         )
       }
     >
