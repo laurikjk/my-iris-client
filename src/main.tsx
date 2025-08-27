@@ -3,7 +3,6 @@ import "@/index.css"
 import {NavigationProvider, Router} from "@/navigation"
 import {useUserStore} from "./stores/user"
 import ReactDOM from "react-dom/client"
-import {StrictMode} from "react"
 
 import {subscribeToDMNotifications, subscribeToNotifications} from "./utils/notifications"
 import {migrateUserState, migratePublicChats} from "./utils/migration"
@@ -60,13 +59,11 @@ initializeApp()
 const root = ReactDOM.createRoot(document.getElementById("root")!)
 
 root.render(
-  <StrictMode>
-    <NavigationProvider>
-      <Layout>
-        <Router />
-      </Layout>
-    </NavigationProvider>
-  </StrictMode>
+  <NavigationProvider>
+    <Layout>
+      <Router />
+    </Layout>
+  </NavigationProvider>
 )
 
 // Store subscriptions

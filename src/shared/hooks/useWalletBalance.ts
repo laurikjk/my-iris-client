@@ -10,10 +10,12 @@ export const useWalletBalance = () => {
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    console.log("🔍 useWalletBalance state:", {
+    console.log("🔍 useWalletBalance effect triggered:", {
       activeProviderType,
       activeNWCId,
       hasActiveWallet: !!activeWallet,
+      walletType: activeWallet?.constructor?.name,
+      currentBalance: balance,
     })
 
     // Clear any existing intervals/timeouts
@@ -26,27 +28,36 @@ export const useWalletBalance = () => {
       retryTimeoutRef.current = null
     }
 
-    // Clear balance immediately when wallet is disabled or uninitialized
-    if (
-      activeProviderType === "disabled" ||
-      activeProviderType === undefined ||
-      !activeWallet
-    ) {
-      console.log("🔍 No active wallet, clearing balance")
+    // Only clear balance when explicitly disabled
+    if (activeProviderType === "disabled") {
+      console.log("🔍 Wallet disabled, clearing balance")
       setBalance(null)
+      return
+    }
+
+    // If wallet isn't ready yet, just return without clearing balance
+    if (activeProviderType === undefined || !activeWallet) {
+      console.log("🔍 Wallet not ready yet, keeping existing balance")
       return
     }
 
     const updateBalance = async () => {
       try {
         console.log("🔍 useWalletBalance: calling getBalance()")
-        const balance = await getBalance()
-        console.log("🔍 useWalletBalance: getBalance returned:", balance)
-        // Only update balance if we got a valid response (null or number, not undefined)
-        if (balance !== undefined) {
-          setBalance(balance)
+        const newBalance = await getBalance()
+        console.log("🔍 useWalletBalance: getBalance returned:", newBalance)
+
+        // Only update balance if we got a valid number
+        // Never set to null or undefined - keep existing balance
+        if (typeof newBalance === "number") {
+          setBalance(newBalance)
         } else {
-          console.log("🔍 Preserving existing balance due to timeout")
+          console.log(
+            "🔍 Keeping existing balance:",
+            balance,
+            "because new value is:",
+            newBalance
+          )
         }
         return true
       } catch (error) {
@@ -62,9 +73,9 @@ export const useWalletBalance = () => {
     const tryUpdateBalance = async (attempt = 1) => {
       const success = await updateBalance()
 
-      if (!success) {
-        // Retry with slower backoff, starting at 5 seconds, capped at 30 seconds
-        const delay = Math.min(5000 * Math.pow(1.5, attempt - 1), 30000)
+      if (!success && attempt < 5) {
+        // Retry with backoff: 2s, 3s, 4.5s, 6.75s
+        const delay = Math.min(2000 * Math.pow(1.5, attempt - 1), 10000)
         console.log(`Balance check failed, retrying in ${delay}ms (attempt ${attempt})`)
         retryTimeoutRef.current = setTimeout(() => {
           tryUpdateBalance(attempt + 1)
@@ -72,10 +83,8 @@ export const useWalletBalance = () => {
       }
     }
 
-    // Initial attempt with a longer delay to let wallet initialize
-    retryTimeoutRef.current = setTimeout(() => {
-      tryUpdateBalance()
-    }, 5000)
+    // Initial attempt immediately, then retry with backoff if needed
+    tryUpdateBalance()
 
     // Set up more frequent polling (every 30 seconds) for better responsiveness
     pollIntervalRef.current = setInterval(updateBalance, 30000)

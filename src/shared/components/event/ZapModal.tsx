@@ -8,7 +8,6 @@ import {
 } from "react"
 import {LnPayCb, NDKEvent, zapInvoiceFromEvent, NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {RiCheckLine, RiFileCopyLine} from "@remixicon/react"
-import {decode} from "light-bolt11-decoder"
 
 import {Avatar} from "@/shared/components/user/Avatar"
 import Modal from "@/shared/components/ui/Modal.tsx"
@@ -16,6 +15,8 @@ import {Name} from "@/shared/components/user/Name"
 import {useUserStore} from "@/stores/user"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {ndk} from "@/utils/ndk"
+import {getZapAmount} from "@/utils/nostr"
+import {KIND_ZAP_RECEIPT} from "@/utils/constants"
 
 interface ZapModalProps {
   onClose: () => void
@@ -192,26 +193,18 @@ function ZapModal({
 
   const fetchZapReceipt = () => {
     const filter = {
-      kinds: [9735],
+      kinds: [KIND_ZAP_RECEIPT],
       ["#e"]: [event.id],
     }
     try {
       const sub = ndk().subscribe(filter)
 
-      sub?.on("event", async (event: NDKEvent) => {
+      sub?.on("event", async (zapEvent: NDKEvent) => {
         sub.stop()
-        const receiptInvoice = event.tagValue("bolt11")
+        const receiptInvoice = zapEvent.tagValue("bolt11")
         if (receiptInvoice) {
-          const decodedInvoice = decode(receiptInvoice)
-          const zapRequest = zapInvoiceFromEvent(event)
-
-          const amountSection = decodedInvoice.sections.find(
-            (section) => section.name === "amount"
-          )
-          const amountPaid =
-            amountSection && "value" in amountSection
-              ? Math.floor(parseInt(amountSection.value) / 1000)
-              : 0
+          const amountPaid = await getZapAmount(zapEvent)
+          const zapRequest = zapInvoiceFromEvent(zapEvent)
           const amountRequested = zapRequest?.amount ? zapRequest.amount / 1000 : -1
 
           if (bolt11Invoice === receiptInvoice && amountPaid === amountRequested) {

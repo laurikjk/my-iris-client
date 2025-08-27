@@ -1,37 +1,44 @@
-import {getZapAmount, getZappingUser} from "@/utils/nostr.ts"
+import {parseZapReceipt, groupZapsByUser, type ZapInfo} from "@/utils/nostr.ts"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {ReactionContent} from "./ReactionContent"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import {ndk} from "@/utils/ndk"
+import {KIND_ZAP_RECEIPT} from "@/utils/constants"
 
 export default function Zaps({event}: {event: NDKEvent}) {
-  const [zapAmountByUser, setZapAmountByUser] = useState(new Map<string, number>())
-  const [commentByUser, setCommentByUser] = useState(new Map<string, string>())
+  const [zapsByUser, setZapsByUser] = useState(
+    new Map<string, {totalAmount: number; zaps: ZapInfo[]}>()
+  )
 
   useEffect(() => {
     try {
-      setZapAmountByUser(new Map())
-      setCommentByUser(new Map())
+      // Clear previous state when event changes
+      setZapsByUser(new Map())
+
       const filter = {
-        kinds: [9735],
+        kinds: [KIND_ZAP_RECEIPT],
         ["#e"]: [event.id],
       }
       const sub = ndk().subscribe(filter)
+      const allZaps: ZapInfo[] = []
 
-      sub?.on("event", async (event: NDKEvent) => {
-        // if (shouldHideEvent(event)) return // enables fake zap receipts but what can we do.
-        const user = getZappingUser(event)
-        const amount = await getZapAmount(event)
-        setZapAmountByUser((prev) => {
-          prev.set(user, (prev.get(user) || 0) + amount)
-          return new Map(prev)
-        })
-        setCommentByUser((prev) => {
-          const comment = event.content
-          prev.set(user, comment)
-          return new Map(prev)
-        })
+      sub?.on("event", async (zapEvent: NDKEvent) => {
+        const zapInfo = parseZapReceipt(zapEvent)
+        if (zapInfo) {
+          // Check for duplicates
+          if (!allZaps.some((z) => z.id === zapInfo.id)) {
+            allZaps.push(zapInfo)
+            const grouped = groupZapsByUser(allZaps)
+            setZapsByUser(grouped)
+
+            console.log(
+              `Zaps modal: User ${zapInfo.pubkey.substring(0, 8)} - added ${zapInfo.amount} sats (event ${zapInfo.id.substring(0, 8)})`
+            )
+          } else {
+            console.log(`Zaps modal: Duplicate zap event ${zapInfo.id.substring(0, 8)}`)
+          }
+        }
       })
       return () => {
         sub.stop()
@@ -43,19 +50,21 @@ export default function Zaps({event}: {event: NDKEvent}) {
 
   return (
     <div className="flex flex-col gap-4">
-      {zapAmountByUser.size === 0 && <p>No zaps yet</p>}
-      {Array.from(zapAmountByUser.entries())
-        .sort(([, a], [, b]) => b - a)
-        .map(([pubKey, amount]) => {
-          const comment = commentByUser.get(pubKey) || ""
+      {zapsByUser.size === 0 && <p>No zaps yet</p>}
+      {Array.from(zapsByUser.entries())
+        .sort(([, a], [, b]) => b.totalAmount - a.totalAmount)
+        .map(([pubKey, data]) => {
+          // Get the latest comment from the user's zaps
+          const latestComment = data.zaps[data.zaps.length - 1]?.comment || ""
           return (
             <UserRow
               showHoverCard={true}
-              key={event.id}
+              key={pubKey}
               pubKey={pubKey}
               description={
                 <>
-                  <ReactionContent content={comment} event={event} /> {String(amount)}
+                  <ReactionContent content={latestComment} event={event} />{" "}
+                  {String(data.totalAmount)}
                 </>
               }
             />

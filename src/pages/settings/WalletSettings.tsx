@@ -1,7 +1,7 @@
 import {useWalletBalance} from "@/shared/hooks/useWalletBalance"
 import {useUserStore} from "@/stores/user"
-import {useWalletProviderStore, WalletProviderType} from "@/stores/walletProvider"
-import {ChangeEvent, useState} from "react"
+import {useWalletProviderStore} from "@/stores/walletProvider"
+import {ChangeEvent, useState, useEffect} from "react"
 
 const WalletSettings = () => {
   const {balance} = useWalletBalance()
@@ -23,15 +23,26 @@ const WalletSettings = () => {
   const [newNWCConnection, setNewNWCConnection] = useState("")
   const [isConnecting, setIsConnecting] = useState(false)
 
-  const handleProviderTypeChange = (type: WalletProviderType) => {
-    setActiveProviderType(type)
-  }
+  // Local state to track selected wallet - this ensures UI updates immediately
+  const [selectedWallet, setSelectedWallet] = useState<string>(() => {
+    if (activeProviderType === "disabled") return "disabled"
+    if (activeProviderType === "native") return "native"
+    if (activeProviderType === "nwc" && activeNWCId) return `nwc:${activeNWCId}`
+    return "disabled"
+  })
 
-  const handleNWCSelectionChange = (nwcId: string) => {
-    setActiveProviderType("nwc")
-    setActiveNWCId(nwcId)
-    connectToNWC(nwcId)
-  }
+  // Sync local state with store changes
+  useEffect(() => {
+    if (activeProviderType === "disabled") {
+      setSelectedWallet("disabled")
+    } else if (activeProviderType === "native") {
+      setSelectedWallet("native")
+    } else if (activeProviderType === "nwc" && activeNWCId) {
+      setSelectedWallet(`nwc:${activeNWCId}`)
+    }
+  }, [activeProviderType, activeNWCId])
+
+  // Removed unused functions - logic is now inline in the onClick/onChange handlers
 
   const handleAddNWCConnection = async () => {
     if (!newNWCName.trim() || !newNWCConnection.trim()) return
@@ -130,59 +141,102 @@ const WalletSettings = () => {
             </label>
             <div className="space-y-2">
               {/* No wallet option */}
-              <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-50">
+              <div
+                className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-50"
+                onClick={() => {
+                  console.log("🖱️ Div clicked for disabled wallet")
+                  setSelectedWallet("disabled")
+                  setActiveProviderType("disabled")
+                }}
+              >
                 <input
                   type="radio"
                   name="wallet-selection"
                   className="radio radio-primary"
-                  checked={activeProviderType === "disabled"}
-                  onChange={() => handleProviderTypeChange("disabled")}
+                  checked={selectedWallet === "disabled"}
+                  onChange={() => {
+                    setSelectedWallet("disabled")
+                    setActiveProviderType("disabled")
+                  }}
                 />
                 <div className="flex-1">
                   <div className="font-medium">🚫 No wallet</div>
                   <div className="text-sm text-gray-500">Disable Lightning payments</div>
                 </div>
-              </label>
+              </div>
 
               {/* Native WebLN option */}
               {nativeWallet && (
-                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-50">
-                  <input
-                    type="radio"
-                    name="wallet-selection"
-                    className="radio radio-primary"
-                    checked={activeProviderType === "native"}
-                    onChange={() => handleProviderTypeChange("native")}
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium">⚡ Native WebLN</div>
-                    <div className="text-sm text-gray-500">Browser extension wallet</div>
-                  </div>
-                </label>
-              )}
-
-              {/* NWC Connections */}
-              {nwcConnections.map((conn) => (
-                <label
-                  key={conn.id}
+                <div
                   className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-50"
+                  onClick={() => {
+                    console.log("🖱️ Div clicked for native wallet")
+                    setSelectedWallet("native")
+                    setActiveProviderType("native")
+                    useWalletProviderStore.getState().refreshActiveProvider()
+                  }}
                 >
                   <input
                     type="radio"
                     name="wallet-selection"
                     className="radio radio-primary"
-                    checked={activeProviderType === "nwc" && activeNWCId === conn.id}
-                    onChange={() => handleNWCSelectionChange(conn.id)}
+                    checked={selectedWallet === "native"}
+                    onChange={() => {
+                      setSelectedWallet("native")
+                      setActiveProviderType("native")
+                      useWalletProviderStore.getState().refreshActiveProvider()
+                    }}
                   />
                   <div className="flex-1">
-                    <div className="font-medium">🔗 {conn.name}</div>
-                    <div className="text-sm text-gray-500">
-                      NWC Connection
-                      {conn.balance !== undefined && ` • ${conn.balance} sats`}
+                    <div className="font-medium">⚡ Native WebLN</div>
+                    <div className="text-sm text-gray-500">Browser extension wallet</div>
+                  </div>
+                </div>
+              )}
+
+              {/* NWC Connections */}
+              {nwcConnections.map((conn) => {
+                const isChecked = selectedWallet === `nwc:${conn.id}`
+                return (
+                  <div
+                    key={conn.id}
+                    className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-50"
+                    onClick={() => {
+                      console.log("🖱️ Div clicked for NWC:", conn.name)
+                      const walletId = `nwc:${conn.id}`
+                      setSelectedWallet(walletId)
+                      setActiveProviderType("nwc")
+                      setActiveNWCId(conn.id)
+                      connectToNWC(conn.id).then(() => {
+                        useWalletProviderStore.getState().refreshActiveProvider()
+                      })
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="wallet-selection"
+                      className="radio radio-primary"
+                      checked={isChecked}
+                      onChange={() => {
+                        const walletId = `nwc:${conn.id}`
+                        setSelectedWallet(walletId)
+                        setActiveProviderType("nwc")
+                        setActiveNWCId(conn.id)
+                        connectToNWC(conn.id).then(() => {
+                          useWalletProviderStore.getState().refreshActiveProvider()
+                        })
+                      }}
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">🔗 {conn.name}</div>
+                      <div className="text-sm text-gray-500">
+                        NWC Connection
+                        {conn.balance !== undefined && ` • ${conn.balance} sats`}
+                      </div>
                     </div>
                   </div>
-                </label>
-              ))}
+                )
+              })}
             </div>
           </div>
 

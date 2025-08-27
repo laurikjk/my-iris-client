@@ -1,9 +1,9 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {UserRow} from "../user/UserRow"
 import {useEffect, useState} from "react"
-import {decode} from "light-bolt11-decoder"
 import {RiFlashlightFill} from "@remixicon/react"
 import {formatAmount} from "@/utils/utils"
+import {getZapAmount} from "@/utils/nostr"
 
 interface ZapReceiptProps {
   event: NDKEvent
@@ -14,16 +14,7 @@ function ZapReceipt({event}: ZapReceiptProps) {
 
   // Extract zap amount from bolt11 invoice
   useEffect(() => {
-    const invoice = event.tagValue("bolt11")
-    if (invoice) {
-      const decodedInvoice = decode(invoice)
-      const amountSection = decodedInvoice.sections.find(
-        (section) => section.name === "amount"
-      )
-      if (amountSection && "value" in amountSection) {
-        setZappedAmount(Math.floor(parseInt(amountSection.value) / 1000))
-      }
-    }
+    getZapAmount(event).then(setZappedAmount)
   }, [event])
 
   // Get the first p or P tag as recipient

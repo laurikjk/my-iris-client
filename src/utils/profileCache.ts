@@ -2,6 +2,7 @@ import {NDKUserProfile} from "@nostr-dev-kit/ndk"
 import {LRUCache} from "typescript-lru-cache"
 import throttle from "lodash/throttle"
 import localforage from "localforage"
+import AnimalName from "./AnimalName"
 
 // Constants for profile data sanitization
 const PROFILE_NAME_MAX_LENGTH = 50
@@ -180,6 +181,28 @@ export const addCachedProfile = (pubkey: string, profile: NDKUserProfile) => {
       throttledSaveProfiles()
     }
   }
+}
+
+export const getCachedName = (pubKey: string): string => {
+  const profile = profileCache.get(pubKey)
+
+  let name = ""
+  if (profile) {
+    if (profile.name) {
+      name = profile.name
+    } else if (!profile.name && profile.displayName) {
+      name = profile.displayName
+    } else if (
+      !profile.name &&
+      !profile.displayName &&
+      profile.display_name &&
+      typeof profile.display_name === "string" // can be number for some reason
+    ) {
+      name = profile.display_name
+    }
+  }
+
+  return name || AnimalName(pubKey)
 }
 
 // Initialize profile cache on module load

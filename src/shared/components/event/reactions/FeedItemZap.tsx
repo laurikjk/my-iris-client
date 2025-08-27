@@ -1,20 +1,20 @@
-import {LnPayCb, NDKEvent, NDKZapper, NDKPaymentConfirmationLN} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
 import {RefObject, useEffect, useState} from "react"
 import useProfile from "@/shared/hooks/useProfile.ts"
-import {getZappingUser} from "@/utils/nostr.ts"
+import {parseZapReceipt, calculateTotalZapAmount, type ZapInfo} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
 import {formatAmount} from "@/utils/utils.ts"
-import {decode} from "light-bolt11-decoder"
 import {usePublicKey, useUserStore} from "@/stores/user"
 import {useScrollAwareLongPress} from "@/shared/hooks/useScrollAwareLongPress"
 import Icon from "../../Icons/Icon.tsx"
 import ZapModal from "../ZapModal.tsx"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
+import {KIND_ZAP_RECEIPT} from "@/utils/constants"
 
-const zapsByEventCache = new LRUCache<string, Map<string, NDKEvent[]>>({
+const zapsByEventCache = new LRUCache<string, Map<string, ZapInfo[]>>({
   maxSize: 100,
 })
 
@@ -44,7 +44,7 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
   const [showZapModal, setShowZapModal] = useState(false)
   const [failedInvoice, setFailedInvoice] = useState<string>("")
 
-  const [zapsByAuthor, setZapsByAuthor] = useState<Map<string, NDKEvent[]>>(
+  const [zapsByAuthor, setZapsByAuthor] = useState<Map<string, ZapInfo[]>>(
     zapsByEventCache.get(event.id) || new Map()
   )
 
@@ -52,24 +52,9 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
   const hasWallet = activeProviderType !== "disabled" && activeProviderType !== undefined
   const canQuickZap = !!defaultZapAmount && defaultZapAmount > 0 && hasWallet
 
-  const calculateZappedAmount = async (
-    zaps: Map<string, NDKEvent[]>
-  ): Promise<number> => {
-    return Array.from(zaps.values())
-      .flat()
-      .reduce((sum, zap) => {
-        const invoice = zap.tagValue("bolt11")
-        if (invoice) {
-          const decodedInvoice = decode(invoice)
-          const amountSection = decodedInvoice.sections.find(
-            (section) => section.name === "amount"
-          )
-          if (amountSection && "value" in amountSection) {
-            return sum + Math.floor(parseInt(amountSection.value) / 1000)
-          }
-        }
-        return sum
-      }, 0)
+  const calculateZappedAmount = async (zaps: Map<string, ZapInfo[]>): Promise<number> => {
+    const total = calculateTotalZapAmount(zaps)
+    return total
   }
 
   const [zappedAmount, setZappedAmount] = useState<number>(0)
@@ -100,41 +85,59 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
   }
 
   const handleOneClickZap = async () => {
+    console.log("Quick zap: starting one-click zap", {
+      defaultZapAmount,
+      hasWallet,
+      activeProviderType,
+      canQuickZap,
+    })
     try {
       setIsZapping(true)
-      flashElement()
+      // Don't flash until payment succeeds
       const amount = Number(defaultZapAmount) * 1000
+      console.log("Quick zap: amount in msats", amount)
 
-      const lnPay: LnPayCb = async ({
-        pr,
-      }): Promise<NDKPaymentConfirmationLN | undefined> => {
-        if (hasWallet) {
-          // Use unified payment method for all wallet types
-          walletProviderSendPayment(pr)
-            .then(() => {
-              // Payment succeeded
-            })
-            .catch((error: Error) => {
-              console.warn("Quick zap payment failed:", error)
-              // Store the failed invoice for the modal
-              setFailedInvoice(pr)
-              setShowZapModal(true)
-            })
-
-          // Return undefined to let NDK know we're handling payment ourselves
-          return undefined
-        }
-        return undefined
+      // Check if profile has lightning address
+      if (!profile?.lud16 && !profile?.lud06) {
+        console.warn("Quick zap: No lightning address found")
+        setShowZapModal(true)
+        return
       }
 
-      const zapper = new NDKZapper(event, amount, "msat", {
-        comment: "",
-        ndk: ndk(),
-        lnPay,
-        tags: [["e", event.id]],
-      })
+      const ndkInstance = ndk()
+      const signer = ndkInstance.signer
+      if (!signer) {
+        console.warn("Quick zap: No signer available")
+        setShowZapModal(true)
+        return
+      }
 
-      await zapper.zap()
+      console.log("Quick zap: creating and publishing zap request")
+
+      // Use the shared function that publishes the zap request
+      const {createAndPublishZapInvoice} = await import("@/utils/nostr")
+      const invoice = await createAndPublishZapInvoice(
+        event,
+        amount,
+        "", // No comment for quick zap
+        profile.lud16 || profile.lud06!,
+        signer
+      )
+
+      console.log("Quick zap: invoice created", invoice.substring(0, 50) + "...")
+
+      // Try to pay with wallet
+      try {
+        await walletProviderSendPayment(invoice)
+        console.log("Quick zap: payment succeeded")
+        // Flash the element on success
+        flashElement()
+      } catch (error) {
+        console.warn("Quick zap payment failed:", error)
+        // Store the failed invoice for the modal
+        setFailedInvoice(invoice)
+        setShowZapModal(true)
+      }
     } catch (error) {
       console.warn("Unable to one-click zap:", error)
       // Open zap modal on zap failure
@@ -155,7 +158,7 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
     if (!showReactionCounts) return
 
     const filter = {
-      kinds: [9735],
+      kinds: [KIND_ZAP_RECEIPT],
       ["#e"]: [event.id],
     }
 
@@ -168,26 +171,28 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
 
       sub?.on("event", async (zapEvent: NDKEvent) => {
         // if (shouldHideEvent(zapEvent)) return // blah. disabling this check enables fake receipts but what can we do
-        const invoice = zapEvent.tagValue("bolt11")
-        if (invoice) {
-          const decodedInvoice = decode(invoice)
-          const amountSection = decodedInvoice.sections.find(
-            (section) => section.name === "amount"
-          )
-          if (amountSection && "value" in amountSection) {
-            setZapsByAuthor((prev) => {
-              const zappingUser = getZappingUser(zapEvent)
-              const newMap = new Map(prev)
-              const authorZaps = newMap.get(zappingUser) ?? []
-              if (!authorZaps.some((e) => e.id === zapEvent.id)) {
-                authorZaps.push(zapEvent)
-              }
-              newMap.set(zappingUser, authorZaps)
-              zapsByEventCache.set(event.id, newMap)
-              debouncedUpdateAmount(newMap)
-              return newMap
-            })
-          }
+        const zapInfo = parseZapReceipt(zapEvent)
+        if (zapInfo) {
+          setZapsByAuthor((prev) => {
+            const newMap = new Map(prev)
+            const authorZaps = newMap.get(zapInfo.pubkey) ?? []
+            if (!authorZaps.some((e) => e.id === zapEvent.id)) {
+              console.log("Adding zap:", {
+                eventId: zapEvent.id,
+                user:
+                  zapInfo.pubkey === myPubKey ? "you" : zapInfo.pubkey.substring(0, 8),
+                amount: zapInfo.amount,
+                totalZapsFromUser: authorZaps.length + 1,
+              })
+              authorZaps.push(zapInfo)
+            } else {
+              console.log("Duplicate zap event ignored:", zapEvent.id)
+            }
+            newMap.set(zapInfo.pubkey, authorZaps)
+            zapsByEventCache.set(event.id, newMap)
+            debouncedUpdateAmount(newMap)
+            return newMap
+          })
         }
       })
 
@@ -201,8 +206,11 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
   }, [showReactionCounts])
 
   useEffect(() => {
-    calculateZappedAmount(zapsByAuthor).then(setZappedAmount)
-  }, [])
+    calculateZappedAmount(zapsByAuthor).then((amount) => {
+      console.log("Initial zap amount calculation:", amount)
+      setZappedAmount(amount)
+    })
+  }, [zapsByAuthor])
 
   const zapped = zapsByAuthor.has(myPubKey)
 

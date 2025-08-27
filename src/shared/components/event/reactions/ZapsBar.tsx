@@ -1,19 +1,12 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import {formatAmount} from "@/utils/utils"
-import {decode} from "light-bolt11-decoder"
-import {getZappingUser} from "@/utils/nostr"
+import {parseZapReceipt, type ZapInfo} from "@/utils/nostr"
 import {Name} from "@/shared/components/user/Name"
 import {ndk} from "@/utils/ndk"
 import {Link} from "@/navigation"
 import {nip19} from "nostr-tools"
-
-interface ZapInfo {
-  amount: number
-  pubkey: string
-  comment: string
-  event: NDKEvent
-}
+import {KIND_ZAP_RECEIPT} from "@/utils/constants"
 
 interface ZapsBarProps {
   event: NDKEvent
@@ -24,50 +17,31 @@ export default function ZapsBar({event}: ZapsBarProps) {
 
   useEffect(() => {
     const filter = {
-      kinds: [9735],
+      kinds: [KIND_ZAP_RECEIPT],
       ["#e"]: [event.id],
     }
 
     const sub = ndk().subscribe(filter)
+    const processedEvents = new Set<string>()
 
     sub?.on("event", (zapEvent: NDKEvent) => {
-      const invoice = zapEvent.tagValue("bolt11")
-      if (invoice) {
-        const decodedInvoice = decode(invoice)
-        const amountSection = decodedInvoice.sections.find(
-          (section) => section.name === "amount"
-        )
-        if (amountSection && "value" in amountSection) {
-          const amount = Math.floor(parseInt(amountSection.value) / 1000)
-          const zappingUser = getZappingUser(zapEvent)
-          const description = zapEvent.tagValue("description")
-          let comment = ""
+      // Skip if already processed
+      if (processedEvents.has(zapEvent.id)) {
+        console.log("ZapsBar: Skipping duplicate event", zapEvent.id)
+        return
+      }
+      processedEvents.add(zapEvent.id)
 
-          if (description) {
-            try {
-              const descEvent = JSON.parse(description)
-              comment = descEvent.content || ""
-            } catch (e) {
-              // Ignore parse errors
-            }
-          }
+      const zapInfo = parseZapReceipt(zapEvent)
+      if (zapInfo) {
+        setZaps((prev) => {
+          const exists = prev.some((z) => z.id === zapEvent.id)
+          if (exists) return prev
 
-          const zapInfo: ZapInfo = {
-            amount,
-            pubkey: zappingUser,
-            comment: comment.slice(0, 50), // Limit to 50 chars as requested
-            event: zapEvent,
-          }
-
-          setZaps((prev) => {
-            const exists = prev.some((z) => z.event.id === zapEvent.id)
-            if (exists) return prev
-
-            const newZaps = [...prev, zapInfo]
-            // Sort by amount descending
-            return newZaps.sort((a, b) => b.amount - a.amount)
-          })
-        }
+          const newZaps = [...prev, {...zapInfo, comment: zapInfo.comment.slice(0, 50)}]
+          // Sort by amount descending
+          return newZaps.sort((a, b) => b.amount - a.amount)
+        })
       }
     })
 
@@ -86,7 +60,7 @@ export default function ZapsBar({event}: ZapsBarProps) {
       ) : (
         zaps.map((zap) => (
           <div
-            key={zap.event.id}
+            key={zap.id}
             className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-sm"
           >
             <span className="text-orange-500 font-semibold">

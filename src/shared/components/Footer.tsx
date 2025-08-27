@@ -33,6 +33,8 @@ const Footer = () => {
   const {balance} = useWalletBalance()
   const myPubKey = useUserStore((state) => state.publicKey)
 
+  console.log("🔍 Footer balance:", balance)
+
   const MENU_ITEMS: MenuItem[] = [
     {link: "/", icon: "home"},
     {

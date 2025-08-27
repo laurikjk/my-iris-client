@@ -1,8 +1,9 @@
 import {create} from "zustand"
 import {persist} from "zustand/middleware"
-import {NDKNWCWallet, NDKWebLNWallet, NDKWallet} from "@nostr-dev-kit/ndk-wallet"
-import NDK from "@nostr-dev-kit/ndk"
-import {DEFAULT_RELAYS} from "@/utils/ndk"
+import {NDKWebLNWallet} from "@nostr-dev-kit/ndk-wallet"
+import {ndk} from "@/utils/ndk"
+import {SimpleNWCWallet} from "@/utils/nwc"
+import throttle from "lodash/throttle"
 
 export type WalletProviderType = "native" | "nwc" | "disabled" | undefined
 
@@ -10,7 +11,7 @@ export interface NWCConnection {
   id: string
   name: string
   connectionString: string // nostr+walletconnect://...
-  wallet?: NDKNWCWallet
+  wallet?: SimpleNWCWallet
   lastUsed?: number
   balance?: number
   isLocalCashuWallet?: boolean // true if this connection comes from bc:config
@@ -23,8 +24,7 @@ interface WalletProviderState {
 
   // Provider instances
   nativeWallet: NDKWebLNWallet | null
-  activeWallet: NDKWallet | null
-  ndk: NDK | null
+  activeWallet: NDKWebLNWallet | SimpleNWCWallet | null
 
   // Saved NWC connections
   nwcConnections: NWCConnection[]
@@ -33,7 +33,7 @@ interface WalletProviderState {
   setActiveProviderType: (type: WalletProviderType) => void
   setActiveNWCId: (id: string) => void
   setNativeWallet: (wallet: NDKWebLNWallet | null) => void
-  setActiveWallet: (wallet: NDKWallet | null) => void
+  setActiveWallet: (wallet: NDKWebLNWallet | SimpleNWCWallet | null) => void
 
   // NWC connection management
   addNWCConnection: (connection: Omit<NWCConnection, "id">) => string
@@ -64,11 +64,12 @@ export const useWalletProviderStore = create<WalletProviderState>()(
       activeNWCId: undefined,
       nativeWallet: null,
       activeWallet: null,
-      ndk: null,
       nwcConnections: [],
 
       setActiveProviderType: (type: WalletProviderType) => {
         console.log("🔄 Setting active provider type to:", type)
+        const prevType = get().activeProviderType
+        console.log("🔄 Previous provider type was:", prevType)
         set({activeProviderType: type})
         get().refreshActiveProvider()
       },
@@ -86,7 +87,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
         }
       },
 
-      setActiveWallet: (wallet: NDKWallet | null) => {
+      setActiveWallet: (wallet: NDKWebLNWallet | SimpleNWCWallet | null) => {
         set({activeWallet: wallet})
       },
 
@@ -140,18 +141,17 @@ export const useWalletProviderStore = create<WalletProviderState>()(
           return false
         }
 
-        console.log("🔌 Found connection string:", connection.connectionString)
+        console.log("🔌 Found connection:", {
+          name: connection.name,
+          isLocalCashu: connection.isLocalCashuWallet,
+          hasWallet: !!connection.wallet,
+          connectionStringLength: connection.connectionString?.length,
+        })
 
         try {
           // Initialize NDK if not already done
-          let ndk = state.ndk
-          if (!ndk) {
-            ndk = new NDK({
-              explicitRelayUrls: DEFAULT_RELAYS,
-            })
-            await ndk.connect()
-            set({ndk})
-          }
+          // Use global NDK instance
+          ndk()
 
           // Parse the NWC connection string
           // Format: nostr+walletconnect://<pubkey>?relay=<relay>&secret=<secret>
@@ -191,11 +191,25 @@ export const useWalletProviderStore = create<WalletProviderState>()(
             )
           }
 
-          // Create NWC wallet
-          const wallet = new NDKNWCWallet(ndk, {
+          // Create our simple NWC wallet
+          console.log("🔌 Creating SimpleNWCWallet with:", {
+            pubkey,
+            relayUrls,
+            hasSecret: !!secret,
+          })
+
+          const wallet = new SimpleNWCWallet({
             pubkey,
             relayUrls,
             secret,
+          })
+
+          // Connect the wallet
+          await wallet.connect()
+
+          console.log("🔌 SimpleNWCWallet created and connected:", {
+            walletExists: !!wallet,
+            walletType: wallet?.constructor?.name,
           })
 
           // Update the connection with the wallet
@@ -206,6 +220,15 @@ export const useWalletProviderStore = create<WalletProviderState>()(
             activeProviderType: "nwc",
             activeNWCId: id,
             activeWallet: wallet,
+          })
+
+          // Verify the state was updated
+          const newState = get()
+          console.log("🔌 State after setting wallet:", {
+            hasActiveWallet: !!newState.activeWallet,
+            activeWalletType: newState.activeWallet?.constructor?.name,
+            activeNWCId: newState.activeNWCId,
+            activeProviderType: newState.activeProviderType,
           })
 
           console.log("✅ NWC connection successful!")
@@ -237,19 +260,18 @@ export const useWalletProviderStore = create<WalletProviderState>()(
           activeProviderType: state.activeProviderType,
           nwcConnectionsCount: state.nwcConnections.length,
           activeNWCId: state.activeNWCId,
+          hasActiveWallet: !!state.activeWallet,
+          hasNativeWallet: !!state.nativeWallet,
         })
 
-        // Initialize NDK
-        if (!state.ndk) {
-          const ndk = new NDK({
-            explicitRelayUrls: DEFAULT_RELAYS,
-          })
-          await ndk.connect()
-          set({ndk})
-        }
+        // Use the global NDK instance - it's already initialized and connected
+        const ndkInstance = ndk()
+        console.log("🔍 Using global NDK instance:", !!ndkInstance)
 
         // Start delayed Cashu NWC checking to give Cashu wallet time to initialize
+        console.log("🔍 About to call startCashuNWCChecking...")
         get().startCashuNWCChecking()
+        console.log("🔍 Returned from startCashuNWCChecking, continuing...")
 
         // Only run wallet discovery if activeProviderType is undefined
         if (state.activeProviderType === undefined) {
@@ -260,7 +282,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
             try {
               const enabled = await window.webln.isEnabled()
               if (enabled) {
-                const nativeWallet = new NDKWebLNWallet(state.ndk!)
+                const nativeWallet = new NDKWebLNWallet(ndk())
 
                 console.log("🔍 Found native WebLN, setting as active")
                 set({
@@ -273,13 +295,28 @@ export const useWalletProviderStore = create<WalletProviderState>()(
               console.warn("Failed to enable native WebLN provider:", error)
             }
           }
-        } else {
+        }
+
+        // Also handle already-selected providers (not in else block anymore)
+        if (
+          state.activeProviderType !== undefined &&
+          state.activeProviderType !== "disabled"
+        ) {
+          console.log("🔍 Provider already selected, updating providers...")
+          console.log("🔍 Checking conditions for NWC init:", {
+            activeProviderType: state.activeProviderType,
+            isNWC: state.activeProviderType === "nwc",
+            activeNWCId: state.activeNWCId,
+            hasActiveNWCId: !!state.activeNWCId,
+            condition: state.activeProviderType === "nwc" && state.activeNWCId,
+          })
+
           // Provider already selected, just update providers
           if (window.webln && !state.nativeWallet) {
             try {
               const enabled = await window.webln.isEnabled()
               if (enabled) {
-                const nativeWallet = new NDKWebLNWallet(state.ndk!)
+                const nativeWallet = new NDKWebLNWallet(ndk())
                 set({nativeWallet})
                 if (state.activeProviderType === "native") {
                   set({activeWallet: nativeWallet})
@@ -292,7 +329,19 @@ export const useWalletProviderStore = create<WalletProviderState>()(
 
           // Initialize active NWC connection if selected
           if (state.activeProviderType === "nwc" && state.activeNWCId) {
-            await get().connectToNWC(state.activeNWCId)
+            console.log("🔍 Initializing active NWC connection:", state.activeNWCId)
+            console.log(
+              "🔍 Available NWC connections:",
+              state.nwcConnections.map((c) => ({
+                id: c.id,
+                name: c.name,
+                hasWallet: !!c.wallet,
+                isLocalCashu: c.isLocalCashuWallet,
+              }))
+            )
+            const success = await get().connectToNWC(state.activeNWCId)
+            console.log("🔍 NWC connection result:", success)
+            console.log("🔍 Active wallet after connection:", !!get().activeWallet)
           }
         }
       },
@@ -357,6 +406,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
         )
 
         if (existingCashuConnection) {
+          console.log("🔍 Already have Cashu NWC connection, skipping check")
           return
         }
 
@@ -470,9 +520,13 @@ export const useWalletProviderStore = create<WalletProviderState>()(
       sendPayment: async (invoice: string) => {
         const {activeWallet, activeProviderType, nativeWallet} = get()
 
-        // Handle NWC wallets
-        if (activeProviderType === "nwc" && activeWallet instanceof NDKNWCWallet) {
-          return await activeWallet.req("pay_invoice", {invoice})
+        // Handle NWC wallets with our SimpleNWCWallet
+        if (activeProviderType === "nwc" && activeWallet instanceof SimpleNWCWallet) {
+          const result = await activeWallet.payInvoice(invoice)
+          if (!result) {
+            throw new Error("Payment failed")
+          }
+          return result
         }
 
         // Handle native WebLN wallets (only if explicitly active)
@@ -489,116 +543,81 @@ export const useWalletProviderStore = create<WalletProviderState>()(
       },
 
       createInvoice: async (amount: number, description?: string) => {
-        const {activeWallet} = get()
+        const {activeWallet, activeProviderType} = get()
 
         if (!activeWallet) {
           throw new Error("No wallet connected")
         }
 
-        // Check if it's an NWC wallet which has makeInvoice method
-        if (activeWallet instanceof NDKNWCWallet) {
-          return await activeWallet.makeInvoice(amount, description || "")
-        } else {
-          throw new Error("Invoice creation not supported for this wallet type")
+        // Check if it's our SimpleNWC wallet
+        if (activeProviderType === "nwc" && activeWallet instanceof SimpleNWCWallet) {
+          const result = await activeWallet.makeInvoice(amount, description)
+          if (result) {
+            return result
+          }
+          throw new Error("Failed to create invoice")
         }
+
+        throw new Error("Invoice creation not supported for this wallet type")
       },
 
-      getBalance: async () => {
-        try {
-          const {activeWallet, activeProviderType} = get()
-          console.log(
-            "🔍 getBalance called, activeProviderType:",
-            activeProviderType,
-            "hasActiveWallet:",
-            !!activeWallet
-          )
+      getBalance: throttle(
+        async () => {
+          try {
+            const {activeWallet, activeProviderType} = get()
+            console.log(
+              "🔍 getBalance called (throttled), activeProviderType:",
+              activeProviderType,
+              "hasActiveWallet:",
+              !!activeWallet
+            )
 
-          if (!activeWallet) {
-            console.log("🔍 No active wallet, returning null")
-            return null
-          }
-
-          // Handle NWC wallets with proper balance request
-          if (activeProviderType === "nwc" && activeWallet instanceof NDKNWCWallet) {
-            console.log("🔍 Entering NWC balance request path")
-            try {
-              console.log("🔍 Making NWC balance request...")
-
-              // Add timeout to prevent hanging
-              const timeoutMs = 10000 // 10 seconds
-              const response = await Promise.race([
-                activeWallet.req("get_balance", {}),
-                new Promise((_, reject) =>
-                  setTimeout(() => reject(new Error("NWC request timed out")), timeoutMs)
-                ),
-              ])
-
-              console.log("🔍 NWC balance response received:", response)
-
-              // Check if response has the expected structure from the logs
-              if (response && typeof response === "object") {
-                // Try different possible response structures
-                if (
-                  "result" in response &&
-                  response.result &&
-                  typeof response.result === "object" &&
-                  "balance" in response.result
-                ) {
-                  // Structure: {result: {balance: 9000}}
-                  const balance = Math.floor((response.result.balance as number) / 1000)
-                  console.log(
-                    "🔍 Parsed NWC balance (from result.balance):",
-                    balance,
-                    "sats"
-                  )
-                  return balance
-                } else if ("balance" in response) {
-                  // Structure: {balance: 9000}
-                  const balance = Math.floor((response.balance as number) / 1000)
-                  console.log("🔍 Parsed NWC balance (from balance):", balance, "sats")
-                  return balance
-                }
-              }
-              console.warn("🔍 Unexpected NWC balance response structure:", response)
-            } catch (error) {
-              console.error("🔍 NWC balance request failed with error:", error)
-              // Don't return null on timeout - preserve existing balance
-              if (error instanceof Error && error.message.includes("timed out")) {
-                console.log("🔍 NWC request timed out, preserving existing balance")
-                return undefined // Signal to useWalletBalance to keep current value
-              }
+            if (!activeWallet) {
+              console.log("🔍 No active wallet, returning null")
               return null
             }
-          }
 
-          // For other wallet types, try NDK balance methods
-          const balance = activeWallet.balance
-          if (balance && typeof balance === "object" && "amount" in balance) {
-            return (balance as {amount: number}).amount || 0
-          }
-
-          // If NDK wallet doesn't have balance yet, try to update it
-          if (
-            "updateBalance" in activeWallet &&
-            typeof activeWallet.updateBalance === "function"
-          ) {
-            await activeWallet.updateBalance()
-            const updatedBalance = activeWallet.balance
-            if (
-              updatedBalance &&
-              typeof updatedBalance === "object" &&
-              "amount" in updatedBalance
-            ) {
-              return (updatedBalance as {amount: number}).amount || 0
+            // Handle NWC wallets with our SimpleNWCWallet
+            if (activeProviderType === "nwc" && activeWallet instanceof SimpleNWCWallet) {
+              console.log("🔍 Using SimpleNWCWallet for balance request")
+              const balance = await activeWallet.getBalance()
+              return balance
             }
-          }
 
-          return 0
-        } catch (error) {
-          console.error("Failed to get balance:", error)
-          return null
-        }
-      },
+            // For NDK wallets, try balance property and updateBalance method
+            if (activeWallet instanceof NDKWebLNWallet) {
+              const walletWithBalance = activeWallet as NDKWebLNWallet & {
+                balance?: {amount: number}
+                updateBalance?: () => Promise<void>
+              }
+              const balance = walletWithBalance.balance
+              if (balance && typeof balance === "object" && "amount" in balance) {
+                return balance.amount || 0
+              }
+
+              // If NDK wallet doesn't have balance yet, try to update it
+              if (walletWithBalance.updateBalance) {
+                await walletWithBalance.updateBalance()
+                const updatedBalance = walletWithBalance.balance
+                if (
+                  updatedBalance &&
+                  typeof updatedBalance === "object" &&
+                  "amount" in updatedBalance
+                ) {
+                  return updatedBalance.amount || 0
+                }
+              }
+            }
+
+            return 0
+          } catch (error) {
+            console.error("Failed to get balance:", error)
+            return null
+          }
+        },
+        3000, // Throttle to max once per 3 seconds
+        {leading: true, trailing: false} // Execute on first call, skip trailing calls
+      ),
 
       getInfo: async () => {
         try {
