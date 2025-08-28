@@ -13,6 +13,7 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
 import {Helmet} from "react-helmet"
 import {ndk} from "@/utils/ndk"
+import debounce from "lodash/debounce"
 
 let publicKey = useUserStore.getState().publicKey
 useUserStore.subscribe((state) => (publicKey = state.publicKey))
@@ -29,6 +30,9 @@ const PublicChat = () => {
   const [messages, setMessages] = useState<SortedMap<string, MessageType>>(
     new SortedMap<string, MessageType>([], comparator)
   )
+  const [displayedMessages, setDisplayedMessages] = useState<
+    SortedMap<string, MessageType>
+  >(new SortedMap<string, MessageType>([], comparator))
   const [replyingTo, setReplyingTo] = useState<MessageType>()
   const [error, setError] = useState<string | null>(null)
   const initialLoadDoneRef = useRef<boolean>(false)
@@ -36,14 +40,27 @@ const PublicChat = () => {
   const [showNoMessages, setShowNoMessages] = useState(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Debounced function to update displayed messages
+  const debouncedUpdateDisplayedMessages = debounce(
+    (newMessages: SortedMap<string, MessageType>) => {
+      setDisplayedMessages(newMessages)
+    },
+    300
+  )
+
   useEffect(() => {
     if (!id) return
     addOrRefreshChatById(id)
   }, [id, addOrRefreshChatById])
 
+  // Update displayed messages when messages change (debounced)
+  useEffect(() => {
+    debouncedUpdateDisplayedMessages(messages)
+  }, [messages, debouncedUpdateDisplayedMessages])
+
   // Set up timeout to show "No messages yet" after 2 seconds
   useEffect(() => {
-    if (messages.size === 0) {
+    if (displayedMessages.size === 0) {
       // Clear any existing timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
@@ -63,7 +80,7 @@ const PublicChat = () => {
         clearTimeout(timeoutRef.current)
       }
     }
-  }, [messages.size])
+  }, [displayedMessages.size])
 
   // Set up continuous subscription for messages
   useEffect(() => {
@@ -235,7 +252,7 @@ const PublicChat = () => {
       </Helmet>
       <PublicChatHeader channelId={id || ""} />
       <ChatContainer
-        messages={messages}
+        messages={displayedMessages}
         sessionId={id}
         onReply={setReplyingTo}
         showAuthor={true}
