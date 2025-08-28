@@ -2,7 +2,6 @@ import {persist} from "zustand/middleware"
 import {create} from "zustand"
 import {
   KIND_TEXT_NOTE,
-  KIND_CLASSIFIED,
   KIND_LONG_FORM_CONTENT,
   KIND_PICTURE_FIRST,
 } from "@/utils/constants"
@@ -61,17 +60,6 @@ const defaultFeedConfigs: Record<string, FeedConfig> = {
       limit: 100,
     },
   },
-  market: {
-    name: "Market",
-    id: "market",
-    showRepliedTo: false,
-    filter: {
-      kinds: [KIND_CLASSIFIED],
-      limit: 100,
-    },
-    followDistance: 3,
-    hideReplies: true,
-  },
   media: {
     name: "Media",
     id: "media",
@@ -111,7 +99,6 @@ const DEFAULT_ENABLED_FEED_IDS = [
   "popular",
   "adventure",
   "articles",
-  "market",
   "media",
 ]
 

@@ -42,30 +42,56 @@ export function ExpirationTime({
     const now = Math.floor(Date.now() / 1000)
     if (timestamp <= now) return
 
-    const timeUntilExpiry = timestamp - now
-    let updateInterval: number
+    let intervalId: NodeJS.Timeout | null = null
 
-    // Update more frequently when close to expiry
-    if (timeUntilExpiry < 60) {
-      updateInterval = 1000 // Every second for last minute
-    } else if (timeUntilExpiry < 3600) {
-      updateInterval = 60000 // Every minute for last hour
-    } else {
-      updateInterval = 60000 // Every minute otherwise
+    const setupInterval = () => {
+      const currentTime = Math.floor(Date.now() / 1000)
+      const timeUntilExpiry = timestamp - currentTime
+
+      if (timeUntilExpiry <= 0) {
+        forceUpdate((n) => n + 1)
+        return
+      }
+
+      // Determine update frequency based on time remaining
+      let updateInterval: number
+      if (timeUntilExpiry <= 60) {
+        updateInterval = 1000 // Every second for last minute
+      } else if (timeUntilExpiry <= 120) {
+        updateInterval = 10000 // Every 10 seconds for 1-2 minutes
+      } else {
+        updateInterval = 60000 // Every minute for longer times
+      }
+
+      intervalId = setInterval(() => {
+        const time = Math.floor(Date.now() / 1000)
+        const remaining = timestamp - time
+
+        if (remaining <= 0) {
+          // Expired
+          forceUpdate((n) => n + 1)
+          if (intervalId) clearInterval(intervalId)
+        } else {
+          forceUpdate((n) => n + 1)
+
+          // Check if we need to adjust frequency
+          if (
+            (remaining <= 60 && updateInterval !== 1000) ||
+            (remaining <= 120 && remaining > 60 && updateInterval === 60000)
+          ) {
+            // Switch to appropriate update frequency
+            if (intervalId) clearInterval(intervalId)
+            setupInterval() // Restart with new frequency
+          }
+        }
+      }, updateInterval)
     }
 
-    const interval = setInterval(() => {
-      const currentTime = Math.floor(Date.now() / 1000)
-      if (currentTime >= timestamp) {
-        // Just expired, update once more and clear interval
-        forceUpdate((n) => n + 1)
-        clearInterval(interval)
-      } else {
-        forceUpdate((n) => n + 1)
-      }
-    }, updateInterval)
+    setupInterval()
 
-    return () => clearInterval(interval)
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+    }
   }, [timestamp])
 
   const iconClass = iconSize === "md" ? "w-4 h-4" : "w-3 h-3"

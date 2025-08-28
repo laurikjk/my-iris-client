@@ -13,6 +13,9 @@ import {Helmet} from "react-helmet"
 import {useSettingsStore} from "@/stores/settings"
 import {useUIStore} from "@/stores/ui"
 import {KIND_CLASSIFIED, KIND_TEXT_NOTE} from "@/utils/constants"
+import socialGraph from "@/utils/socialGraph"
+import {UserRow} from "@/shared/components/user/UserRow"
+import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 
 function SearchPage() {
   const {query} = useParams()
@@ -139,12 +142,7 @@ function SearchPage() {
                 forceUpdate={forceUpdate}
               />
             ) : (
-              <div className="mt-4">
-                <AlgorithmicFeed
-                  type="popular"
-                  displayOptions={{showDisplaySelector: false}}
-                />
-              </div>
+              <NoSearchTermContent activeTab={activeTab} />
             )}
           </div>
           <Helmet>
@@ -168,6 +166,78 @@ function SearchPage() {
         )}
       </RightColumn>
     </div>
+  )
+}
+
+function NoSearchTermContent({activeTab}: {activeTab: "people" | "posts" | "market"}) {
+  if (activeTab === "people") {
+    return (
+      <div className="mt-4">
+        <FollowedUsersList />
+      </div>
+    )
+  }
+
+  if (activeTab === "posts") {
+    return (
+      <div className="mt-4">
+        <AlgorithmicFeed type="popular" displayOptions={{showDisplaySelector: true}} />
+      </div>
+    )
+  }
+
+  // Market tab
+  return (
+    <div className="mt-4">
+      <Feed
+        feedConfig={{
+          name: "Market",
+          id: "market",
+          showRepliedTo: false,
+          filter: {
+            kinds: [KIND_CLASSIFIED],
+            limit: 100,
+          },
+          followDistance: 3,
+          hideReplies: true,
+        }}
+      />
+    </div>
+  )
+}
+
+function FollowedUsersList() {
+  const [displayCount, setDisplayCount] = useState(20)
+  const graph = socialGraph()
+  const rootUser = graph.getRoot()
+  const follows = graph.getFollowedByUser(rootUser)
+
+  // Sort followed users by how many of your friends follow them
+  const sortedFollows = useMemo(() => {
+    if (!follows) return []
+
+    return Array.from(follows)
+      .map((pubkey) => ({
+        pubkey,
+        followedByCount: graph.followedByFriends(pubkey).size,
+      }))
+      .sort((a, b) => b.followedByCount - a.followedByCount)
+  }, [follows, graph, rootUser])
+
+  const loadMore = () => {
+    if (displayCount < sortedFollows.length) {
+      setDisplayCount((prev) => Math.min(prev + 20, sortedFollows.length))
+    }
+  }
+
+  return (
+    <InfiniteScroll onLoadMore={loadMore}>
+      <div className="flex flex-col gap-2 p-2">
+        {sortedFollows.slice(0, displayCount).map(({pubkey}) => (
+          <UserRow key={pubkey} pubKey={pubkey} linkToProfile={true} />
+        ))}
+      </div>
+    </InfiniteScroll>
   )
 }
 
