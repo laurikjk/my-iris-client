@@ -244,7 +244,9 @@ function QRCodeModalEnhanced({onClose, data, pubKey}: QRCodeModalEnhancedProps) 
               <Name pubKey={pubKey} />
             </h1>
             {profile?.nip05 && (
-              <p className="text-white/80 text-sm qr-modal-shadow-sm">{profile.nip05}</p>
+              <p className="text-white/80 text-sm qr-modal-shadow-sm">
+                {profile.nip05.replace("_@", "")}
+              </p>
             )}
           </div>
 
