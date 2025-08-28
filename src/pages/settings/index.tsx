@@ -144,14 +144,14 @@ function Settings() {
         data-main-scroll-container="true"
         data-header-scroll-target
       >
-        <div className="pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0 flex w-full flex-col">
+        <div className="pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0 flex w-full flex-col h-full">
           <div className="flex w-full flex-1">
             <nav
               className={`sticky top-0 w-full lg:w-64 p-4 lg:h-screen ${
                 isSettingsRoot ? "block" : "hidden"
               } lg:block lg:border-r border-custom`}
             >
-              <div className="flex flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
+              <div className="flex flex-col">
                 {settingsGroups.map((group, groupIndex) => (
                   <div key={groupIndex} className="mb-4">
                     <h3 className="font-bold text-xs text-base-content/50 uppercase tracking-wide mb-2">
@@ -192,10 +192,12 @@ function Settings() {
                     ))}
                   </div>
                 ))}
+                {/* Spacer for mobile footer on settings list */}
+                <div className="h-44 lg:hidden" aria-hidden="true" />
               </div>
             </nav>
             <div className={`flex-1 ${isSettingsRoot ? "hidden lg:block" : "block"}`}>
-              <div className="p-4 mx-4 md:p-8 rounded-lg bg-base-100 shadow">
+              <div className="p-4 mx-4 md:p-8 rounded-lg bg-base-100 shadow mb-44 md:mb-0">
                 {(() => {
                   // Determine which component to show based on the path
                   const pathSegments = location.pathname.split("/").filter(Boolean)
@@ -235,8 +237,6 @@ function Settings() {
               </div>
             </div>
           </div>
-          {/* Spacer for mobile footer */}
-          <div className="h-44 md:hidden" aria-hidden="true" />
         </div>
       </div>
       <Helmet>
