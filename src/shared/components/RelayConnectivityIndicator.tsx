@@ -2,6 +2,7 @@ import {useState, useEffect} from "react"
 import {RiWebhookLine} from "@remixicon/react"
 import {ndk as getNdk} from "@/utils/ndk"
 import {useUserStore} from "@/stores/user"
+import {useUIStore} from "@/stores/ui"
 import {Link} from "@/navigation"
 
 interface RelayConnectivityIndicatorProps {
@@ -14,6 +15,7 @@ export const RelayConnectivityIndicator = ({
   showCount = true,
 }: RelayConnectivityIndicatorProps) => {
   const {relayConfigs} = useUserStore()
+  const {showRelayIndicator} = useUIStore()
   const [ndkRelays, setNdkRelays] = useState(new Map())
 
   useEffect(() => {
@@ -38,15 +40,17 @@ export const RelayConnectivityIndicator = ({
 
   const getColorClass = () => {
     if (connectedCount === 0) return "text-error"
-    if (connectedCount < 3) return "text-warning"
-    return "text-success"
+    if (connectedCount === 1) return "text-warning"
+    return "text-neutral-500"
   }
+
+  if (!showRelayIndicator) return null
 
   return (
     <Link
       to="/settings/network"
       className={`flex items-center justify-center gap-1 ${getColorClass()} ${className} hover:opacity-75 transition-opacity`}
-      title={`${connectedCount} relays connected - Click to manage`}
+      title={`${connectedCount} relays connected`}
     >
       <RiWebhookLine className="w-5 h-5" />
       {showCount && <span className="text-sm font-bold">{connectedCount}</span>}

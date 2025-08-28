@@ -7,6 +7,7 @@ interface UIState {
   goToNotifications: number
   hidePWAPrompt: boolean
   isMediaModalSidebarVisible: boolean
+  showRelayIndicator: boolean
   navItemClicked: {signal: number; path: string}
 
   setNewPostOpen: (isOpen: boolean) => void
@@ -14,6 +15,7 @@ interface UIState {
   incrementGoToNotifications: () => void
   setHidePWAPrompt: (hide: boolean) => void
   setMediaModalSidebarVisible: (isVisible: boolean) => void
+  setShowRelayIndicator: (show: boolean) => void
   triggerNavItemClick: (path: string) => void
 }
 
@@ -26,6 +28,7 @@ export const useUIStore = create<UIState>()(
         goToNotifications: 0,
         hidePWAPrompt: false,
         isMediaModalSidebarVisible: true,
+        showRelayIndicator: true,
         navItemClicked: {signal: 0, path: ""},
       }
 
@@ -37,6 +40,7 @@ export const useUIStore = create<UIState>()(
         setHidePWAPrompt: (hidePWAPrompt: boolean) => set({hidePWAPrompt}),
         setMediaModalSidebarVisible: (isMediaModalSidebarVisible: boolean) =>
           set({isMediaModalSidebarVisible}),
+        setShowRelayIndicator: (showRelayIndicator: boolean) => set({showRelayIndicator}),
         triggerNavItemClick: (path: string) =>
           set({navItemClicked: {signal: Date.now(), path}}),
       }
@@ -54,6 +58,7 @@ export const useUIStore = create<UIState>()(
         goToNotifications: state.goToNotifications,
         hidePWAPrompt: state.hidePWAPrompt,
         isMediaModalSidebarVisible: state.isMediaModalSidebarVisible,
+        showRelayIndicator: state.showRelayIndicator,
         // Exclude searchTriggeredFromNav from persistence
       }),
     }

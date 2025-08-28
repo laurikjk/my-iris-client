@@ -1,11 +1,13 @@
 import {useMemo} from "react"
 import {DEFAULT_RELAYS} from "@/utils/ndk"
 import {useUserStore} from "@/stores/user"
+import {useUIStore} from "@/stores/ui"
 import {RelayList} from "@/shared/components/RelayList"
 
 export function Network() {
   const {relayConfigs, setRelayConfigs, ndkOutboxModel, setNdkOutboxModel} =
     useUserStore()
+  const {showRelayIndicator, setShowRelayIndicator} = useUIStore()
 
   const resetDefaults = () => {
     const defaultConfigs = DEFAULT_RELAYS.map((url) => ({url})) // No disabled flag means enabled
@@ -34,10 +36,28 @@ export function Network() {
             className="checkbox checkbox-primary"
           />
           <div>
-            <span className="text-base font-medium">Enable NDK Outbox Model</span>
+            <span className="text-base font-medium">Enable Outbox Model</span>
             <p className="text-sm text-base-content/70">
               Improves relay selection and event distribution using the outbox model
               pattern
+            </p>
+          </div>
+        </label>
+      </div>
+
+      {/* Relay Indicator Setting */}
+      <div className="mb-6">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showRelayIndicator}
+            onChange={(e) => setShowRelayIndicator(e.target.checked)}
+            className="checkbox checkbox-primary"
+          />
+          <div>
+            <span className="text-base font-medium">Show Relay Indicator</span>
+            <p className="text-sm text-base-content/70">
+              Display relay connectivity indicator in the UI
             </p>
           </div>
         </label>
