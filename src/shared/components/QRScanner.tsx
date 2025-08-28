@@ -8,7 +8,6 @@ interface QRScannerProps {
 const QRScanner = ({onScanSuccess}: QRScannerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [qrCodeResult, setQrCodeResult] = useState("")
   const streamRef = useRef<MediaStream | null>(null)
   const animationRef = useRef<number | null>(null)
   const [error, setError] = useState<string>("")
@@ -58,7 +57,6 @@ const QRScanner = ({onScanSuccess}: QRScannerProps) => {
             if (code) {
               // QR code found
               const text = code.data
-              setQrCodeResult(text)
               onScanSuccess(text)
             }
           }
@@ -88,15 +86,15 @@ const QRScanner = ({onScanSuccess}: QRScannerProps) => {
   }, [onScanSuccess])
 
   return (
-    <div>
-      <h1 className="text-center text-2xl mb-4">Scan QR</h1>
+    <div className="w-full h-full relative">
       {error ? (
-        <p className="text-red-500 text-center">{error}</p>
+        <div className="flex items-center justify-center h-full">
+          <p className="text-red-500 text-center p-4">{error}</p>
+        </div>
       ) : (
         <>
-          <video ref={videoRef} style={{width: "100%"}} />
+          <video ref={videoRef} className="w-full h-full object-cover" />
           <canvas ref={canvasRef} style={{display: "none"}} />
-          {qrCodeResult && <p>QR Code Result: {qrCodeResult}</p>}
         </>
       )}
     </div>

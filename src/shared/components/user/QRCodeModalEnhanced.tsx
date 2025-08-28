@@ -6,6 +6,8 @@ import Icon from "@/shared/components/Icons/Icon"
 import Modal from "@/shared/components/ui/Modal"
 import {RiArrowLeftLine} from "@remixicon/react"
 import {generateProxyUrl} from "@/shared/utils/imgproxy"
+import QRScanner from "@/shared/components/QRScanner"
+import {useNavigate} from "@/navigation"
 
 interface QRCodeModalEnhancedProps {
   onClose: () => void
@@ -23,7 +25,9 @@ function QRCodeModalEnhanced({
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [lightningQrCodeUrl, setLightningQrCodeUrl] = useState<string>("")
   const [activeTab, setActiveTab] = useState<"npub" | "lightning">("npub")
+  const [showScanner, setShowScanner] = useState(false)
   const profile = useProfile(pubKey)
+  const navigate = useNavigate()
 
   const npub = data.startsWith("nostr:") ? data.slice(6) : data
   const hasLightningAddress = !!profile?.lud16
@@ -106,6 +110,95 @@ function QRCodeModalEnhanced({
   ]
 
   const randomGradient = gradientColors[Math.floor(Math.random() * gradientColors.length)]
+
+  const handleQRScanSuccess = (result: string) => {
+    setShowScanner(false)
+
+    // Handle different QR code formats
+    if (result.startsWith("nostr:")) {
+      const identifier = result.slice(6)
+      if (identifier.startsWith("npub")) {
+        navigate(`/${identifier}`)
+        onClose()
+      } else if (identifier.startsWith("note")) {
+        navigate(`/post/${identifier}`)
+        onClose()
+      }
+    } else if (result.startsWith("lightning:")) {
+      // Handle lightning addresses if needed
+      const lnAddress = result.slice(10)
+      navigator.clipboard.writeText(lnAddress)
+    } else if (result.startsWith("npub")) {
+      navigate(`/${result}`)
+      onClose()
+    } else if (result.startsWith("note")) {
+      navigate(`/post/${result}`)
+      onClose()
+    }
+  }
+
+  if (showScanner) {
+    const scannerContent = (
+      <div
+        className={`${fullscreen ? "h-full" : "h-[700px] w-[500px]"} flex flex-col relative overflow-hidden ${fullscreen ? "" : "rounded-lg"}`}
+      >
+        {/* Background with gradient */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${randomGradient}`} />
+
+        {/* Content overlay */}
+        <div className="relative z-10 flex flex-col h-full">
+          {/* Header with back button */}
+          <button
+            onClick={() => setShowScanner(false)}
+            className="absolute top-2 left-2 z-20 flex items-center justify-center text-white p-2 rounded-lg transition-colors hover:bg-white/10 qr-modal-shadow-btn"
+            aria-label="Go back"
+          >
+            <RiArrowLeftLine className="w-7 h-7" />
+          </button>
+
+          <div className="text-center pt-8 pb-4">
+            <h1 className="text-2xl font-semibold text-white">Scan QR Code</h1>
+          </div>
+
+          {/* Main content */}
+          <div className="flex-1 flex flex-col items-center justify-center px-6">
+            {/* Scanner area */}
+            <div className="bg-white rounded-2xl p-1 mb-8 shadow-2xl">
+              <div className="w-80 h-80 rounded-2xl overflow-hidden relative">
+                <QRScanner onScanSuccess={handleQRScanSuccess} />
+              </div>
+            </div>
+
+            <p className="text-white text-center mb-8 qr-modal-shadow">
+              Scan a user&apos;s QR code
+              <br />
+              to find them on Nostr
+            </p>
+          </div>
+
+          {/* Bottom button */}
+          <div className="px-6 pb-6">
+            <button
+              className="w-full bg-white/20 backdrop-blur-sm text-white font-semibold py-4 rounded-full shadow-lg border border-white/30"
+              onClick={() => setShowScanner(false)}
+            >
+              View QR Code
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+
+    if (fullscreen) {
+      return <div className="fixed inset-0 z-[9999] bg-black">{scannerContent}</div>
+    }
+
+    return (
+      <Modal onClose={() => setShowScanner(false)} hasBackground={false}>
+        {scannerContent}
+      </Modal>
+    )
+  }
 
   const content = (
     <div
@@ -214,9 +307,7 @@ function QRCodeModalEnhanced({
           {/* Scan QR Code button */}
           <button
             className="bg-white text-black font-semibold py-3 px-8 rounded-full shadow-lg"
-            onClick={() => {
-              /* TODO: Open QR scanner */
-            }}
+            onClick={() => setShowScanner(true)}
           >
             Scan QR Code
           </button>
