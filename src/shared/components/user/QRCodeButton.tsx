@@ -6,6 +6,7 @@ import {PublicKey} from "@/shared/utils/PublicKey"
 import Icon from "@/shared/components/Icons/Icon"
 import {useNavigate} from "@/navigation"
 import {UserRow} from "./UserRow"
+import QRCodeModalEnhanced from "./QRCodeModalEnhanced"
 const QRScanner = lazy(() => import("../QRScanner"))
 
 interface QRCodeModalProps {
@@ -169,6 +170,16 @@ function QRCodeButton({
   icon = "qr",
 }: QRCodeButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   const openModal = () => setIsModalOpen(true)
   const closeModal = () => setIsModalOpen(false)
@@ -183,6 +194,17 @@ function QRCodeButton({
     return ""
   }, [data, npub])
 
+  const pubKey = useMemo(() => {
+    try {
+      if (computedNpub) {
+        return new PublicKey(computedNpub).toString()
+      }
+      return ""
+    } catch {
+      return ""
+    }
+  }, [computedNpub])
+
   return (
     <>
       <button
@@ -192,15 +214,23 @@ function QRCodeButton({
       >
         <Icon name={icon} className="w-4 h-4" />
       </button>
-      {isModalOpen && (
-        <QRCodeModal
-          onClose={closeModal}
-          data={data}
-          onScanSuccess={onScanSuccess}
-          npub={computedNpub}
-          initialShowScanner={!showQRCode}
-        />
-      )}
+      {isModalOpen &&
+        (showQRCode && pubKey ? (
+          <QRCodeModalEnhanced
+            onClose={closeModal}
+            data={data}
+            pubKey={pubKey}
+            fullscreen={isMobile}
+          />
+        ) : (
+          <QRCodeModal
+            onClose={closeModal}
+            data={data}
+            onScanSuccess={onScanSuccess}
+            npub={computedNpub}
+            initialShowScanner={!showQRCode}
+          />
+        ))}
     </>
   )
 }

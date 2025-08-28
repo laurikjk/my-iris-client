@@ -107,7 +107,7 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
           {feeds.map((f) => (
             <div key={f.id} className="flex flex-col items-center gap-1 flex-shrink-0">
               <button
-                className={`btn btn-sm cursor-pointer whitespace-nowrap ${
+                className={`btn md:btn-sm cursor-pointer whitespace-nowrap ${
                   activeFeed === f.id ? "btn-primary" : "btn-neutral"
                 }`}
                 onClick={() => setActiveFeed(f.id)}

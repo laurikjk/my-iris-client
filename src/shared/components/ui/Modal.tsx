@@ -76,7 +76,7 @@ const Modal = ({onClose, children, hasBackground = true}: ModalProps) => {
     <dialog ref={modalRef} className="modal outline-none">
       <div
         ref={contentRef}
-        className={hasBackground ? "modal-box w-full max-w-full" : ""}
+        className={hasBackground ? "modal-box w-full max-w-full bg-base-100" : ""}
         onClick={(e) => e.stopPropagation()}
       >
         {hasBackground && (

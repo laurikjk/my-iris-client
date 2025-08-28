@@ -67,24 +67,24 @@ const ChatList = ({className}: ChatListProps) => {
       </div>
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-        <NavLink
-          to="/chats/new"
-          end
-          className={({isActive}) =>
-            classNames("p-4 flex items-center border-b border-custom", {
-              "bg-base-300": isActive,
-              "hover:bg-base-300": !isActive,
-            })
-          }
-        >
-          <div className="flex items-center gap-3">
-            <RiChatNewLine className="w-5 h-5" />
-            <span className="text-base font-semibold">New Chat</span>
-          </div>
-        </NavLink>
-        {allChatItems.map(({id, type}) => (
-          <ChatListItem key={id} id={id} isPublic={type === "public"} type={type} />
-        ))}
+          <NavLink
+            to="/chats/new"
+            end
+            className={({isActive}) =>
+              classNames("p-4 flex items-center border-b border-custom", {
+                "bg-base-300": isActive,
+                "hover:bg-base-300": !isActive,
+              })
+            }
+          >
+            <div className="flex items-center gap-3">
+              <RiChatNewLine className="w-5 h-5" />
+              <span className="text-base font-semibold">New Chat</span>
+            </div>
+          </NavLink>
+          {allChatItems.map(({id, type}) => (
+            <ChatListItem key={id} id={id} isPublic={type === "public"} type={type} />
+          ))}
         </div>
       </div>
     </nav>
