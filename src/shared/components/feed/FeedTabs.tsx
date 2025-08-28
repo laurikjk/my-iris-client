@@ -85,7 +85,7 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
         {/* Edit button */}
         <button
           onClick={onEditModeToggle}
-          className={`btn btn-sm btn-circle ${editMode ? "btn-primary" : "btn-neutral"}`}
+          className={`btn md:btn-sm btn-circle ${editMode ? "btn-primary" : "btn-neutral"}`}
           title={editMode ? "Done editing" : "Edit feeds"}
         >
           <RiEqualizerFill className="w-4 h-4" />
@@ -95,7 +95,7 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
         {editMode && (
           <button
             onClick={createFeed}
-            className="btn btn-sm btn-info"
+            className="btn md:btn-sm btn-info"
             title="Create new feed"
           >
             <RiAddLine className="w-4 h-4" />
