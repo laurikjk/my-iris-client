@@ -288,20 +288,20 @@ function QRCodeModalEnhanced({onClose, data, pubKey}: QRCodeModalEnhancedProps) 
           </div>
 
           {/* Value with copy button */}
-          <div className="relative flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 mb-6">
+          <div
+            className="relative flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 mb-6 cursor-pointer hover:bg-white/20 transition-colors"
+            onClick={handleCopy}
+          >
             <p
               className={`text-white text-sm font-mono ${showCopied ? "invisible" : ""}`}
             >
               {displayValue}
             </p>
-            <button
-              onClick={handleCopy}
-              className={`text-white p-1 ${showCopied ? "invisible" : ""}`}
-            >
+            <div className={`text-white p-1 ${showCopied ? "invisible" : ""}`}>
               <Icon name="copy" className="w-4 h-4" />
-            </button>
+            </div>
             {showCopied && (
-              <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <span className="text-white text-sm">Copied</span>
               </div>
             )}

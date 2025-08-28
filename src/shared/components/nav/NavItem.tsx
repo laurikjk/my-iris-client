@@ -12,7 +12,7 @@ interface NavItemProps {
   onClick?: MouseEventHandler<HTMLAnchorElement>
   children?: ReactNode
   className?: string
-  badge?: string | number
+  badge?: ReactNode
 }
 
 export const NavItem = ({

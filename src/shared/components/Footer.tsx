@@ -21,7 +21,7 @@ type MenuItem = {
   el?: ReactNode
   activeIcon?: string
   inactiveIcon?: string
-  badge?: string
+  badge?: ReactNode
 }
 
 const Footer = () => {
@@ -38,7 +38,13 @@ const Footer = () => {
       link: "/wallet",
       icon: "wallet",
       loggedInOnly: true,
-      badge: balance !== null ? `${formatAmount(balance)}₿` : undefined,
+      badge:
+        balance !== null ? (
+          <>
+            {formatAmount(balance)}
+            <span className="text-[0.85em]">₿</span>
+          </>
+        ) : undefined,
     },
     {
       link: "/new",
