@@ -71,6 +71,8 @@ export function useSwipable({
   const wasDragged = useRef(false)
   const touchStartTime = useRef<number | null>(null)
   const unlockScrollRef = useRef<(() => void) | null>(null)
+  const velocityX = useRef<number>(0)
+  const lastMoveTime = useRef<number | null>(null)
   const {
     detectDirection,
     getCurrentDirection,
@@ -135,6 +137,8 @@ export function useSwipable({
       dragStartX.current = clientX
       dragStartY.current = clientY
       dragLastX.current = clientX
+      lastMoveTime.current = Date.now()
+      velocityX.current = 0
     },
     [resetScrollDirection]
   )
@@ -180,7 +184,18 @@ export function useSwipable({
         }
 
         setDragX(deltaX)
+
+        // Calculate velocity
+        const now = Date.now()
+        if (dragLastX.current !== null && lastMoveTime.current !== null) {
+          const timeDelta = now - lastMoveTime.current
+          if (timeDelta > 0) {
+            velocityX.current = (clientX - dragLastX.current) / timeDelta
+          }
+        }
+
         dragLastX.current = clientX
+        lastMoveTime.current = now
       }
 
       // For mouse events, always preventDefault
@@ -190,7 +205,18 @@ export function useSwipable({
         }
         wasDragged.current = true
         setDragX(deltaX)
+
+        // Calculate velocity for mouse
+        const now = Date.now()
+        if (dragLastX.current !== null && lastMoveTime.current !== null) {
+          const timeDelta = now - lastMoveTime.current
+          if (timeDelta > 0) {
+            velocityX.current = (clientX - dragLastX.current) / timeDelta
+          }
+        }
+
         dragLastX.current = clientX
+        lastMoveTime.current = now
       }
     },
     [isDragging, detectDirection]
@@ -233,10 +259,31 @@ export function useSwipable({
 
     const currentThreshold = contentWidth * threshold
 
+    // Velocity threshold in pixels per millisecond
+    // Higher velocity = easier to swipe to next image
+    const velocityThreshold = 0.3 // pixels per ms
+    const minSwipeDistance = 20 // minimum distance to consider velocity
+
     setIsTransitioning(true)
 
-    if (Math.abs(dragX) > currentThreshold) {
-      const dir = dragX > 0 ? "prev" : "next"
+    // Determine if we should navigate based on velocity or distance
+    const absVelocity = Math.abs(velocityX.current)
+    const absDistance = Math.abs(dragX)
+
+    // Quick swipe: high velocity with minimal distance
+    const isQuickSwipe = absVelocity > velocityThreshold && absDistance > minSwipeDistance
+
+    // Slow drag: exceeds distance threshold
+    const isSlowDrag = absDistance > currentThreshold
+
+    if (isQuickSwipe || isSlowDrag) {
+      // Use velocity direction for quick swipes, drag direction for slow drags
+      let dir: "prev" | "next"
+      if (isQuickSwipe) {
+        dir = velocityX.current > 0 ? "prev" : "next"
+      } else {
+        dir = dragX > 0 ? "prev" : "next"
+      }
       setTransitionDirection(dir)
       setTargetIndex(dir === "prev" ? getPrevIndex() : getNextIndex())
     } else {
@@ -271,6 +318,8 @@ export function useSwipable({
       dragStartX.current = null
       dragStartY.current = null
       dragLastX.current = null
+      velocityX.current = 0
+      lastMoveTime.current = null
 
       // Re-enable transitions after a brief delay
       setTimeout(() => {
