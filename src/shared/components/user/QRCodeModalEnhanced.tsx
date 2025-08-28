@@ -277,16 +277,16 @@ function QRCodeModalEnhanced({onClose, data, pubKey}: QRCodeModalEnhancedProps) 
                 <img src={qrCodeUrl} alt="Public Key QR Code" className="w-64 h-64" />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="bg-black rounded-full p-2 shadow-lg border-4 border-white overflow-hidden">
-                    <canvas 
+                    <canvas
                       ref={(canvas) => {
                         if (canvas) {
-                          const ctx = canvas.getContext('2d')
+                          const ctx = canvas.getContext("2d")
                           const img = new Image()
                           img.onload = () => {
                             if (ctx) {
                               canvas.width = 40
                               canvas.height = 40
-                              ctx.filter = 'grayscale(100%) brightness(0%) invert(100%)'
+                              ctx.filter = "grayscale(100%) brightness(0%) invert(100%)"
                               ctx.drawImage(img, 0, 0, 40, 40)
                             }
                           }

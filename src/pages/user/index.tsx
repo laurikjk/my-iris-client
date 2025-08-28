@@ -1,6 +1,6 @@
 import {useMemo, useState, useEffect} from "react"
 import classNames from "classnames"
-import {RiSettings3Line} from "@remixicon/react"
+import {RiMenuLine} from "@remixicon/react"
 
 import RightColumn from "@/shared/components/RightColumn"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
@@ -189,7 +189,7 @@ function UserPage({pubKey}: {pubKey: string}) {
                   className="btn btn-ghost btn-circle md:hidden"
                   title="Settings"
                 >
-                  <RiSettings3Line className="w-7 h-7" />
+                  <RiMenuLine className="w-7 h-7" />
                 </Link>
               ) : (
                 <ProfileDropdownButton pubKey={pubKeyHex} />
