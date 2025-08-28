@@ -87,11 +87,11 @@ const ProfileHeader = ({
         </Header>
       )}
       <div className="flex flex-col gap-4 w-full break-all">
-        <div className="w-full h-48 md:h-72 bg-gradient-to-r from-primary to-primary-dark">
+        <div className="w-full h-36 md:h-72 bg-gradient-to-r from-primary to-primary-dark">
           {profile?.banner && (
             <ProxyImg
               src={profile?.banner}
-              className="w-full h-48 md:h-72 object-cover cursor-pointer select-none"
+              className="w-full h-36 md:h-72 object-cover cursor-pointer select-none"
               alt=""
               onClick={() => setShowBannerModal(true)}
               hideBroken={true}
