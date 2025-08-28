@@ -13,19 +13,14 @@ interface QRCodeModalEnhancedProps {
   onClose: () => void
   data: string
   pubKey: string
-  fullscreen?: boolean
 }
 
-function QRCodeModalEnhanced({
-  onClose,
-  data,
-  pubKey,
-  fullscreen = false,
-}: QRCodeModalEnhancedProps) {
+function QRCodeModalEnhanced({onClose, data, pubKey}: QRCodeModalEnhancedProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [lightningQrCodeUrl, setLightningQrCodeUrl] = useState<string>("")
   const [activeTab, setActiveTab] = useState<"npub" | "lightning">("npub")
   const [showScanner, setShowScanner] = useState(false)
+  const [showCopied, setShowCopied] = useState(false)
   const profile = useProfile(pubKey)
   const navigate = useNavigate()
 
@@ -111,6 +106,13 @@ function QRCodeModalEnhanced({
 
   const randomGradient = gradientColors[Math.floor(Math.random() * gradientColors.length)]
 
+  const handleCopy = () => {
+    const textToCopy = activeTab === "npub" ? npub : profile?.lud16 || ""
+    navigator.clipboard.writeText(textToCopy)
+    setShowCopied(true)
+    setTimeout(() => setShowCopied(false), 2000)
+  }
+
   const handleQRScanSuccess = (result: string) => {
     setShowScanner(false)
 
@@ -139,9 +141,7 @@ function QRCodeModalEnhanced({
 
   if (showScanner) {
     const scannerContent = (
-      <div
-        className={`${fullscreen ? "h-full" : "h-[700px] w-[500px]"} flex flex-col relative overflow-hidden ${fullscreen ? "" : "rounded-lg"}`}
-      >
+      <div className="h-screen w-screen md:h-[700px] md:w-[500px] flex flex-col relative overflow-hidden md:rounded-lg">
         {/* Background with gradient */}
         <div className={`absolute inset-0 bg-gradient-to-br ${randomGradient}`} />
 
@@ -169,7 +169,7 @@ function QRCodeModalEnhanced({
               </div>
             </div>
 
-            <p className="text-white text-center mb-8 qr-modal-shadow">
+            <p className="text-white text-center mb-8">
               Scan a user&apos;s QR code
               <br />
               to find them on Nostr
@@ -189,10 +189,6 @@ function QRCodeModalEnhanced({
       </div>
     )
 
-    if (fullscreen) {
-      return <div className="fixed inset-0 z-[9999] bg-black">{scannerContent}</div>
-    }
-
     return (
       <Modal onClose={() => setShowScanner(false)} hasBackground={false}>
         {scannerContent}
@@ -201,29 +197,27 @@ function QRCodeModalEnhanced({
   }
 
   const content = (
-    <div
-      className={`${fullscreen ? "h-full" : "h-[700px] w-[500px]"} flex flex-col relative overflow-y-auto overflow-x-hidden ${fullscreen ? "" : "rounded-lg"}`}
-    >
-      {/* Background with gradient or banner */}
-      <div
-        className={`absolute inset-0 ${bannerProxyUrl ? "" : `bg-gradient-to-br ${randomGradient}`}`}
-        style={
-          bannerProxyUrl
-            ? {
-                backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${bannerProxyUrl})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundAttachment: "fixed",
-                filter: "blur(8px)",
-                transform: "scale(1.1)",
-                transformOrigin: "center",
-              }
-            : {}
-        }
-      />
+    <div className="h-screen w-screen md:h-[700px] md:w-[500px] flex flex-col relative overflow-hidden md:rounded-lg">
+      {/* Background with gradient as base */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${randomGradient}`} />
+      
+      {/* Banner overlay if available */}
+      {bannerProxyUrl && (
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${bannerProxyUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            filter: "blur(8px)",
+            transform: "scale(1.1)",
+            transformOrigin: "center",
+          }}
+        />
+      )}
 
       {/* Content overlay */}
-      <div className="relative z-10 flex flex-col h-full">
+      <div className="relative z-10 flex flex-col h-full overflow-y-auto overflow-x-hidden">
         {/* Header with close button - absolute positioned */}
         <button
           onClick={onClose}
@@ -234,7 +228,7 @@ function QRCodeModalEnhanced({
         </button>
 
         {/* Main content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pt-6 pb-6">
           {/* Profile section */}
           <div className="flex flex-col items-center mb-6">
             <div className="rounded-full border-4 border-white shadow-xl mb-4 overflow-hidden">
@@ -276,32 +270,31 @@ function QRCodeModalEnhanced({
           </div>
 
           {/* QR Code */}
-          <div className="bg-white rounded-2xl p-4 mb-6 shadow-2xl">
-            {activeTab === "npub" && qrCodeUrl && (
+          <div className="bg-white rounded-2xl p-4 mb-6 shadow-2xl w-72 h-72 flex items-center justify-center">
+            {activeTab === "npub" && qrCodeUrl ? (
               <img src={qrCodeUrl} alt="Public Key QR Code" className="w-64 h-64" />
-            )}
-            {activeTab === "lightning" && lightningQrCodeUrl && (
+            ) : activeTab === "lightning" && lightningQrCodeUrl ? (
               <img
                 src={lightningQrCodeUrl}
                 alt="Lightning Address QR Code"
                 className="w-64 h-64"
               />
+            ) : (
+              <div className="w-64 h-64 animate-pulse bg-gray-200 rounded" />
             )}
           </div>
 
           {/* Value with copy button */}
-          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 mb-6">
-            <p className="text-white text-sm font-mono">{displayValue}</p>
-            <button
-              onClick={() =>
-                navigator.clipboard.writeText(
-                  activeTab === "npub" ? npub : profile?.lud16 || ""
-                )
-              }
-              className="text-white p-1"
-            >
+          <div className="relative flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 mb-6">
+            <p className={`text-white text-sm font-mono ${showCopied ? "invisible" : ""}`}>{displayValue}</p>
+            <button onClick={handleCopy} className={`text-white p-1 ${showCopied ? "invisible" : ""}`}>
               <Icon name="copy" className="w-4 h-4" />
             </button>
+            {showCopied && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-white text-sm">Copied</span>
+              </div>
+            )}
           </div>
 
           {/* Scan QR Code button */}
@@ -315,10 +308,6 @@ function QRCodeModalEnhanced({
       </div>
     </div>
   )
-
-  if (fullscreen) {
-    return <div className="fixed inset-0 z-[9999] bg-black">{content}</div>
-  }
 
   return (
     <Modal onClose={onClose} hasBackground={false}>
