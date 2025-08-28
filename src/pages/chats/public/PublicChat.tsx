@@ -88,6 +88,7 @@ const PublicChat = () => {
         tags: event.tags,
         kind: KIND_CHANNEL_MESSAGE,
         reactions: {},
+        sentToRelays: true, // Messages from subscription are already on relays
       }
 
       setMessages((prev) => {
@@ -141,7 +142,7 @@ const PublicChat = () => {
 
       // Sign and publish the event
       await event.sign()
-      await event.publish()
+      const publishedRelays = await event.publish()
 
       // Add message to local state
       const newMessage: MessageType = {
@@ -152,6 +153,7 @@ const PublicChat = () => {
         tags: event.tags,
         kind: KIND_CHANNEL_MESSAGE,
         reactions: {},
+        sentToRelays: publishedRelays.size > 0, // Only true if actually published to relays
       }
 
       setMessages((prev) => {
