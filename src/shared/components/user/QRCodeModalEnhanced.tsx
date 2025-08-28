@@ -131,16 +131,14 @@ function QRCodeModalEnhanced({
 
       {/* Content overlay */}
       <div className="relative z-10 flex flex-col h-full">
-        {/* Header with close button */}
-        <div className="flex justify-start items-center p-2">
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center text-white p-2 rounded-lg transition-colors hover:bg-white/10 qr-modal-shadow-btn"
-            aria-label="Go back"
-          >
-            <RiArrowLeftLine className="w-7 h-7" />
-          </button>
-        </div>
+        {/* Header with close button - absolute positioned */}
+        <button
+          onClick={onClose}
+          className="absolute top-2 left-2 z-20 flex items-center justify-center text-white p-2 rounded-lg transition-colors hover:bg-white/10 qr-modal-shadow-btn"
+          aria-label="Go back"
+        >
+          <RiArrowLeftLine className="w-7 h-7" />
+        </button>
 
         {/* Main content */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6">
