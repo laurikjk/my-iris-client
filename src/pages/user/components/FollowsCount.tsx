@@ -25,9 +25,12 @@ function FollowsCount({pubKey}: FollowsCountProps) {
 
   return (
     <>
-      <button className="btn btn-sm btn-neutral" onClick={handleFollowsClick}>
-        <span>Follows </span>{" "}
-        <span className="badge">{formatAmount(follows.length)}</span>
+      <button
+        className="text-base-content hover:underline cursor-pointer bg-transparent border-none p-0"
+        onClick={handleFollowsClick}
+      >
+        <span className="font-semibold">{formatAmount(follows.length)}</span>{" "}
+        <span className="text-base-content/70">follows</span>
       </button>
       {follows?.includes(myPubKey) && (
         <span className="badge badge-neutral">Follows you</span>

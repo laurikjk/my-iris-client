@@ -49,9 +49,12 @@ const FollowerCount = ({pubKey}: {pubKey: string}) => {
 
   return (
     <>
-      <button className="btn btn-sm btn-neutral" onClick={handleFollowersClick}>
-        <span>Known followers</span>{" "}
-        <span className="badge">{formatAmount(followers.length)}</span>
+      <button
+        className="text-base-content hover:underline cursor-pointer bg-transparent border-none p-0"
+        onClick={handleFollowersClick}
+      >
+        <span className="font-semibold">{formatAmount(followers.length)}</span>{" "}
+        <span className="text-base-content/70">known followers</span>
       </button>
       {showFollowList && (
         <Modal onClose={() => setShowFollowList(false)}>
