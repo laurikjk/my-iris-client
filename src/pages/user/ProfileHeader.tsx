@@ -5,6 +5,9 @@ import {useUserStore} from "@/stores/user"
 import {Invite} from "nostr-double-ratchet/src"
 import {ndk} from "@/utils/ndk"
 import {Filter, VerifiedEvent} from "nostr-tools"
+import {useNip05Validation} from "@/shared/hooks/useNip05Validation"
+import {NIP05_REGEX} from "@/utils/validation"
+import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
 import {FollowButton} from "@/shared/components/button/FollowButton.tsx"
@@ -35,6 +38,7 @@ const ProfileHeader = ({
     [pubKey]
   )
   const myPubKey = useUserStore((state) => state.publicKey)
+  const nip05valid = useNip05Validation(pubKey, profile?.nip05)
 
   const [showProfilePhotoModal, setShowProfilePhotoModal] = useState(false)
   const [showBannerModal, setShowBannerModal] = useState(false)
@@ -149,8 +153,22 @@ const ProfileHeader = ({
               )}
             </div>
           </div>
-          <div className="text-2xl font-bold">
-            <Name pubKey={pubKey} />
+          <div className="flex flex-col">
+            <div className="flex flex-row justify-between items-center flex-wrap gap-2">
+              <div className="text-2xl font-bold">
+                <Name pubKey={pubKey} />
+              </div>
+              <SubscriberBadge pubkey={pubKeyHex} />
+            </div>
+            {profile?.nip05 && NIP05_REGEX.test(profile.nip05) && (
+              <small className="text-base-content/70">
+                {nip05valid === false ? (
+                  <s>{profile.nip05.replace("_@", "")}</s>
+                ) : (
+                  profile.nip05.replace("_@", "")
+                )}
+              </small>
+            )}
           </div>
           <ProfileDetails
             pubKey={pubKey}
