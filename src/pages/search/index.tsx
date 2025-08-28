@@ -5,27 +5,27 @@ import useHistoryState from "@/shared/hooks/useHistoryState"
 import SearchBox from "@/shared/components/ui/SearchBox"
 import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
-import {NDKFilter} from "@nostr-dev-kit/ndk"
+import {NDKFilter, NDKEvent} from "@nostr-dev-kit/ndk"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import {useParams, useNavigate} from "@/navigation"
 import Widget from "@/shared/components/ui/Widget"
 import {Helmet} from "react-helmet"
 import {useSettingsStore} from "@/stores/settings"
 import {useUIStore} from "@/stores/ui"
-import {KIND_CLASSIFIED, KIND_TEXT_NOTE} from "@/utils/constants"
+import {KIND_CLASSIFIED, KIND_TEXT_NOTE, KIND_EPHEMERAL} from "@/utils/constants"
 import socialGraph from "@/utils/socialGraph"
 import {UserRow} from "@/shared/components/user/UserRow"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
+import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
 
 function SearchPage() {
   const {query} = useParams()
   const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchTerm, setSearchTerm] = useState(query || "")
-  const [activeTab, setActiveTab] = useHistoryState<"people" | "posts" | "market">(
-    query ? "posts" : "people",
-    "searchTab"
-  )
+  const [activeTab, setActiveTab] = useHistoryState<
+    "people" | "posts" | "market" | "map"
+  >(query ? "posts" : "people", "searchTab")
   const [forceUpdate, setForceUpdate] = useState(0)
   const navItemClicked = useUIStore((state) => state.navItemClicked)
 
@@ -115,6 +115,12 @@ function SearchPage() {
               >
                 Market
               </button>
+              <button
+                className={`btn btn-sm ${activeTab === "map" ? "btn-primary" : "btn-neutral"}`}
+                onClick={() => setActiveTab("map")}
+              >
+                Map
+              </button>
             </div>
 
             {query && activeTab !== "people" && (
@@ -169,7 +175,11 @@ function SearchPage() {
   )
 }
 
-function NoSearchTermContent({activeTab}: {activeTab: "people" | "posts" | "market"}) {
+function NoSearchTermContent({
+  activeTab,
+}: {
+  activeTab: "people" | "posts" | "market" | "map"
+}) {
   if (activeTab === "people") {
     return (
       <div className="mt-4">
@@ -186,22 +196,80 @@ function NoSearchTermContent({activeTab}: {activeTab: "people" | "posts" | "mark
     )
   }
 
-  // Market tab
+  if (activeTab === "market") {
+    return (
+      <div className="mt-4">
+        <Feed
+          feedConfig={{
+            name: "Market",
+            id: "market",
+            showRepliedTo: false,
+            filter: {
+              kinds: [KIND_CLASSIFIED],
+              limit: 100,
+            },
+            followDistance: 3,
+            hideReplies: true,
+          }}
+        />
+      </div>
+    )
+  }
+
+  // Map tab
+  return <MapContent />
+}
+
+function MapContent() {
+  const [feedEvents, setFeedEvents] = useState<NDKEvent[]>([])
+  const [selectedGeohashes, setSelectedGeohashes] = useState<string[]>([])
+
+  // Default to all geohashes when none selected
+  const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
+  const geohashes = selectedGeohashes.length > 0 ? selectedGeohashes : allGeohashes
+
+  const feedConfig = useMemo(
+    () => ({
+      id: "map-search",
+      name: "Location Feed",
+      filter: {
+        kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL],
+        "#g": geohashes,
+        limit: 100,
+      },
+      followDistance: 5,
+      showRepliedTo: true,
+      hideReplies: false,
+    }),
+    [geohashes]
+  )
+
   return (
     <div className="mt-4">
-      <Feed
-        feedConfig={{
-          name: "Market",
-          id: "market",
-          showRepliedTo: false,
-          filter: {
-            kinds: [KIND_CLASSIFIED],
-            limit: 100,
-          },
-          followDistance: 3,
-          hideReplies: true,
+      <GeohashMap
+        geohashes={geohashes}
+        feedEvents={feedEvents}
+        onGeohashSelect={(geohash) => {
+          setSelectedGeohashes([geohash.toLowerCase()])
         }}
+        height="20rem"
+        className="w-full max-w-full"
       />
+      <div className="mt-4">
+        <Feed
+          key={geohashes.join(",")}
+          feedConfig={feedConfig}
+          showReplies={0}
+          borderTopFirst={true}
+          showDisplayAsSelector={true}
+          onEvent={(event) => {
+            setFeedEvents((prev) => {
+              if (prev.some((e) => e.id === event.id)) return prev
+              return [...prev.slice(-99), event]
+            })
+          }}
+        />
+      </div>
     </div>
   )
 }
