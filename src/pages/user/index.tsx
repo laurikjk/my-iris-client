@@ -17,6 +17,7 @@ import {PublicKey} from "@/shared/utils/PublicKey"
 import FollowList from "./components/FollowList"
 import socialGraph from "@/utils/socialGraph"
 import ProfileHeader from "./ProfileHeader"
+import ProfileDropdownButton from "@/shared/components/user/ProfileDropdownButton"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
 import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
@@ -181,15 +182,19 @@ function UserPage({pubKey}: {pubKey: string}) {
         <Header>
           <div className="flex items-center justify-between w-full">
             <Name pubKey={pubKeyHex} />
-            {isOwnProfile && (
-              <Link
-                to="/settings"
-                className="btn btn-ghost btn-circle md:hidden"
-                title="Settings"
-              >
-                <RiSettings3Line className="w-7 h-7" />
-              </Link>
-            )}
+            <div className="flex items-center gap-2">
+              {isOwnProfile ? (
+                <Link
+                  to="/settings"
+                  className="btn btn-ghost btn-circle md:hidden"
+                  title="Settings"
+                >
+                  <RiSettings3Line className="w-7 h-7" />
+                </Link>
+              ) : (
+                <ProfileDropdownButton pubKey={pubKeyHex} />
+              )}
+            </div>
           </div>
         </Header>
         <ScrollablePageContainer>

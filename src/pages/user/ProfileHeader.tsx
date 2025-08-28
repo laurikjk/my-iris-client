@@ -7,7 +7,6 @@ import {ndk} from "@/utils/ndk"
 import {Filter, VerifiedEvent} from "nostr-tools"
 
 import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButton"
-import ProfileDropdownButton from "@/shared/components/user/ProfileDropdownButton"
 import {FollowButton} from "@/shared/components/button/FollowButton.tsx"
 import ProfileDetails from "@/pages/user/components/ProfileDetails.tsx"
 import FollowerCount from "@/pages/user/components/FollowerCount.tsx"
@@ -148,8 +147,6 @@ const ProfileHeader = ({
                   )}
                 </>
               )}
-              {/* Show dropdown for all profiles including self */}
-              <ProfileDropdownButton pubKey={pubKey} />
             </div>
           </div>
           <div className="text-2xl font-bold">

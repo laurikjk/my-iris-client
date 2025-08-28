@@ -4,9 +4,10 @@ import {Avatar} from "@/shared/components/user/Avatar"
 import {Name} from "@/shared/components/user/Name"
 import Icon from "@/shared/components/Icons/Icon"
 import Modal from "@/shared/components/ui/Modal"
-import {RiArrowLeftLine} from "@remixicon/react"
+import {RiArrowLeftLine, RiFlashlightFill} from "@remixicon/react"
 import {generateProxyUrl} from "@/shared/utils/imgproxy"
 import QRScanner from "@/shared/components/QRScanner"
+import runningOstrich from "@/assets/running-ostrich.gif"
 import {useNavigate} from "@/navigation"
 
 interface QRCodeModalEnhancedProps {
@@ -46,12 +47,12 @@ function QRCodeModalEnhanced({onClose, data, pubKey}: QRCodeModalEnhancedProps) 
     const generateQR = async () => {
       try {
         const QRCode = await import("qrcode")
-        // Generate npub QR
+        // Generate npub QR with high error correction for logo overlay
         const npubUrl = await new Promise((resolve, reject) => {
           QRCode.toDataURL(
             data,
             {
-              errorCorrectionLevel: "M",
+              errorCorrectionLevel: "H",
               margin: 0,
               width: 256,
               color: {
@@ -67,13 +68,13 @@ function QRCodeModalEnhanced({onClose, data, pubKey}: QRCodeModalEnhancedProps) 
         })
         setQrCodeUrl(npubUrl as string)
 
-        // Generate lightning QR if available
+        // Generate lightning QR with high error correction if available
         if (profile?.lud16) {
           const lightningUrl = await new Promise((resolve, reject) => {
             QRCode.toDataURL(
               `lightning:${profile.lud16}`,
               {
-                errorCorrectionLevel: "M",
+                errorCorrectionLevel: "H",
                 margin: 0,
                 width: 256,
                 color: {
@@ -270,16 +271,47 @@ function QRCodeModalEnhanced({onClose, data, pubKey}: QRCodeModalEnhancedProps) 
           </div>
 
           {/* QR Code */}
-          <div className="bg-white rounded-2xl p-4 mb-6 shadow-2xl w-72 h-72 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-4 mb-6 shadow-2xl w-72 h-72 flex items-center justify-center relative">
             {activeTab === "npub" && qrCodeUrl && (
-              <img src={qrCodeUrl} alt="Public Key QR Code" className="w-64 h-64" />
+              <div className="relative">
+                <img src={qrCodeUrl} alt="Public Key QR Code" className="w-64 h-64" />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="bg-black rounded-full p-2 shadow-lg border-4 border-white overflow-hidden">
+                    <canvas 
+                      ref={(canvas) => {
+                        if (canvas) {
+                          const ctx = canvas.getContext('2d')
+                          const img = new Image()
+                          img.onload = () => {
+                            if (ctx) {
+                              canvas.width = 40
+                              canvas.height = 40
+                              ctx.filter = 'grayscale(100%) brightness(0%) invert(100%)'
+                              ctx.drawImage(img, 0, 0, 40, 40)
+                            }
+                          }
+                          img.src = runningOstrich
+                        }
+                      }}
+                      className="w-10 h-10"
+                    />
+                  </div>
+                </div>
+              </div>
             )}
             {activeTab === "lightning" && lightningQrCodeUrl && (
-              <img
-                src={lightningQrCodeUrl}
-                alt="Lightning Address QR Code"
-                className="w-64 h-64"
-              />
+              <div className="relative">
+                <img
+                  src={lightningQrCodeUrl}
+                  alt="Lightning Address QR Code"
+                  className="w-64 h-64"
+                />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="bg-black rounded-full p-3 shadow-lg border-4 border-white">
+                    <RiFlashlightFill className="w-8 h-8 text-white" />
+                  </div>
+                </div>
+              </div>
             )}
             {!(
               (activeTab === "npub" && qrCodeUrl) ||

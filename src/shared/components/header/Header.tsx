@@ -14,6 +14,7 @@ import {useHeaderClick} from "./useHeaderClick"
 interface HeaderProps {
   title?: string
   children?: ReactNode
+  rightContent?: ReactNode
   showBack?: boolean
   showNotifications?: boolean
   scrollDown?: boolean
@@ -24,6 +25,7 @@ interface HeaderProps {
 const Header = ({
   title,
   children,
+  rightContent,
   showBack = true,
   showNotifications = false,
   scrollDown = false,
@@ -79,6 +81,7 @@ const Header = ({
           </div>
         </div>
         <div className="flex items-center gap-2 mr-2">
+          {rightContent}
           {myPubKey && (
             <>
               {location.pathname === "/" && (
