@@ -47,7 +47,7 @@ const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentPr
   } else if (referredEvent) {
     return <TextNote event={referredEvent} truncate={truncate} />
   } else if (event.kind === KIND_TEXT_NOTE && event.tagValue("zapraiser")) {
-    return <Zapraiser event={event} />
+    return <Zapraiser event={event} truncate={truncate} />
   } else if (event.kind === KIND_HIGHLIGHT) {
     return <Highlight event={event} />
   } else if (event.kind === KIND_LONG_FORM_CONTENT) {

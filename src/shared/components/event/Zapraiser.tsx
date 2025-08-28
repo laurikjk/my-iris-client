@@ -5,9 +5,10 @@ import HyperText from "../HyperText"
 
 interface ZapraiserProps {
   event: NDKEvent
+  truncate?: number
 }
 
-function Zapraiser({event}: ZapraiserProps) {
+function Zapraiser({event, truncate}: ZapraiserProps) {
   const [zapProgress, setZapProgress] = useState(0)
 
   useEffect(() => {
@@ -30,7 +31,7 @@ function Zapraiser({event}: ZapraiserProps) {
 
   return (
     <div className="flex flex-col gap-2 px-4">
-      <HyperText>{event.content}</HyperText>
+      <HyperText truncate={truncate}>{event.content}</HyperText>
       <div className="flex flex-col gap-2 mt-4 mb-2">
         <p className="self-center">Zap Goal {zapProgress} %</p>
         <div className="w-full h-4 bg-gray-200 rounded">
