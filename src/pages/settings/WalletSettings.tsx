@@ -161,7 +161,7 @@ const WalletSettings = () => {
                 />
                 <div className="flex-1">
                   <div className="font-medium">🚫 No wallet</div>
-                  <div className="text-sm text-gray-500">Disable Lightning payments</div>
+                  <div className="text-sm text-gray-500">Disable Quick Zaps</div>
                 </div>
               </div>
 
