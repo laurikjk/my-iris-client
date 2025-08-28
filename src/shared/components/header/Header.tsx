@@ -10,6 +10,7 @@ import classNames from "classnames"
 import {useHeaderScroll} from "./useHeaderScroll"
 import {HeaderNavigation} from "./HeaderNavigation"
 import {useHeaderClick} from "./useHeaderClick"
+import {RelayConnectivityIndicator} from "../RelayConnectivityIndicator"
 
 interface HeaderProps {
   title?: string
@@ -81,6 +82,9 @@ const Header = ({
           </div>
         </div>
         <div className="flex items-center gap-2 mr-2">
+          <div className="md:hidden">
+            <RelayConnectivityIndicator />
+          </div>
           {rightContent}
           {myPubKey && (
             <>

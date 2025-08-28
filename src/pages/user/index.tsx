@@ -179,9 +179,8 @@ function UserPage({pubKey}: {pubKey: string}) {
   return (
     <div className="flex justify-center flex-1 relative h-full">
       <div className="flex-1 flex flex-col h-full relative">
-        <Header>
-          <div className="flex items-center justify-between w-full">
-            <Name pubKey={pubKeyHex} />
+        <Header
+          rightContent={
             <div className="flex items-center gap-2">
               {isOwnProfile ? (
                 <Link
@@ -195,7 +194,9 @@ function UserPage({pubKey}: {pubKey: string}) {
                 <ProfileDropdownButton pubKey={pubKeyHex} />
               )}
             </div>
-          </div>
+          }
+        >
+          <Name pubKey={pubKeyHex} />
         </Header>
         <ScrollablePageContainer>
           <div className="flex-1">

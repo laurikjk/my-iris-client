@@ -16,6 +16,7 @@ import {UserRow} from "../user/UserRow"
 import {useUIStore} from "@/stores/ui"
 import {NavItem} from "./NavItem"
 import {ndk} from "@/utils/ndk"
+import {RelayConnectivityIndicator} from "../RelayConnectivityIndicator"
 
 const NavSideBar = () => {
   const ref = useRef<HTMLDivElement>(null)
@@ -135,16 +136,19 @@ const NavSideBar = () => {
         </div>
         {myPubKey && (
           <>
-            <div
-              className="flex flex-col p-4 mb-2 xl:mb-6 gap-4"
-              data-testid="sidebar-user-row"
-            >
-              <UserRow
-                pubKey={myPubKey}
-                showBadge={false}
-                textClassName="md:hidden xl:inline font-bold"
-                avatarWidth={45}
-              />
+            <div className="flex flex-col p-4 gap-2">
+              <div className="flex justify-center md:justify-center xl:justify-start mb-2">
+                <RelayConnectivityIndicator className="md:hidden xl:flex" />
+                <RelayConnectivityIndicator className="hidden md:flex xl:hidden" />
+              </div>
+              <div className="flex-1">
+                <UserRow
+                  pubKey={myPubKey}
+                  showBadge={false}
+                  textClassName="md:hidden xl:inline font-bold"
+                  avatarWidth={45}
+                />
+              </div>
             </div>
           </>
         )}

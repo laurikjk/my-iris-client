@@ -51,7 +51,7 @@ function RelayDetails({relayUrl}: RelayDetailsProps) {
 
   return (
     <Widget title="Relay Information">
-      <div className="space-y-4">
+      <div className="space-y-4 h-96 overflow-y-auto">
         {relayInfo.icon && (
           <div className="flex justify-center">
             <img
