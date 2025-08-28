@@ -14,6 +14,28 @@ import {getExpirationLabel} from "@/utils/expiration"
 import {RiAttachment2, RiMapPinLine, RiTimeLine} from "@remixicon/react"
 import HyperText from "@/shared/components/HyperText"
 
+// Extract hashtags from text content per NIP-24
+const extractHashtags = (text: string): string[] => {
+  // Regex to match hashtags while avoiding false positives
+  // - Must start with # followed by alphanumeric chars or underscore
+  // - Avoid URLs like example.com/#anchor (preceded by / or .)
+  // - Avoid inside URLs (preceded by ://)
+  // - Must be at word boundary or start of line
+  const hashtagRegex = /(?:^|[^/\w.])#([a-zA-Z0-9_]+)(?=\s|$|[^\w])/g
+  const hashtags = new Set<string>()
+  let match
+
+  while ((match = hashtagRegex.exec(text)) !== null) {
+    const hashtag = match[1].toLowerCase()
+    // Skip very short or very long hashtags
+    if (hashtag.length >= 2 && hashtag.length <= 50) {
+      hashtags.add(hashtag)
+    }
+  }
+
+  return Array.from(hashtags)
+}
+
 interface BaseNoteCreatorProps {
   onClose?: () => void
   replyingTo?: NDKEvent
@@ -251,6 +273,12 @@ export function BaseNoteCreator({
           event.tags.push(["g", hash])
         })
       }
+
+      // Add hashtag tags per NIP-24
+      const hashtags = extractHashtags(text)
+      hashtags.forEach((hashtag) => {
+        event.tags.push(["t", hashtag])
+      })
 
       // Add expiration tag (calculate timestamp from delta)
       if (expirationDelta) {
