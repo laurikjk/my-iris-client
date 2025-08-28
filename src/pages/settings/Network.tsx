@@ -26,6 +26,19 @@ export function Network() {
     <div>
       <h2 className="text-2xl mb-4">Network</h2>
 
+      {/* Relay Indicator Setting */}
+      <div className="mb-6">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showRelayIndicator}
+            onChange={(e) => setShowRelayIndicator(e.target.checked)}
+            className="checkbox checkbox-primary"
+          />
+          <span className="text-base font-medium">Show Relay Indicator</span>
+        </label>
+      </div>
+
       {/* NDK Outbox Model Setting */}
       <div className="mb-6">
         <label className="flex items-center gap-3 cursor-pointer">
@@ -38,26 +51,7 @@ export function Network() {
           <div>
             <span className="text-base font-medium">Enable Outbox Model</span>
             <p className="text-sm text-base-content/70">
-              Improves relay selection and event distribution using the outbox model
-              pattern
-            </p>
-          </div>
-        </label>
-      </div>
-
-      {/* Relay Indicator Setting */}
-      <div className="mb-6">
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showRelayIndicator}
-            onChange={(e) => setShowRelayIndicator(e.target.checked)}
-            className="checkbox checkbox-primary"
-          />
-          <div>
-            <span className="text-base font-medium">Show Relay Indicator</span>
-            <p className="text-sm text-base-content/70">
-              Display relay connectivity indicator in the UI
+              Connects to other people&apos;s relays for better event sync
             </p>
           </div>
         </label>
