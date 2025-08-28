@@ -91,19 +91,19 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
           <RiEqualizerFill className="w-4 h-4" />
         </button>
 
-        {/* Create button - only visible in edit mode */}
-        {editMode && (
-          <button
-            onClick={createFeed}
-            className="btn md:btn-sm btn-info"
-            title="Create new feed"
-          >
-            <RiAddLine className="w-4 h-4" />
-            New
-          </button>
-        )}
-
         <div className="flex flex-row gap-2 overflow-x-auto scrollbar-hide flex-1">
+          {/* Create button - only visible in edit mode, at the beginning */}
+          {editMode && (
+            <button
+              onClick={createFeed}
+              className="btn md:btn-sm btn-info flex-shrink-0"
+              title="Create new feed"
+            >
+              <RiAddLine className="w-4 h-4" />
+              New
+            </button>
+          )}
+          
           {feeds.map((f) => (
             <div key={f.id} className="flex flex-col items-center gap-1 flex-shrink-0">
               <button

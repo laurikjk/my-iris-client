@@ -1,5 +1,5 @@
 export const formatAmount = (n: number, maxSignificantDigits = 4) => {
-  if (n < 1000) return n + " "
+  if (n < 1000) return n.toString()
 
   let value: number
   let suffix: string
@@ -25,5 +25,5 @@ export const formatAmount = (n: number, maxSignificantDigits = 4) => {
     formatted = rounded.toFixed(2).replace(/\.00$/, "")
   }
 
-  return formatted + suffix + " "
+  return formatted + suffix
 }

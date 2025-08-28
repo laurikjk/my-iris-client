@@ -98,7 +98,7 @@ const NavSideBar = () => {
                   onClick={onClick}
                   badge={
                     label === "Wallet" && balance !== null
-                      ? formatAmount(balance)
+                      ? `${formatAmount(balance)}₿`
                       : undefined
                   }
                 />

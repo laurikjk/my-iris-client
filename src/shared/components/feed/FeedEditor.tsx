@@ -328,7 +328,7 @@ function FeedEditor({
               className="btn btn-sm btn-neutral"
               title="Reset feed"
             >
-              Reset
+              Reset feeds
             </button>
           )}
           {showDeleteButton && onDelete && (

@@ -38,7 +38,7 @@ const Footer = () => {
       link: "/wallet",
       icon: "wallet",
       loggedInOnly: true,
-      badge: balance !== null ? formatAmount(balance) : undefined,
+      badge: balance !== null ? `${formatAmount(balance)}₿` : undefined,
     },
     {
       link: "/new",
@@ -124,7 +124,7 @@ const FooterNavItem = ({item}: {item: MenuItem; readonly: boolean}) => {
         <span className="indicator">
           {renderIcon(item, isActive)}
           {item.badge && (
-            <span className="badge badge-xs absolute left-1/2 -translate-x-1/2 -bottom-3">
+            <span className="badge badge-xs absolute left-1/2 -translate-x-1/2 -bottom-3 whitespace-nowrap">
               {item.badge}
             </span>
           )}

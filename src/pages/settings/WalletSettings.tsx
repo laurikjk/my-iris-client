@@ -85,7 +85,7 @@ const WalletSettings = () => {
   const getBalanceDisplay = () => {
     if (activeProviderType === "disabled" || activeProviderType === undefined)
       return "No wallet connected"
-    if (balance !== null) return `${balance.toLocaleString()} sats`
+    if (balance !== null) return `${balance.toLocaleString()}₿`
     return ""
   }
 
@@ -231,7 +231,7 @@ const WalletSettings = () => {
                       <div className="font-medium">🔗 {conn.name}</div>
                       <div className="text-sm text-gray-500">
                         NWC Connection
-                        {conn.balance !== undefined && ` • ${conn.balance} sats`}
+                        {conn.balance !== undefined && ` • ${conn.balance}₿`}
                       </div>
                     </div>
                   </div>
@@ -291,7 +291,7 @@ const WalletSettings = () => {
                 placeholder="21"
                 min="1"
               />
-              <span className="text-gray-500">sats</span>
+              <span className="text-gray-500">₿</span>
             </div>
             <label className="label">
               <span className="label-text-alt text-gray-500">
@@ -373,7 +373,7 @@ const WalletSettings = () => {
                   </div>
                   {conn.balance !== undefined && (
                     <div className="text-sm text-success">
-                      Balance: {conn.balance} sats
+                      Balance: {conn.balance}₿
                     </div>
                   )}
                 </div>
