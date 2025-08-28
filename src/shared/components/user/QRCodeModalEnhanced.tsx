@@ -200,7 +200,7 @@ function QRCodeModalEnhanced({onClose, data, pubKey}: QRCodeModalEnhancedProps) 
     <div className="h-screen w-screen md:h-[700px] md:w-[500px] flex flex-col relative overflow-hidden md:rounded-lg">
       {/* Background with gradient as base */}
       <div className={`absolute inset-0 bg-gradient-to-br ${randomGradient}`} />
-      
+
       {/* Banner overlay if available */}
       {bannerProxyUrl && (
         <div
@@ -271,23 +271,33 @@ function QRCodeModalEnhanced({onClose, data, pubKey}: QRCodeModalEnhancedProps) 
 
           {/* QR Code */}
           <div className="bg-white rounded-2xl p-4 mb-6 shadow-2xl w-72 h-72 flex items-center justify-center">
-            {activeTab === "npub" && qrCodeUrl ? (
+            {activeTab === "npub" && qrCodeUrl && (
               <img src={qrCodeUrl} alt="Public Key QR Code" className="w-64 h-64" />
-            ) : activeTab === "lightning" && lightningQrCodeUrl ? (
+            )}
+            {activeTab === "lightning" && lightningQrCodeUrl && (
               <img
                 src={lightningQrCodeUrl}
                 alt="Lightning Address QR Code"
                 className="w-64 h-64"
               />
-            ) : (
-              <div className="w-64 h-64 animate-pulse bg-gray-200 rounded" />
             )}
+            {!(
+              (activeTab === "npub" && qrCodeUrl) ||
+              (activeTab === "lightning" && lightningQrCodeUrl)
+            ) && <div className="w-64 h-64 animate-pulse bg-gray-200 rounded" />}
           </div>
 
           {/* Value with copy button */}
           <div className="relative flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 mb-6">
-            <p className={`text-white text-sm font-mono ${showCopied ? "invisible" : ""}`}>{displayValue}</p>
-            <button onClick={handleCopy} className={`text-white p-1 ${showCopied ? "invisible" : ""}`}>
+            <p
+              className={`text-white text-sm font-mono ${showCopied ? "invisible" : ""}`}
+            >
+              {displayValue}
+            </p>
+            <button
+              onClick={handleCopy}
+              className={`text-white p-1 ${showCopied ? "invisible" : ""}`}
+            >
               <Icon name="copy" className="w-4 h-4" />
             </button>
             {showCopied && (

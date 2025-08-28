@@ -73,11 +73,13 @@ function SearchPage() {
       <div className="flex flex-col flex-1 h-full relative">
         <Header title={query ? `Search: "${query}"` : "Search"} />
         <ScrollablePageContainer className="flex flex-col items-center">
-          <div className="p-2 flex-1 w-full max-w-screen-lg flex flex-col gap-4 md:pt-2">
+          <div className="flex-1 w-full max-w-screen-lg flex flex-col gap-4 md:pt-2">
             {activeTab === "people" ? (
-              <SearchBox searchNotes={true} maxResults={10} focusOnNav={true} />
+              <div className="p-2">
+                <SearchBox searchNotes={true} maxResults={10} focusOnNav={true} />
+              </div>
             ) : (
-              <form onSubmit={handleSubmit} className="flex w-full">
+              <form onSubmit={handleSubmit} className="flex w-full p-2">
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -91,7 +93,7 @@ function SearchPage() {
                 </button>
               </form>
             )}
-            <div className="px-2 flex gap-2 overflow-x-auto">
+            <div className="flex gap-2 overflow-x-auto p-2">
               <button
                 className={`btn btn-sm ${activeTab === "people" ? "btn-primary" : "btn-neutral"}`}
                 onClick={() => setActiveTab("people")}
@@ -113,7 +115,7 @@ function SearchPage() {
             </div>
 
             {query && activeTab !== "people" && (
-              <div className="flex items-center gap-2 p-2">
+              <div className="flex items-center gap-2 p-2 mx-2">
                 <input
                   type="checkbox"
                   className="toggle toggle-sm"

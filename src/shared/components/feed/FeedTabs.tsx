@@ -103,7 +103,7 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
               New
             </button>
           )}
-          
+
           {feeds.map((f) => (
             <div key={f.id} className="flex flex-col items-center gap-1 flex-shrink-0">
               <button

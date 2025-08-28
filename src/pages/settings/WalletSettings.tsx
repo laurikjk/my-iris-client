@@ -372,9 +372,7 @@ const WalletSettings = () => {
                       : "Never used"}
                   </div>
                   {conn.balance !== undefined && (
-                    <div className="text-sm text-success">
-                      Balance: {conn.balance}₿
-                    </div>
+                    <div className="text-sm text-success">Balance: {conn.balance}₿</div>
                   )}
                 </div>
                 <div className="flex items-center gap-2">

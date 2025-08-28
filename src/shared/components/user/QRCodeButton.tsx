@@ -170,16 +170,6 @@ function QRCodeButton({
   icon = "qr",
 }: QRCodeButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
-  }, [])
 
   const openModal = () => setIsModalOpen(true)
   const closeModal = () => setIsModalOpen(false)
@@ -216,12 +206,7 @@ function QRCodeButton({
       </button>
       {isModalOpen &&
         (showQRCode && pubKey ? (
-          <QRCodeModalEnhanced
-            onClose={closeModal}
-            data={data}
-            pubKey={pubKey}
-            fullscreen={isMobile}
-          />
+          <QRCodeModalEnhanced onClose={closeModal} data={data} pubKey={pubKey} />
         ) : (
           <QRCodeModal
             onClose={closeModal}
