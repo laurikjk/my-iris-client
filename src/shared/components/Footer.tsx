@@ -130,7 +130,7 @@ const FooterNavItem = ({item}: {item: MenuItem; readonly: boolean}) => {
         <span className="indicator">
           {renderIcon(item, isActive)}
           {item.badge && (
-            <span className="badge badge-xs absolute left-1/2 -translate-x-1/2 -bottom-3 whitespace-nowrap">
+            <span className="absolute left-1/2 -translate-x-1/2 -bottom-3 whitespace-nowrap text-xs">
               {item.badge}
             </span>
           )}
