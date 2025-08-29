@@ -27,6 +27,8 @@ export default function NavLink(props: NavLinkProps) {
         } else {
           // Not at top, just scroll up
           scrollContainer.scrollTo({top: 0, behavior: "instant"})
+          // Trigger scroll event manually for instant scrolls
+          scrollContainer.dispatchEvent(new Event('scroll', { bubbles: true, cancelable: true }))
         }
       }
     }
