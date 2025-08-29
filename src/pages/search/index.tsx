@@ -1,8 +1,7 @@
-import {useMemo, useState, useEffect, FormEvent, useRef} from "react"
+import {useMemo, useState, useEffect, FormEvent, useRef, RefObject} from "react"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import useHistoryState from "@/shared/hooks/useHistoryState"
-import SearchBox from "@/shared/components/ui/SearchBox"
 import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import {NDKFilter, NDKEvent} from "@nostr-dev-kit/ndk"
@@ -17,6 +16,126 @@ import socialGraph from "@/utils/socialGraph"
 import {UserRow} from "@/shared/components/user/UserRow"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
+import {useSearch} from "@/shared/hooks/useSearch"
+import {nip19} from "nostr-tools"
+import Icon from "@/shared/components/Icons/Icon"
+import {ALL_GEOHASHES} from "@/utils/geohash"
+
+interface UnifiedSearchInputProps {
+  activeTab: "people" | "posts" | "market" | "map"
+  searchTerm: string
+  setSearchTerm: (term: string) => void
+  marketSearchTerm: string
+  setMarketSearchTerm: (term: string) => void
+  mapSearchTerm: string
+  setMapSearchTerm: (term: string) => void
+  peopleSearch: ReturnType<typeof useSearch>
+  navigate: (path: string) => void
+  searchInputRef: RefObject<HTMLInputElement | null>
+  setSelectedGeohashes: (geohashes: string[]) => void
+}
+
+function UnifiedSearchInput({
+  activeTab,
+  searchTerm,
+  setSearchTerm,
+  marketSearchTerm,
+  setMarketSearchTerm,
+  mapSearchTerm,
+  setMapSearchTerm,
+  peopleSearch,
+  navigate,
+  searchInputRef,
+  setSelectedGeohashes,
+}: UnifiedSearchInputProps) {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (activeTab === "posts") {
+      navigate(`/search/${searchTerm}`)
+    }
+    // Market and map search are handled via state/instant updates, no navigation needed
+  }
+
+  const getCurrentValue = () => {
+    switch (activeTab) {
+      case "people":
+        return peopleSearch.value
+      case "posts":
+        return searchTerm
+      case "market":
+        return marketSearchTerm
+      case "map":
+        return mapSearchTerm
+      default:
+        return ""
+    }
+  }
+
+  const handleInputChange = (value: string) => {
+    switch (activeTab) {
+      case "people":
+        peopleSearch.setValue(value)
+        break
+      case "posts":
+        setSearchTerm(value)
+        break
+      case "market":
+        setMarketSearchTerm(value)
+        break
+      case "map":
+        setMapSearchTerm(value)
+        // Update map instantly as user types
+        if (value.trim()) {
+          const geohash = value.toLowerCase().replace(/[^0-9bcdefghjkmnpqrstuvwxyz]/g, "")
+          if (geohash) {
+            setSelectedGeohashes((current) => {
+              // Only update if different to prevent unnecessary re-renders
+              if (current.length === 1 && current[0] === geohash) return current
+              return [geohash]
+            })
+          }
+        } else {
+          setSelectedGeohashes([])
+        }
+        break
+    }
+  }
+
+  const getPlaceholder = () => {
+    switch (activeTab) {
+      case "people":
+        return "Search people..."
+      case "posts":
+        return "Search posts..."
+      case "market":
+        return "Search market..."
+      case "map":
+        return "Search geohash area..."
+      default:
+        return "Search..."
+    }
+  }
+
+  // No dropdown for any tab - results show in content area
+
+  return (
+    <div className="w-full p-2">
+      <form onSubmit={handleSubmit} className="w-full">
+        <label className="input input-bordered flex items-center gap-2 w-full">
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="grow"
+            placeholder={getPlaceholder()}
+            value={getCurrentValue()}
+            onChange={(e) => handleInputChange(e.target.value)}
+          />
+          <Icon name="search-outline" className="text-neutral-content/60" />
+        </label>
+      </form>
+    </div>
+  )
+}
 
 function SearchPage() {
   const {query} = useParams()
@@ -27,7 +146,23 @@ function SearchPage() {
     "people" | "posts" | "market" | "map"
   >(query ? "posts" : "people", "searchTab")
   const [forceUpdate, setForceUpdate] = useState(0)
+  const [marketSearchTerm, setMarketSearchTerm] = useState("")
+  const [mapSearchTerm, setMapSearchTerm] = useState("")
+  const [selectedGeohashes, setSelectedGeohashes] = useState<string[]>([])
   const navItemClicked = useUIStore((state) => state.navItemClicked)
+
+  // People search using extracted SearchBox logic
+  const peopleSearch = useSearch({
+    maxResults: 10,
+    onSelect: (pubKey: string) => {
+      try {
+        navigate(`/${nip19.npubEncode(pubKey)}`)
+      } catch (error) {
+        console.error("Error encoding pubkey:", error)
+        navigate(`/${pubKey}`)
+      }
+    },
+  })
 
   const {content} = useSettingsStore()
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
@@ -44,6 +179,11 @@ function SearchPage() {
 
   useEffect(() => {
     setForceUpdate((prev) => prev + 1)
+    // Clear search inputs when changing tabs
+    peopleSearch.setValue("")
+    setSearchTerm("")
+    setMarketSearchTerm("")
+    setMapSearchTerm("")
   }, [activeTab])
 
   // Focus search input when search nav item is clicked (for posts/market tabs)
@@ -56,46 +196,38 @@ function SearchPage() {
     }
   }, [navItemClicked, activeTab])
 
-  const filters: NDKFilter = useMemo(
-    () => ({
-      kinds: activeTab === "market" ? [KIND_CLASSIFIED] : [KIND_TEXT_NOTE],
-      search: query,
-    }),
-    [query, activeTab]
-  )
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (searchTerm !== query) {
-      navigate(`/search/${searchTerm}`)
+  const filters: NDKFilter = useMemo(() => {
+    if (activeTab === "market") {
+      return {
+        kinds: [KIND_CLASSIFIED],
+        search: marketSearchTerm || query,
+      }
     }
-  }
+    return {
+      kinds: [KIND_TEXT_NOTE],
+      search: query,
+    }
+  }, [query, activeTab, marketSearchTerm])
 
   return (
     <div className="flex flex-1 flex-row relative h-full">
       <div className="flex flex-col flex-1 h-full relative">
         <Header title={query ? `Search: "${query}"` : "Search"} />
         <ScrollablePageContainer className="flex flex-col items-center">
-          <div className="flex-1 w-full max-w-screen-lg flex flex-col gap-4 md:pt-2">
-            {activeTab === "people" ? (
-              <div className="p-2">
-                <SearchBox searchNotes={true} maxResults={10} focusOnNav={true} />
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="flex w-full p-2">
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search"
-                  className="input input-bordered w-full"
-                />
-                <button type="submit" className="btn btn-primary ml-2">
-                  Search
-                </button>
-              </form>
-            )}
+          <div className="flex-1 w-full max-w-screen-lg flex flex-col gap-2 md:pt-2">
+            <UnifiedSearchInput
+              activeTab={activeTab}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              marketSearchTerm={marketSearchTerm}
+              setMarketSearchTerm={setMarketSearchTerm}
+              mapSearchTerm={mapSearchTerm}
+              setMapSearchTerm={setMapSearchTerm}
+              peopleSearch={peopleSearch}
+              navigate={navigate}
+              searchInputRef={searchInputRef}
+              setSelectedGeohashes={setSelectedGeohashes}
+            />
             <div className="flex gap-2 overflow-x-auto p-2">
               <button
                 className={`btn btn-sm ${activeTab === "people" ? "btn-primary" : "btn-neutral"}`}
@@ -148,7 +280,13 @@ function SearchPage() {
                 forceUpdate={forceUpdate}
               />
             ) : (
-              <NoSearchTermContent activeTab={activeTab} />
+              <NoSearchTermContent
+                activeTab={activeTab}
+                selectedGeohashes={selectedGeohashes}
+                setSelectedGeohashes={setSelectedGeohashes}
+                peopleSearch={peopleSearch}
+                setMapSearchTerm={setMapSearchTerm}
+              />
             )}
           </div>
           <Helmet>
@@ -177,13 +315,21 @@ function SearchPage() {
 
 function NoSearchTermContent({
   activeTab,
+  selectedGeohashes,
+  setSelectedGeohashes,
+  peopleSearch,
+  setMapSearchTerm,
 }: {
   activeTab: "people" | "posts" | "market" | "map"
+  selectedGeohashes: string[]
+  setSelectedGeohashes: (geohashes: string[]) => void
+  peopleSearch: ReturnType<typeof useSearch>
+  setMapSearchTerm: (term: string) => void
 }) {
   if (activeTab === "people") {
     return (
       <div className="mt-4">
-        <FollowedUsersList />
+        <FollowedUsersList peopleSearch={peopleSearch} />
       </div>
     )
   }
@@ -217,40 +363,63 @@ function NoSearchTermContent({
   }
 
   // Map tab
-  return <MapContent />
+  return (
+    <MapContent
+      selectedGeohashes={selectedGeohashes}
+      setSelectedGeohashes={setSelectedGeohashes}
+      setMapSearchTerm={setMapSearchTerm}
+    />
+  )
 }
 
-function MapContent() {
+function MapContent({
+  selectedGeohashes,
+  setSelectedGeohashes,
+  setMapSearchTerm,
+}: {
+  selectedGeohashes: string[]
+  setSelectedGeohashes: (geohashes: string[]) => void
+  setMapSearchTerm: (term: string) => void
+}) {
   const [feedEvents, setFeedEvents] = useState<NDKEvent[]>([])
-  const [selectedGeohashes, setSelectedGeohashes] = useState<string[]>([])
 
-  // Default to all geohashes when none selected
-  const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
-  const geohashes = selectedGeohashes.length > 0 ? selectedGeohashes : allGeohashes
+  // Use selected geohashes or empty array for initial state
+  const geohashes = selectedGeohashes
 
-  const feedConfig = useMemo(
-    () => ({
+  const feedConfig = useMemo(() => {
+    // When no geohashes selected, show global view with all geohashes
+    const isGlobalView = geohashes.length === 0
+
+    const filter = isGlobalView
+      ? {
+          kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL],
+          "#g": ALL_GEOHASHES,
+          limit: 100,
+        }
+      : {
+          kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL],
+          "#g": geohashes,
+          limit: 100,
+        }
+
+    return {
       id: "map-search",
       name: "Location Feed",
-      filter: {
-        kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL],
-        "#g": geohashes,
-        limit: 100,
-      },
+      filter,
       followDistance: 5,
       showRepliedTo: true,
       hideReplies: false,
-    }),
-    [geohashes]
-  )
+    }
+  }, [geohashes])
 
   return (
     <div className="mt-4">
       <GeohashMap
-        geohashes={geohashes}
+        geohashes={geohashes.length === 0 ? ALL_GEOHASHES : geohashes}
         feedEvents={feedEvents}
         onGeohashSelect={(geohash) => {
           setSelectedGeohashes([geohash.toLowerCase()])
+          setMapSearchTerm(geohash.toLowerCase()) // Update search input to match selection
         }}
         height="20rem"
         className="w-full max-w-full"
@@ -274,14 +443,23 @@ function MapContent() {
   )
 }
 
-function FollowedUsersList() {
+function FollowedUsersList({peopleSearch}: {peopleSearch: ReturnType<typeof useSearch>}) {
   const [displayCount, setDisplayCount] = useState(20)
   const graph = socialGraph()
   const rootUser = graph.getRoot()
   const follows = graph.getFollowedByUser(rootUser)
 
-  // Sort followed users by how many of your friends follow them
-  const sortedFollows = useMemo(() => {
+  // Show search results if there's a search term, otherwise show followed users
+  const displayUsers = useMemo(() => {
+    if (peopleSearch.value.trim()) {
+      // Show search results
+      return peopleSearch.searchResults.map((result) => ({
+        pubkey: result.pubKey,
+        followedByCount: graph.followedByFriends(result.pubKey).size,
+      }))
+    }
+
+    // Show followed users sorted by how many of your friends follow them
     if (!follows) return []
 
     return Array.from(follows)
@@ -290,18 +468,18 @@ function FollowedUsersList() {
         followedByCount: graph.followedByFriends(pubkey).size,
       }))
       .sort((a, b) => b.followedByCount - a.followedByCount)
-  }, [follows, graph, rootUser])
+  }, [follows, graph, rootUser, peopleSearch.value, peopleSearch.searchResults])
 
   const loadMore = () => {
-    if (displayCount < sortedFollows.length) {
-      setDisplayCount((prev) => Math.min(prev + 20, sortedFollows.length))
+    if (displayCount < displayUsers.length) {
+      setDisplayCount((prev) => Math.min(prev + 20, displayUsers.length))
     }
   }
 
   return (
     <InfiniteScroll onLoadMore={loadMore}>
-      <div className="flex flex-col gap-2 p-2">
-        {sortedFollows.slice(0, displayCount).map(({pubkey}) => (
+      <div className="flex flex-col gap-2 px-4">
+        {displayUsers.slice(0, displayCount).map(({pubkey}) => (
           <UserRow key={pubkey} pubKey={pubkey} linkToProfile={true} />
         ))}
       </div>

@@ -3,7 +3,8 @@
  * Based on the geohash algorithm
  */
 
-const BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz"
+export const BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz"
+export const ALL_GEOHASHES = BASE32.split("")
 
 export function decodeGeohash(geohash: string): [number, number, number, number] {
   let evenBit = true

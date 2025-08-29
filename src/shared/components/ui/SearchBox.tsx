@@ -10,7 +10,7 @@ import {useSearchStore, CustomSearchResult} from "@/stores/search"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {isOvermuted} from "@/utils/visibility"
 import {searchIndex} from "@/utils/profileSearch"
-import socialGraph from "@/utils/socialGraph"
+import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {useNavigate} from "@/navigation"
 import classNames from "classnames"
 import {nip19} from "nostr-tools"
@@ -60,6 +60,7 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
     const navigate = useNavigate()
     const dropdownRef = useRef<HTMLDivElement>(null)
     const navItemClicked = useUIStore((state) => state.navItemClicked)
+    const isSocialGraphLoaded = useSocialGraphLoaded()
 
     // Forward ref to the input element
     useImperativeHandle(ref, () => inputRef.current!, [])
@@ -127,10 +128,12 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
         .filter((result) => !isOvermuted(result.item.pubKey))
         .map((result) => {
           const fuseScore = 1 - (result.score ?? 1)
-          const followDistance =
-            socialGraph().getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE
-          const friendsFollowing =
-            socialGraph().followedByFriends(result.item.pubKey).size || 0
+          const followDistance = isSocialGraphLoaded
+            ? (socialGraph().getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE)
+            : DEFAULT_DISTANCE
+          const friendsFollowing = isSocialGraphLoaded
+            ? socialGraph().followedByFriends(result.item.pubKey).size || 0
+            : 0
 
           const nameLower = result.item.name.toLowerCase()
           const nip05Lower = result.item.nip05?.toLowerCase() || ""
@@ -176,7 +179,7 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
           : []),
         ...resultsWithAdjustedScores.map((result) => result.item),
       ])
-    }, [value, navigate, searchNotes])
+    }, [value, navigate, searchNotes, isSocialGraphLoaded])
 
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {

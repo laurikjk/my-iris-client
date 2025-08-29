@@ -435,8 +435,15 @@ export default function GeohashMapContent({
 
   // Fit bounds only when geohashes actually change (not on every state update)
   useEffect(() => {
-    if (!mapRef.current || geohashes.length === 0 || isGlobalView) return
+    if (!mapRef.current) return
 
+    // If empty geohashes or global view, zoom to world view
+    if (geohashes.length === 0 || isGlobalView) {
+      mapRef.current.setView([0, 0], 1) // More zoomed out world view
+      return
+    }
+
+    // Otherwise fit bounds to selected geohashes
     const bounds: L.LatLngBoundsExpression = []
     geohashes.forEach((gh) => {
       const [latMin, latMax, lonMin, lonMax] = decodeGeohash(gh)

@@ -91,7 +91,11 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
   }
 
   const handleTouchMove = (e: TouchEvent) => {
-    if (!scrollContainerRef.current?.dataset.startX || !scrollContainerRef.current?.dataset.startY) return
+    if (
+      !scrollContainerRef.current?.dataset.startX ||
+      !scrollContainerRef.current?.dataset.startY
+    )
+      return
 
     const touch = e.touches[0]
     const startX = parseFloat(scrollContainerRef.current.dataset.startX)
