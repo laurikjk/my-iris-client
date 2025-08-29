@@ -93,17 +93,18 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
     className = "btn-secondary"
   } else if (localIsFollowing) {
     text = isHovering ? "Unfollow" : "Following"
-    className = isHovering ? "btn-secondary" : "btn-success"
+    className = isHovering ? "btn-secondary" : "btn-neutral"
   }
 
   return (
     <button
-      className={`btn ${small ? "btn-sm" : ""} ${className}`}
+      className={`btn ${small ? "btn-sm" : ""} ${className} relative`}
       onClick={handleClick}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      {text}
+      <span className="invisible">Following</span>
+      <span className="absolute inset-0 flex items-center justify-center">{text}</span>
     </button>
   )
 }
