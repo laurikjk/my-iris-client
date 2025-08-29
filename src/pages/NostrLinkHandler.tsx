@@ -7,6 +7,8 @@ import {nip05, nip19} from "nostr-tools"
 import {Page404} from "@/pages/Page404"
 import ThreadPage from "@/pages/thread"
 import ProfilePage from "@/pages/user"
+import {useUserStore} from "@/stores/user"
+import {getCachedUsername} from "@/utils/usernameCache"
 
 const CLOUDFLARE_CSAM_EXPLANATION_NOTE =
   "note1pu5kvxwfzytxsw6vkqd4eu6e0xr8znaur6sl38r4swl3klgsn6dqzlpnsl"
@@ -16,6 +18,7 @@ export default function NostrLinkHandler() {
   const {link} = useParams()
   const [error, setError] = useState<string>()
   const [asyncPubkey, setAsyncPubkey] = useState<string>()
+  const myPubKey = useUserStore((state) => state.publicKey)
 
   // Memoize link parsing to prevent recalculation
   const linkData = useMemo(() => {
@@ -44,8 +47,13 @@ export default function NostrLinkHandler() {
           const decoded = nip19.decode(link)
           naddrData = decoded.data as {pubkey: string; kind: number; identifier: string}
         } else if (!isNote && !isProfile && !isAddress) {
-          // Username/nip05 - needs async resolution
-          needsAsyncResolution = true
+          // Username/nip05 - check if it's our own cached username first
+          if (myPubKey && getCachedUsername(myPubKey) === link) {
+            pubkey = myPubKey
+          } else {
+            // Username/nip05 - needs async resolution
+            needsAsyncResolution = true
+          }
         }
       }
     } catch (err) {
@@ -53,7 +61,7 @@ export default function NostrLinkHandler() {
     }
 
     return {isProfile, isNote, isAddress, pubkey, naddrData, needsAsyncResolution}
-  }, [link])
+  }, [link, myPubKey])
 
   const [loading, setLoading] = useState(linkData.needsAsyncResolution)
 
