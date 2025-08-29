@@ -1,6 +1,7 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {formatAmount} from "@/utils/utils"
 import {KIND_CLASSIFIED} from "@/utils/constants"
+import {marketStore} from "@/stores/marketstore"
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
@@ -46,6 +47,12 @@ export const extractMarketData = (event: NDKEvent) => {
   const imageUrl = imageTag ? imageTag[1] : null
   const summary = event?.tagValue("summary") || event?.content || ""
   const cleanSummary = imageUrl ? summary.replace(imageUrl, "").trim() : summary
+
+  // Extract and track "t" tags (categories)
+  const tTags = event?.tags?.filter((tag) => tag[0] === "t" && tag[1]) || []
+  if (tTags.length > 0) {
+    marketStore.addTags(tTags.map((tag) => tag[1]))
+  }
 
   return {
     title,
