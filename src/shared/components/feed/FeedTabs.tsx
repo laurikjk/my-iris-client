@@ -1,4 +1,4 @@
-import {useMemo} from "react"
+import {useMemo, useRef, type TouchEvent} from "react"
 import {useFeedStore, useEnabledFeedIds, type FeedConfig} from "@/stores/feed"
 import {
   RiArrowLeftSLine,
@@ -79,24 +79,56 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
     setActiveFeed(uniqueId)
   }
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  // Touch event handlers to prevent vertical scroll during horizontal swipes
+  const handleTouchStart = (e: TouchEvent) => {
+    if (!scrollContainerRef.current) return
+
+    const touch = e.touches[0]
+    scrollContainerRef.current.dataset.startX = touch.clientX.toString()
+    scrollContainerRef.current.dataset.startY = touch.clientY.toString()
+  }
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!scrollContainerRef.current?.dataset.startX || !scrollContainerRef.current?.dataset.startY) return
+
+    const touch = e.touches[0]
+    const startX = parseFloat(scrollContainerRef.current.dataset.startX)
+    const startY = parseFloat(scrollContainerRef.current.dataset.startY)
+
+    const deltaX = Math.abs(touch.clientX - startX)
+    const deltaY = Math.abs(touch.clientY - startY)
+
+    // If horizontal movement is greater than vertical, prevent vertical scroll
+    if (deltaX > deltaY && deltaX > 10) {
+      e.preventDefault()
+    }
+  }
+
   return (
     <div className="px-4 pb-4">
       <div className="flex flex-row items-center gap-2 overflow-x-auto max-w-[100vw] scrollbar-hide">
         {/* Edit button */}
         <button
           onClick={onEditModeToggle}
-          className={`btn md:btn-sm btn-circle ${editMode ? "btn-primary" : "btn-neutral"}`}
+          className={`btn btn-sm btn-circle ${editMode ? "btn-primary" : "btn-neutral"}`}
           title={editMode ? "Done editing" : "Edit feeds"}
         >
           <RiEqualizerFill className="w-4 h-4" />
         </button>
 
-        <div className="flex flex-row gap-2 overflow-x-auto scrollbar-hide flex-1">
+        <div
+          ref={scrollContainerRef}
+          className="flex flex-row gap-2 overflow-x-auto scrollbar-hide flex-1"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+        >
           {/* Create button - only visible in edit mode, at the beginning */}
           {editMode && (
             <button
               onClick={createFeed}
-              className="btn md:btn-sm btn-info flex-shrink-0"
+              className="btn btn-sm btn-info flex-shrink-0"
               title="Create new feed"
             >
               <RiAddLine className="w-4 h-4" />
@@ -107,7 +139,7 @@ function FeedTabs({allTabs, editMode, onEditModeToggle}: FeedTabsProps) {
           {feeds.map((f) => (
             <div key={f.id} className="flex flex-col items-center gap-1 flex-shrink-0">
               <button
-                className={`btn md:btn-sm cursor-pointer whitespace-nowrap ${
+                className={`btn btn-sm cursor-pointer whitespace-nowrap ${
                   activeFeed === f.id ? "btn-primary" : "btn-neutral"
                 }`}
                 onClick={() => setActiveFeed(f.id)}
