@@ -1,17 +1,9 @@
-import {RiAddCircleLine, RiAddLine} from "@remixicon/react" // Import Plus icon from Remix Icons
+import {RiAddLine} from "@remixicon/react"
 import {usePublicKey} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
-import classNames from "classnames" // Import classnames library
 import {useCallback} from "react"
 
-function PublishButton({
-  className,
-  showLabel = true,
-}: {
-  className?: string
-  showLabel?: boolean
-}) {
-  // Add className prop
+function PublishButton() {
   const {newPostOpen, setNewPostOpen} = useUIStore()
   const myPubKey = usePublicKey()
 
@@ -23,25 +15,16 @@ function PublishButton({
   if (!myPubKey) return null
 
   return (
-    <>
-      <div
+    <div className="ml-2 md:ml-0 xl:px-2 md:mt-2 hidden md:block xl:w-full">
+      <button
         data-testid="new-post-button"
-        className={classNames(
-          "cursor-pointer flex flex-row items-center justify-center rounded-full",
-          "primary md:bg-primary md:hover:bg-primary-hover md:text-white",
-          {
-            "p-4 md:p-2 aspect-auto md:aspect-square xl:aspect-auto xl:p-4": showLabel,
-            "aspect-square": !showLabel,
-          },
-          className
-        )}
+        className="btn btn-primary btn-circle xl:w-full xl:rounded-full text-lg"
         onClick={handlePress}
       >
-        <RiAddCircleLine className="md:hidden" />
-        <RiAddLine className="hidden md:inline" />
-        {showLabel && <span className="ml-2 inline md:hidden xl:inline">New post</span>}
-      </div>
-    </>
+        <RiAddLine className="xl:hidden" />
+        <span className="hidden xl:inline">Post</span>
+      </button>
+    </div>
   )
 }
 

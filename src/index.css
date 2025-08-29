@@ -44,23 +44,38 @@ body {
 }
 
 /* Light theme */
-[data-theme="light"] .btn-primary {
-  background: linear-gradient(to top, rgba(60, 33, 200, 1), rgba(122, 41, 288, 1));
-  color: #ffffff;
+[data-theme="light"] .btn.btn-primary {
+  background: #0f1419 !important;
+  color: #ffffff !important;
+  border: none;
 }
 
-[data-theme="light"] .btn-primary:hover {
-  background: linear-gradient(to top, rgba(60, 33, 200, 0.8), rgba(122, 41, 288, 0.8));
+[data-theme="light"] .btn.btn-primary:hover {
+  background: #15202b !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .btn.btn-neutral {
+  background: #f7f9fa !important;
+  color: #536471 !important;
+  border: 1px solid #e1e8ed !important;
+}
+
+[data-theme="light"] .btn.btn-neutral:hover {
+  background: #e1e8ed !important;
+  color: #0f1419 !important;
 }
 
 /* Iris theme */
-[data-theme="iris"] .btn-primary {
-  background: #ff3f15;
+[data-theme="iris"] .btn.btn-primary {
+  background: #f8f8f8 !important;
+  color: #1a1a1a !important;
+  border: 1px solid #333333;
 }
 
-[data-theme="iris"] .btn-primary:hover {
-  background: #ff3f15;
-  box-shadow: 0 0 10px #ff3f15;
+[data-theme="iris"] .btn.btn-primary:hover {
+  background: #e8e8e8 !important;
+  color: #1a1a1a !important;
 }
 
 iframe {

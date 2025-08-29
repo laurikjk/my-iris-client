@@ -2,7 +2,6 @@ import {Link} from "@/navigation"
 import SearchBox from "@/shared/components/ui/SearchBox"
 import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
 import {RelayStats} from "@/shared/components/RelayStats"
-import irisConnectingPeople from "@/assets/iris-connecting-people.png"
 
 export function HomeRightColumn() {
   return (
@@ -11,12 +10,10 @@ export function HomeRightColumn() {
         <SearchBox searchNotes={true} className="w-full max-w-full" />
       </div>
       <div className="flex flex-col gap-4 items-center">
-        <Link to="/about" className="inline-block w-full max-w-xs">
-          <img
-            src={irisConnectingPeople}
-            alt="Iris — Connecting People"
-            className="mx-auto cursor-pointer hover:opacity-90 transition-opacity"
-          />
+        <Link to="/about" className="inline-block w-full max-w-xs text-center">
+          <div className="text-2xl font-bold text-base-content hover:opacity-90 transition-opacity cursor-pointer">
+            Iris — Connecting People
+          </div>
         </Link>
         <div className="w-full max-w-xs">
           <SocialGraphWidget background={false} />

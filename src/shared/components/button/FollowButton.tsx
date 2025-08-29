@@ -87,13 +87,13 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
 
   // text should be Follow or Following. if Following, on hover it should say Unfollow
   let text = "Follow"
-  let className = "btn-primary"
+  let className = "btn-info"
   if (isMuted) {
     text = "Unmute"
     className = "btn-secondary"
   } else if (localIsFollowing) {
     text = isHovering ? "Unfollow" : "Following"
-    className = isHovering ? "btn-secondary" : "btn-neutral"
+    className = isHovering ? "btn-error" : "btn-neutral"
   }
 
   return (

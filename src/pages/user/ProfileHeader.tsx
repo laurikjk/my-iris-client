@@ -90,7 +90,7 @@ const ProfileHeader = ({
         </Header>
       )}
       <div className="flex flex-col gap-4 w-full break-all">
-        <div className="w-full h-36 md:h-56 bg-gradient-to-r from-primary to-primary-dark">
+        <div className="w-full h-36 md:h-56 bg-gradient-to-br from-base-200 to-base-300">
           {profile?.banner && (
             <ProxyImg
               src={profile?.banner}

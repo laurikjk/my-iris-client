@@ -109,13 +109,7 @@ const NavSideBar = () => {
               )
             })}
           </ul>
-          {myPubKey && ndk().signer && (
-            <div className="ml-2 md:ml-0 xl:ml-2 md:mt-2 xl:mt-0">
-              <div className="hidden md:flex">
-                <PublishButton />
-              </div>
-            </div>
-          )}
+          {myPubKey && ndk().signer && <PublishButton />}
           {!myPubKey && (
             <>
               <button

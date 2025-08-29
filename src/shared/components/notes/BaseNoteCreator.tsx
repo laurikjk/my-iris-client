@@ -436,21 +436,13 @@ export function BaseNoteCreator({
         <div className="flex gap-2 px-4 pb-3">
           <button
             onClick={() => setPreviewMode(false)}
-            className={
-              !previewMode
-                ? "px-4 py-1.5 rounded-full text-sm font-medium !bg-primary !text-primary-content hover:!bg-primary hover:!text-primary-content focus:!bg-primary focus:!text-primary-content active:!bg-primary active:!text-primary-content outline-none select-none"
-                : "px-4 py-1.5 rounded-full text-sm font-medium bg-base-200 text-base-content/60 hover:text-base-content hover:bg-base-300 focus:bg-base-300 focus:text-base-content outline-none select-none"
-            }
+            className={!previewMode ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}
           >
             Edit
           </button>
           <button
             onClick={() => setPreviewMode(true)}
-            className={
-              previewMode
-                ? "px-4 py-1.5 rounded-full text-sm font-medium !bg-primary !text-primary-content hover:!bg-primary hover:!text-primary-content focus:!bg-primary focus:!text-primary-content active:!bg-primary active:!text-primary-content outline-none select-none"
-                : "px-4 py-1.5 rounded-full text-sm font-medium bg-base-200 text-base-content/60 hover:text-base-content hover:bg-base-300 focus:bg-base-300 focus:text-base-content outline-none select-none"
-            }
+            className={previewMode ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}
           >
             Preview
           </button>
