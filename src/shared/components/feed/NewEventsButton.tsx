@@ -72,6 +72,18 @@ const NewEventsButton = ({
         return
       }
 
+      // Simple check: if the feed item is not in the viewport or has no dimensions, it's likely hidden
+      const rect = firstFeedItemRef.current.getBoundingClientRect()
+      if (
+        rect.width === 0 ||
+        rect.height === 0 ||
+        rect.top < -1000 ||
+        rect.left < -1000
+      ) {
+        setIsVisible(false)
+        return
+      }
+
       // Check if the element or any parent is hidden
       let element = firstFeedItemRef.current as HTMLElement
       let visible = true
@@ -89,12 +101,13 @@ const NewEventsButton = ({
         // Also check for transform: translateX that might indicate a hidden stack view
         const transform = style.transform
         if (transform && transform !== "none") {
-          const rect = element.getBoundingClientRect()
-          if (rect.left > window.innerWidth || rect.right < 0) {
+          const elementRect = element.getBoundingClientRect()
+          if (elementRect.left > window.innerWidth || elementRect.right < 0) {
             visible = false
             break
           }
         }
+
         element = element.parentElement!
       }
 
