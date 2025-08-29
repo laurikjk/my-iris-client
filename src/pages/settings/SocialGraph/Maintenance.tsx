@@ -2,52 +2,46 @@ import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {SettingsButton} from "@/shared/components/settings/SettingsButton"
 import socialGraph, {getFollowLists, stopRecrawl} from "@/utils/socialGraph"
+import {useSocialGraphStore} from "@/stores/socialGraph"
 
-interface MaintenanceProps {
-  isCrawling: boolean
-  setIsCrawling: (crawling: boolean) => void
-  onRecalculateDistances: () => void
-}
+export function Maintenance() {
+  const crawling = useSocialGraphStore((state) => state.isRecrawling)
 
-export function Maintenance({
-  isCrawling,
-  setIsCrawling,
-  onRecalculateDistances,
-}: MaintenanceProps) {
+  const handleRecalculateDistances = () => {
+    socialGraph().recalculateFollowDistances()
+    const removed = socialGraph().removeMutedNotFollowedUsers()
+    console.log("Removed", removed, "muted not followed users")
+  }
   return (
     <SettingsGroup title="Maintenance">
       <SettingsGroupItem>
         <div className="flex flex-col space-y-1">
-          <button onClick={onRecalculateDistances} className="text-info text-left">
+          <button onClick={handleRecalculateDistances} className="text-info text-left">
             Recalculate Follow Distances
           </button>
           <span className="text-xs text-base-content/60">Fast, no bandwidth usage</span>
         </div>
       </SettingsGroupItem>
 
-      <SettingsGroupItem isLast={!isCrawling}>
+      <SettingsGroupItem isLast={!crawling}>
         <div className="flex flex-col space-y-1">
           <button
             onClick={() => {
-              setIsCrawling(true)
               getFollowLists(socialGraph().getRoot(), false, 2)
             }}
             className="text-info text-left"
-            disabled={isCrawling}
+            disabled={crawling}
           >
-            {isCrawling ? "Recrawling..." : "Recrawl follow lists"}
+            {crawling ? "Recrawling..." : "Recrawl follow lists"}
           </button>
           <span className="text-xs text-base-content/60">Slow, bandwidth intensive</span>
         </div>
       </SettingsGroupItem>
 
-      {isCrawling && (
+      {crawling && (
         <SettingsButton
           label="Stop crawling"
-          onClick={() => {
-            stopRecrawl()
-            setIsCrawling(false)
-          }}
+          onClick={stopRecrawl}
           variant="destructive"
           isLast
         />

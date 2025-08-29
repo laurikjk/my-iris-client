@@ -14,7 +14,7 @@ export default {
         custom: "var(--border-color)",
       },
       borderWidth: {
-        'b-px': '0 0 0.5px 0',
+        "b-px": "0 0 0.5px 0",
       },
     },
   },

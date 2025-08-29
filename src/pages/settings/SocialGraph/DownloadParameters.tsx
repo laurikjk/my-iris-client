@@ -113,8 +113,15 @@ export function DownloadParameters({
       </SettingsGroupItem>
 
       <SettingsGroupItem isLast>
-        <div className="flex flex-col space-y-2">
-          <div className="text-sm text-base-content/70">
+        <div className="flex flex-col space-y-1">
+          <button
+            onClick={onDownload}
+            disabled={isDownloading}
+            className="text-info text-left"
+          >
+            {isDownloading ? "Downloading..." : "Download graph"}
+          </button>
+          <span className="text-xs text-base-content/60">
             Download from{" "}
             <a
               href="https://graph-api.iris.to"
@@ -124,24 +131,17 @@ export function DownloadParameters({
             >
               graph-api.iris.to
             </a>
-          </div>
-          <button
-            onClick={onDownload}
-            disabled={isDownloading}
-            className="text-info text-left"
-          >
-            {isDownloading ? "Downloading..." : "Download graph"}
-          </button>
+          </span>
           {downloadedBytes !== null && !isDownloading && !downloadError && (
-            <span className="text-sm text-success">
+            <span className="text-xs text-success">
               Downloaded: {formatSize(downloadedBytes)}
             </span>
           )}
           {downloadError && (
-            <span className="text-sm text-error">Error: {downloadError}</span>
+            <span className="text-xs text-error">Error: {downloadError}</span>
           )}
           {isDownloading && (
-            <span className="text-sm text-info">
+            <span className="text-xs text-info">
               {downloadedBytes && downloadedBytes >= 1024
                 ? `Downloading... ${formatSize(downloadedBytes)}`
                 : "Starting download..."}

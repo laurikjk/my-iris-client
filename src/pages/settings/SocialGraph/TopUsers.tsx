@@ -3,35 +3,62 @@ import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {RiArrowRightSLine, RiArrowDownSLine} from "@remixicon/react"
 import {useState} from "react"
+import socialGraph from "@/utils/socialGraph"
 
-interface TopUsersProps {
-  topFollowedUsers: Array<{user: string; count: number}>
-  topMutedUsers: Array<{user: string; count: number}>
-  topUsersLimit: number
-  onFindTopFollowed: () => void
-  onFindTopMuted: () => void
-}
+const TOP_USERS_LIMIT = 20
 
-export function TopUsers({
-  topFollowedUsers,
-  topMutedUsers,
-  topUsersLimit,
-  onFindTopFollowed,
-  onFindTopMuted,
-}: TopUsersProps) {
+export function TopUsers() {
   const [showFollowed, setShowFollowed] = useState(false)
   const [showMuted, setShowMuted] = useState(false)
+  const [topFollowedUsers, setTopFollowedUsers] = useState<
+    Array<{user: string; count: number}>
+  >([])
+  const [topMutedUsers, setTopMutedUsers] = useState<
+    Array<{user: string; count: number}>
+  >([])
+
+  const getTopNMostFollowedUsers = (n: number) => {
+    const userFollowerCounts: Array<{user: string; count: number}> = []
+
+    for (const user of socialGraph()) {
+      const followers = socialGraph().getFollowersByUser(user)
+      userFollowerCounts.push({user, count: followers.size})
+    }
+
+    userFollowerCounts.sort((a, b) => b.count - a.count)
+    return userFollowerCounts.slice(0, n)
+  }
+
+  const getTopNMostMutedUsers = (n: number) => {
+    const userMuteCounts: Array<{user: string; count: number}> = []
+
+    for (const user of socialGraph()) {
+      const mutedBy = socialGraph().getUserMutedBy(user)
+      userMuteCounts.push({user, count: mutedBy.size})
+    }
+
+    userMuteCounts.sort((a, b) => b.count - a.count)
+    return userMuteCounts.slice(0, n)
+  }
+
+  const handleFindTopFollowed = () => {
+    setTopFollowedUsers(getTopNMostFollowedUsers(TOP_USERS_LIMIT))
+  }
+
+  const handleFindTopMuted = () => {
+    setTopMutedUsers(getTopNMostMutedUsers(TOP_USERS_LIMIT))
+  }
 
   const handleToggleFollowed = () => {
     if (!showFollowed && topFollowedUsers.length === 0) {
-      onFindTopFollowed()
+      handleFindTopFollowed()
     }
     setShowFollowed(!showFollowed)
   }
 
   const handleToggleMuted = () => {
     if (!showMuted && topMutedUsers.length === 0) {
-      onFindTopMuted()
+      handleFindTopMuted()
     }
     setShowMuted(!showMuted)
   }
@@ -43,7 +70,7 @@ export function TopUsers({
         isLast={!showFollowed && !showMuted}
       >
         <div className="flex justify-between items-center">
-          <span>Most Followed Users ({topUsersLimit})</span>
+          <span>Most Followed Users ({TOP_USERS_LIMIT})</span>
           {showFollowed ? (
             <RiArrowDownSLine size={20} className="text-base-content/50" />
           ) : (
@@ -67,7 +94,7 @@ export function TopUsers({
 
       <SettingsGroupItem onClick={handleToggleMuted} isLast={!showMuted}>
         <div className="flex justify-between items-center">
-          <span>Most Muted Users ({topUsersLimit})</span>
+          <span>Most Muted Users ({TOP_USERS_LIMIT})</span>
           {showMuted ? (
             <RiArrowDownSLine size={20} className="text-base-content/50" />
           ) : (

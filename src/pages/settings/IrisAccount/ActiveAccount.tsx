@@ -38,7 +38,9 @@ export default function ActiveAccount({
   return (
     <SettingsGroup title="Active Iris.to Username">
       <SettingsGroupItem>
-        <div className="text-sm text-base-content/70 mb-3">You have an active iris.to username:</div>
+        <div className="text-sm text-base-content/70 mb-3">
+          You have an active iris.to username:
+        </div>
       </SettingsGroupItem>
       <AccountName name={name} />
       <SettingsGroupItem>

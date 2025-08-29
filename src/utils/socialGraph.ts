@@ -1,6 +1,7 @@
 import {SocialGraph, NostrEvent} from "nostr-social-graph/src"
 import {NDKSubscription} from "@nostr-dev-kit/ndk"
 import {useUserStore} from "@/stores/user"
+import {useSocialGraphStore} from "@/stores/socialGraph"
 import {VerifiedEvent} from "nostr-tools"
 import debounce from "lodash/debounce"
 import throttle from "lodash/throttle"
@@ -158,9 +159,11 @@ function getFollowListsInternal(
         }, 5000)
       } else if (isManual) {
         isManualRecrawling = false
+        useSocialGraphStore.getState().setIsRecrawling(false)
       }
     } else if (isManual) {
       isManualRecrawling = false
+      useSocialGraphStore.getState().setIsRecrawling(false)
     }
   }
 
@@ -169,6 +172,7 @@ function getFollowListsInternal(
 
 export function getFollowLists(myPubKey: string, missingOnly = true, upToDistance = 1) {
   isManualRecrawling = true
+  useSocialGraphStore.getState().setIsRecrawling(true)
   getFollowListsInternal(myPubKey, missingOnly, upToDistance, true)
 }
 
@@ -385,12 +389,9 @@ export const resetGraph = async () => {
 export const stopRecrawl = () => {
   if (isManualRecrawling) {
     isManualRecrawling = false
+    useSocialGraphStore.getState().setIsRecrawling(false)
     throttledSave()
   }
-}
-
-export const isRecrawling = () => {
-  return isManualRecrawling
 }
 
 export default () => instance

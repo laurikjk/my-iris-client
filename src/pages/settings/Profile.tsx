@@ -3,6 +3,7 @@ import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
 import {SettingsButton} from "@/shared/components/settings/SettingsButton"
 import {Avatar} from "@/shared/components/user/Avatar"
+import {Name} from "@/shared/components/user/Name"
 import {useFileUpload} from "@/shared/hooks/useFileUpload"
 import useProfile from "@/shared/hooks/useProfile"
 import {useEffect, useMemo, useState} from "react"
@@ -102,7 +103,7 @@ export function ProfileSettings() {
           </div>
           <div className="text-center">
             <h2 className="text-2xl font-semibold">
-              {newProfile?.display_name || existingProfile?.display_name || "Anonymous"}
+              <Name pubKey={myPubKey} />
             </h2>
             {(newProfile?.nip05 || existingProfile?.nip05) && (
               <p className="text-base-content/70 text-sm">

@@ -122,7 +122,7 @@ function RegisterForm({minLength, subscriptionPlan, onRegister}: RegisterFormPro
             <div className="text-sm text-base-content/70">
               Register an Iris username (iris.to/username)
             </div>
-            
+
             <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
               <div className="flex flex-row gap-2">
                 <input
@@ -144,7 +144,9 @@ function RegisterForm({minLength, subscriptionPlan, onRegister}: RegisterFormPro
               {/* Status messages */}
               <div className="space-y-2">
                 {/* Checking status */}
-                {isChecking && <div className="text-info text-sm">Checking availability...</div>}
+                {isChecking && (
+                  <div className="text-info text-sm">Checking availability...</div>
+                )}
 
                 {/* Valid username */}
                 {!isChecking && isValid && statusMessage && (
@@ -157,9 +159,7 @@ function RegisterForm({minLength, subscriptionPlan, onRegister}: RegisterFormPro
                 )}
 
                 {/* Error message */}
-                {errorMessage && (
-                  <div className="text-error text-sm">{errorMessage}</div>
-                )}
+                {errorMessage && <div className="text-error text-sm">{errorMessage}</div>}
 
                 {/* Subscription upgrade link */}
                 {errorMessage && errorMessage.includes("must be") && (

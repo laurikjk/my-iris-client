@@ -3,11 +3,15 @@ import {useUserStore} from "@/stores/user"
 import {useUserRecordsStore} from "@/stores/userRecords"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useDraftStore} from "@/stores/draft"
-import {MouseEvent, useState} from "react"
-import {useNavigate, Link} from "@/navigation"
+import {MouseEvent, useEffect, useState} from "react"
+import {useNavigate} from "@/navigation"
 import localforage from "localforage"
 import {ndk} from "@/utils/ndk"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
+import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
+import {useWalletProviderStore} from "@/stores/walletProvider"
+import {SettingsButton} from "@/shared/components/settings/SettingsButton"
 
 // Helper function to add timeout to any promise
 const withTimeout = (promise: Promise<unknown>, ms: number): Promise<unknown> => {
@@ -22,7 +26,22 @@ const withTimeout = (promise: Promise<unknown>, ms: number): Promise<unknown> =>
 function Account() {
   const store = useUserStore()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [cashuBalance, setCashuBalance] = useState<number | null>(null)
   const navigate = useNavigate()
+  const {activeProviderType, nwcConnections, activeNWCId} = useWalletProviderStore()
+
+  useEffect(() => {
+    if (activeProviderType === "nwc" && activeNWCId) {
+      const connection = nwcConnections.find((c) => c.id === activeNWCId)
+      if (connection?.isLocalCashuWallet) {
+        setCashuBalance(connection.balance ?? null)
+      } else {
+        setCashuBalance(null)
+      }
+    } else {
+      setCashuBalance(null)
+    }
+  }, [activeProviderType, activeNWCId, nwcConnections])
 
   async function cleanupNDK() {
     const ndkInstance = ndk()
@@ -96,9 +115,9 @@ function Account() {
     }
   }
 
-  async function handleLogout(e: MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
+  async function handleLogout(e?: MouseEvent) {
+    e?.preventDefault()
+    e?.stopPropagation()
     if (
       !store.privateKey ||
       confirm("Log out? Make sure you have a backup of your secret key.")
@@ -147,31 +166,57 @@ function Account() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl mb-4">Log out</h1>
-      <div className="flex flex-col gap-4">
-        <small>Make sure you have a backup of your secret key before logging out.</small>
-        <small>
-          Your <b>Iris chats</b> and <b>Cashu wallet</b> on this device will be
-          permanently deleted.
-        </small>
-        <div className="mt-2 flex gap-2">
-          {store.privateKey && (
-            <Link to="/settings/backup" className="btn btn-default">
-              Backup
-            </Link>
-          )}
-          <button
-            className="btn btn-primary"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-          >
-            {isLoggingOut ? (
-              <div className="loading loading-spinner loading-sm" />
-            ) : (
-              "Log out"
+    <div className="bg-base-200 min-h-full">
+      <div className="p-4">
+        <div className="space-y-6">
+          <SettingsGroup title="Log out">
+            <SettingsGroupItem>
+              <div className="flex flex-col gap-3">
+                <div className="text-sm text-base-content/70">
+                  Make sure you have a backup of your secret key before logging out.
+                </div>
+                <div className="text-sm text-base-content/70">
+                  Your <span className="font-medium">Iris chats</span> and{" "}
+                  <span className="font-medium">Cashu wallet</span> on this device will be
+                  permanently deleted.
+                </div>
+                {cashuBalance !== null && cashuBalance > 0 && (
+                  <div className="text-sm text-warning font-medium">
+                    Your Cashu wallet contains {cashuBalance} sats that will be lost!
+                  </div>
+                )}
+              </div>
+            </SettingsGroupItem>
+
+            {store.privateKey && (
+              <SettingsGroupItem onClick={() => navigate("/settings/backup")}>
+                <div className="flex items-center justify-between">
+                  <span>Backup secret key</span>
+                  <svg
+                    className="w-5 h-5 text-base-content/40"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </div>
+              </SettingsGroupItem>
             )}
-          </button>
+
+            <SettingsButton
+              label={isLoggingOut ? "Logging out..." : "Log out"}
+              onClick={handleLogout}
+              variant="destructive"
+              isLast
+              disabled={isLoggingOut}
+            />
+          </SettingsGroup>
         </div>
       </div>
     </div>
