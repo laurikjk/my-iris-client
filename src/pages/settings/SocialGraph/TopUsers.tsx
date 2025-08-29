@@ -65,10 +65,7 @@ export function TopUsers() {
 
   return (
     <SettingsGroup title="Top Users">
-      <SettingsGroupItem
-        onClick={handleToggleFollowed}
-        isLast={!showFollowed && !showMuted}
-      >
+      <SettingsGroupItem onClick={handleToggleFollowed}>
         <div className="flex justify-between items-center">
           <span>Most Followed Users ({TOP_USERS_LIMIT})</span>
           {showFollowed ? (
@@ -92,7 +89,7 @@ export function TopUsers() {
           </SettingsGroupItem>
         ))}
 
-      <SettingsGroupItem onClick={handleToggleMuted} isLast={!showMuted}>
+      <SettingsGroupItem onClick={handleToggleMuted}>
         <div className="flex justify-between items-center">
           <span>Most Muted Users ({TOP_USERS_LIMIT})</span>
           {showMuted ? (

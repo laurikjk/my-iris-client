@@ -28,20 +28,32 @@ function Account() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [cashuBalance, setCashuBalance] = useState<number | null>(null)
   const navigate = useNavigate()
-  const {activeProviderType, nwcConnections, activeNWCId} = useWalletProviderStore()
+  const {activeProviderType, nwcConnections, activeNWCId, getBalance} =
+    useWalletProviderStore()
 
   useEffect(() => {
-    if (activeProviderType === "nwc" && activeNWCId) {
-      const connection = nwcConnections.find((c) => c.id === activeNWCId)
-      if (connection?.isLocalCashuWallet) {
-        setCashuBalance(connection.balance ?? null)
+    const fetchBalance = async () => {
+      if (activeProviderType === "nwc" && activeNWCId) {
+        const connection = nwcConnections.find((c) => c.id === activeNWCId)
+        if (connection?.isLocalCashuWallet) {
+          try {
+            const balance = await getBalance()
+            setCashuBalance(balance ?? connection.balance ?? null)
+          } catch (error) {
+            console.error("Error getting Cashu balance:", error)
+            // Fall back to stored balance if live call fails
+            setCashuBalance(connection.balance ?? null)
+          }
+        } else {
+          setCashuBalance(null)
+        }
       } else {
         setCashuBalance(null)
       }
-    } else {
-      setCashuBalance(null)
     }
-  }, [activeProviderType, activeNWCId, nwcConnections])
+
+    fetchBalance()
+  }, [activeProviderType, activeNWCId, nwcConnections, getBalance])
 
   async function cleanupNDK() {
     const ndkInstance = ndk()
