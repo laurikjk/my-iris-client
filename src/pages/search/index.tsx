@@ -1,26 +1,25 @@
-import {useEffect, useRef} from "react"
+import {useEffect, useRef, useState, FormEvent} from "react"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
-import {useParams} from "@/navigation"
+import {useParams, useNavigate} from "@/navigation"
 import Widget from "@/shared/components/ui/Widget"
 import {Helmet} from "react-helmet"
 import {useSettingsStore} from "@/stores/settings"
 import {useUIStore} from "@/stores/ui"
-import PeopleSearch from "./components/PeopleSearch"
-import PostsSearch from "./components/PostsSearch"
-import MarketSearch from "./components/MarketSearch"
-import MapSearch from "./components/MapSearch"
+import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
+import Feed from "@/shared/components/feed/Feed"
+import {KIND_TEXT_NOTE} from "@/utils/constants"
+import Icon from "@/shared/components/Icons/Icon"
 
 function SearchPage() {
   const {query} = useParams()
+  const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const [activeTab, setActiveTab] = useHistoryState<
-    "people" | "posts" | "market" | "map"
-  >(query ? "posts" : "people", "searchTab")
   const navItemClicked = useUIStore((state) => state.navItemClicked)
+  const [searchTerm, setSearchTerm] = useState(query || "")
 
   const {content} = useSettingsStore()
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
@@ -28,51 +27,17 @@ function SearchPage() {
     "searchShowEventsByUnknownUsers"
   )
 
-  useEffect(() => {
-    if (query) {
-      setActiveTab("posts")
-    }
-  }, [query, setActiveTab])
-
   // Focus search input when search nav item is clicked
   useEffect(() => {
     if (navItemClicked.path !== "/search") return
+    searchInputRef.current?.focus()
+  }, [navItemClicked])
 
-    // Focus the input for posts/market tabs
-    if (activeTab !== "people") {
-      searchInputRef.current?.focus()
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (searchTerm.trim()) {
+      navigate(`/search/${searchTerm}`)
     }
-  }, [navItemClicked, activeTab])
-
-  const renderSearchContent = () => {
-    switch (activeTab) {
-      case "people":
-        return <PeopleSearch searchInputRef={searchInputRef} />
-      case "posts":
-        return (
-          <PostsSearch
-            query={query}
-            showEventsByUnknownUsers={showEventsByUnknownUsers}
-            searchInputRef={searchInputRef}
-          />
-        )
-      case "market":
-        return (
-          <MarketSearch
-            query={query}
-            showEventsByUnknownUsers={showEventsByUnknownUsers}
-            searchInputRef={searchInputRef}
-          />
-        )
-      case "map":
-        return <MapSearch searchInputRef={searchInputRef} />
-      default:
-        return null
-    }
-  }
-
-  const shouldShowUnknownUsersToggle = () => {
-    return (activeTab === "posts" || activeTab === "market") && query
   }
 
   return (
@@ -80,35 +45,10 @@ function SearchPage() {
       <div className="flex flex-col flex-1 h-full relative">
         <Header title={query ? `Search: "${query}"` : "Search"} />
         <ScrollablePageContainer className="flex flex-col items-center">
-          <div className="flex-1 w-full max-w-screen-lg flex flex-col gap-2 md:pt-2">
-            <div className="flex gap-2 overflow-x-auto p-2">
-              <button
-                className={`btn btn-sm ${activeTab === "people" ? "btn-primary" : "btn-neutral"}`}
-                onClick={() => setActiveTab("people")}
-              >
-                People
-              </button>
-              <button
-                className={`btn btn-sm ${activeTab === "posts" ? "btn-primary" : "btn-neutral"}`}
-                onClick={() => setActiveTab("posts")}
-              >
-                Posts
-              </button>
-              <button
-                className={`btn btn-sm ${activeTab === "market" ? "btn-primary" : "btn-neutral"}`}
-                onClick={() => setActiveTab("market")}
-              >
-                Market
-              </button>
-              <button
-                className={`btn btn-sm ${activeTab === "map" ? "btn-primary" : "btn-neutral"}`}
-                onClick={() => setActiveTab("map")}
-              >
-                Map
-              </button>
-            </div>
+          <div className="flex-1 w-full flex flex-col gap-2 md:pt-2">
+            <SearchTabSelector activeTab="posts" />
 
-            {shouldShowUnknownUsersToggle() && (
+            {query && (
               <div className="flex items-center gap-2 p-2 mx-2">
                 <input
                   type="checkbox"
@@ -120,7 +60,46 @@ function SearchPage() {
               </div>
             )}
 
-            {renderSearchContent()}
+            {query ? (
+              <Feed
+                key={`posts-${query}`}
+                feedConfig={{
+                  name: "Search Results",
+                  id: `search-posts-${query}`,
+                  showRepliedTo: false,
+                  showEventsByUnknownUsers: showEventsByUnknownUsers,
+                  filter: {
+                    kinds: [KIND_TEXT_NOTE],
+                    ...(query.trim() && {search: query}),
+                  },
+                }}
+              />
+            ) : (
+              <div className="w-full">
+                <div className="w-full p-2">
+                  <form onSubmit={handleSubmit} className="w-full">
+                    <label className="input input-bordered flex items-center gap-2 w-full">
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        className="grow"
+                        placeholder="Search posts..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                      <Icon name="search-outline" className="text-neutral-content/60" />
+                    </label>
+                  </form>
+                </div>
+
+                <div className="mt-4">
+                  <AlgorithmicFeed
+                    type="popular"
+                    displayOptions={{showDisplaySelector: true}}
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <Helmet>
             <title>{query ? `Search: ${query}` : `Search`} / Iris</title>

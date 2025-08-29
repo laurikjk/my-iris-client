@@ -77,7 +77,7 @@ const Footer = () => {
                 <FooterNavItem key={index} item={item} readonly={readonly} />
               )
           )}
-          <FooterNavItem item={{link: "/search", icon: "search"}} readonly={readonly} />
+          <FooterNavItem item={{link: "/u", icon: "search"}} readonly={readonly} />
           {myPubKey && (
             <ProfileLink
               pubKey={myPubKey}

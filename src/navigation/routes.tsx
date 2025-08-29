@@ -16,6 +16,8 @@ const SettingsPage = lazy(() => import("@/pages/settings"))
 const SubscriptionPage = lazy(() => import("@/pages/subscription"))
 const RelayPage = lazy(() => import("@/pages/relay"))
 const MapPage = lazy(() => import("@/pages/map"))
+const MarketPage = lazy(() => import("@/pages/market"))
+const UserSearchPage = lazy(() => import("@/pages/user-search"))
 
 export const routes: RouteDefinition[] = [
   {path: "/", component: HomePage, alwaysKeep: true},
@@ -27,9 +29,13 @@ export const routes: RouteDefinition[] = [
   {path: "/subscribe", component: SubscriptionPage},
   {path: "/search", component: SearchPage},
   {path: "/search/:query", component: SearchPage},
+  {path: "/m", component: MarketPage},
+  {path: "/m/:category", component: MarketPage},
+  {path: "/u", component: UserSearchPage},
+  {path: "/u/:query", component: UserSearchPage},
   {path: "/relay/:url?", component: RelayPage},
   {path: "/map", component: MapPage},
-  {path: "/map/:geohash", component: MapPage},
+  {path: "/map/:query", component: MapPage},
   {path: "/about", component: AboutPage},
   {path: "/:link/*", component: NostrLinkHandler},
   {path: "/:link", component: NostrLinkHandler},

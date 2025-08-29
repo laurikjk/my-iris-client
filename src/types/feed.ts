@@ -7,6 +7,7 @@ export interface FeedFilter {
   search?: string
   "#e"?: string[]
   "#g"?: string[]
+  "#t"?: string[]
 }
 
 export interface FeedConfig {

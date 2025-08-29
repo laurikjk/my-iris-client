@@ -9,6 +9,7 @@ interface UIState {
   isMediaModalSidebarVisible: boolean
   showRelayIndicator: boolean
   navItemClicked: {signal: number; path: string}
+  marketDisplayAs: "list" | "grid"
 
   setNewPostOpen: (isOpen: boolean) => void
   setShowLoginDialog: (isOpen: boolean) => void
@@ -17,6 +18,7 @@ interface UIState {
   setMediaModalSidebarVisible: (isVisible: boolean) => void
   setShowRelayIndicator: (show: boolean) => void
   triggerNavItemClick: (path: string) => void
+  setMarketDisplayAs: (displayAs: "list" | "grid") => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -30,6 +32,7 @@ export const useUIStore = create<UIState>()(
         isMediaModalSidebarVisible: true,
         showRelayIndicator: true,
         navItemClicked: {signal: 0, path: ""},
+        marketDisplayAs: "list" as "list" | "grid",
       }
 
       const actions = {
@@ -43,6 +46,7 @@ export const useUIStore = create<UIState>()(
         setShowRelayIndicator: (showRelayIndicator: boolean) => set({showRelayIndicator}),
         triggerNavItemClick: (path: string) =>
           set({navItemClicked: {signal: Date.now(), path}}),
+        setMarketDisplayAs: (marketDisplayAs: "list" | "grid") => set({marketDisplayAs}),
       }
 
       return {
@@ -59,7 +63,8 @@ export const useUIStore = create<UIState>()(
         hidePWAPrompt: state.hidePWAPrompt,
         isMediaModalSidebarVisible: state.isMediaModalSidebarVisible,
         showRelayIndicator: state.showRelayIndicator,
-        // Exclude searchTriggeredFromNav from persistence
+        marketDisplayAs: state.marketDisplayAs,
+        // Exclude navItemClicked from persistence
       }),
     }
   )

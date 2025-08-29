@@ -1,224 +1,130 @@
-import {useState, useEffect} from "react"
 import {useParams} from "@/navigation"
+import {useRef, useState, useMemo} from "react"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import Feed from "@/shared/components/feed/Feed"
-import FeedEditor from "@/shared/components/feed/FeedEditor"
-import {GeohashField} from "@/shared/components/feed/FeedEditor/GeohashField"
-import {FollowDistanceField} from "@/shared/components/feed/FeedEditor/FollowDistanceField"
-import EventKindsSelector from "@/shared/components/ui/EventKindsSelector"
+import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
+import {KIND_TEXT_NOTE, KIND_EPHEMERAL} from "@/utils/constants"
+import {ALL_GEOHASHES} from "@/utils/geohash"
+import Icon from "@/shared/components/Icons/Icon"
 import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
-import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
-import type {FeedConfig, FeedFilter} from "@/types/feed"
-import {KIND_TEXT_NOTE, KIND_EPHEMERAL} from "@/utils/constants"
+import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
+import {Helmet} from "react-helmet"
 
 export default function MapPage() {
-  const {geohash} = useParams()
-  const [showMoreSettings, setShowMoreSettings] = useState(false)
-  const [feedConfig, setFeedConfig] = useState<FeedConfig | null>(null)
-  const [feedKey, setFeedKey] = useState(0)
+  const {query} = useParams()
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedGeohashes, setSelectedGeohashes] = useState<string[]>([])
   const [feedEvents, setFeedEvents] = useState<NDKEvent[]>([])
+  const [displayAs, setDisplayAs] = useState<"list" | "grid">("list")
 
-  useEffect(() => {
-    // Only set initial config, don't override user selections
-    if (feedConfig !== null) return
+  const handleInputChange = (value: string) => {
+    setSearchTerm(value)
+    // Update map instantly as user types
+    if (value.trim()) {
+      const geohash = value.toLowerCase().replace(/[^0-9bcdefghjkmnpqrstuvwxyz]/g, "")
+      if (geohash) {
+        setSelectedGeohashes((current) => {
+          // Only update if different to prevent unnecessary re-renders
+          if (current.length === 1 && current[0] === geohash) return current
+          return [geohash]
+        })
+      }
+    } else {
+      setSelectedGeohashes([])
+    }
+  }
 
-    // Create a feed config - with or without specific geohash
-    const geohashValue = geohash && typeof geohash === "string" ? geohash : ""
+  // Use selected geohashes or empty array for initial state
+  const geohashes = selectedGeohashes
 
-    // If no geohash specified, use all single-character geohashes
-    const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
-    const defaultGeohashes = geohashValue ? [geohashValue] : allGeohashes
+  const feedConfig = useMemo(() => {
+    // When no geohashes selected, show global view with all geohashes
+    const isGlobalView = geohashes.length === 0
 
-    setFeedConfig({
-      id: geohashValue ? `geohash-${geohashValue}` : "geohash-global",
-      name: geohashValue ? `Location: ${geohashValue}` : "Location Feed",
-      filter: {
-        kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL], // Text notes and ephemeral events for geohash feeds
-        "#g": defaultGeohashes, // Always include geohash filter
-        limit: 100,
-      },
-      followDistance: 5, // Default follow distance of 5 for geohash feeds
+    const filter = isGlobalView
+      ? {
+          kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL],
+          "#g": ALL_GEOHASHES,
+          limit: 100,
+        }
+      : {
+          kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL],
+          "#g": geohashes,
+          limit: 100,
+        }
+
+    return {
+      id: `map-search-${geohashes.join(",") || "global"}`,
+      name: "Location Feed",
+      filter,
+      followDistance: 5,
       showRepliedTo: true,
       hideReplies: false,
-    })
-  }, [geohash, feedConfig])
-
-  if (!feedConfig) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <div className="loading loading-spinner loading-lg"></div>
-      </div>
-    )
-  }
-
-  const handleConfigUpdate = (updatedConfig: FeedConfig) => {
-    setFeedConfig(updatedConfig)
-    // Clear events when config changes
-    setFeedEvents([])
-    // Force Feed component to remount with new config
-    setFeedKey((prev) => prev + 1)
-
-    // Update URL based on selection
-    const geohashes = updatedConfig.filter?.["#g"]
-    const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
-    const isGlobalSelection =
-      geohashes &&
-      geohashes.length === 32 &&
-      allGeohashes.every((gh) => geohashes.includes(gh))
-
-    if (geohashes && geohashes.length === 1 && !isGlobalSelection) {
-      // Single geohash selected (not global) - update URL
-      const newPath = `/map/${geohashes[0]}`
-      window.history.replaceState(null, "", newPath)
-    } else if (isGlobalSelection) {
-      // Global view - remove geohash from URL
-      window.history.replaceState(null, "", "/map")
+      displayAs,
     }
-    // For other cases (multiple non-global selections), keep current URL
-  }
-
-  const updateFilter = <K extends keyof FeedFilter>(key: K, value: FeedFilter[K]) => {
-    if (!feedConfig) return
-    const currentFilter = feedConfig.filter || {}
-    const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
-
-    // Only reset to all geohashes if explicitly cleared in map view
-    if (
-      key === "#g" &&
-      (value === undefined || (Array.isArray(value) && value.length === 0))
-    ) {
-      // For geohash filter in map view, use all geohashes when cleared
-      handleConfigUpdate({
-        ...feedConfig,
-        filter: {...currentFilter, "#g": allGeohashes},
-      })
-    } else if (value === undefined) {
-      // Remove the key if value is undefined for other filters
-      const newFilter = {...currentFilter}
-      delete newFilter[key]
-      handleConfigUpdate({
-        ...feedConfig,
-        filter: Object.keys(newFilter).length > 0 ? newFilter : undefined,
-      })
-    } else {
-      // Normal update - just set the value
-      handleConfigUpdate({
-        ...feedConfig,
-        filter: {...currentFilter, [key]: value},
-      })
-    }
-  }
-
-  // Derive title from current feedConfig geohashes
-  const currentGeohashes = feedConfig.filter?.["#g"] || []
-  const allGeohashes = "0123456789bcdefghjkmnpqrstuvwxyz".split("")
-  const isGlobalView =
-    currentGeohashes.length === 32 &&
-    allGeohashes.every((gh) => currentGeohashes.includes(gh))
-
-  let headerTitle = "Location Feed"
-  if (!isGlobalView && currentGeohashes.length === 1) {
-    headerTitle = `Location: ${currentGeohashes[0]}`
-  } else if (!isGlobalView && currentGeohashes.length > 1) {
-    headerTitle = `Location: ${currentGeohashes.length} sectors`
-  }
+  }, [geohashes, displayAs])
 
   return (
-    <div className="flex w-full flex-col flex-1 h-full relative overflow-hidden">
-      <Header title={headerTitle} />
-      <ScrollablePageContainer className="flex flex-col items-center">
-        <div className="flex-1 w-full max-w-full flex flex-col">
-          {/* Full width map at the top of the column */}
-          <GeohashMap
-            geohashes={feedConfig.filter?.["#g"]}
-            feedEvents={feedEvents}
-            onGeohashSelect={(geohash) => {
-              // Replace selection instead of adding to it (ensure lowercase)
-              updateFilter("#g", [geohash.toLowerCase()])
-            }}
-            height="20rem"
-            className="w-full max-w-full"
-          />
+    <div className="flex flex-1 flex-row relative h-full">
+      <div className="flex flex-col flex-1 h-full relative">
+        <Header title={query ? `Map: ${query}` : "Map"} />
+        <ScrollablePageContainer className="flex flex-col items-center">
+          <div className="flex-1 w-full flex flex-col gap-2 md:pt-2">
+            <SearchTabSelector activeTab="map" />
 
-          <div className="p-2 flex flex-col gap-4 md:pt-2 w-full max-w-full">
-            {/* Show either inline controls or full editor */}
-            {showMoreSettings ? (
-              <FeedEditor
-                feedConfig={feedConfig}
-                onConfigChange={handleConfigUpdate}
-                onClose={() => setShowMoreSettings(false)}
-                showDeleteButton={false}
-                showResetButton={false}
-                showCloneButton={false}
-              />
-            ) : (
-              <div className="w-full max-w-full flex flex-col gap-3 p-4 border border-base-300 rounded-lg">
-                <GeohashField
-                  value={feedConfig.filter?.["#g"]}
-                  onChange={(value) => updateFilter("#g", value)}
-                  showLabel={true}
+            <div className="w-full">
+              <div className="w-full p-2">
+                <label className="input input-bordered flex items-center gap-2 w-full">
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    className="grow"
+                    placeholder="Search geohash area..."
+                    value={searchTerm}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                  />
+                  <Icon name="search-outline" className="text-neutral-content/60" />
+                </label>
+              </div>
+
+              <div className="mt-4">
+                <GeohashMap
+                  geohashes={geohashes.length === 0 ? ALL_GEOHASHES : geohashes}
+                  feedEvents={feedEvents}
+                  onGeohashSelect={(geohash) => {
+                    setSelectedGeohashes([geohash.toLowerCase()])
+                    setSearchTerm(geohash.toLowerCase()) // Update search input to match selection
+                  }}
+                  height="20rem"
+                  className="w-full max-w-full"
                 />
-
-                <div className="flex items-start gap-2 w-full max-w-full overflow-hidden">
-                  <span className="text-sm text-base-content/70 min-w-[7rem] pt-2 flex-shrink-0">
-                    Event Kinds
-                  </span>
-                  <div className="flex-1 min-w-0 w-full max-w-full">
-                    <EventKindsSelector
-                      selectedKinds={feedConfig.filter?.kinds || []}
-                      onKindsChange={(kinds) =>
-                        updateFilter("kinds", kinds.length > 0 ? kinds : undefined)
-                      }
-                    />
-                    <span className="text-xs text-base-content/50 mt-1 block">
-                      Select event types to include in this feed. Select none to display
-                      all.
-                    </span>
-                  </div>
-                </div>
-
-                <FollowDistanceField
-                  value={feedConfig.followDistance}
-                  onChange={(value) =>
-                    handleConfigUpdate({...feedConfig, followDistance: value})
-                  }
-                  showLabel={true}
-                />
-
-                {/* More settings button */}
-                <div className="flex items-center gap-2 pt-2 border-t border-base-300">
-                  <button
-                    onClick={() => setShowMoreSettings(true)}
-                    className="btn btn-sm btn-neutral"
-                    title="Show advanced settings"
-                  >
-                    More Settings
-                  </button>
+                <div className="mt-4">
+                  <Feed
+                    key={geohashes.join(",") || "global"}
+                    feedConfig={feedConfig}
+                    showReplies={0}
+                    borderTopFirst={true}
+                    showDisplayAsSelector={true}
+                    displayAs={displayAs}
+                    onDisplayAsChange={setDisplayAs}
+                    onEvent={(event) => {
+                      setFeedEvents((prev) => {
+                        if (prev.some((e) => e.id === event.id)) return prev
+                        return [...prev.slice(-99), event]
+                      })
+                    }}
+                  />
                 </div>
               </div>
-            )}
-
-            {/* Feed */}
-            <Feed
-              key={feedKey}
-              feedConfig={feedConfig}
-              showReplies={0}
-              borderTopFirst={true}
-              showDisplayAsSelector={true}
-              onEvent={(event) => {
-                // Collect events for the map
-                setFeedEvents((prev) => {
-                  // Avoid duplicates
-                  if (prev.some((e) => e.id === event.id)) return prev
-                  // Keep last 100 events
-                  return [...prev.slice(-99), event]
-                })
-              }}
-            />
+            </div>
           </div>
-        </div>
-      </ScrollablePageContainer>
+          <Helmet>
+            <title>{query ? `Map: ${query}` : "Map"} / Iris</title>
+          </Helmet>
+        </ScrollablePageContainer>
+      </div>
     </div>
   )
 }
