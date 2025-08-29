@@ -3,6 +3,9 @@ import {ChangeEvent, useState, useEffect, useRef} from "react"
 import {useUserStore} from "@/stores/user"
 import {useSettingsStore} from "@/stores/settings"
 import {getDefaultServers, stripHttps} from "./mediaservers-utils"
+import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
+import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
+import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
 
 function MediaServers() {
   const {
@@ -71,180 +74,191 @@ function MediaServers() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl mb-4">Media Servers</h1>
-      <div className="flex flex-col gap-4">
-        <div>
-          <p>Select default media server</p>
-          <select
-            aria-label="Select default server"
-            className="select select-primary mt-2"
-            value={defaultMediaserver?.url || ""}
-            onChange={handleDefaultServerChange}
-          >
-            {mediaservers.map((server) => (
-              <option key={server.url} value={server.url}>
-                {stripHttps(server.url)} ({server.protocol})
-              </option>
-            ))}
-          </select>
-        </div>
+    <div className="bg-base-200 min-h-full">
+      <div className="p-4">
+        <div className="space-y-6">
+          <SettingsGroup title="Default Server">
+            <SettingsGroupItem isLast>
+              <div className="flex justify-between items-center">
+                <span>Media Server</span>
+                <select
+                  aria-label="Select default server"
+                  className="select select-sm bg-base-200 border-base-content/20"
+                  value={defaultMediaserver?.url || ""}
+                  onChange={handleDefaultServerChange}
+                >
+                  {mediaservers.map((server) => (
+                    <option key={server.url} value={server.url}>
+                      {stripHttps(server.url)} ({server.protocol})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </SettingsGroupItem>
+          </SettingsGroup>
 
-        <div>
-          <p>Add new media server</p>
-          <div className="flex gap-2 mt-2">
-            <input
-              type="url"
-              className="input input-bordered flex-1"
-              placeholder="server.example.com"
-              value={newServer}
-              onChange={(e) => setNewServer(e.target.value)}
-            />
-            <select
-              className="select select-bordered"
-              value={newProtocol}
-              onChange={(e) => setNewProtocol(e.target.value as "blossom" | "nip96")}
-            >
-              <option value="blossom">Blossom</option>
-              <option value="nip96">NIP-96</option>
-            </select>
-            <button
-              className="btn btn-primary"
-              onClick={handleAddServer}
-              disabled={!newServer}
-            >
-              Add
-            </button>
-          </div>
-        </div>
+          <SettingsGroup title="Add Server">
+            <SettingsGroupItem>
+              <div className="flex flex-col space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    className="bg-base-200 rounded-lg px-3 py-2 text-sm border border-base-content/20 flex-1"
+                    placeholder="server.example.com"
+                    value={newServer}
+                    onChange={(e) => setNewServer(e.target.value)}
+                  />
+                  <select
+                    className="select select-sm bg-base-200 border-base-content/20"
+                    value={newProtocol}
+                    onChange={(e) =>
+                      setNewProtocol(e.target.value as "blossom" | "nip96")
+                    }
+                  >
+                    <option value="blossom">Blossom</option>
+                    <option value="nip96">NIP-96</option>
+                  </select>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={handleAddServer}
+                    disabled={!newServer}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </SettingsGroupItem>
 
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <p>Configured media servers</p>
-            <button className="btn btn-sm btn-outline" onClick={handleRestoreDefaults}>
-              Restore Defaults
-            </button>
-          </div>
-          <div className="flex flex-col gap-2 mt-2">
-            {mediaservers.map((server) => (
-              <div key={server.url} className="flex items-center gap-2">
+            <SettingsGroupItem>
+              <div className="text-sm text-base-content/70">
                 <a
-                  href={server.url}
+                  href="https://github.com/hzrd149/blossom"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 link"
+                  className="link"
                 >
-                  {stripHttps(server.url)} ({server.protocol})
-                </a>
+                  Blossom
+                </a>{" "}
+                is a specification for storing content addressed files on media servers.
+              </div>
+            </SettingsGroupItem>
+
+            <SettingsGroupItem isLast>
+              <div className="text-sm text-base-content/70">
+                <a
+                  href="https://github.com/nostr-protocol/nips/blob/master/96.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link"
+                >
+                  NIP-96
+                </a>{" "}
+                is a Nostr protocol extension for file uploads.
+              </div>
+            </SettingsGroupItem>
+          </SettingsGroup>
+
+          <SettingsGroup title="Configured Servers">
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-base-content/70">
+                  {mediaservers.length} server{mediaservers.length !== 1 ? "s" : ""}
+                </span>
                 <button
-                  className="btn btn-sm btn-error"
-                  onClick={() => handleRemoveServer(server.url)}
+                  className="btn btn-sm btn-outline"
+                  onClick={handleRestoreDefaults}
                 >
-                  Remove
+                  Restore Defaults
                 </button>
               </div>
+            </SettingsGroupItem>
+
+            {mediaservers.map((server, index) => (
+              <SettingsGroupItem
+                key={server.url}
+                isLast={index === mediaservers.length - 1}
+              >
+                <div className="flex items-center justify-between">
+                  <a
+                    href={server.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 link link-primary"
+                  >
+                    {stripHttps(server.url)} ({server.protocol})
+                  </a>
+                  <button
+                    className="btn btn-sm btn-error ml-4"
+                    onClick={() => handleRemoveServer(server.url)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </SettingsGroupItem>
             ))}
-          </div>
-        </div>
+          </SettingsGroup>
 
-        <div className="divider"></div>
-
-        <div>
-          <h2 className="text-xl mb-4">Image Proxy Settings</h2>
-          <div className="flex flex-col gap-4">
-            <div>
-              <label className="flex items-center gap-2">
+          <SettingsGroup title="Image Proxy">
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <span>Load images via proxy</span>
                 <input
                   type="checkbox"
-                  className="checkbox"
+                  className="toggle toggle-primary"
                   checked={imgproxy.enabled}
                   onChange={(e) => updateImgproxy({enabled: e.target.checked})}
                 />
-                Load images via proxy
-              </label>
-            </div>
+              </div>
+            </SettingsGroupItem>
 
-            <div>
-              <label className="flex items-center gap-2">
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <span>Fallback to original source</span>
                 <input
                   type="checkbox"
-                  className="checkbox"
+                  className="toggle toggle-primary"
                   checked={imgproxy.fallbackToOriginal}
                   onChange={(e) => updateImgproxy({fallbackToOriginal: e.target.checked})}
                 />
-                If image proxy fails, load from original source
-              </label>
-            </div>
+              </div>
+            </SettingsGroupItem>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Proxy URL</label>
-              <input
-                type="url"
-                className="input input-bordered w-full"
-                placeholder="https://imgproxy.coracle.social"
-                value={imgproxy.url}
-                onChange={(e) => updateImgproxy({url: e.target.value})}
-              />
-            </div>
+            <SettingsInputItem
+              label="Proxy URL"
+              value={imgproxy.url}
+              placeholder="https://imgproxy.coracle.social"
+              onChange={(value) => updateImgproxy({url: value})}
+              type="url"
+            />
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Key (optional)</label>
-              <input
-                type="text"
-                className="input input-bordered w-full"
-                placeholder="Leave empty for default coracle.social server"
-                value={imgproxy.key}
-                onChange={(e) => updateImgproxy({key: e.target.value})}
-              />
-            </div>
+            <SettingsInputItem
+              label="Key"
+              value={imgproxy.key}
+              placeholder="Optional"
+              onChange={(value) => updateImgproxy({key: value})}
+            />
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Salt (optional)</label>
-              <input
-                type="text"
-                className="input input-bordered w-full"
-                placeholder="Leave empty for default coracle.social server"
-                value={imgproxy.salt}
-                onChange={(e) => updateImgproxy({salt: e.target.value})}
-              />
-            </div>
-          </div>
-        </div>
+            <SettingsInputItem
+              label="Salt"
+              value={imgproxy.salt}
+              placeholder="Optional"
+              onChange={(value) => updateImgproxy({salt: value})}
+            />
 
-        <div className="text-sm text-gray-500">
-          <p>
-            <a
-              href="https://github.com/hzrd149/blossom"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link"
-            >
-              Blossom
-            </a>{" "}
-            is a specification for storing content addressed files on media servers.
-          </p>
-          <p className="mt-2">
-            <a
-              href="https://github.com/nostr-protocol/nips/blob/master/96.md"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link"
-            >
-              NIP-96
-            </a>{" "}
-            is a Nostr protocol extension for file uploads.
-          </p>
-          <p className="mt-2">
-            <a
-              href="https://github.com/imgproxy/imgproxy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link"
-            >
-              imgproxy
-            </a>{" "}
-            is a server for resizing and converting remote images.
-          </p>
+            <SettingsGroupItem isLast>
+              <div className="text-sm text-base-content/70">
+                <a
+                  href="https://github.com/imgproxy/imgproxy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link"
+                >
+                  imgproxy
+                </a>{" "}
+                is a server for resizing and converting remote images.
+              </div>
+            </SettingsGroupItem>
+          </SettingsGroup>
         </div>
       </div>
     </div>

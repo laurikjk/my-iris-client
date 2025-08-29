@@ -1,4 +1,6 @@
 import {useState, useEffect, ChangeEvent} from "react"
+import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
+import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import Debug from "@/utils/DebugManager"
 import {useSettingsStore} from "@/stores/settings"
 
@@ -130,112 +132,121 @@ export default function SystemSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl mb-4">System</h2>
+    <div className="bg-base-200 min-h-full">
+      <div className="p-4">
+        <div className="space-y-6">
+          <SettingsGroup title="Maintenance">
+            <SettingsGroupItem isLast>
+              <div className="flex flex-col space-y-2">
+                <button
+                  onClick={refreshApp}
+                  className={`text-info text-left ${updateAvailable ? "animate-pulse" : ""}`}
+                >
+                  {updateAvailable
+                    ? "Update Available - Click to Refresh"
+                    : "Refresh Application"}
+                </button>
+                <p className="text-xs text-base-content/60">
+                  Reload the application to apply any pending updates or fix weirdness.
+                </p>
+              </div>
+            </SettingsGroupItem>
+          </SettingsGroup>
 
-      <div className="card bg-base-200 shadow-xl">
-        <div className="card-body">
-          <h3 className="card-title">Maintenance</h3>
-          <div>
-            <button
-              className={`btn btn-primary w-full ${updateAvailable ? "animate-pulse" : ""}`}
-              onClick={refreshApp}
-            >
-              {updateAvailable
-                ? "Update Available - Click to Refresh"
-                : "Refresh Application"}
-            </button>
-            <p className="text-sm text-base-content/70 mt-1">
-              Reload the application to apply any pending updates or fix weirdness.
-            </p>
-          </div>
-        </div>
-      </div>
+          <SettingsGroup title="Application Info">
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <span>App Version</span>
+                <span className="text-base-content/70">{appVersion}</span>
+              </div>
+            </SettingsGroupItem>
 
-      <div className="card bg-base-200 shadow-xl">
-        <div className="card-body">
-          <h3 className="card-title">Debug Information</h3>
-          <div className="grid grid-cols-2 gap-2">
-            <div>App Version:</div>
-            <div>{appVersion}</div>
-            <div>Build Time:</div>
-            <div>{formatBuildTime(buildTime)}</div>
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <span>Build Time</span>
+                <span className="text-base-content/70 text-sm">
+                  {formatBuildTime(buildTime)}
+                </span>
+              </div>
+            </SettingsGroupItem>
+
             {memoryUsage && (
-              <>
-                <div>Memory Usage:</div>
-                <div>
-                  {memoryUsage.used}MB / {memoryUsage.total}MB
+              <SettingsGroupItem isLast>
+                <div className="flex justify-between items-center">
+                  <span>Memory Usage</span>
+                  <span className="text-base-content/70">
+                    {memoryUsage.used}MB / {memoryUsage.total}MB
+                  </span>
                 </div>
-              </>
+              </SettingsGroupItem>
             )}
-          </div>
-        </div>
-      </div>
+          </SettingsGroup>
 
-      <div className="card bg-base-200 shadow-xl">
-        <div className="card-body">
-          <h3 className="card-title">Debug Mode</h3>
-          <div className="space-y-4">
-            <div className="form-control">
-              <label className="label cursor-pointer">
-                <span className="label-text">Enable Debug Mode</span>
+          <SettingsGroup title="Debug Mode">
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <span>Enable Debug Mode</span>
                 <input
                   type="checkbox"
                   className="toggle toggle-primary"
                   checked={debugMode}
                   onChange={toggleDebugMode}
                 />
-              </label>
-            </div>
+              </div>
+            </SettingsGroupItem>
 
-            <div className="form-control">
-              <label className="label cursor-pointer">
-                <span className="label-text">Preserve Debug Session</span>
+            <SettingsGroupItem isLast={!debugMode}>
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span>Preserve Debug Session</span>
+                  <span className="text-sm text-base-content/60">
+                    Keep the same debug session across app restarts
+                  </span>
+                </div>
                 <input
                   type="checkbox"
                   className="toggle toggle-secondary"
                   checked={preserveDebugSession}
                   onChange={togglePreserveDebugSession}
                 />
-              </label>
-              <div className="label">
-                <span className="label-text-alt text-xs opacity-70">
-                  Keep the same debug session across app restarts
-                </span>
               </div>
-            </div>
-          </div>
+            </SettingsGroupItem>
 
-          {debugMode && debugSessionLink && (
-            <div className="mt-4 space-y-4">
-              <div>
-                <label className="label">
-                  <span className="label-text">Debug Session Link:</span>
-                </label>
-                <a
-                  href={debugSessionLink}
-                  className="link link-primary text-xs break-all"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {debugSessionLink}
-                </a>
-              </div>
+            {debugMode && debugSessionLink && (
+              <>
+                <SettingsGroupItem>
+                  <div className="flex flex-col space-y-2">
+                    <span className="text-sm text-base-content/70">
+                      Debug Session Link:
+                    </span>
+                    <a
+                      href={debugSessionLink}
+                      className="link link-primary text-xs break-all"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {debugSessionLink}
+                    </a>
+                  </div>
+                </SettingsGroupItem>
 
-              <div>
-                <label className="label">
-                  <span className="label-text">Test Sync (syncs with debug page):</span>
-                </label>
-                <input
-                  type="text"
-                  value={testValue}
-                  onChange={handleTestInputChange}
-                  placeholder="Type something to test sync..."
-                  className="input input-bordered w-full"
-                />
-              </div>
-            </div>
-          )}
+                <SettingsGroupItem isLast>
+                  <div className="flex flex-col space-y-2">
+                    <span className="text-sm text-base-content/70">
+                      Test Sync (syncs with debug page):
+                    </span>
+                    <input
+                      type="text"
+                      value={testValue}
+                      onChange={handleTestInputChange}
+                      placeholder="Type something to test sync..."
+                      className="bg-base-200 rounded-lg px-3 py-2 text-sm border border-base-content/20"
+                    />
+                  </div>
+                </SettingsGroupItem>
+              </>
+            )}
+          </SettingsGroup>
         </div>
       </div>
     </div>

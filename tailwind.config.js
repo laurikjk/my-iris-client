@@ -13,6 +13,9 @@ export default {
       borderColor: {
         custom: "var(--border-color)",
       },
+      borderWidth: {
+        'b-px': '0 0 0.5px 0',
+      },
     },
   },
   plugins: [require("@tailwindcss/typography"), require("daisyui")],

@@ -1,13 +1,7 @@
 import {useState, useEffect} from "react"
 import {ndk as getNdk} from "@/utils/ndk"
 import {Link} from "@/navigation"
-import {
-  RiAddLine,
-  RiCloseLine,
-  RiLinkM,
-  RiLinkUnlinkM,
-  RiDeleteBinLine,
-} from "@remixicon/react"
+import {RiAddLine, RiCloseLine, RiDeleteBinLine} from "@remixicon/react"
 import {useUserStore, RelayConfig} from "@/stores/user"
 
 interface RelayListProps {
@@ -220,17 +214,13 @@ export function RelayList({
                       {displayUrl}
                     </Link>
                     <div className={`flex items-center ${compact ? "gap-2" : "gap-4"}`}>
-                      <button
-                        onClick={() => toggleRelayConnection(config.url)}
-                        className={`${buttonPadding} hover:bg-base-${compact ? "300" : "200"} rounded transition-colors flex-shrink-0`}
+                      <input
+                        type="checkbox"
+                        checked={isEnabled}
+                        onChange={() => toggleRelayConnection(config.url)}
+                        className="toggle toggle-primary toggle-sm"
                         title={isEnabled ? "Disconnect from relay" : "Connect to relay"}
-                      >
-                        {isEnabled ? (
-                          <RiLinkUnlinkM className={`${iconSize} text-error`} />
-                        ) : (
-                          <RiLinkM className={`${iconSize} text-success`} />
-                        )}
-                      </button>
+                      />
                       {showDelete && (
                         <RiDeleteBinLine
                           className={`${iconSize} cursor-pointer`}

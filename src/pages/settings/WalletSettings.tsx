@@ -1,6 +1,9 @@
 import {useWalletBalance} from "@/shared/hooks/useWalletBalance"
 import {useUserStore} from "@/stores/user"
 import {useWalletProviderStore} from "@/stores/walletProvider"
+import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
+import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
+import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
 import {ChangeEvent, useState, useEffect} from "react"
 
 const WalletSettings = () => {
@@ -108,157 +111,162 @@ const WalletSettings = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Wallet Settings</h1>
-        <div className="flex items-center gap-3 text-lg">
-          <span className="text-gray-600">Balance:</span>
-          <span className="font-semibold">{getBalanceDisplay()}</span>
-        </div>
-      </div>
-
-      {/* Active Wallet Section */}
-      <div className="card bg-base-100 shadow-lg">
-        <div className="card-body">
-          <h2 className="card-title text-lg mb-4">Lightning Wallet</h2>
-
-          {/* Current Wallet Display */}
-          <div className="flex items-center justify-between p-4 bg-base-200 rounded-lg mb-4">
-            <div>
-              <span className="text-sm text-gray-500">Currently using:</span>
-              <div className="font-semibold">{getCurrentWalletDisplay()}</div>
-            </div>
-            {balance !== null && balance > 0 && (
-              <div className="badge badge-success">Connected</div>
-            )}
-          </div>
-
-          {/* Wallet Selection Radio Buttons */}
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-medium">Select Wallet</span>
-            </label>
-            <div className="space-y-2">
-              {/* No wallet option */}
-              <div
-                className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-50"
-                onClick={() => {
-                  console.log("🖱️ Div clicked for disabled wallet")
-                  setSelectedWallet("disabled")
-                  setActiveProviderType("disabled")
-                }}
-              >
-                <input
-                  type="radio"
-                  name="wallet-selection"
-                  className="radio radio-primary"
-                  checked={selectedWallet === "disabled"}
-                  onChange={() => {
-                    setSelectedWallet("disabled")
-                    setActiveProviderType("disabled")
-                  }}
-                />
-                <div className="flex-1">
-                  <div className="font-medium">🚫 No wallet</div>
-                  <div className="text-sm text-gray-500">Disable Quick Zaps</div>
+    <div className="bg-base-200 min-h-full">
+      <div className="p-4">
+        <div className="space-y-6">
+          <SettingsGroup title="Status">
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="font-medium">Current Wallet</span>
+                  <div className="text-sm text-base-content/70">
+                    {getCurrentWalletDisplay()}
+                  </div>
                 </div>
+                {balance !== null && balance > 0 && (
+                  <div className="badge badge-success">Connected</div>
+                )}
               </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem isLast>
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Balance</span>
+                <span className="text-base-content/70">{getBalanceDisplay()}</span>
+              </div>
+            </SettingsGroupItem>
+          </SettingsGroup>
 
-              {/* Native WebLN option */}
-              {nativeWallet && (
-                <div
-                  className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-50"
-                  onClick={() => {
-                    console.log("🖱️ Div clicked for native wallet")
-                    setSelectedWallet("native")
-                    setActiveProviderType("native")
-                    useWalletProviderStore.getState().refreshActiveProvider()
-                  }}
-                >
+          <SettingsGroup title="Select Wallet">
+            {/* No wallet option */}
+            <SettingsGroupItem
+              onClick={() => {
+                console.log("🖱️ Div clicked for disabled wallet")
+                setSelectedWallet("disabled")
+                setActiveProviderType("disabled")
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
                   <input
                     type="radio"
                     name="wallet-selection"
                     className="radio radio-primary"
-                    checked={selectedWallet === "native"}
+                    checked={selectedWallet === "disabled"}
                     onChange={() => {
-                      setSelectedWallet("native")
-                      setActiveProviderType("native")
-                      useWalletProviderStore.getState().refreshActiveProvider()
+                      setSelectedWallet("disabled")
+                      setActiveProviderType("disabled")
                     }}
                   />
-                  <div className="flex-1">
-                    <div className="font-medium">⚡ Native WebLN</div>
-                    <div className="text-sm text-gray-500">Browser extension wallet</div>
+                  <div>
+                    <div className="font-medium">🚫 No wallet</div>
+                    <div className="text-sm text-base-content/60">Disable Quick Zaps</div>
                   </div>
                 </div>
-              )}
+              </div>
+            </SettingsGroupItem>
 
-              {/* NWC Connections */}
-              {nwcConnections.map((conn) => {
-                const isChecked = selectedWallet === `nwc:${conn.id}`
-                return (
-                  <div
-                    key={conn.id}
-                    className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-50"
-                    onClick={() => {
-                      console.log("🖱️ Div clicked for NWC:", conn.name)
-                      const walletId = `nwc:${conn.id}`
-                      setSelectedWallet(walletId)
-                      setActiveProviderType("nwc")
-                      setActiveNWCId(conn.id)
-                      connectToNWC(conn.id).then(() => {
-                        useWalletProviderStore.getState().refreshActiveProvider()
-                      })
-                    }}
-                  >
+            {/* Native WebLN option */}
+            {nativeWallet && (
+              <SettingsGroupItem
+                onClick={() => {
+                  console.log("🖱️ Div clicked for native wallet")
+                  setSelectedWallet("native")
+                  setActiveProviderType("native")
+                  useWalletProviderStore.getState().refreshActiveProvider()
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
                     <input
                       type="radio"
                       name="wallet-selection"
                       className="radio radio-primary"
-                      checked={isChecked}
+                      checked={selectedWallet === "native"}
                       onChange={() => {
-                        const walletId = `nwc:${conn.id}`
-                        setSelectedWallet(walletId)
-                        setActiveProviderType("nwc")
-                        setActiveNWCId(conn.id)
-                        connectToNWC(conn.id).then(() => {
-                          useWalletProviderStore.getState().refreshActiveProvider()
-                        })
+                        setSelectedWallet("native")
+                        setActiveProviderType("native")
+                        useWalletProviderStore.getState().refreshActiveProvider()
                       }}
                     />
-                    <div className="flex-1">
-                      <div className="font-medium">🔗 {conn.name}</div>
-                      <div className="text-sm text-gray-500">
-                        NWC Connection
-                        {conn.balance !== undefined && ` • ${conn.balance}₿`}
+                    <div>
+                      <div className="font-medium">⚡ Native WebLN</div>
+                      <div className="text-sm text-base-content/60">
+                        Browser extension wallet
                       </div>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          </div>
+                </div>
+              </SettingsGroupItem>
+            )}
 
-          {/* Add New Connection Button */}
-          <div className="flex gap-2">
-            <button
-              className="btn btn-outline flex-1"
+            {/* NWC Connections */}
+            {nwcConnections.map((conn, index) => {
+              const isChecked = selectedWallet === `nwc:${conn.id}`
+              const isLast = index === nwcConnections.length - 1
+              return (
+                <SettingsGroupItem
+                  key={conn.id}
+                  isLast={isLast}
+                  onClick={() => {
+                    console.log("🖱️ Div clicked for NWC:", conn.name)
+                    const walletId = `nwc:${conn.id}`
+                    setSelectedWallet(walletId)
+                    setActiveProviderType("nwc")
+                    setActiveNWCId(conn.id)
+                    connectToNWC(conn.id).then(() => {
+                      useWalletProviderStore.getState().refreshActiveProvider()
+                    })
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="wallet-selection"
+                        className="radio radio-primary"
+                        checked={isChecked}
+                        onChange={() => {
+                          const walletId = `nwc:${conn.id}`
+                          setSelectedWallet(walletId)
+                          setActiveProviderType("nwc")
+                          setActiveNWCId(conn.id)
+                          connectToNWC(conn.id).then(() => {
+                            useWalletProviderStore.getState().refreshActiveProvider()
+                          })
+                        }}
+                      />
+                      <div>
+                        <div className="font-medium">🔗 {conn.name}</div>
+                        <div className="text-sm text-base-content/60">
+                          NWC Connection
+                          {conn.balance !== undefined && ` • ${conn.balance}₿`}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </SettingsGroupItem>
+              )
+            })}
+          </SettingsGroup>
+
+          <SettingsGroup title="Manage Connections">
+            <SettingsGroupItem
               onClick={() =>
                 (
                   document.getElementById("add-nwc-modal") as HTMLDialogElement
                 )?.showModal()
               }
+              isLast={nwcConnections.length === 0}
             >
-              + Add NWC Wallet
-            </button>
-          </div>
+              <div className="flex justify-between items-center">
+                <span>Add NWC Wallet</span>
+                <span className="text-primary">+</span>
+              </div>
+            </SettingsGroupItem>
 
-          {/* Manage Connections */}
-          {nwcConnections.length > 0 && (
-            <div className="mt-4">
-              <button
-                className="btn btn-ghost btn-sm"
+            {nwcConnections.length > 0 && (
+              <SettingsGroupItem
+                isLast
                 onClick={() =>
                   (
                     document.getElementById(
@@ -267,38 +275,31 @@ const WalletSettings = () => {
                   )?.showModal()
                 }
               >
-                Manage Connections ({nwcConnections.length})
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+                <div className="flex justify-between items-center">
+                  <span>Manage Connections</span>
+                  <span className="text-sm text-base-content/60">
+                    {nwcConnections.length} connection
+                    {nwcConnections.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              </SettingsGroupItem>
+            )}
+          </SettingsGroup>
 
-      {/* Zap Settings Section */}
-      <div className="card bg-base-100 shadow-lg">
-        <div className="card-body">
-          <h2 className="card-title text-lg mb-4">Zap Settings</h2>
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text font-medium">Default zap amount</span>
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                className="input input-bordered flex-1"
-                onChange={handleDefaultZapAmountChange}
-                value={defaultZapAmount}
-                placeholder="21"
-                min="1"
-              />
-              <span className="text-gray-500">₿</span>
-            </div>
-            <label className="label">
-              <span className="label-text-alt text-gray-500">
-                Amount used for one-click zapping
-              </span>
-            </label>
-          </div>
+          <SettingsGroup title="Zap Settings">
+            <SettingsInputItem
+              label="Default zap amount"
+              value={defaultZapAmount.toString()}
+              onChange={(value) =>
+                handleDefaultZapAmountChange({
+                  target: {value},
+                } as ChangeEvent<HTMLInputElement>)
+              }
+              type="text"
+              rightContent={<span className="text-base-content/60">₿</span>}
+              isLast
+            />
+          </SettingsGroup>
         </div>
       </div>
 

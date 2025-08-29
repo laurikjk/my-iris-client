@@ -8,9 +8,13 @@ import IrisAPI, {
   PushNotifications,
 } from "@/utils/IrisAPI"
 import NotificationSubscriptionItem from "./NotificationSubscriptionItem"
-import {useEffect, useState, ChangeEvent} from "react"
+import {useEffect, useState} from "react"
 import {useSettingsStore} from "@/stores/settings"
+import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
+import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
+import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
 import Icon from "@/shared/components/Icons/Icon"
+import {RiArrowRightSLine, RiArrowDownSLine} from "@remixicon/react"
 import debounce from "lodash/debounce"
 
 interface StatusIndicatorProps {
@@ -137,8 +141,7 @@ const NotificationSettings = () => {
     }
   }
 
-  function handleServerChange(e: ChangeEvent<HTMLInputElement>) {
-    const url = e.target.value
+  function handleServerChange(url: string) {
     setInputValue(url)
     debouncedValidation(url)
   }
@@ -226,101 +229,125 @@ const NotificationSettings = () => {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden">
-      <div className="flex flex-col space-y-4 overflow-x-hidden">
-        {/*
-            <StatusIndicator
-            status={!login.readonly}
-            enabledMessage="You have write access"
-            disabledMessage="You don't have write access"
-            />
-        */}
-        <StatusIndicator
-          status={hasNotificationsApi}
-          enabledMessage="Notifications API is enabled"
-          disabledMessage="Notifications API is disabled"
-        />
-        <div className="flex items-center gap-2 flex-wrap">
-          <StatusIndicator
-            status={notificationsAllowed}
-            enabledMessage="Notifications are allowed"
-            disabledMessage="Notifications are not allowed"
-          />
-          {hasNotificationsApi && !notificationsAllowed && (
-            <button className="btn btn-neutral" onClick={requestNotificationPermission}>
-              Allow
-            </button>
-          )}
-          {notificationsAllowed && (
-            <button className="btn btn-neutral btn-sm" onClick={fireTestNotification}>
-              Test Notification
-            </button>
-          )}
-        </div>
-        <StatusIndicator
-          status={serviceWorkerReady}
-          enabledMessage="Service Worker is running"
-          disabledMessage="Service Worker is not running"
-        />
-        <div className="flex items-center gap-2 flex-wrap">
-          <StatusIndicator
-            status={subscribedToPush}
-            enabledMessage="Subscribed to push notifications"
-            disabledMessage="Not subscribed to push notifications"
-          />
-          {allGood && !subscribedToPush && (
-            <button className="btn btn-primary btn-sm" onClick={subscribeToNotifications}>
-              Subscribe
-            </button>
-          )}
-        </div>
-        <div>
-          <b>Notification Server</b>
-          <div className="mt-2">
-            <input
-              type="text"
-              className={`w-full input input-primary ${isValidUrl ? "" : "input-error"}`}
+    <div className="bg-base-200 min-h-full">
+      <div className="p-4">
+        <div className="space-y-6">
+          <SettingsGroup title="Status">
+            <SettingsGroupItem>
+              <StatusIndicator
+                status={hasNotificationsApi}
+                enabledMessage="Notifications API is enabled"
+                disabledMessage="Notifications API is disabled"
+              />
+            </SettingsGroupItem>
+            <SettingsGroupItem>
+              <div className="flex items-center justify-between">
+                <StatusIndicator
+                  status={notificationsAllowed}
+                  enabledMessage="Notifications are allowed"
+                  disabledMessage="Notifications are not allowed"
+                />
+                <div className="flex items-center gap-2">
+                  {hasNotificationsApi && !notificationsAllowed && (
+                    <button
+                      className="btn btn-neutral btn-sm"
+                      onClick={requestNotificationPermission}
+                    >
+                      Allow
+                    </button>
+                  )}
+                  {notificationsAllowed && (
+                    <button
+                      className="btn btn-neutral btn-sm"
+                      onClick={fireTestNotification}
+                    >
+                      Test
+                    </button>
+                  )}
+                </div>
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
+              <StatusIndicator
+                status={serviceWorkerReady}
+                enabledMessage="Service Worker is running"
+                disabledMessage="Service Worker is not running"
+              />
+            </SettingsGroupItem>
+            <SettingsGroupItem isLast>
+              <div className="flex items-center justify-between">
+                <StatusIndicator
+                  status={subscribedToPush}
+                  enabledMessage="Subscribed to push notifications"
+                  disabledMessage="Not subscribed to push notifications"
+                />
+                {allGood && !subscribedToPush && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={subscribeToNotifications}
+                  >
+                    Subscribe
+                  </button>
+                )}
+              </div>
+            </SettingsGroupItem>
+          </SettingsGroup>
+
+          <SettingsGroup title="Server">
+            <SettingsInputItem
+              label="Notification Server"
               value={inputValue}
               onChange={handleServerChange}
+              type="url"
+              rightContent={
+                !isValidUrl ? (
+                  <Icon name="close" size={16} className="text-error" />
+                ) : undefined
+              }
             />
-            {!isValidUrl && <p className="text-error">Invalid URL</p>}
-          </div>
-          <div className="mt-2">
-            Self-host notification server?{" "}
-            <a
-              className="link"
-              href="https://github.com/mmalmi/nostr-notification-server"
-            >
-              Source code
-            </a>
-          </div>
-        </div>
-        <div className="mt-4">
-          <div className="my-4 flex items-center justify-between min-h-[2rem] flex-wrap gap-2">
-            <span className="font-bold">
-              {Object.keys(subscriptionsData).length} subscriptions
-            </span>
-            <div className="flex items-center gap-2 flex-wrap">
-              {selectedRows.size > 0 && (
-                <button className="btn btn-error btn-sm" onClick={handleDeleteSelected}>
-                  Delete {selectedRows.size} selected
-                </button>
-              )}
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-sm"
-                  checked={
-                    selectedRows.size > 0 &&
-                    selectedRows.size === Object.keys(subscriptionsData).length
-                  }
-                  onChange={toggleSelectAll}
-                />
-                <span className="text-sm">Select all</span>
-              </label>
-            </div>
-          </div>
-          <div className="flex flex-col space-y-2 w-full">
+            <SettingsGroupItem isLast>
+              <div className="text-sm text-base-content/70">
+                Self-host notification server?{" "}
+                <a
+                  className="link"
+                  href="https://github.com/mmalmi/nostr-notification-server"
+                >
+                  Source code
+                </a>
+              </div>
+            </SettingsGroupItem>
+          </SettingsGroup>
+
+          <SettingsGroup title="Subscriptions">
+            <SettingsGroupItem>
+              <div className="flex items-center justify-between">
+                <span className="font-medium">
+                  {Object.keys(subscriptionsData).length} active subscriptions
+                </span>
+                <div className="flex items-center gap-2">
+                  {selectedRows.size > 0 && (
+                    <button
+                      className="btn btn-error btn-sm"
+                      onClick={handleDeleteSelected}
+                    >
+                      Delete {selectedRows.size}
+                    </button>
+                  )}
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="checkbox checkbox-sm"
+                      checked={
+                        selectedRows.size > 0 &&
+                        selectedRows.size === Object.keys(subscriptionsData).length
+                      }
+                      onChange={toggleSelectAll}
+                    />
+                    <span className="text-sm">Select all</span>
+                  </label>
+                </div>
+              </div>
+            </SettingsGroupItem>
             {Object.entries(subscriptionsData)
               .flatMap(([id, subscription]) => {
                 type SubscriptionItem = {
@@ -363,34 +390,46 @@ const NotificationSettings = () => {
                 return items
               })
               .sort((a, b) => (b.isCurrentDevice ? 1 : 0) - (a.isCurrentDevice ? 1 : 0))
-              .map(({id, subscription, pushSubscription, index}) => (
-                <NotificationSubscriptionItem
+              .map(({id, subscription, pushSubscription, index}, itemIndex, array) => (
+                <SettingsGroupItem
                   key={`${id}-${index}`}
-                  id={id}
-                  subscription={subscription}
-                  pushSubscription={pushSubscription}
-                  currentEndpoint={currentEndpoint}
-                  onDelete={handleDeleteSubscription}
-                  isSelected={selectedRows.has(id)}
-                  onToggleSelect={toggleSelection}
-                />
+                  isLast={itemIndex === array.length - 1}
+                >
+                  <NotificationSubscriptionItem
+                    id={id}
+                    subscription={subscription}
+                    pushSubscription={pushSubscription}
+                    currentEndpoint={currentEndpoint}
+                    onDelete={handleDeleteSubscription}
+                    isSelected={selectedRows.has(id)}
+                    onToggleSelect={toggleSelection}
+                  />
+                </SettingsGroupItem>
               ))}
-          </div>
-        </div>
+          </SettingsGroup>
 
-        <div className="mt-4">
-          <b>Debug: /subscriptions Response</b>
-          <button
-            className="btn btn-neutral btn-sm ml-2"
-            onClick={() => setShowDebugData(!showDebugData)}
-          >
-            {showDebugData ? "Hide" : "Show"}
-          </button>
-          {showDebugData && (
-            <pre className="bg-base-200 p-4 rounded overflow-auto whitespace-pre-wrap break-all">
-              {JSON.stringify(subscriptionsData, null, 2) || ""}
-            </pre>
-          )}
+          <SettingsGroup title="Debug">
+            <SettingsGroupItem
+              onClick={() => setShowDebugData(!showDebugData)}
+              isLast={!showDebugData}
+            >
+              <div className="flex justify-between items-center">
+                <span>Subscriptions Response</span>
+                {showDebugData ? (
+                  <RiArrowDownSLine size={20} className="text-base-content/50" />
+                ) : (
+                  <RiArrowRightSLine size={20} className="text-base-content/50" />
+                )}
+              </div>
+            </SettingsGroupItem>
+            {showDebugData && (
+              <SettingsGroupItem isLast>
+                <pre className="bg-base-300 p-4 rounded overflow-auto whitespace-pre-wrap break-all text-sm">
+                  {JSON.stringify(subscriptionsData, null, 2) || ""}
+                </pre>
+              </SettingsGroupItem>
+            )}
+          </SettingsGroup>
         </div>
       </div>
     </div>

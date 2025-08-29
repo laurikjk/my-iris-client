@@ -1,4 +1,4 @@
-import {useState, useEffect, useRef, KeyboardEvent} from "react"
+import {useState, useEffect, useRef, KeyboardEvent, DragEvent} from "react"
 import {Link, useNavigate} from "@/navigation"
 import {nip19} from "nostr-tools"
 import {NDKEvent, NDKKind} from "@nostr-dev-kit/ndk"
@@ -123,6 +123,7 @@ export function BaseNoteCreator({
     totalFiles: 0,
     currentFileIndex: 0,
   })
+  const [isDragOver, setIsDragOver] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -352,6 +353,56 @@ export function BaseNoteCreator({
     }
   }
 
+  const handleDragEnter = (e: DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragOver(true)
+      // Expand inline note creator on drag hover
+      if (!isModal && expandOnFocus && !isFocused) {
+        setIsFocused(true)
+      }
+    }
+  }
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    // Only hide drag overlay if leaving the container
+    if (!containerRef.current?.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false)
+    }
+  }
+
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 0) {
+      // Simulate file input change to trigger UploadButton's onChange handler
+      const fileInput = containerRef.current?.querySelector(
+        'input[type="file"]'
+      ) as HTMLInputElement
+      if (fileInput) {
+        // Create a new FileList-like object
+        const dt = new DataTransfer()
+        files.forEach((file) => dt.items.add(file))
+        fileInput.files = dt.files
+
+        // Trigger the change event
+        const event = new Event("change", {bubbles: true})
+        fileInput.dispatchEvent(event)
+      }
+    }
+  }
+
   if (!myPubKey) return null
 
   const isModal = variant === "modal"
@@ -361,7 +412,24 @@ export function BaseNoteCreator({
     : `border-b border-custom ${className}`
 
   return (
-    <div ref={containerRef} className={containerClass}>
+    <div
+      ref={containerRef}
+      className={`${containerClass} ${isDragOver ? "relative" : ""}`}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {isDragOver && (
+        <div className="absolute inset-0 bg-primary/20 border-2 border-dashed border-primary rounded-lg flex items-center justify-center z-10 pointer-events-none">
+          <div className="text-center">
+            <RiAttachment2 className="w-8 h-8 mx-auto mb-2 text-primary" />
+            <p className="text-primary font-medium">Drop files to upload</p>
+          </div>
+        </div>
+      )}
+
       {/* Edit/Preview toggle */}
       {showPreview && shouldExpand && (
         <div className="flex gap-2 px-4 pb-3">

@@ -55,11 +55,7 @@ const NotificationSubscriptionItem = ({
   }
 
   return (
-    <div
-      className={`flex flex-col w-full border rounded ${
-        isCurrentDevice ? "border-primary bg-primary/5" : ""
-      }`}
-    >
+    <div className={`flex flex-col w-full ${isCurrentDevice ? "bg-primary/5" : ""}`}>
       <div className="flex w-full items-center gap-2 p-3">
         <input
           type="checkbox"

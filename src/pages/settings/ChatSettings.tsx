@@ -3,6 +3,8 @@ import {useUserStore} from "@/stores/user"
 import {useUserRecordsStore} from "@/stores/userRecords"
 import {useSessionsStore} from "@/stores/sessions"
 import {RiDeleteBin6Line, RiRefreshLine} from "@remixicon/react"
+import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
+import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 
 interface DeviceInfo {
   id: string
@@ -111,89 +113,91 @@ const ChatSettings = () => {
 
   if (!publicKey) {
     return (
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Chat Settings</h2>
-        <p className="text-base-content/70">
-          Please sign in to manage your chat settings.
-        </p>
+      <div className="bg-base-200 min-h-full">
+        <div className="p-4">
+          <div className="text-center py-8 text-base-content/70">
+            Please sign in to manage your chat settings.
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Chat Settings</h2>
-        <p className="text-base-content/70">
-          Manage your devices for private messaging. Each device gets a unique invite that
-          allows other users to establish secure sessions.
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">Your Devices</h3>
-          <div className="flex gap-2">
-            <button
-              onClick={handleRefreshInvites}
-              className="btn btn-ghost btn-sm"
-              title="Refresh invites"
-            >
-              <RiRefreshLine size={16} />
-            </button>
-          </div>
+    <div className="bg-base-200 min-h-full">
+      <div className="p-4">
+        <div className="mb-6">
+          <p className="text-base-content/70">
+            Manage your devices for private messaging. Each device gets a unique invite
+            that allows other users to establish secure sessions.
+          </p>
         </div>
 
-        {devices.length === 0 ? (
-          <div className="text-center py-8 text-base-content/70">
-            <p>No device invites found.</p>
-            <button
-              onClick={handleRefreshInvites}
-              className="btn btn-primary btn-sm mt-2"
-            >
-              Create Device Invite
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {devices.map((device) => (
-              <div
-                key={device.id}
-                className={`card bg-base-200 p-4 ${
-                  device.isCurrent ? "ring-2 ring-primary" : ""
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium">{device.label}</h4>
-                      {device.isCurrent && (
-                        <span className="badge badge-primary badge-sm">Current</span>
-                      )}
-                    </div>
-                    <div className="text-sm text-base-content/70 space-y-1">
-                      <p>ID: {device.id}</p>
-                      <p>Active sessions: {device.sessionCount}</p>
-                      <p>Last activity: {formatLastSeen(device.lastSeen)}</p>
-                    </div>
-                  </div>
-                  <div className="ml-4">
+        <div className="space-y-6">
+          <SettingsGroup title="Your Devices">
+            {devices.length === 0 ? (
+              <SettingsGroupItem isLast>
+                <div className="text-center py-4">
+                  <p className="text-base-content/70 mb-3">No device invites found.</p>
+                  <button
+                    onClick={handleRefreshInvites}
+                    className="btn btn-primary btn-sm"
+                  >
+                    Create Device Invite
+                  </button>
+                </div>
+              </SettingsGroupItem>
+            ) : (
+              <>
+                <SettingsGroupItem>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-base-content/70">
+                      {devices.length} device{devices.length !== 1 ? "s" : ""}
+                    </span>
                     <button
-                      onClick={() => handleNullifyDevice(device.id)}
-                      className="btn btn-ghost btn-sm text-error hover:bg-error/20"
-                      title="Nullify device invite"
+                      onClick={handleRefreshInvites}
+                      className="btn btn-ghost btn-sm"
+                      title="Refresh invites"
                     >
-                      <RiDeleteBin6Line size={16} />
+                      <RiRefreshLine size={16} />
                     </button>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                </SettingsGroupItem>
 
-      {/* Debug section removed */}
+                {devices.map((device, index) => (
+                  <SettingsGroupItem
+                    key={device.id}
+                    isLast={index === devices.length - 1}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{device.label}</span>
+                          {device.isCurrent && (
+                            <span className="badge badge-primary badge-sm">Current</span>
+                          )}
+                        </div>
+                        <div className="text-sm text-base-content/60 space-y-1">
+                          <p>ID: {device.id}</p>
+                          <p>Active sessions: {device.sessionCount}</p>
+                          <p>Last activity: {formatLastSeen(device.lastSeen)}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleNullifyDevice(device.id)}
+                        className="btn btn-ghost btn-sm text-error hover:bg-error/20 ml-4"
+                        title="Nullify device invite"
+                      >
+                        <RiDeleteBin6Line size={16} />
+                      </button>
+                    </div>
+                  </SettingsGroupItem>
+                ))}
+              </>
+            )}
+          </SettingsGroup>
+        </div>
+      </div>
     </div>
   )
 }

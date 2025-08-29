@@ -1,4 +1,4 @@
-import SocialGraphSettings from "@/pages/settings/SocialGraphSettings"
+import SocialGraphSettings from "@/pages/settings/SocialGraph"
 import {useLocation, Link} from "@/navigation"
 import MediaServers from "@/pages/settings/Mediaservers.tsx"
 import {ProfileSettings} from "@/pages/settings/Profile.tsx"
@@ -14,6 +14,8 @@ import WalletSettings from "./WalletSettings"
 import SystemSettings from "./SystemSettings"
 import Backup from "@/pages/settings/Backup"
 import ChatSettings from "./ChatSettings"
+import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
+import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {Helmet} from "react-helmet"
 import classNames from "classnames"
 import {ReactElement} from "react"
@@ -136,9 +138,33 @@ function Settings() {
     },
   ]
 
+  const getSettingsTitle = () => {
+    const pathSegments = location.pathname.split("/").filter(Boolean)
+    const settingsPath = pathSegments[1] || ""
+
+    const titleMap: Record<string, string> = {
+      "": "Settings",
+      account: "Log out",
+      network: "Network",
+      profile: "Profile",
+      iris: "iris.to username",
+      content: "Content",
+      wallet: "Wallet",
+      backup: "Backup",
+      appearance: "Appearance",
+      mediaservers: "Media Servers",
+      "social-graph": "Social Graph",
+      notifications: "Notifications",
+      system: "System",
+      chat: "Chat",
+    }
+
+    return titleMap[settingsPath] || "Settings"
+  }
+
   return (
     <div className="flex flex-col h-full">
-      <Header title="Settings" />
+      <Header title={getSettingsTitle()} />
       <div
         className="flex flex-1 overflow-y-scroll overflow-x-hidden scrollbar-hide relative"
         data-main-scroll-container="true"
@@ -147,57 +173,60 @@ function Settings() {
         <div className="pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0 flex w-full flex-col h-full">
           <div className="flex w-full flex-1">
             <nav
-              className={`sticky top-0 w-full lg:w-64 p-4 lg:h-screen ${
+              className={`sticky top-0 w-full lg:w-64 p-4 lg:h-screen bg-base-200 ${
                 isSettingsRoot ? "block" : "hidden"
               } lg:block lg:border-r border-custom`}
             >
-              <div className="flex flex-col">
+              <div className="flex flex-col gap-6">
                 {settingsGroups.map((group, groupIndex) => (
-                  <div key={groupIndex} className="mb-4">
-                    <h3 className="font-bold text-xs text-base-content/50 uppercase tracking-wide mb-2">
-                      {group.title}
-                    </h3>
+                  <SettingsGroup key={groupIndex} title={group.title}>
                     {group.items.map(({icon, iconBg, message, path}, index) => (
                       <Link
                         to={path}
                         key={path}
-                        className={classNames(
-                          "px-2.5 py-1.5 flex justify-between items-center border border-custom hover:bg-base-300",
-                          {
-                            "rounded-t-xl": index === 0,
-                            "rounded-b-xl": index === group.items.length - 1,
-                            "border-t-0": index !== 0,
-                            "bg-base-100":
-                              location.pathname === path ||
-                              (isSettingsRoot && path === "/settings/profile"),
-                          }
-                        )}
+                        className={classNames({
+                          "bg-base-200":
+                            location.pathname === path ||
+                            (isSettingsRoot && path === "/settings/profile"),
+                        })}
                       >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`p-1 ${iconBg} rounded-lg flex justify-center items-center text-white`}
-                          >
-                            {typeof icon === "string" ? (
-                              <Icon name={icon} size={18} />
-                            ) : (
-                              icon
-                            )}
+                        <SettingsGroupItem
+                          variant="navigation"
+                          isLast={index === group.items.length - 1}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`p-1 ${iconBg} rounded-lg flex justify-center items-center text-white`}
+                              >
+                                {typeof icon === "string" ? (
+                                  <Icon name={icon} size={16} />
+                                ) : (
+                                  icon
+                                )}
+                              </div>
+                              <span className="text-base font-medium flex-grow">
+                                {message}
+                              </span>
+                            </div>
+                            <RiArrowRightSLine
+                              size={18}
+                              className="text-base-content/50"
+                            />
                           </div>
-                          <span className="text-base font-semibold flex-grow">
-                            {message}
-                          </span>
-                        </div>
-                        <RiArrowRightSLine size={18} className="text-base-content" />
+                        </SettingsGroupItem>
                       </Link>
                     ))}
-                  </div>
+                  </SettingsGroup>
                 ))}
                 {/* Spacer for mobile footer on settings list */}
                 <div className="h-44 lg:hidden" aria-hidden="true" />
               </div>
             </nav>
-            <div className={`flex-1 ${isSettingsRoot ? "hidden lg:block" : "block"}`}>
-              <div className="p-4 mx-4 md:p-8 rounded-lg bg-base-100 shadow mb-44 md:mb-0">
+            <div
+              className={`flex-1 ${isSettingsRoot ? "hidden lg:block" : "block"} overflow-y-scroll overflow-x-hidden scrollbar-hide`}
+            >
+              <div className="md:px-2">
                 {(() => {
                   // Determine which component to show based on the path
                   const pathSegments = location.pathname.split("/").filter(Boolean)
@@ -234,6 +263,9 @@ function Settings() {
                       return <ProfileSettings />
                   }
                 })()}
+
+                {/* Mobile footer spacing */}
+                <div className="h-44 md:hidden" aria-hidden="true" />
               </div>
             </div>
           </div>

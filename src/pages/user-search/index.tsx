@@ -75,12 +75,15 @@ export default function UserSearchPage() {
 
             <div className="w-full">
               <div className="w-full p-2">
-                <form onSubmit={(e) => {
-                  e.preventDefault()
-                  if (searchValue.trim()) {
-                    navigate(`/u/${encodeURIComponent(searchValue.trim())}`)
-                  }
-                }} className="w-full">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (searchValue.trim()) {
+                      navigate(`/u/${encodeURIComponent(searchValue.trim())}`)
+                    }
+                  }}
+                  className="w-full"
+                >
                   <label className="input input-bordered flex items-center gap-2 w-full">
                     <input
                       ref={searchInputRef}

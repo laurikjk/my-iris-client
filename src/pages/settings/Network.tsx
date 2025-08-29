@@ -3,6 +3,8 @@ import {DEFAULT_RELAYS} from "@/utils/ndk"
 import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
 import {RelayList} from "@/shared/components/RelayList"
+import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
+import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 
 export function Network() {
   const {relayConfigs, setRelayConfigs, ndkOutboxModel, setNdkOutboxModel} =
@@ -23,55 +25,60 @@ export function Network() {
   }, [relayConfigs])
 
   return (
-    <div>
-      <h2 className="text-2xl mb-4">Network</h2>
+    <div className="bg-base-200 min-h-full">
+      <div className="p-4">
+        <div className="space-y-6">
+          <SettingsGroup title="Connection">
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <span>Show Relay Indicator</span>
+                <input
+                  type="checkbox"
+                  checked={showRelayIndicator}
+                  onChange={(e) => setShowRelayIndicator(e.target.checked)}
+                  className="toggle toggle-primary"
+                />
+              </div>
+            </SettingsGroupItem>
 
-      {/* Relay Indicator Setting */}
-      <div className="mb-6">
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showRelayIndicator}
-            onChange={(e) => setShowRelayIndicator(e.target.checked)}
-            className="checkbox checkbox-primary"
-          />
-          <span className="text-base font-medium">Show Relay Indicator</span>
-        </label>
-      </div>
+            <SettingsGroupItem isLast>
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span>Enable Outbox Model</span>
+                  <span className="text-sm text-base-content/60">
+                    Connects to other people&apos;s relays for better event sync
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={ndkOutboxModel}
+                  onChange={(e) => setNdkOutboxModel(e.target.checked)}
+                  className="toggle toggle-primary"
+                />
+              </div>
+            </SettingsGroupItem>
+          </SettingsGroup>
 
-      {/* NDK Outbox Model Setting */}
-      <div className="mb-6">
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={ndkOutboxModel}
-            onChange={(e) => setNdkOutboxModel(e.target.checked)}
-            className="checkbox checkbox-primary"
-          />
-          <div>
-            <span className="text-base font-medium">Enable Outbox Model</span>
-            <p className="text-sm text-base-content/70">
-              Connects to other people&apos;s relays for better event sync
-            </p>
-          </div>
-        </label>
-      </div>
-
-      <RelayList
-        compact={false}
-        showDelete={true}
-        showAddRelay={true}
-        showDiscovered={true}
-        className="mt-4"
-        maxHeight="max-h-none"
-      />
-      {!hasDefaultRelays && (
-        <div className="mt-4">
-          <button className="btn btn-secondary" onClick={resetDefaults}>
-            Reset to defaults
-          </button>
+          <SettingsGroup title="Relays">
+            <SettingsGroupItem isLast>
+              <div className="flex flex-col space-y-4">
+                <RelayList
+                  compact={false}
+                  showDelete={true}
+                  showAddRelay={true}
+                  showDiscovered={true}
+                  maxHeight="max-h-none"
+                />
+                {!hasDefaultRelays && (
+                  <button className="btn btn-secondary" onClick={resetDefaults}>
+                    Reset to defaults
+                  </button>
+                )}
+              </div>
+            </SettingsGroupItem>
+          </SettingsGroup>
         </div>
-      )}
+      </div>
     </div>
   )
 }
