@@ -9,6 +9,7 @@ import Icon from "@/shared/components/Icons/Icon"
 import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
+import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
 import {Helmet} from "react-helmet"
 
 export default function UserSearchPage() {
@@ -97,6 +98,8 @@ export default function UserSearchPage() {
                   </label>
                 </form>
               </div>
+
+              {!searchValue.trim() && <SocialGraphWidget background={false} />}
 
               <div className="mt-4">
                 <InfiniteScroll onLoadMore={loadMore}>
