@@ -113,6 +113,15 @@ export function ProfileSettings() {
         </div>
 
         <div className="space-y-6">
+          <SettingsGroup>
+            <SettingsButton
+              label="Save Changes"
+              onClick={onSaveProfile}
+              disabled={!isEdited}
+              isLast
+            />
+          </SettingsGroup>
+
           <SettingsGroup title="Personal Information">
             <SettingsInputItem
               label="Name"
@@ -230,14 +239,6 @@ export function ProfileSettings() {
             />
           </SettingsGroup>
 
-          <SettingsGroup>
-            <SettingsButton
-              label="Save Changes"
-              onClick={onSaveProfile}
-              disabled={!isEdited}
-              isLast
-            />
-          </SettingsGroup>
         </div>
       </div>
     </div>

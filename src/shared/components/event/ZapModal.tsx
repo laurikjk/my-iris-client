@@ -37,7 +37,7 @@ function ZapModal({
   initialAmount,
   paymentFailed,
 }: ZapModalProps) {
-  const {defaultZapAmount, setDefaultZapAmount} = useUserStore()
+  const {defaultZapAmount, setDefaultZapAmount, defaultZapComment, setDefaultZapComment} = useUserStore()
   const {activeProviderType, sendPayment: walletProviderSendPayment} =
     useWalletProviderStore()
 
@@ -51,8 +51,9 @@ function ZapModal({
     initialAmount || (defaultZapAmount > 0 ? defaultZapAmount.toString() : "21")
   )
   const [customAmount, setCustomAmount] = useState<string>("")
-  const [zapMessage, setZapMessage] = useState<string>("")
+  const [zapMessage, setZapMessage] = useState<string>(defaultZapComment || "")
   const [shouldSetDefault, setShouldSetDefault] = useState(false)
+  const [shouldSetDefaultComment, setShouldSetDefaultComment] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string>("")
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
@@ -90,6 +91,10 @@ function ZapModal({
     setShouldSetDefault(e.target.checked)
   }
 
+  const handleSetDefaultComment = (e: ChangeEvent<HTMLInputElement>) => {
+    setShouldSetDefaultComment(e.target.checked)
+  }
+
   const handleCopyPaymentRequest = () => {
     navigator.clipboard.writeText(bolt11Invoice)
     setCopiedPaymentRequest(true)
@@ -119,6 +124,9 @@ function ZapModal({
     try {
       if (shouldSetDefault) {
         setDefaultZapAmount(Number(zapAmount))
+      }
+      if (shouldSetDefaultComment && zapMessage.trim()) {
+        setDefaultZapComment(zapMessage.trim())
       }
 
       const lnPay: LnPayCb = async ({pr}) => {
@@ -299,6 +307,12 @@ function ZapModal({
             )}
             <p className="text-center">
               {hasWallet ? "Or scan" : "Scan"} the QR code to zap <b>{zapAmount} sats</b>
+              {zapMessage && (
+                <>
+                  <br />
+                  <span className="text-sm opacity-70">"{zapMessage}"</span>
+                </>
+              )}
             </p>
             <div className="w-40 h-40">
               {qrCodeUrl && <img id="qr-image" className="w-40 h-40" src={qrCodeUrl} />}
@@ -357,6 +371,17 @@ function ZapModal({
                 onChange={handleSetDefaultAmount}
               />
               <span className="label-text">Set as default zap amount</span>
+            </label>
+
+            <label className="label cursor-pointer justify-start gap-2">
+              <input
+                type="checkbox"
+                className="checkbox"
+                checked={shouldSetDefaultComment}
+                onChange={handleSetDefaultComment}
+                disabled={!zapMessage.trim() || zapMessage.trim() === defaultZapComment}
+              />
+              <span className="label-text">Save comment as default</span>
             </label>
 
             <button

@@ -32,6 +32,7 @@ interface UserState {
 
   walletConnect: boolean
   defaultZapAmount: number
+  defaultZapComment: string
   ndkOutboxModel: boolean
 
   hasHydrated: boolean
@@ -52,6 +53,7 @@ interface UserState {
   removeMediaserver: (url: string) => void
   setWalletConnect: (walletConnect: boolean) => void
   setDefaultZapAmount: (defaultZapAmount: number) => void
+  setDefaultZapComment: (defaultZapComment: string) => void
   setNdkOutboxModel: (ndkOutboxModel: boolean) => void
   reset: () => void
   ensureDefaultMediaserver: (isSubscriber: boolean) => void
@@ -76,6 +78,7 @@ export const useUserStore = create<UserState>()(
         defaultMediaserver: null,
         walletConnect: false,
         defaultZapAmount: 0,
+        defaultZapComment: "",
         ndkOutboxModel: !import.meta.env.VITE_USE_LOCAL_RELAY,
         hasHydrated: false,
       }
@@ -142,6 +145,7 @@ export const useUserStore = create<UserState>()(
           })),
         setWalletConnect: (walletConnect: boolean) => set({walletConnect}),
         setDefaultZapAmount: (defaultZapAmount: number) => set({defaultZapAmount}),
+        setDefaultZapComment: (defaultZapComment: string) => set({defaultZapComment}),
         setNdkOutboxModel: (ndkOutboxModel: boolean) => set({ndkOutboxModel}),
         reset: () => set(initialState),
         ensureDefaultMediaserver: (isSubscriber: boolean) =>

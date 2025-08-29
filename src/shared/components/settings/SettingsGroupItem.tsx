@@ -1,9 +1,9 @@
-import {ReactNode} from "react"
+import {ReactNode, MouseEvent} from "react"
 
 interface SettingsGroupItemProps {
   children: ReactNode
   isLast?: boolean
-  onClick?: () => void
+  onClick?: (e?: MouseEvent<HTMLButtonElement>) => void
   className?: string
   variant?: "default" | "navigation"
 }

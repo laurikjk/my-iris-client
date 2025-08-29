@@ -26,7 +26,7 @@ interface FeedItemZapProps {
 
 function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZapProps) {
   const myPubKey = usePublicKey()
-  const {defaultZapAmount} = useUserStore()
+  const {defaultZapAmount, defaultZapComment} = useUserStore()
   const {activeProviderType, sendPayment: walletProviderSendPayment} =
     useWalletProviderStore()
   const [isZapping, setIsZapping] = useState(false)
@@ -110,7 +110,7 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
       const invoice = await createAndPublishZapInvoice(
         event,
         amount,
-        "", // No comment for quick zap
+        defaultZapComment || "", // Use default comment for quick zap
         profile.lud16 || profile.lud06!,
         signer
       )
