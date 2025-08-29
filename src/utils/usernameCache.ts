@@ -50,17 +50,29 @@ export const addUsernameToCache = (
  */
 export const getCachedUsername = (pubkey: string): string | undefined => {
   const cached = usernameCache.get(pubkey)
-  // Only return verified usernames for routing purposes
-  return cached?.verified ? cached.username : undefined
+  if (!cached?.verified) return undefined
+
+  // Don't redirect to "_" for _@iris.to users - keep them on npub
+  if (cached.username === "_") return undefined
+
+  return cached.username
 }
 
 /**
  * Convert any user identifier to the best route
- * @param identifier - Can be npub, hex pubkey, or username
+ * @param identifier - Can be npub, hex pubkey, username, or _@iris.to
  * @returns The best route for this user
  */
 export const getUserRoute = (identifier: string): string => {
   let pubkey: string
+
+  if (identifier === "_@iris.to") {
+    const cachedPubkey = usernameToPubkey.get("_")
+    if (cachedPubkey) {
+      return `/${nip19.npubEncode(cachedPubkey)}`
+    }
+    return `/${identifier}`
+  }
 
   // Convert npub to hex if needed
   if (identifier.startsWith("npub")) {
@@ -118,6 +130,10 @@ export const isSameUserRoute = (route1: string, route2: string): boolean => {
 export const toPubkey = (identifier: string): string | null => {
   // Remove leading slash if present
   identifier = identifier.replace(/^\//, "")
+
+  if (identifier === "_@iris.to") {
+    return null
+  }
 
   // Check if it's npub
   if (identifier.startsWith("npub")) {

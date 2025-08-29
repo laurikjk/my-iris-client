@@ -60,7 +60,10 @@ function ProfileDetails({
   const isMuted = useMemo(() => mutes.includes(hexPub), [mutes, hexPub])
 
   useEffect(() => {
-    if (displayProfile?.nip05?.endsWith("@iris.to")) {
+    if (
+      displayProfile?.nip05?.endsWith("@iris.to") &&
+      displayProfile.nip05 !== "_@iris.to"
+    ) {
       const currentPath = window.location.pathname.split("/").slice(2).join("/")
       const basePath = displayProfile.nip05.replace("@iris.to", "")
       const newPath = currentPath ? `/${basePath}/${currentPath}` : `/${basePath}`

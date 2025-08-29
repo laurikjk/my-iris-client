@@ -7,7 +7,7 @@ import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
 import {RelayStats} from "@/shared/components/RelayStats"
 import {NDKFilter} from "@nostr-dev-kit/ndk"
 import Feed from "@/shared/components/feed/Feed.tsx"
-import {useParams} from "@/navigation"
+import {useParams, useNavigate} from "@/navigation"
 import Widget from "@/shared/components/ui/Widget"
 import {useSettingsStore} from "@/stores/settings"
 import {Helmet} from "react-helmet"
@@ -17,6 +17,7 @@ import {KIND_TEXT_NOTE} from "@/utils/constants"
 
 function RelayPage() {
   const {url} = useParams()
+  const navigate = useNavigate()
   const decodedRelay = url ? decodeURIComponent(url) : ""
   const initialRelayUrl = decodedRelay ? `wss://${decodedRelay}` : ""
   const relayDisplayName = decodedRelay || ""
@@ -65,15 +66,15 @@ function RelayPage() {
               const cleanUrl = newRelay
                 .replace(/^(https?:\/\/)?(wss?:\/\/)?/, "")
                 .replace(/\/$/, "") // Remove trailing slash
-              window.location.href = `/relay/${encodeURIComponent(cleanUrl)}`
+              navigate(`/relay/${encodeURIComponent(cleanUrl)}`, {replace: true})
             }}
             placeholder="Select a relay"
           />
 
+          <RelayDetails relayUrl={selectedRelayUrl} />
+
           {selectedRelayUrl && (
             <>
-              <RelayDetails relayUrl={selectedRelayUrl} />
-
               <div className="flex items-center gap-2 p-2">
                 <input
                   type="checkbox"

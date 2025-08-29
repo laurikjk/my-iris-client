@@ -37,10 +37,55 @@ function RelayDetails({relayUrl}: RelayDetailsProps) {
     fetchInfo()
   }, [relayUrl])
 
-  if (!relayUrl) return null
-  if (loading) return null
-  if (error) return null
-  if (!relayInfo) return null
+  if (!relayUrl) {
+    return (
+      <Widget title="Relay Information">
+        <div className="space-y-4 h-96 overflow-y-auto flex flex-col items-center justify-center">
+          <div className="text-center text-base-content/50">
+            <p className="text-lg mb-2">No relay selected</p>
+            <p className="text-sm">Select a relay above to view its information</p>
+          </div>
+        </div>
+      </Widget>
+    )
+  }
+
+  if (loading) {
+    return (
+      <Widget title="Relay Information">
+        <div className="space-y-4 h-96 overflow-y-auto flex flex-col items-center justify-center">
+          <div className="loading loading-spinner loading-md"></div>
+          <p className="text-base-content/50">Loading relay information...</p>
+        </div>
+      </Widget>
+    )
+  }
+
+  if (error) {
+    return (
+      <Widget title="Relay Information">
+        <div className="space-y-4 h-96 overflow-y-auto flex flex-col items-center justify-center">
+          <div className="text-center text-base-content/50">
+            <p className="text-lg mb-2">Unable to load relay information</p>
+            <p className="text-sm">{error}</p>
+          </div>
+        </div>
+      </Widget>
+    )
+  }
+
+  if (!relayInfo) {
+    return (
+      <Widget title="Relay Information">
+        <div className="space-y-4 h-96 overflow-y-auto flex flex-col items-center justify-center">
+          <div className="text-center text-base-content/50">
+            <p className="text-lg mb-2">No relay information available</p>
+            <p className="text-sm">This relay doesn&apos;t provide NIP-11 information</p>
+          </div>
+        </div>
+      </Widget>
+    )
+  }
 
   const formatFee = (amount: number, unit: string) => {
     if (unit === "msats") {
