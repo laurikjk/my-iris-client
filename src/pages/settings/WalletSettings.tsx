@@ -8,7 +8,8 @@ import {ChangeEvent, useState, useEffect} from "react"
 
 const WalletSettings = () => {
   const {balance} = useWalletBalance()
-  const {defaultZapAmount, setDefaultZapAmount, defaultZapComment, setDefaultZapComment} = useUserStore()
+  const {defaultZapAmount, setDefaultZapAmount, defaultZapComment, setDefaultZapComment} =
+    useUserStore()
 
   const {
     activeProviderType,
@@ -213,7 +214,7 @@ const WalletSettings = () => {
                   isLast={isLast}
                   onClick={(e) => {
                     // Don't trigger selection when clicking delete button
-                    if (e && (e.target as HTMLElement).closest('.btn-error')) return
+                    if (e && (e.target as HTMLElement).closest(".btn-error")) return
                     console.log("🖱️ Div clicked for NWC:", conn.name)
                     const walletId = `nwc:${conn.id}`
                     setSelectedWallet(walletId)
@@ -298,7 +299,9 @@ const WalletSettings = () => {
                     <button
                       className="btn btn-sm btn-primary"
                       onClick={handleAddNWCConnection}
-                      disabled={!newNWCName.trim() || !newNWCConnection.trim() || isConnecting}
+                      disabled={
+                        !newNWCName.trim() || !newNWCConnection.trim() || isConnecting
+                      }
                     >
                       {isConnecting ? "Adding..." : "Add"}
                     </button>
@@ -309,10 +312,7 @@ const WalletSettings = () => {
 
             {/* Add NWC Button */}
             {!showAddForm && (
-              <SettingsGroupItem
-                isLast
-                onClick={() => setShowAddForm(true)}
-              >
+              <SettingsGroupItem isLast onClick={() => setShowAddForm(true)}>
                 <div className="flex justify-between items-center">
                   <span>Add NWC Connection</span>
                   <span className="text-primary">+</span>
@@ -320,7 +320,6 @@ const WalletSettings = () => {
               </SettingsGroupItem>
             )}
           </SettingsGroup>
-
 
           <SettingsGroup title="Zap Settings">
             <SettingsInputItem
@@ -345,7 +344,6 @@ const WalletSettings = () => {
           </SettingsGroup>
         </div>
       </div>
-
     </div>
   )
 }

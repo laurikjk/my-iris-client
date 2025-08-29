@@ -37,7 +37,8 @@ function ZapModal({
   initialAmount,
   paymentFailed,
 }: ZapModalProps) {
-  const {defaultZapAmount, setDefaultZapAmount, defaultZapComment, setDefaultZapComment} = useUserStore()
+  const {defaultZapAmount, setDefaultZapAmount, defaultZapComment, setDefaultZapComment} =
+    useUserStore()
   const {activeProviderType, sendPayment: walletProviderSendPayment} =
     useWalletProviderStore()
 
@@ -310,7 +311,7 @@ function ZapModal({
               {zapMessage && (
                 <>
                   <br />
-                  <span className="text-sm opacity-70">"{zapMessage}"</span>
+                  <span className="text-sm opacity-70">&ldquo;{zapMessage}&rdquo;</span>
                 </>
               )}
             </p>

@@ -3,6 +3,8 @@ import {FormEvent, useState, ChangeEvent} from "react"
 import {useUserStore} from "@/stores/user"
 import AccountName from "./AccountName"
 import {Link} from "@/navigation"
+import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
+import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 
 interface RegisterFormProps {
   minLength: number
@@ -99,63 +101,80 @@ function RegisterForm({minLength, subscriptionPlan, onRegister}: RegisterFormPro
   }
 
   return (
-    <div>
-      <SubscriberBadge className="mt-2" pubkey={pubKey} />
-      <p>Register an Iris username (iris.to/username)</p>
-      <div className="flex flex-row justify-between items-center mb-2">
-        <div>
-          Current subscription:{" "}
-          {subscriptionPlan
-            ? `${subscriptionPlan} (min username length: ${minLength})`
-            : "None"}
-        </div>
-      </div>
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <div className="flex flex-row gap-4">
-          <input
-            className="input input-bordered"
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={handleInputChange}
-          />
-          <button
-            className="btn btn-primary"
-            type="submit"
-            disabled={!isValid || isChecking}
-          >
-            {isChecking ? "Checking..." : "Register"}
-          </button>
-        </div>
-
-        <div className="mt-2">
-          {/* Checking status */}
-          {isChecking && <div className="text-info">Checking availability...</div>}
-
-          {/* Valid username */}
-          {!isChecking && isValid && statusMessage && (
-            <div className="text-success">
-              <div>{statusMessage}</div>
-              <AccountName name={username} link={false} />
+    <>
+      <SettingsGroup title="Subscription Status">
+        <SettingsGroupItem isLast>
+          <div className="flex flex-col gap-3">
+            <SubscriberBadge pubkey={pubKey} />
+            <div className="text-sm text-base-content/70">
+              Current subscription:{" "}
+              {subscriptionPlan
+                ? `${subscriptionPlan} (min username length: ${minLength})`
+                : "None"}
             </div>
-          )}
+          </div>
+        </SettingsGroupItem>
+      </SettingsGroup>
 
-          {/* Error message */}
-          {errorMessage && (
-            <div className="text-error font-medium mt-2">{errorMessage}</div>
-          )}
-
-          {/* Subscription upgrade link */}
-          {errorMessage && errorMessage.includes("must be") && (
-            <div className="mt-2">
-              <Link to="/subscribe" className="link">
-                Get a subscription to choose shorter usernames
-              </Link>
+      <SettingsGroup title="Register Username">
+        <SettingsGroupItem isLast>
+          <div className="space-y-4">
+            <div className="text-sm text-base-content/70">
+              Register an Iris username (iris.to/username)
             </div>
-          )}
-        </div>
-      </form>
-    </div>
+            
+            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+              <div className="flex flex-row gap-2">
+                <input
+                  className="input input-bordered flex-1"
+                  type="text"
+                  placeholder="Username"
+                  value={username}
+                  onChange={handleInputChange}
+                />
+                <button
+                  className="btn btn-primary"
+                  type="submit"
+                  disabled={!isValid || isChecking}
+                >
+                  {isChecking ? "Checking..." : "Register"}
+                </button>
+              </div>
+
+              {/* Status messages */}
+              <div className="space-y-2">
+                {/* Checking status */}
+                {isChecking && <div className="text-info text-sm">Checking availability...</div>}
+
+                {/* Valid username */}
+                {!isChecking && isValid && statusMessage && (
+                  <div className="text-success text-sm">
+                    <div>{statusMessage}</div>
+                    <div className="mt-2">
+                      <AccountName name={username} link={false} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Error message */}
+                {errorMessage && (
+                  <div className="text-error text-sm">{errorMessage}</div>
+                )}
+
+                {/* Subscription upgrade link */}
+                {errorMessage && errorMessage.includes("must be") && (
+                  <div className="text-sm">
+                    <Link to="/subscribe" className="link">
+                      Get a subscription to choose shorter usernames
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </form>
+          </div>
+        </SettingsGroupItem>
+      </SettingsGroup>
+    </>
   )
 }
 

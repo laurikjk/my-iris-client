@@ -2,10 +2,9 @@ import IrisAccount from "./IrisAccount"
 
 function IrisSettings() {
   return (
-    <div>
-      <h1 className="text-2xl mb-4">Iris.to username</h1>
-      <div className="flex flex-col gap-4 prose">
-        <div>
+    <div className="bg-base-200 min-h-full">
+      <div className="p-4">
+        <div className="space-y-6">
           <IrisAccount />
         </div>
       </div>

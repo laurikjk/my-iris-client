@@ -238,7 +238,6 @@ export function ProfileSettings() {
               isLast
             />
           </SettingsGroup>
-
         </div>
       </div>
     </div>

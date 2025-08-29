@@ -8,6 +8,8 @@ import RegisterForm from "./RegisterForm"
 import {useEffect, useState} from "react"
 import AccountName from "./AccountName"
 import IrisAPI from "@/utils/IrisAPI"
+import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
+import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 
 // Main component
 function IrisAccount() {
@@ -125,38 +127,54 @@ function IrisAccount() {
   // Render based on state
   if (irisToActive) {
     return (
-      <div className="flex flex-col gap-2">
+      <SettingsGroup title="Active Iris.to Username">
         <AccountName name={profile?.nip05?.split("@")[0]} />
-        <SubscriberBadge className="mt-2" pubkey={myPubKey} />
-      </div>
+        <SettingsGroupItem isLast>
+          <SubscriberBadge pubkey={myPubKey} />
+        </SettingsGroupItem>
+      </SettingsGroup>
     )
   }
 
   if (existing) {
     return (
-      <div className="flex flex-col gap-2">
+      <>
         <ActiveAccount name={existing.name} setAsPrimary={() => setIrisToActive(true)} />
-        <SubscriberBadge className="mt-2" pubkey={myPubKey} />
-      </div>
+        <SettingsGroup title="Subscription">
+          <SettingsGroupItem isLast>
+            <SubscriberBadge pubkey={myPubKey} />
+          </SettingsGroupItem>
+        </SettingsGroup>
+      </>
     )
   }
 
   if (error) {
-    return <div className="error">Error: {error}</div>
+    return (
+      <SettingsGroup title="Error">
+        <SettingsGroupItem isLast>
+          <div className="text-error">{error}</div>
+        </SettingsGroupItem>
+      </SettingsGroup>
+    )
   }
 
   if (showChallenge) {
-    return <ChallengeForm onVerify={handleVerify} />
+    return (
+      <SettingsGroup title="Verification Required">
+        <SettingsGroupItem isLast>
+          <ChallengeForm onVerify={handleVerify} />
+        </SettingsGroupItem>
+      </SettingsGroup>
+    )
   }
 
   return (
-    <div className="flex flex-col">
-      <RegisterForm
-        minLength={minUsernameLength}
-        subscriptionPlan={subscriptionPlan}
-        onRegister={handleRegister}
-      />
-    </div>
+    <RegisterForm
+      minLength={minUsernameLength}
+      subscriptionPlan={subscriptionPlan}
+      onRegister={handleRegister}
+    />
   )
 }
 
