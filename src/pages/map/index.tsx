@@ -14,8 +14,10 @@ import {Helmet} from "react-helmet"
 export default function MapPage() {
   const {query} = useParams()
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedGeohashes, setSelectedGeohashes] = useState<string[]>([])
+  const [searchTerm, setSearchTerm] = useState(query || "")
+  const [selectedGeohashes, setSelectedGeohashes] = useState<string[]>(
+    query ? [query.toLowerCase()] : []
+  )
   const [feedEvents, setFeedEvents] = useState<NDKEvent[]>([])
   const [displayAs, setDisplayAs] = useState<"list" | "grid">("list")
 

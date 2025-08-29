@@ -103,16 +103,20 @@ export const useHeaderScroll = ({
         headerRef.current.style.transform = `translateY(${newTranslateY}px)`
 
         const isHomePage = window.location.pathname === "/"
-        
+
         if (isHomePage && window.innerWidth < MOBILE_BREAKPOINT) {
           // Home page: switch between logo and feed name, fade everything else
-          const logoElement = headerRef.current.querySelector("[data-header-logo]") as HTMLElement
-          const feedNameElement = headerRef.current.querySelector("[data-header-feed-name]") as HTMLElement
+          const logoElement = headerRef.current.querySelector(
+            "[data-header-logo]"
+          ) as HTMLElement
+          const feedNameElement = headerRef.current.querySelector(
+            "[data-header-feed-name]"
+          ) as HTMLElement
 
           if (logoElement && feedNameElement && contentRef.current) {
             const showLogo = currentScrollY <= SCROLL_THRESHOLD && newTranslateY === 0
             const opacity = 1 - Math.min(1, Math.abs(newTranslateY) / OPACITY_MIN_POINT)
-            
+
             logoElement.style.opacity = showLogo ? "1" : "0"
             feedNameElement.style.opacity = showLogo ? "0" : "1"
             contentRef.current.style.opacity = `${opacity}`

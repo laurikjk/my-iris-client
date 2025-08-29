@@ -10,7 +10,6 @@ import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePage
 import {Name} from "@/shared/components/user/Name"
 import {Link} from "@/navigation"
 import {type FeedConfig, useFeedStore} from "@/stores/feed"
-import {shouldHideUser} from "@/utils/visibility"
 import Widget from "@/shared/components/ui/Widget"
 import useFollows from "@/shared/hooks/useFollows"
 import {PublicKey} from "@/shared/utils/PublicKey"
