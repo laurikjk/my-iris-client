@@ -172,7 +172,7 @@ function UserPage({pubKey}: {pubKey: string}) {
 
   const visibleTabs = tabs.filter(
     (tab) =>
-      (tab.path !== "you" || (myPubKey && !shouldHideUser(pubKeyHex))) &&
+      (tab.path !== "you" || (myPubKey && !isOwnProfile)) &&
       (tab.path !== "market" || hasMarketEvents || activeTab === "market")
   )
 
