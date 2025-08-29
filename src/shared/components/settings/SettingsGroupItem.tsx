@@ -16,7 +16,7 @@ export function SettingsGroupItem({
   variant = "default",
 }: SettingsGroupItemProps) {
   const padding = variant === "navigation" ? "px-4 py-2" : "px-4 py-2.5"
-  const baseClasses = `${padding} hover:bg-base-200/50 transition-colors relative`
+  const baseClasses = `${padding} hover:bg-base-200/50 transition-colors relative select-none`
 
   const borderElement = !isLast ? (
     <div className="absolute bottom-0 left-4 right-0 border-b-px border-base-content/15" />

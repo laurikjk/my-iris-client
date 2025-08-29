@@ -81,7 +81,7 @@ const Header = ({
             {children || title}
           </div>
         </div>
-        <div className="flex items-center gap-2 mr-2">
+        <div className="flex items-center gap-2 mr-2 flex-shrink-0">
           <div className="md:hidden">
             <RelayConnectivityIndicator />
           </div>
@@ -116,7 +116,7 @@ const Header = ({
           )}
           {!myPubKey && (
             <button
-              className="md:hidden btn btn-sm btn-primary"
+              className="md:hidden btn btn-sm btn-primary whitespace-nowrap"
               onClick={() => setShowLoginDialog(true)}
             >
               Sign up
