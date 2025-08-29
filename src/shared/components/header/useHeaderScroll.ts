@@ -102,25 +102,25 @@ export const useHeaderScroll = ({
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(${newTranslateY}px)`
 
-        // Handle logo and feed name opacity for home page (mobile only)
         const isHomePage = window.location.pathname === "/"
+        
         if (isHomePage && window.innerWidth < MOBILE_BREAKPOINT) {
-          const logoElement = headerRef.current.querySelector(
-            "[data-header-logo]"
-          ) as HTMLElement
-          const feedNameElement = headerRef.current.querySelector(
-            "[data-header-feed-name]"
-          ) as HTMLElement
+          // Home page: switch between logo and feed name, fade everything else
+          const logoElement = headerRef.current.querySelector("[data-header-logo]") as HTMLElement
+          const feedNameElement = headerRef.current.querySelector("[data-header-feed-name]") as HTMLElement
 
-          if (logoElement && feedNameElement) {
-            // Show logo when at top (scroll position 0), show feed name when scrolled
+          if (logoElement && feedNameElement && contentRef.current) {
             const showLogo = currentScrollY <= SCROLL_THRESHOLD && newTranslateY === 0
+            const opacity = 1 - Math.min(1, Math.abs(newTranslateY) / OPACITY_MIN_POINT)
+            
             logoElement.style.opacity = showLogo ? "1" : "0"
             feedNameElement.style.opacity = showLogo ? "0" : "1"
+            contentRef.current.style.opacity = `${opacity}`
           }
         } else if (contentRef.current) {
-          // Default behavior for other pages
-          contentRef.current.style.opacity = `${1 - Math.min(1, newTranslateY / -OPACITY_MIN_POINT)}`
+          // Other pages: fade out all header content
+          const opacity = 1 - Math.min(1, Math.abs(newTranslateY) / OPACITY_MIN_POINT)
+          contentRef.current.style.opacity = `${opacity}`
         }
       }
     }
