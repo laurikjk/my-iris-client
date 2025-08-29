@@ -5,6 +5,7 @@ import {NDKEvent, NDKKind} from "@nostr-dev-kit/ndk"
 import {useDraftStore, ImetaTag} from "@/stores/draft"
 import EmojiButton from "@/shared/components/emoji/EmojiButton"
 import {Avatar} from "@/shared/components/user/Avatar"
+import {ProfileLink} from "@/shared/components/user/ProfileLink"
 import {usePublicKey} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
 import UploadButton, {type UploadState} from "@/shared/components/button/UploadButton"
@@ -471,9 +472,9 @@ export function BaseNoteCreator({
       )}
 
       <div className={isModal ? "flex gap-4 px-4" : "flex gap-3 px-4 py-3"}>
-        <Link to={`/${nip19.npubEncode(myPubKey)}`} className="flex-shrink-0">
+        <ProfileLink pubKey={myPubKey} className="flex-shrink-0">
           <Avatar pubKey={myPubKey} width={40} showBadge={false} />
-        </Link>
+        </ProfileLink>
 
         <div className="flex-1">
           <div className={isModal ? "h-[300px] overflow-y-auto" : ""}>

@@ -1,11 +1,10 @@
 import {Fragment, useMemo} from "react"
 
 import {AvatarGroup} from "./AvatarGroup"
-import {nip19} from "nostr-tools"
 import {Name} from "./Name"
 
 import socialGraph from "@/utils/socialGraph"
-import {Link} from "@/navigation"
+import {ProfileLink} from "./ProfileLink"
 import {Badge} from "./Badge"
 
 const MAX_FOLLOWED_BY_FRIENDS = 3
@@ -26,9 +25,9 @@ export default function FollowedBy({pubkey}: {pubkey: string}) {
   const renderFollowedByFriendsLinks = () => {
     return followedByFriendsArray.map((a, index) => (
       <Fragment key={a}>
-        <Link to={`/${nip19.npubEncode(a)}`} className="link inline">
+        <ProfileLink pubKey={a} className="link inline">
           <Name pubKey={a} />
-        </Link>
+        </ProfileLink>
         {index < followedByFriendsArray.length - 1 && ","}{" "}
       </Fragment>
     ))

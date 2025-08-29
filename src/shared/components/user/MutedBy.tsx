@@ -3,8 +3,7 @@ import Modal from "@/shared/components/ui/Modal.tsx"
 import {shouldHideUser} from "@/utils/visibility"
 import {Fragment, useMemo, useState} from "react"
 import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
-import {Link} from "@/navigation"
-import {nip19} from "nostr-tools"
+import {ProfileLink} from "./ProfileLink"
 import {Name} from "./Name"
 
 const MAX_MUTED_BY_DISPLAY = 3
@@ -30,9 +29,9 @@ export default function MutedBy({pubkey}: {pubkey: string}) {
   const renderMutedByLinks = () => {
     return mutedByArray.map((a, index) => (
       <Fragment key={a}>
-        <Link to={`/${nip19.npubEncode(a)}`} className="link">
+        <ProfileLink pubKey={a} className="link">
           <Name pubKey={a} />
-        </Link>
+        </ProfileLink>
         {index < mutedByArray.length - 1 && ", "}
       </Fragment>
     ))

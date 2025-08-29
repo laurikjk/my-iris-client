@@ -1,9 +1,7 @@
 // mentions like #[3], can refer to event or user
 
-import {Link} from "@/navigation"
-import {nip19} from "nostr-tools"
-
 import {Name} from "@/shared/components/user/Name.tsx"
+import {ProfileLink} from "@/shared/components/user/ProfileLink"
 
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem.tsx"
 import Embed from "../index.ts"
@@ -25,9 +23,9 @@ const InlineMention: Embed = {
     const [type, id] = tag
     if (type === "p") {
       return (
-        <Link to={`/${nip19.npubEncode(id)}`} className="link">
+        <ProfileLink pubKey={id} className="link">
           <Name pubKey={id} />
-        </Link>
+        </ProfileLink>
       )
     } else if (type === "e") {
       return (

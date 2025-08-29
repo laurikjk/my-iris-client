@@ -1,7 +1,7 @@
-import {Link} from "@/navigation"
 import {nip19} from "nostr-tools"
 
 import {Name} from "@/shared/components/user/Name.tsx"
+import {ProfileLink} from "@/shared/components/user/ProfileLink"
 
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem.tsx"
 import Embed from "../index.ts"
@@ -47,9 +47,9 @@ const NostrUser: Embed = {
       const {type, data} = nip19.decode(match)
       if (type === "nprofile") {
         return (
-          <Link className="link link-info" to={`/${nip19.npubEncode(data.pubkey)}`}>
+          <ProfileLink pubKey={data.pubkey} className="link link-info">
             <Name pubKey={data.pubkey} />
-          </Link>
+          </ProfileLink>
         )
       } else if (type === "nevent") {
         // same as note
