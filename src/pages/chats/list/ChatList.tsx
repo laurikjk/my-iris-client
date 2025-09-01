@@ -1,12 +1,11 @@
 import {usePublicChatsStore} from "@/stores/publicChats"
 import Header from "@/shared/components/header/Header"
-import {usePrivateChatsStore} from "@/stores/privateChats"
+import {usePrivateChatsStoreNew} from "@/stores/privateChats.new"
 import ChatListItem from "./ChatListItem"
 import {NavLink} from "@/navigation"
 import classNames from "classnames"
 import {useEffect} from "react"
 import {useGroupsStore} from "@/stores/groups"
-import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "@/pages/chats/utils/messageGrouping"
 
@@ -15,7 +14,7 @@ interface ChatListProps {
 }
 
 const ChatList = ({className}: ChatListProps) => {
-  const {getChatsList} = usePrivateChatsStore()
+  const {getChatsList} = usePrivateChatsStoreNew()
   const {publicChats, timestamps, addOrRefreshChatById} = usePublicChatsStore()
   const {groups} = useGroupsStore()
 
@@ -29,8 +28,8 @@ const ChatList = ({className}: ChatListProps) => {
   }, [publicChats, addOrRefreshChatById])
 
   const latestForGroup = (id: string) => {
-    const events = usePrivateMessagesStore.getState().events
-    const messages = events.get(id) ?? new SortedMap([], comparator)
+    const state = usePrivateChatsStoreNew.getState()
+    const messages = state.messages.get(id) ?? new SortedMap([], comparator)
     const lastMsg = messages.last()?.[1]
     if (!lastMsg) return 0
     return lastMsg.created_at ? new Date(lastMsg.created_at * 1000).getTime() : 0

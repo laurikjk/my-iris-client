@@ -9,7 +9,7 @@ import {
 // Mock the nostr-double-ratchet module
 vi.mock("nostr-double-ratchet/src", async () => {
   const actual = await vi.importActual("nostr-double-ratchet/src")
-  
+
   // Mock Session class
   const mockSession = {
     name: "mock-device-id",
@@ -63,7 +63,7 @@ describe("SessionManager - With Pre-populated Storage", () => {
         deviceId: "device1",
       },
       {
-        userPubKey: "alice123", 
+        userPubKey: "alice123",
         deviceId: "device2",
       },
       {
@@ -75,7 +75,7 @@ describe("SessionManager - With Pre-populated Storage", () => {
     // Verify storage was populated
     const storageKeys = await mockDeps.storage.list("session/")
     expect(storageKeys).toContain("session/alice123/device1")
-    expect(storageKeys).toContain("session/alice123/device2") 
+    expect(storageKeys).toContain("session/alice123/device2")
     expect(storageKeys).toContain("session/bob456/device1")
 
     // Create SessionManager
@@ -92,7 +92,7 @@ describe("SessionManager - With Pre-populated Storage", () => {
 
     // Verify sessions were loaded (we can't directly access private properties,
     // but we can verify the side effects like storage access patterns)
-    
+
     // The loadSessions method should have been called and processed our data
     // We can verify by checking that Session constructor was called
     // (6 times because init() gets called twice - once in constructor, once manually)
@@ -106,9 +106,13 @@ describe("SessionManager - With Pre-populated Storage", () => {
 
   it("should restore existing invite from storage instead of creating new one", async () => {
     // Pre-populate storage with existing invite
-    await populateStorageWithInvite(mockDeps.storage, mockDeps.deviceId, "existing-invite-data")
+    await populateStorageWithInvite(
+      mockDeps.storage,
+      mockDeps.deviceId,
+      "existing-invite-data"
+    )
 
-    // Create SessionManager  
+    // Create SessionManager
     sessionManager = new SessionManager(
       mockDeps.ourIdentityKey,
       mockDeps.deviceId,

@@ -1,7 +1,7 @@
 /**
  * @deprecated This store is deprecated and will be removed in a future version.
  * Use usePrivateChatsStoreNew from './privateChats.new' instead.
- * 
+ *
  * This was an experimental implementation that has been superseded by the new
  * centralized store with proper SessionManager integration.
  */

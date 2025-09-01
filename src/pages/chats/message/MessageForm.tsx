@@ -11,7 +11,7 @@ import UploadButton from "@/shared/components/button/UploadButton"
 import EmojiButton from "@/shared/components/emoji/EmojiButton"
 import MessageFormReplyPreview from "./MessageFormReplyPreview"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
-import {usePrivateChatsStore} from "@/stores/privateChatsNew"
+import {usePrivateChatsStoreNew} from "@/stores/privateChats.new"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiAttachment2} from "@remixicon/react"
 import EmojiType from "@/types/emoji"
@@ -38,7 +38,7 @@ const MessageForm = ({
   onSendMessage,
   isPublicChat = false,
 }: MessageFormProps) => {
-  const {sendToUser} = usePrivateChatsStore()
+  const {sendToUser} = usePrivateChatsStoreNew()
   const [newMessage, setNewMessage] = useState("")
   const [encryptionMetadata, setEncryptionMetadata] = useState<
     Map<string, EncryptionMetaWithImeta>

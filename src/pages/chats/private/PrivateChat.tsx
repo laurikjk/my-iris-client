@@ -2,37 +2,44 @@ import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "../utils/messageGrouping"
 import PrivateChatHeader from "./PrivateChatHeader"
-import {usePrivateChatsStore} from "@/stores/privateChats"
-import {usePrivateMessagesStore} from "@/stores/privateMessages"
+import {usePrivateChatsStoreNew} from "@/stores/privateChats.new"
 import MessageForm from "../message/MessageForm"
 import {MessageType} from "../message/Message"
 import {useEffect, useState} from "react"
-import {useUserRecordsStore} from "@/stores/userRecords"
 import {useUserStore} from "@/stores/user"
 import {KIND_REACTION} from "@/utils/constants"
 
+// Create a stable empty map to avoid recreating on every render
+const EMPTY_MESSAGES = new SortedMap<string, MessageType>([], comparator)
+
 const Chat = ({id}: {id: string}) => {
   // id is now userPubKey instead of sessionId
-  const {updateLastSeen} = usePrivateChatsStore()
+  const {updateLastSeen, startListeningToUser, sendToUser} = usePrivateChatsStoreNew()
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
-  // Get all sessions for this user
+  // Get messages reactively from new store - use a stable selector
+  const messages = usePrivateChatsStoreNew(
+    (state) => {
+      if (!id) return null
+      return state.messages.get(id) || null
+    },
+    (a, b) => a === b // Shallow comparison - only re-render if the actual map instance changes
+  )
 
-  // Get messages reactively from events store - this will update when new messages are added
-  const eventsMap = usePrivateMessagesStore((state) => state.events)
-  const messages = eventsMap.get(id) ?? new SortedMap<string, MessageType>([], comparator)
+  // Use stable reference for empty messages
+  const safeMessages = messages || EMPTY_MESSAGES
 
   useEffect(() => {
     if (!id) {
       return
     }
 
-    if (!messages) return
+    if (!safeMessages) return
 
     const myPubKey = useUserStore.getState().publicKey
-    Array.from(messages.entries()).forEach(([, message]) => {
+    Array.from(safeMessages.entries()).forEach(([, message]) => {
       if (!haveReply && message.pubkey !== myPubKey) {
         setHaveReply(true)
       }
@@ -40,11 +47,13 @@ const Chat = ({id}: {id: string}) => {
         setHaveSent(true)
       }
     })
-  }, [id, messages, haveReply, haveSent])
+  }, [id, safeMessages, haveReply, haveSent])
 
   useEffect(() => {
     if (!id) return
 
+    // Initialize SessionManager for this user (automatically fetch invites and create sessions)
+    startListeningToUser(id)
     updateLastSeen(id)
 
     const handleVisibilityChange = () => {
@@ -64,9 +73,7 @@ const Chat = ({id}: {id: string}) => {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("focus", handleFocus)
     }
-  }, [id, updateLastSeen])
-
-  const {sendToUser} = useUserRecordsStore()
+  }, [id, updateLastSeen, startListeningToUser])
 
   const handleSendReaction = async (messageId: string, emoji: string) => {
     const myPubKey = useUserStore.getState().publicKey
@@ -91,9 +98,9 @@ const Chat = ({id}: {id: string}) => {
 
   return (
     <>
-      <PrivateChatHeader id={id} messages={messages} />
+      <PrivateChatHeader id={id} messages={safeMessages} />
       <ChatContainer
-        messages={messages}
+        messages={safeMessages}
         sessionId={id}
         onReply={setReplyingTo}
         onSendReaction={handleSendReaction}

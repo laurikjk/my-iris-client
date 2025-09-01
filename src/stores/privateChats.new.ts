@@ -14,9 +14,9 @@ import {useUserStore} from "./user"
 import {ndk} from "@/utils/ndk"
 
 // Subscribe function for nostr events
-const subscribe = (filter: unknown, onEvent: (event: unknown) => void) => {
+const subscribe = (filter: any, onEvent: (event: any) => void) => {
   const sub = ndk().subscribe(filter)
-  sub.on("event", (e: unknown) => onEvent(e))
+  sub.on("event", (e: any) => onEvent(e))
   return () => sub.stop()
 }
 
@@ -66,7 +66,7 @@ const makeOrModifyMessage = async (chatId: string, message: MessageType) => {
       if (!reactions[content]) {
         reactions[content] = []
       }
-      if (!reactions[content].some((r) => r.pubkey === message.pubkey)) {
+      if (!reactions[content].some((r: any) => r.pubkey === message.pubkey)) {
         reactions[content].push({
           pubkey: message.pubkey,
           created_at: message.created_at,
@@ -95,6 +95,7 @@ interface PrivateChatsStoreState {
 
   // Initialization state
   isInitialized: boolean
+  isInitializing: boolean
 }
 
 interface PrivateChatsStoreActions {
@@ -140,10 +141,15 @@ export const usePrivateChatsStoreNew = create<PrivateChatsStoreNew>()(
       sessionManager: undefined,
       userRecords: new Map(),
       isInitialized: false,
+      isInitializing: false,
 
       // Initialize the store and SessionManager
       initialize: async () => {
-        if (get().isInitialized) return
+        const currentState = get()
+        if (currentState.isInitialized || currentState.isInitializing) return
+
+        // Set initializing flag to prevent concurrent initializations
+        set({isInitializing: true})
 
         const userState = useUserStore.getState()
         if (!userState.privateKey) {
@@ -163,6 +169,9 @@ export const usePrivateChatsStoreNew = create<PrivateChatsStoreNew>()(
             },
             put: async <T>(key: string, value: T): Promise<void> => {
               await localforage.setItem(key, value)
+            },
+            del: async (key: string): Promise<void> => {
+              await localforage.removeItem(key)
             },
             list: async (prefix: string): Promise<string[]> => {
               const keys = await localforage.keys()
@@ -186,15 +195,16 @@ export const usePrivateChatsStoreNew = create<PrivateChatsStoreNew>()(
               reactions: {},
             } as MessageType
 
-            // Route message to appropriate chat
-            get().upsertMessage(fromUserPubKey, message)
+            // Route message to appropriate chat - get a fresh reference to avoid stale closures
+            usePrivateChatsStoreNew.getState().upsertMessage(fromUserPubKey, message)
           })
 
-          set({sessionManager, isInitialized: true})
+          set({sessionManager, isInitialized: true, isInitializing: false})
 
           console.log("Private chats store initialized successfully")
         } catch (error) {
           console.error("Failed to initialize private chats store:", error)
+          set({isInitializing: false}) // Reset flag on error
         }
       },
 
@@ -317,13 +327,14 @@ export const usePrivateChatsStoreNew = create<PrivateChatsStoreNew>()(
           const chatMeta = state.chats.get(userPubKey)
           const lastSeen = chatMeta?.lastSeen || 0
 
-          const messagesArray = messages ? messages.values() : []
+          const messagesArray = messages ? Array.from(messages.values()) : []
           const lastMessage = messagesArray[messagesArray.length - 1]
           const lastMessageTime = lastMessage ? lastMessage.created_at * 1000 : 0
 
           // Count unread messages (messages after lastSeen)
           const unreadCount = messagesArray.filter(
-            (msg) => msg.created_at * 1000 > lastSeen && msg.pubkey !== myPubKey
+            (msg: MessageType) =>
+              msg.created_at * 1000 > lastSeen && msg.pubkey !== myPubKey
           ).length
 
           chatsList.push({
@@ -340,7 +351,8 @@ export const usePrivateChatsStoreNew = create<PrivateChatsStoreNew>()(
 
       // Session management
       startListeningToUser: (userPubKey: string) => {
-        const sessionManager = get().sessionManager
+        const currentState = get()
+        const sessionManager = currentState.sessionManager
         if (sessionManager) {
           sessionManager.listenToUser(userPubKey)
         }
@@ -384,6 +396,7 @@ export const usePrivateChatsStoreNew = create<PrivateChatsStoreNew>()(
           sessionManager: undefined,
           userRecords: new Map(),
           isInitialized: false,
+          isInitializing: false,
         })
       },
     }),
@@ -425,12 +438,9 @@ export const usePrivateChatsStoreNew = create<PrivateChatsStoreNew>()(
         }
       },
       onRehydrateStorage: () => (state) => {
-        // Initialize the store after rehydration
-        if (state) {
-          setTimeout(() => {
-            state.initialize()
-          }, 100)
-        }
+        // Don't auto-initialize here - let main.tsx handle initialization
+        // to avoid double initialization and infinite loops
+        console.log("Store rehydrated successfully")
       },
     }
   )
