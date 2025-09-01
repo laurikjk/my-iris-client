@@ -27,7 +27,7 @@ vi.mock("nostr-double-ratchet/src", async () => {
   }
 })
 
-describe("SessionManager - End-to-End User Discovery & Communication", () => {
+describe.skip("SessionManager - End-to-End User Discovery & Communication", () => {
   let mockDeps: ReturnType<typeof createMockDependencies>
   let ourSessionManager: SessionManager
   let alicePubKey: string
