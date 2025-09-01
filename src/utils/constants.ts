@@ -16,6 +16,9 @@ export const KIND_REACTION = 7
 // NIP-16: Event Treatment
 export const KIND_EPHEMERAL = 20000 // Ephemeral events
 
+// NIP-04: Encrypted Direct Messages
+export const KIND_CHAT_MESSAGE = 14 // Encrypted direct message (double-ratchet)
+
 // NIP-28: Public chat
 export const KIND_CHANNEL_CREATE = 40 // Channel creation
 export const KIND_CHANNEL_MESSAGE = 42 // Channel message
