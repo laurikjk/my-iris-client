@@ -1,6 +1,6 @@
 import {usePublicChatsStore} from "@/stores/publicChats"
 import Header from "@/shared/components/header/Header"
-import {usePrivateChatsStore} from "@/stores/privateChats"
+import {usePrivateChatsStore} from "@/stores/privateChatsNew"
 import ChatListItem from "./ChatListItem"
 import {NavLink} from "@/navigation"
 import classNames from "classnames"
