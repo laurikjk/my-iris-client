@@ -3,7 +3,7 @@ import {useParams} from "@/navigation"
 import {useGroupsStore} from "@/stores/groups"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useUserStore} from "@/stores/user"
-import {useUserRecordsStore} from "@/stores/userRecords"
+import {usePrivateChatsStore} from "@/stores/privateChatsNew"
 import ChatContainer from "../components/ChatContainer"
 import MessageForm from "../message/MessageForm"
 import GroupChatHeader from "./GroupChatHeader"
@@ -20,7 +20,7 @@ const GroupChatPage = () => {
   // Fix: Use the events store with proper subscription to get reactive updates
   const {events} = usePrivateMessagesStore()
   const myPubKey = useUserStore((state) => state.publicKey)
-  const {sendToUser} = useUserRecordsStore()
+  const {sendToUser} = usePrivateChatsStore()
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
   if (!id || !group) {
