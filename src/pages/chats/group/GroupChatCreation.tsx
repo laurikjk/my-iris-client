@@ -2,7 +2,7 @@ import {DoubleRatchetUser} from "../utils/doubleRatchetUsers"
 import {MemberSelection, GroupDetailsStep} from "./components"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {useState, useEffect, FormEvent} from "react"
-import {useUserRecordsStore} from "@/stores/userRecords"
+import {usePrivateChatsStore} from "@/stores/privateChatsNew"
 import {useGroupsStore} from "@/stores/groups"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "@/navigation"
@@ -109,7 +109,7 @@ const GroupChatCreation = () => {
       }
 
       // Send create group message to all invited members except self
-      const {sendToUser} = useUserRecordsStore.getState()
+      const {sendToUser} = usePrivateChatsStore.getState()
       await Promise.all(
         selectedMembers
           .filter((pubkey: string) => pubkey !== myPubKey)
