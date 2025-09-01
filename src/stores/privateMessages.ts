@@ -36,7 +36,7 @@ interface PrivateMessagesStoreActions {
 
 type PrivateMessagesStore = PrivateMessagesStoreState & PrivateMessagesStoreActions
 
-const makeOrModifyMessage = async (_chatId: string, message: MessageType) => {
+const makeOrModifyMessage = async (chatId: string, message: MessageType) => {
   const isReaction = message.kind === KIND_REACTION
   const eTag = message.tags.find(([key]) => key === "e")
   if (isReaction && eTag) {
