@@ -7,7 +7,7 @@ import {UnsignedEvent, Filter, VerifiedEvent} from "nostr-tools"
 import {hexToBytes} from "@noble/hashes/utils"
 import {useUserStore} from "./user"
 import SessionManager from "@/session/SessionManager"
-import {InMemoryStorageAdapter} from "@/session/StorageAdapter"
+import {LocalStorageAdapter} from "@/session/StorageAdapter"
 import {ndk} from "@/utils/ndk"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {Rumor} from "nostr-double-ratchet/src"
@@ -68,7 +68,7 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
       deviceId,
       nostrSubscribe,
       nostrPublish,
-      new InMemoryStorageAdapter() // TODO: use persistent storage
+      new LocalStorageAdapter("iris_session_") // Persistent storage for sessions
     )
 
     // Set up event listener for incoming messages
