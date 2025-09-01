@@ -98,7 +98,25 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
     }
 
     const myPubKey = useUserStore.getState().publicKey
+    if (!myPubKey) {
+      throw new Error("User public key not available")
+    }
 
+    // Create the message object to store locally
+    const messageEvent: MessageType = {
+      ...event,
+      pubkey: myPubKey, // Set the sender's pubkey
+      created_at: event.created_at || Math.floor(Date.now() / 1000),
+      id: event.id || crypto.randomUUID(),
+      sig: "",
+      tags: event.tags || [],
+      kind: event.kind || 14, // Default to chat message kind
+    }
+
+    // Store the sent message locally first (for immediate UI feedback)
+    usePrivateMessagesStore.getState().upsert(userPubKey, messageEvent)
+
+    // Then send via SessionManager
     if (event.content) {
       // Send text message
       await sessionManager.sendText(userPubKey, event.content)
