@@ -1,3 +1,10 @@
+/**
+ * @deprecated This store is deprecated and will be removed in a future version.
+ * Use usePrivateChatsStoreNew from './privateChats.new' instead.
+ * 
+ * The new store handles both messages and chat metadata in a single unified interface.
+ */
+
 import {comparator} from "@/pages/chats/utils/messageGrouping"
 import type {MessageType} from "@/pages/chats/message/Message"
 import * as messageRepository from "@/utils/messageRepository"

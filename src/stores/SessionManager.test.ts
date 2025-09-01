@@ -68,7 +68,7 @@ describe("SessionManager", () => {
     const session = createStubSession()
     const testDeviceId = "test-device"
     const sessionId = `${recipient}:${testDeviceId}`
-    
+
     // Store session in SessionManager and create UserRecord
     ;(manager as any).sessions.set(sessionId, session)
     const userRecord = new UserRecord(recipient, recipient)
@@ -97,7 +97,7 @@ describe("SessionManager", () => {
     const session = createStubSession()
     const testDeviceId = "test-device"
     const sessionId = `${recipient}:${testDeviceId}`
-    
+
     // Store session in SessionManager and create UserRecord
     ;(manager as any).sessions.set(sessionId, session)
     const userRecord = new UserRecord(recipient, recipient)
@@ -126,7 +126,7 @@ describe("SessionManager", () => {
     const session = createStubSession()
     const testDeviceId = "test-device"
     const sessionId = `${ourPublicKey}:${testDeviceId}`
-    
+
     // Store session in SessionManager and create UserRecord
     ;(manager as any).sessions.set(sessionId, session)
     const userRecord = new UserRecord(ourPublicKey, ourPublicKey)
@@ -157,7 +157,7 @@ describe("SessionManager", () => {
     const session = createStubSession()
     const testDeviceId = "test-device"
     const sessionId = `${ourPublicKey}:${testDeviceId}`
-    
+
     // Store session in SessionManager and create UserRecord
     ;(manager as any).sessions.set(sessionId, session)
     const userRecord = new UserRecord(ourPublicKey, ourPublicKey)
@@ -171,7 +171,7 @@ describe("SessionManager", () => {
     const record = (manager as any).userRecords.get(ourPublicKey)
     const activeSessionIds = record.getActiveSessionIds()
     expect(activeSessionIds).toHaveLength(0)
-    
+
     // Session should still exist in SessionManager until explicitly removed
     const sessionFromManager = (manager as any).sessions.get(sessionId)
     expect(sessionFromManager).toBe(session)
@@ -191,7 +191,7 @@ describe("SessionManager", () => {
     const session2 = createStubSession()
     const sessionId1 = `${ourPublicKey}:device-1`
     const sessionId2 = `${ourPublicKey}:device-2`
-    
+
     // Store sessions in SessionManager and create UserRecord
     ;(manager as any).sessions.set(sessionId1, session1)
     ;(manager as any).sessions.set(sessionId2, session2)
@@ -206,7 +206,7 @@ describe("SessionManager", () => {
     expect(activeSessionIds).toHaveLength(2)
     expect(activeSessionIds).toContain(sessionId1)
     expect(activeSessionIds).toContain(sessionId2)
-    
+
     // Verify sessions are accessible via SessionManager
     expect((manager as any).sessions.get(sessionId1)).toBe(session1)
     expect((manager as any).sessions.get(sessionId2)).toBe(session2)
@@ -224,7 +224,7 @@ describe("SessionManager", () => {
     const session = createStubSession()
     const testDeviceId = "test-device"
     const sessionId = `${recipient}:${testDeviceId}`
-    
+
     // Store session in SessionManager and create UserRecord
     ;(manager as any).sessions.set(sessionId, session)
     const userRecord = new UserRecord(recipient, recipient)

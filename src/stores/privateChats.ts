@@ -1,3 +1,14 @@
+/**
+ * @deprecated This store is deprecated and will be removed in a future version.
+ * Use usePrivateChatsStoreNew from './privateChats.new' instead.
+ * 
+ * The new store provides:
+ * - Direct integration with SessionManager for better session management
+ * - Self-contained architecture without external dependencies
+ * - Better TypeScript support and error handling
+ * - Improved message persistence and retrieval
+ */
+
 import {createJSONStorage, persist} from "zustand/middleware"
 import {MessageType} from "@/pages/chats/message/Message"
 import {comparator} from "@/pages/chats/utils/messageGrouping"
