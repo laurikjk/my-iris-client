@@ -1,9 +1,9 @@
-import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
-import {useUserRecordsStore} from "@/stores/userRecords"
-import {usePrivateMessagesStore} from "@/stores/privateMessages"
+// import {getMillisecondTimestamp} from "nostr-double-ratchet/src" // TEMP: Unused
+// import {useUserRecordsStore} from "@/stores/userRecords" // TEMP: Removed
+// import {usePrivateMessagesStore} from "@/stores/privateMessages" // TEMP: Unused
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {MessageType} from "@/pages/chats/message/Message"
-import {useMemo} from "react"
+// import {useMemo} from "react" // TEMP: Unused
 import {useUserStore} from "@/stores/user"
 
 interface UnseenMessagesBadgeProps {
@@ -12,25 +12,12 @@ interface UnseenMessagesBadgeProps {
 }
 
 const UnseenMessagesBadge = ({messages, lastSeen}: UnseenMessagesBadgeProps) => {
-  const {lastSeen: globalLastSeen} = useUserRecordsStore()
-  const {events} = usePrivateMessagesStore()
+  // TEMP: Dummy global last seen data and events
+  // const globalLastSeen = new Map<string, number>()
+  // const {events} = usePrivateMessagesStore()
 
-  // Global usage - check all sessions (for navsidebar/footer)
-  const hasUnread = useMemo(() => {
-    const myPubKey = useUserStore.getState().publicKey
-    return Array.from(events.entries()).some(([sessionId, sessionEvents]) => {
-      const [, latest] = sessionEvents.last() ?? []
-      if (!latest) return false
-      if (latest.pubkey === myPubKey) return false
-
-      const latestTime = getMillisecondTimestamp(latest)
-      const lastSeenTime = globalLastSeen.get(sessionId)
-
-      if (lastSeenTime === undefined) return false
-
-      return latestTime > lastSeenTime
-    })
-  }, [events, globalLastSeen])
+  // TEMP: Always return false for unread
+  const hasUnread = false
 
   // If props are provided, use them (for specific session usage)
   if (messages && lastSeen !== undefined) {

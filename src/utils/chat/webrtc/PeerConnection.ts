@@ -3,7 +3,7 @@ import {EventEmitter} from "tseep"
 
 import {getCachedName, NDKEventFromRawEvent} from "@/utils/nostr"
 import {Rumor, Session} from "nostr-double-ratchet/src"
-import {useSessionsStore} from "@/stores/sessions"
+// import {useSessionsStore} from "@/stores/sessions" // TEMP: Removed
 import socialGraph from "@/utils/socialGraph"
 import {KIND_APP_DATA} from "@/utils/constants"
 
@@ -16,9 +16,10 @@ export function getPeerConnection(
     create?: boolean
   } = {}
 ) {
-  const {ask = true, connect = false, create = true} = options
-  const sessionData = useSessionsStore.getState().sessions.get(sessionId)
-  const pubKey = sessionData?.userPubKey || sessionId.split(":")[0]
+  const {ask = true, create = true} = options
+  // const connect = false // TEMP: Unused
+  // TEMP: Dummy session data
+  const pubKey = sessionId.split(":")[0]
   if (
     create &&
     socialGraph().getFollowDistance(pubKey) > 1 &&
@@ -34,17 +35,9 @@ export function getPeerConnection(
       !ask ||
       confirm(`WebRTC connect with ${getCachedName(pubKey)}?`))
   ) {
-    const sessionData = useSessionsStore.getState().sessions.get(sessionId)
-    if (!sessionData) {
-      console.error("Session not found for peer:", sessionId)
-      return
-    }
-    const connection = new PeerConnection(sessionData.session, sessionId)
-    connections.set(sessionId, connection)
-    if (connect) {
-      connection?.connect()
-    }
-    return connection
+    // TEMP: Skip session data check
+    console.log("TEMP: WebRTC connection creation disabled")
+    return
   }
   return connections.get(sessionId)
 }
@@ -284,8 +277,9 @@ export default class PeerConnection extends EventEmitter {
       return
     }
 
-    const sessionData = useSessionsStore.getState().sessions.get(this.peerId)
-    const pubkey = sessionData?.userPubKey || this.peerId.split(":")[0]
+    // TEMP: Disable useSessionsStore call
+    // const sessionData = useSessionsStore.getState().sessions.get(this.peerId)
+    const pubkey = this.peerId.split(":")[0]
     const name = getCachedName(pubkey)
     const confirmString = `Save ${this.incomingFileMetadata.name} from ${name}?`
     if (!confirm(confirmString)) {

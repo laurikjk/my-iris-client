@@ -5,7 +5,7 @@ import {UserRow} from "@/shared/components/user/UserRow"
 import Header from "@/shared/components/header/Header"
 import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {useUserRecordsStore} from "@/stores/userRecords"
+// import {useUserRecordsStore} from "@/stores/userRecords" // TEMP: Removed
 import {MessageType} from "../message/Message"
 import {useNavigate} from "@/navigation"
 import {useState} from "react"
@@ -17,8 +17,11 @@ interface PrivateChatHeaderProps {
 const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const navigate = useNavigate()
-  const {sessions, deleteSession} = useUserRecordsStore()
-  const session = sessions.get(id)
+  // TEMP: Dummy session data
+  const session = null
+  const deleteSession = (id: string) => {
+    console.log('TEMP: deleteSession called but not implemented', id)
+  }
 
   const handleDeleteChat = () => {
     if (id && confirm("Delete this chat?")) {

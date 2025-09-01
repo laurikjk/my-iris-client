@@ -1,7 +1,7 @@
 import {useState, useEffect} from "react"
 import {useUserStore} from "@/stores/user"
-import {useUserRecordsStore} from "@/stores/userRecords"
-import {useSessionsStore} from "@/stores/sessions"
+// import {useUserRecordsStore} from "@/stores/userRecords" // TEMP: Removed
+// import {useSessionsStore} from "@/stores/sessions" // TEMP: Removed
 import {RiDeleteBin6Line, RiRefreshLine} from "@remixicon/react"
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
@@ -15,15 +15,14 @@ interface DeviceInfo {
 }
 
 const ChatSettings = () => {
-  const {
-    invites,
-    sessions,
-    lastSeen,
-    deleteInvite,
-    createDefaultInvites,
-    getOwnDeviceInvites,
-    deviceId: currentDeviceId,
-  } = useUserRecordsStore()
+  // TEMP: Dummy store data
+  const invites = new Map()
+  const sessions = new Map()
+  const lastSeen = new Map()
+  const deleteInvite = (id: string) => console.log('TEMP: deleteInvite', id)
+  const createDefaultInvites = () => console.log('TEMP: createDefaultInvites')
+  const getOwnDeviceInvites = () => new Map()
+  const currentDeviceId = 'temp-device-id'
   const {publicKey} = useUserStore()
   const [devices, setDevices] = useState<DeviceInfo[]>([])
 
@@ -35,10 +34,10 @@ const ChatSettings = () => {
       const deviceSessions = new Map<string, number>()
       const deviceLastSeen = new Map<string, number>()
 
-      Array.from(sessions.entries()).forEach(([sessionId]) => {
-        const sessionData = useSessionsStore.getState().sessions.get(sessionId)
-        const userPubKey = sessionData?.userPubKey || sessionId.split(":")[0]
-        const deviceId = sessionData?.deviceId || sessionId.split(":", 2)[1] || "unknown"
+      Array.from(sessions.entries()).forEach(([sessionId]: [string, any]) => {
+        // TEMP: Dummy session data
+        const userPubKey = sessionId.split(":")[0]
+        const deviceId = sessionId.split(":", 2)[1] || "unknown"
         if (userPubKey === publicKey) {
           // This is a session with one of our own devices
           const actualDeviceId = deviceId
@@ -61,7 +60,7 @@ const ChatSettings = () => {
       // These are the legitimate devices we control
       const ownInvites = getOwnDeviceInvites()
       const deviceList: DeviceInfo[] = Array.from(ownInvites.entries()).map(
-        ([deviceId]) => ({
+        ([deviceId]: [string, any]) => ({
           id: deviceId,
           label: `Device ${deviceId.slice(0, 8)}`,
           isCurrent: deviceId === currentDeviceId,
