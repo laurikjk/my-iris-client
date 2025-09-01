@@ -160,7 +160,6 @@ export default class SessionManager {
           this.internalSubscriptions.forEach((cb) => cb(_event, ourPublicKey))
         })
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error("Own-invite accept failed", err)
       }
     })

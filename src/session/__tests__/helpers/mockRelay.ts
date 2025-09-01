@@ -1,9 +1,9 @@
-import { matchFilter, VerifiedEvent, UnsignedEvent } from 'nostr-tools'
+import {matchFilter, VerifiedEvent, UnsignedEvent} from "nostr-tools"
 
 // In-memory relay that supports replay to new subscribers and push-based
 // delivery to all subscribers without relying on polling timeouts.
 
-const relay: (UnsignedEvent & { sig?: string; id?: string })[] = []
+const relay: (UnsignedEvent & {sig?: string; id?: string})[] = []
 
 type Subscriber = {
   filter: any
@@ -37,7 +37,7 @@ export function publish(event: UnsignedEvent) {
 
 export function makeSubscribe() {
   return (filter: any, onEvent: (e: VerifiedEvent) => void) => {
-    const subscriber: Subscriber = { filter, onEvent, delivered: new Set() }
+    const subscriber: Subscriber = {filter, onEvent, delivered: new Set()}
 
     // Replay history
     for (const e of relay) {
@@ -52,4 +52,4 @@ export function makeSubscribe() {
       if (idx !== -1) subscribers.splice(idx, 1)
     }
   }
-} 
+}
