@@ -14,10 +14,11 @@ import {Helmet} from "react-helmet"
 
 export default function UserSearchPage() {
   const {query} = useParams()
+  const decodedQuery = query ? decodeURIComponent(query) : ""
   const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [displayCount, setDisplayCount] = useState(20)
-  const [searchValue, setSearchValue] = useState(query || "")
+  const [searchValue, setSearchValue] = useState(decodedQuery)
 
   const peopleSearch = useSearch({
     maxResults: 10,
@@ -69,7 +70,7 @@ export default function UserSearchPage() {
   return (
     <div className="flex flex-1 flex-row relative h-full">
       <div className="flex flex-col flex-1 h-full relative">
-        <Header title={query ? `People: ${query}` : "People"} />
+        <Header title={decodedQuery ? `People: ${decodedQuery}` : "People"} />
         <ScrollablePageContainer className="flex flex-col items-center">
           <div className="flex-1 w-full flex flex-col gap-2 md:pt-2">
             <SearchTabSelector activeTab="people" />
@@ -113,7 +114,7 @@ export default function UserSearchPage() {
             </div>
           </div>
           <Helmet>
-            <title>{query ? `People: ${query}` : "People"} / Iris</title>
+            <title>{decodedQuery ? `People: ${decodedQuery}` : "People"} / Iris</title>
           </Helmet>
         </ScrollablePageContainer>
       </div>
