@@ -1,6 +1,6 @@
 import {Name} from "@/shared/components/user/Name"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
-import {useSessionsStore} from "@/stores/sessions"
+// import {useSessionsStore} from "@/stores/sessions" // TEMP: Removed
 import {useState, useEffect} from "react"
 import {MessageType} from "./Message"
 import classNames from "classnames"
@@ -18,8 +18,8 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
   const {events} = usePrivateMessagesStore()
 
   // No need to find the reply tag here since we're passing it directly
-  const sessionData = useSessionsStore((state) => state.sessions.get(sessionId))
-  const theirPublicKey = sessionData?.userPubKey || sessionId.split(":")[0]
+  // TEMP: Dummy implementation
+  const theirPublicKey = sessionId.split(":")[0]
 
   // Function to handle scrolling to the replied message
   const handleScrollToReply = () => {
