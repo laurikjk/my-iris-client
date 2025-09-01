@@ -1,5 +1,5 @@
 import {Invite, Session, serializeSessionState, deserializeSessionState, Rumor, CHAT_MESSAGE_KIND} from "nostr-double-ratchet/src"
-import {generateSecretKey, getPublicKey, UnsignedEvent} from "nostr-tools"
+import {getPublicKey, UnsignedEvent} from "nostr-tools"
 import type {StorageAdapter} from "./StorageAdapter"
 import type {UserRecord} from "./UserRecord"
 
@@ -193,7 +193,8 @@ export default class SessionManager {
       kind: CHAT_MESSAGE_KIND,
       content: text,
       tags: [],
-      created_at: Math.floor(Date.now() / 1000)
+      created_at: Math.floor(Date.now() / 1000),
+      pubkey: getPublicKey(this.ourIdentityKey)
     }
     return this.sendEvent(recipientIdentityKey, event)
   }

@@ -83,6 +83,7 @@ describe("SessionManager", () => {
       content: "hello",
       tags: [],
       created_at: expect.any(Number),
+      pubkey: expect.any(String),
     })
     expect(results).toHaveLength(1)
   })
