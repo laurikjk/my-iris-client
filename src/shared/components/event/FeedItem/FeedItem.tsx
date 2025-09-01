@@ -291,7 +291,7 @@ function FeedItem({
             repliedToEventId &&
             !(showRepliedTo && repliedToEventId) && (
               <div className="flex flex-row select-none mb-2 px-4">
-                <ReplyHeader />
+                <ReplyHeader repliedToEventId={repliedToEventId} />
               </div>
             )}
           <div className={classNames("flex-1 w-full", {"text-lg": standalone})}>
