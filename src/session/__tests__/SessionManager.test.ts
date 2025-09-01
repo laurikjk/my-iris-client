@@ -1,7 +1,7 @@
 import {describe, it, expect, vi} from "vitest"
 import SessionManager from "../SessionManager"
 import {generateSecretKey, getPublicKey} from "nostr-tools"
-import {Session, serializeSessionState, Invite} from "nostr-double-ratchet/src"
+import {serializeSessionState, Invite} from "nostr-double-ratchet/src"
 
 describe("SessionManager", () => {
   const ourIdentityKey = generateSecretKey()
@@ -12,6 +12,7 @@ describe("SessionManager", () => {
       get: vi.fn().mockResolvedValue(null), // no stored invite
       put: vi.fn().mockResolvedValue(undefined),
       list: vi.fn().mockResolvedValue([]), // no stored sessions
+      del: vi.fn().mockResolvedValue(undefined), // Add missing del method
     }
 
     const mockSubscribe = vi.fn().mockReturnValue(() => {}) // unsubscribe function
@@ -80,6 +81,7 @@ describe("SessionManager", () => {
         return Promise.resolve(null)
       }),
       put: vi.fn().mockResolvedValue(undefined),
+      del: vi.fn().mockResolvedValue(undefined), // Add missing del method
       list: vi.fn().mockImplementation((prefix: string) => {
         if (prefix === "session/") {
           return Promise.resolve([
