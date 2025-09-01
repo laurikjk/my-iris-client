@@ -83,7 +83,7 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
         tags: event.tags || [],
         kind: event.kind || 14, // Default to chat message kind
       }
-      
+
       usePrivateMessagesStore.getState().upsert(fromPubKey, messageEvent as MessageType)
     })
 
@@ -98,7 +98,7 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
     }
 
     const myPubKey = useUserStore.getState().publicKey
-    
+
     if (event.content) {
       // Send text message
       await sessionManager.sendText(userPubKey, event.content)
@@ -130,7 +130,7 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
   getChatsList: () => {
     const sessionManager = get().sessionManager
     const chats = get().chats
-    
+
     if (!sessionManager) {
       return []
     }
@@ -166,20 +166,16 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
 
         // Calculate unread count
         const myPubKey = useUserStore.getState().publicKey
-        const unreadCount = Array.from(messages.values()).filter(
-          (msg: MessageType) => {
-            if (msg.pubkey === myPubKey) return false // Don't count our own messages
-            const msgTime = msg.created_at ? msg.created_at * 1000 : 0
-            return msgTime > chatData.lastSeen
-          }
-        ).length
+        const unreadCount = Array.from(messages.values()).filter((msg: MessageType) => {
+          if (msg.pubkey === myPubKey) return false // Don't count our own messages
+          const msgTime = msg.created_at ? msg.created_at * 1000 : 0
+          return msgTime > chatData.lastSeen
+        }).length
 
         return {
           userPubKey,
           lastMessage,
-          lastMessageTime: lastMessage?.created_at
-            ? lastMessage.created_at * 1000
-            : 0,
+          lastMessageTime: lastMessage?.created_at ? lastMessage.created_at * 1000 : 0,
           unreadCount,
         }
       })
