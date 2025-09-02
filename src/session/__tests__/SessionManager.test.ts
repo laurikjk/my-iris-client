@@ -3,6 +3,7 @@ import SessionManager from "../SessionManager"
 import {generateSecretKey, getPublicKey} from "nostr-tools"
 import {serializeSessionState, Invite} from "nostr-double-ratchet/src"
 import {Rumor} from "nostr-double-ratchet"
+import {KIND_CHAT_MESSAGE} from "../../utils/constants"
 
 describe("SessionManager", () => {
   const createMockSessionManager = async (identityKey: Uint8Array, deviceId: string) => {
@@ -53,9 +54,16 @@ describe("SessionManager", () => {
     const onEventBob = vi.fn()
     managerBob.onEvent(onEventBob)
 
-    // TODO: Look at what kind of events are sent in the UI code and mock one here
-    const event: Partial<Rumor> = {}
+    const chatMessage: Partial<Rumor> = {
+      kind: KIND_CHAT_MESSAGE,
+      content: "Hello Bob from Alice!",
+      created_at: Math.floor(Date.now() / 1000),
+    }
 
-    managerAlice.sendEvent(bobPubkey, event)
+    managerAlice.sendEvent(bobPubkey, chatMessage)
+
+    expect(publishAlice).toHaveBeenCalled()
+
+
   })
 })
