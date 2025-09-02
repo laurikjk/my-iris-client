@@ -7,7 +7,7 @@ import {
   deserializeSessionState,
   Session,
   Invite,
-} from "nostr-double-ratchet"
+} from "nostr-double-ratchet/src"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {UserRecord} from "./UserRecord"
 import {getPublicKey} from "nostr-tools"
