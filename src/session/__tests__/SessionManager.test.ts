@@ -264,33 +264,138 @@ describe("SessionManager", () => {
   })
 
   it("should receive a message", async () => {
-    // Same setup as above test
-    const alicePubkey = getPublicKey(generateSecretKey())
-    const bobPubkey = getPublicKey(generateSecretKey())
+    // Generate keys for Alice and Bob
+    const aliceIdentityKey = generateSecretKey()
+    const bobIdentityKey = generateSecretKey()
+    const alicePubkey = getPublicKey(aliceIdentityKey)
+    const bobPubkey = getPublicKey(bobIdentityKey)
 
-    // TODO: mock subs and pubs for alice and bob
-    //
-    // NOTE: Using these mocks we should be able to simulate network requests / websocket messages
-    // to fully test the message sending and receiving flow without real network activity.
+    // Synchronous mock network event bus
+    const eventBus = {
+      subscribers: new Map<string, Array<{filter: any, callback: Function}>>(),
+      
+      subscribe(userKey: string, filter: any, callback: Function) {
+        if (!this.subscribers.has(userKey)) {
+          this.subscribers.set(userKey, [])
+        }
+        this.subscribers.get(userKey)!.push({filter, callback})
+        
+        return () => {
+          const subs = this.subscribers.get(userKey) || []
+          const index = subs.findIndex(sub => sub.callback === callback)
+          if (index >= 0) subs.splice(index, 1)
+        }
+      },
+      
+      async publish(event: any) {
+        // Immediately deliver to all matching subscribers
+        for (const [userKey, subs] of this.subscribers) {
+          for (const {filter, callback} of subs) {
+            if (this.matchesFilter(filter, event)) {
+              callback(event)
+            }
+          }
+        }
+      },
+      
+      matchesFilter(filter: any, event: any) {
+        // Basic Nostr filter matching
+        if (filter.kinds && !filter.kinds.includes(event.kind)) return false
+        if (filter.authors && !filter.authors.includes(event.pubkey)) return false
+        if (filter["#p"] && !event.tags?.some((tag: any) => tag[0] === "p" && filter["#p"].includes(tag[1]))) return false
+        return true
+      }
+    }
 
-    // TODO: mock storage for alice and bob (empty)
+    // Mock storage for Alice
+    const mockStorageAlice = {
+      data: new Map(),
+      get: vi.fn().mockImplementation((key: string) => Promise.resolve(mockStorageAlice.data.get(key))),
+      put: vi.fn().mockImplementation((key: string, value: any) => {
+        mockStorageAlice.data.set(key, value)
+        return Promise.resolve()
+      }),
+      list: vi.fn().mockImplementation((prefix: string) => 
+        Promise.resolve(Array.from(mockStorageAlice.data.keys()).filter(k => k.startsWith(prefix)))
+      ),
+      del: vi.fn().mockResolvedValue(undefined)
+    }
 
-    // const managerAlice = new SessionManager(
-    //   ourIdentityKey,
-    //   deviceId,
-    //   mockSubscribeAlice,
-    //   mockPublishAlice,
-    //   mockStorage
-    // )
+    // Mock storage for Bob
+    const mockStorageBob = {
+      data: new Map(),
+      get: vi.fn().mockImplementation((key: string) => Promise.resolve(mockStorageBob.data.get(key))),
+      put: vi.fn().mockImplementation((key: string, value: any) => {
+        mockStorageBob.data.set(key, value)
+        return Promise.resolve()
+      }),
+      list: vi.fn().mockImplementation((prefix: string) => 
+        Promise.resolve(Array.from(mockStorageBob.data.keys()).filter(k => k.startsWith(prefix)))
+      ),
+      del: vi.fn().mockResolvedValue(undefined)
+    }
 
-    // await managerAlice.init()
+    // Mock subscribe/publish for Alice
+    const mockSubscribeAlice = vi.fn().mockImplementation((filter: any, onEvent: Function) => 
+      eventBus.subscribe('alice', filter, onEvent)
+    )
 
-    // Now set up event listener (this is the correct timing)
-    const receivedEvents: Array<{event: any; fromPubKey: string}> = []
-    const unsubscribe = manager.onEvent((event, fromPubKey) => {
-      receivedEvents.push({event, fromPubKey})
+    const mockPublishAlice = vi.fn().mockImplementation(async (event: any) => {
+      await eventBus.publish(event)
+      return {...event, id: event.id || crypto.randomUUID(), sig: "mock-sig"}
     })
 
-    // TODO: send to bob
+    // Mock subscribe/publish for Bob
+    const mockSubscribeBob = vi.fn().mockImplementation((filter: any, onEvent: Function) => 
+      eventBus.subscribe('bob', filter, onEvent)
+    )
+
+    const mockPublishBob = vi.fn().mockImplementation(async (event: any) => {
+      await eventBus.publish(event)
+      return {...event, id: event.id || crypto.randomUUID(), sig: "mock-sig"}
+    })
+
+    // Create SessionManagers for Alice and Bob
+    const managerAlice = new SessionManager(
+      aliceIdentityKey,
+      "alice-device",
+      mockSubscribeAlice,
+      mockPublishAlice,
+      mockStorageAlice
+    )
+
+    const managerBob = new SessionManager(
+      bobIdentityKey,
+      "bob-device",
+      mockSubscribeBob,
+      mockPublishBob,
+      mockStorageBob
+    )
+
+    // Initialize both managers
+    await Promise.all([managerAlice.init(), managerBob.init()])
+
+    // Set up event listeners
+    const aliceEvents: Array<{event: any; fromPubKey: string}> = []
+    const bobEvents: Array<{event: any; fromPubKey: string}> = []
+
+    managerAlice.onEvent((event, fromPubKey) => {
+      aliceEvents.push({event, fromPubKey})
+    })
+
+    managerBob.onEvent((event, fromPubKey) => {
+      bobEvents.push({event, fromPubKey})
+    })
+
+    // Alice starts listening to Bob (this should establish a session)
+    managerAlice.listenToUser(bobPubkey)
+
+    // Send message from Alice to Bob
+    await managerAlice.sendText(bobPubkey, "Hello Bob!")
+
+    // Verify Bob received the message
+    expect(bobEvents).toHaveLength(1)
+    expect(bobEvents[0].event.content).toBe("Hello Bob!")
+    expect(bobEvents[0].fromPubKey).toBe(alicePubkey)
   })
 })
