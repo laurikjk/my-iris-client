@@ -1,6 +1,12 @@
 import {describe, it, expect, vi} from "vitest"
 import SessionManager from "../SessionManager"
-import {generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent} from "nostr-tools"
+import {
+  Filter,
+  generateSecretKey,
+  getPublicKey,
+  UnsignedEvent,
+  VerifiedEvent,
+} from "nostr-tools"
 import {serializeSessionState, Invite} from "nostr-double-ratchet/src"
 import {Rumor} from "nostr-double-ratchet"
 import {KIND_CHAT_MESSAGE} from "../../utils/constants"
@@ -33,6 +39,8 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 // }
 
 describe("SessionManager", () => {
+  const subscriptionMap = new Map<string, (event: VerifiedEvent) => void>()
+
   const createMockSessionManager = async (deviceId: string) => {
     const secretKey = generateSecretKey()
     const publicKey = getPublicKey(secretKey)
@@ -45,12 +53,13 @@ describe("SessionManager", () => {
       list: vi.spyOn(mockStorage, "list"),
     }
 
-    const subscribe = vi.fn((filter, onEvent) => {
-      // TODO: implement mock subscription
-      console.log("Mock subscribe called with filter:", filter, onEvent)
-      return () => {}
-    })
-    const publish = vi.fn(async (event: UnsignedEvent) => {
+    const subscribe = vi
+      .fn()
+      .mockImplementation((_filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
+        subscriptionMap.set(deviceId, onEvent)
+        return () => {} // empty sub stop function
+      })
+    const publish = vi.fn().mockImplementation(async (event: UnsignedEvent) => {
       const ndkEvent = new NDKEvent()
       ndkEvent.kind = event.kind
       ndkEvent.content = event.content
@@ -58,8 +67,14 @@ describe("SessionManager", () => {
       ndkEvent.created_at = event.created_at
       ndkEvent.pubkey = event.pubkey
 
-      // TODO: publish mock with subscription mock
-      // await ndkEvent.publish()
+      const onEvent = subscriptionMap.get(deviceId)
+      if (onEvent) {
+        onEvent({
+          ...event,
+          id: ndkEvent.id || "mock-id",
+          sig: ndkEvent.sig || "mock-sig",
+        } as VerifiedEvent)
+      }
       return {
         ...event,
         id: ndkEvent.id || "mock-id",
@@ -121,5 +136,6 @@ describe("SessionManager", () => {
 
     expect(publishAlice).toHaveBeenCalled()
 
+    expect(onEventBob).toHaveBeenCalled()
   })
 })
