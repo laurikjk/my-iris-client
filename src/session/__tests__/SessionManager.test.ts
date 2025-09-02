@@ -4,21 +4,26 @@ import {generateSecretKey, getPublicKey} from "nostr-tools"
 import {serializeSessionState, Invite} from "nostr-double-ratchet/src"
 import {Rumor} from "nostr-double-ratchet"
 import {KIND_CHAT_MESSAGE} from "../../utils/constants"
+import {InMemoryStorageAdapter} from "../StorageAdapter"
 
 describe("SessionManager", () => {
-  const createMockSessionManager = async (identityKey: Uint8Array, deviceId: string) => {
-    const mockStorage = {
-      get: vi.fn().mockResolvedValue(null),
-      put: vi.fn().mockResolvedValue(undefined),
-      list: vi.fn().mockResolvedValue([]),
-      del: vi.fn().mockResolvedValue(undefined),
+  const createMockSessionManager = async (deviceId: string) => {
+    const secretKey = generateSecretKey()
+    const publicKey = getPublicKey(secretKey)
+
+    const mockStorage = new InMemoryStorageAdapter()
+    const storageSpy = {
+      get: vi.spyOn(mockStorage, "get"),
+      del: vi.spyOn(mockStorage, "del"),
+      put: vi.spyOn(mockStorage, "put"),
+      list: vi.spyOn(mockStorage, "list"),
     }
 
     const subscribe = vi.fn().mockReturnValue(() => {})
     const publish = vi.fn().mockResolvedValue({})
 
     const manager = new SessionManager(
-      identityKey,
+      secretKey,
       deviceId,
       subscribe,
       publish,
@@ -27,32 +32,39 @@ describe("SessionManager", () => {
 
     await manager.init()
 
-    return {manager, subscribe, publish, mockStorage}
+    const onEvent = vi.fn()
+    manager.onEvent(onEvent)
+
+    return {
+      manager,
+      subscribe,
+      publish,
+      onEvent,
+      mockStorage,
+      storageSpy,
+      secretKey,
+      publicKey,
+    }
   }
 
   it("should receive a message", async () => {
-    const aliceIdentityKey = generateSecretKey()
-    const bobIdentityKey = generateSecretKey()
-    const alicePubkey = getPublicKey(aliceIdentityKey)
-    const bobPubkey = getPublicKey(bobIdentityKey)
-
     const {
       manager: managerAlice,
       subscribe: subAlice,
       publish: publishAlice,
-    } = await createMockSessionManager(aliceIdentityKey, "alice-device-1")
-
-    const onEventAlice = vi.fn()
-    managerAlice.onEvent(onEventAlice)
+      onEvent: onEventAlice,
+      publicKey: alicePubkey,
+      secretKey: aliceSeckey,
+    } = await createMockSessionManager("alice-device-1")
 
     const {
       manager: managerBob,
       subscribe: subBob,
       publish: publishBob,
-    } = await createMockSessionManager(bobIdentityKey, "bob-device-1")
-
-    const onEventBob = vi.fn()
-    managerBob.onEvent(onEventBob)
+      onEvent: onEventBob,
+      publicKey: bobPubkey,
+      secretKey: bobSeckey,
+    } = await createMockSessionManager("bob-device-1")
 
     const chatMessage: Partial<Rumor> = {
       kind: KIND_CHAT_MESSAGE,
@@ -64,6 +76,6 @@ describe("SessionManager", () => {
 
     expect(publishAlice).toHaveBeenCalled()
 
-
+    expect(onEventBob).toHaveBeenCalled()
   })
 })
