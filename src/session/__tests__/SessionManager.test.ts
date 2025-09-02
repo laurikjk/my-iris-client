@@ -2,22 +2,10 @@ import {describe, it, expect, vi} from "vitest"
 import SessionManager from "../SessionManager"
 import {generateSecretKey, getPublicKey} from "nostr-tools"
 import {serializeSessionState, Invite} from "nostr-double-ratchet/src"
+import {Rumor} from "nostr-double-ratchet"
 
 describe("SessionManager", () => {
-  const ourIdentityKey = generateSecretKey()
-  const deviceId = "test-device"
-
-  it("should receive a message", async () => {
-    const aliceIdentityKey = generateSecretKey()
-    const bobIdentityKey = generateSecretKey()
-    const alicePubkey = getPublicKey(aliceIdentityKey)
-    const bobPubkey = getPublicKey(bobIdentityKey)
-
-    const testMessage = {
-      kind: 14,
-      content: "Hello Bob!",
-    }
-
+  const createMockSessionManager = async (identityKey: Uint8Array, deviceId: string) => {
     const mockStorage = {
       get: vi.fn().mockResolvedValue(null),
       put: vi.fn().mockResolvedValue(undefined),
@@ -25,28 +13,49 @@ describe("SessionManager", () => {
       del: vi.fn().mockResolvedValue(undefined),
     }
 
-    const subBob = vi.fn().mockReturnValue(() => {})
-    const publishBob = vi.fn().mockResolvedValue({})
-    const onEventBob = vi.fn()
+    const subscribe = vi.fn().mockReturnValue(() => {})
+    const publish = vi.fn().mockResolvedValue({})
 
-    const managerBob = new SessionManager(
-      bobIdentityKey,
-      "bob-device",
-      subBob,
-      publishBob,
+    const manager = new SessionManager(
+      identityKey,
+      deviceId,
+      subscribe,
+      publish,
       mockStorage
     )
 
-    await managerBob.init()
+    await manager.init()
 
-    console.log("subBob calls:", subBob.mock.calls)
-    console.log("publishBob calls:", publishBob.mock.calls)
-    console.log("onEventBob calls:", onEventBob.mock.calls)
+    return {manager, subscribe, publish, mockStorage}
+  }
 
+  it("should receive a message", async () => {
+    const aliceIdentityKey = generateSecretKey()
+    const bobIdentityKey = generateSecretKey()
+    const alicePubkey = getPublicKey(aliceIdentityKey)
+    const bobPubkey = getPublicKey(bobIdentityKey)
+
+    const {
+      manager: managerAlice,
+      subscribe: subAlice,
+      publish: publishAlice,
+    } = await createMockSessionManager(aliceIdentityKey, "alice-device-1")
+
+    const onEventAlice = vi.fn()
+    managerAlice.onEvent(onEventAlice)
+
+    const {
+      manager: managerBob,
+      subscribe: subBob,
+      publish: publishBob,
+    } = await createMockSessionManager(bobIdentityKey, "bob-device-1")
+
+    const onEventBob = vi.fn()
     managerBob.onEvent(onEventBob)
 
-    console.log("subBob calls:", subBob.mock.calls)
-    console.log("publishBob calls:", publishBob.mock.calls)
-    console.log("onEventBob calls:", onEventBob.mock.calls)
+    // TODO: Look at what kind of events are sent in the UI code and mock one here
+    const event: Partial<Rumor> = {}
+
+    managerAlice.sendEvent(bobPubkey, event)
   })
 })
