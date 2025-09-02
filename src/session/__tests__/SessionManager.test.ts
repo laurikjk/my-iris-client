@@ -55,8 +55,11 @@ describe("SessionManager", () => {
 
     const subscribe = vi
       .fn()
-      .mockImplementation((_filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
-        subscriptionMap.set(deviceId, onEvent)
+      .mockImplementation((filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
+        filter.authors?.forEach((author) => {
+          console.log("user", publicKey, "subscribing to author:", author)
+          subscriptionMap.set(author, onEvent)
+        })
         return () => {} // empty sub stop function
       })
     const publish = vi.fn().mockImplementation(async (event: UnsignedEvent) => {
@@ -67,7 +70,15 @@ describe("SessionManager", () => {
       ndkEvent.created_at = event.created_at
       ndkEvent.pubkey = event.pubkey
 
-      const onEvent = subscriptionMap.get(deviceId)
+      const onEvent = subscriptionMap.get(event.pubkey)
+
+      console.log(
+        "Publishing event to deviceId:",
+        deviceId,
+        "onEvent exists:",
+        !!onEvent,
+        onEvent
+      )
       if (onEvent) {
         onEvent({
           ...event,
