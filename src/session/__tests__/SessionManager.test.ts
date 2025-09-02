@@ -199,7 +199,7 @@ describe("SessionManager", () => {
     unsubscribe()
   })
 
-  it("should properly set up event subscriptions when onEvent is called AFTER init (correct timing)", async () => {
+  it("should properly set up event subscriptions when onEvent is called AFTER init", async () => {
     // Same setup as above test
     const alicePubkey = getPublicKey(generateSecretKey())
 
@@ -242,7 +242,6 @@ describe("SessionManager", () => {
       mockStorage
     )
 
-    // CORRECT: Set up event listener AFTER init() completes
     await manager.init()
 
     // Now set up event listener (this is the correct timing)
@@ -262,5 +261,36 @@ describe("SessionManager", () => {
     expect(sessionInternalSubs?.size).toBeGreaterThan(0)
 
     unsubscribe()
+  })
+
+  it("should receive a message", async () => {
+    // Same setup as above test
+    const alicePubkey = getPublicKey(generateSecretKey())
+    const bobPubkey = getPublicKey(generateSecretKey())
+
+    // TODO: mock subs and pubs for alice and bob
+    //
+    // NOTE: Using these mocks we should be able to simulate network requests / websocket messages
+    // to fully test the message sending and receiving flow without real network activity.
+
+    // TODO: mock storage for alice and bob (empty)
+
+    // const managerAlice = new SessionManager(
+    //   ourIdentityKey,
+    //   deviceId,
+    //   mockSubscribeAlice,
+    //   mockPublishAlice,
+    //   mockStorage
+    // )
+
+    // await managerAlice.init()
+
+    // Now set up event listener (this is the correct timing)
+    const receivedEvents: Array<{event: any; fromPubKey: string}> = []
+    const unsubscribe = manager.onEvent((event, fromPubKey) => {
+      receivedEvents.push({event, fromPubKey})
+    })
+
+    // TODO: send to bob
   })
 })
