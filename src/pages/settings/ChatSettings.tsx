@@ -14,15 +14,16 @@ interface DeviceInfo {
   lastSeen?: number
 }
 
+// TEMP: Dummy store data - moved outside component to prevent recreation on every render
+const invites = new Map()
+const sessions = new Map()
+const lastSeen = new Map()
+const deleteInvite = (id: string) => console.log("TEMP: deleteInvite", id)
+const createDefaultInvites = () => console.log("TEMP: createDefaultInvites")
+const getOwnDeviceInvites = () => new Map()
+const currentDeviceId = "temp-device-id"
+
 const ChatSettings = () => {
-  // TEMP: Dummy store data
-  const invites = new Map()
-  const sessions = new Map()
-  const lastSeen = new Map()
-  const deleteInvite = (id: string) => console.log("TEMP: deleteInvite", id)
-  const createDefaultInvites = () => console.log("TEMP: createDefaultInvites")
-  const getOwnDeviceInvites = () => new Map()
-  const currentDeviceId = "temp-device-id"
   const {publicKey} = useUserStore()
   const [devices, setDevices] = useState<DeviceInfo[]>([])
 
@@ -82,7 +83,7 @@ const ChatSettings = () => {
     loadDeviceInfo()
 
     // Debug functions removed
-  }, [invites, sessions, lastSeen, publicKey, currentDeviceId])
+  }, [publicKey]) // Only publicKey changes, other deps are now static
 
   const handleNullifyDevice = async (deviceId: string) => {
     if (
