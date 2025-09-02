@@ -41,10 +41,6 @@ export default class SessionManager {
     this.ourIdentityKey = ourIdentityKey
     this.deviceId = deviceId
     this.storage = storage || new InMemoryStorageAdapter()
-
-    // Kick off initialisation in background for backwards compatibility
-    // Users that need to wait can call await manager.init()
-    this.init()
   }
 
   private _initialised = false
@@ -164,7 +160,6 @@ export default class SessionManager {
     })
 
     this._initialised = true
-    await this.nostrPublish(this.invite.getEvent()).catch(() => {})
   }
 
   private async loadSessions() {
