@@ -8,8 +8,6 @@ describe("SessionManager", () => {
   const deviceId = "test-device"
 
   it("should receive a message", async () => {
-    // Test the actual SessionManager message sending without network dependencies
-    // This test verifies that when sessions are established, messages flow correctly
     const aliceIdentityKey = generateSecretKey()
     const bobIdentityKey = generateSecretKey()
     const alicePubkey = getPublicKey(aliceIdentityKey)
@@ -28,25 +26,27 @@ describe("SessionManager", () => {
     }
 
     const subBob = vi.fn().mockReturnValue(() => {})
-    const onEventBob = vi.fn().mockResolvedValue({})
+    const publishBob = vi.fn().mockResolvedValue({})
+    const onEventBob = vi.fn()
 
     const managerBob = new SessionManager(
       bobIdentityKey,
       "bob-device",
       subBob,
-      onEventBob,
+      publishBob,
       mockStorage
     )
 
     await managerBob.init()
 
     console.log("subBob calls:", subBob.mock.calls)
+    console.log("publishBob calls:", publishBob.mock.calls)
     console.log("onEventBob calls:", onEventBob.mock.calls)
 
-    managerBob.onEvent((event, fromPubKey) => {
-      console.log("Bob received event:", event, "from:", fromPubKey)
-    })
+    managerBob.onEvent(onEventBob)
 
-    
+    console.log("subBob calls:", subBob.mock.calls)
+    console.log("publishBob calls:", publishBob.mock.calls)
+    console.log("onEventBob calls:", onEventBob.mock.calls)
   })
 })
