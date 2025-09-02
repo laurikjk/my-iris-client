@@ -71,6 +71,8 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
       new LocalStorageAdapter("iris_session_") // Persistent storage for sessions
     )
 
+    await sessionManager.init()
+
     // Set up event listener for incoming messages
     sessionManager.onEvent((event: Rumor, fromPubKey: string) => {
       // Convert to MessageType format and add to private messages store
@@ -87,7 +89,6 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
       usePrivateMessagesStore.getState().upsert(fromPubKey, messageEvent as MessageType)
     })
 
-    await sessionManager.init()
     set({sessionManager})
   },
 
@@ -116,7 +117,6 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
     // Store the sent message locally first (for immediate UI feedback)
     usePrivateMessagesStore.getState().upsert(userPubKey, messageEvent)
 
-    // Then send via SessionManager
     if (event.content) {
       // Send text message
       await sessionManager.sendText(userPubKey, event.content)
