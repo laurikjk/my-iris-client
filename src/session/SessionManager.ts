@@ -7,7 +7,7 @@ import {
   deserializeSessionState,
   Session,
   Invite,
-} from "nostr-double-ratchet/src"
+} from "nostr-double-ratchet"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {UserRecord} from "./UserRecord"
 import {getPublicKey} from "nostr-tools"
@@ -26,7 +26,7 @@ export default class SessionManager {
   private storage: StorageAdapter
   private messageQueue: Map<
     string,
-    Array<{event: Partial<Rumor>; resolve: (results: any[]) => void}>
+    Array<{event: Partial<Rumor>; resolve: (results: unknown[]) => void}>
   > = new Map()
 
   constructor(
@@ -235,12 +235,12 @@ export default class SessionManager {
     this.internalSubscriptions.forEach((cb) => cb(event as Rumor, recipientIdentityKey))
 
     const results = []
-    const publishPromises: Promise<any>[] = []
+    const publishPromises: Promise<unknown>[] = []
 
     // Send to recipient's devices
     const userRecord = this.userRecords.get(recipientIdentityKey)
     if (!userRecord) {
-      return new Promise<any[]>((resolve) => {
+      return new Promise<unknown[]>((resolve) => {
         if (!this.messageQueue.has(recipientIdentityKey)) {
           this.messageQueue.set(recipientIdentityKey, [])
         }
@@ -255,7 +255,7 @@ export default class SessionManager {
     )
 
     if (sendableSessions.length === 0) {
-      return new Promise<any[]>((resolve) => {
+      return new Promise<unknown[]>((resolve) => {
         if (!this.messageQueue.has(recipientIdentityKey)) {
           this.messageQueue.set(recipientIdentityKey, [])
         }
@@ -354,7 +354,9 @@ export default class SessionManager {
 
           // Return the event to be published
           return event
-        } catch {}
+        } catch {
+          // ignore errors during invite accept
+        }
       }
     )
 

@@ -36,7 +36,7 @@ const MessageActionButtons = ({
 }: MessageActionButtonsProps) => {
   // TEMP: Dummy sendMessage function
   const sendMessage = async (sessionId: string, event: any) => {
-    console.log('TEMP: sendMessage called but not implemented', sessionId, event)
+    console.log("TEMP: sendMessage called but not implemented", sessionId, event)
   }
   const [showReactionsPicker, setShowReactionsPicker] = useState(false)
   const [pickerPosition, setPickerPosition] = useState<{clientY?: number}>({})

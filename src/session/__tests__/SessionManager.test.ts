@@ -123,7 +123,7 @@ describe("SessionManager", () => {
   it("should properly set up event subscriptions for restored sessions", async () => {
     // Create a real session and serialize it
     const alicePubkey = getPublicKey(generateSecretKey())
-    
+
     const mockSubscribe = vi.fn().mockReturnValue(() => {})
     const mockPublish = vi.fn().mockResolvedValue({})
 
@@ -165,12 +165,12 @@ describe("SessionManager", () => {
     )
 
     // Track events received
-    const receivedEvents: Array<{event: any, fromPubKey: string}> = []
-    
+    const receivedEvents: Array<{event: any; fromPubKey: string}> = []
+
     // CRITICAL: Set up event listener AFTER init() to match the current broken behavior
     // This test should initially fail, then pass after we fix the timing
     await manager.init()
-    
+
     // Set up event listener (this simulates the current problematic timing)
     const unsubscribe = manager.onEvent((event, fromPubKey) => {
       receivedEvents.push({event, fromPubKey})
@@ -179,19 +179,19 @@ describe("SessionManager", () => {
     // Verify session was restored
     const userRecords = (manager as any).userRecords
     expect(userRecords.has(alicePubkey)).toBe(true)
-    
+
     const aliceRecord = userRecords.get(alicePubkey)
     const restoredSessions = aliceRecord.getActiveSessions()
     expect(restoredSessions).toHaveLength(1)
-    
+
     // The real test: restored sessions should have event handlers set up
     // We can test this by checking if the session has proper event subscriptions
     const restoredSession = restoredSessions[0]
-    
+
     // This is the critical test - if event handlers are properly set up,
     // the session should have an internal subscription
     const sessionInternalSubs = (restoredSession as any).internalSubscriptions
-    
+
     // This should be > 0 if event handlers were properly set up during restoration
     // Currently this will likely be 0, indicating the bug
     expect(sessionInternalSubs?.size).toBeGreaterThan(0)
@@ -202,7 +202,7 @@ describe("SessionManager", () => {
   it("should properly set up event subscriptions when onEvent is called AFTER init (correct timing)", async () => {
     // Same setup as above test
     const alicePubkey = getPublicKey(generateSecretKey())
-    
+
     const mockSubscribe = vi.fn().mockReturnValue(() => {})
     const mockPublish = vi.fn().mockResolvedValue({})
 
@@ -244,9 +244,9 @@ describe("SessionManager", () => {
 
     // CORRECT: Set up event listener AFTER init() completes
     await manager.init()
-    
+
     // Now set up event listener (this is the correct timing)
-    const receivedEvents: Array<{event: any, fromPubKey: string}> = []
+    const receivedEvents: Array<{event: any; fromPubKey: string}> = []
     const unsubscribe = manager.onEvent((event, fromPubKey) => {
       receivedEvents.push({event, fromPubKey})
     })
@@ -256,7 +256,7 @@ describe("SessionManager", () => {
     const aliceRecord = userRecords.get(alicePubkey)
     const restoredSessions = aliceRecord.getActiveSessions()
     const restoredSession = restoredSessions[0]
-    
+
     // With correct timing, event handlers should be properly set up
     const sessionInternalSubs = (restoredSession as any).internalSubscriptions
     expect(sessionInternalSubs?.size).toBeGreaterThan(0)
