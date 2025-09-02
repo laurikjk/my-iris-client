@@ -5,7 +5,6 @@ import {
   Unsubscribe,
   serializeSessionState,
   deserializeSessionState,
-  Session,
   Invite,
 } from "nostr-double-ratchet/src"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
