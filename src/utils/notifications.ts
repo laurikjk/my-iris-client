@@ -154,9 +154,9 @@ export const subscribeToDMNotifications = debounce(async () => {
   // const sessions = new Map()
 
   const inviteRecipients: string[] = []
-    // Array.from(invites.values())
-    // .map((i) => i.inviterEphemeralPublicKey)
-    // .filter((a) => typeof a === "string") as string[]
+  // Array.from(invites.values())
+  // .map((i) => i.inviterEphemeralPublicKey)
+  // .filter((a) => typeof a === "string") as string[]
 
   // TEMP: Empty session authors
   const sessionAuthors: string[] = []

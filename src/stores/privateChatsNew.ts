@@ -8,9 +8,10 @@ import {hexToBytes} from "@noble/hashes/utils"
 import {useUserStore} from "./user"
 import SessionManager from "@/session/SessionManager"
 import {LocalStorageAdapter} from "@/session/StorageAdapter"
+import {UserRecord} from "@/session/UserRecord"
 import {ndk} from "@/utils/ndk"
-import {NDKEventFromRawEvent} from "@/utils/nostr"
-import {Rumor} from "nostr-double-ratchet/src"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {Rumor} from "nostr-double-ratchet"
 
 interface PrivateChatsStoreState {
   chats: Map<string, {lastSeen: number}> // userPubKey -> chat metadata
@@ -55,11 +56,23 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
       return () => sub.stop()
     }
 
-    const nostrPublish = async (event: any) => {
-      const ndkEvent = NDKEventFromRawEvent(event)
+    const nostrPublish = async (event: UnsignedEvent) => {
+      const ndkEvent = new NDKEvent()
+      ndkEvent.ndk = ndk()
+      ndkEvent.kind = event.kind
+      ndkEvent.content = event.content
+      ndkEvent.tags = event.tags
+      ndkEvent.created_at = event.created_at
+      ndkEvent.pubkey = event.pubkey
+
       await ndkEvent.publish()
+
       // Return the event as VerifiedEvent format for SessionManager
-      return event as VerifiedEvent
+      return {
+        ...event,
+        id: ndkEvent.id,
+        sig: ndkEvent.sig || "",
+      } as VerifiedEvent
     }
 
     // Initialize SessionManager
@@ -76,15 +89,14 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
     // Set up event listener for incoming messages
     sessionManager.onEvent((event: Rumor, fromPubKey: string) => {
       // Convert to MessageType format and add to private messages store
-      const messageEvent = {
+      const messageEvent: MessageType = {
         ...event,
         pubkey: fromPubKey,
         created_at: event.created_at || Math.floor(Date.now() / 1000),
         id: event.id || crypto.randomUUID(),
-        sig: "",
         tags: event.tags || [],
         kind: event.kind || 14, // Default to chat message kind
-      }
+      } as MessageType
 
       usePrivateMessagesStore.getState().upsert(fromPubKey, messageEvent as MessageType)
     })
@@ -108,11 +120,10 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
       ...event,
       pubkey: myPubKey, // Set the sender's pubkey
       created_at: event.created_at || Math.floor(Date.now() / 1000),
-      id: event.id || crypto.randomUUID(),
-      sig: "",
+      id: crypto.randomUUID(),
       tags: event.tags || [],
       kind: event.kind || 14, // Default to chat message kind
-    }
+    } as MessageType
 
     // Store the sent message locally first (for immediate UI feedback)
     usePrivateMessagesStore.getState().upsert(userPubKey, messageEvent)
@@ -154,10 +165,9 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
     }
 
     // Get all users we have sessions with
-    const userRecords = (sessionManager as any).userRecords as Map<
-      string,
-      {getActiveSessions(): unknown[]}
-    >
+    // We need to access private userRecords property for implementation
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userRecords = (sessionManager as any).userRecords as Map<string, UserRecord>
     const userPubKeys = new Set<string>()
 
     for (const [userPubKey, userRecord] of userRecords.entries()) {

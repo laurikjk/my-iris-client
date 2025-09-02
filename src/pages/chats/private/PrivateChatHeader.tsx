@@ -20,7 +20,7 @@ const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
   // TEMP: Dummy session data
   const session = null
   const deleteSession = (id: string) => {
-    console.log('TEMP: deleteSession called but not implemented', id)
+    console.log("TEMP: deleteSession called but not implemented", id)
   }
 
   const handleDeleteChat = () => {

@@ -19,10 +19,10 @@ const ChatSettings = () => {
   const invites = new Map()
   const sessions = new Map()
   const lastSeen = new Map()
-  const deleteInvite = (id: string) => console.log('TEMP: deleteInvite', id)
-  const createDefaultInvites = () => console.log('TEMP: createDefaultInvites')
+  const deleteInvite = (id: string) => console.log("TEMP: deleteInvite", id)
+  const createDefaultInvites = () => console.log("TEMP: createDefaultInvites")
   const getOwnDeviceInvites = () => new Map()
-  const currentDeviceId = 'temp-device-id'
+  const currentDeviceId = "temp-device-id"
   const {publicKey} = useUserStore()
   const [devices, setDevices] = useState<DeviceInfo[]>([])
 

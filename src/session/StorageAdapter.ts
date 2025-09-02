@@ -84,7 +84,7 @@ export class LocalStorageAdapter implements StorageAdapter {
   async list(prefix = ""): Promise<string[]> {
     const keys: string[] = []
     const searchPrefix = this.getFullKey(prefix)
-    
+
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
@@ -94,9 +94,9 @@ export class LocalStorageAdapter implements StorageAdapter {
         }
       }
     } catch (e) {
-      console.warn('Failed to list keys from localStorage:', e)
+      console.warn("Failed to list keys from localStorage:", e)
     }
-    
+
     return keys
   }
 }
