@@ -66,38 +66,8 @@ describe("SessionManager", () => {
           const historicalEvents = eventStore.get(author) || []
           console.log(`Found ${historicalEvents.length} historical events for ${author}`)
           historicalEvents.forEach((event) => {
-            // Check all filter conditions
-            let matches = true
-            
             // Filter by kinds if specified
-            if (filter.kinds && !filter.kinds.includes(event.kind)) {
-              matches = false
-            }
-            
-            // Filter by tag conditions (like '#l')
-            if (matches) {
-              for (const [key, values] of Object.entries(filter)) {
-                if (key.startsWith('#')) {
-                  const tagName = key.substring(1) // Remove '#' prefix
-                  const eventTagValues = event.tags
-                    ?.filter(tag => tag[0] === tagName)
-                    .map(tag => tag[1]) || []
-                  
-                  // Check if any of the required values match
-                  const hasMatch = (values as string[]).some(requiredValue => 
-                    eventTagValues.includes(requiredValue)
-                  )
-                  
-                  if (!hasMatch) {
-                    console.log(`Event doesn't match tag filter ${key}:`, values, "event tags:", eventTagValues)
-                    matches = false
-                    break
-                  }
-                }
-              }
-            }
-
-            if (matches) {
+            if (!filter.kinds || filter.kinds.includes(event.kind)) {
               console.log(
                 "Replaying historical event - kind:",
                 event.kind,
@@ -106,17 +76,8 @@ describe("SessionManager", () => {
                 "to user:",
                 publicKey
               )
-              console.log("Filter:", filter)
               // Deliver event synchronously
               onEvent(event)
-            } else {
-              console.log(
-                "Skipping event - kind:",
-                event.kind,
-                "from",
-                author,
-                "due to filter mismatch"
-              )
             }
           })
         })
