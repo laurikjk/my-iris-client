@@ -19,7 +19,7 @@ const Chat = ({id}: {id: string}) => {
 
   // Check if we have any sessions for this user via sessionManager
   const hasAnySessions = sessionManager
-    ? (sessionManager as any).userRecords?.get(id)?.getActiveSessions()?.length > 0
+    ? (sessionManager as unknown).userRecords?.get(id)?.getActiveSessions()?.length > 0
     : false
 
   // Get messages reactively from events store - this will update when new messages are added

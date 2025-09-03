@@ -7,7 +7,6 @@ import {
   UnsignedEvent,
   VerifiedEvent,
 } from "nostr-tools"
-import {serializeSessionState, Invite} from "nostr-double-ratchet/src"
 import {Rumor} from "nostr-double-ratchet"
 import {KIND_CHAT_MESSAGE} from "../../utils/constants"
 import {InMemoryStorageAdapter} from "../StorageAdapter"
@@ -102,7 +101,7 @@ describe("SessionManager", () => {
           userId: publicKey,
         })
 
-        eventStore.forEach((events, pubkey) => {
+        eventStore.forEach((events) => {
           events.forEach((event) => {
             if (eventMatchesFilter(event, filter)) {
               onEvent(event)
@@ -180,19 +179,27 @@ describe("SessionManager", () => {
   it("should receive a message", async () => {
     const {
       manager: managerAlice,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       subscribe: subAlice,
       publish: publishAlice,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       onEvent: onEventAlice,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       publicKey: alicePubkey,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       secretKey: aliceSeckey,
     } = await createMockSessionManager("alice-device-1")
 
     const {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       manager: managerBob,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       subscribe: subBob,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       publish: publishBob,
       onEvent: onEventBob,
       publicKey: bobPubkey,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       secretKey: bobSeckey,
     } = await createMockSessionManager("bob-device-1")
 

@@ -15,6 +15,7 @@ interface DeviceInfo {
 }
 
 // TEMP: Dummy store data - moved outside component to prevent recreation on every render
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const invites = new Map()
 const sessions = new Map()
 const lastSeen = new Map()
@@ -35,7 +36,7 @@ const ChatSettings = () => {
       const deviceSessions = new Map<string, number>()
       const deviceLastSeen = new Map<string, number>()
 
-      Array.from(sessions.entries()).forEach(([sessionId]: [string, any]) => {
+      Array.from(sessions.entries()).forEach(([sessionId]: [string, unknown]) => {
         // TEMP: Dummy session data
         const userPubKey = sessionId.split(":")[0]
         const deviceId = sessionId.split(":", 2)[1] || "unknown"
@@ -61,7 +62,7 @@ const ChatSettings = () => {
       // These are the legitimate devices we control
       const ownInvites = getOwnDeviceInvites()
       const deviceList: DeviceInfo[] = Array.from(ownInvites.entries()).map(
-        ([deviceId]: [string, any]) => ({
+        ([deviceId]: [string, unknown]) => ({
           id: deviceId,
           label: `Device ${deviceId.slice(0, 8)}`,
           isCurrent: deviceId === currentDeviceId,

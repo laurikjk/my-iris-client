@@ -65,7 +65,7 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
       ndkEvent.created_at = event.created_at
       ndkEvent.pubkey = event.pubkey
 
-      const signer = new NDKPrivateKeySigner(secretKey)
+      const signer = new NDKPrivateKeySigner(userStore.privateKey)
       await ndkEvent.sign(signer)
 
       await ndkEvent.publish().catch((e) => {
