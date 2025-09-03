@@ -11,7 +11,7 @@ import {serializeSessionState, Invite} from "nostr-double-ratchet/src"
 import {Rumor} from "nostr-double-ratchet"
 import {KIND_CHAT_MESSAGE} from "../../utils/constants"
 import {InMemoryStorageAdapter} from "../StorageAdapter"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 
 // const nostrSubscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
 //   const sub = ndk().subscribe(filter)
@@ -57,22 +57,57 @@ describe("SessionManager", () => {
     const subscribe = vi
       .fn()
       .mockImplementation((filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
+        console.log("SUBSCRIBE called with filter:", filter, "by user:", publicKey)
         filter.authors?.forEach((author) => {
           console.log("user", publicKey, "subscribing to author:", author)
           subscriptionMap.set(author, onEvent)
 
           // Send historical events that match the filter
           const historicalEvents = eventStore.get(author) || []
+          console.log(`Found ${historicalEvents.length} historical events for ${author}`)
           historicalEvents.forEach((event) => {
+            // Check all filter conditions
+            let matches = true
+            
             // Filter by kinds if specified
-            if (!filter.kinds || filter.kinds.includes(event.kind)) {
+            if (filter.kinds && !filter.kinds.includes(event.kind)) {
+              matches = false
+            }
+            
+            // Filter by tag conditions (like '#l')
+            if (matches) {
+              for (const [key, values] of Object.entries(filter)) {
+                if (key.startsWith('#')) {
+                  const tagName = key.substring(1) // Remove '#' prefix
+                  const eventTagValues = event.tags
+                    ?.filter(tag => tag[0] === tagName)
+                    .map(tag => tag[1]) || []
+                  
+                  // Check if any of the required values match
+                  const hasMatch = (values as string[]).some(requiredValue => 
+                    eventTagValues.includes(requiredValue)
+                  )
+                  
+                  if (!hasMatch) {
+                    console.log(`Event doesn't match tag filter ${key}:`, values, "event tags:", eventTagValues)
+                    matches = false
+                    break
+                  }
+                }
+              }
+            }
+
+            if (matches) {
               console.log(
                 "Replaying historical event - kind:",
                 event.kind,
                 "from",
-                author
+                author,
+                "to user:",
+                publicKey
               )
-              console.log("Filter kinds:", filter.kinds || "no filter")
+              console.log("Filter:", filter)
+              // Deliver event synchronously
               onEvent(event)
             } else {
               console.log(
@@ -80,7 +115,7 @@ describe("SessionManager", () => {
                 event.kind,
                 "from",
                 author,
-                "due to filter"
+                "due to filter mismatch"
               )
             }
           })
@@ -88,17 +123,23 @@ describe("SessionManager", () => {
         return () => {} // empty sub stop function
       })
     const publish = vi.fn().mockImplementation(async (event: UnsignedEvent) => {
+      // Use NDK to sign the event properly
       const ndkEvent = new NDKEvent()
       ndkEvent.kind = event.kind
       ndkEvent.content = event.content
       ndkEvent.tags = event.tags
       ndkEvent.created_at = event.created_at
       ndkEvent.pubkey = event.pubkey
+      
+      // Create a signer and sign the event
+      const signer = new NDKPrivateKeySigner(secretKey)
+      await ndkEvent.sign(signer)
 
       const verifiedEvent = {
         ...event,
-        id: ndkEvent.id || "mock-id",
-        sig: ndkEvent.sig || "mock-sig",
+        id: ndkEvent.id!,
+        sig: ndkEvent.sig!,
+        [Symbol.for("verified")]: true,  // Mark as verified for nostr-tools
       } as VerifiedEvent
 
       // Store the event
@@ -115,8 +156,8 @@ describe("SessionManager", () => {
         event.kind,
         "pubkey:",
         event.pubkey,
-        "deviceId:",
-        deviceId,
+        "id:",
+        ndkEvent.id,
         "subscriber exists:",
         !!onEvent
       )
@@ -176,10 +217,9 @@ describe("SessionManager", () => {
       created_at: Math.floor(Date.now() / 1000),
     }
 
-    managerAlice.sendEvent(bobPubkey, chatMessage)
+    await managerAlice.sendEvent(bobPubkey, chatMessage)
 
     expect(publishAlice).toHaveBeenCalled()
-
     expect(onEventBob).toHaveBeenCalled()
   })
 })
