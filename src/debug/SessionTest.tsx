@@ -10,7 +10,7 @@ type EventLog = {
   timestamp: number
   type: string
   source: string
-  data: any
+  data: unknown
 }
 
 type Message = {
@@ -30,13 +30,15 @@ export default function SessionTest() {
   const [eventLog, setEventLog] = useState<EventLog[]>([])
   const [aliceInfo, setAliceInfo] = useState({pubkey: "", deviceId: "alice-device-1"})
   const [bobInfo, setBobInfo] = useState({pubkey: "", deviceId: "bob-device-1"})
+  const [aliceConnected, setAliceConnected] = useState(false)
+  const [bobConnected, setBobConnected] = useState(false)
 
   const aliceSecretKey = useRef(generateSecretKey())
   const bobSecretKey = useRef(generateSecretKey())
   const aliceNDK = useRef<NDK | null>(null)
   const bobNDK = useRef<NDK | null>(null)
 
-  const addEventLog = (type: string, source: string, data: any) => {
+  const addEventLog = (type: string, source: string, data: unknown) => {
     const logEntry = {
       timestamp: Date.now(),
       type,
@@ -46,43 +48,34 @@ export default function SessionTest() {
     setEventLog((prev) => [...prev.slice(-19), logEntry]) // Keep last 20
   }
 
+  const getSourceColor = (source: string) => {
+    if (source === "alice") return "text-blue-400"
+    if (source === "bob") return "text-green-400"
+    return "text-yellow-400"
+  }
+
   // Create NDK instances for Alice and Bob
-  const createNDK = (secretKey: Uint8Array, name: string) => {
+  const createNDK = (secretKey: Uint8Array) => {
     const signer = new NDKPrivateKeySigner(secretKey)
     const ndk = new NDK({
       explicitRelayUrls: [
         "wss://temp.iris.to/",
-        "wss://nos.lol", 
+        "wss://nos.lol",
         "wss://relay.nostr.band",
         "wss://relay.f7z.io",
-        "wss://relay.damus.io"
+        "wss://relay.damus.io",
       ],
       signer: signer,
     })
 
-    // Add event listeners for debugging
-    ndk.on("connect", () => {
-      addEventLog("NDK_CONNECT", name.toLowerCase(), "Connected to relay")
-    })
-
-    ndk.on("disconnect", () => {
-      addEventLog("NDK_DISCONNECT", name.toLowerCase(), "Disconnected from relay")
-    })
-
-    ndk.on("event", (event: NDKEvent) => {
-      addEventLog("NDK_EVENT", name.toLowerCase(), {
-        kind: event.kind,
-        pubkey: event.pubkey?.slice(0, 16),
-        content: event.content?.slice(0, 100),
-      })
-    })
+    // NDK doesn't have these events - we'll track connection differently
 
     return ndk
   }
 
   // NDK-compatible subscribe function
   const createSubscribe = (ndk: NDK, name: string) => {
-    return (filter: NDKFilter, onEvent: (event: any) => void) => {
+    return (filter: NDKFilter, onEvent: (event: Record<string, unknown>) => void) => {
       addEventLog("SUBSCRIBE", name.toLowerCase(), filter)
 
       const subscription = ndk.subscribe(filter)
@@ -111,7 +104,7 @@ export default function SessionTest() {
 
   // NDK-compatible publish function
   const createPublish = (ndk: NDK, name: string) => {
-    return async (event: any) => {
+    return async (event: Record<string, unknown>) => {
       addEventLog("PUBLISH", name.toLowerCase(), {
         kind: event.kind,
         content: event.content?.slice(0, 100),
@@ -141,8 +134,31 @@ export default function SessionTest() {
       const aliceStorage = new InMemoryStorageAdapter()
       const alicePubkey = getPublicKey(aliceSecretKey.current)
 
-      aliceNDK.current = createNDK(aliceSecretKey.current, "Alice")
-      await aliceNDK.current.connect()
+      aliceNDK.current = createNDK(aliceSecretKey.current)
+      
+      // NDK connect doesn't throw errors, it connects in background
+      const aliceConnectPromise = aliceNDK.current.connect()
+      addEventLog("NDK_CONNECTING", "alice", "Attempting to connect to relays")
+      
+      // Listen for when relays connect
+      aliceNDK.current.pool.on("relay:connect", (relay) => {
+        addEventLog("RELAY_CONNECT", "alice", `Connected to ${relay.url}`)
+        setAliceConnected(true)
+      })
+      
+      aliceNDK.current.pool.on("relay:disconnect", (relay) => {
+        addEventLog("RELAY_DISCONNECT", "alice", `Disconnected from ${relay.url}`)
+      })
+      
+      // Wait a bit for initial connections
+      setTimeout(() => {
+        const connectedRelays = Array.from(aliceNDK.current!.pool.relays.values())
+          .filter(r => r.connected).length
+        addEventLog("CONNECTION_STATUS", "alice", `${connectedRelays} relays connected`)
+        if (connectedRelays > 0) {
+          setAliceConnected(true)
+        }
+      }, 2000)
 
       const aliceManager = new SessionManager(
         aliceSecretKey.current,
@@ -173,8 +189,31 @@ export default function SessionTest() {
       const bobStorage = new InMemoryStorageAdapter()
       const bobPubkey = getPublicKey(bobSecretKey.current)
 
-      bobNDK.current = createNDK(bobSecretKey.current, "Bob")
-      await bobNDK.current.connect()
+      bobNDK.current = createNDK(bobSecretKey.current)
+      
+      // NDK connect doesn't throw errors, it connects in background
+      const bobConnectPromise = bobNDK.current.connect()
+      addEventLog("NDK_CONNECTING", "bob", "Attempting to connect to relays")
+      
+      // Listen for when relays connect
+      bobNDK.current.pool.on("relay:connect", (relay) => {
+        addEventLog("RELAY_CONNECT", "bob", `Connected to ${relay.url}`)
+        setBobConnected(true)
+      })
+      
+      bobNDK.current.pool.on("relay:disconnect", (relay) => {
+        addEventLog("RELAY_DISCONNECT", "bob", `Disconnected from ${relay.url}`)
+      })
+      
+      // Wait a bit for initial connections
+      setTimeout(() => {
+        const connectedRelays = Array.from(bobNDK.current!.pool.relays.values())
+          .filter(r => r.connected).length
+        addEventLog("CONNECTION_STATUS", "bob", `${connectedRelays} relays connected`)
+        if (connectedRelays > 0) {
+          setBobConnected(true)
+        }
+      }, 2000)
 
       const bobManager = new SessionManager(
         bobSecretKey.current,
@@ -207,9 +246,8 @@ export default function SessionTest() {
     return () => {
       aliceManager?.close()
       bobManager?.close()
-      // Close NDK connections
-      aliceNDK.current?.destroy()
-      bobNDK.current?.destroy()
+      // Close NDK connections - NDK doesn't have destroy method
+      // Connections will be cleaned up automatically
     }
   }, [])
 
@@ -284,28 +322,27 @@ export default function SessionTest() {
           Alice NDK:{" "}
           <span
             className={
-              aliceNDK.current
+              aliceConnected
                 ? "text-green-600 font-semibold"
                 : "text-red-600 font-semibold"
             }
           >
-            {aliceNDK.current ? "Connected" : "Disconnected"}
+            {aliceConnected ? "Connected" : "Disconnected"}
           </span>
         </div>
         <div>
           Bob NDK:{" "}
           <span
             className={
-              bobNDK.current
-                ? "text-green-600 font-semibold"
-                : "text-red-600 font-semibold"
+              bobConnected ? "text-green-600 font-semibold" : "text-red-600 font-semibold"
             }
           >
-            {bobNDK.current ? "Connected" : "Disconnected"}
+            {bobConnected ? "Connected" : "Disconnected"}
           </span>
         </div>
         <div>
-          Relays: <span className="font-mono">Public Nostr relays (damus.io, nos.lol, etc.)</span>
+          Relays:{" "}
+          <span className="font-mono">Public Nostr relays (damus.io, nos.lol, etc.)</span>
         </div>
       </div>
 
@@ -414,15 +451,7 @@ export default function SessionTest() {
               <span className="text-gray-500">
                 {new Date(log.timestamp).toLocaleTimeString()}
               </span>{" "}
-              <span
-                className={`font-semibold ${
-                  log.source === "alice"
-                    ? "text-blue-400"
-                    : log.source === "bob"
-                      ? "text-green-400"
-                      : "text-yellow-400"
-                }`}
-              >
+              <span className={`font-semibold ${getSourceColor(log.source)}`}>
                 [{log.source.toUpperCase()}]
               </span>{" "}
               <span className="text-white">{log.type}</span>
