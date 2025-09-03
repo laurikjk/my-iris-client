@@ -74,6 +74,7 @@ describe("SessionManager", () => {
     }
   >()
   const eventStore = new Map<string, VerifiedEvent[]>() // Store events by pubkey
+
   let subscriptionCounter = 0
 
   const createMockSessionManager = async (deviceId: string) => {
@@ -91,7 +92,8 @@ describe("SessionManager", () => {
     const subscribe = vi
       .fn()
       .mockImplementation((filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
-        const subId = `sub-${++subscriptionCounter}`
+        subscriptionCounter = subscriptionCounter + 1
+        const subId = `sub-${subscriptionCounter}`
 
         // Store the subscription with complete filter
         subscriptions.set(subId, {
@@ -138,32 +140,14 @@ describe("SessionManager", () => {
       eventStore.get(event.pubkey)!.push(verifiedEvent)
 
       // Route to ALL matching subscriptions
-      let deliveredCount = 0
       const matchingSubscriptions: string[] = []
 
       subscriptions.forEach((sub, subId) => {
         if (eventMatchesFilter(verifiedEvent, sub.filter)) {
-          console.log(
-            `Delivering event ${event.kind} to subscription ${subId} (${sub.userId})`
-          )
           sub.callback(verifiedEvent)
-          deliveredCount++
           matchingSubscriptions.push(subId)
         }
       })
-
-      console.log(
-        "Publishing event - kind:",
-        event.kind,
-        "pubkey:",
-        event.pubkey,
-        "id:",
-        ndkEvent.id,
-        "delivered to:",
-        deliveredCount,
-        "subscriptions:",
-        matchingSubscriptions
-      )
 
       return verifiedEvent
     })
