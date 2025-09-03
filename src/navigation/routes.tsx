@@ -18,6 +18,7 @@ const RelayPage = lazy(() => import("@/pages/relay"))
 const MapPage = lazy(() => import("@/pages/map"))
 const MarketPage = lazy(() => import("@/pages/market"))
 const UserSearchPage = lazy(() => import("@/pages/user-search"))
+const SessionTestPage = lazy(() => import("@/debug/SessionTest"))
 
 export const routes: RouteDefinition[] = [
   {path: "/", component: HomePage, alwaysKeep: true},
@@ -37,6 +38,7 @@ export const routes: RouteDefinition[] = [
   {path: "/map", component: MapPage},
   {path: "/map/:query", component: MapPage},
   {path: "/about", component: AboutPage},
+  {path: "/session-test", component: SessionTestPage},
   {path: "/:link/*", component: NostrLinkHandler},
   {path: "/:link", component: NostrLinkHandler},
 ]
