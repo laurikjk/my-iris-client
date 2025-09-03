@@ -6,6 +6,7 @@ import {
   serializeSessionState,
   deserializeSessionState,
   Invite,
+  Session,
 } from "nostr-double-ratchet/src"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {UserRecord} from "./UserRecord"
