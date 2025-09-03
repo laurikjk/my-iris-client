@@ -147,7 +147,7 @@ export default function SystemSettings() {
                     : "Refresh Application"}
                 </button>
                 <p className="text-xs text-base-content/60">
-                  Reload the application to apply any pending updates or fix weirdness.
+                  Reload the application to apply any pending updates or fix issues.
                 </p>
               </div>
             </SettingsGroupItem>

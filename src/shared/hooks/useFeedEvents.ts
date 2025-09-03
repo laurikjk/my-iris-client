@@ -125,11 +125,22 @@ export default function useFeedEvents({
     }
 
     // Client-side search validation for relays that don't support search filters
+    // Also validate hashtag matches
     if (filters.search) {
       if (!event.content) return false
-      const searchTerm = filters.search.toLowerCase()
+      const searchTerms = filters.search.toLowerCase().split(/\s+/)
       const eventContent = event.content.toLowerCase()
-      if (!eventContent.includes(searchTerm)) {
+
+      // Check if all search terms are present (including hashtags)
+      const allTermsMatch = searchTerms.every((term) => {
+        if (term.startsWith("#")) {
+          // For hashtags, check both with and without # in content
+          return eventContent.includes(term) || eventContent.includes(term.substring(1))
+        }
+        return eventContent.includes(term)
+      })
+
+      if (!allTermsMatch) {
         return false
       }
     }
@@ -257,11 +268,74 @@ export default function useFeedEvents({
       return
     }
 
-    const subscriptionFilter = untilTimestamp
-      ? {...filters, until: untilTimestamp}
-      : filters
+    // Transform search filter to use #t tags for hashtags
+    let subscriptionFilters: NDKFilter | NDKFilter[]
 
-    const sub = ndk().subscribe(subscriptionFilter, relayUrls ? {relayUrls} : undefined)
+    if (filters.search) {
+      const searchTerms = filters.search.toLowerCase().split(/\s+/)
+      const hashtags: string[] = []
+      const regularWords: string[] = []
+
+      searchTerms.forEach((term) => {
+        if (term.startsWith("#") && term.length > 1) {
+          // Remove # and add to hashtags
+          hashtags.push(term.substring(1))
+        } else if (term.length > 0) {
+          regularWords.push(term)
+        }
+      })
+
+      // Build multiple filters to maximize relay compatibility
+      const baseFilter = {...filters}
+      delete baseFilter.search // Remove search from base filter
+
+      if (untilTimestamp) {
+        baseFilter.until = untilTimestamp
+      }
+
+      // For hashtag-only searches, use only #t filter (no search filter)
+      if (hashtags.length > 0 && regularWords.length === 0) {
+        // Single filter with just hashtags - this ensures ALL relays can handle it
+        subscriptionFilters = {
+          ...baseFilter,
+          "#t": hashtags,
+        }
+      } else {
+        // For searches with regular words or mixed content
+        const filterArray: NDKFilter[] = []
+
+        // If we have hashtags, add them as #t filter
+        if (hashtags.length > 0) {
+          filterArray.push({
+            ...baseFilter,
+            "#t": hashtags,
+          })
+        }
+
+        // If we have regular words
+        if (regularWords.length > 0) {
+          // Add as #t tags (some relays index all words as tags)
+          filterArray.push({
+            ...baseFilter,
+            "#t": regularWords,
+          })
+
+          // Also include search filter for relays that support full-text search
+          filterArray.push({
+            ...baseFilter,
+            search: regularWords.join(" "),
+          })
+        }
+
+        // Use the filter array if we have any filters, otherwise use base filter
+        subscriptionFilters = filterArray.length > 0 ? filterArray : baseFilter
+      }
+    } else {
+      // No search, use original filter
+      subscriptionFilters = untilTimestamp ? {...filters, until: untilTimestamp} : filters
+    }
+
+    const sub = ndk().subscribe(subscriptionFilters, relayUrls ? {relayUrls} : undefined)
 
     // Reset these flags when subscription changes
     hasReceivedEventsRef.current = eventsRef.current.size > 0
