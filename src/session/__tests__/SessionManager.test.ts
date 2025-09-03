@@ -1,4 +1,4 @@
-import {describe, it, expect, vi} from "vitest"
+import {describe, it, expect, vi, beforeEach} from "vitest"
 import SessionManager from "../SessionManager"
 import {
   Filter,
@@ -10,71 +10,14 @@ import {
 import {Rumor} from "nostr-double-ratchet"
 import {KIND_CHAT_MESSAGE} from "../../utils/constants"
 import {InMemoryStorageAdapter} from "../StorageAdapter"
-import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
-
-// Helpers
-function eventMatchesFilter(event: VerifiedEvent, filter: Filter): boolean {
-  // Check kinds
-  if (filter.kinds && !filter.kinds.includes(event.kind)) return false
-
-  // Check authors
-  if (filter.authors && !filter.authors.includes(event.pubkey)) return false
-
-  // Check tag filters (#p, #e, #d, etc.)
-  for (const [key, values] of Object.entries(filter)) {
-    if (key.startsWith("#")) {
-      const tagName = key.substring(1)
-      const eventTagValues =
-        event.tags?.filter((tag) => tag[0] === tagName).map((tag) => tag[1]) || []
-
-      const hasMatch = (values as string[]).some((requiredValue) =>
-        eventTagValues.includes(requiredValue)
-      )
-
-      if (!hasMatch) return false
-    }
-  }
-
-  return true
-}
-
-// const nostrSubscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
-//   const sub = ndk().subscribe(filter)
-//   sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
-//   return () => sub.stop()
-// }
-//
-// const nostrPublish = async (event: UnsignedEvent) => {
-//   const ndkEvent = new NDKEvent()
-//   ndkEvent.ndk = ndk()
-//   ndkEvent.kind = event.kind
-//   ndkEvent.content = event.content
-//   ndkEvent.tags = event.tags
-//   ndkEvent.created_at = event.created_at
-//   ndkEvent.pubkey = event.pubkey
-//
-//   await ndkEvent.publish()
-//
-//   // Return the event as VerifiedEvent format for SessionManager
-//   return {
-//     ...event,
-//     id: ndkEvent.id,
-//     sig: ndkEvent.sig || "",
-//   } as VerifiedEvent
-// }
+import {MockRelay} from "./helpers/mockRelay"
 
 describe("SessionManager", () => {
-  const subscriptions = new Map<
-    string,
-    {
-      callback: (event: VerifiedEvent) => void
-      filter: Filter
-      userId: string
-    }
-  >()
-  const eventStore = new Map<string, VerifiedEvent[]>() // Store events by pubkey
+  let mockRelay: MockRelay
 
-  let subscriptionCounter = 0
+  beforeEach(() => {
+    mockRelay = new MockRelay()
+  })
 
   const createMockSessionManager = async (deviceId: string) => {
     const secretKey = generateSecretKey()
@@ -91,63 +34,11 @@ describe("SessionManager", () => {
     const subscribe = vi
       .fn()
       .mockImplementation((filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
-        subscriptionCounter = subscriptionCounter + 1
-        const subId = `sub-${subscriptionCounter}`
-
-        subscriptions.set(subId, {
-          callback: onEvent,
-          filter: filter,
-          userId: publicKey,
-        })
-
-        eventStore.forEach((events) => {
-          events.forEach((event) => {
-            if (eventMatchesFilter(event, filter)) {
-              onEvent(event)
-            }
-          })
-        })
-
-        return () => {
-          subscriptions.delete(subId)
-        }
+        return mockRelay.subscribe(filter, onEvent)
       })
+
     const publish = vi.fn().mockImplementation(async (event: UnsignedEvent) => {
-      // Use NDK to sign the event properly
-      const ndkEvent = new NDKEvent()
-      ndkEvent.kind = event.kind
-      ndkEvent.content = event.content
-      ndkEvent.tags = event.tags
-      ndkEvent.created_at = event.created_at
-      ndkEvent.pubkey = event.pubkey
-
-      // Create a signer and sign the event
-      const signer = new NDKPrivateKeySigner(secretKey)
-      await ndkEvent.sign(signer)
-
-      const verifiedEvent = {
-        ...event,
-        id: ndkEvent.id!,
-        sig: ndkEvent.sig!,
-      } as VerifiedEvent
-
-      // Store the event
-      if (!eventStore.has(event.pubkey)) {
-        eventStore.set(event.pubkey, [])
-      }
-      eventStore.get(event.pubkey)!.push(verifiedEvent)
-
-      // Route to ALL matching subscriptions
-      const matchingSubscriptions: string[] = []
-
-      subscriptions.forEach((sub, subId) => {
-        if (eventMatchesFilter(verifiedEvent, sub.filter)) {
-          sub.callback(verifiedEvent)
-          matchingSubscriptions.push(subId)
-        }
-      })
-
-      return verifiedEvent
+      return await mockRelay.publish(event, secretKey)
     })
 
     const manager = new SessionManager(
@@ -172,19 +63,16 @@ describe("SessionManager", () => {
       storageSpy,
       secretKey,
       publicKey,
+      relay: mockRelay,
     }
   }
 
   it("should receive a message", async () => {
-    const {
-      manager: managerAlice,
-      publish: publishAlice,
-    } = await createMockSessionManager("alice-device-1")
+    const {manager: managerAlice, publish: publishAlice} =
+      await createMockSessionManager("alice-device-1")
 
-    const {
-      onEvent: onEventBob,
-      publicKey: bobPubkey,
-    } = await createMockSessionManager("bob-device-1")
+    const {onEvent: onEventBob, publicKey: bobPubkey} =
+      await createMockSessionManager("bob-device-1")
 
     const chatMessage: Partial<Rumor> = {
       kind: KIND_CHAT_MESSAGE,
