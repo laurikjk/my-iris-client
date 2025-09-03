@@ -40,6 +40,7 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 describe("SessionManager", () => {
   const subscriptionMap = new Map<string, (event: VerifiedEvent) => void>()
+  const eventStore = new Map<string, VerifiedEvent[]>() // Store events by pubkey
 
   const createMockSessionManager = async (deviceId: string) => {
     const secretKey = generateSecretKey()
@@ -59,6 +60,30 @@ describe("SessionManager", () => {
         filter.authors?.forEach((author) => {
           console.log("user", publicKey, "subscribing to author:", author)
           subscriptionMap.set(author, onEvent)
+
+          // Send historical events that match the filter
+          const historicalEvents = eventStore.get(author) || []
+          historicalEvents.forEach((event) => {
+            // Filter by kinds if specified
+            if (!filter.kinds || filter.kinds.includes(event.kind)) {
+              console.log(
+                "Replaying historical event - kind:",
+                event.kind,
+                "from",
+                author
+              )
+              console.log("Filter kinds:", filter.kinds || "no filter")
+              onEvent(event)
+            } else {
+              console.log(
+                "Skipping event - kind:",
+                event.kind,
+                "from",
+                author,
+                "due to filter"
+              )
+            }
+          })
         })
         return () => {} // empty sub stop function
       })
@@ -70,27 +95,35 @@ describe("SessionManager", () => {
       ndkEvent.created_at = event.created_at
       ndkEvent.pubkey = event.pubkey
 
-      const onEvent = subscriptionMap.get(event.pubkey)
-
-      console.log(
-        "Publishing event to deviceId:",
-        deviceId,
-        "onEvent exists:",
-        !!onEvent,
-        onEvent
-      )
-      if (onEvent) {
-        onEvent({
-          ...event,
-          id: ndkEvent.id || "mock-id",
-          sig: ndkEvent.sig || "mock-sig",
-        } as VerifiedEvent)
-      }
-      return {
+      const verifiedEvent = {
         ...event,
         id: ndkEvent.id || "mock-id",
         sig: ndkEvent.sig || "mock-sig",
       } as VerifiedEvent
+
+      // Store the event
+      if (!eventStore.has(event.pubkey)) {
+        eventStore.set(event.pubkey, [])
+      }
+      eventStore.get(event.pubkey)!.push(verifiedEvent)
+
+      // Send to current subscribers
+      const onEvent = subscriptionMap.get(event.pubkey)
+
+      console.log(
+        "Publishing event - kind:",
+        event.kind,
+        "pubkey:",
+        event.pubkey,
+        "deviceId:",
+        deviceId,
+        "subscriber exists:",
+        !!onEvent
+      )
+      if (onEvent) {
+        onEvent(verifiedEvent)
+      }
+      return verifiedEvent
     })
 
     const manager = new SessionManager(
