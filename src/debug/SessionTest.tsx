@@ -5,6 +5,7 @@ import {InMemoryStorageAdapter} from "../session/StorageAdapter"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
 import {Rumor} from "nostr-double-ratchet"
 import NDK, {NDKEvent, NDKPrivateKeySigner, NDKFilter} from "@nostr-dev-kit/ndk"
+import {NDKEventFromRawEvent} from "@/utils/nostr"
 
 type EventLog = {
   timestamp: number
@@ -107,20 +108,19 @@ export default function SessionTest() {
     return async (event: Record<string, unknown>) => {
       addEventLog("PUBLISH", name.toLowerCase(), {
         kind: event.kind,
-        content: event.content?.slice(0, 100),
-        tags: event.tags?.length,
+        content:
+          typeof event.content === "string" ? event.content.slice(0, 100) : event.content,
+        tags: Array.isArray(event.tags) ? event.tags.length : 0,
       })
 
-      const ndkEvent = new NDKEvent(ndk, event)
-      await ndkEvent.sign()
-
       try {
-        const result = await ndkEvent.publish()
+        const ndkEvent = NDKEventFromRawEvent(event as Record<string, unknown>)
+        await ndkEvent.publish(undefined, undefined, 0)
         addEventLog("PUBLISH_SUCCESS", name.toLowerCase(), {
-          eventId: ndkEvent.id?.slice(0, 16),
-          relaysPublished: result.size,
+          eventId: event.id ? String(event.id).slice(0, 16) : "unknown",
+          published: true,
         })
-        return ndkEvent.rawEvent()
+        return event
       } catch (error) {
         addEventLog("PUBLISH_ERROR", name.toLowerCase(), error)
         throw error
@@ -135,25 +135,26 @@ export default function SessionTest() {
       const alicePubkey = getPublicKey(aliceSecretKey.current)
 
       aliceNDK.current = createNDK(aliceSecretKey.current)
-      
+
       // NDK connect doesn't throw errors, it connects in background
-      const aliceConnectPromise = aliceNDK.current.connect()
+      aliceNDK.current.connect()
       addEventLog("NDK_CONNECTING", "alice", "Attempting to connect to relays")
-      
+
       // Listen for when relays connect
       aliceNDK.current.pool.on("relay:connect", (relay) => {
         addEventLog("RELAY_CONNECT", "alice", `Connected to ${relay.url}`)
         setAliceConnected(true)
       })
-      
+
       aliceNDK.current.pool.on("relay:disconnect", (relay) => {
         addEventLog("RELAY_DISCONNECT", "alice", `Disconnected from ${relay.url}`)
       })
-      
+
       // Wait a bit for initial connections
       setTimeout(() => {
-        const connectedRelays = Array.from(aliceNDK.current!.pool.relays.values())
-          .filter(r => r.connected).length
+        const connectedRelays = Array.from(aliceNDK.current!.pool.relays.values()).filter(
+          (r) => r.connected
+        ).length
         addEventLog("CONNECTION_STATUS", "alice", `${connectedRelays} relays connected`)
         if (connectedRelays > 0) {
           setAliceConnected(true)
@@ -190,25 +191,26 @@ export default function SessionTest() {
       const bobPubkey = getPublicKey(bobSecretKey.current)
 
       bobNDK.current = createNDK(bobSecretKey.current)
-      
+
       // NDK connect doesn't throw errors, it connects in background
-      const bobConnectPromise = bobNDK.current.connect()
+      bobNDK.current.connect()
       addEventLog("NDK_CONNECTING", "bob", "Attempting to connect to relays")
-      
+
       // Listen for when relays connect
       bobNDK.current.pool.on("relay:connect", (relay) => {
         addEventLog("RELAY_CONNECT", "bob", `Connected to ${relay.url}`)
         setBobConnected(true)
       })
-      
+
       bobNDK.current.pool.on("relay:disconnect", (relay) => {
         addEventLog("RELAY_DISCONNECT", "bob", `Disconnected from ${relay.url}`)
       })
-      
+
       // Wait a bit for initial connections
       setTimeout(() => {
-        const connectedRelays = Array.from(bobNDK.current!.pool.relays.values())
-          .filter(r => r.connected).length
+        const connectedRelays = Array.from(bobNDK.current!.pool.relays.values()).filter(
+          (r) => r.connected
+        ).length
         addEventLog("CONNECTION_STATUS", "bob", `${connectedRelays} relays connected`)
         if (connectedRelays > 0) {
           setBobConnected(true)
