@@ -16,10 +16,11 @@ import Icon from "@/shared/components/Icons/Icon"
 
 function SearchPage() {
   const {query} = useParams()
+  const decodedQuery = query ? decodeURIComponent(query) : ""
   const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const navItemClicked = useUIStore((state) => state.navItemClicked)
-  const [searchTerm, setSearchTerm] = useState(query || "")
+  const [searchTerm, setSearchTerm] = useState(decodedQuery)
 
   const {content} = useSettingsStore()
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
@@ -43,12 +44,12 @@ function SearchPage() {
   return (
     <div className="flex flex-1 flex-row relative h-full">
       <div className="flex flex-col flex-1 h-full relative">
-        <Header title={query ? `Search: "${query}"` : "Search"} />
+        <Header title={decodedQuery ? `Search: "${decodedQuery}"` : "Search"} />
         <ScrollablePageContainer className="flex flex-col items-center">
           <div className="flex-1 w-full flex flex-col gap-2 md:pt-2">
             <SearchTabSelector activeTab="posts" />
 
-            {query && (
+            {decodedQuery && (
               <div className="flex items-center gap-2 p-2 mx-2">
                 <input
                   type="checkbox"
@@ -60,17 +61,17 @@ function SearchPage() {
               </div>
             )}
 
-            {query ? (
+            {decodedQuery ? (
               <Feed
-                key={`posts-${query}`}
+                key={`posts-${decodedQuery}`}
                 feedConfig={{
                   name: "Search Results",
-                  id: `search-posts-${query}`,
+                  id: `search-posts-${decodedQuery}`,
                   showRepliedTo: false,
                   showEventsByUnknownUsers: showEventsByUnknownUsers,
                   filter: {
                     kinds: [KIND_TEXT_NOTE],
-                    ...(query.trim() && {search: query}),
+                    ...(decodedQuery.trim() && {search: decodedQuery}),
                   },
                 }}
               />
@@ -102,7 +103,7 @@ function SearchPage() {
             )}
           </div>
           <Helmet>
-            <title>{query ? `Search: ${query}` : `Search`} / Iris</title>
+            <title>{decodedQuery ? `Search: ${decodedQuery}` : `Search`} / Iris</title>
           </Helmet>
         </ScrollablePageContainer>
       </div>
