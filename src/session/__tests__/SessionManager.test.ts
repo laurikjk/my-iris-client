@@ -39,8 +39,39 @@ import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 // }
 
 describe("SessionManager", () => {
-  const subscriptionMap = new Map<string, (event: VerifiedEvent) => void>()
+  const subscriptions = new Map<string, {
+    callback: (event: VerifiedEvent) => void,
+    filter: Filter,
+    userId: string
+  }>()
   const eventStore = new Map<string, VerifiedEvent[]>() // Store events by pubkey
+  let subscriptionCounter = 0
+
+  function eventMatchesFilter(event: VerifiedEvent, filter: Filter): boolean {
+    // Check kinds
+    if (filter.kinds && !filter.kinds.includes(event.kind)) return false
+    
+    // Check authors
+    if (filter.authors && !filter.authors.includes(event.pubkey)) return false
+    
+    // Check tag filters (#p, #e, #d, etc.)
+    for (const [key, values] of Object.entries(filter)) {
+      if (key.startsWith('#')) {
+        const tagName = key.substring(1)
+        const eventTagValues = event.tags
+          ?.filter(tag => tag[0] === tagName)
+          .map(tag => tag[1]) || []
+        
+        const hasMatch = (values as string[]).some(requiredValue => 
+          eventTagValues.includes(requiredValue)
+        )
+        
+        if (!hasMatch) return false
+      }
+    }
+    
+    return true
+  }
 
   const createMockSessionManager = async (deviceId: string) => {
     const secretKey = generateSecretKey()
@@ -57,31 +88,39 @@ describe("SessionManager", () => {
     const subscribe = vi
       .fn()
       .mockImplementation((filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
-        console.log("SUBSCRIBE called with filter:", filter, "by user:", publicKey)
-        filter.authors?.forEach((author) => {
-          console.log("user", publicKey, "subscribing to author:", author)
-          subscriptionMap.set(author, onEvent)
+        const subId = `sub-${++subscriptionCounter}`
+        console.log("SUBSCRIBE called with filter:", filter, "by user:", publicKey, "subId:", subId)
+        
+        // Store the subscription with complete filter
+        subscriptions.set(subId, {
+          callback: onEvent,
+          filter: filter,
+          userId: publicKey
+        })
 
-          // Send historical events that match the filter
-          const historicalEvents = eventStore.get(author) || []
-          console.log(`Found ${historicalEvents.length} historical events for ${author}`)
-          historicalEvents.forEach((event) => {
-            // Filter by kinds if specified
-            if (!filter.kinds || filter.kinds.includes(event.kind)) {
+        // Send historical events that match this filter
+        let replayedCount = 0
+        eventStore.forEach((events, pubkey) => {
+          events.forEach(event => {
+            if (eventMatchesFilter(event, filter)) {
               console.log(
                 "Replaying historical event - kind:",
                 event.kind,
                 "from",
-                author,
-                "to user:",
-                publicKey
+                pubkey,
+                "to subscription:",
+                subId
               )
-              // Deliver event synchronously
               onEvent(event)
+              replayedCount++
             }
           })
         })
-        return () => {} // empty sub stop function
+        console.log(`Replayed ${replayedCount} historical events to subscription ${subId}`)
+        
+        return () => {
+          subscriptions.delete(subId)
+        }
       })
     const publish = vi.fn().mockImplementation(async (event: UnsignedEvent) => {
       // Use NDK to sign the event properly
@@ -108,8 +147,18 @@ describe("SessionManager", () => {
       }
       eventStore.get(event.pubkey)!.push(verifiedEvent)
 
-      // Send to current subscribers
-      const onEvent = subscriptionMap.get(event.pubkey)
+      // Route to ALL matching subscriptions
+      let deliveredCount = 0
+      const matchingSubscriptions: string[] = []
+      
+      subscriptions.forEach((sub, subId) => {
+        if (eventMatchesFilter(verifiedEvent, sub.filter)) {
+          console.log(`Delivering event ${event.kind} to subscription ${subId} (${sub.userId})`)
+          sub.callback(verifiedEvent)
+          deliveredCount++
+          matchingSubscriptions.push(subId)
+        }
+      })
 
       console.log(
         "Publishing event - kind:",
@@ -118,12 +167,12 @@ describe("SessionManager", () => {
         event.pubkey,
         "id:",
         ndkEvent.id,
-        "subscriber exists:",
-        !!onEvent
+        "delivered to:",
+        deliveredCount,
+        "subscriptions:",
+        matchingSubscriptions
       )
-      if (onEvent) {
-        onEvent(verifiedEvent)
-      }
+      
       return verifiedEvent
     })
 
