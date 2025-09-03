@@ -40,14 +40,16 @@ describe("SessionManager", () => {
       secretKey: aliceSecretKey,
     } = await createMockSessionManager("alice-device-1", sharedRelay)
 
-    const {manager: aliceDevice2, onEvent: onEventAliceDevice2} =
-      await createMockSessionManager("alice-device-2", sharedRelay, aliceSecretKey)
+    const {manager: aliceDevice2} = await createMockSessionManager(
+      "alice-device-2",
+      sharedRelay,
+      aliceSecretKey
+    )
 
-    const {
-      manager: bobDevice1,
-      onEvent: onEventBob,
-      publicKey: bobPubkey,
-    } = await createMockSessionManager("bob-device-1", sharedRelay)
+    const {onEvent: onEventBob, publicKey: bobPubkey} = await createMockSessionManager(
+      "bob-device-1",
+      sharedRelay
+    )
 
     const initialMessage: Partial<Rumor> = {
       kind: KIND_CHAT_MESSAGE,
@@ -76,5 +78,75 @@ describe("SessionManager", () => {
       }),
       alicePubkey
     )
+  })
+
+  it("should persist sessions across manager restarts", async () => {
+    // Phase 1: Initial communication to establish sessions
+    let sharedRelay = new MockRelay()
+
+    const {
+      manager: aliceManager1,
+      secretKey: aliceSecretKey,
+      publicKey: alicePubkey,
+      mockStorage: aliceStorage,
+    } = await createMockSessionManager("alice-device-1", sharedRelay)
+
+    const {
+      manager: bobManager1,
+      secretKey: bobSecretKey,
+      publicKey: bobPubkey,
+      mockStorage: bobStorage,
+    } = await createMockSessionManager("bob-device-1", sharedRelay)
+
+    // Send initial message to establish session
+    const initialMessage: Partial<Rumor> = {
+      kind: KIND_CHAT_MESSAGE,
+      content: "Initial message",
+      created_at: Math.floor(Date.now() / 1000),
+    }
+    await aliceManager1.sendEvent(bobPubkey, initialMessage)
+
+    // Verify sessions exist in storage
+    const aliceStorageKeys = await aliceStorage.list("session/")
+    const bobStorageKeys = await bobStorage.list("session/")
+    expect(aliceStorageKeys.length).toBeGreaterThan(0)
+    expect(bobStorageKeys.length).toBeGreaterThan(0)
+
+    // Close the managers
+    aliceManager1.close()
+    bobManager1.close()
+
+    // Phase 2: Restart with fresh relay but same storage
+    sharedRelay = new MockRelay()
+
+    const {manager: aliceManager2} = await createMockSessionManager(
+      "alice-device-1",
+      sharedRelay,
+      aliceSecretKey,
+      aliceStorage
+    )
+
+    const {onEvent: onEventBob2} = await createMockSessionManager(
+      "bob-device-1",
+      sharedRelay,
+      bobSecretKey,
+      bobStorage
+    )
+
+    const afterRestartMessage: Partial<Rumor> = {
+      kind: KIND_CHAT_MESSAGE,
+      content: "Message after restart",
+      created_at: Math.floor(Date.now() / 1000),
+    }
+    await aliceManager2.sendEvent(bobPubkey, afterRestartMessage)
+
+    expect(onEventBob2).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "Message after restart",
+      }),
+      alicePubkey
+    )
+
+    console.log("Storage debugs:", await aliceStorage.list(), await bobStorage.list())
   })
 })

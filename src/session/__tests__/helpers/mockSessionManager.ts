@@ -4,11 +4,11 @@ import {Filter, generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent} f
 import {InMemoryStorageAdapter} from "../../StorageAdapter"
 import {MockRelay} from "./mockRelay"
 
-export const createMockSessionManager = async (deviceId: string, sharedMockRelay?: MockRelay, existingSecretKey?: Uint8Array) => {
+export const createMockSessionManager = async (deviceId: string, sharedMockRelay?: MockRelay, existingSecretKey?: Uint8Array, existingStorage?: InMemoryStorageAdapter) => {
   const secretKey = existingSecretKey || generateSecretKey()
   const publicKey = getPublicKey(secretKey)
 
-  const mockStorage = new InMemoryStorageAdapter()
+  const mockStorage = existingStorage || new InMemoryStorageAdapter()
   const storageSpy = {
     get: vi.spyOn(mockStorage, "get"),
     del: vi.spyOn(mockStorage, "del"),
