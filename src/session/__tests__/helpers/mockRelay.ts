@@ -6,7 +6,7 @@ import {matchFilter, VerifiedEvent, UnsignedEvent} from "nostr-tools"
 const relay: (UnsignedEvent & {sig?: string; id?: string})[] = []
 
 type Subscriber = {
-  filter: any
+  filter: unknown
   onEvent: (e: VerifiedEvent) => void
   delivered: Set<object> // track events already sent to this subscriber
 }
@@ -14,9 +14,9 @@ type Subscriber = {
 const subscribers: Subscriber[] = []
 
 function deliverToSubscriber(sub: Subscriber, event: UnsignedEvent) {
-  if (!sub.delivered.has(event) && matchFilter(sub.filter, event as any)) {
+  if (!sub.delivered.has(event) && matchFilter(sub.filter, event as unknown)) {
     sub.delivered.add(event)
-    sub.onEvent(event as any)
+    sub.onEvent(event as unknown)
   }
 }
 
@@ -25,7 +25,7 @@ function deliverToSubscriber(sub: Subscriber, event: UnsignedEvent) {
 // ---------------------------------------------------------------------------
 
 export function publish(event: UnsignedEvent) {
-  relay.push(event as any)
+  relay.push(event as unknown)
 
   // Push to existing subscribers immediately
   for (const sub of subscribers) {
@@ -36,7 +36,7 @@ export function publish(event: UnsignedEvent) {
 }
 
 export function makeSubscribe() {
-  return (filter: any, onEvent: (e: VerifiedEvent) => void) => {
+  return (filter: unknown, onEvent: (e: VerifiedEvent) => void) => {
     const subscriber: Subscriber = {filter, onEvent, delivered: new Set()}
 
     // Replay history

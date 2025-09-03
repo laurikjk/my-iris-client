@@ -299,7 +299,9 @@ export default class SessionManager {
       this.nostrSubscribe,
       async (_invite) => {
         try {
-          console.log(`${getPublicKey(this.ourIdentityKey)} received invite from ${userPubkey}, processing...`)
+          console.log(
+            `${getPublicKey(this.ourIdentityKey)} received invite from ${userPubkey}, processing...`
+          )
           const deviceId =
             _invite instanceof Invite && _invite.deviceId ? _invite.deviceId : "unknown"
 
@@ -307,19 +309,29 @@ export default class SessionManager {
           if (userRecord) {
             const existingSessions = userRecord.getActiveSessions()
             if (existingSessions.some((session) => session.name === deviceId)) {
-              console.log(`${getPublicKey(this.ourIdentityKey)} already has session with ${userPubkey}:${deviceId}`)
+              console.log(
+                `${getPublicKey(this.ourIdentityKey)} already has session with ${userPubkey}:${deviceId}`
+              )
               return // Already have session with this device
             }
           }
 
-          console.log(`${getPublicKey(this.ourIdentityKey)} accepting invite from ${userPubkey}...`)
+          console.log(
+            `${getPublicKey(this.ourIdentityKey)} accepting invite from ${userPubkey}...`
+          )
           const {session, event} = await _invite.accept(
             this.nostrSubscribe,
             getPublicKey(this.ourIdentityKey),
             this.ourIdentityKey
           )
-          console.log(`${getPublicKey(this.ourIdentityKey)} publishing acceptance event:`, event.kind, event.pubkey)
-          this.nostrPublish(event)?.catch((err) => console.error("Failed to publish acceptance:", err))
+          console.log(
+            `${getPublicKey(this.ourIdentityKey)} publishing acceptance event:`,
+            event.kind,
+            event.pubkey
+          )
+          this.nostrPublish(event)?.catch((err) =>
+            console.error("Failed to publish acceptance:", err)
+          )
 
           // Store the new session
           let currentUserRecord = this.userRecords.get(userPubkey)
@@ -354,7 +366,10 @@ export default class SessionManager {
           // Return the event to be published
           return event
         } catch (err) {
-          console.error(`${getPublicKey(this.ourIdentityKey)} failed to accept invite from ${userPubkey}:`, err)
+          console.error(
+            `${getPublicKey(this.ourIdentityKey)} failed to accept invite from ${userPubkey}:`,
+            err
+          )
         }
       }
     )
