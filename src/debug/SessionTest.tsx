@@ -30,7 +30,7 @@ export default function SessionTest() {
   const [eventLog, setEventLog] = useState<EventLog[]>([])
   const [aliceInfo, setAliceInfo] = useState({pubkey: "", deviceId: "alice-device-1"})
   const [bobInfo, setBobInfo] = useState({pubkey: "", deviceId: "bob-device-1"})
-  
+
   const aliceSecretKey = useRef(generateSecretKey())
   const bobSecretKey = useRef(generateSecretKey())
   const aliceNDK = useRef<NDK | null>(null)
@@ -41,16 +41,22 @@ export default function SessionTest() {
       timestamp: Date.now(),
       type,
       source,
-      data
+      data,
     }
-    setEventLog(prev => [...prev.slice(-19), logEntry]) // Keep last 20
+    setEventLog((prev) => [...prev.slice(-19), logEntry]) // Keep last 20
   }
 
   // Create NDK instances for Alice and Bob
   const createNDK = (secretKey: Uint8Array, name: string) => {
     const signer = new NDKPrivateKeySigner(secretKey)
     const ndk = new NDK({
-      explicitRelayUrls: ["ws://localhost:7777"], // Use local relay for testing
+      explicitRelayUrls: [
+        "wss://temp.iris.to/",
+        "wss://nos.lol", 
+        "wss://relay.nostr.band",
+        "wss://relay.f7z.io",
+        "wss://relay.damus.io"
+      ],
       signer: signer,
     })
 
@@ -67,7 +73,7 @@ export default function SessionTest() {
       addEventLog("NDK_EVENT", name.toLowerCase(), {
         kind: event.kind,
         pubkey: event.pubkey?.slice(0, 16),
-        content: event.content?.slice(0, 100)
+        content: event.content?.slice(0, 100),
       })
     })
 
@@ -78,14 +84,14 @@ export default function SessionTest() {
   const createSubscribe = (ndk: NDK, name: string) => {
     return (filter: NDKFilter, onEvent: (event: any) => void) => {
       addEventLog("SUBSCRIBE", name.toLowerCase(), filter)
-      
+
       const subscription = ndk.subscribe(filter)
-      
+
       subscription.on("event", (event: NDKEvent) => {
         addEventLog("SUB_EVENT", name.toLowerCase(), {
           kind: event.kind,
           pubkey: event.pubkey?.slice(0, 16),
-          id: event.id?.slice(0, 16)
+          id: event.id?.slice(0, 16),
         })
         onEvent(event.rawEvent())
       })
@@ -109,17 +115,17 @@ export default function SessionTest() {
       addEventLog("PUBLISH", name.toLowerCase(), {
         kind: event.kind,
         content: event.content?.slice(0, 100),
-        tags: event.tags?.length
+        tags: event.tags?.length,
       })
 
       const ndkEvent = new NDKEvent(ndk, event)
       await ndkEvent.sign()
-      
+
       try {
         const result = await ndkEvent.publish()
         addEventLog("PUBLISH_SUCCESS", name.toLowerCase(), {
           eventId: ndkEvent.id?.slice(0, 16),
-          relaysPublished: result.size
+          relaysPublished: result.size,
         })
         return ndkEvent.rawEvent()
       } catch (error) {
@@ -134,7 +140,7 @@ export default function SessionTest() {
       // Alice setup
       const aliceStorage = new InMemoryStorageAdapter()
       const alicePubkey = getPublicKey(aliceSecretKey.current)
-      
+
       aliceNDK.current = createNDK(aliceSecretKey.current, "Alice")
       await aliceNDK.current.connect()
 
@@ -148,28 +154,31 @@ export default function SessionTest() {
 
       aliceManager.onEvent((event: Rumor, from: string) => {
         addEventLog("MESSAGE_RECEIVED", "alice", {event, from})
-        setAliceMessages(prev => [...prev, {
-          content: event.content || "",
-          from,
-          timestamp: Date.now(),
-          isOwn: from === alicePubkey
-        }])
+        setAliceMessages((prev) => [
+          ...prev,
+          {
+            content: event.content || "",
+            from,
+            timestamp: Date.now(),
+            isOwn: from === alicePubkey,
+          },
+        ])
       })
 
       await aliceManager.init()
       setAliceManager(aliceManager)
       setAliceInfo({pubkey: alicePubkey, deviceId: "alice-device-1"})
 
-      // Bob setup  
+      // Bob setup
       const bobStorage = new InMemoryStorageAdapter()
       const bobPubkey = getPublicKey(bobSecretKey.current)
-      
+
       bobNDK.current = createNDK(bobSecretKey.current, "Bob")
       await bobNDK.current.connect()
-      
+
       const bobManager = new SessionManager(
         bobSecretKey.current,
-        "bob-device-1", 
+        "bob-device-1",
         createSubscribe(bobNDK.current, "Bob"),
         createPublish(bobNDK.current, "Bob"),
         bobStorage
@@ -177,12 +186,15 @@ export default function SessionTest() {
 
       bobManager.onEvent((event: Rumor, from: string) => {
         addEventLog("MESSAGE_RECEIVED", "bob", {event, from})
-        setBobMessages(prev => [...prev, {
-          content: event.content || "",
-          from,
-          timestamp: Date.now(),
-          isOwn: from === bobPubkey
-        }])
+        setBobMessages((prev) => [
+          ...prev,
+          {
+            content: event.content || "",
+            from,
+            timestamp: Date.now(),
+            isOwn: from === bobPubkey,
+          },
+        ])
       })
 
       await bobManager.init()
@@ -203,43 +215,49 @@ export default function SessionTest() {
 
   const sendAliceMessage = async () => {
     if (!aliceManager || !aliceInput.trim()) return
-    
+
     const message = {
       kind: KIND_CHAT_MESSAGE,
       content: aliceInput,
-      created_at: Math.floor(Date.now() / 1000)
+      created_at: Math.floor(Date.now() / 1000),
     }
 
     addEventLog("SENDING_MESSAGE", "alice", message)
     await aliceManager.sendEvent(bobInfo.pubkey, message)
-    
-    setAliceMessages(prev => [...prev, {
-      content: aliceInput,
-      from: aliceInfo.pubkey,
-      timestamp: Date.now(),
-      isOwn: true
-    }])
+
+    setAliceMessages((prev) => [
+      ...prev,
+      {
+        content: aliceInput,
+        from: aliceInfo.pubkey,
+        timestamp: Date.now(),
+        isOwn: true,
+      },
+    ])
     setAliceInput("")
   }
 
   const sendBobMessage = async () => {
     if (!bobManager || !bobInput.trim()) return
-    
+
     const message = {
       kind: KIND_CHAT_MESSAGE,
       content: bobInput,
-      created_at: Math.floor(Date.now() / 1000)
+      created_at: Math.floor(Date.now() / 1000),
     }
 
     addEventLog("SENDING_MESSAGE", "bob", message)
     await bobManager.sendEvent(aliceInfo.pubkey, message)
-    
-    setBobMessages(prev => [...prev, {
-      content: bobInput,
-      from: bobInfo.pubkey,
-      timestamp: Date.now(),
-      isOwn: true
-    }])
+
+    setBobMessages((prev) => [
+      ...prev,
+      {
+        content: bobInput,
+        from: bobInfo.pubkey,
+        timestamp: Date.now(),
+        isOwn: true,
+      },
+    ])
     setBobInput("")
   }
 
@@ -258,28 +276,61 @@ export default function SessionTest() {
           Reset
         </button>
       </div>
-      
+
       {/* Status */}
-      <div className="mb-4 p-2 bg-gray-100 rounded text-sm">
-        <div>Alice NDK: {aliceNDK.current ? "Connected" : "Disconnected"}</div>
-        <div>Bob NDK: {bobNDK.current ? "Connected" : "Disconnected"}</div>
-        <div>Relay: ws://localhost:7777</div>
+      <div className="mb-4 p-4 bg-white border rounded text-sm text-black">
+        <div className="font-medium">Connection Status:</div>
+        <div>
+          Alice NDK:{" "}
+          <span
+            className={
+              aliceNDK.current
+                ? "text-green-600 font-semibold"
+                : "text-red-600 font-semibold"
+            }
+          >
+            {aliceNDK.current ? "Connected" : "Disconnected"}
+          </span>
+        </div>
+        <div>
+          Bob NDK:{" "}
+          <span
+            className={
+              bobNDK.current
+                ? "text-green-600 font-semibold"
+                : "text-red-600 font-semibold"
+            }
+          >
+            {bobNDK.current ? "Connected" : "Disconnected"}
+          </span>
+        </div>
+        <div>
+          Relays: <span className="font-mono">Public Nostr relays (damus.io, nos.lol, etc.)</span>
+        </div>
       </div>
-      
+
       {/* Chat Interface */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         {/* Alice Column */}
-        <div className="border rounded-lg p-4">
-          <h2 className="font-semibold text-lg mb-2">Alice</h2>
-          <div className="text-xs text-gray-600 mb-4">
-            <div>Device: {aliceInfo.deviceId}</div>
-            <div>Pubkey: {aliceInfo.pubkey.slice(0, 16)}...</div>
+        <div className="border rounded-lg p-4 bg-white">
+          <h2 className="font-semibold text-lg mb-2 text-black">Alice</h2>
+          <div className="text-xs text-gray-700 mb-4">
+            <div>
+              Device: <span className="font-mono">{aliceInfo.deviceId}</span>
+            </div>
+            <div>
+              Pubkey:{" "}
+              <span className="font-mono">{aliceInfo.pubkey.slice(0, 16)}...</span>
+            </div>
           </div>
-          
+
           {/* Messages */}
           <div className="h-64 border rounded bg-gray-50 p-2 mb-4 overflow-y-auto">
             {aliceMessages.map((msg, i) => (
-              <div key={i} className={`mb-2 ${msg.isOwn ? 'text-blue-600' : 'text-green-600'}`}>
+              <div
+                key={i}
+                className={`mb-2 ${msg.isOwn ? "text-blue-600" : "text-green-600"}`}
+              >
                 <span className="text-xs text-gray-500">
                   {new Date(msg.timestamp).toLocaleTimeString()}
                 </span>
@@ -294,13 +345,13 @@ export default function SessionTest() {
               type="text"
               value={aliceInput}
               onChange={(e) => setAliceInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && sendAliceMessage()}
-              className="flex-1 border rounded px-2 py-1"
+              onKeyPress={(e) => e.key === "Enter" && sendAliceMessage()}
+              className="flex-1 border border-gray-300 rounded px-3 py-2 text-black bg-white focus:outline-none focus:border-blue-500"
               placeholder="Type message..."
             />
             <button
               onClick={sendAliceMessage}
-              className="px-4 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-medium"
             >
               Send
             </button>
@@ -308,17 +359,24 @@ export default function SessionTest() {
         </div>
 
         {/* Bob Column */}
-        <div className="border rounded-lg p-4">
-          <h2 className="font-semibold text-lg mb-2">Bob</h2>
-          <div className="text-xs text-gray-600 mb-4">
-            <div>Device: {bobInfo.deviceId}</div>
-            <div>Pubkey: {bobInfo.pubkey.slice(0, 16)}...</div>
+        <div className="border rounded-lg p-4 bg-white">
+          <h2 className="font-semibold text-lg mb-2 text-black">Bob</h2>
+          <div className="text-xs text-gray-700 mb-4">
+            <div>
+              Device: <span className="font-mono">{bobInfo.deviceId}</span>
+            </div>
+            <div>
+              Pubkey: <span className="font-mono">{bobInfo.pubkey.slice(0, 16)}...</span>
+            </div>
           </div>
-          
+
           {/* Messages */}
           <div className="h-64 border rounded bg-gray-50 p-2 mb-4 overflow-y-auto">
             {bobMessages.map((msg, i) => (
-              <div key={i} className={`mb-2 ${msg.isOwn ? 'text-blue-600' : 'text-green-600'}`}>
+              <div
+                key={i}
+                className={`mb-2 ${msg.isOwn ? "text-blue-600" : "text-green-600"}`}
+              >
                 <span className="text-xs text-gray-500">
                   {new Date(msg.timestamp).toLocaleTimeString()}
                 </span>
@@ -333,13 +391,13 @@ export default function SessionTest() {
               type="text"
               value={bobInput}
               onChange={(e) => setBobInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && sendBobMessage()}
-              className="flex-1 border rounded px-2 py-1"
+              onKeyPress={(e) => e.key === "Enter" && sendBobMessage()}
+              className="flex-1 border border-gray-300 rounded px-3 py-2 text-black bg-white focus:outline-none focus:border-green-500"
               placeholder="Type message..."
             />
             <button
               onClick={sendBobMessage}
-              className="px-4 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 font-medium"
             >
               Send
             </button>
@@ -350,25 +408,27 @@ export default function SessionTest() {
       {/* Event Log */}
       <div className="border rounded-lg p-4">
         <h2 className="font-semibold text-lg mb-2">Event Log (NDK)</h2>
-        <div className="h-64 bg-gray-900 text-green-400 font-mono text-xs p-2 overflow-y-auto">
+        <div className="h-96 bg-gray-900 text-green-400 font-mono text-xs p-2 overflow-y-auto">
           {eventLog.map((log, i) => (
             <div key={i} className="mb-1">
               <span className="text-gray-500">
                 {new Date(log.timestamp).toLocaleTimeString()}
-              </span>
-              {' '}
-              <span className={`font-semibold ${
-                log.source === 'alice' ? 'text-blue-400' : 
-                log.source === 'bob' ? 'text-green-400' : 
-                'text-yellow-400'
-              }`}>
+              </span>{" "}
+              <span
+                className={`font-semibold ${
+                  log.source === "alice"
+                    ? "text-blue-400"
+                    : log.source === "bob"
+                      ? "text-green-400"
+                      : "text-yellow-400"
+                }`}
+              >
                 [{log.source.toUpperCase()}]
-              </span>
-              {' '}
+              </span>{" "}
               <span className="text-white">{log.type}</span>
               <div className="ml-4 text-gray-400">
                 {JSON.stringify(log.data, null, 2).slice(0, 200)}
-                {JSON.stringify(log.data).length > 200 ? '...' : ''}
+                {JSON.stringify(log.data).length > 200 ? "..." : ""}
               </div>
             </div>
           ))}
