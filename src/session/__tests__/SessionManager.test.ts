@@ -94,7 +94,6 @@ describe("SessionManager", () => {
         subscriptionCounter = subscriptionCounter + 1
         const subId = `sub-${subscriptionCounter}`
 
-        // Store the subscription with complete filter
         subscriptions.set(subId, {
           callback: onEvent,
           filter: filter,
@@ -179,28 +178,12 @@ describe("SessionManager", () => {
   it("should receive a message", async () => {
     const {
       manager: managerAlice,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      subscribe: subAlice,
       publish: publishAlice,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      onEvent: onEventAlice,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      publicKey: alicePubkey,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      secretKey: aliceSeckey,
     } = await createMockSessionManager("alice-device-1")
 
     const {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      manager: managerBob,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      subscribe: subBob,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      publish: publishBob,
       onEvent: onEventBob,
       publicKey: bobPubkey,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      secretKey: bobSeckey,
     } = await createMockSessionManager("bob-device-1")
 
     const chatMessage: Partial<Rumor> = {
