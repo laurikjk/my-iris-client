@@ -100,7 +100,6 @@ describe("SessionManager", () => {
         ...event,
         id: ndkEvent.id!,
         sig: ndkEvent.sig!,
-        [Symbol.for("verified")]: true,  // Mark as verified for nostr-tools
       } as VerifiedEvent
 
       // Store the event
