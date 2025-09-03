@@ -10,7 +10,7 @@ import SessionManager from "@/session/SessionManager"
 import {LocalStorageAdapter} from "@/session/StorageAdapter"
 import {UserRecord} from "@/session/UserRecord"
 import {ndk} from "@/utils/ndk"
-import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
+import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {Rumor} from "nostr-double-ratchet"
 
 interface PrivateChatsStoreState {
@@ -56,29 +56,16 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
       return () => sub.stop()
     }
 
-    const nostrPublish = async (event: UnsignedEvent) => {
-      const ndkEvent = new NDKEvent()
-      ndkEvent.ndk = ndk()
-      ndkEvent.kind = event.kind
-      ndkEvent.content = event.content
-      ndkEvent.tags = event.tags
-      ndkEvent.created_at = event.created_at
-      ndkEvent.pubkey = event.pubkey
-
-      const signer = new NDKPrivateKeySigner(userStore.privateKey)
-      await ndkEvent.sign(signer)
-
-      await ndkEvent.publish().catch((e) => {
-        console.error("Failed to publish event via NDK:", e)
-        throw e
-      })
-
-      // Return the event as VerifiedEvent format for SessionManager
-      return {
-        ...event,
-        id: ndkEvent.id,
-        sig: ndkEvent.sig || "",
-      } as VerifiedEvent
+    const nostrPublish = async (event: VerifiedEvent) => {
+      try {
+        const ndkEvent = NDKEventFromRawEvent(event)
+        await ndkEvent.publish(undefined, undefined, 0)
+        console.log("published event", event.id)
+        return event
+      } catch (error) {
+        console.error("Failed to publish event via NDK:", error)
+        throw error
+      }
     }
 
     // Initialize SessionManager
