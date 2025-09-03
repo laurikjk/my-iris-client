@@ -10,7 +10,7 @@ import SessionManager from "@/session/SessionManager"
 import {LocalStorageAdapter} from "@/session/StorageAdapter"
 import {UserRecord} from "@/session/UserRecord"
 import {ndk} from "@/utils/ndk"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 import {Rumor} from "nostr-double-ratchet"
 
 interface PrivateChatsStoreState {
@@ -65,7 +65,13 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
       ndkEvent.created_at = event.created_at
       ndkEvent.pubkey = event.pubkey
 
-      await ndkEvent.publish()
+      const signer = new NDKPrivateKeySigner(secretKey)
+      await ndkEvent.sign(signer)
+
+      await ndkEvent.publish().catch((e) => {
+        console.error("Failed to publish event via NDK:", e)
+        throw e
+      })
 
       // Return the event as VerifiedEvent format for SessionManager
       return {

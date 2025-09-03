@@ -13,6 +13,32 @@ import {KIND_CHAT_MESSAGE} from "../../utils/constants"
 import {InMemoryStorageAdapter} from "../StorageAdapter"
 import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 
+// Helpers
+function eventMatchesFilter(event: VerifiedEvent, filter: Filter): boolean {
+  // Check kinds
+  if (filter.kinds && !filter.kinds.includes(event.kind)) return false
+
+  // Check authors
+  if (filter.authors && !filter.authors.includes(event.pubkey)) return false
+
+  // Check tag filters (#p, #e, #d, etc.)
+  for (const [key, values] of Object.entries(filter)) {
+    if (key.startsWith("#")) {
+      const tagName = key.substring(1)
+      const eventTagValues =
+        event.tags?.filter((tag) => tag[0] === tagName).map((tag) => tag[1]) || []
+
+      const hasMatch = (values as string[]).some((requiredValue) =>
+        eventTagValues.includes(requiredValue)
+      )
+
+      if (!hasMatch) return false
+    }
+  }
+
+  return true
+}
+
 // const nostrSubscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
 //   const sub = ndk().subscribe(filter)
 //   sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
@@ -39,39 +65,16 @@ import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 // }
 
 describe("SessionManager", () => {
-  const subscriptions = new Map<string, {
-    callback: (event: VerifiedEvent) => void,
-    filter: Filter,
-    userId: string
-  }>()
+  const subscriptions = new Map<
+    string,
+    {
+      callback: (event: VerifiedEvent) => void
+      filter: Filter
+      userId: string
+    }
+  >()
   const eventStore = new Map<string, VerifiedEvent[]>() // Store events by pubkey
   let subscriptionCounter = 0
-
-  function eventMatchesFilter(event: VerifiedEvent, filter: Filter): boolean {
-    // Check kinds
-    if (filter.kinds && !filter.kinds.includes(event.kind)) return false
-    
-    // Check authors
-    if (filter.authors && !filter.authors.includes(event.pubkey)) return false
-    
-    // Check tag filters (#p, #e, #d, etc.)
-    for (const [key, values] of Object.entries(filter)) {
-      if (key.startsWith('#')) {
-        const tagName = key.substring(1)
-        const eventTagValues = event.tags
-          ?.filter(tag => tag[0] === tagName)
-          .map(tag => tag[1]) || []
-        
-        const hasMatch = (values as string[]).some(requiredValue => 
-          eventTagValues.includes(requiredValue)
-        )
-        
-        if (!hasMatch) return false
-      }
-    }
-    
-    return true
-  }
 
   const createMockSessionManager = async (deviceId: string) => {
     const secretKey = generateSecretKey()
@@ -89,35 +92,22 @@ describe("SessionManager", () => {
       .fn()
       .mockImplementation((filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
         const subId = `sub-${++subscriptionCounter}`
-        console.log("SUBSCRIBE called with filter:", filter, "by user:", publicKey, "subId:", subId)
-        
+
         // Store the subscription with complete filter
         subscriptions.set(subId, {
           callback: onEvent,
           filter: filter,
-          userId: publicKey
+          userId: publicKey,
         })
 
-        // Send historical events that match this filter
-        let replayedCount = 0
         eventStore.forEach((events, pubkey) => {
-          events.forEach(event => {
+          events.forEach((event) => {
             if (eventMatchesFilter(event, filter)) {
-              console.log(
-                "Replaying historical event - kind:",
-                event.kind,
-                "from",
-                pubkey,
-                "to subscription:",
-                subId
-              )
               onEvent(event)
-              replayedCount++
             }
           })
         })
-        console.log(`Replayed ${replayedCount} historical events to subscription ${subId}`)
-        
+
         return () => {
           subscriptions.delete(subId)
         }
@@ -130,7 +120,7 @@ describe("SessionManager", () => {
       ndkEvent.tags = event.tags
       ndkEvent.created_at = event.created_at
       ndkEvent.pubkey = event.pubkey
-      
+
       // Create a signer and sign the event
       const signer = new NDKPrivateKeySigner(secretKey)
       await ndkEvent.sign(signer)
@@ -150,10 +140,12 @@ describe("SessionManager", () => {
       // Route to ALL matching subscriptions
       let deliveredCount = 0
       const matchingSubscriptions: string[] = []
-      
+
       subscriptions.forEach((sub, subId) => {
         if (eventMatchesFilter(verifiedEvent, sub.filter)) {
-          console.log(`Delivering event ${event.kind} to subscription ${subId} (${sub.userId})`)
+          console.log(
+            `Delivering event ${event.kind} to subscription ${subId} (${sub.userId})`
+          )
           sub.callback(verifiedEvent)
           deliveredCount++
           matchingSubscriptions.push(subId)
@@ -172,7 +164,7 @@ describe("SessionManager", () => {
         "subscriptions:",
         matchingSubscriptions
       )
-      
+
       return verifiedEvent
     })
 
