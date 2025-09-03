@@ -1,10 +1,21 @@
 import {vi} from "vitest"
 import SessionManager from "../../SessionManager"
-import {Filter, generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent} from "nostr-tools"
+import {
+  Filter,
+  generateSecretKey,
+  getPublicKey,
+  UnsignedEvent,
+  VerifiedEvent,
+} from "nostr-tools"
 import {InMemoryStorageAdapter} from "../../StorageAdapter"
 import {MockRelay} from "./mockRelay"
 
-export const createMockSessionManager = async (deviceId: string, sharedMockRelay?: MockRelay, existingSecretKey?: Uint8Array, existingStorage?: InMemoryStorageAdapter) => {
+export const createMockSessionManager = async (
+  deviceId: string,
+  sharedMockRelay?: MockRelay,
+  existingSecretKey?: Uint8Array,
+  existingStorage?: InMemoryStorageAdapter
+) => {
   const secretKey = existingSecretKey || generateSecretKey()
   const publicKey = getPublicKey(secretKey)
 
@@ -28,13 +39,7 @@ export const createMockSessionManager = async (deviceId: string, sharedMockRelay
     return await mockRelay.publish(event, secretKey)
   })
 
-  const manager = new SessionManager(
-    secretKey,
-    deviceId,
-    subscribe,
-    publish,
-    mockStorage
-  )
+  const manager = new SessionManager(secretKey, deviceId, subscribe, publish, mockStorage)
 
   await manager.init()
 
