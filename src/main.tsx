@@ -7,11 +7,10 @@ import ReactDOM from "react-dom/client"
 import {subscribeToDMNotifications, subscribeToNotifications} from "./utils/notifications"
 import {migrateUserState, migratePublicChats} from "./utils/migration"
 import {useSettingsStore} from "@/stores/settings"
-import {useUserRecordsStore} from "@/stores/userRecords"
 import {
-  subscribeToOwnDeviceInvites,
-  resetDeviceInvitesInitialization,
-} from "@/stores/privateChats"
+  initializeSessionManager,
+  resetSessionManagerInitialization,
+} from "@/stores/privateChatsNew"
 import {ndk} from "./utils/ndk"
 import socialGraph from "./utils/socialGraph"
 import DebugManager from "./utils/DebugManager"
@@ -35,8 +34,7 @@ const initializeApp = () => {
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
-      useUserRecordsStore.getState().createDefaultInvites()
-      subscribeToOwnDeviceInvites().catch(console.error)
+      initializeSessionManager().catch(console.error)
     }
   }
 
@@ -71,15 +69,14 @@ const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
   // Only proceed if public key actually changed
   if (state.publicKey && state.publicKey !== prevState.publicKey) {
     console.log("Public key changed, initializing chat modules")
-    resetDeviceInvitesInitialization() // Reset to allow re-initialization
+    resetSessionManagerInitialization() // Reset to allow re-initialization
     subscribeToNotifications()
     subscribeToDMNotifications()
     migratePublicChats()
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
-      useUserRecordsStore.getState().createDefaultInvites()
-      subscribeToOwnDeviceInvites().catch(console.error)
+      initializeSessionManager().catch(console.error)
     }
   }
 })
