@@ -1,9 +1,9 @@
 import {useState, useEffect, useRef} from "react"
 import SessionManager from "../session/SessionManager"
-import {generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent} from "nostr-tools"
+import {generateSecretKey, getPublicKey, VerifiedEvent} from "nostr-tools"
 import {InMemoryStorageAdapter} from "../session/StorageAdapter"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
-import {Rumor} from "nostr-double-ratchet"
+import {Rumor, NostrPublish, NostrSubscribe} from "nostr-double-ratchet"
 import NDK, {NDKEvent, NDKPrivateKeySigner, NDKFilter} from "@nostr-dev-kit/ndk"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 
@@ -104,20 +104,18 @@ export default function SessionTest() {
   }
 
   // NDK-compatible publish function
-  const createPublish = (ndk: NDK, name: string) => {
-    return async (event: Record<string, unknown>) => {
+  const createPublish = (ndk: NDK, name: string): NostrPublish => {
+    return async (event) => {
       addEventLog("PUBLISH", name.toLowerCase(), {
         kind: event.kind,
-        content:
-          typeof event.content === "string" ? event.content.slice(0, 100) : event.content,
+        content: event.content,
         tags: Array.isArray(event.tags) ? event.tags.length : 0,
       })
 
       try {
-        const ndkEvent = NDKEventFromRawEvent(event as Record<string, unknown>)
+        const ndkEvent = NDKEventFromRawEvent(event)
         await ndkEvent.publish(undefined, undefined, 0)
         addEventLog("PUBLISH_SUCCESS", name.toLowerCase(), {
-          eventId: event.id ? String(event.id).slice(0, 16) : "unknown",
           published: true,
         })
         return event
