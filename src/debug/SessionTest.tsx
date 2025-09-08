@@ -113,12 +113,13 @@ export default function SessionTest() {
       })
 
       try {
-        const ndkEvent = NDKEventFromRawEvent(event)
-        await ndkEvent.publish(undefined, undefined, 0)
+        const e = new NDKEvent(ndk, event)
+        e.publish()
+
         addEventLog("PUBLISH_SUCCESS", name.toLowerCase(), {
           published: true,
         })
-        return event
+        return event as VerifiedEvent
       } catch (error) {
         addEventLog("PUBLISH_ERROR", name.toLowerCase(), error)
         throw error
