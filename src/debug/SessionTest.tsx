@@ -263,16 +263,6 @@ export default function SessionTest() {
 
     addEventLog("SENDING_MESSAGE", "alice", message)
     await aliceManager.sendEvent(bobInfo.pubkey, message)
-
-    setAliceMessages((prev) => [
-      ...prev,
-      {
-        content: aliceInput,
-        from: aliceInfo.pubkey,
-        timestamp: Date.now(),
-        isOwn: true,
-      },
-    ])
     setAliceInput("")
   }
 
@@ -287,16 +277,6 @@ export default function SessionTest() {
 
     addEventLog("SENDING_MESSAGE", "bob", message)
     await bobManager.sendEvent(aliceInfo.pubkey, message)
-
-    setBobMessages((prev) => [
-      ...prev,
-      {
-        content: bobInput,
-        from: bobInfo.pubkey,
-        timestamp: Date.now(),
-        isOwn: true,
-      },
-    ])
     setBobInput("")
   }
 
