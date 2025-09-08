@@ -1,5 +1,6 @@
 import {
   NostrSubscribe,
+  NostrPublish,
   Rumor,
   Unsubscribe,
   serializeSessionState,
@@ -13,10 +14,6 @@ import {getPublicKey, VerifiedEvent} from "nostr-tools"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
 
 export type OnEventCallback = (event: Rumor, from: string) => void
-
-interface NostrPublish {
-  (event: VerifiedEvent): Promise<void>
-}
 
 export default class SessionManager {
   private userRecords: Map<string, UserRecord> = new Map()
