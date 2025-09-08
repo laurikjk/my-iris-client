@@ -1,6 +1,6 @@
 import {useState, useEffect, useRef} from "react"
 import SessionManager from "../session/SessionManager"
-import {generateSecretKey, getPublicKey} from "nostr-tools"
+import {generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent} from "nostr-tools"
 import {InMemoryStorageAdapter} from "../session/StorageAdapter"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
 import {Rumor} from "nostr-double-ratchet"
@@ -76,7 +76,7 @@ export default function SessionTest() {
 
   // NDK-compatible subscribe function
   const createSubscribe = (ndk: NDK, name: string) => {
-    return (filter: NDKFilter, onEvent: (event: Record<string, unknown>) => void) => {
+    return (filter: NDKFilter, onEvent: (event: VerifiedEvent) => void) => {
       addEventLog("SUBSCRIBE", name.toLowerCase(), filter)
 
       const subscription = ndk.subscribe(filter)
@@ -84,10 +84,10 @@ export default function SessionTest() {
       subscription.on("event", (event: NDKEvent) => {
         addEventLog("SUB_EVENT", name.toLowerCase(), {
           kind: event.kind,
-          pubkey: event.pubkey?.slice(0, 16),
-          id: event.id?.slice(0, 16),
+          pubkey: event.pubkey,
+          id: event.id,
         })
-        onEvent(event.rawEvent())
+        onEvent(event as unknown as VerifiedEvent)
       })
 
       subscription.on("eose", () => {
