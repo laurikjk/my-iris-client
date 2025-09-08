@@ -308,7 +308,7 @@ export default function SessionTest() {
   }
 
   return (
-    <div className="p-4 max-w-6xl mx-auto">
+    <div className="p-4 max-w-6xl mx-auto h-screen flex flex-col">
       <div className="flex items-center gap-4 mb-4">
         <h1 className="text-2xl font-bold">SessionManager Debug Chat (NDK)</h1>
         <button onClick={resetAll} className="btn btn-sm btn-secondary">
@@ -348,7 +348,7 @@ export default function SessionTest() {
       </div>
 
       {/* Chat Interface */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-2 gap-4 mb-8 flex-shrink-0">
         {/* Alice Column */}
         <div className="border rounded-lg p-4 bg-white">
           <h2 className="font-semibold text-lg mb-2 text-black">Alice</h2>
@@ -444,9 +444,9 @@ export default function SessionTest() {
       </div>
 
       {/* Event Log */}
-      <div className="border rounded-lg p-4">
+      <div className="border rounded-lg p-4 flex-1 flex flex-col min-h-0">
         <h2 className="font-semibold text-lg mb-2">Event Log (NDK)</h2>
-        <div className="h-96 bg-gray-900 text-green-400 font-mono text-xs p-2 overflow-y-auto">
+        <div className="flex-1 bg-gray-900 text-green-400 font-mono text-xs p-2 overflow-y-auto">
           {eventLog.map((log, i) => (
             <div key={i} className="mb-1">
               <span className="text-gray-500">
