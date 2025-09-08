@@ -371,7 +371,7 @@ function FeedItem({
       </div>
       {showReplies > 0 && (eventId || event?.id) && (
         <div className="flex flex-col justify-center">
-          {standalone && myPubKey && (
+          {standalone && myPubKey && event && (
             <InlineNoteCreator repliedEvent={event} placeholder="Reply to this post..." />
           )}
           <Feed
