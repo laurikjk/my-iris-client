@@ -34,6 +34,7 @@ export default function SessionTest() {
   const [aliceConnected, setAliceConnected] = useState(false)
   const [bobConnected, setBobConnected] = useState(false)
   const [showSessionDetails, setShowSessionDetails] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const aliceSecretKey = useRef(generateSecretKey())
   const bobSecretKey = useRef(generateSecretKey())
@@ -41,6 +42,10 @@ export default function SessionTest() {
   const bobNDK = useRef<NDK | null>(null)
   const aliceSeenMessages = useRef(new Set<string>())
   const bobSeenMessages = useRef(new Set<string>())
+
+  // Persistent storage instances to test session restoration
+  const aliceStorage = useRef(new InMemoryStorageAdapter())
+  const bobStorage = useRef(new InMemoryStorageAdapter())
 
   const addEventLog = (type: string, source: string, data: unknown) => {
     const logEntry = {
@@ -131,134 +136,6 @@ export default function SessionTest() {
   }
 
   useEffect(() => {
-    const initManagers = async () => {
-      // Alice setup
-      const aliceStorage = new InMemoryStorageAdapter()
-      const alicePubkey = getPublicKey(aliceSecretKey.current)
-
-      aliceNDK.current = createNDK(aliceSecretKey.current)
-
-      // NDK connect doesn't throw errors, it connects in background
-      aliceNDK.current.connect()
-      addEventLog("NDK_CONNECTING", "alice", "Attempting to connect to relays")
-
-      // Listen for when relays connect
-      aliceNDK.current.pool.on("relay:connect", (relay) => {
-        addEventLog("RELAY_CONNECT", "alice", `Connected to ${relay.url}`)
-        setAliceConnected(true)
-      })
-
-      aliceNDK.current.pool.on("relay:disconnect", (relay) => {
-        addEventLog("RELAY_DISCONNECT", "alice", `Disconnected from ${relay.url}`)
-      })
-
-      // Wait a bit for initial connections
-      setTimeout(() => {
-        const connectedRelays = Array.from(aliceNDK.current!.pool.relays.values()).filter(
-          (r) => r.connected
-        ).length
-        addEventLog("CONNECTION_STATUS", "alice", `${connectedRelays} relays connected`)
-        if (connectedRelays > 0) {
-          setAliceConnected(true)
-        }
-      }, 2000)
-
-      const aliceManager = new SessionManager(
-        aliceSecretKey.current,
-        "alice-device-1",
-        createSubscribe(aliceNDK.current, "Alice"),
-        createPublish(aliceNDK.current, "Alice"),
-        aliceStorage
-      )
-
-      aliceManager.onEvent((event: Rumor, from: string) => {
-        const messageKey = `${from}-${event.content}-${event.created_at}`
-        if (aliceSeenMessages.current.has(messageKey)) {
-          addEventLog("DUPLICATE_MESSAGE", "alice", {event, from})
-          return
-        }
-        aliceSeenMessages.current.add(messageKey)
-
-        addEventLog("MESSAGE_RECEIVED", "alice", {event, from})
-        setAliceMessages((prev) => [
-          ...prev,
-          {
-            content: event.content || "",
-            from,
-            timestamp: Date.now(),
-            isOwn: from === alicePubkey,
-          },
-        ])
-      })
-
-      await aliceManager.init()
-      setAliceManager(aliceManager)
-      setAliceInfo({pubkey: alicePubkey, deviceId: "alice-device-1"})
-
-      // Bob setup
-      const bobStorage = new InMemoryStorageAdapter()
-      const bobPubkey = getPublicKey(bobSecretKey.current)
-
-      bobNDK.current = createNDK(bobSecretKey.current)
-
-      // NDK connect doesn't throw errors, it connects in background
-      bobNDK.current.connect()
-      addEventLog("NDK_CONNECTING", "bob", "Attempting to connect to relays")
-
-      // Listen for when relays connect
-      bobNDK.current.pool.on("relay:connect", (relay) => {
-        addEventLog("RELAY_CONNECT", "bob", `Connected to ${relay.url}`)
-        setBobConnected(true)
-      })
-
-      bobNDK.current.pool.on("relay:disconnect", (relay) => {
-        addEventLog("RELAY_DISCONNECT", "bob", `Disconnected from ${relay.url}`)
-      })
-
-      // Wait a bit for initial connections
-      setTimeout(() => {
-        const connectedRelays = Array.from(bobNDK.current!.pool.relays.values()).filter(
-          (r) => r.connected
-        ).length
-        addEventLog("CONNECTION_STATUS", "bob", `${connectedRelays} relays connected`)
-        if (connectedRelays > 0) {
-          setBobConnected(true)
-        }
-      }, 2000)
-
-      const bobManager = new SessionManager(
-        bobSecretKey.current,
-        "bob-device-1",
-        createSubscribe(bobNDK.current, "Bob"),
-        createPublish(bobNDK.current, "Bob"),
-        bobStorage
-      )
-
-      bobManager.onEvent((event: Rumor, from: string) => {
-        const messageKey = `${from}-${event.content}-${event.created_at}`
-        if (bobSeenMessages.current.has(messageKey)) {
-          addEventLog("DUPLICATE_MESSAGE", "bob", {event, from})
-          return
-        }
-        bobSeenMessages.current.add(messageKey)
-
-        addEventLog("MESSAGE_RECEIVED", "bob", {event, from})
-        setBobMessages((prev) => [
-          ...prev,
-          {
-            content: event.content || "",
-            from,
-            timestamp: Date.now(),
-            isOwn: from === bobPubkey,
-          },
-        ])
-      })
-
-      await bobManager.init()
-      setBobManager(bobManager)
-      setBobInfo({pubkey: bobPubkey, deviceId: "bob-device-1"})
-    }
-
     initManagers().catch(console.error)
 
     return () => {
@@ -304,6 +181,163 @@ export default function SessionTest() {
     aliceSeenMessages.current.clear()
     bobSeenMessages.current.clear()
     // Recreate managers would require reloading - for now just clear UI
+  }
+
+  const simulateRefresh = async () => {
+    setIsRefreshing(true)
+    addEventLog(
+      "SIMULATING_REFRESH",
+      "system",
+      "Closing existing managers and reinitializing"
+    )
+
+    // Close existing managers
+    aliceManager?.close()
+    bobManager?.close()
+
+    // Clear state
+    setAliceManager(null)
+    setBobManager(null)
+    setAliceConnected(false)
+    setBobConnected(false)
+
+    // Wait a moment for cleanup
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Reinitialize everything using the same storage and keys
+    await initManagers()
+    setIsRefreshing(false)
+    addEventLog(
+      "REFRESH_COMPLETE",
+      "system",
+      "Managers reinitialized, sessions should be restored from storage"
+    )
+  }
+
+  const initManagers = async () => {
+    // Alice setup - using persistent storage to test restoration
+    const alicePubkey = getPublicKey(aliceSecretKey.current)
+
+    aliceNDK.current = createNDK(aliceSecretKey.current)
+
+    // NDK connect doesn't throw errors, it connects in background
+    aliceNDK.current.connect()
+    addEventLog("NDK_CONNECTING", "alice", "Attempting to connect to relays")
+
+    // Listen for when relays connect
+    aliceNDK.current.pool.on("relay:connect", (relay) => {
+      addEventLog("RELAY_CONNECT", "alice", `Connected to ${relay.url}`)
+      setAliceConnected(true)
+    })
+
+    aliceNDK.current.pool.on("relay:disconnect", (relay) => {
+      addEventLog("RELAY_DISCONNECT", "alice", `Disconnected from ${relay.url}`)
+    })
+
+    // Wait a bit for initial connections
+    setTimeout(() => {
+      const connectedRelays = Array.from(aliceNDK.current!.pool.relays.values()).filter(
+        (r) => r.connected
+      ).length
+      addEventLog("CONNECTION_STATUS", "alice", `${connectedRelays} relays connected`)
+      if (connectedRelays > 0) {
+        setAliceConnected(true)
+      }
+    }, 2000)
+
+    const aliceManager = new SessionManager(
+      aliceSecretKey.current,
+      "alice-device-1",
+      createSubscribe(aliceNDK.current, "Alice"),
+      createPublish(aliceNDK.current, "Alice"),
+      aliceStorage.current
+    )
+
+    aliceManager.onEvent((event: Rumor, from: string) => {
+      const messageKey = `${from}-${event.content}-${event.created_at}`
+      if (aliceSeenMessages.current.has(messageKey)) {
+        addEventLog("DUPLICATE_MESSAGE", "alice", {event, from})
+        return
+      }
+      aliceSeenMessages.current.add(messageKey)
+
+      addEventLog("MESSAGE_RECEIVED", "alice", {event, from})
+      setAliceMessages((prev) => [
+        ...prev,
+        {
+          content: event.content || "",
+          from,
+          timestamp: Date.now(),
+          isOwn: from === alicePubkey,
+        },
+      ])
+    })
+
+    await aliceManager.init()
+    setAliceManager(aliceManager)
+    setAliceInfo({pubkey: alicePubkey, deviceId: "alice-device-1"})
+
+    // Bob setup - using persistent storage to test restoration
+    const bobPubkey = getPublicKey(bobSecretKey.current)
+
+    bobNDK.current = createNDK(bobSecretKey.current)
+
+    // NDK connect doesn't throw errors, it connects in background
+    bobNDK.current.connect()
+    addEventLog("NDK_CONNECTING", "bob", "Attempting to connect to relays")
+
+    // Listen for when relays connect
+    bobNDK.current.pool.on("relay:connect", (relay) => {
+      addEventLog("RELAY_CONNECT", "bob", `Connected to ${relay.url}`)
+      setBobConnected(true)
+    })
+
+    bobNDK.current.pool.on("relay:disconnect", (relay) => {
+      addEventLog("RELAY_DISCONNECT", "bob", `Disconnected from ${relay.url}`)
+    })
+
+    // Wait a bit for initial connections
+    setTimeout(() => {
+      const connectedRelays = Array.from(bobNDK.current!.pool.relays.values()).filter(
+        (r) => r.connected
+      ).length
+      addEventLog("CONNECTION_STATUS", "bob", `${connectedRelays} relays connected`)
+      if (connectedRelays > 0) {
+        setBobConnected(true)
+      }
+    }, 2000)
+
+    const bobManager = new SessionManager(
+      bobSecretKey.current,
+      "bob-device-1",
+      createSubscribe(bobNDK.current, "Bob"),
+      createPublish(bobNDK.current, "Bob"),
+      bobStorage.current
+    )
+
+    bobManager.onEvent((event: Rumor, from: string) => {
+      const messageKey = `${from}-${event.content}-${event.created_at}`
+      if (bobSeenMessages.current.has(messageKey)) {
+        addEventLog("DUPLICATE_MESSAGE", "bob", {event, from})
+        return
+      }
+      bobSeenMessages.current.add(messageKey)
+
+      addEventLog("MESSAGE_RECEIVED", "bob", {event, from})
+      setBobMessages((prev) => [
+        ...prev,
+        {
+          content: event.content || "",
+          from,
+          timestamp: Date.now(),
+          isOwn: from === bobPubkey,
+        },
+      ])
+    })
+
+    await bobManager.init()
+    setBobManager(bobManager)
+    setBobInfo({pubkey: bobPubkey, deviceId: "bob-device-1"})
   }
 
   // Helper to truncate hex keys for display
@@ -500,6 +534,17 @@ export default function SessionTest() {
         <h1 className="text-2xl font-bold">SessionManager Debug Chat (NDK)</h1>
         <button onClick={resetAll} className="btn btn-sm btn-secondary">
           Reset
+        </button>
+        <button
+          onClick={simulateRefresh}
+          className={`px-3 py-1 rounded text-sm font-medium ${
+            isRefreshing
+              ? "bg-orange-300 text-orange-800 cursor-not-allowed"
+              : "bg-orange-500 text-white hover:bg-orange-600"
+          }`}
+          disabled={!aliceManager || !bobManager || isRefreshing}
+        >
+          {isRefreshing ? "Refreshing..." : "Simulate Refresh"}
         </button>
         <button
           onClick={() => setShowSessionDetails(!showSessionDetails)}
