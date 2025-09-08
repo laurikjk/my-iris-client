@@ -109,6 +109,8 @@ export default class SessionManager {
           this.saveSession(targetUserKey, deviceKey, session)
 
           session.onEvent((_event: Rumor) => {
+            // Save session state after successful decryption (state has advanced)
+            this.saveSession(targetUserKey, deviceKey, session)
             this.internalSubscriptions.forEach((cb) => cb(_event, targetUserKey))
           })
         } catch {
@@ -153,6 +155,8 @@ export default class SessionManager {
         this.saveSession(ourPublicKey, deviceId, session)
 
         session.onEvent((_event: Rumor) => {
+          // Save session state after successful decryption (state has advanced)
+          this.saveSession(ourPublicKey, deviceId, session)
           this.internalSubscriptions.forEach((cb) => cb(_event, ourPublicKey))
         })
       } catch (err) {
@@ -188,6 +192,8 @@ export default class SessionManager {
         this.saveSession(ownerPubKey, deviceId, session)
 
         session.onEvent((_event: Rumor) => {
+          // Save session state after successful decryption (state has advanced)
+          this.saveSession(ownerPubKey, deviceId, session)
           this.internalSubscriptions.forEach((cb) => cb(_event, ownerPubKey))
         })
       } catch {
@@ -263,7 +269,14 @@ export default class SessionManager {
     for (const session of sendableSessions) {
       const {event: encryptedEvent} = session.sendEvent(event)
       results.push(encryptedEvent)
-      publishPromises.push(this.nostrPublish(encryptedEvent).catch(() => {}))
+      publishPromises.push(
+        this.nostrPublish(encryptedEvent)
+          .then(() => {
+            // Save session state after successful send (state has advanced)
+            this.saveSession(recipientIdentityKey, session.name || "unknown", session)
+          })
+          .catch(() => {})
+      )
     }
 
     // Send to our own devices (for multi-device sync)
@@ -350,6 +363,8 @@ export default class SessionManager {
 
           // Register all existing callbacks on the new session
           session.onEvent((_event: Rumor) => {
+            // Save session state after successful decryption (state has advanced)
+            this.saveSession(userPubkey, deviceId, session)
             this.internalSubscriptions.forEach((callback) => callback(_event, userPubkey))
           })
 
@@ -401,6 +416,9 @@ export default class SessionManager {
     for (const [pubkey, userRecord] of this.userRecords.entries()) {
       for (const session of userRecord.getActiveSessions()) {
         session.onEvent((event: Rumor) => {
+          // Save session state after successful decryption (state has advanced)
+          const deviceId = session.name || "unknown"
+          this.saveSession(pubkey, deviceId, session)
           callback(event, pubkey)
         })
       }
