@@ -278,7 +278,13 @@ export default class SessionManager {
       for (const session of ownSendableSessions) {
         const {event: encryptedEvent} = session.sendEvent(event)
         results.push(encryptedEvent)
-        publishPromises.push(this.nostrPublish(encryptedEvent).catch(() => {}))
+        publishPromises.push(
+          this.nostrPublish(encryptedEvent)
+            .then(() => {
+              this.saveSession(ourPublicKey, session.name || "unknown", session)
+            })
+            .catch(() => {})
+        )
       }
     }
 
