@@ -70,6 +70,8 @@ export default function GeohashMapContent({
   const gridLayerRef = useRef<L.LayerGroup | null>(null)
   const dotsLayerRef = useRef<L.LayerGroup | null>(null)
   const [hoveredGeohash, setHoveredGeohash] = useState<string>("")
+  const [inputValue, setInputValue] = useState<string>("")
+  const [isEditing, setIsEditing] = useState(false)
 
   // Extract geohashes from feed events (only highest resolution per event)
   const eventGeohashes = useMemo(() => {
@@ -99,6 +101,31 @@ export default function GeohashMapContent({
       allGeohashes.every((gh) => geohashes.includes(gh))
     )
   }, [geohashes])
+
+  // Determine the current active geohash to display
+  const displayValue = useMemo(() => {
+    if (isGlobalView) return ""
+    if (geohashes.length === 1) return geohashes[0]
+    if (geohashes.length > 1) return `${geohashes.length} selected`
+    return ""
+  }, [geohashes, isGlobalView])
+
+  // Update input value when display value changes (unless actively typing)
+  useEffect(() => {
+    if (!isEditing) {
+      setInputValue(displayValue)
+    }
+  }, [displayValue, isEditing])
+
+  // Stop editing after a short delay to allow external updates
+  useEffect(() => {
+    if (isEditing) {
+      const timer = setTimeout(() => {
+        setIsEditing(false)
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [inputValue, isEditing])
 
   // Draw grid function
   const drawGrid = useCallback(() => {
@@ -453,5 +480,47 @@ export default function GeohashMapContent({
     mapRef.current.fitBounds(bounds, {padding: [50, 50]})
   }, [geohashes.join(","), isGlobalView]) // Only trigger when the actual geohash values change
 
-  return <div ref={mapContainerRef} className="w-full overflow-hidden" style={{height}} />
+  return (
+    <div className="relative w-full overflow-hidden" style={{height}}>
+      <div ref={mapContainerRef} className="w-full h-full" />
+      {onGeohashSelect && (
+        <div className="absolute bottom-4 left-4 z-[1000]">
+          <div className="relative">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => {
+                const value = e.target.value
+                setInputValue(value)
+                setIsEditing(true)
+
+                const trimmed = value.trim().toLowerCase()
+                if (trimmed === "") {
+                  onGeohashSelect("*")
+                } else if (/^[0-9bcdefghjkmnpqrstuvwxyz]{1,12}$/.test(trimmed)) {
+                  onGeohashSelect(trimmed)
+                }
+              }}
+              placeholder="geohash"
+              maxLength={12}
+              className="input w-36 text-sm bg-base-100/90 backdrop-blur-sm border-base-300 shadow-lg text-base-content pr-8"
+            />
+            <svg
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-base-content/60"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }

@@ -77,8 +77,13 @@ export function GeohashField({
   }
 
   const handleGeohashSelect = (geohash: string) => {
-    // Replace current selection with clicked geohash (ensure lowercase)
-    onChange([geohash.toLowerCase()])
+    // Handle global selection
+    if (geohash === "*") {
+      onChange(allGeohashes)
+    } else {
+      // Replace current selection with clicked geohash (ensure lowercase)
+      onChange([geohash.toLowerCase()])
+    }
   }
 
   return (

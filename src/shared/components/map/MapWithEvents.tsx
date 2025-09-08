@@ -52,7 +52,11 @@ export default function MapWithEvents({
         geohashes={selectedGeohashes.length === 0 ? ALL_GEOHASHES : selectedGeohashes}
         feedEvents={feedEvents}
         onGeohashSelect={(geohash) => {
-          navigate(`/map/${geohash.toLowerCase()}`)
+          if (geohash === "*") {
+            navigate("/map")
+          } else {
+            navigate(`/map/${geohash.toLowerCase()}`)
+          }
         }}
         height="100%"
         className="w-full h-full"

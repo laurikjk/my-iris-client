@@ -1,10 +1,9 @@
 import {useParams} from "@/navigation"
-import {useRef, useState, useMemo, useEffect} from "react"
+import {useState, useMemo, useEffect} from "react"
 import Feed from "@/shared/components/feed/Feed"
 import {KIND_TEXT_NOTE, KIND_EPHEMERAL} from "@/utils/constants"
 import {ALL_GEOHASHES} from "@/utils/geohash"
 import MapWithEvents from "@/shared/components/map/MapWithEvents"
-import Icon from "@/shared/components/Icons/Icon"
 import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
@@ -15,14 +14,12 @@ import {useUIStore} from "@/stores/ui"
 export default function MapPage() {
   const {query} = useParams()
   const isInTwoColumnLayout = useIsTwoColumnLayout()
-  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Initialize state properly from route parameter
   const initialGeohashes = useMemo(() => {
     return query ? [query.toLowerCase()] : []
   }, [query])
 
-  const [searchTerm, setSearchTerm] = useState(query || "")
   const [selectedGeohashes, setSelectedGeohashes] = useState<string[]>(initialGeohashes)
   const displayAs = useUIStore((state) => state.mapDisplayAs)
   const setMapDisplayAs = useUIStore((state) => state.setMapDisplayAs)
@@ -31,25 +28,7 @@ export default function MapPage() {
   useEffect(() => {
     const newGeohashes = query ? [query.toLowerCase()] : []
     setSelectedGeohashes(newGeohashes)
-    setSearchTerm(query || "")
   }, [query])
-
-  const handleInputChange = (value: string) => {
-    setSearchTerm(value)
-    // Update map instantly as user types
-    if (value.trim()) {
-      const geohash = value.toLowerCase().replace(/[^0-9bcdefghjkmnpqrstuvwxyz]/g, "")
-      if (geohash) {
-        setSelectedGeohashes((current) => {
-          // Only update if different to prevent unnecessary re-renders
-          if (current.length === 1 && current[0] === geohash) return current
-          return [geohash]
-        })
-      }
-    } else {
-      setSelectedGeohashes([])
-    }
-  }
 
   // Use selected geohashes or empty array for initial state
   const geohashes = selectedGeohashes
@@ -120,20 +99,6 @@ export default function MapPage() {
             <SearchTabSelector activeTab="map" />
 
             <div className="w-full">
-              <div className="w-full p-2">
-                <label className="input input-bordered flex items-center gap-2 w-full">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    className="grow"
-                    placeholder="Search geohash area..."
-                    value={searchTerm}
-                    onChange={(e) => handleInputChange(e.target.value)}
-                  />
-                  <Icon name="search-outline" className="text-neutral-content/60" />
-                </label>
-              </div>
-
               <div className="mt-4">
                 <MapWithEvents
                   selectedGeohashes={geohashes}
