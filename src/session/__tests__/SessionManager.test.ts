@@ -200,7 +200,7 @@ describe("SessionManager", () => {
 
   it("abc", async () => {
     // Phase 1: Initial communication to establish sessions
-    let sharedRelay = new MockRelay()
+    const sharedRelay = new MockRelay()
 
     const {
       manager: aliceManager1,

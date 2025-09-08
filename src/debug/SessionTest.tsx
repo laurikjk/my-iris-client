@@ -3,9 +3,9 @@ import SessionManager from "../session/SessionManager"
 import {generateSecretKey, getPublicKey, VerifiedEvent} from "nostr-tools"
 import {InMemoryStorageAdapter} from "../session/StorageAdapter"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
-import {Rumor, NostrPublish, NostrSubscribe} from "nostr-double-ratchet"
+import {Rumor, NostrPublish, SessionState} from "nostr-double-ratchet"
 import NDK, {NDKEvent, NDKPrivateKeySigner, NDKFilter} from "@nostr-dev-kit/ndk"
-import {NDKEventFromRawEvent} from "@/utils/nostr"
+import {UserRecord} from "../session/UserRecord"
 
 type EventLog = {
   timestamp: number
@@ -33,6 +33,7 @@ export default function SessionTest() {
   const [bobInfo, setBobInfo] = useState({pubkey: "", deviceId: "bob-device-1"})
   const [aliceConnected, setAliceConnected] = useState(false)
   const [bobConnected, setBobConnected] = useState(false)
+  const [showSessionDetails, setShowSessionDetails] = useState(false)
 
   const aliceSecretKey = useRef(generateSecretKey())
   const bobSecretKey = useRef(generateSecretKey())
@@ -177,7 +178,7 @@ export default function SessionTest() {
           return
         }
         aliceSeenMessages.current.add(messageKey)
-        
+
         addEventLog("MESSAGE_RECEIVED", "alice", {event, from})
         setAliceMessages((prev) => [
           ...prev,
@@ -240,7 +241,7 @@ export default function SessionTest() {
           return
         }
         bobSeenMessages.current.add(messageKey)
-        
+
         addEventLog("MESSAGE_RECEIVED", "bob", {event, from})
         setBobMessages((prev) => [
           ...prev,
@@ -305,12 +306,210 @@ export default function SessionTest() {
     // Recreate managers would require reloading - for now just clear UI
   }
 
+  // Helper to truncate hex keys for display
+  const truncateKey = (key: string | undefined, length = 16) => {
+    if (!key) return "none"
+    return key.length > length ? `${key.slice(0, length)}...` : key
+  }
+
+  // Helper to format Uint8Array keys
+  const formatUint8Array = (arr: Uint8Array | undefined) => {
+    if (!arr) return "none"
+    const hex = Array.from(arr)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")
+    return truncateKey(hex)
+  }
+
+  // Session state renderer
+  const SessionStateDisplay = ({
+    state,
+    title,
+  }: {
+    state: SessionState | undefined
+    title: string
+  }) => {
+    if (!state) return <div className="text-gray-500">No state</div>
+
+    return (
+      <div className="border rounded p-2 bg-gray-50 text-xs">
+        <div className="font-semibold mb-2 text-black">{title}</div>
+        <div className="space-y-1 text-gray-700">
+          <div>
+            <span className="font-medium">Root Key:</span>{" "}
+            {formatUint8Array(state.rootKey)}
+          </div>
+          <div>
+            <span className="font-medium">Their Current PubKey:</span>{" "}
+            {truncateKey(state.theirCurrentNostrPublicKey)}
+          </div>
+          <div>
+            <span className="font-medium">Their Next PubKey:</span>{" "}
+            {truncateKey(state.theirNextNostrPublicKey)}
+          </div>
+          <div>
+            <span className="font-medium">Our Current PubKey:</span>{" "}
+            {truncateKey(state.ourCurrentNostrKey?.publicKey)}
+          </div>
+          <div>
+            <span className="font-medium">Our Current PrivKey:</span>{" "}
+            {formatUint8Array(state.ourCurrentNostrKey?.privateKey)}
+          </div>
+          <div>
+            <span className="font-medium">Our Next PubKey:</span>{" "}
+            {truncateKey(state.ourNextNostrKey.publicKey)}
+          </div>
+          <div>
+            <span className="font-medium">Our Next PrivKey:</span>{" "}
+            {formatUint8Array(state.ourNextNostrKey.privateKey)}
+          </div>
+          <div>
+            <span className="font-medium">Receiving Chain Key:</span>{" "}
+            {formatUint8Array(state.receivingChainKey)}
+          </div>
+          <div>
+            <span className="font-medium">Sending Chain Key:</span>{" "}
+            {formatUint8Array(state.sendingChainKey)}
+          </div>
+          <div>
+            <span className="font-medium">Send Chain Msg #:</span>{" "}
+            {state.sendingChainMessageNumber}
+          </div>
+          <div>
+            <span className="font-medium">Recv Chain Msg #:</span>{" "}
+            {state.receivingChainMessageNumber}
+          </div>
+          <div>
+            <span className="font-medium">Prev Send Chain Count:</span>{" "}
+            {state.previousSendingChainMessageCount}
+          </div>
+          <div>
+            <span className="font-medium">Skipped Keys:</span>{" "}
+            {Object.keys(state.skippedKeys || {}).length}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Manager state renderer
+  const ManagerStateDisplay = ({
+    manager,
+    title,
+  }: {
+    manager: SessionManager | null
+    title: string
+  }) => {
+    if (!manager) return <div className="text-gray-500">Manager not initialized</div>
+
+    // Access private fields through type assertion (for debugging only)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userRecords = (manager as any).userRecords as Map<string, UserRecord>
+    const deviceId = manager.getDeviceId()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const invite = (manager as any).invite
+
+    return (
+      <div className="border rounded p-3 bg-white">
+        <div className="font-semibold mb-3 text-lg text-black">{title} Manager State</div>
+
+        {/* Manager info */}
+        <div className="mb-3 p-2 bg-blue-50 rounded text-sm text-gray-700">
+          <div>
+            <span className="font-medium">Device ID:</span> {deviceId}
+          </div>
+          <div>
+            <span className="font-medium">Invite Present:</span> {invite ? "Yes" : "No"}
+          </div>
+          <div>
+            <span className="font-medium">User Records:</span> {userRecords.size}
+          </div>
+        </div>
+
+        {/* User records */}
+        {Array.from(userRecords.entries()).map(([pubkey, userRecord]) => (
+          <div key={pubkey} className="mb-4 p-2 border-l-4 border-green-400 bg-green-50">
+            <div className="font-medium text-black mb-2">
+              User: {truncateKey(pubkey, 20)}
+            </div>
+
+            {/* Device records */}
+            <div className="mb-2">
+              <span className="text-sm font-medium text-gray-600">
+                Devices ({userRecord.getDeviceCount()}):
+              </span>
+              {userRecord.getAllDevices().map((device) => (
+                <div
+                  key={device.deviceId}
+                  className="ml-4 mt-1 p-2 bg-white rounded border text-xs"
+                >
+                  <div>
+                    <span className="font-medium">Device ID:</span> {device.deviceId}
+                  </div>
+                  <div>
+                    <span className="font-medium">Public Key:</span>{" "}
+                    {truncateKey(device.publicKey)}
+                  </div>
+                  <div>
+                    <span className="font-medium">Active Session:</span>{" "}
+                    {device.activeSession ? "Yes" : "No"}
+                  </div>
+                  <div>
+                    <span className="font-medium">Inactive Sessions:</span>{" "}
+                    {device.inactiveSessions.length}
+                  </div>
+                  <div>
+                    <span className="font-medium">Last Activity:</span>{" "}
+                    {device.lastActivity
+                      ? new Date(device.lastActivity).toLocaleString()
+                      : "Never"}
+                  </div>
+                  <div>
+                    <span className="font-medium">Stale:</span>{" "}
+                    {device.isStale ? "Yes" : "No"}
+                  </div>
+
+                  {/* Active session state */}
+                  {device.activeSession && (
+                    <div className="mt-2">
+                      <SessionStateDisplay
+                        state={device.activeSession.state}
+                        title={`Active Session (${device.activeSession.name})`}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Session summary */}
+            <div className="text-sm text-gray-600">
+              <div>Active Sessions: {userRecord.getActiveSessionCount()}</div>
+              <div>Sendable Sessions: {userRecord.getSendableSessions().length}</div>
+              <div>Total Sessions: {userRecord.getAllSessions().length}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 max-w-6xl mx-auto h-screen flex flex-col">
       <div className="flex items-center gap-4 mb-4">
         <h1 className="text-2xl font-bold">SessionManager Debug Chat (NDK)</h1>
         <button onClick={resetAll} className="btn btn-sm btn-secondary">
           Reset
+        </button>
+        <button
+          onClick={() => setShowSessionDetails(!showSessionDetails)}
+          className={`px-3 py-1 rounded text-sm font-medium ${
+            showSessionDetails
+              ? "bg-purple-500 text-white hover:bg-purple-600"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+        >
+          {showSessionDetails ? "Hide Session State" : "Show Session State"}
         </button>
       </div>
 
@@ -440,6 +639,17 @@ export default function SessionTest() {
           </div>
         </div>
       </div>
+
+      {/* Session Details Panel */}
+      {showSessionDetails && (
+        <div className="mb-6 border rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto">
+          <h2 className="font-semibold text-lg mb-4 text-black">Session Manager State</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ManagerStateDisplay manager={aliceManager} title="Alice" />
+            <ManagerStateDisplay manager={bobManager} title="Bob" />
+          </div>
+        </div>
+      )}
 
       {/* Event Log */}
       <div className="border rounded-lg p-4 flex-1 flex flex-col min-h-0">
