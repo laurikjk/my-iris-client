@@ -27,7 +27,7 @@ export const formatPrice = (priceTag: string[]) => {
 
   if (!isNaN(parsedPrice)) {
     if (currency === "SATS" || currency === "SAT") {
-      return `${formatAmount(parsedPrice)} sats${frequency ? `/ ${frequency}` : ""}`
+      return `${formatAmount(parsedPrice)}₿${frequency ? `/ ${frequency}` : ""}`
     }
     return symbol
       ? `${symbol}${formatAmount(parsedPrice)}${frequency ? `/ ${frequency}` : ""}`

@@ -191,7 +191,7 @@ function NotificationsFeedItem({notification, highlight}: NotificationsFeedItemP
                     zapped
                     {totalZappedAmount > 0 && (
                       <span className="text-yellow-600 font-semibold ml-1">
-                        {formatAmount(totalZappedAmount)} sats
+                        {formatAmount(totalZappedAmount)}₿
                       </span>
                     )}
                   </>

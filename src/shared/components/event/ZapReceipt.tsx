@@ -27,7 +27,7 @@ function ZapReceipt({event}: ZapReceiptProps) {
           <RiFlashlightFill className="w-4 h-4 text-yellow-500" />
           <span className="text-base-content/70">zapped</span>
           <span className="text-yellow-600 font-semibold">
-            {formatAmount(zappedAmount || 0)} sats
+            {formatAmount(zappedAmount || 0)}₿
           </span>
           <span className="text-base-content/70">to</span>
           {zapRecipient && (

@@ -47,7 +47,7 @@ function ZapReceiptHeader({event}: ZapReceiptHeaderProps) {
         <Name pubKey={zappingUser} />
         <span className="mx-1">zapped</span>
         <span className="text-yellow-600 font-semibold">
-          {formatAmount(zappedAmount || 0)} sats
+          {formatAmount(zappedAmount || 0)}₿
         </span>
         <RiFlashlightFill className="w-4 h-4 text-yellow-500 ml-1" />
       </Link>
