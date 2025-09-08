@@ -30,7 +30,7 @@ export default function TwitchClipComponent({match}: TwitchClipComponentProps) {
   if (!clipId) {
     return (
       <a
-        href={match.startsWith('http') ? match : `https://${match}`}
+        href={match.startsWith("http") ? match : `https://${match}`}
         target="_blank"
         rel="noopener noreferrer"
         className="text-primary hover:underline"

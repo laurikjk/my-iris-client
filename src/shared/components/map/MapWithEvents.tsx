@@ -15,7 +15,7 @@ interface MapWithEventsProps {
 export default function MapWithEvents({
   selectedGeohashes,
   height = "20rem",
-  className = "w-full"
+  className = "w-full",
 }: MapWithEventsProps) {
   const navigate = useNavigate()
   const [feedEvents, setFeedEvents] = useState<NDKEvent[]>([])
@@ -57,7 +57,7 @@ export default function MapWithEvents({
         height="100%"
         className="w-full h-full"
       />
-      
+
       {/* Hidden feed to collect events for the map */}
       <div className="hidden">
         <Feed

@@ -16,12 +16,12 @@ export default function MapPage() {
   const {query} = useParams()
   const isInTwoColumnLayout = useIsTwoColumnLayout()
   const searchInputRef = useRef<HTMLInputElement>(null)
-  
+
   // Initialize state properly from route parameter
   const initialGeohashes = useMemo(() => {
     return query ? [query.toLowerCase()] : []
   }, [query])
-  
+
   const [searchTerm, setSearchTerm] = useState(query || "")
   const [selectedGeohashes, setSelectedGeohashes] = useState<string[]>(initialGeohashes)
   const displayAs = useUIStore((state) => state.mapDisplayAs)
@@ -79,7 +79,7 @@ export default function MapPage() {
       hideReplies: false,
       displayAs,
     }
-    
+
     return config
   }, [geohashes, displayAs])
 

@@ -44,7 +44,7 @@ function SearchPage() {
     }
   }
 
-  // If in two-column layout, show the home-style right column  
+  // If in two-column layout, show the home-style right column
   if (isInTwoColumnLayout) {
     return <HomeRightColumn />
   }

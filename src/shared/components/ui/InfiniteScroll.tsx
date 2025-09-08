@@ -1,9 +1,26 @@
 import {ReactNode, useCallback, useEffect, useRef} from "react"
 
+function findNearestScrollingParent(element: HTMLElement): HTMLElement | null {
+  let parent = element.parentElement
+  while (parent) {
+    const computedStyle = getComputedStyle(parent)
+    const overflowY = computedStyle.overflowY
+    if (
+      overflowY === "auto" ||
+      overflowY === "scroll" ||
+      parent.hasAttribute("data-scrollable")
+    ) {
+      return parent
+    }
+    parent = parent.parentElement
+  }
+  return null
+}
+
 type Props = {
   onLoadMore: () => void
   children: ReactNode
-  scrollContainer?: HTMLDivElement | null
+  scrollContainer?: HTMLElement | null
 }
 
 const InfiniteScroll = ({onLoadMore, children, scrollContainer}: Props) => {
@@ -20,8 +37,14 @@ const InfiniteScroll = ({onLoadMore, children, scrollContainer}: Props) => {
   )
 
   useEffect(() => {
+    // Find scroll container automatically if not provided
+    let actualScrollContainer = scrollContainer
+    if (!actualScrollContainer && observerRef.current) {
+      actualScrollContainer = findNearestScrollingParent(observerRef.current)
+    }
+
     const observerOptions = {
-      root: scrollContainer,
+      root: actualScrollContainer,
       rootMargin: "1000px",
       threshold: 1.0,
     }

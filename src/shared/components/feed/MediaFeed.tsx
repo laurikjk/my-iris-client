@@ -1,7 +1,6 @@
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
-import {useMemo, useCallback} from "react"
-import useHistoryState from "@/shared/hooks/useHistoryState"
+import {useMemo, useCallback, useState} from "react"
 import MediaModal from "../media/MediaModal"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ImageGridItem from "./ImageGridItem"
@@ -15,10 +14,7 @@ interface MediaFeedProps {
 }
 
 export default function MediaFeed({events, eventsToHighlight}: MediaFeedProps) {
-  const [displayCount, setDisplayCount] = useHistoryState(
-    INITIAL_DISPLAY_COUNT,
-    "displayCount"
-  )
+  const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY_COUNT)
 
   // Use custom hooks for better organization
   const {calculateAllMedia} = useMediaExtraction()
@@ -31,7 +27,7 @@ export default function MediaFeed({events, eventsToHighlight}: MediaFeedProps) {
 
   const loadMoreItems = useCallback(() => {
     if (events.length > displayCount) {
-      setDisplayCount((prev: number) => prev + DISPLAY_INCREMENT)
+      setDisplayCount(displayCount + DISPLAY_INCREMENT)
       return true
     }
     return false

@@ -96,7 +96,7 @@ const Layout = ({children}: {children: ReactNode}) => {
 
     // Use the last search route for the title when showing search content
     if (lastSearchRoute.startsWith("/map")) return "Map"
-    if (lastSearchRoute.startsWith("/u")) return "People" 
+    if (lastSearchRoute.startsWith("/u")) return "People"
     if (lastSearchRoute.startsWith("/search")) return "Search"
     if (lastSearchRoute.startsWith("/m")) return "Market"
 
@@ -114,7 +114,6 @@ const Layout = ({children}: {children: ReactNode}) => {
 
   // Initialize wallet providers on app startup
   useEffect(() => {
-    console.log("🔍 Layout: Initializing wallet providers")
     initializeProviders()
   }, [initializeProviders])
 
