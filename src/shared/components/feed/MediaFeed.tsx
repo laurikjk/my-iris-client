@@ -1,6 +1,6 @@
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
-import {useMemo, useCallback, useState, useRef, useEffect} from "react"
+import {useMemo, useCallback, useState} from "react"
 import MediaModal from "../media/MediaModal"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import ImageGridItem from "./ImageGridItem"
@@ -15,58 +15,11 @@ interface MediaFeedProps {
 
 export default function MediaFeed({events, eventsToHighlight}: MediaFeedProps) {
   const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY_COUNT)
-  const [containerWidth, setContainerWidth] = useState(0)
-  const containerRef = useRef<HTMLDivElement>(null)
 
   // Use custom hooks for better organization
   const {calculateAllMedia} = useMediaExtraction()
   const {showModal, activeItemIndex, modalMedia, openModal, closeModal} = useMediaModal()
   const {fetchedEventsMap, handleEventFetched} = useMediaCache()
-
-  // Update container width on resize
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        // Find the scroll container parent by traversing up the DOM
-        let scrollContainer = containerRef.current.parentElement
-        while (scrollContainer) {
-          const overflow = window.getComputedStyle(scrollContainer).overflow
-          if (
-            overflow === "auto" ||
-            overflow === "scroll" ||
-            scrollContainer.classList.contains("feed-container")
-          ) {
-            break
-          }
-          scrollContainer = scrollContainer.parentElement
-        }
-        // Use the scroll container width, or fallback to current container
-        const targetWidth =
-          scrollContainer?.offsetWidth || containerRef.current.offsetWidth
-        setContainerWidth(targetWidth)
-      }
-    }
-
-    // Update width initially
-    updateWidth()
-
-    // Use ResizeObserver if available, otherwise fall back to window resize
-    if (window.ResizeObserver && containerRef.current) {
-      const resizeObserver = new ResizeObserver(updateWidth)
-      resizeObserver.observe(containerRef.current)
-      return () => resizeObserver.disconnect()
-    } else {
-      window.addEventListener("resize", updateWidth)
-      return () => window.removeEventListener("resize", updateWidth)
-    }
-  }, [])
-
-  // Determine gap based on container width
-  const gridGap = useMemo(() => {
-    if (containerWidth >= 800) return "gap-1"
-    if (containerWidth >= 600) return "gap-0.5"
-    return "gap-px"
-  }, [containerWidth])
 
   const visibleEvents = useMemo(() => {
     return events.slice(0, displayCount)
@@ -138,17 +91,19 @@ export default function MediaFeed({events, eventsToHighlight}: MediaFeedProps) {
       )}
 
       <InfiniteScroll onLoadMore={loadMoreItems}>
-        <div ref={containerRef} className={`grid grid-cols-3 ${gridGap}`}>
-          {visibleEvents.map((item, index) => (
-            <ImageGridItem
-              key={`${item.id}_${index}`}
-              event={item}
-              index={index}
-              setActiveItemIndex={handleImageClick}
-              onEventFetched={handleEventFetched}
-              highlightAsNew={eventsToHighlight?.has(item.id) || false}
-            />
-          ))}
+        <div className="@container">
+          <div className="grid grid-cols-3 gap-px @2xl:gap-0.5 @4xl:gap-1">
+            {visibleEvents.map((item, index) => (
+              <ImageGridItem
+                key={`${item.id}_${index}`}
+                event={item}
+                index={index}
+                setActiveItemIndex={handleImageClick}
+                onEventFetched={handleEventFetched}
+                highlightAsNew={eventsToHighlight?.has(item.id) || false}
+              />
+            ))}
+          </div>
         </div>
       </InfiniteScroll>
     </>
