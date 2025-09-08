@@ -1,7 +1,7 @@
 import {useState, useEffect, useRef} from "react"
 import SessionManager from "../session/SessionManager"
 import {generateSecretKey, getPublicKey, VerifiedEvent} from "nostr-tools"
-import {InMemoryStorageAdapter} from "../session/StorageAdapter"
+import {LocalStorageAdapter} from "../session/StorageAdapter"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
 import {Rumor, NostrPublish, SessionState} from "nostr-double-ratchet"
 import NDK, {NDKEvent, NDKPrivateKeySigner, NDKFilter} from "@nostr-dev-kit/ndk"
@@ -44,8 +44,8 @@ export default function SessionTest() {
   const bobSeenMessages = useRef(new Set<string>())
 
   // Persistent storage instances to test session restoration
-  const aliceStorage = useRef(new InMemoryStorageAdapter())
-  const bobStorage = useRef(new InMemoryStorageAdapter())
+  const aliceStorage = useRef(new LocalStorageAdapter("alice_session_"))
+  const bobStorage = useRef(new LocalStorageAdapter("bob_session_"))
 
   const addEventLog = (type: string, source: string, data: unknown) => {
     const logEntry = {
@@ -183,6 +183,27 @@ export default function SessionTest() {
     // Recreate managers would require reloading - for now just clear UI
   }
 
+  const clearStorage = async () => {
+    // Clear localStorage for both Alice and Bob
+    const aliceKeys = await aliceStorage.current.list()
+    const bobKeys = await bobStorage.current.list()
+
+    addEventLog(
+      "CLEARING_STORAGE",
+      "system",
+      `Clearing ${aliceKeys.length + bobKeys.length} stored sessions`
+    )
+
+    for (const key of aliceKeys) {
+      await aliceStorage.current.del(key)
+    }
+    for (const key of bobKeys) {
+      await bobStorage.current.del(key)
+    }
+
+    addEventLog("STORAGE_CLEARED", "system", "All session data cleared from storage")
+  }
+
   const simulateRefresh = async () => {
     setIsRefreshing(true)
     addEventLog(
@@ -217,6 +238,20 @@ export default function SessionTest() {
   const initManagers = async () => {
     // Alice setup - using persistent storage to test restoration
     const alicePubkey = getPublicKey(aliceSecretKey.current)
+
+    // Debug storage contents before initialization
+    const aliceKeys = await aliceStorage.current.list()
+    const bobKeys = await bobStorage.current.list()
+    addEventLog(
+      "STORAGE_STATE",
+      "alice",
+      `Found ${aliceKeys.length} stored keys: ${aliceKeys.join(", ")}`
+    )
+    addEventLog(
+      "STORAGE_STATE",
+      "bob",
+      `Found ${bobKeys.length} stored keys: ${bobKeys.join(", ")}`
+    )
 
     aliceNDK.current = createNDK(aliceSecretKey.current)
 
@@ -261,7 +296,7 @@ export default function SessionTest() {
       }
       aliceSeenMessages.current.add(messageKey)
 
-      addEventLog("MESSAGE_RECEIVED", "alice", {event, from})
+      addEventLog("MESSAGE_RECEIVED", "alice", {event, from, decrypted: true})
       setAliceMessages((prev) => [
         ...prev,
         {
@@ -323,7 +358,7 @@ export default function SessionTest() {
       }
       bobSeenMessages.current.add(messageKey)
 
-      addEventLog("MESSAGE_RECEIVED", "bob", {event, from})
+      addEventLog("MESSAGE_RECEIVED", "bob", {event, from, decrypted: true})
       setBobMessages((prev) => [
         ...prev,
         {
@@ -534,6 +569,12 @@ export default function SessionTest() {
         <h1 className="text-2xl font-bold">SessionManager Debug Chat (NDK)</h1>
         <button onClick={resetAll} className="btn btn-sm btn-secondary">
           Reset
+        </button>
+        <button
+          onClick={clearStorage}
+          className="px-3 py-1 rounded text-sm font-medium bg-red-500 text-white hover:bg-red-600"
+        >
+          Clear Storage
         </button>
         <button
           onClick={simulateRefresh}
