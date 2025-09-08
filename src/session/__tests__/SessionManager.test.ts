@@ -146,7 +146,87 @@ describe("SessionManager", () => {
       }),
       alicePubkey
     )
+  })
 
-    console.log("Storage debugs:", await aliceStorage.list(), await bobStorage.list())
+  it("should ", async () => {
+    const sharedRelay = new MockRelay()
+
+    const {
+      manager: aliceDevice1,
+      onEvent: onEventAliceDevice1,
+      publicKey: alicePubkey,
+      secretKey: aliceSecretKey,
+    } = await createMockSessionManager("alice-device-1", sharedRelay)
+
+    const {manager: aliceDevice2} = await createMockSessionManager(
+      "alice-device-2",
+      sharedRelay,
+      aliceSecretKey
+    )
+
+    const {onEvent: onEventBob, publicKey: bobPubkey} = await createMockSessionManager(
+      "bob-device-1",
+      sharedRelay
+    )
+
+    const initialMessage: Partial<Rumor> = {
+      kind: KIND_CHAT_MESSAGE,
+      content: "Hello Bob from Alice device 1",
+      created_at: Math.floor(Date.now() / 1000),
+    }
+    await aliceDevice1.sendEvent(bobPubkey, initialMessage)
+
+    const syncMessage: Partial<Rumor> = {
+      kind: KIND_CHAT_MESSAGE,
+      content: "Hello Bob from Alice device 2",
+      created_at: Math.floor(Date.now() / 1000),
+    }
+    await aliceDevice2.sendEvent(bobPubkey, syncMessage)
+
+    expect(onEventBob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "Hello Bob from Alice device 2",
+      }),
+      alicePubkey
+    )
+
+    expect(onEventAliceDevice1).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "Hello Bob from Alice device 2",
+      }),
+      alicePubkey
+    )
+  })
+
+  it("abc", async () => {
+    // Phase 1: Initial communication to establish sessions
+    let sharedRelay = new MockRelay()
+
+    const {
+      manager: aliceManager1,
+      secretKey: aliceSecretKey,
+      publicKey: alicePubkey,
+      mockStorage: aliceStorage,
+    } = await createMockSessionManager("alice-device-1", sharedRelay)
+
+    const {
+      manager: bobManager1,
+      secretKey: bobSecretKey,
+      publicKey: bobPubkey,
+      mockStorage: bobStorage,
+    } = await createMockSessionManager("bob-device-1", sharedRelay)
+
+    const initialMessage: Partial<Rumor> = {
+      kind: KIND_CHAT_MESSAGE,
+      content: "Initial message",
+      created_at: Math.floor(Date.now() / 1000),
+    }
+    await aliceManager1.sendEvent(bobPubkey, initialMessage)
+    await aliceManager1.sendEvent(bobPubkey, initialMessage)
+
+    const aliceStorageKeys = await aliceStorage.list("session/")
+    const bobStorageKeys = await bobStorage.list("session/")
+    expect(aliceStorageKeys.length).toBe(1)
+    expect(bobStorageKeys.length).toBe(1)
   })
 })
