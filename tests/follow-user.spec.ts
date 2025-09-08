@@ -25,6 +25,6 @@ test("can follow user by npub", async ({page}) => {
   // Move cursor away from button to avoid hover state showing "Unfollow"
   await page.mouse.move(0, 0)
 
-  // Verify button text changes to "Following"
-  await expect(followButton).toHaveText("Following")
+  // Verify button text changes to "Following" (check visible span)
+  await expect(followButton.locator("span.absolute")).toHaveText("Following")
 })

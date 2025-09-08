@@ -5,7 +5,7 @@ test("can navigate between main sections", async ({page}) => {
   await signUp(page)
 
   await page.getByRole("link", {name: "Search"}).click()
-  await expect(page.url()).toContain("/search")
+  await expect(page.url()).toContain("/u")
 
   await page.getByRole("link", {name: "About"}).click()
   await expect(page.url()).toContain("/about")

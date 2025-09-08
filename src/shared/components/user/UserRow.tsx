@@ -41,7 +41,7 @@ export function UserRow({
   )
 
   return (
-    <div className="relative" {...hoverProps}>
+    <div className="relative" data-testid="sidebar-user-row" {...hoverProps}>
       {linkToProfile ? (
         <ProfileLink pubKey={pubKey}>{mainContent}</ProfileLink>
       ) : (

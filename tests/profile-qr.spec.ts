@@ -14,8 +14,11 @@ test("can open QR code on own profile", async ({page}) => {
     .getByRole("button", {name: "Show QR Code"})
     .click()
 
-  await expect(page.getByRole("img", {name: "QR Code"})).toBeVisible({timeout: 10000})
+  await expect(page.getByRole("img", {name: "Public Key QR Code"})).toBeVisible({
+    timeout: 10000,
+  })
 
-  const qrData = page.getByText(/nostr:npub/)
+  // Check that the npub value is visible (it's truncated in the display)
+  const qrData = page.getByText(/npub.*\.\.\./)
   await expect(qrData).toBeVisible({timeout: 10000})
 })

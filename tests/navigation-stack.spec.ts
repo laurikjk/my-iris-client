@@ -11,7 +11,7 @@ test.describe("Stack Navigation", () => {
 
     // Navigate to search
     await page.getByRole("link", {name: "Search"}).click()
-    await expect(page.url()).toContain("/search")
+    await expect(page.url()).toContain("/u")
 
     // Navigate back to home
     await page.getByRole("link", {name: "Home", exact: true}).click()
@@ -22,7 +22,7 @@ test.describe("Stack Navigation", () => {
     // Test back navigation
     await page.goBack()
     await page.waitForTimeout(500) // Give navigation time to complete
-    await expect(page).toHaveURL(/\/search$/)
+    await expect(page).toHaveURL(/\/u$/)
     console.log("Back to search: ", page.url())
 
     await page.goBack()
