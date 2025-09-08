@@ -10,12 +10,14 @@ interface MapWithEventsProps {
   selectedGeohashes: string[]
   height?: string
   className?: string
+  displayAs?: "list" | "grid"
 }
 
 export default function MapWithEvents({
   selectedGeohashes,
   height = "20rem",
   className = "w-full",
+  displayAs = "list",
 }: MapWithEventsProps) {
   const navigate = useNavigate()
   const [feedEvents, setFeedEvents] = useState<NDKEvent[]>([])
@@ -43,8 +45,9 @@ export default function MapWithEvents({
       followDistance: 5,
       showRepliedTo: true,
       hideReplies: false,
+      displayAs,
     }
-  }, [selectedGeohashes])
+  }, [selectedGeohashes, displayAs])
 
   return (
     <div className={className} style={{height}}>

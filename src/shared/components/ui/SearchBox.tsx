@@ -7,6 +7,7 @@ import {
   useImperativeHandle,
 } from "react"
 import {useSearchStore, CustomSearchResult} from "@/stores/search"
+import {useKeyboardNavigation} from "@/shared/hooks/useKeyboardNavigation"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {isOvermuted} from "@/utils/visibility"
 import {searchIndex} from "@/utils/profileSearch"
@@ -52,7 +53,6 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
     ref
   ) => {
     const [searchResults, setSearchResults] = useState<CustomSearchResult[]>([])
-    const [activeResult, setActiveResult] = useState<number>(0)
     const {recentSearches, setRecentSearches} = useSearchStore()
     const [isFocused, setIsFocused] = useState(false)
     const [value, setValue] = useState<string>("")
@@ -168,11 +168,6 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
       // Sort by adjustedScore in DESCENDING order (higher is better)
       resultsWithAdjustedScores.sort((a, b) => b.adjustedScore - a.adjustedScore)
 
-      if (!redirect) {
-        setActiveResult(1)
-      } else {
-        setActiveResult(0)
-      }
       setSearchResults([
         ...(searchNotes
           ? [{pubKey: "search-notes", name: `search notes: ${v}`, query: v}]
@@ -181,53 +176,32 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
       ])
     }, [value, navigate, searchNotes, isSocialGraphLoaded])
 
-    useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        // Only handle keyboard events if this SearchBox input is focused
-        // AND the dropdown is visible (either showing search results or recent searches)
-        if (document.activeElement !== inputRef.current) return
-        if (!isFocused && searchResults.length === 0 && recentSearches.length === 0)
-          return
+    // Determine which list is currently being displayed
+    const displayedItems = value ? searchResults : recentSearches
+    const displayedLength = Math.min(displayedItems.length, maxResults)
 
-        // Determine which list is currently being displayed
-        const displayedItems = value ? searchResults : recentSearches
-        const displayedLength = Math.min(displayedItems.length, maxResults)
-
-        if (e.key === "ArrowDown") {
-          e.preventDefault()
-          if (displayedLength === 0) return
-          setActiveResult((prev) => (prev + 1) % displayedLength)
-        } else if (e.key === "ArrowUp") {
-          e.preventDefault()
-          if (displayedLength === 0) return
-          setActiveResult((prev) => (prev - 1 + displayedLength) % displayedLength)
-        } else if (e.key === "Escape") {
-          setValue("")
-          setSearchResults([])
-          setIsFocused(false)
-          setActiveResult(0)
-        } else if (e.key === "Enter") {
-          e.preventDefault()
-          if (displayedLength > 0) {
-            const activeItem = displayedItems[activeResult]
-            handleSelectResult(activeItem.pubKey, activeItem.query)
-          } else if (searchNotes && value.trim()) {
-            // Only search for notes if no dropdown item is selected
-            handleSelectResult("search-notes", value.trim())
-          }
-        }
+    const handleKeyboardSelect = (index: number) => {
+      if (displayedLength > 0) {
+        const activeItem = displayedItems[index]
+        handleSelectResult(activeItem.pubKey, activeItem.query)
+      } else if (searchNotes && value.trim()) {
+        handleSelectResult("search-notes", value.trim())
       }
-      window.addEventListener("keydown", handleKeyDown)
-      return () => window.removeEventListener("keydown", handleKeyDown)
-    }, [
-      searchResults,
-      activeResult,
-      navigate,
-      maxResults,
-      value,
-      recentSearches,
-      searchNotes,
-    ])
+    }
+
+    const handleKeyboardEscape = () => {
+      setValue("")
+      setSearchResults([])
+      setIsFocused(false)
+    }
+
+    const {activeIndex: activeResult} = useKeyboardNavigation({
+      inputRef,
+      items: displayedItems.slice(0, maxResults),
+      onSelect: handleKeyboardSelect,
+      onEscape: handleKeyboardEscape,
+      isActive: isFocused || searchResults.length > 0 || recentSearches.length > 0,
+    })
 
     // autofocus the input field when not redirecting
     useEffect(() => {
@@ -240,7 +214,6 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
       const handleClickOutside = (event: MouseEvent) => {
         if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
           setIsFocused(false)
-          setActiveResult(0)
         }
       }
 
@@ -269,7 +242,6 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
       setValue("")
       setSearchResults([])
       setIsFocused(false) // Hide dropdown for all interactions
-      setActiveResult(0) // Reset selection to first item
       inputRef.current?.blur() // Unfocus the input field
 
       if (pubKey === "search-notes" && query) {

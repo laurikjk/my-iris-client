@@ -1,6 +1,7 @@
 import {useParams, useNavigate} from "@/navigation"
 import {useRef, useMemo, useState, useEffect} from "react"
 import {useSearch} from "@/shared/hooks/useSearch"
+import {useKeyboardNavigation} from "@/shared/hooks/useKeyboardNavigation"
 import {UserRow} from "@/shared/components/user/UserRow"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import socialGraph from "@/utils/socialGraph"
@@ -8,6 +9,7 @@ import {nip19} from "nostr-tools"
 import Icon from "@/shared/components/Icons/Icon"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
+import classNames from "classnames"
 
 export default function UserSearchContent() {
   const {query} = useParams()
@@ -58,6 +60,30 @@ export default function UserSearchContent() {
       .sort((a, b) => b.followedByCount - a.followedByCount)
   }, [follows, graph, rootUser, searchValue, peopleSearch.searchResults])
 
+  const handleSelectUser = (index: number) => {
+    const user = displayUsers[index]
+    if (user) {
+      try {
+        navigate(`/${nip19.npubEncode(user.pubkey)}`)
+      } catch (error) {
+        console.error("Error encoding pubkey:", error)
+        navigate(`/${user.pubkey}`)
+      }
+    }
+  }
+
+  const handleEscape = () => {
+    setSearchValue("")
+  }
+
+  const {activeIndex} = useKeyboardNavigation({
+    inputRef: searchInputRef,
+    items: displayUsers.slice(0, displayCount),
+    onSelect: handleSelectUser,
+    onEscape: handleEscape,
+    isActive: true,
+  })
+
   const loadMore = () => {
     if (displayCount < displayUsers.length) {
       setDisplayCount((prev) => Math.min(prev + 20, displayUsers.length))
@@ -99,8 +125,17 @@ export default function UserSearchContent() {
           <div className="mt-4">
             <InfiniteScroll onLoadMore={loadMore}>
               <div className="flex flex-col gap-2 px-4">
-                {displayUsers.slice(0, displayCount).map(({pubkey}) => (
-                  <UserRow key={pubkey} pubKey={pubkey} linkToProfile={true} />
+                {displayUsers.slice(0, displayCount).map(({pubkey}, index) => (
+                  <div
+                    key={pubkey}
+                    className={classNames("rounded-md cursor-pointer p-2", {
+                      "bg-primary text-primary-content": index === activeIndex,
+                      "hover:bg-primary/20": index !== activeIndex,
+                    })}
+                    onClick={() => handleSelectUser(index)}
+                  >
+                    <UserRow pubKey={pubkey} linkToProfile={false} />
+                  </div>
                 ))}
               </div>
             </InfiniteScroll>

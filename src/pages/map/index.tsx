@@ -104,6 +104,7 @@ export default function MapPage() {
                   selectedGeohashes={geohashes}
                   height="20rem"
                   className="w-full max-w-full"
+                  displayAs={displayAs}
                 />
                 <div className="mt-4">
                   <Feed
