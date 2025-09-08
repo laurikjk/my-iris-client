@@ -5,6 +5,7 @@ import SpotifyPodcast from "./spotify/SpotifyPodcast.tsx"
 import EncryptedUrl from "./encrypted/EncryptedUrl.tsx"
 import SmallThumbnail from "./media/SmallThumbnail.tsx"
 import TwitchChannel from "./twitch/TwitchChannel.tsx"
+import TwitchClip from "./twitch/TwitchClip.tsx"
 import SpotifyAlbum from "./spotify/SpotifyAlbum.tsx"
 import SpotifyTrack from "./spotify/SpotifyTrack.tsx"
 import InlineMention from "./nostr/InlineMention.tsx"
@@ -63,6 +64,7 @@ export const allEmbeds = [
   // TidalPlaylist,
   // TidalTrack,
   TikTok,
+  TwitchClip,
   Twitch,
   TwitchChannel,
   WavLake,
@@ -91,6 +93,7 @@ export const mediaEmbeds = [
   // TidalPlaylist,
   // TidalTrack,
   TikTok,
+  TwitchClip,
   Twitch,
   TwitchChannel,
   WavLake,
