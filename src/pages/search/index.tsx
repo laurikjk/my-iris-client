@@ -25,6 +25,11 @@ function SearchPage() {
   const navItemClicked = useUIStore((state) => state.navItemClicked)
   const [searchTerm, setSearchTerm] = useState(decodedQuery)
 
+  // Update search term when URL query changes
+  useEffect(() => {
+    setSearchTerm(decodedQuery)
+  }, [decodedQuery])
+
   const {content} = useSettingsStore()
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
     !content.hideEventsByUnknownUsers,
@@ -58,6 +63,22 @@ function SearchPage() {
           <div className="flex-1 w-full flex flex-col gap-2 md:pt-2">
             <SearchTabSelector activeTab="posts" />
 
+            <div className="w-full p-2">
+              <form onSubmit={handleSubmit} className="w-full">
+                <label className="input input-bordered flex items-center gap-2 w-full">
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    className="grow"
+                    placeholder="Search posts..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  <Icon name="search-outline" className="text-neutral-content/60" />
+                </label>
+              </form>
+            </div>
+
             {decodedQuery && (
               <div className="flex items-center gap-2 p-2 mx-2">
                 <input
@@ -85,29 +106,11 @@ function SearchPage() {
                 }}
               />
             ) : (
-              <div className="w-full">
-                <div className="w-full p-2">
-                  <form onSubmit={handleSubmit} className="w-full">
-                    <label className="input input-bordered flex items-center gap-2 w-full">
-                      <input
-                        ref={searchInputRef}
-                        type="text"
-                        className="grow"
-                        placeholder="Search posts..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                      <Icon name="search-outline" className="text-neutral-content/60" />
-                    </label>
-                  </form>
-                </div>
-
-                <div className="mt-4">
-                  <AlgorithmicFeed
-                    type="popular"
-                    displayOptions={{showDisplaySelector: true}}
-                  />
-                </div>
+              <div className="mt-4">
+                <AlgorithmicFeed
+                  type="popular"
+                  displayOptions={{showDisplaySelector: true}}
+                />
               </div>
             )}
           </div>
