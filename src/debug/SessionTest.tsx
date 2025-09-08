@@ -38,6 +38,8 @@ export default function SessionTest() {
   const bobSecretKey = useRef(generateSecretKey())
   const aliceNDK = useRef<NDK | null>(null)
   const bobNDK = useRef<NDK | null>(null)
+  const aliceSeenMessages = useRef(new Set<string>())
+  const bobSeenMessages = useRef(new Set<string>())
 
   const addEventLog = (type: string, source: string, data: unknown) => {
     const logEntry = {
@@ -169,6 +171,13 @@ export default function SessionTest() {
       )
 
       aliceManager.onEvent((event: Rumor, from: string) => {
+        const messageKey = `${from}-${event.content}-${event.created_at}`
+        if (aliceSeenMessages.current.has(messageKey)) {
+          addEventLog("DUPLICATE_MESSAGE", "alice", {event, from})
+          return
+        }
+        aliceSeenMessages.current.add(messageKey)
+        
         addEventLog("MESSAGE_RECEIVED", "alice", {event, from})
         setAliceMessages((prev) => [
           ...prev,
@@ -225,6 +234,13 @@ export default function SessionTest() {
       )
 
       bobManager.onEvent((event: Rumor, from: string) => {
+        const messageKey = `${from}-${event.content}-${event.created_at}`
+        if (bobSeenMessages.current.has(messageKey)) {
+          addEventLog("DUPLICATE_MESSAGE", "bob", {event, from})
+          return
+        }
+        bobSeenMessages.current.add(messageKey)
+        
         addEventLog("MESSAGE_RECEIVED", "bob", {event, from})
         setBobMessages((prev) => [
           ...prev,
@@ -284,6 +300,8 @@ export default function SessionTest() {
     setAliceMessages([])
     setBobMessages([])
     setEventLog([])
+    aliceSeenMessages.current.clear()
+    bobSeenMessages.current.clear()
     // Recreate managers would require reloading - for now just clear UI
   }
 
