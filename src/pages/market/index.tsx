@@ -10,10 +10,12 @@ import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import {Helmet} from "react-helmet"
+import {useIsTwoColumnLayout} from "@/shared/hooks/useIsTwoColumnLayout"
 
 export default function MarketPage() {
   const {category} = useParams()
   const navigate = useNavigate()
+  const isInTwoColumnLayout = useIsTwoColumnLayout()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const showEventsByUnknownUsers = useSettingsStore(
     (state) => !state.content.hideEventsByUnknownUsers
@@ -42,6 +44,93 @@ export default function MarketPage() {
   const hasSearchTerm = Boolean(submittedSearch?.trim())
   const hasCategory = Boolean(category?.trim())
 
+  // If in two-column layout, only show the feed (categories interface is in middle column)
+  if (isInTwoColumnLayout) {
+    const feedComponent = (() => {
+      if (hasSearchTerm) {
+        return (
+          <Feed
+            key={`market-${submittedSearch}`}
+            feedConfig={{
+              name: "Market Search Results",
+              id: `search-market-${submittedSearch}`,
+              showRepliedTo: false,
+              showEventsByUnknownUsers: showEventsByUnknownUsers,
+              filter: {
+                kinds: [KIND_CLASSIFIED],
+                search: submittedSearch,
+              },
+            }}
+            displayAs={displayAs}
+            onDisplayAsChange={setMarketDisplayAs}
+            showDisplayAsSelector={true}
+          />
+        )
+      }
+      if (hasCategory) {
+        const tagVariations = [category]
+        const lowerTag = category.toLowerCase()
+        if (lowerTag !== category) {
+          tagVariations.push(lowerTag)
+        }
+
+        return (
+          <Feed
+            key={`market-tag-${category}`}
+            feedConfig={{
+              name: `Market: ${category}`,
+              id: `search-market-tag-${category}`,
+              showRepliedTo: false,
+              showEventsByUnknownUsers: showEventsByUnknownUsers,
+              filter: {
+                kinds: [KIND_CLASSIFIED],
+                "#t": tagVariations,
+              },
+            }}
+            displayAs={displayAs}
+            onDisplayAsChange={setMarketDisplayAs}
+            showDisplayAsSelector={true}
+          />
+        )
+      }
+      return (
+        <Feed
+          feedConfig={{
+            name: "Market",
+            id: "market",
+            showRepliedTo: false,
+            filter: {
+              kinds: [KIND_CLASSIFIED],
+              limit: 100,
+            },
+            followDistance: 3,
+            hideReplies: true,
+          }}
+          displayAs={displayAs}
+          onDisplayAsChange={setMarketDisplayAs}
+          showDisplayAsSelector={true}
+        />
+      )
+    })()
+
+    return (
+      <div className="flex flex-1 flex-row relative h-full">
+        <div className="flex flex-col flex-1 h-full relative">
+          <Header title={category ? `Market: ${category}` : "Market"} />
+          <ScrollablePageContainer className="flex flex-col items-center">
+            <div className="flex-1 w-full flex flex-col gap-2 md:pt-2">
+              {feedComponent}
+            </div>
+            <Helmet>
+              <title>{category ? `Market: ${category}` : "Market"} / Iris</title>
+            </Helmet>
+          </ScrollablePageContainer>
+        </div>
+      </div>
+    )
+  }
+
+  // Single column layout - show full interface
   return (
     <div className="flex flex-1 flex-row relative h-full">
       <div className="flex flex-col flex-1 h-full relative">

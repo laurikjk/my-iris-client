@@ -1,4 +1,5 @@
 import {useLocation, useNavigate} from "@/navigation"
+import {getCurrentRouteInfo} from "@/navigation/utils"
 import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import NavSideBar from "@/shared/components/nav/NavSideBar"
@@ -11,9 +12,11 @@ import ErrorBoundary from "./ui/ErrorBoundary"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useUIStore} from "@/stores/ui"
 import {Helmet} from "react-helmet"
-import {useEffect, ReactNode, useRef, useMemo} from "react"
+import {useEffect, ReactNode, useRef, useMemo, useState} from "react"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
+import {useIsTwoColumnLayout} from "@/shared/hooks/useIsTwoColumnLayout"
 import HomeFeed from "@/pages/home/feed/components/HomeFeed"
+import UnifiedSearchContent from "@/shared/components/search/UnifiedSearchContent"
 import {ScrollProvider} from "@/contexts/ScrollContext"
 import Header from "@/shared/components/header/Header"
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
@@ -47,6 +50,13 @@ const Layout = ({children}: {children: ReactNode}) => {
   const navigate = useNavigate()
   const location = useLocation()
   const isLargeScreen = useIsLargeScreen()
+  const isTwoColumnLayout = useIsTwoColumnLayout()
+
+  // Track middle column content - default to HomeFeed, and remember last search route
+  const [middleColumnContent, setMiddleColumnContent] = useState<"home" | "search">(
+    "home"
+  )
+  const [lastSearchRoute, setLastSearchRoute] = useState("/u")
 
   // Feed header logic for two-column layout
   const myPubKey = usePublicKey()
@@ -81,9 +91,22 @@ const Layout = ({children}: {children: ReactNode}) => {
       ? "Home"
       : activeFeedConfig?.customName || activeFeedItem?.name || "Following"
 
+  const getMiddleColumnTitle = () => {
+    if (middleColumnContent === "home") return feedName
+
+    // Use the last search route for the title when showing search content
+    if (lastSearchRoute.startsWith("/map")) return "Map"
+    if (lastSearchRoute.startsWith("/u")) return "People" 
+    if (lastSearchRoute.startsWith("/search")) return "Search"
+    if (lastSearchRoute.startsWith("/m")) return "Market"
+
+    return "Search"
+  }
+
+  const middleColumnTitle = getMiddleColumnTitle()
+
   const shouldShowMainFeed =
-    !appearance.singleColumnLayout &&
-    isLargeScreen &&
+    isTwoColumnLayout &&
     !location.pathname.startsWith("/settings") &&
     !location.pathname.startsWith("/chats")
 
@@ -95,15 +118,55 @@ const Layout = ({children}: {children: ReactNode}) => {
     initializeProviders()
   }, [initializeProviders])
 
-  // Scroll middle column when home is clicked (for two-column layout)
+  // Handle nav item clicks for middle column content
   useEffect(() => {
-    if (navItemClicked.signal === 0 || navItemClicked.path !== "/" || !shouldShowMainFeed)
-      return
+    if (navItemClicked.signal === 0 || !shouldShowMainFeed) return
 
-    if (middleColumnRef.current) {
-      middleColumnRef.current.scrollTo({top: 0, behavior: "instant"})
+    if (navItemClicked.path === "/") {
+      setMiddleColumnContent("home")
+      if (middleColumnRef.current) {
+        middleColumnRef.current.scrollTo({top: 0, behavior: "instant"})
+      }
+    } else if (
+      navItemClicked.path === "/u" ||
+      navItemClicked.path === "/search" ||
+      navItemClicked.path === "/m" ||
+      navItemClicked.path === "/map"
+    ) {
+      // Set the appropriate search route based on the clicked path
+      if (navItemClicked.path === "/map") {
+        setLastSearchRoute("/map")
+      } else if (navItemClicked.path === "/u") {
+        setLastSearchRoute("/u")
+      } else if (navItemClicked.path === "/search") {
+        setLastSearchRoute("/search")
+      } else if (navItemClicked.path === "/m") {
+        setLastSearchRoute("/m")
+      }
+
+      setMiddleColumnContent("search")
+      if (middleColumnRef.current) {
+        middleColumnRef.current.scrollTo({top: 0, behavior: "instant"})
+      }
     }
   }, [navItemClicked, shouldShowMainFeed])
+
+  // Set middle column content based on current route when in two-column layout
+  // Only change on root route changes, not when navigating within a search section
+  useEffect(() => {
+    if (!shouldShowMainFeed) return
+
+    const routeInfo = getCurrentRouteInfo(location.pathname)
+
+    if (routeInfo.type === "home") {
+      setMiddleColumnContent("home")
+    } else if (routeInfo.baseRoute) {
+      // This is a search route, update both content and last route
+      setLastSearchRoute(routeInfo.baseRoute)
+      setMiddleColumnContent("search")
+    }
+    // If not a recognized route, keep the current middle column content
+  }, [location.pathname, shouldShowMainFeed])
 
   useEffect(() => {
     if (goToNotifications > openedAt) {
@@ -175,7 +238,7 @@ const Layout = ({children}: {children: ReactNode}) => {
           >
             <Header showBack={false} showNotifications={true}>
               <div className="flex items-center justify-between w-full">
-                <span className="md:px-3 md:py-2">{feedName}</span>
+                <span className="md:px-3 md:py-2">{middleColumnTitle}</span>
                 <button
                   className="p-2 bg-base-100 hover:bg-base-200 rounded-full transition-colors mt-1"
                   onClick={() =>
@@ -201,9 +264,13 @@ const Layout = ({children}: {children: ReactNode}) => {
               data-main-scroll-container="middle-column"
               data-header-scroll-target
             >
-              <ScrollProvider scrollContainerRef={middleColumnRef}>
-                <HomeFeed />
-              </ScrollProvider>
+              {middleColumnContent === "home" ? (
+                <ScrollProvider scrollContainerRef={middleColumnRef}>
+                  <HomeFeed />
+                </ScrollProvider>
+              ) : (
+                <UnifiedSearchContent searchRoute={lastSearchRoute} />
+              )}
             </div>
           </div>
         )}

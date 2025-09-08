@@ -13,11 +13,14 @@ import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import Feed from "@/shared/components/feed/Feed"
 import {KIND_TEXT_NOTE} from "@/utils/constants"
 import Icon from "@/shared/components/Icons/Icon"
+import {useIsTwoColumnLayout} from "@/shared/hooks/useIsTwoColumnLayout"
+import {HomeRightColumn} from "@/pages/home/components/HomeRightColumn"
 
 function SearchPage() {
   const {query} = useParams()
   const decodedQuery = query ? decodeURIComponent(query) : ""
   const navigate = useNavigate()
+  const isInTwoColumnLayout = useIsTwoColumnLayout()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const navItemClicked = useUIStore((state) => state.navItemClicked)
   const [searchTerm, setSearchTerm] = useState(decodedQuery)
@@ -41,6 +44,12 @@ function SearchPage() {
     }
   }
 
+  // If in two-column layout, show the home-style right column  
+  if (isInTwoColumnLayout) {
+    return <HomeRightColumn />
+  }
+
+  // Single column layout - show full interface
   return (
     <div className="flex flex-1 flex-row relative h-full">
       <div className="flex flex-col flex-1 h-full relative">

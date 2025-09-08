@@ -46,3 +46,44 @@ export function matchPath(
 
   return {params}
 }
+
+export function getCurrentRouteInfo(pathname: string) {
+  // Define the search routes we care about - order matters! Check more specific routes first
+  const searchRoutes = [
+    "/map",
+    "/map/:query",
+    "/u",
+    "/u/:query",
+    "/search",
+    "/search/:query",
+    "/m",
+    "/m/:category",
+  ]
+
+  // Check if current path matches any search route
+  for (const route of searchRoutes) {
+    const match = matchPath(pathname, route)
+    if (match) {
+      // Return the base route type - check /map first to avoid /m conflict
+      if (route.startsWith("/map")) {
+        return {type: "map", baseRoute: "/map"}
+      }
+      if (route.startsWith("/u")) {
+        return {type: "user-search", baseRoute: "/u"}
+      }
+      if (route.startsWith("/search")) {
+        return {type: "search", baseRoute: "/search"}
+      }
+      if (route.startsWith("/m")) {
+        return {type: "market", baseRoute: "/m"}
+      }
+    }
+  }
+
+  // Check for home routes
+  if (pathname === "/" || matchPath(pathname, "/home")) {
+    return {type: "home", baseRoute: "/"}
+  }
+
+  return {type: "other", baseRoute: null}
+}

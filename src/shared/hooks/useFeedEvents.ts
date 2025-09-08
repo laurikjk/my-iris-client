@@ -127,17 +127,24 @@ export default function useFeedEvents({
     // Client-side search validation for relays that don't support search filters
     // Also validate hashtag matches
     if (filters.search) {
-      if (!event.content) return false
       const searchTerms = filters.search.toLowerCase().split(/\s+/)
-      const eventContent = event.content.toLowerCase()
+      const eventContent = event.content?.toLowerCase() || ""
 
-      // Check if all search terms are present (including hashtags)
+      // Get event's t tags
+      const tTags =
+        event.tags
+          ?.filter((tag) => tag[0] === "t" && tag[1])
+          ?.map((tag) => tag[1].toLowerCase()) || []
+
+      // Check if all search terms are present (either in content or t tags)
       const allTermsMatch = searchTerms.every((term) => {
-        if (term.startsWith("#")) {
-          // For hashtags, check both with and without # in content
-          return eventContent.includes(term) || eventContent.includes(term.substring(1))
-        }
-        return eventContent.includes(term)
+        const cleanTerm = term.startsWith("#") ? term.substring(1) : term
+        // Check in content or t tags
+        return (
+          eventContent.includes(term) ||
+          eventContent.includes(cleanTerm) ||
+          tTags.includes(cleanTerm)
+        )
       })
 
       if (!allTermsMatch) {
