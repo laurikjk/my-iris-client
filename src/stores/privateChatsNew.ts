@@ -57,15 +57,8 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
     }
 
     const nostrPublish = async (event: VerifiedEvent) => {
-      try {
-        const ndkEvent = NDKEventFromRawEvent(event)
-        await ndkEvent.publish(undefined, undefined, 0)
-        console.log("published event", event.id)
-        return event
-      } catch (error) {
-        console.error("Failed to publish event via NDK:", error)
-        throw error
-      }
+      const ndkEvent = NDKEventFromRawEvent(event)
+      await ndkEvent.publish(undefined, undefined, 0)
     }
 
     // Initialize SessionManager

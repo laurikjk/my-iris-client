@@ -1,5 +1,4 @@
 import {
-  NostrPublish,
   NostrSubscribe,
   Rumor,
   Unsubscribe,
@@ -10,10 +9,14 @@ import {
 } from "nostr-double-ratchet/src"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {UserRecord} from "./UserRecord"
-import {getPublicKey} from "nostr-tools"
+import {getPublicKey, VerifiedEvent} from "nostr-tools"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
 
 export type OnEventCallback = (event: Rumor, from: string) => void
+
+interface NostrPublish {
+  (event: VerifiedEvent): Promise<void>
+}
 
 export default class SessionManager {
   private userRecords: Map<string, UserRecord> = new Map()
