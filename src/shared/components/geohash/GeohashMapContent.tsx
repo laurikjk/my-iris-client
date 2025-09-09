@@ -356,7 +356,9 @@ export default function GeohashMapContent({
 
         if (
           isWithinSelection &&
-          (isGlobalView || geohashes.length === 0 || eventGh.length > Math.max(...geohashes.map((g) => g.length)))
+          (isGlobalView ||
+            geohashes.length === 0 ||
+            eventGh.length > Math.max(...geohashes.map((g) => g.length)))
         ) {
           const bounds = decodeGeohash(eventGh)
           const lat = (bounds[0] + bounds[1]) / 2
@@ -514,11 +516,7 @@ export default function GeohashMapContent({
                   onGeohashSelect("*")
                 }}
               >
-                <svg
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
