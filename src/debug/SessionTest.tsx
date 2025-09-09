@@ -54,7 +54,7 @@ export default function SessionTest() {
       source,
       data,
     }
-    setEventLog((prev) => [...prev.slice(-19), logEntry]) // Keep last 20
+    setEventLog((prev) => [...prev, logEntry]) // Keep last 20
   }
 
   const getSourceColor = (source: string) => {

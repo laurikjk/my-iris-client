@@ -10,7 +10,7 @@ import {
 } from "nostr-double-ratchet/src"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {UserRecord} from "./UserRecord"
-import {getPublicKey, VerifiedEvent} from "nostr-tools"
+import {getPublicKey} from "nostr-tools"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
 
 export type OnEventCallback = (event: Rumor, from: string) => void
@@ -46,6 +46,19 @@ export default class SessionManager {
 
   private _initialised = false
 
+  private async _processReceivedMessage(
+    session: Session,
+    event: Rumor,
+    pubkey: string,
+    deviceId: string
+  ): Promise<void> {
+    // 1. Save session state FIRST (state already advanced by decryption)
+    await this.saveSession(pubkey, deviceId, session)
+
+    // 2. Then notify callbacks
+    this.internalSubscriptions.forEach((cb) => cb(event, pubkey))
+  }
+
   /**
    * Perform asynchronous initialisation steps: create (or load) our invite,
    * publish it, hydrate sessions from storage and subscribe to new invites.
@@ -53,8 +66,16 @@ export default class SessionManager {
    */
   public async init(): Promise<void> {
     console.log("Initialising SessionManager")
-    if (this._initialised) return
+    if (this._initialised) {
+      return
+    }
 
+    await this._init()
+
+    this._initialised = true
+  }
+
+  private async _init(): Promise<void> {
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
 
     // 1. Hydrate existing sessions (placeholder for future implementation)
@@ -109,9 +130,20 @@ export default class SessionManager {
           this.saveSession(targetUserKey, deviceKey, session)
 
           session.onEvent((_event: Rumor) => {
-            // Save session state after successful decryption (state has advanced)
-            this.saveSession(targetUserKey, deviceKey, session)
-            this.internalSubscriptions.forEach((cb) => cb(_event, targetUserKey))
+            // Process message immediately, but schedule saving for later
+            // This avoids circular dependency with the operation queue
+            Promise.resolve().then(async () => {
+              try {
+                await this._processReceivedMessage(
+                  session,
+                  _event,
+                  targetUserKey,
+                  deviceKey
+                )
+              } catch (error) {
+                console.error("Error processing received message:", error)
+              }
+            })
           })
         } catch {
           /* ignore errors */
@@ -155,21 +187,28 @@ export default class SessionManager {
         this.saveSession(ourPublicKey, deviceId, session)
 
         session.onEvent((_event: Rumor) => {
-          // Save session state after successful decryption (state has advanced)
-          this.saveSession(ourPublicKey, deviceId, session)
-          this.internalSubscriptions.forEach((cb) => cb(_event, ourPublicKey))
+          // Process message immediately, but schedule saving for later
+          // This avoids circular dependency with the operation queue
+          Promise.resolve().then(async () => {
+            try {
+              await this._processReceivedMessage(session, _event, ourPublicKey, deviceId)
+            } catch (error) {
+              console.error("Error processing received message:", error)
+            }
+          })
         })
       } catch (err) {
         console.error("Own-invite accept failed", err)
       }
     })
-
-    this._initialised = true
   }
 
   private async loadSessions() {
     const base = "session/"
     const keys = await this.storage.list(base)
+    const ourPublicKey = getPublicKey(this.ourIdentityKey)
+    const uniqueUsers = new Set<string>()
+
     for (const key of keys) {
       const rest = key.substring(base.length)
       const idx = rest.indexOf("/")
@@ -192,13 +231,29 @@ export default class SessionManager {
         this.saveSession(ownerPubKey, deviceId, session)
 
         session.onEvent((_event: Rumor) => {
-          // Save session state after successful decryption (state has advanced)
-          this.saveSession(ownerPubKey, deviceId, session)
-          this.internalSubscriptions.forEach((cb) => cb(_event, ownerPubKey))
+          // Process message immediately, but schedule saving for later
+          // This avoids circular dependency with the operation queue
+          Promise.resolve().then(async () => {
+            try {
+              await this._processReceivedMessage(session, _event, ownerPubKey, deviceId)
+            } catch (error) {
+              console.error("Error processing received message:", error)
+            }
+          })
         })
+
+        // Track unique users to start listening for new invites/messages
+        if (ownerPubKey !== ourPublicKey) {
+          uniqueUsers.add(ownerPubKey)
+        }
       } catch {
         // corrupted entry — ignore
       }
+    }
+
+    // Start listening for new invites/messages from all users we have sessions with
+    for (const userPubKey of uniqueUsers) {
+      this.listenToUser(userPubKey)
     }
   }
 
@@ -230,7 +285,17 @@ export default class SessionManager {
     return await this.sendEvent(recipientIdentityKey, event)
   }
 
-  async sendEvent(recipientIdentityKey: string, event: Partial<Rumor>) {
+  async sendEvent(
+    recipientIdentityKey: string,
+    event: Partial<Rumor>
+  ): Promise<unknown[]> {
+    return await this._sendEvent(recipientIdentityKey, event)
+  }
+
+  private async _sendEvent(
+    recipientIdentityKey: string,
+    event: Partial<Rumor>
+  ): Promise<unknown[]> {
     console.log("Sending event to", recipientIdentityKey, event)
     // Immediately notify local subscribers so that UI can render sent message optimistically
     this.internalSubscriptions.forEach((cb) => cb(event as Rumor, recipientIdentityKey))
@@ -363,9 +428,15 @@ export default class SessionManager {
 
           // Register all existing callbacks on the new session
           session.onEvent((_event: Rumor) => {
-            // Save session state after successful decryption (state has advanced)
-            this.saveSession(userPubkey, deviceId, session)
-            this.internalSubscriptions.forEach((callback) => callback(_event, userPubkey))
+            // Process message immediately, but schedule saving for later
+            // This avoids circular dependency with the operation queue
+            Promise.resolve().then(async () => {
+              try {
+                await this._processReceivedMessage(session, _event, userPubkey, deviceId)
+              } catch (error) {
+                console.error("Error processing received message:", error)
+              }
+            })
           })
 
           const queuedMessages = this.messageQueue.get(userPubkey)
@@ -411,18 +482,6 @@ export default class SessionManager {
 
   onEvent(callback: OnEventCallback) {
     this.internalSubscriptions.add(callback)
-
-    // Subscribe to existing sessions
-    for (const [pubkey, userRecord] of this.userRecords.entries()) {
-      for (const session of userRecord.getActiveSessions()) {
-        session.onEvent((event: Rumor) => {
-          // Save session state after successful decryption (state has advanced)
-          const deviceId = session.name || "unknown"
-          this.saveSession(pubkey, deviceId, session)
-          callback(event, pubkey)
-        })
-      }
-    }
 
     // Return unsubscribe function
     return () => {
