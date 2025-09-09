@@ -7,7 +7,7 @@ import {
   deserializeSessionState,
   Invite,
   Session,
-} from "nostr-double-ratchet/src"
+} from "nostr-double-ratchet"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {UserRecord} from "./UserRecord"
 import {getPublicKey} from "nostr-tools"
@@ -182,7 +182,7 @@ export default class SessionManager {
           userRecord = new UserRecord(ourPublicKey, this.nostrSubscribe)
           this.userRecords.set(ourPublicKey, userRecord)
         }
-        const deviceId = invite["deviceId"] || event.id || "unknown"
+        const deviceId = invite["deviceId"] || "unknown"
         userRecord.upsertSession(deviceId, session)
         this.saveSession(ourPublicKey, deviceId, session)
 
@@ -227,6 +227,7 @@ export default class SessionManager {
           userRecord = new UserRecord(ownerPubKey, this.nostrSubscribe)
           this.userRecords.set(ownerPubKey, userRecord)
         }
+        console.log(`Loading session for ${ownerPubKey} with deviceId: ${deviceId}`)
         userRecord.upsertSession(deviceId, session)
         this.saveSession(ownerPubKey, deviceId, session)
 
