@@ -470,14 +470,6 @@ export default class SessionManager {
     this.inviteUnsubscribes.set(userPubkey, unsubscribe)
   }
 
-  stopListeningToUser(userPubkey: string) {
-    const unsubscribe = this.inviteUnsubscribes.get(userPubkey)
-    if (unsubscribe) {
-      unsubscribe()
-      this.inviteUnsubscribes.delete(userPubkey)
-    }
-  }
-
   // Update onEvent to include internalSubscriptions management
   private internalSubscriptions: Set<OnEventCallback> = new Set()
 
