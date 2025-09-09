@@ -483,13 +483,11 @@ export default class SessionManager {
   }
 
   close() {
-    // Clean up all subscriptions
     for (const unsubscribe of this.inviteUnsubscribes.values()) {
       unsubscribe()
     }
     this.inviteUnsubscribes.clear()
 
-    // Close all sessions
     for (const userRecord of this.userRecords.values()) {
       for (const session of userRecord.getActiveSessions()) {
         session.close()
