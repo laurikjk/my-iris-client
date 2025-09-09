@@ -236,11 +236,20 @@ export default function MarketFilters({
         <Feed
           key={category || "all"}
           feedConfig={feedConfig}
-          onEvent={(event) => {
+          onEvent={async (event) => {
             setMapEvents((prev) => {
               if (prev.some((e) => e.id === event.id)) return prev
               return [...prev.slice(-199), event]
             })
+
+            // Extract and add tags from the event
+            const tTags = event.tags.filter((tag) => tag[0] === "t" && tag[1])
+            if (tTags.length > 0) {
+              await marketStore.addTags(tTags.map((tag) => tag[1]))
+              // Update available tags after adding new ones
+              const updatedTags = await marketStore.getTags()
+              setAvailableTags(updatedTags)
+            }
           }}
         />
       </div>
