@@ -356,7 +356,7 @@ export default function GeohashMapContent({
 
         if (
           isWithinSelection &&
-          (isGlobalView || eventGh.length > Math.max(...geohashes.map((g) => g.length)))
+          (isGlobalView || geohashes.length === 0 || eventGh.length > Math.max(...geohashes.map((g) => g.length)))
         ) {
           const bounds = decodeGeohash(eventGh)
           const lat = (bounds[0] + bounds[1]) / 2

@@ -143,6 +143,17 @@ const Feed = memo(function Feed({
     displayAs,
   })
 
+  // Call onEvent for all filtered events
+  useEffect(() => {
+    if (onEvent && filteredEvents.length > 0) {
+      filteredEvents.forEach(event => {
+        if ('content' in event) {
+          onEvent(event as NDKEvent)
+        }
+      })
+    }
+  }, [filteredEvents, onEvent])
+
   const loadMoreItems = () => {
     const hasMore = hookLoadMoreItems()
     if (hasMore) {
@@ -329,7 +340,6 @@ const Feed = memo(function Feed({
                       showRepliedTo={feedConfig.showRepliedTo ?? true}
                       showReplies={showReplies}
                       event={event}
-                      onEvent={onEvent}
                       borderTop={borderTopFirst && index === 0}
                       highlightAsNew={eventsToHighlight.has(event.id)}
                     />
