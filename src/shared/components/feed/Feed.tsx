@@ -143,12 +143,16 @@ const Feed = memo(function Feed({
     displayAs,
   })
 
-  // Call onEvent for all filtered events
+  // Track which events we've already notified about
+  const notifiedEventIds = useRef(new Set<string>())
+  
+  // Call onEvent for new filtered events only
   useEffect(() => {
     if (onEvent && filteredEvents.length > 0) {
       filteredEvents.forEach(event => {
-        if ('content' in event) {
+        if ('content' in event && !notifiedEventIds.current.has(event.id)) {
           onEvent(event as NDKEvent)
+          notifiedEventIds.current.add(event.id)
         }
       })
     }
