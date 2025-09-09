@@ -2,12 +2,15 @@ export function matchPath(
   pathname: string,
   pattern: string
 ): {params: Record<string, string>} | null {
+  // Strip query params for matching
+  const pathOnly = pathname.split("?")[0]
+
   // Special handling for /* patterns - should match both /path and /path/...
   if (pattern.endsWith("/*")) {
     const basePath = pattern.slice(0, -2)
-    if (pathname === basePath || pathname.startsWith(basePath + "/")) {
+    if (pathOnly === basePath || pathOnly.startsWith(basePath + "/")) {
       const wildcardPart =
-        pathname === basePath ? "" : pathname.slice(basePath.length + 1)
+        pathOnly === basePath ? "" : pathOnly.slice(basePath.length + 1)
       return {params: {"*": wildcardPart}}
     }
     return null
@@ -35,7 +38,7 @@ export function matchPath(
     .join("/")
 
   const regex = new RegExp(`^${regexPattern}$`)
-  const match = pathname.match(regex)
+  const match = pathOnly.match(regex)
 
   if (!match) return null
 
@@ -48,6 +51,9 @@ export function matchPath(
 }
 
 export function getCurrentRouteInfo(pathname: string) {
+  // Strip query params for route matching
+  const pathOnly = pathname.split("?")[0]
+
   // Define the search routes we care about - order matters! Check more specific routes first
   const searchRoutes = [
     "/map",
@@ -62,7 +68,7 @@ export function getCurrentRouteInfo(pathname: string) {
 
   // Check if current path matches any search route
   for (const route of searchRoutes) {
-    const match = matchPath(pathname, route)
+    const match = matchPath(pathOnly, route)
     if (match) {
       // Return the base route type - check /map first to avoid /m conflict
       if (route.startsWith("/map")) {
@@ -81,7 +87,7 @@ export function getCurrentRouteInfo(pathname: string) {
   }
 
   // Check for home routes
-  if (pathname === "/" || matchPath(pathname, "/home")) {
+  if (pathOnly === "/" || matchPath(pathOnly, "/home")) {
     return {type: "home", baseRoute: "/"}
   }
 

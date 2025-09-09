@@ -25,7 +25,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
 
   // Initialize with current URL
   useEffect(() => {
-    const initialPath = window.location.pathname
+    const initialPath = window.location.pathname + window.location.search
 
     // Check if we already have history state (e.g., from page refresh)
     const existingState = window.history.state
@@ -61,12 +61,12 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
   }, [])
 
   // Track current URL to detect changes
-  const currentUrlRef = useRef(window.location.pathname)
+  const currentUrlRef = useRef(window.location.pathname + window.location.search)
 
   // Handle browser back/forward
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
-      const newUrl = window.location.pathname
+      const newUrl = window.location.pathname + window.location.search
       const state = event.state
 
       // Update our navigation state to match the browser

@@ -1,12 +1,13 @@
 import {useParams, useNavigate} from "@/navigation"
-import {useRef, useState, useEffect, FormEvent} from "react"
+import {useRef, useState, useEffect, FormEvent, useMemo} from "react"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import Icon from "@/shared/components/Icons/Icon"
 import {marketStore} from "@/stores/marketstore"
 import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
-import {ndk} from "@/utils/ndk"
 import {KIND_CLASSIFIED} from "@/utils/constants"
+import Feed from "@/shared/components/feed/Feed"
+import {useSettingsStore} from "@/stores/settings"
 
 interface MarketFiltersProps {
   mapHeight?: string
@@ -25,12 +26,18 @@ export default function MarketFilters({
   const [searchTerm, setSearchTerm] = useState("")
   const [availableTags, setAvailableTags] = useState<string[]>([])
   const [mapEvents, setMapEvents] = useState<NDKEvent[]>([])
+  const showEventsByUnknownUsers = useSettingsStore(
+    (state) => !state.content.hideEventsByUnknownUsers
+  )
 
-  // Get geohash from URL query params
+  // Get geohash from URL query params or localStorage fallback
   const urlParams = new URLSearchParams(window.location.search)
   const geohashFromUrl = urlParams.get("g")
+  const storedGeohash = category
+    ? localStorage.getItem(`market-geohash-${category}`)
+    : null
   const [selectedGeohash, setSelectedGeohash] = useState<string | undefined>(
-    geohashFromUrl || undefined
+    geohashFromUrl || storedGeohash || undefined
   )
 
   const hasCategory = Boolean(category?.trim())
@@ -43,6 +50,30 @@ export default function MarketFilters({
     setShowMap(Boolean(category?.trim()))
   }, [category])
 
+  // Listen for URL changes to update selected geohash
+  // Also restore query params if they're missing
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const params = new URLSearchParams(window.location.search)
+      const g = params.get("g")
+      setSelectedGeohash(g || undefined)
+    }
+
+    // Check if we have a stored geohash but it's not in the URL
+    if (selectedGeohash && !window.location.search.includes("g=")) {
+      const params = new URLSearchParams(window.location.search)
+      params.set("g", selectedGeohash)
+      const newUrl = `${window.location.pathname}?${params}`
+      window.history.replaceState({}, "", newUrl)
+    }
+
+    window.addEventListener("popstate", handleLocationChange)
+
+    return () => {
+      window.removeEventListener("popstate", handleLocationChange)
+    }
+  }, [selectedGeohash])
+
   useEffect(() => {
     const loadTags = async () => {
       const tags = await marketStore.getTags()
@@ -51,40 +82,24 @@ export default function MarketFilters({
     loadTags()
   }, [])
 
-  // Subscribe to market events with geohash tags for the map
-  useEffect(() => {
-    if (!showMap && !category) return
-
+  // Create feed config for collecting market events
+  // Don't filter by category for map collection - show all events on map
+  const feedConfig = useMemo(() => {
     const filter: NDKFilter = {
       kinds: [KIND_CLASSIFIED],
-      limit: 100,
+      limit: 500,
     }
 
-    // Only add category filter if one is selected
-    if (category) {
-      const tagVariations = [category]
-      const lowerTag = category.toLowerCase()
-      if (lowerTag !== category) {
-        tagVariations.push(lowerTag)
-      }
-      filter["#t"] = tagVariations
+    return {
+      id: `market-map-all`,
+      name: "Market Map Events",
+      filter,
+      followDistance: 3,
+      showRepliedTo: false,
+      hideReplies: true,
+      showEventsByUnknownUsers: true, // Show all events on map
     }
-
-    const sub = ndk().subscribe(filter)
-    const events: NDKEvent[] = []
-
-    sub.on("event", (event: NDKEvent) => {
-      // Only include events with geohash tags
-      if (event.tags.some((tag) => tag[0] === "g")) {
-        events.push(event)
-        setMapEvents([...events])
-      }
-    })
-
-    return () => {
-      sub.stop()
-    }
-  }, [showMap, category])
+  }, [showEventsByUnknownUsers])
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -93,7 +108,7 @@ export default function MarketFilters({
     }
   }
 
-  // Update URL when geohash is selected
+  // Update URL when geohash is selected and trigger a navigation event
   const handleGeohashSelect = (geohash: string) => {
     // Don't set wildcard geohashes, just unset
     if (!geohash || geohash === "*") {
@@ -104,12 +119,16 @@ export default function MarketFilters({
         ? `${window.location.pathname}?${params}`
         : window.location.pathname
       window.history.pushState({}, "", newUrl)
+      // Dispatch popstate event to notify other components
+      window.dispatchEvent(new PopStateEvent("popstate"))
     } else {
       setSelectedGeohash(geohash)
       const params = new URLSearchParams(window.location.search)
       params.set("g", geohash)
       const newUrl = `${window.location.pathname}?${params}`
       window.history.pushState({}, "", newUrl)
+      // Dispatch popstate event to notify other components
+      window.dispatchEvent(new PopStateEvent("popstate"))
     }
   }
 
@@ -154,13 +173,18 @@ export default function MarketFilters({
               Map
             </button>
           </div>
-          
+
           {/* Category label with X button when category is selected */}
           {hasCategory && (
             <span className="badge p-4 badge-primary badge-lg">
               {category}
               <button
-                onClick={() => navigate("/m")}
+                onClick={() => {
+                  // Preserve query params when clearing category
+                  const params = new URLSearchParams(window.location.search)
+                  const queryString = params.toString()
+                  navigate(`/m${queryString ? `?${queryString}` : ""}`)
+                }}
                 className="ml-2 hover:text-primary-content/80 text-lg"
               >
                 ×
@@ -178,7 +202,12 @@ export default function MarketFilters({
               <button
                 key={tag}
                 onClick={() => {
-                  navigate(`/m/${encodeURIComponent(tag)}`)
+                  // Preserve query params when navigating
+                  const params = new URLSearchParams(window.location.search)
+                  const queryString = params.toString()
+                  navigate(
+                    `/m/${encodeURIComponent(tag)}${queryString ? `?${queryString}` : ""}`
+                  )
                 }}
                 className={`badge cursor-pointer transition-colors h-fit ${
                   category === tag
@@ -200,6 +229,20 @@ export default function MarketFilters({
             height={mapHeight}
           />
         )}
+      </div>
+
+      {/* Hidden feed to collect events for the map - always render to collect events */}
+      <div className="hidden">
+        <Feed
+          key={category || "all"}
+          feedConfig={feedConfig}
+          onEvent={(event) => {
+            setMapEvents((prev) => {
+              if (prev.some((e) => e.id === event.id)) return prev
+              return [...prev.slice(-199), event]
+            })
+          }}
+        />
       </div>
     </div>
   )
