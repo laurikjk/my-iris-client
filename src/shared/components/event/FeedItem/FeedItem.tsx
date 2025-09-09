@@ -303,11 +303,14 @@ function FeedItem({
             {(() => {
               const targetEvent = referredEvent || event
               const hasGeohash = targetEvent.tags.some((tag) => tag[0] === "g" && tag[1])
+              const hasLocation = targetEvent.tags.some(
+                (tag) => tag[0] === "location" && tag[1]
+              )
               const hasExpiration = targetEvent.tags.some(
                 (tag) => tag[0] === "expiration" && tag[1]
               )
 
-              if (!hasGeohash && !hasExpiration) return null
+              if (!hasGeohash && !hasLocation && !hasExpiration) return null
 
               return (
                 <div
@@ -318,7 +321,7 @@ function FeedItem({
                     }
                   )}
                 >
-                  {hasGeohash ? (
+                  {hasGeohash || hasLocation ? (
                     <GeohashLocation event={targetEvent} className="" />
                   ) : (
                     <div />
