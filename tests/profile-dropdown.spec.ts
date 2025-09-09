@@ -23,20 +23,18 @@ test.describe("Profile dropdown functionality", () => {
     const header = page.locator("header").first()
     await expect(header).toBeVisible()
 
-    // Look for the dropdown button in the header
-    // It should be in the right side of the header
-    const dropdownButton = page.locator("header button.btn-circle.btn-ghost").last()
+    // Look for the dropdown button in the header using test-id
+    const dropdownButton = page.getByTestId("profile-dropdown-button")
     await expect(dropdownButton).toBeVisible({timeout: 10000})
 
     // Click the dropdown button to open the menu
     await dropdownButton.click()
 
-    // Wait a moment for the dropdown to open
-    await page.waitForTimeout(500)
+    // Wait for dropdown to be visible
+    const dropdown = page.locator(".dropdown-content").first()
+    await expect(dropdown).toBeVisible({timeout: 5000})
 
     // Check that the dropdown contains "Mute" text
-    const dropdown = page.locator(".dropdown-content")
-    await expect(dropdown).toBeVisible()
     await expect(dropdown).toContainText("Mute")
   })
 

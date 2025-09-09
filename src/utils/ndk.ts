@@ -67,11 +67,58 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
     watchLocalSettings(ndkInstance)
     ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
     ndkInstance.connect()
+    setupVisibilityReconnection(ndkInstance)
     console.log("NDK instance initialized", ndkInstance)
   } else if (opts) {
     throw new Error("NDK instance already initialized, cannot pass options")
   }
   return ndkInstance
+}
+
+/**
+ * Setup visibility change listener to force immediate reconnection
+ * when PWA returns to foreground
+ */
+function setupVisibilityReconnection(instance: NDK) {
+  let wasHidden = false
+
+  const handleVisibilityChange = () => {
+    if (document.hidden) {
+      wasHidden = true
+      return
+    }
+
+    // App returned to foreground
+    if (wasHidden) {
+      wasHidden = false
+      console.log("PWA returned to foreground, checking relay connections...")
+
+      // Force immediate reconnection for disconnected relays
+      for (const relay of instance.pool.relays.values()) {
+        if (relay.status !== 1) {
+          // 1 = connected
+          console.log(`Forcing reconnection to ${relay.url}`)
+          relay.connect()
+        }
+      }
+    }
+  }
+
+  document.addEventListener("visibilitychange", handleVisibilityChange)
+
+  // Also handle page show event for iOS PWAs
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) {
+      handleVisibilityChange()
+    }
+  })
+
+  // Handle focus event as fallback
+  window.addEventListener("focus", () => {
+    if (wasHidden) {
+      handleVisibilityChange()
+    }
+  })
 }
 
 function recreateNDKInstance() {

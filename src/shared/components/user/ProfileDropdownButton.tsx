@@ -12,6 +12,7 @@ function ProfileDropdownButton({pubKey}: ProfileDropdownButtonProps) {
     <div className="relative">
       <button
         className="btn btn-circle btn-ghost"
+        data-testid="profile-dropdown-button"
         onClick={(e) => {
           e.stopPropagation()
           setShowDropdown((v) => !v)

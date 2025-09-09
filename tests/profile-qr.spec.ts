@@ -19,6 +19,7 @@ test("can open QR code on own profile", async ({page}) => {
   })
 
   // Check that the npub value is visible (it's truncated in the display)
-  const qrData = page.getByText(/npub.*\.\.\./)
+  // Use the first match since there might be multiple (one for copy, one for lightning)
+  const qrData = page.getByText(/npub.*\.\.\./).first()
   await expect(qrData).toBeVisible({timeout: 10000})
 })

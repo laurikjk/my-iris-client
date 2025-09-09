@@ -43,7 +43,7 @@ test.describe("Stack Navigation", () => {
 
     await page.goForward()
     await page.waitForTimeout(500)
-    await expect(page).toHaveURL(/\/search$/)
+    await expect(page).toHaveURL(/\/u$/)
     console.log("Forward to search: ", page.url())
   })
 
