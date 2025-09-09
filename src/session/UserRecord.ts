@@ -294,24 +294,6 @@ export class UserRecord {
     this.deviceRecords.clear()
   }
 
-  // ============================================================================
-  // Legacy Compatibility Methods
-  // ============================================================================
-
-  /**
-   * @deprecated Use upsertDevice instead
-   */
-  public conditionalUpdate(deviceId: string, publicKey: string): void {
-    this.upsertDevice(deviceId, publicKey)
-  }
-
-  /**
-   * @deprecated Use upsertSession instead
-   */
-  public insertSession(deviceId: string, session: Session): void {
-    this.upsertSession(deviceId, session)
-  }
-
   /**
    * Creates a new session for a device
    */
