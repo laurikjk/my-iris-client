@@ -8,13 +8,22 @@ import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 import {KIND_CLASSIFIED} from "@/utils/constants"
 
-export default function MarketFilters() {
+interface MarketFiltersProps {
+  mapHeight?: string
+  categoriesHeight?: string
+  includeSearch?: boolean
+}
+
+export default function MarketFilters({
+  mapHeight = "calc(100vh - 242px)",
+  categoriesHeight = "",
+  includeSearch = true,
+}: MarketFiltersProps = {}) {
   const {category} = useParams()
   const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [availableTags, setAvailableTags] = useState<string[]>([])
-  const [showMap, setShowMap] = useState(false)
   const [mapEvents, setMapEvents] = useState<NDKEvent[]>([])
 
   // Get geohash from URL query params
@@ -25,6 +34,14 @@ export default function MarketFilters() {
   )
 
   const hasCategory = Boolean(category?.trim())
+
+  // Show map by default when category is selected
+  const [showMap, setShowMap] = useState(hasCategory)
+
+  // Update showMap when category changes
+  useEffect(() => {
+    setShowMap(Boolean(category?.trim()))
+  }, [category])
 
   useEffect(() => {
     const loadTags = async () => {
@@ -98,59 +115,65 @@ export default function MarketFilters() {
 
   return (
     <div className="flex flex-col gap-2">
-      <SearchTabSelector activeTab="market" />
+      {includeSearch && (
+        <>
+          <SearchTabSelector activeTab="market" />
 
-      <div className="w-full p-2">
-        <form onSubmit={handleSubmit} className="w-full">
-          <label className="input input-bordered flex items-center gap-2 w-full">
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="grow"
-              placeholder="Search market..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Icon name="search-outline" className="text-neutral-content/60" />
-          </label>
-        </form>
-      </div>
+          <div className="w-full p-2">
+            <form onSubmit={handleSubmit} className="w-full">
+              <label className="input input-bordered flex items-center gap-2 w-full">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  className="grow"
+                  placeholder="Search market..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <Icon name="search-outline" className="text-neutral-content/60" />
+              </label>
+            </form>
+          </div>
+        </>
+      )}
 
-      <div className="px-2">
-        {/* Category label with X button when category is selected */}
-        {hasCategory && (
-          <div className="mb-3 flex items-center gap-2">
-            <span className="badge badge-primary">
+      <div className={includeSearch ? "px-2" : ""}>
+        {/* Toggle buttons and category label on same row */}
+        <div className="flex justify-between items-center flex-wrap gap-2 mb-4">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowMap(false)}
+              className={`btn btn-sm ${!showMap ? "btn-primary" : "btn-outline"}`}
+            >
+              Categories
+            </button>
+            <button
+              onClick={() => setShowMap(true)}
+              className={`btn btn-sm ${showMap ? "btn-primary" : "btn-outline"}`}
+            >
+              Map
+            </button>
+          </div>
+          
+          {/* Category label with X button when category is selected */}
+          {hasCategory && (
+            <span className="badge p-4 badge-primary badge-lg">
               {category}
               <button
                 onClick={() => navigate("/m")}
-                className="ml-2 hover:text-primary-content/80"
+                className="ml-2 hover:text-primary-content/80 text-lg"
               >
                 ×
               </button>
             </span>
-          </div>
-        )}
-
-        {/* Toggle buttons for Categories and Map */}
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => setShowMap(false)}
-            className={`btn btn-sm ${!showMap ? "btn-primary" : "btn-outline"}`}
-          >
-            Categories
-          </button>
-          <button
-            onClick={() => setShowMap(true)}
-            className={`btn btn-sm ${showMap ? "btn-primary" : "btn-outline"}`}
-          >
-            Map
-          </button>
+          )}
         </div>
 
         {/* Show categories or map based on toggle */}
-        {!showMap && !hasCategory && (
-          <div className="flex flex-wrap gap-2 content-start">
+        {!showMap && (
+          <div
+            className={`${categoriesHeight} overflow-y-auto flex flex-wrap gap-2 content-start`}
+          >
             {availableTags.map((tag) => (
               <button
                 key={tag}
@@ -169,12 +192,12 @@ export default function MarketFilters() {
           </div>
         )}
 
-        {(showMap || hasCategory) && (
+        {showMap && (
           <GeohashMap
             geohashes={selectedGeohash ? [selectedGeohash] : []}
             feedEvents={mapEvents}
             onGeohashSelect={handleGeohashSelect}
-            height="calc(100vh - 200px)"
+            height={mapHeight}
           />
         )}
       </div>
