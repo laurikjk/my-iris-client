@@ -1,19 +1,15 @@
 import {Session, NostrSubscribe, NostrPublish} from "nostr-double-ratchet"
-
-interface DeviceRecord {
-  deviceId: string
-  publicKey: string
-  activeSession?: Session
-  inactiveSessions: Session[]
-  isStale: boolean
-  staleTimestamp?: number
-  lastActivity?: number
-}
+import {StorageAdapter} from "./StorageAdapter"
 
 export class DeviceRecord {
+  private activeSession?: Session
+  private inactiveSessions: Session[] = []
+  private staleTimestamp?: number
+
   constructor(
     public readonly deviceId: string,
     private readonly nostrSubscribe: NostrSubscribe,
-    private readonly nostrPublish: NostrPublish
+    private readonly nostrPublish: NostrPublish,
+    private readonly storageAdapter: StorageAdapter
   ) {}
 }
