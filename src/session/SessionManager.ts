@@ -52,10 +52,7 @@ export default class SessionManager {
     pubkey: string,
     deviceId: string
   ): Promise<void> {
-    // 1. Save session state FIRST (state already advanced by decryption)
     await this.saveSession(pubkey, deviceId, session)
-
-    // 2. Then notify callbacks
     this.internalSubscriptions.forEach((cb) => cb(event, pubkey))
   }
 

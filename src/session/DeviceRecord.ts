@@ -8,6 +8,7 @@ export class DeviceRecord {
 
   constructor(
     public readonly deviceId: string,
+    public readonly session: Session,
     private readonly nostrSubscribe: NostrSubscribe,
     private readonly nostrPublish: NostrPublish,
     private readonly storageAdapter: StorageAdapter
