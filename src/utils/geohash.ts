@@ -118,3 +118,64 @@ export async function getCurrentLocationGeohash(
     )
   })
 }
+
+// Approximate region names for common 1-character geohash prefixes
+const GEOHASH_REGIONS: Record<string, string> = {
+  // Africa & Middle East
+  s: "Africa/Middle East",
+  k: "Africa",
+  e: "Africa",
+
+  // Europe
+  u: "Europe",
+  g: "Europe",
+
+  // Asia
+  w: "Asia",
+  t: "Asia",
+  v: "Asia/India",
+  x: "East Asia",
+  y: "North Asia",
+
+  // Americas
+  d: "North America",
+  c: "North America",
+  f: "North America",
+  "9": "South America",
+  "6": "South America",
+
+  // Oceania
+  r: "Oceania",
+  q: "Pacific",
+
+  // Polar regions
+  p: "Arctic",
+  b: "Antarctica",
+  z: "Arctic",
+
+  // Other
+  "0": "Pacific",
+  "1": "Pacific",
+  "2": "Pacific",
+  "3": "Pacific",
+  "4": "Indian Ocean",
+  "5": "Indian Ocean",
+  "7": "South America",
+  "8": "Pacific",
+  h: "Antarctica",
+  j: "Antarctica",
+  m: "Pacific",
+  n: "Pacific",
+}
+
+// Get a human-readable approximation of the location from a geohash
+export function getGeohashLocationName(geohash: string): string {
+  if (!geohash) return ""
+
+  const firstChar = geohash[0].toLowerCase()
+  const regionName = GEOHASH_REGIONS[firstChar] || ""
+
+  // For longer geohashes, we could add more specific names
+  // but for now just return the region
+  return regionName
+}

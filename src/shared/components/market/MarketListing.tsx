@@ -4,11 +4,41 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 import MarketDetails from "./MarketDetails"
 import MarketImage from "./MarketImage"
 import HyperText from "../HyperText"
+import {CategoryLabel} from "./CategoryLabel"
 
 type MarketListingProps = {
   event: NDKEvent
   truncate?: number
   isTruncated?: boolean
+}
+
+/**
+ * Component to display category tags
+ */
+function CategoryTags({
+  event,
+  showCategories,
+}: {
+  event: NDKEvent
+  showCategories: boolean
+}) {
+  if (!showCategories) return null
+
+  const categoryTags = event.tags.filter((tag) => tag[0] === "t" && tag[1])
+
+  if (categoryTags.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap gap-2 mt-2">
+      {categoryTags.map((tag, index) => (
+        <CategoryLabel
+          key={`${tag[1]}-${index}`}
+          category={tag[1]}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ))}
+    </div>
+  )
 }
 
 /**
@@ -27,6 +57,7 @@ function TruncatedMarketListing({event}: {event: NDKEvent}) {
             {(title || summary) && (
               <div className="text-md text-base-content mb-4">{title || summary}</div>
             )}
+            <CategoryTags event={event} showCategories={false} />
           </div>
         </div>
       </div>
@@ -37,7 +68,13 @@ function TruncatedMarketListing({event}: {event: NDKEvent}) {
 /**
  * Component for full market listings
  */
-function FullMarketListing({event}: {event: NDKEvent}) {
+function FullMarketListing({
+  event,
+  isStandalone,
+}: {
+  event: NDKEvent
+  isStandalone: boolean
+}) {
   const {title, price, imageUrl, content, tags} = extractMarketData(event)
 
   return (
@@ -60,6 +97,8 @@ function FullMarketListing({event}: {event: NDKEvent}) {
             <HyperText event={event} textPadding={false}>
               {content}
             </HyperText>
+
+            <CategoryTags event={event} showCategories={isStandalone} />
           </div>
         </div>
         <MarketDetails tags={tags} />
@@ -74,10 +113,13 @@ function FullMarketListing({event}: {event: NDKEvent}) {
 function MarketListing({event, truncate, isTruncated}: MarketListingProps) {
   // Use isTruncated prop if provided, otherwise fall back to truncate check
   const shouldTruncate = isTruncated !== undefined ? isTruncated : !!truncate
+  // Item is standalone when it's not truncated (no truncate value or truncate is 0)
+  const isStandalone = !truncate || truncate === 0
+
   if (shouldTruncate) {
     return <TruncatedMarketListing event={event} />
   }
-  return <FullMarketListing event={event} />
+  return <FullMarketListing event={event} isStandalone={isStandalone} />
 }
 
 export default MarketListing

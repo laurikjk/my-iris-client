@@ -8,6 +8,8 @@ import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {KIND_CLASSIFIED} from "@/utils/constants"
 import Feed from "@/shared/components/feed/Feed"
 import {useSettingsStore} from "@/stores/settings"
+import {RiMapPinLine} from "@remixicon/react"
+import {CategoryLabel} from "@/shared/components/market/CategoryLabel"
 
 interface MarketFiltersProps {
   mapHeight?: string
@@ -174,23 +176,46 @@ export default function MarketFilters({
             </button>
           </div>
 
-          {/* Category label with X button when category is selected */}
-          {hasCategory && (
-            <span className="badge p-4 badge-primary badge-lg">
-              {category}
-              <button
-                onClick={() => {
-                  // Preserve query params when clearing category
-                  const params = new URLSearchParams(window.location.search)
-                  const queryString = params.toString()
-                  navigate(`/m${queryString ? `?${queryString}` : ""}`)
-                }}
-                className="ml-2 hover:text-primary-content/80 text-lg"
-              >
-                ×
-              </button>
-            </span>
-          )}
+          {/* Category and location labels */}
+          <div className="flex gap-2 flex-wrap">
+            {hasCategory && (
+              <span className="badge p-4 badge-primary badge-lg">
+                {category}
+                <button
+                  onClick={() => {
+                    // Preserve query params when clearing category
+                    const params = new URLSearchParams(window.location.search)
+                    const queryString = params.toString()
+                    navigate(`/m${queryString ? `?${queryString}` : ""}`)
+                  }}
+                  className="ml-2 hover:text-primary-content/80 text-lg"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {selectedGeohash && (
+              <span className="badge p-4 badge-info badge-lg flex items-center gap-1">
+                <RiMapPinLine className="w-4 h-4" />
+                {selectedGeohash}
+                <button
+                  onClick={() => {
+                    setSelectedGeohash(undefined)
+                    const params = new URLSearchParams(window.location.search)
+                    params.delete("g")
+                    const newUrl = params.toString()
+                      ? `${window.location.pathname}?${params}`
+                      : window.location.pathname
+                    window.history.pushState({}, "", newUrl)
+                    window.dispatchEvent(new PopStateEvent("popstate"))
+                  }}
+                  className="ml-2 hover:text-secondary-content/80 text-lg"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Show categories or map based on toggle */}
@@ -199,9 +224,13 @@ export default function MarketFilters({
             className={`${categoriesHeight} overflow-y-auto flex flex-wrap gap-2 content-start`}
           >
             {availableTags.map((tag) => (
-              <button
+              <CategoryLabel
                 key={tag}
-                onClick={() => {
+                category={tag}
+                isActive={category === tag}
+                className="h-fit"
+                onClick={(e) => {
+                  e.preventDefault()
                   // Preserve query params when navigating
                   const params = new URLSearchParams(window.location.search)
                   const queryString = params.toString()
@@ -209,14 +238,7 @@ export default function MarketFilters({
                     `/m/${encodeURIComponent(tag)}${queryString ? `?${queryString}` : ""}`
                   )
                 }}
-                className={`badge cursor-pointer transition-colors h-fit ${
-                  category === tag
-                    ? "badge-primary"
-                    : "badge-outline hover:bg-primary hover:text-primary-content hover:border-primary"
-                }`}
-              >
-                {tag}
-              </button>
+              />
             ))}
           </div>
         )}

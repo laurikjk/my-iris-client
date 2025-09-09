@@ -98,18 +98,40 @@ export default function MarketPage() {
     )
   }
 
+  // Generate title with category and location
+  const generateTitle = () => {
+    let title = "Market"
+    const parts = []
+
+    if (category) {
+      parts.push(category)
+    }
+
+    if (selectedGeohash) {
+      parts.push(`#${selectedGeohash}`)
+    }
+
+    if (parts.length > 0) {
+      title += ": " + parts.join(" • ")
+    }
+
+    return title
+  }
+
+  const pageTitle = generateTitle()
+
   // If in two-column layout, only show the feed (controls are in MarketFilters in middle column)
   if (isInTwoColumnLayout) {
     return (
       <div className="flex flex-1 flex-row relative h-full">
         <div className="flex flex-col flex-1 h-full relative">
-          <Header title={category ? `Market: ${category}` : "Market"} />
+          <Header title={pageTitle} />
           <ScrollablePageContainer className="flex flex-col items-center">
             <div className="flex-1 w-full flex flex-col gap-2 md:pt-2">
               <FeedComponent />
             </div>
             <Helmet>
-              <title>{category ? `Market: ${category}` : "Market"} / Iris</title>
+              <title>{pageTitle} / Iris</title>
             </Helmet>
           </ScrollablePageContainer>
         </div>
@@ -121,7 +143,7 @@ export default function MarketPage() {
   return (
     <div className="flex flex-1 flex-row relative h-full">
       <div className="flex flex-col flex-1 h-full relative">
-        <Header title={category ? `Market: ${category}` : "Market"} />
+        <Header title={pageTitle} />
         <ScrollablePageContainer className="flex flex-col items-center">
           <div className="flex-1 w-full flex flex-col gap-2 md:pt-2">
             <MarketFilters
@@ -135,7 +157,7 @@ export default function MarketPage() {
             </div>
           </div>
           <Helmet>
-            <title>{category ? `Market: ${category}` : "Market"} / Iris</title>
+            <title>{pageTitle} / Iris</title>
           </Helmet>
         </ScrollablePageContainer>
       </div>
