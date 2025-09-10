@@ -294,13 +294,11 @@ export default class SessionManager {
     event: Partial<Rumor>
   ): Promise<unknown[]> {
     console.log("Sending event to", recipientIdentityKey, event)
-    // Immediately notify local subscribers so that UI can render sent message optimistically
     this.internalSubscriptions.forEach((cb) => cb(event as Rumor, recipientIdentityKey))
 
     const results = []
     const publishPromises: Promise<unknown>[] = []
 
-    // Send to recipient's devices
     const userRecord = this.userRecords.get(recipientIdentityKey)
     if (!userRecord) {
       return new Promise<unknown[]>((resolve) => {
@@ -327,21 +325,18 @@ export default class SessionManager {
       })
     }
 
-    // Send to all sendable sessions with recipient
     for (const session of sendableSessions) {
       const {event: encryptedEvent} = session.sendEvent(event)
       results.push(encryptedEvent)
       publishPromises.push(
         this.nostrPublish(encryptedEvent)
           .then(() => {
-            // Save session state after successful send (state has advanced)
             this.saveSession(recipientIdentityKey, session.name || "unknown", session)
           })
           .catch(() => {})
       )
     }
 
-    // Send to our own devices (for multi-device sync)
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
     const ownUserRecord = this.userRecords.get(ourPublicKey)
     if (ownUserRecord) {
@@ -363,7 +358,6 @@ export default class SessionManager {
       }
     }
 
-    // Ensure all publish operations settled before returning
     if (publishPromises.length > 0) {
       await Promise.all(publishPromises)
     }
@@ -372,6 +366,8 @@ export default class SessionManager {
   }
 
   listenToUser(userPubkey: string) {
+    // Check sessions from storage
+
     // Don't subscribe multiple times to the same user
     if (this.inviteUnsubscribes.has(userPubkey)) return
 
@@ -380,9 +376,6 @@ export default class SessionManager {
       this.nostrSubscribe,
       async (_invite) => {
         try {
-          console.log(
-            `${getPublicKey(this.ourIdentityKey)} received invite from ${userPubkey}, processing...`
-          )
           const deviceId =
             _invite instanceof Invite && _invite.deviceId ? _invite.deviceId : "unknown"
 
@@ -390,10 +383,7 @@ export default class SessionManager {
           if (userRecord) {
             const existingSessions = userRecord.getActiveSessions()
             if (existingSessions.some((session) => session.name === deviceId)) {
-              console.log(
-                `${getPublicKey(this.ourIdentityKey)} already has session with ${userPubkey}:${deviceId}`
-              )
-              return // Already have session with this device
+              return
             }
           }
 
@@ -404,11 +394,6 @@ export default class SessionManager {
             this.nostrSubscribe,
             getPublicKey(this.ourIdentityKey),
             this.ourIdentityKey
-          )
-          console.log(
-            `${getPublicKey(this.ourIdentityKey)} publishing acceptance event:`,
-            event.kind,
-            event.pubkey
           )
           this.nostrPublish(event)?.catch((err) =>
             console.error("Failed to publish acceptance:", err)
@@ -449,10 +434,9 @@ export default class SessionManager {
                   resolve(results)
                 }
               }
-            }, 1000) // Increased delay for CI compatibility
+            }, 1000)
           }
 
-          // Return the event to be published
           return event
         } catch (err) {
           console.error(
@@ -466,20 +450,17 @@ export default class SessionManager {
     this.inviteUnsubscribes.set(userPubkey, unsubscribe)
   }
 
-  // Update onEvent to include internalSubscriptions management
   private internalSubscriptions: Set<OnEventCallback> = new Set()
 
   onEvent(callback: OnEventCallback) {
     this.internalSubscriptions.add(callback)
 
-    // Return unsubscribe function
     return () => {
       this.internalSubscriptions.delete(callback)
     }
   }
 
   close() {
-    // Clean up all subscriptions
     for (const unsubscribe of this.inviteUnsubscribes.values()) {
       unsubscribe()
     }
