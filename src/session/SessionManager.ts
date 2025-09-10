@@ -65,14 +65,11 @@ export default class SessionManager {
    * Can be awaited by callers that need deterministic readiness.
    */
   public async init(): Promise<void> {
-    console.log("Initialising SessionManager")
-    if (this._initialised) {
+    if (!this._initialised) {
+      await this._init()
+      this._initialised = true
       return
     }
-
-    await this._init()
-
-    this._initialised = true
   }
 
   private async _init(): Promise<void> {
