@@ -13,7 +13,6 @@ import {getPublicKey} from "nostr-tools"
 
 export type OnEventCallback = (event: Rumor, from: string) => void
 
-// Pure data interfaces - no behavior, just state
 interface DeviceRecord {
   readonly deviceId: string
   readonly userId: string
@@ -153,11 +152,6 @@ export default class SessionManager {
     this.internalSubscriptions.forEach((cb) => cb(event, pubkey))
   }
 
-  /**
-   * Perform asynchronous initialisation steps: create (or load) our invite,
-   * publish it, hydrate sessions from storage and subscribe to new invites.
-   * Can be awaited by callers that need deterministic readiness.
-   */
   public async init(): Promise<void> {
     if (!this._initialised) {
       await this._init()
@@ -180,7 +174,7 @@ export default class SessionManager {
         invite = Invite.deserialize(stored)
       }
     } catch {
-      /* ignore malformed */
+      // ignore
     }
 
     if (!invite) {
@@ -191,7 +185,6 @@ export default class SessionManager {
     }
     this.invite = invite
 
-    // Publish our own invite
     console.log("Publishing our own invite", invite)
     const event = invite.getEvent()
     this.nostrPublish(event)
@@ -224,10 +217,8 @@ export default class SessionManager {
 
           const deviceKey = session.name || "unknown"
 
-          // Ensure session name matches deviceId
           session.name = deviceKey
 
-          // Inline upsertSession logic
           const device = userRecord.devices.get(deviceKey)
           const updatedInactive = device?.activeSession
             ? [device.activeSession, ...(device.inactiveSessions || [])]
@@ -255,7 +246,6 @@ export default class SessionManager {
 
           this.saveSession(targetUserKey, deviceKey, session)
 
-          // Set up session subscription
           const sessionSubscriptionId = `session:${targetUserKey}:${deviceKey}`
           this.subscriptionManager.unsubscribeByDevice(targetUserKey, deviceKey)
 
@@ -283,7 +273,7 @@ export default class SessionManager {
             {userId: targetUserKey, deviceId: deviceKey}
           )
         } catch {
-          /* ignore errors */
+          // ignore
         }
       }
     )
@@ -298,7 +288,6 @@ export default class SessionManager {
 
         const existingRecord = this.userRecords.get(ourPublicKey)
         if (existingRecord && !existingRecord.isStale) {
-          // Inline getActiveSessions logic
           let hasExistingSession = false
           for (const device of existingRecord.devices.values()) {
             if (
@@ -457,8 +446,6 @@ export default class SessionManager {
           lastActivity: Date.now(),
         })
 
-        // Don't save again - we just loaded from storage
-
         // Set up session subscription
         const sessionSubscriptionId = `session:${ownerPubKey}:${deviceId}`
         this.subscriptionManager.unsubscribeByDevice(ownerPubKey, deviceId)
@@ -482,16 +469,14 @@ export default class SessionManager {
           {userId: ownerPubKey, deviceId: deviceId}
         )
 
-        // Track unique users to start listening for new invites/messages
         if (ownerPubKey !== ourPublicKey) {
           uniqueUsers.add(ownerPubKey)
         }
       } catch {
-        // corrupted entry — ignore
+        // ignore
       }
     }
 
-    // Set up invite subscriptions for all loaded users
     for (const userPubKey of uniqueUsers) {
       this.setupUserInviteSubscription(userPubKey)
     }
@@ -502,27 +487,13 @@ export default class SessionManager {
       const key = `session/${ownerPubKey}/${deviceId}`
       await this.storage.put(key, serializeSessionState(session.state))
     } catch {
-      /* ignore */
+      // ignore
     }
-  }
-
-  getDeviceId(): string {
-    return this.deviceId
-  }
-
-  getInvite(): Invite {
-    if (!this.invite) {
-      throw new Error("SessionManager not initialised yet")
-    }
-    return this.invite
   }
 
   private setupUserInviteSubscription(userPubkey: string) {
-    // Don't subscribe multiple times to the same user
     const inviteSubscriptionId = `invite:${userPubkey}`
-    if (this.subscriptionManager.unsubscribe(inviteSubscriptionId)) {
-      // Already had subscription, cleaned it up, will create new one below
-    }
+    this.subscriptionManager.unsubscribe(inviteSubscriptionId)
 
     const unsubscribe = Invite.fromUser(
       userPubkey,
@@ -534,7 +505,6 @@ export default class SessionManager {
 
           const userRecord = this.userRecords.get(userPubkey)
           if (userRecord && !userRecord.isStale) {
-            // Inline getActiveSessions logic to check for existing session
             let hasExistingSession = false
             for (const device of userRecord.devices.values()) {
               if (
@@ -563,7 +533,6 @@ export default class SessionManager {
             console.error("Failed to publish acceptance:", err)
           )
 
-          // Store the new session
           let currentUserRecord = this.userRecords.get(userPubkey)
           if (!currentUserRecord) {
             currentUserRecord = {
@@ -576,10 +545,8 @@ export default class SessionManager {
             this.userRecords.set(userPubkey, currentUserRecord)
           }
 
-          // Ensure session name matches deviceId
           session.name = deviceId
 
-          // Inline upsertSession logic
           const device = currentUserRecord.devices.get(deviceId)
           const updatedInactive = device?.activeSession
             ? [device.activeSession, ...(device.inactiveSessions || [])]
@@ -607,7 +574,6 @@ export default class SessionManager {
 
           this.saveSession(userPubkey, deviceId, session)
 
-          // Set up session subscription
           const sessionSubscriptionId = `session:${userPubkey}:${deviceId}`
           this.subscriptionManager.unsubscribeByDevice(userPubkey, deviceId)
 
@@ -678,7 +644,6 @@ export default class SessionManager {
   close() {
     this.subscriptionManager.close()
 
-    // Close all sessions
     for (const userRecord of this.userRecords.values()) {
       for (const device of userRecord.devices.values()) {
         device.activeSession?.close()
@@ -689,10 +654,6 @@ export default class SessionManager {
     this.internalSubscriptions.clear()
   }
 
-  /**
-   * Accept an invite as our own device, persist the session, and publish the acceptance event.
-   * Used for multi-device flows where a user adds a new device.
-   */
   public async acceptOwnInvite(invite: Invite) {
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
     const {session, event} = await invite.accept(
@@ -770,7 +731,7 @@ export default class SessionManager {
 
   async sendText(recipientIdentityKey: string, text: string) {
     const event = {
-      kind: 14, // KIND_CHAT_MESSAGE
+      kind: 14,
       content: text,
     }
     return await this.sendEvent(recipientIdentityKey, event)
@@ -788,7 +749,6 @@ export default class SessionManager {
     event: Partial<Rumor>
   ): Promise<unknown[]> {
     console.log("Sending event to", recipientIdentityKey, event)
-    // Immediately notify local subscribers so that UI can render sent message optimistically
     this.internalSubscriptions.forEach((cb) => cb(event as Rumor, recipientIdentityKey))
 
     const results = []
@@ -805,7 +765,6 @@ export default class SessionManager {
       })
     }
 
-    // Inline getActiveSessions logic
     const activeSessions: Session[] = []
     if (!userRecord.isStale) {
       for (const device of userRecord.devices.values()) {
@@ -828,25 +787,21 @@ export default class SessionManager {
       })
     }
 
-    // Send to all sendable sessions with recipient
     for (const session of sendableSessions) {
       const {event: encryptedEvent} = session.sendEvent(event)
       results.push(encryptedEvent)
       publishPromises.push(
         this.nostrPublish(encryptedEvent)
           .then(() => {
-            // Save session state after successful send (state has advanced)
             this.saveSession(recipientIdentityKey, session.name || "unknown", session)
           })
           .catch(() => {})
       )
     }
 
-    // Send to our own devices (for multi-device sync)
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
     const ownUserRecord = this.userRecords.get(ourPublicKey)
     if (ownUserRecord) {
-      // Inline getActiveSessions logic for own devices
       const ownActiveSessions: Session[] = []
       if (!ownUserRecord.isStale) {
         for (const device of ownUserRecord.devices.values()) {
@@ -871,7 +826,6 @@ export default class SessionManager {
       }
     }
 
-    // Ensure all publish operations settled before returning
     if (publishPromises.length > 0) {
       await Promise.all(publishPromises)
     }
