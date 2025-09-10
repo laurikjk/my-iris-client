@@ -46,13 +46,8 @@ export default function MarketFilters({
 
   const hasCategory = Boolean(category?.trim())
 
-  // Show map by default when category is selected
+  // Show map by default when category is selected on initial load
   const [showMap, setShowMap] = useState(hasCategory)
-
-  // Update showMap when category changes
-  useEffect(() => {
-    setShowMap(Boolean(category?.trim()))
-  }, [category])
 
   // Listen for URL changes to update selected geohash and search
   // Also restore query params if they're missing
@@ -109,12 +104,20 @@ export default function MarketFilters({
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const params = new URLSearchParams(window.location.search)
+
     if (searchTerm.trim()) {
-      // Use search query parameter instead of category path for full-text search
-      const params = new URLSearchParams(window.location.search)
+      // Add search term to URL
       params.set("q", searchTerm.trim())
-      navigate(`/m?${params.toString()}`)
+    } else {
+      // Clear search term from URL when submitting empty
+      params.delete("q")
+      setSearchTerm("")
     }
+
+    const path = category ? `/m/${encodeURIComponent(category)}` : "/m"
+    const queryString = params.toString()
+    navigate(`${path}${queryString ? `?${queryString}` : ""}`)
   }
 
   // Update URL when geohash is selected and trigger a navigation event
