@@ -107,97 +107,97 @@ export default class SessionManager {
       .catch((e) => console.error("Failed to publish our own invite", e))
 
     // 2b. Listen for acceptances of *our* invite and create sessions
-    this.invite.listen(
-      this.ourIdentityKey,
-      this.nostrSubscribe,
-      (session, inviteePubkey) => {
-        if (!inviteePubkey) return
+    // this.invite.listen(
+    //   this.ourIdentityKey,
+    //   this.nostrSubscribe,
+    //   (session, inviteePubkey) => {
+    //     if (!inviteePubkey) return
 
-        const targetUserKey = inviteePubkey
+    //     const targetUserKey = inviteePubkey
 
-        try {
-          let userRecord = this.userRecords.get(targetUserKey)
-          if (!userRecord) {
-            userRecord = new UserRecord(targetUserKey, this.nostrSubscribe)
-            this.userRecords.set(targetUserKey, userRecord)
-          }
+    //     try {
+    //       let userRecord = this.userRecords.get(targetUserKey)
+    //       if (!userRecord) {
+    //         userRecord = new UserRecord(targetUserKey, this.nostrSubscribe)
+    //         this.userRecords.set(targetUserKey, userRecord)
+    //       }
 
-          const deviceKey = session.name || "unknown"
-          userRecord.upsertSession(deviceKey, session)
-          this.saveSession(targetUserKey, deviceKey, session)
+    //       const deviceKey = session.name || "unknown"
+    //       userRecord.upsertSession(deviceKey, session)
+    //       this.saveSession(targetUserKey, deviceKey, session)
 
-          session.onEvent((_event: Rumor) => {
-            // Process message immediately, but schedule saving for later
-            // This avoids circular dependency with the operation queue
-            Promise.resolve().then(async () => {
-              try {
-                await this._processReceivedMessage(
-                  session,
-                  _event,
-                  targetUserKey,
-                  deviceKey
-                )
-              } catch (error) {
-                console.error("Error processing received message:", error)
-              }
-            })
-          })
-        } catch {
-          /* ignore errors */
-        }
-      }
-    )
+    //       session.onEvent((_event: Rumor) => {
+    //         // Process message immediately, but schedule saving for later
+    //         // This avoids circular dependency with the operation queue
+    //         Promise.resolve().then(async () => {
+    //           try {
+    //             await this._processReceivedMessage(
+    //               session,
+    //               _event,
+    //               targetUserKey,
+    //               deviceKey
+    //             )
+    //           } catch (error) {
+    //             console.error("Error processing received message:", error)
+    //           }
+    //         })
+    //       })
+    //     } catch {
+    //       /* ignore errors */
+    //     }
+    //   }
+    // )
 
-    // 3. Subscribe to our own invites from other devices
-    Invite.fromUser(ourPublicKey, this.nostrSubscribe, async (invite) => {
-      try {
-        const inviteDeviceId = invite["deviceId"] || "unknown"
-        if (!inviteDeviceId || inviteDeviceId === this.deviceId) {
-          return
-        }
+    // // 3. Subscribe to our own invites from other devices
+    // Invite.fromUser(ourPublicKey, this.nostrSubscribe, async (invite) => {
+    //   try {
+    //     const inviteDeviceId = invite["deviceId"] || "unknown"
+    //     if (!inviteDeviceId || inviteDeviceId === this.deviceId) {
+    //       return
+    //     }
 
-        const existingRecord = this.userRecords.get(ourPublicKey)
-        if (
-          existingRecord
-            ?.getActiveSessions()
-            .some((session) => session.name === inviteDeviceId)
-        ) {
-          return
-        }
+    //     const existingRecord = this.userRecords.get(ourPublicKey)
+    //     if (
+    //       existingRecord
+    //         ?.getActiveSessions()
+    //         .some((session) => session.name === inviteDeviceId)
+    //     ) {
+    //       return
+    //     }
 
-        const {session, event} = await invite.accept(
-          this.nostrSubscribe,
-          ourPublicKey,
-          this.ourIdentityKey
-        )
-        this.nostrPublish(event)?.catch(() => {})
+    //     const {session, event} = await invite.accept(
+    //       this.nostrSubscribe,
+    //       ourPublicKey,
+    //       this.ourIdentityKey
+    //     )
+    //     this.nostrPublish(event)?.catch(() => {})
 
-        this.saveSession(ourPublicKey, inviteDeviceId, session)
+    //     this.saveSession(ourPublicKey, inviteDeviceId, session)
 
-        let userRecord = this.userRecords.get(ourPublicKey)
-        if (!userRecord) {
-          userRecord = new UserRecord(ourPublicKey, this.nostrSubscribe)
-          this.userRecords.set(ourPublicKey, userRecord)
-        }
-        const deviceId = invite["deviceId"] || "unknown"
-        userRecord.upsertSession(deviceId, session)
-        this.saveSession(ourPublicKey, deviceId, session)
+    //     let userRecord = this.userRecords.get(ourPublicKey)
+    //     if (!userRecord) {
+    //       userRecord = new UserRecord(ourPublicKey, this.nostrSubscribe)
+    //       this.userRecords.set(ourPublicKey, userRecord)
+    //     }
+    //     const deviceId = invite["deviceId"] || "unknown"
+    //     userRecord.upsertSession(deviceId, session)
+    //     this.saveSession(ourPublicKey, deviceId, session)
 
-        session.onEvent((_event: Rumor) => {
-          // Process message immediately, but schedule saving for later
-          // This avoids circular dependency with the operation queue
-          Promise.resolve().then(async () => {
-            try {
-              await this._processReceivedMessage(session, _event, ourPublicKey, deviceId)
-            } catch (error) {
-              console.error("Error processing received message:", error)
-            }
-          })
-        })
-      } catch (err) {
-        console.error("Own-invite accept failed", err)
-      }
-    })
+    //     session.onEvent((_event: Rumor) => {
+    //       // Process message immediately, but schedule saving for later
+    //       // This avoids circular dependency with the operation queue
+    //       Promise.resolve().then(async () => {
+    //         try {
+    //           await this._processReceivedMessage(session, _event, ourPublicKey, deviceId)
+    //         } catch (error) {
+    //           console.error("Error processing received message:", error)
+    //         }
+    //       })
+    //     })
+    //   } catch (err) {
+    //     console.error("Own-invite accept failed", err)
+    //   }
+    // })
   }
 
   private async loadSessions() {

@@ -16,25 +16,10 @@ export class UserRecord {
     private readonly nostrPublish: NostrPublish,
     private readonly storageAdapter: StorageAdapter
   ) {
-    this.loadInvites()
+    this.listenToInvites()
   }
 
-  private async loadInvites() {
-    const storedDeviceRecords = await this.storageAdapter.list(
-      `user/${this.userPublicKey}/device/`
-    )
-    for (const str of storedDeviceRecords) {
-      const record = JSON.parse(str)
-      const deviceRecord = new DeviceRecord(
-        record.deviceId,
-        new Session(this.nostrSubscribe, record.sessionState),
-        this.nostrSubscribe,
-        this.nostrPublish,
-        this.storageAdapter
-      )
-      this.deviceRecords.set(record.deviceId, deviceRecord)
-    }
-
+  private async listenToInvites() {
     const unsubscribe = Invite.fromUser(
       this.userPublicKey,
       this.nostrSubscribe,
@@ -54,12 +39,15 @@ export class UserRecord {
             this.ourPrivateKey
           )
           await this.nostrPublish(event)
-          const deviceRecord = new DeviceRecord(
+          const deviceRecord = await DeviceRecord.fromSession(
             deviceId,
+            this.userPublicKey,
             session,
-            this.nostrSubscribe,
-            this.nostrPublish,
-            this.storageAdapter
+            {
+              nostrSubscribe: this.nostrSubscribe,
+              nostrPublish: this.nostrPublish,
+              storageAdapter: this.storageAdapter,
+            }
           )
           this.deviceRecords.set(deviceId, deviceRecord)
         } catch (e) {

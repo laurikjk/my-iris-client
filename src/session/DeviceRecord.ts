@@ -1,16 +1,125 @@
-import {Session, NostrSubscribe, NostrPublish} from "nostr-double-ratchet"
+import {
+  Session,
+  NostrSubscribe,
+  NostrPublish,
+  Rumor,
+  serializeSessionState,
+  deserializeSessionState,
+} from "nostr-double-ratchet"
 import {StorageAdapter} from "./StorageAdapter"
+
+interface DeviceRecordDependencies {
+  nostrSubscribe: NostrSubscribe
+  nostrPublish: NostrPublish
+  storageAdapter: StorageAdapter
+}
 
 export class DeviceRecord {
   private activeSession?: Session
   private inactiveSessions: Session[] = []
   private staleTimestamp?: number
 
-  constructor(
+  private constructor(
     public readonly deviceId: string,
-    public readonly session: Session,
-    private readonly nostrSubscribe: NostrSubscribe,
-    private readonly nostrPublish: NostrPublish,
-    private readonly storageAdapter: StorageAdapter
-  ) {}
+    public readonly userPubkey: string,
+    activeSession: Session | null,
+    inactiveSessions: Session[],
+    staleTimestamp: number | undefined,
+    private readonly dependencies: DeviceRecordDependencies
+  ) {
+    this.activeSession = activeSession || undefined
+    this.inactiveSessions = inactiveSessions
+    this.staleTimestamp = staleTimestamp
+  }
+
+  static async fromStorage(
+    deviceId: string,
+    userPubkey: string,
+    dependencies: DeviceRecordDependencies
+  ): Promise<DeviceRecord | null> {
+    const activeSessionKey = `session/${userPubkey}/${deviceId}/active`
+    let activeSession: Session | null = null
+    try {
+      const sessionData = await dependencies.storageAdapter.get<string>(activeSessionKey)
+      if (sessionData) {
+        const sessionState = deserializeSessionState(sessionData)
+        activeSession = new Session(dependencies.nostrSubscribe, sessionState)
+      }
+    } catch {}
+
+    if (!activeSession) {
+      return null
+    }
+
+    const inactiveSessions: Session[] = []
+    let index = 0
+    try {
+      while (true) {
+        const inactiveSessionKey = `session/${userPubkey}/${deviceId}/inactive/${index}`
+        const sessionData =
+          await dependencies.storageAdapter.get<string>(inactiveSessionKey)
+        if (!sessionData) break
+
+        const sessionState = deserializeSessionState(sessionData)
+        inactiveSessions.push(new Session(dependencies.nostrSubscribe, sessionState))
+        index++
+      }
+    } catch {
+      // Stop loading on error
+    }
+
+    const metadataKey = `device/${userPubkey}/${deviceId}/metadata`
+    let staleTimestamp: number | undefined
+    try {
+      const metadataStr = await dependencies.storageAdapter.get<string>(metadataKey)
+      if (metadataStr) {
+        const metadata = JSON.parse(metadataStr)
+        staleTimestamp = metadata.staleTimestamp
+      }
+    } catch {}
+
+    return new DeviceRecord(
+      deviceId,
+      userPubkey,
+      activeSession,
+      inactiveSessions,
+      staleTimestamp,
+      dependencies
+    )
+  }
+
+  static async fromSession(
+    deviceId: string,
+    userPubkey: string,
+    session: Session,
+    dependencies: DeviceRecordDependencies
+  ): Promise<DeviceRecord> {
+    const instance = new DeviceRecord(
+      deviceId,
+      userPubkey,
+      session,
+      [],
+      undefined,
+      dependencies
+    )
+
+    const activeSessionKey = `session/${userPubkey}/${deviceId}/active`
+    const metadataKey = `device/${userPubkey}/${deviceId}/metadata`
+
+    try {
+      const sessionData = serializeSessionState(session.state)
+      await dependencies.storageAdapter.put(activeSessionKey, sessionData)
+
+      const metadata = {
+        deviceId,
+        userPubkey,
+        staleTimestamp: undefined,
+      }
+      await dependencies.storageAdapter.put(metadataKey, JSON.stringify(metadata))
+    } catch (err) {
+      console.error(`Failed to persist new session for ${deviceId}:`, err)
+    }
+
+    return instance
+  }
 }
