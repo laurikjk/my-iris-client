@@ -197,13 +197,13 @@ export default class SessionManager {
     this.invite.listen(
       this.ourIdentityKey,
       this.nostrSubscribe,
-      (session, inviteePubkey) => {
-        if (!inviteePubkey) return
+      (session, inviteePubkey, deviceId) => {
+        if (!inviteePubkey || !deviceId) return
 
         const targetUserKey = inviteePubkey
 
         try {
-          const deviceKey = session.name || "unknown"
+          const deviceKey = deviceId
           this.upsertDeviceSession(targetUserKey, deviceKey, session)
 
           this.saveSession(targetUserKey, deviceKey, session)
