@@ -149,9 +149,8 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
       return []
     }
 
-    // Get all users we have sessions with
-    const usersWithSessions = sessionManager.getAllUsersWithActiveSessions()
-    const userPubKeys = new Set<string>(usersWithSessions)
+    // Get all users we have chats with (from store)
+    const userPubKeys = new Set<string>()
 
     // Also include users we have in the chats store (for persistence)
     for (const userPubKey of chats.keys()) {

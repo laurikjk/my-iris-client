@@ -470,8 +470,6 @@ export default function SessionTest() {
   }) => {
     if (!manager) return <div className="text-gray-500">Manager not initialized</div>
 
-    // Use public method to get users with sessions
-    const usersWithSessions = manager.getAllUsersWithActiveSessions()
     const deviceId = manager.getDeviceId()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const invite = (manager as any).invite
@@ -489,24 +487,12 @@ export default function SessionTest() {
             <span className="font-medium">Invite Present:</span> {invite ? "Yes" : "No"}
           </div>
           <div>
-            <span className="font-medium">Users with Sessions:</span> {usersWithSessions.length}
+            <span className="font-medium">Debug Info:</span> See below
           </div>
         </div>
 
         {/* Users with sessions */}
-        {usersWithSessions.map((pubkey) => (
-          <div key={pubkey} className="mb-4 p-2 border-l-4 border-green-400 bg-green-50">
-            <div className="font-medium text-black mb-2">
-              User: {truncateKey(pubkey, 20)}
-            </div>
-            <div className="text-sm text-gray-600">
-              Active Sessions: {manager.getActiveSessions(pubkey).length}
-            </div>
-            <div className="text-sm text-gray-600">
-              Sendable Sessions: {manager.getSendableSessions(pubkey).length}
-            </div>
-          </div>
-        ))}
+        <div className="text-sm text-gray-600">{manager.debugInfo()}</div>
       </div>
     )
   }

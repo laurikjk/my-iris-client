@@ -12,22 +12,19 @@ import {KIND_REACTION} from "@/utils/constants"
 
 const Chat = ({id}: {id: string}) => {
   // id is now userPubKey instead of sessionId
-  const {updateLastSeen, sessionManager} = usePrivateChatsStore()
+  const {updateLastSeen} = usePrivateChatsStore()
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
-  // Check if we have any sessions for this user via sessionManager
-  const hasAnySessions = sessionManager
-    ? (sessionManager as unknown).userRecords?.get(id)?.getActiveSessions()?.length > 0
-    : false
+  // Allow messaging regardless of session state - sessions will be created automatically
 
   // Get messages reactively from events store - this will update when new messages are added
   const eventsMap = usePrivateMessagesStore((state) => state.events)
   const messages = eventsMap.get(id) ?? new SortedMap<string, MessageType>([], comparator)
 
   useEffect(() => {
-    if (!id || !hasAnySessions) {
+    if (!id) {
       return
     }
 
@@ -42,7 +39,7 @@ const Chat = ({id}: {id: string}) => {
         setHaveSent(true)
       }
     })
-  }, [id, messages, haveReply, haveSent, hasAnySessions])
+  }, [id, messages, haveReply, haveSent])
 
   useEffect(() => {
     if (!id) return

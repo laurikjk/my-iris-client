@@ -10,7 +10,6 @@ import {
 } from "nostr-double-ratchet"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {getPublicKey} from "nostr-tools"
-import {KIND_CHAT_MESSAGE} from "../utils/constants"
 
 export type OnEventCallback = (event: Rumor, from: string) => void
 
@@ -518,105 +517,6 @@ export default class SessionManager {
     return this.invite
   }
 
-
-  async sendEvent(
-    recipientIdentityKey: string,
-    event: Partial<Rumor>
-  ): Promise<unknown[]> {
-    return await this._sendEvent(recipientIdentityKey, event)
-  }
-
-  private async _sendEvent(
-    recipientIdentityKey: string,
-    event: Partial<Rumor>
-  ): Promise<unknown[]> {
-    console.log("Sending event to", recipientIdentityKey, event)
-    this.internalSubscriptions.forEach((cb) => cb(event as Rumor, recipientIdentityKey))
-
-    const results = []
-    const publishPromises: Promise<unknown>[] = []
-
-    const userRecord = this.userRecords.get(recipientIdentityKey)
-    if (!userRecord) {
-      return new Promise<unknown[]>((resolve) => {
-        if (!this.messageQueue.has(recipientIdentityKey)) {
-          this.messageQueue.set(recipientIdentityKey, [])
-        }
-        this.messageQueue.get(recipientIdentityKey)!.push({event, resolve})
-        this.listenToUser(recipientIdentityKey)
-      })
-    }
-
-    // Inline getActiveSessions logic
-    const activeSessions: Session[] = []
-    if (!userRecord.isStale) {
-      for (const device of userRecord.devices.values()) {
-        if (!device.isStale && device.activeSession) {
-          activeSessions.push(device.activeSession)
-        }
-      }
-    }
-    const sendableSessions = activeSessions.filter(
-      (s) => !!(s.state?.theirNextNostrPublicKey && s.state?.ourCurrentNostrKey)
-    )
-
-    if (sendableSessions.length === 0) {
-      return new Promise<unknown[]>((resolve) => {
-        if (!this.messageQueue.has(recipientIdentityKey)) {
-          this.messageQueue.set(recipientIdentityKey, [])
-        }
-        this.messageQueue.get(recipientIdentityKey)!.push({event, resolve})
-        this.listenToUser(recipientIdentityKey)
-      })
-    }
-
-    for (const session of sendableSessions) {
-      const {event: encryptedEvent} = session.sendEvent(event)
-      results.push(encryptedEvent)
-      publishPromises.push(
-        this.nostrPublish(encryptedEvent)
-          .then(() => {
-            this.saveSession(recipientIdentityKey, session.name || "unknown", session)
-          })
-          .catch(() => {})
-      )
-    }
-
-    const ourPublicKey = getPublicKey(this.ourIdentityKey)
-    const ownUserRecord = this.userRecords.get(ourPublicKey)
-    if (ownUserRecord) {
-      // Inline getActiveSessions logic for own devices
-      const ownActiveSessions: Session[] = []
-      if (!ownUserRecord.isStale) {
-        for (const device of ownUserRecord.devices.values()) {
-          if (!device.isStale && device.activeSession) {
-            ownActiveSessions.push(device.activeSession)
-          }
-        }
-      }
-      const ownSendableSessions = ownActiveSessions.filter(
-        (s) => !!(s.state?.theirNextNostrPublicKey && s.state?.ourCurrentNostrKey)
-      )
-      for (const session of ownSendableSessions) {
-        const {event: encryptedEvent} = session.sendEvent(event)
-        results.push(encryptedEvent)
-        publishPromises.push(
-          this.nostrPublish(encryptedEvent)
-            .then(() => {
-              this.saveSession(ourPublicKey, session.name || "unknown", session)
-            })
-            .catch(() => {})
-        )
-      }
-    }
-
-    if (publishPromises.length > 0) {
-      await Promise.all(publishPromises)
-    }
-
-    return results
-  }
-
   private setupUserInviteSubscription(userPubkey: string) {
     // Don't subscribe multiple times to the same user
     const inviteSubscriptionId = `invite:${userPubkey}`
@@ -868,35 +768,115 @@ export default class SessionManager {
     this.nostrPublish(event)?.catch(() => {})
   }
 
-  // Public methods for querying sessions - needed by other parts of the codebase
-  getActiveSessions(userId: string): Session[] {
-    const userRecord = this.userRecords.get(userId)
-    if (!userRecord || userRecord.isStale) return []
-
-    const sessions: Session[] = []
-    for (const device of userRecord.devices.values()) {
-      if (!device.isStale && device.activeSession) {
-        sessions.push(device.activeSession)
-      }
+  async sendText(recipientIdentityKey: string, text: string) {
+    const event = {
+      kind: 14, // KIND_CHAT_MESSAGE
+      content: text,
     }
-    return sessions
+    return await this.sendEvent(recipientIdentityKey, event)
   }
 
-  getSendableSessions(userId: string): Session[] {
-    return this.getActiveSessions(userId).filter(
-      (session) =>
-        !!(session.state?.theirNextNostrPublicKey && session.state?.ourCurrentNostrKey)
+  async sendEvent(
+    recipientIdentityKey: string,
+    event: Partial<Rumor>
+  ): Promise<unknown[]> {
+    return await this._sendEvent(recipientIdentityKey, event)
+  }
+
+  private async _sendEvent(
+    recipientIdentityKey: string,
+    event: Partial<Rumor>
+  ): Promise<unknown[]> {
+    console.log("Sending event to", recipientIdentityKey, event)
+    // Immediately notify local subscribers so that UI can render sent message optimistically
+    this.internalSubscriptions.forEach((cb) => cb(event as Rumor, recipientIdentityKey))
+
+    const results = []
+    const publishPromises: Promise<unknown>[] = []
+
+    const userRecord = this.userRecords.get(recipientIdentityKey)
+    if (!userRecord) {
+      return new Promise<unknown[]>((resolve) => {
+        if (!this.messageQueue.has(recipientIdentityKey)) {
+          this.messageQueue.set(recipientIdentityKey, [])
+        }
+        this.messageQueue.get(recipientIdentityKey)!.push({event, resolve})
+        this.listenToUser(recipientIdentityKey)
+      })
+    }
+
+    // Inline getActiveSessions logic
+    const activeSessions: Session[] = []
+    if (!userRecord.isStale) {
+      for (const device of userRecord.devices.values()) {
+        if (!device.isStale && device.activeSession) {
+          activeSessions.push(device.activeSession)
+        }
+      }
+    }
+    const sendableSessions = activeSessions.filter(
+      (s) => !!(s.state?.theirNextNostrPublicKey && s.state?.ourCurrentNostrKey)
     )
-  }
 
-  getAllUsersWithActiveSessions(): string[] {
-    const userIds: string[] = []
-    for (const [userId, userRecord] of this.userRecords.entries()) {
-      if (!userRecord.isStale && this.getActiveSessions(userId).length > 0) {
-        userIds.push(userId)
+    if (sendableSessions.length === 0) {
+      return new Promise<unknown[]>((resolve) => {
+        if (!this.messageQueue.has(recipientIdentityKey)) {
+          this.messageQueue.set(recipientIdentityKey, [])
+        }
+        this.messageQueue.get(recipientIdentityKey)!.push({event, resolve})
+        this.listenToUser(recipientIdentityKey)
+      })
+    }
+
+    // Send to all sendable sessions with recipient
+    for (const session of sendableSessions) {
+      const {event: encryptedEvent} = session.sendEvent(event)
+      results.push(encryptedEvent)
+      publishPromises.push(
+        this.nostrPublish(encryptedEvent)
+          .then(() => {
+            // Save session state after successful send (state has advanced)
+            this.saveSession(recipientIdentityKey, session.name || "unknown", session)
+          })
+          .catch(() => {})
+      )
+    }
+
+    // Send to our own devices (for multi-device sync)
+    const ourPublicKey = getPublicKey(this.ourIdentityKey)
+    const ownUserRecord = this.userRecords.get(ourPublicKey)
+    if (ownUserRecord) {
+      // Inline getActiveSessions logic for own devices
+      const ownActiveSessions: Session[] = []
+      if (!ownUserRecord.isStale) {
+        for (const device of ownUserRecord.devices.values()) {
+          if (!device.isStale && device.activeSession) {
+            ownActiveSessions.push(device.activeSession)
+          }
+        }
+      }
+      const ownSendableSessions = ownActiveSessions.filter(
+        (s) => !!(s.state?.theirNextNostrPublicKey && s.state?.ourCurrentNostrKey)
+      )
+      for (const session of ownSendableSessions) {
+        const {event: encryptedEvent} = session.sendEvent(event)
+        results.push(encryptedEvent)
+        publishPromises.push(
+          this.nostrPublish(encryptedEvent)
+            .then(() => {
+              this.saveSession(ourPublicKey, session.name || "unknown", session)
+            })
+            .catch(() => {})
+        )
       }
     }
-    return userIds
+
+    // Ensure all publish operations settled before returning
+    if (publishPromises.length > 0) {
+      await Promise.all(publishPromises)
+    }
+
+    return results
   }
 
   debugInfo(): string {
