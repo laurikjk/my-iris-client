@@ -8,7 +8,6 @@ import {hexToBytes} from "@noble/hashes/utils"
 import {useUserStore} from "./user"
 import SessionManager from "@/session/SessionManager"
 import {LocalStorageAdapter} from "@/session/StorageAdapter"
-import {UserRecord} from "@/session/UserRecord"
 import {ndk} from "@/utils/ndk"
 import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {Rumor} from "nostr-double-ratchet"
@@ -151,17 +150,8 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
     }
 
     // Get all users we have sessions with
-    // We need to access private userRecords property for implementation
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const userRecords = (sessionManager as any).userRecords as Map<string, UserRecord>
-    const userPubKeys = new Set<string>()
-
-    for (const [userPubKey, userRecord] of userRecords.entries()) {
-      // Only include users with active sessions
-      if (userRecord.getActiveSessions().length > 0) {
-        userPubKeys.add(userPubKey)
-      }
-    }
+    const usersWithSessions = sessionManager.getAllUsersWithActiveSessions()
+    const userPubKeys = new Set<string>(usersWithSessions)
 
     // Also include users we have in the chats store (for persistence)
     for (const userPubKey of chats.keys()) {

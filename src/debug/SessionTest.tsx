@@ -5,7 +5,6 @@ import {LocalStorageAdapter} from "../session/StorageAdapter"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
 import {Rumor, NostrPublish, SessionState} from "nostr-double-ratchet"
 import NDK, {NDKEvent, NDKPrivateKeySigner, NDKFilter} from "@nostr-dev-kit/ndk"
-import {UserRecord} from "../session/UserRecord"
 
 type EventLog = {
   timestamp: number
@@ -471,9 +470,8 @@ export default function SessionTest() {
   }) => {
     if (!manager) return <div className="text-gray-500">Manager not initialized</div>
 
-    // Access private fields through type assertion (for debugging only)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const userRecords = (manager as any).userRecords as Map<string, UserRecord>
+    // Use public method to get users with sessions
+    const usersWithSessions = manager.getAllUsersWithActiveSessions()
     const deviceId = manager.getDeviceId()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const invite = (manager as any).invite
@@ -491,71 +489,21 @@ export default function SessionTest() {
             <span className="font-medium">Invite Present:</span> {invite ? "Yes" : "No"}
           </div>
           <div>
-            <span className="font-medium">User Records:</span> {userRecords.size}
+            <span className="font-medium">Users with Sessions:</span> {usersWithSessions.length}
           </div>
         </div>
 
-        {/* User records */}
-        {Array.from(userRecords.entries()).map(([pubkey, userRecord]) => (
+        {/* Users with sessions */}
+        {usersWithSessions.map((pubkey) => (
           <div key={pubkey} className="mb-4 p-2 border-l-4 border-green-400 bg-green-50">
             <div className="font-medium text-black mb-2">
               User: {truncateKey(pubkey, 20)}
             </div>
-
-            {/* Device records */}
-            <div className="mb-2">
-              <span className="text-sm font-medium text-gray-600">
-                Devices ({userRecord.getDeviceCount()}):
-              </span>
-              {userRecord.getAllDevices().map((device) => (
-                <div
-                  key={device.deviceId}
-                  className="ml-4 mt-1 p-2 bg-white rounded border text-xs"
-                >
-                  <div>
-                    <span className="font-medium">Device ID:</span> {device.deviceId}
-                  </div>
-                  <div>
-                    <span className="font-medium">Public Key:</span>{" "}
-                    {truncateKey(device.publicKey)}
-                  </div>
-                  <div>
-                    <span className="font-medium">Active Session:</span>{" "}
-                    {device.activeSession ? "Yes" : "No"}
-                  </div>
-                  <div>
-                    <span className="font-medium">Inactive Sessions:</span>{" "}
-                    {device.inactiveSessions.length}
-                  </div>
-                  <div>
-                    <span className="font-medium">Last Activity:</span>{" "}
-                    {device.lastActivity
-                      ? new Date(device.lastActivity).toLocaleString()
-                      : "Never"}
-                  </div>
-                  <div>
-                    <span className="font-medium">Stale:</span>{" "}
-                    {device.isStale ? "Yes" : "No"}
-                  </div>
-
-                  {/* Active session state */}
-                  {device.activeSession && (
-                    <div className="mt-2">
-                      <SessionStateDisplay
-                        state={device.activeSession.state}
-                        title={`Active Session (${device.activeSession.name})`}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Session summary */}
             <div className="text-sm text-gray-600">
-              <div>Active Sessions: {userRecord.getActiveSessionCount()}</div>
-              <div>Sendable Sessions: {userRecord.getSendableSessions().length}</div>
-              <div>Total Sessions: {userRecord.getAllSessions().length}</div>
+              Active Sessions: {manager.getActiveSessions(pubkey).length}
+            </div>
+            <div className="text-sm text-gray-600">
+              Sendable Sessions: {manager.getSendableSessions(pubkey).length}
             </div>
           </div>
         ))}
