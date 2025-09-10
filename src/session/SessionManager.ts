@@ -879,6 +879,36 @@ export default class SessionManager {
     this.nostrPublish(event)?.catch(() => {})
   }
 
+  // Public methods for querying sessions - needed by other parts of the codebase
+  getActiveSessions(userId: string): Session[] {
+    const userRecord = this.userRecords.get(userId)
+    if (!userRecord || userRecord.isStale) return []
+    
+    const sessions: Session[] = []
+    for (const device of userRecord.devices.values()) {
+      if (!device.isStale && device.activeSession) {
+        sessions.push(device.activeSession)
+      }
+    }
+    return sessions
+  }
+  
+  getSendableSessions(userId: string): Session[] {
+    return this.getActiveSessions(userId).filter(
+      session => !!(session.state?.theirNextNostrPublicKey && session.state?.ourCurrentNostrKey)
+    )
+  }
+  
+  getAllUsersWithActiveSessions(): string[] {
+    const userIds: string[] = []
+    for (const [userId, userRecord] of this.userRecords.entries()) {
+      if (!userRecord.isStale && this.getActiveSessions(userId).length > 0) {
+        userIds.push(userId)
+      }
+    }
+    return userIds
+  }
+
   debugInfo(): string {
     const userCount = this.userRecords.size
     let deviceCount = 0
