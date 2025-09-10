@@ -295,7 +295,10 @@ export default function MarketFilters({
             // Extract and add tags from the event
             const tTags = event.tags.filter((tag) => tag[0] === "t" && tag[1])
             if (tTags.length > 0) {
-              await marketStore.addTags(tTags.map((tag) => tag[1]))
+              await marketStore.addTags(
+                tTags.map((tag) => tag[1]),
+                event.pubkey
+              )
               // Update available tags after adding new ones
               const updatedTags = await marketStore.getTags()
               setAvailableTags(updatedTags)

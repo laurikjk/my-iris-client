@@ -51,7 +51,10 @@ export const extractMarketData = (event: NDKEvent) => {
   // Extract and track "t" tags (categories)
   const tTags = event?.tags?.filter((tag) => tag[0] === "t" && tag[1]) || []
   if (tTags.length > 0) {
-    marketStore.addTags(tTags.map((tag) => tag[1]))
+    marketStore.addTags(
+      tTags.map((tag) => tag[1]),
+      event.pubkey
+    )
   }
 
   return {
