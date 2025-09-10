@@ -229,6 +229,9 @@ export default class SessionManager {
 
           const deviceKey = session.name || "unknown"
 
+          // Ensure session name matches deviceId
+          session.name = deviceKey
+
           // Inline upsertSession logic
           const device = userRecord.devices.get(deviceKey)
           const updatedInactive = device?.activeSession
@@ -339,6 +342,9 @@ export default class SessionManager {
         }
         const deviceId = invite["deviceId"] || "unknown"
 
+        // Ensure session name matches deviceId
+        session.name = deviceId
+
         // Inline upsertSession logic
         const device = userRecord.devices.get(deviceId)
         const updatedInactive = device?.activeSession
@@ -427,6 +433,9 @@ export default class SessionManager {
         }
         console.log(`Loading session for ${ownerPubKey} with deviceId: ${deviceId}`)
 
+        // Ensure session name matches deviceId
+        session.name = deviceId
+
         // Inline upsertSession logic
         const device = userRecord.devices.get(deviceId)
         const updatedInactive = device?.activeSession
@@ -487,8 +496,9 @@ export default class SessionManager {
       }
     }
 
+    // Set up invite subscriptions for all loaded users
     for (const userPubKey of uniqueUsers) {
-      this.listenToUser(userPubKey)
+      this.setupUserInviteSubscription(userPubKey)
     }
   }
 
@@ -618,9 +628,7 @@ export default class SessionManager {
     return results
   }
 
-  listenToUser(userPubkey: string) {
-    // Check sessions from storage
-
+  private setupUserInviteSubscription(userPubkey: string) {
     // Don't subscribe multiple times to the same user
     const inviteSubscriptionId = `invite:${userPubkey}`
     if (this.subscriptionManager.unsubscribe(inviteSubscriptionId)) {
@@ -678,6 +686,9 @@ export default class SessionManager {
             }
             this.userRecords.set(userPubkey, currentUserRecord)
           }
+
+          // Ensure session name matches deviceId
+          session.name = deviceId
 
           // Inline upsertSession logic
           const device = currentUserRecord.devices.get(deviceId)
@@ -761,6 +772,10 @@ export default class SessionManager {
     })
   }
 
+  listenToUser(userPubkey: string) {
+    this.setupUserInviteSubscription(userPubkey)
+  }
+
   private internalSubscriptions: Set<OnEventCallback> = new Set()
 
   onEvent(callback: OnEventCallback) {
@@ -809,6 +824,9 @@ export default class SessionManager {
     }
 
     const deviceId = session.name || "unknown"
+
+    // Ensure session name matches deviceId
+    session.name = deviceId
 
     // Inline upsertSession logic
     const device = userRecord.devices.get(deviceId)
@@ -860,12 +878,12 @@ export default class SessionManager {
     )
     this.nostrPublish(event)?.catch(() => {})
   }
-  
+
   debugInfo(): string {
     const userCount = this.userRecords.size
     let deviceCount = 0
     let activeSessionCount = 0
-    
+
     for (const userRecord of this.userRecords.values()) {
       deviceCount += userRecord.devices.size
       for (const device of userRecord.devices.values()) {
@@ -874,7 +892,7 @@ export default class SessionManager {
         }
       }
     }
-    
+
     return `SessionManager: ${userCount} users, ${deviceCount} devices, ${activeSessionCount} active sessions. ${this.subscriptionManager.debugInfo()}`
   }
 }
