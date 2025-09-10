@@ -18,6 +18,7 @@ export class DeviceRecord {
   private activeSession?: Session
   private inactiveSessions: Session[] = []
   private staleTimestamp?: number
+  private eventCallbacks: Set<(event: Rumor) => void> = new Set()
 
   private constructor(
     public readonly deviceId: string,
@@ -30,6 +31,19 @@ export class DeviceRecord {
     this.activeSession = activeSession || undefined
     this.inactiveSessions = inactiveSessions
     this.staleTimestamp = staleTimestamp
+
+    // Setup session message handling
+    if (this.activeSession) {
+      this.activeSession.onEvent((event: Rumor) => {
+        // Forward to all registered callbacks
+        this.eventCallbacks.forEach(callback => callback(event))
+        
+        // Persist session state after receive (async, don't block)
+        const activeSessionKey = `session/${this.userPubkey}/${this.deviceId}/active`
+        const sessionData = serializeSessionState(this.activeSession!.state)
+        this.dependencies.storageAdapter.put(activeSessionKey, sessionData).catch(() => {})
+      })
+    }
   }
 
   static async fromStorage(
@@ -121,5 +135,24 @@ export class DeviceRecord {
     }
 
     return instance
+  }
+
+  async sendMessage(event: Partial<Rumor>): Promise<void> {
+    if (!this.activeSession) {
+      throw new Error(`No active session for device ${this.deviceId}`)
+    }
+    
+    const {event: encryptedEvent} = this.activeSession.sendEvent(event)
+    await this.dependencies.nostrPublish(encryptedEvent)
+    
+    // Persist session state after send
+    const activeSessionKey = `session/${this.userPubkey}/${this.deviceId}/active`
+    const sessionData = serializeSessionState(this.activeSession.state)
+    await this.dependencies.storageAdapter.put(activeSessionKey, sessionData)
+  }
+
+  onEvent(callback: (event: Rumor) => void): () => void {
+    this.eventCallbacks.add(callback)
+    return () => this.eventCallbacks.delete(callback)
   }
 }
