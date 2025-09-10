@@ -127,6 +127,7 @@ export default class SessionManager {
     string,
     Array<{event: Partial<Rumor>; resolve: (results: unknown[]) => void}>
   > = new Map()
+  private _initialised = false
 
   constructor(
     ourIdentityKey: Uint8Array,
@@ -143,18 +144,13 @@ export default class SessionManager {
     this.storage = storage || new InMemoryStorageAdapter()
   }
 
-  private _initialised = false
-
   private async _processReceivedMessage(
     session: Session,
     event: Rumor,
     pubkey: string,
     deviceId: string
   ): Promise<void> {
-    // 1. Save session state FIRST (state already advanced by decryption)
     await this.saveSession(pubkey, deviceId, session)
-
-    // 2. Then notify callbacks
     this.internalSubscriptions.forEach((cb) => cb(event, pubkey))
   }
 
@@ -522,13 +518,6 @@ export default class SessionManager {
     return this.invite
   }
 
-  async sendText(recipientIdentityKey: string, text: string) {
-    const event = {
-      kind: KIND_CHAT_MESSAGE,
-      content: text,
-    }
-    return await this.sendEvent(recipientIdentityKey, event)
-  }
 
   async sendEvent(
     recipientIdentityKey: string,
@@ -883,7 +872,7 @@ export default class SessionManager {
   getActiveSessions(userId: string): Session[] {
     const userRecord = this.userRecords.get(userId)
     if (!userRecord || userRecord.isStale) return []
-    
+
     const sessions: Session[] = []
     for (const device of userRecord.devices.values()) {
       if (!device.isStale && device.activeSession) {
@@ -892,13 +881,14 @@ export default class SessionManager {
     }
     return sessions
   }
-  
+
   getSendableSessions(userId: string): Session[] {
     return this.getActiveSessions(userId).filter(
-      session => !!(session.state?.theirNextNostrPublicKey && session.state?.ourCurrentNostrKey)
+      (session) =>
+        !!(session.state?.theirNextNostrPublicKey && session.state?.ourCurrentNostrKey)
     )
   }
-  
+
   getAllUsersWithActiveSessions(): string[] {
     const userIds: string[] = []
     for (const [userId, userRecord] of this.userRecords.entries()) {
