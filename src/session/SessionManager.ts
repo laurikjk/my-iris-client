@@ -225,8 +225,8 @@ export default class SessionManager {
             "session",
             {userId: targetUserKey, deviceId: deviceKey}
           )
-        } catch {
-          // ignore
+        } catch (err) {
+          console.error("Error handling invite acceptance:", err)
         }
       }
     )
@@ -350,6 +350,7 @@ export default class SessionManager {
     try {
       const key = `session/${ownerPubKey}/${deviceId}`
       await this.storage.put(key, serializeSessionState(session.state))
+      console.warn("Saved session for", deviceId)
     } catch {
       // ignore
     }
