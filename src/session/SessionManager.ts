@@ -250,20 +250,10 @@ export default class SessionManager {
           this.subscriptionManager.unsubscribeByDevice(targetUserKey, deviceKey)
 
           const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-            // Process message immediately, but schedule saving for later
-            // This avoids circular dependency with the operation queue
-            Promise.resolve().then(async () => {
-              try {
-                await this._processReceivedMessage(
-                  session,
-                  _event,
-                  targetUserKey,
-                  deviceKey
-                )
-              } catch (error) {
+            this._processReceivedMessage(session, _event, targetUserKey, deviceKey)
+              .catch((error) => {
                 console.error("Error processing received message:", error)
-              }
-            })
+              })
           })
 
           this.subscriptionManager.subscribe(
@@ -357,20 +347,14 @@ export default class SessionManager {
 
         this.saveSession(ourPublicKey, deviceId, session)
 
-        // Set up session subscription
         const sessionSubscriptionId = `session:${ourPublicKey}:${deviceId}`
         this.subscriptionManager.unsubscribeByDevice(ourPublicKey, deviceId)
 
         const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-          // Process message immediately, but schedule saving for later
-          // This avoids circular dependency with the operation queue
-          Promise.resolve().then(async () => {
-            try {
-              await this._processReceivedMessage(session, _event, ourPublicKey, deviceId)
-            } catch (error) {
+          this._processReceivedMessage(session, _event, ourPublicKey, deviceId)
+            .catch((error) => {
               console.error("Error processing received message:", error)
-            }
-          })
+            })
         })
 
         this.subscriptionManager.subscribe(
@@ -446,20 +430,14 @@ export default class SessionManager {
           lastActivity: Date.now(),
         })
 
-        // Set up session subscription
         const sessionSubscriptionId = `session:${ownerPubKey}:${deviceId}`
         this.subscriptionManager.unsubscribeByDevice(ownerPubKey, deviceId)
 
         const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-          // Process message immediately, but schedule saving for later
-          // This avoids circular dependency with the operation queue
-          Promise.resolve().then(async () => {
-            try {
-              await this._processReceivedMessage(session, _event, ownerPubKey, deviceId)
-            } catch (error) {
+          this._processReceivedMessage(session, _event, ownerPubKey, deviceId)
+            .catch((error) => {
               console.error("Error processing received message:", error)
-            }
-          })
+            })
         })
 
         this.subscriptionManager.subscribe(
@@ -578,15 +556,10 @@ export default class SessionManager {
           this.subscriptionManager.unsubscribeByDevice(userPubkey, deviceId)
 
           const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-            // Process message immediately, but schedule saving for later
-            // This avoids circular dependency with the operation queue
-            Promise.resolve().then(async () => {
-              try {
-                await this._processReceivedMessage(session, _event, userPubkey, deviceId)
-              } catch (error) {
+            this._processReceivedMessage(session, _event, userPubkey, deviceId)
+              .catch((error) => {
                 console.error("Error processing received message:", error)
-              }
-            })
+              })
           })
 
           this.subscriptionManager.subscribe(
@@ -711,13 +684,10 @@ export default class SessionManager {
     this.subscriptionManager.unsubscribeByDevice(ourPublicKey, deviceId)
 
     const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-      Promise.resolve().then(async () => {
-        try {
-          await this._processReceivedMessage(session, _event, ourPublicKey, deviceId)
-        } catch (error) {
+      this._processReceivedMessage(session, _event, ourPublicKey, deviceId)
+        .catch((error) => {
           console.error("Error processing received message:", error)
-        }
-      })
+        })
     })
 
     this.subscriptionManager.subscribe(
