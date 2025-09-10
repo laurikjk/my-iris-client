@@ -7,6 +7,7 @@ interface CategoryLabelProps {
   maxLength?: number
   className?: string
   onClick?: (e: MouseEvent) => void
+  userCount?: number
 }
 
 export function CategoryLabel({
@@ -15,6 +16,7 @@ export function CategoryLabel({
   maxLength = 20,
   className = "",
   onClick,
+  userCount,
 }: CategoryLabelProps) {
   const truncatedCategory =
     category.length > maxLength ? category.substring(0, maxLength) + "..." : category
@@ -31,6 +33,9 @@ export function CategoryLabel({
       title={category.length > maxLength ? category : undefined}
     >
       {truncatedCategory}
+      {userCount !== undefined && userCount > 0 && (
+        <span className="ml-1 opacity-60 text-xs">({userCount})</span>
+      )}
     </Link>
   )
 }

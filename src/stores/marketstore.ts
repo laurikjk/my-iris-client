@@ -100,6 +100,23 @@ class MarketStore {
       .map((item) => item.tag)
   }
 
+  async getTagsWithCounts(): Promise<{tag: string; userCount: number}[]> {
+    await this.initialize()
+
+    // Sort by user count (descending), then alphabetically
+    const tagsWithCounts = Array.from(this.seenTags).map((lowerTag) => ({
+      tag: this.tagMap.get(lowerTag) || lowerTag,
+      userCount: this.categoryUsers.get(lowerTag)?.size || 0,
+    }))
+
+    return tagsWithCounts.sort((a, b) => {
+      if (b.userCount !== a.userCount) {
+        return b.userCount - a.userCount
+      }
+      return a.tag.localeCompare(b.tag)
+    })
+  }
+
   private async persist() {
     try {
       const tagsToStore = Array.from(this.seenTags).map(

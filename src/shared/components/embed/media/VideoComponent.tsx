@@ -130,11 +130,29 @@ function HlsVideoComponent({
     }
   }, [content.autoplayVideos, hasVideoTrack])
 
+  // Define default dimensions to prevent layout shift
+  const defaultWidth = Math.min(650, window.innerWidth)
+  const defaultHeight = limitHeight ? 400 : 500 // 16:10 aspect ratio approximation
+
+  const containerStyle = {
+    // Always provide height to prevent layout shift
+    height: calculatedDimensions?.height || `${defaultHeight}px`,
+  }
+
+  const videoStyle = {
+    ...calculatedDimensions,
+    // Always provide dimensions to prevent layout shift
+    width: calculatedDimensions?.width || `${defaultWidth}px`,
+    height: calculatedDimensions?.height || `${defaultHeight}px`,
+    backgroundImage: blurhashUrl ? `url(${blurhashUrl})` : undefined,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  }
+
   return (
     <div
-      className={classNames("relative w-full justify-center flex object-contain my-2", {
-        "h-[600px]": limitHeight || !originalWidth || !originalHeight,
-      })}
+      className={classNames("relative w-full justify-center flex object-contain my-2")}
+      style={containerStyle}
     >
       <video
         onClick={(e) => {
@@ -151,15 +169,9 @@ function HlsVideoComponent({
         ref={videoRef}
         className={classNames("max-w-full object-contain", {
           "blur-xl": blur,
-          "h-full max-h-[600px]": limitHeight || !originalWidth || !originalHeight,
-          "max-h-[90vh] lg:h-[600px]": !limitHeight && originalWidth && originalHeight,
+          "h-full max-h-[600px]": true,
         })}
-        style={{
-          ...calculatedDimensions,
-          backgroundImage: blurhashUrl ? `url(${blurhashUrl})` : undefined,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
+        style={videoStyle}
         controls
         muted={hasVideoTrack ? isMuted : false}
         autoPlay={content.autoplayVideos && hasVideoTrack}

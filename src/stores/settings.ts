@@ -14,7 +14,7 @@ interface SettingsState {
   // Content settings
   content: {
     blurNSFW: boolean
-    hideEventsByUnknownUsers: boolean
+    hideRepliesAndReactionsByUnknownUsers: boolean
     hidePostsByMutedMoreThanFollowed: boolean
     autoplayVideos: boolean
     showLikes: boolean
@@ -63,7 +63,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       content: {
         blurNSFW: true,
-        hideEventsByUnknownUsers: true,
+        hideRepliesAndReactionsByUnknownUsers: true,
         hidePostsByMutedMoreThanFollowed: true,
         autoplayVideos: true,
         showLikes: true,

@@ -7,7 +7,6 @@ import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePage
 import {useParams, useNavigate} from "@/navigation"
 import Widget from "@/shared/components/ui/Widget"
 import {Helmet} from "react-helmet"
-import {useSettingsStore} from "@/stores/settings"
 import {useUIStore} from "@/stores/ui"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import Feed from "@/shared/components/feed/Feed"
@@ -30,9 +29,9 @@ function SearchPage() {
     setSearchTerm(decodedQuery)
   }, [decodedQuery])
 
-  const {content} = useSettingsStore()
+  // Search should show all events regardless of follow distance
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
-    !content.hideEventsByUnknownUsers,
+    true,
     "searchShowEventsByUnknownUsers"
   )
 
@@ -98,7 +97,7 @@ function SearchPage() {
                   name: "Search Results",
                   id: `search-posts-${decodedQuery}`,
                   showRepliedTo: false,
-                  showEventsByUnknownUsers: showEventsByUnknownUsers,
+                  followDistance: showEventsByUnknownUsers ? undefined : 5,
                   filter: {
                     kinds: [KIND_TEXT_NOTE],
                     ...(decodedQuery.trim() && {search: decodedQuery}),

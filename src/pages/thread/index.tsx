@@ -66,7 +66,7 @@ export default function ThreadPage({
   const addToThread = useCallback(
     (event: NDKEvent) => {
       if (
-        content.hideEventsByUnknownUsers &&
+        content.hideRepliesAndReactionsByUnknownUsers &&
         socialGraph().getFollowDistance(event.pubkey) > 5
       )
         return
@@ -80,7 +80,7 @@ export default function ThreadPage({
         addRelevantPerson(user)
       }
     },
-    [content.hideEventsByUnknownUsers, threadAuthor, addRelevantPerson]
+    [content.hideRepliesAndReactionsByUnknownUsers, threadAuthor, addRelevantPerson]
   )
 
   return (

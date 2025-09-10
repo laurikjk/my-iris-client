@@ -2,7 +2,6 @@ import {useParams} from "@/navigation"
 import {useState, useEffect} from "react"
 import Feed from "@/shared/components/feed/Feed"
 import {KIND_CLASSIFIED} from "@/utils/constants"
-import {useSettingsStore} from "@/stores/settings"
 import {useUIStore} from "@/stores/ui"
 import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
@@ -14,9 +13,6 @@ import MarketFilters from "./components/MarketFilters"
 export default function MarketPage() {
   const {category} = useParams()
   const isInTwoColumnLayout = useIsTwoColumnLayout()
-  const showEventsByUnknownUsers = useSettingsStore(
-    (state) => !state.content.hideEventsByUnknownUsers
-  )
   const displayAs = useUIStore((state) => state.marketDisplayAs)
   const setMarketDisplayAs = useUIStore((state) => state.setMarketDisplayAs)
 
@@ -77,7 +73,6 @@ export default function MarketPage() {
             name: `Market${category ? `: ${category}` : ""}${selectedGeohash ? " (filtered by location)" : ""}${searchQuery ? ` (search: ${searchQuery})` : ""}`,
             id: `search-market-${category || ""}-${selectedGeohash || ""}-${searchQuery || ""}`,
             showRepliedTo: false,
-            showEventsByUnknownUsers: showEventsByUnknownUsers,
             filter,
           }}
           displayAs={displayAs}

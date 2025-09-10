@@ -7,9 +7,9 @@ import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
 import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {KIND_CLASSIFIED} from "@/utils/constants"
 import Feed from "@/shared/components/feed/Feed"
-import {useSettingsStore} from "@/stores/settings"
 import {RiMapPinLine} from "@remixicon/react"
 import {CategoryLabel} from "@/shared/components/market/CategoryLabel"
+import {shouldHideUser} from "@/utils/visibility"
 
 interface MarketFiltersProps {
   mapHeight?: string
@@ -29,11 +29,12 @@ export default function MarketFilters({
   const urlParams = new URLSearchParams(window.location.search)
   const searchFromUrl = urlParams.get("q")
   const [searchTerm, setSearchTerm] = useState(searchFromUrl || "")
-  const [availableTags, setAvailableTags] = useState<string[]>([])
-  const [mapEvents, setMapEvents] = useState<NDKEvent[]>([])
-  const showEventsByUnknownUsers = useSettingsStore(
-    (state) => !state.content.hideEventsByUnknownUsers
+  const [availableTags, setAvailableTags] = useState<{tag: string; userCount: number}[]>(
+    []
   )
+  const [mapEvents, setMapEvents] = useState<NDKEvent[]>([])
+  // Market should show all events regardless of follow distance
+  const showEventsByUnknownUsers = true
 
   // Get geohash from URL query params or localStorage fallback
   const geohashFromUrl = urlParams.get("g")
@@ -77,7 +78,7 @@ export default function MarketFilters({
 
   useEffect(() => {
     const loadTags = async () => {
-      const tags = await marketStore.getTags()
+      const tags = await marketStore.getTagsWithCounts()
       setAvailableTags(tags)
     }
     loadTags()
@@ -98,7 +99,7 @@ export default function MarketFilters({
       followDistance: 3,
       showRepliedTo: false,
       hideReplies: true,
-      showEventsByUnknownUsers: true, // Show all events on map
+      showEventsByUnknownUsers, // Show all events on map
     }
   }, [showEventsByUnknownUsers])
 
@@ -254,11 +255,12 @@ export default function MarketFilters({
           <div
             className={`${categoriesHeight} overflow-y-auto flex flex-wrap gap-2 content-start`}
           >
-            {availableTags.map((tag) => (
+            {availableTags.map((item) => (
               <CategoryLabel
-                key={tag}
-                category={tag}
-                isActive={category === tag}
+                key={item.tag}
+                category={item.tag}
+                isActive={category === item.tag}
+                userCount={item.userCount}
                 className="h-fit"
                 onClick={(e) => {
                   e.preventDefault()
@@ -266,7 +268,7 @@ export default function MarketFilters({
                   const params = new URLSearchParams(window.location.search)
                   const queryString = params.toString()
                   navigate(
-                    `/m/${encodeURIComponent(tag)}${queryString ? `?${queryString}` : ""}`
+                    `/m/${encodeURIComponent(item.tag)}${queryString ? `?${queryString}` : ""}`
                   )
                 }}
               />
@@ -296,15 +298,21 @@ export default function MarketFilters({
             })
 
             // Extract and add tags from the event
-            const tTags = event.tags.filter((tag) => tag[0] === "t" && tag[1])
-            if (tTags.length > 0) {
-              await marketStore.addTags(
-                tTags.map((tag) => tag[1]),
-                event.pubkey
-              )
-              // Update available tags after adding new ones
-              const updatedTags = await marketStore.getTags()
-              setAvailableTags(updatedTags)
+            // Only count categories from known users (respecting the showEventsByUnknownUsers setting)
+            const shouldCount =
+              showEventsByUnknownUsers || !shouldHideUser(event.pubkey, 3, true)
+
+            if (shouldCount) {
+              const tTags = event.tags.filter((tag) => tag[0] === "t" && tag[1])
+              if (tTags.length > 0) {
+                await marketStore.addTags(
+                  tTags.map((tag) => tag[1]),
+                  event.pubkey
+                )
+                // Update available tags after adding new ones
+                const updatedTags = await marketStore.getTagsWithCounts()
+                setAvailableTags(updatedTags)
+              }
             }
           }}
         />

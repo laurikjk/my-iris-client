@@ -1,7 +1,6 @@
 import {useEffect, useRef, useState, FormEvent} from "react"
 import {useParams, useNavigate} from "@/navigation"
 import {useUIStore} from "@/stores/ui"
-import {useSettingsStore} from "@/stores/settings"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import Feed from "@/shared/components/feed/Feed"
@@ -17,9 +16,9 @@ export default function SearchFilters() {
   const navItemClicked = useUIStore((state) => state.navItemClicked)
   const [searchTerm, setSearchTerm] = useState(decodedQuery)
 
-  const {content} = useSettingsStore()
+  // Search should show all events regardless of follow distance
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
-    !content.hideEventsByUnknownUsers,
+    true,
     "searchShowEventsByUnknownUsers"
   )
 
@@ -76,7 +75,7 @@ export default function SearchFilters() {
               name: "Search Results",
               id: `search-posts-${decodedQuery}`,
               showRepliedTo: false,
-              showEventsByUnknownUsers: showEventsByUnknownUsers,
+              followDistance: showEventsByUnknownUsers ? undefined : 5,
               filter: {
                 kinds: [KIND_TEXT_NOTE],
                 ...(decodedQuery.trim() && {search: decodedQuery}),

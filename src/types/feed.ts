@@ -21,7 +21,6 @@ export interface FeedConfig {
   requiresMedia?: boolean
   requiresReplies?: boolean
   excludeSeen?: boolean
-  showEventsByUnknownUsers?: boolean // Deprecated in feed configs, used only in global settings
   relayUrls?: string[]
   // For reply feeds - only show replies to this specific event
   repliesTo?: string

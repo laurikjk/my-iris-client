@@ -64,21 +64,30 @@ const ImageComponent = ({
     )
   }
 
+  // Define default dimensions to prevent layout shift
+  const defaultWidth = Math.min(650, window.innerWidth)
+  const defaultHeight = limitHeight ? 400 : 500 // reasonable default aspect ratio
+
+  const styleWithDimensions = {
+    ...calculatedDimensions,
+    // Always provide dimensions to prevent layout shift
+    width: calculatedDimensions?.width || `${defaultWidth}px`,
+    height: calculatedDimensions?.height || `${defaultHeight}px`,
+    backgroundImage: blurhashUrl ? `url(${blurhashUrl})` : undefined,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  }
+
   return (
     <ProxyImg
-      width={originalWidth || Math.min(650, window.innerWidth)}
+      width={originalWidth || defaultWidth}
       onError={() => setHasError(true)}
       onClick={onClick}
       className={classNames("my-2 max-w-full cursor-pointer object-contain", {
         "blur-md": blur,
         "max-h-[90vh] lg:max-h-[600px]": true,
       })}
-      style={{
-        ...calculatedDimensions,
-        backgroundImage: blurhashUrl ? `url(${blurhashUrl})` : undefined,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
+      style={styleWithDimensions}
       src={match}
     />
   )

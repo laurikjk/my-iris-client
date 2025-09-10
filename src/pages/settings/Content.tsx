@@ -21,9 +21,9 @@ function Content() {
         <div className="space-y-6">
           <SettingsGroup>
             <SettingToggle
-              checked={content.hideEventsByUnknownUsers}
-              onChange={() => handleToggleChange("hideEventsByUnknownUsers")}
-              label="Hide posts by unknown users"
+              checked={content.hideRepliesAndReactionsByUnknownUsers}
+              onChange={() => handleToggleChange("hideRepliesAndReactionsByUnknownUsers")}
+              label="Hide replies and reactions by unknown users"
             />
             <SettingToggle
               checked={content.blurNSFW}

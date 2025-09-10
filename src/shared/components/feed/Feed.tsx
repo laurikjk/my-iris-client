@@ -108,7 +108,8 @@ const Feed = memo(function Feed({
   const [bottomVisibleEventTimestamp, setBottomVisibleEventTimestamp] =
     useState<number>(Infinity)
 
-  const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useState(false)
+  // For manually showing/hiding unknown user events via toggle
+  const [showUnknownUserEvents, setShowUnknownUserEvents] = useState(false)
 
   const {saveFeedConfig} = useFeedStore()
 
@@ -136,7 +137,7 @@ const Feed = memo(function Feed({
     cacheKey,
     displayCount,
     feedConfig,
-    hideEventsByUnknownUsers: false,
+    hideEventsByUnknownUsers: feedConfig.followDistance !== undefined,
     sortFn,
     relayUrls: feedConfig.relayUrls,
     bottomVisibleEventTimestamp,
@@ -360,13 +361,13 @@ const Feed = memo(function Feed({
         {myPubKey && eventsByUnknownUsers.length > 0 && (
           <div
             className="p-4 border-t border-b border-custom text-info text-center transition-colors duration-200 ease-in-out hover:underline hover:bg-[var(--note-hover-color)] cursor-pointer"
-            onClick={() => setShowEventsByUnknownUsers(!showEventsByUnknownUsers)}
+            onClick={() => setShowUnknownUserEvents(!showUnknownUserEvents)}
           >
-            {showEventsByUnknownUsers ? "Hide" : "Show"} {eventsByUnknownUsers.length}{" "}
-            events by unknown users
+            {showUnknownUserEvents ? "Hide" : "Show"} {eventsByUnknownUsers.length} events
+            by unknown users
           </div>
         )}
-        {showEventsByUnknownUsers && eventsByUnknownUsers.length > 0 && (
+        {showUnknownUserEvents && eventsByUnknownUsers.length > 0 && (
           <UnknownUserEvents
             eventsByUnknownUsers={eventsByUnknownUsers}
             showRepliedTo={feedConfig.showRepliedTo ?? true}

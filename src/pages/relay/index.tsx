@@ -9,7 +9,6 @@ import {NDKFilter} from "@nostr-dev-kit/ndk"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import {useParams, useNavigate} from "@/navigation"
 import Widget from "@/shared/components/ui/Widget"
-import {useSettingsStore} from "@/stores/settings"
 import {Helmet} from "react-helmet"
 import RelaySelector from "@/shared/components/ui/RelaySelector"
 import RelayDetails from "@/shared/components/relay/RelayDetails"
@@ -30,9 +29,9 @@ function RelayPage() {
     setSelectedRelayUrl(initialRelayUrl)
   }, [initialRelayUrl])
 
-  const {content} = useSettingsStore()
+  // Relay view should show all events regardless of follow distance
   const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
-    !content.hideEventsByUnknownUsers,
+    true,
     "relayShowEventsByUnknownUsers"
   )
 
@@ -91,7 +90,7 @@ function RelayPage() {
                   name: "Relay Feed",
                   id: `relay-${selectedRelayUrl}`,
                   showRepliedTo: true,
-                  showEventsByUnknownUsers: showEventsByUnknownUsers,
+                  followDistance: showEventsByUnknownUsers ? undefined : 5,
                   sortType: "chronological",
                   relayUrls: [selectedRelayUrl],
                   filter: filters,

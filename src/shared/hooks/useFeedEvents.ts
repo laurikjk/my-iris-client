@@ -243,8 +243,20 @@ export default function useFeedEvents({
   const filteredEvents = useMemo((): NDKEvent[] => {
     const events = Array.from(eventsRef.current.values())
 
-    return events
-  }, [eventsVersion])
+    // Re-filter events when feedConfig changes
+    return events.filter((event) => shouldAcceptEventRef.current!(event))
+  }, [
+    eventsVersion,
+    feedConfig.followDistance,
+    feedConfig.hideReplies,
+    feedConfig.requiresMedia,
+    feedConfig.requiresReplies,
+    feedConfig.repliesTo,
+    feedConfig.excludeSeen,
+    feedConfig.relayUrls,
+    hideEventsByUnknownUsers,
+    displayAs,
+  ])
 
   const eventsByUnknownUsers = useMemo(() => {
     if (!hideEventsByUnknownUsers) {
