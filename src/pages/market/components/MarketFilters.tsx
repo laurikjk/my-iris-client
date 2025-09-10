@@ -25,7 +25,10 @@ export default function MarketFilters({
   const {category} = useParams()
   const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const [searchTerm, setSearchTerm] = useState("")
+  // Get search query from URL
+  const urlParams = new URLSearchParams(window.location.search)
+  const searchFromUrl = urlParams.get("q")
+  const [searchTerm, setSearchTerm] = useState(searchFromUrl || "")
   const [availableTags, setAvailableTags] = useState<string[]>([])
   const [mapEvents, setMapEvents] = useState<NDKEvent[]>([])
   const showEventsByUnknownUsers = useSettingsStore(
@@ -33,7 +36,6 @@ export default function MarketFilters({
   )
 
   // Get geohash from URL query params or localStorage fallback
-  const urlParams = new URLSearchParams(window.location.search)
   const geohashFromUrl = urlParams.get("g")
   const storedGeohash = category
     ? localStorage.getItem(`market-geohash-${category}`)
@@ -52,13 +54,15 @@ export default function MarketFilters({
     setShowMap(Boolean(category?.trim()))
   }, [category])
 
-  // Listen for URL changes to update selected geohash
+  // Listen for URL changes to update selected geohash and search
   // Also restore query params if they're missing
   useEffect(() => {
     const handleLocationChange = () => {
       const params = new URLSearchParams(window.location.search)
       const g = params.get("g")
+      const q = params.get("q")
       setSelectedGeohash(g || undefined)
+      setSearchTerm(q || "")
     }
 
     // Check if we have a stored geohash but it's not in the URL
@@ -106,7 +110,10 @@ export default function MarketFilters({
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (searchTerm.trim()) {
-      navigate(`/m/${encodeURIComponent(searchTerm.trim())}`)
+      // Use search query parameter instead of category path for full-text search
+      const params = new URLSearchParams(window.location.search)
+      params.set("q", searchTerm.trim())
+      navigate(`/m?${params.toString()}`)
     }
   }
 
@@ -176,8 +183,29 @@ export default function MarketFilters({
             </button>
           </div>
 
-          {/* Category and location labels */}
+          {/* Category, search, and location labels */}
           <div className="flex gap-2 flex-wrap">
+            {searchFromUrl && (
+              <span className="badge p-4 badge-success badge-lg">
+                &quot;{searchFromUrl}&quot;
+                <button
+                  onClick={() => {
+                    // Clear search query from URL
+                    const params = new URLSearchParams(window.location.search)
+                    params.delete("q")
+                    setSearchTerm("")
+                    const newUrl = params.toString()
+                      ? `${window.location.pathname}?${params}`
+                      : window.location.pathname
+                    window.history.pushState({}, "", newUrl)
+                    window.dispatchEvent(new PopStateEvent("popstate"))
+                  }}
+                  className="ml-2 hover:text-success-content/80 text-lg"
+                >
+                  ×
+                </button>
+              </span>
+            )}
             {hasCategory && (
               <span className="badge p-4 badge-primary badge-lg">
                 {category}

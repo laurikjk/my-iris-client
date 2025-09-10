@@ -20,17 +20,20 @@ export default function MarketPage() {
   const displayAs = useUIStore((state) => state.marketDisplayAs)
   const setMarketDisplayAs = useUIStore((state) => state.setMarketDisplayAs)
 
-  // Get geohash from URL query params
+  // Get geohash and search query from URL query params
   const [selectedGeohash, setSelectedGeohash] = useState<string | undefined>()
+  const [searchQuery, setSearchQuery] = useState<string | undefined>()
 
   const hasCategory = Boolean(category?.trim())
 
-  // Update selectedGeohash when URL changes
+  // Update selectedGeohash and searchQuery when URL changes
   useEffect(() => {
     const handleLocationChange = () => {
       const params = new URLSearchParams(window.location.search)
       const g = params.get("g")
+      const q = params.get("q")
       setSelectedGeohash(g || undefined)
+      setSearchQuery(q || undefined)
     }
 
     // Initial load
@@ -46,7 +49,7 @@ export default function MarketPage() {
 
   // Shared feed component
   const FeedComponent = () => {
-    if (hasCategory || selectedGeohash) {
+    if (hasCategory || selectedGeohash || searchQuery) {
       const filter: NDKFilter = {
         kinds: [KIND_CLASSIFIED],
       }
@@ -62,12 +65,17 @@ export default function MarketPage() {
         filter["#g"] = [selectedGeohash]
       }
 
+      if (searchQuery) {
+        // Add search filter for full-text search
+        filter.search = searchQuery
+      }
+
       return (
         <Feed
-          key={`market-${category || ""}-${selectedGeohash || ""}`}
+          key={`market-${category || ""}-${selectedGeohash || ""}-${searchQuery || ""}`}
           feedConfig={{
-            name: `Market${category ? `: ${category}` : ""}${selectedGeohash ? " (filtered by location)" : ""}`,
-            id: `search-market-${category || ""}-${selectedGeohash || ""}`,
+            name: `Market${category ? `: ${category}` : ""}${selectedGeohash ? " (filtered by location)" : ""}${searchQuery ? ` (search: ${searchQuery})` : ""}`,
+            id: `search-market-${category || ""}-${selectedGeohash || ""}-${searchQuery || ""}`,
             showRepliedTo: false,
             showEventsByUnknownUsers: showEventsByUnknownUsers,
             filter,
@@ -98,10 +106,14 @@ export default function MarketPage() {
     )
   }
 
-  // Generate title with category and location
+  // Generate title with category, location, and search
   const generateTitle = () => {
     let title = "Market"
     const parts = []
+
+    if (searchQuery) {
+      parts.push(`"${searchQuery}"`)
+    }
 
     if (category) {
       parts.push(category)
