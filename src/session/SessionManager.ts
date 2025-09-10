@@ -203,46 +203,8 @@ export default class SessionManager {
         const targetUserKey = inviteePubkey
 
         try {
-          let userRecord = this.userRecords.get(targetUserKey)
-          if (!userRecord) {
-            userRecord = {
-              userId: targetUserKey,
-              devices: new Map(),
-              isStale: false,
-              createdAt: Date.now(),
-              lastActivity: Date.now(),
-            }
-            this.userRecords.set(targetUserKey, userRecord)
-          }
-
           const deviceKey = session.name || "unknown"
-
-          session.name = deviceKey
-
-          const device = userRecord.devices.get(deviceKey)
-          const updatedInactive = device?.activeSession
-            ? [device.activeSession, ...(device.inactiveSessions || [])]
-            : device?.inactiveSessions || []
-
-          const updatedDevice: DeviceRecord = {
-            deviceId: deviceKey,
-            userId: targetUserKey,
-            publicKey: session.state?.theirNextNostrPublicKey || "",
-            activeSession: session,
-            inactiveSessions: updatedInactive,
-            isStale: false,
-            createdAt: device?.createdAt || Date.now(),
-            lastActivity: Date.now(),
-          }
-
-          const updatedDevices = new Map(userRecord.devices)
-          updatedDevices.set(deviceKey, updatedDevice)
-
-          this.userRecords.set(targetUserKey, {
-            ...userRecord,
-            devices: updatedDevices,
-            lastActivity: Date.now(),
-          })
+          this.upsertDeviceSession(targetUserKey, deviceKey, session)
 
           this.saveSession(targetUserKey, deviceKey, session)
 
@@ -304,48 +266,8 @@ export default class SessionManager {
 
         this.saveSession(ourPublicKey, inviteDeviceId, session)
 
-        let userRecord = this.userRecords.get(ourPublicKey)
-        if (!userRecord) {
-          userRecord = {
-            userId: ourPublicKey,
-            devices: new Map(),
-            isStale: false,
-            createdAt: Date.now(),
-            lastActivity: Date.now(),
-          }
-          this.userRecords.set(ourPublicKey, userRecord)
-        }
         const deviceId = invite["deviceId"] || "unknown"
-
-        // Ensure session name matches deviceId
-        session.name = deviceId
-
-        // Inline upsertSession logic
-        const device = userRecord.devices.get(deviceId)
-        const updatedInactive = device?.activeSession
-          ? [device.activeSession, ...(device.inactiveSessions || [])]
-          : device?.inactiveSessions || []
-
-        const updatedDevice: DeviceRecord = {
-          deviceId: deviceId,
-          userId: ourPublicKey,
-          publicKey: session.state?.theirNextNostrPublicKey || "",
-          activeSession: session,
-          inactiveSessions: updatedInactive,
-          isStale: false,
-          createdAt: device?.createdAt || Date.now(),
-          lastActivity: Date.now(),
-        }
-
-        const updatedDevices = new Map(userRecord.devices)
-        updatedDevices.set(deviceId, updatedDevice)
-
-        this.userRecords.set(ourPublicKey, {
-          ...userRecord,
-          devices: updatedDevices,
-          lastActivity: Date.now(),
-        })
-
+        this.upsertDeviceSession(ourPublicKey, deviceId, session)
         this.saveSession(ourPublicKey, deviceId, session)
 
         const sessionSubscriptionId = `session:${ourPublicKey}:${deviceId}`
@@ -390,47 +312,8 @@ export default class SessionManager {
         const state = deserializeSessionState(data)
         const session = new Session(this.nostrSubscribe, state)
 
-        let userRecord = this.userRecords.get(ownerPubKey)
-        if (!userRecord) {
-          userRecord = {
-            userId: ownerPubKey,
-            devices: new Map(),
-            isStale: false,
-            createdAt: Date.now(),
-            lastActivity: Date.now(),
-          }
-          this.userRecords.set(ownerPubKey, userRecord)
-        }
         console.log(`Loading session for ${ownerPubKey} with deviceId: ${deviceId}`)
-
-        // Ensure session name matches deviceId
-        session.name = deviceId
-
-        // Inline upsertSession logic
-        const device = userRecord.devices.get(deviceId)
-        const updatedInactive = device?.activeSession
-          ? [device.activeSession, ...(device.inactiveSessions || [])]
-          : device?.inactiveSessions || []
-
-        const updatedDevice: DeviceRecord = {
-          deviceId: deviceId,
-          userId: ownerPubKey,
-          publicKey: session.state?.theirNextNostrPublicKey || "",
-          activeSession: session,
-          inactiveSessions: updatedInactive,
-          isStale: false,
-          createdAt: device?.createdAt || Date.now(),
-          lastActivity: Date.now(),
-        }
-
-        const updatedDevices = new Map(userRecord.devices)
-        updatedDevices.set(deviceId, updatedDevice)
-
-        this.userRecords.set(ownerPubKey, {
-          ...userRecord,
-          devices: updatedDevices,
-          lastActivity: Date.now(),
-        })
+        this.upsertDeviceSession(ownerPubKey, deviceId, session)
 
         const sessionSubscriptionId = `session:${ownerPubKey}:${deviceId}`
         this.subscriptionManager.unsubscribeByDevice(ownerPubKey, deviceId)
@@ -470,6 +353,56 @@ export default class SessionManager {
     } catch {
       // ignore
     }
+  }
+
+  private createOrGetUserRecord(userPubkey: string): UserRecord {
+    let userRecord = this.userRecords.get(userPubkey)
+    if (!userRecord) {
+      userRecord = {
+        userId: userPubkey,
+        devices: new Map(),
+        isStale: false,
+        createdAt: Date.now(),
+        lastActivity: Date.now(),
+      }
+      this.userRecords.set(userPubkey, userRecord)
+    }
+    return userRecord
+  }
+
+  private upsertDeviceSession(
+    userPubkey: string,
+    deviceId: string,
+    session: Session
+  ): void {
+    const userRecord = this.createOrGetUserRecord(userPubkey)
+
+    session.name = deviceId
+
+    const device = userRecord.devices.get(deviceId)
+    const updatedInactive = device?.activeSession
+      ? [device.activeSession, ...(device.inactiveSessions || [])]
+      : device?.inactiveSessions || []
+
+    const updatedDevice: DeviceRecord = {
+      deviceId: deviceId,
+      userId: userPubkey,
+      publicKey: session.state?.theirNextNostrPublicKey || "",
+      activeSession: session,
+      inactiveSessions: updatedInactive,
+      isStale: false,
+      createdAt: device?.createdAt || Date.now(),
+      lastActivity: Date.now(),
+    }
+
+    const updatedDevices = new Map(userRecord.devices)
+    updatedDevices.set(deviceId, updatedDevice)
+
+    this.userRecords.set(userPubkey, {
+      ...userRecord,
+      devices: updatedDevices,
+      lastActivity: Date.now(),
+    })
   }
 
   private setupUserInviteSubscription(userPubkey: string) {
@@ -514,44 +447,7 @@ export default class SessionManager {
             console.error("Failed to publish acceptance:", err)
           )
 
-          let currentUserRecord = this.userRecords.get(userPubkey)
-          if (!currentUserRecord) {
-            currentUserRecord = {
-              userId: userPubkey,
-              devices: new Map(),
-              isStale: false,
-              createdAt: Date.now(),
-              lastActivity: Date.now(),
-            }
-            this.userRecords.set(userPubkey, currentUserRecord)
-          }
-
-          session.name = deviceId
-
-          const device = currentUserRecord.devices.get(deviceId)
-          const updatedInactive = device?.activeSession
-            ? [device.activeSession, ...(device.inactiveSessions || [])]
-            : device?.inactiveSessions || []
-
-          const updatedDevice: DeviceRecord = {
-            deviceId: deviceId,
-            userId: userPubkey,
-            publicKey: session.state?.theirNextNostrPublicKey || "",
-            activeSession: session,
-            inactiveSessions: updatedInactive,
-            isStale: false,
-            createdAt: device?.createdAt || Date.now(),
-            lastActivity: Date.now(),
-          }
-
-          const updatedDevices = new Map(currentUserRecord.devices)
-          updatedDevices.set(deviceId, updatedDevice)
-
-          this.userRecords.set(userPubkey, {
-            ...currentUserRecord,
-            devices: updatedDevices,
-            lastActivity: Date.now(),
-          })
+          this.upsertDeviceSession(userPubkey, deviceId, session)
 
           this.saveSession(userPubkey, deviceId, session)
 
@@ -638,48 +534,8 @@ export default class SessionManager {
       ourPublicKey,
       this.ourIdentityKey
     )
-    let userRecord = this.userRecords.get(ourPublicKey)
-    if (!userRecord) {
-      userRecord = {
-        userId: ourPublicKey,
-        devices: new Map(),
-        isStale: false,
-        createdAt: Date.now(),
-        lastActivity: Date.now(),
-      }
-      this.userRecords.set(ourPublicKey, userRecord)
-    }
-
     const deviceId = session.name || "unknown"
-
-    // Ensure session name matches deviceId
-    session.name = deviceId
-
-    // Inline upsertSession logic
-    const device = userRecord.devices.get(deviceId)
-    const updatedInactive = device?.activeSession
-      ? [device.activeSession, ...(device.inactiveSessions || [])]
-      : device?.inactiveSessions || []
-
-    const updatedDevice: DeviceRecord = {
-      deviceId: deviceId,
-      userId: ourPublicKey,
-      publicKey: session.state?.theirNextNostrPublicKey || "",
-      activeSession: session,
-      inactiveSessions: updatedInactive,
-      isStale: false,
-      createdAt: device?.createdAt || Date.now(),
-      lastActivity: Date.now(),
-    }
-
-    const updatedDevices = new Map(userRecord.devices)
-    updatedDevices.set(deviceId, updatedDevice)
-
-    this.userRecords.set(ourPublicKey, {
-      ...userRecord,
-      devices: updatedDevices,
-      lastActivity: Date.now(),
-    })
+    this.upsertDeviceSession(ourPublicKey, deviceId, session)
 
     await this.saveSession(ourPublicKey, deviceId, session)
 
