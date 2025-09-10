@@ -139,7 +139,7 @@ export default class SessionManager {
     this.nostrPublish = nostrPublish
     this.ourIdentityKey = ourIdentityKey
     this.deviceId = deviceId
-    this.storage = storage || new InMemoryStorageAdapter()
+    this.storage = new InMemoryStorageAdapter() // storage || new InMemoryStorageAdapter()
   }
 
   private async _processReceivedMessage(
@@ -250,10 +250,11 @@ export default class SessionManager {
           this.subscriptionManager.unsubscribeByDevice(targetUserKey, deviceKey)
 
           const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-            this._processReceivedMessage(session, _event, targetUserKey, deviceKey)
-              .catch((error) => {
+            this._processReceivedMessage(session, _event, targetUserKey, deviceKey).catch(
+              (error) => {
                 console.error("Error processing received message:", error)
-              })
+              }
+            )
           })
 
           this.subscriptionManager.subscribe(
@@ -351,10 +352,11 @@ export default class SessionManager {
         this.subscriptionManager.unsubscribeByDevice(ourPublicKey, deviceId)
 
         const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-          this._processReceivedMessage(session, _event, ourPublicKey, deviceId)
-            .catch((error) => {
+          this._processReceivedMessage(session, _event, ourPublicKey, deviceId).catch(
+            (error) => {
               console.error("Error processing received message:", error)
-            })
+            }
+          )
         })
 
         this.subscriptionManager.subscribe(
@@ -434,10 +436,11 @@ export default class SessionManager {
         this.subscriptionManager.unsubscribeByDevice(ownerPubKey, deviceId)
 
         const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-          this._processReceivedMessage(session, _event, ownerPubKey, deviceId)
-            .catch((error) => {
+          this._processReceivedMessage(session, _event, ownerPubKey, deviceId).catch(
+            (error) => {
               console.error("Error processing received message:", error)
-            })
+            }
+          )
         })
 
         this.subscriptionManager.subscribe(
@@ -556,10 +559,11 @@ export default class SessionManager {
           this.subscriptionManager.unsubscribeByDevice(userPubkey, deviceId)
 
           const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-            this._processReceivedMessage(session, _event, userPubkey, deviceId)
-              .catch((error) => {
+            this._processReceivedMessage(session, _event, userPubkey, deviceId).catch(
+              (error) => {
                 console.error("Error processing received message:", error)
-              })
+              }
+            )
           })
 
           this.subscriptionManager.subscribe(
@@ -684,10 +688,11 @@ export default class SessionManager {
     this.subscriptionManager.unsubscribeByDevice(ourPublicKey, deviceId)
 
     const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-      this._processReceivedMessage(session, _event, ourPublicKey, deviceId)
-        .catch((error) => {
+      this._processReceivedMessage(session, _event, ourPublicKey, deviceId).catch(
+        (error) => {
           console.error("Error processing received message:", error)
-        })
+        }
+      )
     })
 
     this.subscriptionManager.subscribe(
