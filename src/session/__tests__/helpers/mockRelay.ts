@@ -1,0 +1,89 @@
+import {matchFilter, VerifiedEvent, UnsignedEvent, Filter} from "nostr-tools"
+import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
+
+type Subscriber = {
+  id: string
+  filter: Filter
+  onEvent: (e: VerifiedEvent) => void
+  delivered: Set<string> // track event IDs already sent to this subscriber
+}
+
+export class MockRelay {
+  private events: VerifiedEvent[] = []
+  private subscribers: Map<string, Subscriber> = new Map()
+  private subscriptionCounter = 0
+
+  getEvents(): VerifiedEvent[] {
+    return [...this.events]
+  }
+
+  getSubscriptions(): Map<string, Subscriber> {
+    return new Map(this.subscribers)
+  }
+
+  async publish(
+    event: UnsignedEvent,
+    signerSecretKey?: Uint8Array
+  ): Promise<VerifiedEvent> {
+    const ndkEvent = new NDKEvent()
+    ndkEvent.kind = event.kind
+    ndkEvent.content = event.content
+    ndkEvent.tags = event.tags || []
+    ndkEvent.created_at = event.created_at
+    ndkEvent.pubkey = event.pubkey
+
+    if (signerSecretKey) {
+      const signer = new NDKPrivateKeySigner(signerSecretKey)
+      await ndkEvent.sign(signer)
+    }
+
+    const verifiedEvent = {
+      ...event,
+      id: ndkEvent.id!,
+      sig: ndkEvent.sig!,
+      tags: ndkEvent.tags || [],
+    } as VerifiedEvent
+
+    this.events.push(verifiedEvent)
+
+    for (const sub of this.subscribers.values()) {
+      this.deliverToSubscriber(sub, verifiedEvent)
+    }
+
+    return verifiedEvent
+  }
+
+  subscribe(filter: Filter, onEvent: (event: VerifiedEvent) => void): () => void {
+    this.subscriptionCounter++
+    const subId = `sub-${this.subscriptionCounter}`
+
+    const subscriber: Subscriber = {
+      id: subId,
+      filter,
+      onEvent,
+      delivered: new Set(),
+    }
+
+    this.subscribers.set(subId, subscriber)
+
+    for (const event of this.events) {
+      this.deliverToSubscriber(subscriber, event)
+    }
+
+    return () => {
+      this.subscribers.delete(subId)
+    }
+  }
+  private deliverToSubscriber(subscriber: Subscriber, event: VerifiedEvent): void {
+    if (!subscriber.delivered.has(event.id) && matchFilter(subscriber.filter, event)) {
+      subscriber.delivered.add(event.id)
+      subscriber.onEvent(event)
+    }
+  }
+
+  reset(): void {
+    this.events = []
+    this.subscribers.clear()
+    this.subscriptionCounter = 0
+  }
+}

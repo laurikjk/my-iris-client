@@ -17,7 +17,7 @@ import debounce from "lodash/debounce"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
 import {useGroupsStore} from "@/stores/groups"
-import {usePrivateChatsStore} from "@/stores/privateChats"
+import {usePrivateChatsStore} from "@/stores/privateChatsNew"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "@/pages/chats/utils/messageGrouping"
 

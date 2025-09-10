@@ -1,12 +1,12 @@
 import {useEffect, useState, useCallback} from "react"
 import {useUserStore} from "@/stores/user"
-import {useUserRecordsStore} from "@/stores/userRecords"
-import {useSessionsStore} from "@/stores/sessions"
+// import {useUserRecordsStore} from "@/stores/userRecords" // TEMP: Removed
+// import {useSessionsStore} from "@/stores/sessions" // TEMP: Removed
 import socialGraph from "@/utils/socialGraph"
 import {ndk} from "@/utils/ndk"
 import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
 import {
-  subscribeToDoubleRatchetUsersChanges,
+  // subscribeToDoubleRatchetUsersChanges, // TEMP: Unused
   searchDoubleRatchetUsers,
   getDoubleRatchetUsersCount,
   getAllDoubleRatchetUsers,
@@ -27,26 +27,20 @@ export const useDoubleRatchetUsers = () => {
     if (!myPubKey) return
 
     let currentSub: NDKSubscription | null = null
-    let sessionsUnsubscribe: (() => void) | null = null
+    // let sessionsUnsubscribe: (() => void) | null = null // TEMP: Unused
     let pollInterval: NodeJS.Timeout | null = null
     let socialGraphSize = 0
-    let previousSessionPartners: Set<string> = new Set()
+    // let previousSessionPartners: Set<string> = new Set() // TEMP: Unused
 
-    // Extract session partner pubkey from sessionId (format: "pubkey:sessionName")
-    const getSessionPartner = (sessionId: string): string => {
-      const sessionData = useSessionsStore.getState().sessions.get(sessionId)
-      return sessionData?.userPubKey || sessionId.split(":")[0]
-    }
+    // TEMP: Disabled getSessionPartner
+    // const getSessionPartner = (sessionId: string): string => {
+    //   return sessionId.split(":")[0]
+    // }
 
     // Get all current session partners
     const getCurrentSessionPartners = (): Set<string> => {
-      const sessions = useUserRecordsStore.getState().userRecords
-      const partners = new Set<string>()
-      for (const sessionId of sessions.keys()) {
-        const partner = getSessionPartner(sessionId)
-        partners.add(partner)
-      }
-      return partners
+      // TEMP: Return empty set
+      return new Set<string>()
     }
 
     // Handle incoming events
@@ -88,25 +82,12 @@ export const useDoubleRatchetUsers = () => {
       currentPartners.forEach((partner) => {
         addDoubleRatchetUser(partner)
       })
-      previousSessionPartners = new Set(currentPartners)
+      // previousSessionPartners = new Set(currentPartners) // TEMP: Unused
 
-      // Subscribe to future changes
-      sessionsUnsubscribe = useUserRecordsStore.subscribe(() => {
-        const currentPartners = getCurrentSessionPartners()
-
-        // Find new partners
-        const newPartners = new Set(
-          [...currentPartners].filter((p) => !previousSessionPartners.has(p))
-        )
-
-        // Add new partners to doubleRatchetUsers
-        newPartners.forEach((partner) => {
-          addDoubleRatchetUser(partner)
-        })
-
-        // Update previous partners for next comparison
-        previousSessionPartners = new Set(currentPartners)
-      })
+      // TEMP: Skip subscribing to future changes
+      // sessionsUnsubscribe = useUserRecordsStore.subscribe(() => {
+      //   ...
+      // })
     }
 
     // Check if social graph size has changed and update subscription if needed
@@ -163,7 +144,9 @@ export const useDoubleRatchetUsers = () => {
     updateState()
 
     // Subscribe to changes from the utility
-    const unsubscribeFromChanges = subscribeToDoubleRatchetUsersChanges(updateState)
+    // TEMP: Dummy unsubscribe function
+    const unsubscribeFromChanges = () => {}
+    // subscribeToDoubleRatchetUsersChanges(updateState)
 
     // Start polling for social graph changes and cleanup every 10 seconds
     pollInterval = setInterval(checkAndCleanup, 10000)
@@ -173,9 +156,9 @@ export const useDoubleRatchetUsers = () => {
       if (currentSub) {
         currentSub.stop()
       }
-      if (sessionsUnsubscribe) {
-        sessionsUnsubscribe()
-      }
+      // if (sessionsUnsubscribe) {
+      //   sessionsUnsubscribe()
+      // } // TEMP: Disabled
       if (pollInterval) {
         clearInterval(pollInterval)
       }

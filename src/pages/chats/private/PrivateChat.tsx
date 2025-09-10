@@ -2,28 +2,25 @@ import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "../utils/messageGrouping"
 import PrivateChatHeader from "./PrivateChatHeader"
-import {usePrivateChatsStore} from "@/stores/privateChats"
+import {usePrivateChatsStore} from "@/stores/privateChatsNew"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import MessageForm from "../message/MessageForm"
 import {MessageType} from "../message/Message"
 import {useEffect, useState} from "react"
-import {useUserRecordsStore} from "@/stores/userRecords"
 import {useUserStore} from "@/stores/user"
 import {KIND_REACTION} from "@/utils/constants"
 
 const Chat = ({id}: {id: string}) => {
   // id is now userPubKey instead of sessionId
-  const {updateLastSeen} = usePrivateChatsStore()
+  const {updateLastSeen, sessionManager} = usePrivateChatsStore()
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
-  // Get all sessions for this user
-  const sessions = useUserRecordsStore((state) => state.sessions)
-  const userSessions = Array.from(sessions.keys()).filter((sessionId) =>
-    sessionId.startsWith(`${id}:`)
-  )
-  const hasAnySessions = userSessions.length > 0
+  // Check if we have any sessions for this user via sessionManager
+  const hasAnySessions = sessionManager
+    ? (sessionManager as unknown).userRecords?.get(id)?.getActiveSessions()?.length > 0
+    : false
 
   // Get messages reactively from events store - this will update when new messages are added
   const eventsMap = usePrivateMessagesStore((state) => state.events)
@@ -71,7 +68,7 @@ const Chat = ({id}: {id: string}) => {
     }
   }, [id, updateLastSeen])
 
-  const {sendToUser} = useUserRecordsStore()
+  const {sendToUser} = usePrivateChatsStore()
 
   const handleSendReaction = async (messageId: string, emoji: string) => {
     const myPubKey = useUserStore.getState().publicKey

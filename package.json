@@ -28,6 +28,7 @@
     "preview": "vite preview",
     "pretest": "npx playwright install --with-deps chromium",
     "test": "vitest run && VITE_USE_TEST_RELAY=true playwright test --reporter=list",
+    "test:unit": "vitest run",
     "test:ci": "vitest run && VITE_USE_LOCAL_RELAY=true playwright test --reporter=list",
     "test:local": "vitest run && VITE_USE_LOCAL_RELAY=true playwright test --reporter=list --workers=1",
     "test:ui": "VITE_USE_TEST_RELAY=true playwright test --ui",
