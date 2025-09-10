@@ -139,7 +139,7 @@ export default class SessionManager {
     this.nostrPublish = nostrPublish
     this.ourIdentityKey = ourIdentityKey
     this.deviceId = deviceId
-    this.storage = new InMemoryStorageAdapter() // storage || new InMemoryStorageAdapter()
+    this.storage = storage || new InMemoryStorageAdapter()
   }
 
   private async _processReceivedMessage(
