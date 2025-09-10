@@ -170,7 +170,7 @@ export default class SessionManager {
           ourPublicKey,
           this.ourIdentityKey
         )
-        this.nostrPublish(event)?.catch(() => {})
+        this.nostrPublish(event)
 
         this.saveSession(ourPublicKey, inviteDeviceId, session)
 
