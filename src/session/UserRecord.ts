@@ -151,16 +151,6 @@ export class UserRecord {
       }
     }
 
-    // Sort by ability to send messages (prioritize ready sessions)
-    sessions.sort((a, b) => {
-      const aCanSend = !!(a.state?.theirNextNostrPublicKey && a.state?.ourCurrentNostrKey)
-      const bCanSend = !!(b.state?.theirNextNostrPublicKey && b.state?.ourCurrentNostrKey)
-
-      if (aCanSend && !bCanSend) return -1
-      if (!aCanSend && bCanSend) return 1
-      return 0
-    })
-
     return sessions
   }
 

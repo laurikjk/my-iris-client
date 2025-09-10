@@ -249,7 +249,6 @@ export default class SessionManager {
       }
     }
 
-    // Start listening for new invites/messages from all users we have sessions with
     for (const userPubKey of uniqueUsers) {
       this.listenToUser(userPubKey)
     }
