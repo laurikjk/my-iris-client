@@ -1,19 +1,22 @@
 import {useParams} from "@/navigation"
+import {useState, useCallback} from "react"
 import Feed from "@/shared/components/feed/Feed"
-import {KIND_CLASSIFIED} from "@/utils/constants"
 import {useUIStore} from "@/stores/ui"
 import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import {Helmet} from "react-helmet"
 import {useIsTwoColumnLayout} from "@/shared/hooks/useIsTwoColumnLayout"
-import {NDKFilter} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 import MarketFilters from "./components/MarketFilters"
+import {marketStore} from "@/stores/marketstore"
+import {buildMarketFeedConfig} from "./utils"
 
 export default function MarketPage() {
   const {category} = useParams()
   const isInTwoColumnLayout = useIsTwoColumnLayout()
   const displayAs = useUIStore((state) => state.marketDisplayAs)
   const setMarketDisplayAs = useUIStore((state) => state.setMarketDisplayAs)
+  const [mapEvents, setMapEvents] = useState<NDKEvent[]>([])
 
   // Parse URL params directly without state to avoid stale values
   const params = new URLSearchParams(window.location.search)
@@ -21,68 +24,44 @@ export default function MarketPage() {
   const searchQuery = params.get("q") || undefined
   const additionalTags = params.get("t")?.split(",").filter(Boolean) || []
 
-  const hasCategory = Boolean(category?.trim())
+  // Callback to collect events for the map and track categories
+  const handleMarketEvent = useCallback(async (event: NDKEvent) => {
+    // Only add events that have geohash tags for map display
+    const hasGeohash = event.tags.some((tag) => tag[0] === "g" && tag[1])
+    if (hasGeohash) {
+      setMapEvents((prev) => {
+        if (prev.some((e) => e.id === event.id)) return prev
+        return [...prev.slice(-499), event] // Keep last 500 events
+      })
+    }
+
+    // Track category tags for co-occurrence
+    const tTags = event.tags.filter((tag) => tag[0] === "t" && tag[1])
+    if (tTags.length > 0) {
+      await marketStore.addTags(
+        tTags.map((tag) => tag[1]),
+        event.pubkey
+      )
+    }
+  }, [])
 
   // Shared feed component
   const FeedComponent = () => {
-    if (hasCategory || additionalTags.length > 0 || selectedGeohash || searchQuery) {
-      const filter: NDKFilter = {
-        kinds: [KIND_CLASSIFIED],
-      }
+    const feedConfig = buildMarketFeedConfig(
+      category,
+      additionalTags,
+      selectedGeohash,
+      searchQuery
+    )
 
-      // Collect all selected tags
-      const allTags: string[] = []
-      if (hasCategory) {
-        allTags.push(category)
-      }
-      allTags.push(...additionalTags)
-
-      if (allTags.length > 0) {
-        // For multiple tags, use search to implement AND logic
-        // The search filter in useFeedEvents already handles hashtag AND logic
-        const searchTerms = allTags.map((tag) => `#${tag}`).join(" ")
-        filter.search = searchQuery ? `${searchQuery} ${searchTerms}` : searchTerms
-      } else if (searchQuery) {
-        filter.search = searchQuery
-      }
-
-      if (selectedGeohash) {
-        filter["#g"] = [selectedGeohash]
-      }
-
-      const feedConfig = {
-        name: `Market${allTags.length > 0 ? `: ${allTags.join(", ")}` : ""}${selectedGeohash ? " (filtered by location)" : ""}${searchQuery ? ` (search: ${searchQuery})` : ""}`,
-        id: `search-market-${allTags.join("-")}-${selectedGeohash || ""}-${searchQuery || ""}`,
-        showRepliedTo: false,
-        filter,
-      }
-
-      return (
-        <Feed
-          key={`market-${allTags.join("-")}-${selectedGeohash || ""}-${searchQuery || ""}`}
-          feedConfig={feedConfig}
-          displayAs={displayAs}
-          onDisplayAsChange={setMarketDisplayAs}
-          showDisplayAsSelector={true}
-        />
-      )
-    }
     return (
       <Feed
-        feedConfig={{
-          name: "Market",
-          id: "market",
-          showRepliedTo: false,
-          filter: {
-            kinds: [KIND_CLASSIFIED],
-            limit: 100,
-          },
-          followDistance: 3,
-          hideReplies: true,
-        }}
+        key={feedConfig.id}
+        feedConfig={feedConfig}
         displayAs={displayAs}
         onDisplayAsChange={setMarketDisplayAs}
         showDisplayAsSelector={true}
+        onEvent={handleMarketEvent}
       />
     )
   }
@@ -143,6 +122,7 @@ export default function MarketPage() {
               mapHeight="20rem"
               categoriesHeight="h-80"
               includeSearch={true}
+              mapEvents={mapEvents}
             />
 
             <div className="mt-4">

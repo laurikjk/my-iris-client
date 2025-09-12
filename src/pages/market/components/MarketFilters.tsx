@@ -4,23 +4,24 @@ import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import Icon from "@/shared/components/Icons/Icon"
 import {marketStore} from "@/stores/marketstore"
 import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
-import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
-import {KIND_CLASSIFIED} from "@/utils/constants"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 import Feed from "@/shared/components/feed/Feed"
 import {RiMapPinLine} from "@remixicon/react"
 import {CategoryLabel} from "@/shared/components/market/CategoryLabel"
-import {shouldHideUser} from "@/utils/visibility"
+import {buildMarketFeedConfig} from "@/pages/market/utils"
 
 interface MarketFiltersProps {
   mapHeight?: string
   categoriesHeight?: string
   includeSearch?: boolean
+  mapEvents?: NDKEvent[]
 }
 
 export default function MarketFilters({
   mapHeight = "calc(100vh - 242px)",
   categoriesHeight = "",
   includeSearch = true,
+  mapEvents: providedMapEvents,
 }: MarketFiltersProps = {}) {
   const {category} = useParams()
   const navigate = useNavigate()
@@ -36,9 +37,11 @@ export default function MarketFilters({
   const [availableTags, setAvailableTags] = useState<
     {tag: string; userCount: number; cooccurrenceScore?: number}[]
   >([])
-  const [mapEvents, setMapEvents] = useState<NDKEvent[]>([])
-  // Market should show all events regardless of follow distance
-  const showEventsByUnknownUsers = true
+  const [localMapEvents, setLocalMapEvents] = useState<NDKEvent[]>([])
+
+  // Use provided map events if available, otherwise use local collection
+  const mapEvents = providedMapEvents || localMapEvents
+  const needsLocalCollection = !providedMapEvents
 
   // Get geohash from URL query params or localStorage fallback
   const geohashFromUrl = urlParams.get("g")
@@ -107,24 +110,22 @@ export default function MarketFilters({
     loadTags()
   }, [selectedTags])
 
-  // Create feed config for collecting market events
-  // Don't filter - we want ALL events to build complete co-occurrence data
-  const feedConfig = useMemo(() => {
-    const filter: NDKFilter = {
-      kinds: [KIND_CLASSIFIED],
-      limit: 500,
-    }
+  // Feed config for collecting map events when not provided - use same config as main feed
+  const mapFeedConfig = useMemo(() => {
+    if (!needsLocalCollection) return null
 
-    return {
-      id: `market-map-all`,
-      name: "Market Map Events",
-      filter,
-      followDistance: 3,
-      showRepliedTo: false,
-      hideReplies: true,
-      showEventsByUnknownUsers, // Show all events on map
-    }
-  }, [showEventsByUnknownUsers])
+    // Parse URL params to get current filters
+    const params = new URLSearchParams(window.location.search)
+    const currentCategory = window.location.pathname.match(/\/m\/([^/]+)/)?.[1]
+      ? decodeURIComponent(window.location.pathname.match(/\/m\/([^/]+)/)?.[1] as string)
+      : undefined
+    const geohash = params.get("g") || undefined
+    const query = params.get("q") || undefined
+    const tags = params.get("t")?.split(",").filter(Boolean) || []
+
+    // Use the same feed config builder as the main page
+    return buildMarketFeedConfig(currentCategory, tags, geohash, query)
+  }, [needsLocalCollection, window.location.pathname, window.location.search])
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -394,41 +395,34 @@ export default function MarketFilters({
         )}
       </div>
 
-      {/* Hidden feed to collect events for the map - always render to collect events */}
-      <div className="hidden">
-        <Feed
-          key="market-map-all"
-          feedConfig={feedConfig}
-          onEvent={async (event) => {
-            setMapEvents((prev) => {
-              if (prev.some((e) => e.id === event.id)) return prev
-              return [...prev.slice(-199), event]
-            })
+      {/* Hidden feed to collect events when mapEvents not provided */}
+      {needsLocalCollection && mapFeedConfig && (
+        <div className="hidden">
+          <Feed
+            key="market-map-local"
+            feedConfig={mapFeedConfig}
+            onEvent={async (event) => {
+              // Only add events that have geohash tags
+              const hasGeohash = event.tags.some((tag) => tag[0] === "g" && tag[1])
+              if (hasGeohash) {
+                setLocalMapEvents((prev) => {
+                  if (prev.some((e) => e.id === event.id)) return prev
+                  return [...prev.slice(-499), event]
+                })
+              }
 
-            // Extract and add tags from the event
-            // Only count categories from known users (respecting the showEventsByUnknownUsers setting)
-            const shouldCount =
-              showEventsByUnknownUsers || !shouldHideUser(event.pubkey, 3, true)
-
-            if (shouldCount) {
+              // Track category tags for co-occurrence
               const tTags = event.tags.filter((tag) => tag[0] === "t" && tag[1])
               if (tTags.length > 0) {
-                // Always track all co-occurrences between all tags in the event
                 await marketStore.addTags(
                   tTags.map((tag) => tag[1]),
                   event.pubkey
                 )
-                // Update available tags after adding new ones
-                const updatedTags =
-                  selectedTags.length > 0
-                    ? await marketStore.getCooccurringTags(selectedTags)
-                    : await marketStore.getTagsWithCounts()
-                setAvailableTags(updatedTags)
               }
-            }
-          }}
-        />
-      </div>
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
