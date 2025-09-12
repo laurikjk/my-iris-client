@@ -15,16 +15,50 @@ function Content() {
     updateContent({[key]: !content[key]})
   }
 
+  const handleFollowDistanceChange = (value: number) => {
+    // Map slider value 6 to undefined (unlimited)
+    const filterValue = value === 6 ? undefined : value
+    updateContent({maxFollowDistanceForReplies: filterValue})
+  }
+
+  const getFollowDistanceLabel = (value: number | undefined) => {
+    if (value === undefined || value === 6) return "Unlimited"
+    if (value === 1) return "Followed users only"
+    if (value === 2) return "Followed by friends"
+    if (value >= 3 && value <= 5) return `Follow distance ${value}`
+    return `Follow distance ${value}`
+  }
+
   return (
     <div className="bg-base-200 min-h-full">
       <div className="p-4">
         <div className="space-y-6">
           <SettingsGroup>
-            <SettingToggle
-              checked={content.hideRepliesAndReactionsByUnknownUsers}
-              onChange={() => handleToggleChange("hideRepliesAndReactionsByUnknownUsers")}
-              label="Hide replies and reactions by unknown users"
-            />
+            <SettingsGroupItem>
+              <div className="w-full">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-base font-medium">
+                    Show replies and reactions from follow distance
+                  </label>
+                  <span className="text-sm text-base-content/70">
+                    {getFollowDistanceLabel(content.maxFollowDistanceForReplies)}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="6"
+                  value={content.maxFollowDistanceForReplies ?? 6}
+                  onChange={(e) => handleFollowDistanceChange(Number(e.target.value))}
+                  className="range range-sm w-full"
+                  step="1"
+                />
+                <div className="text-xs text-base-content/50 mt-1">
+                  1 = Followed users • 2 = Friends of friends • 3-5 = Extended network •
+                  Unlimited = No filter
+                </div>
+              </div>
+            </SettingsGroupItem>
             <SettingToggle
               checked={content.blurNSFW}
               onChange={() => handleToggleChange("blurNSFW")}

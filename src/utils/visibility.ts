@@ -23,12 +23,12 @@ export const shouldHideUser = (
     return cache.get(cacheKey)!
   }
 
-  // Check hideRepliesAndReactionsByUnknownUsers setting only if allowUnknown is false
+  // Check maxFollowDistanceForReplies setting only if allowUnknown is false
   // When allowUnknown is true, the feed-specific setting should override the global setting
   if (
     !allowUnknown &&
-    content.hideRepliesAndReactionsByUnknownUsers &&
-    instance.getFollowDistance(pubKey) >= 10
+    content.maxFollowDistanceForReplies !== undefined &&
+    instance.getFollowDistance(pubKey) > content.maxFollowDistanceForReplies
   ) {
     cache.set(cacheKey, true)
     return true

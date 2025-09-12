@@ -25,7 +25,6 @@ interface UseFeedEventsProps {
   cacheKey: string
   displayCount: number
   feedConfig: FeedConfig
-  hideEventsByUnknownUsers: boolean
   sortFn?: (a: NDKEvent, b: NDKEvent) => number
   relayUrls?: string[]
   bottomVisibleEventTimestamp?: number
@@ -37,7 +36,6 @@ export default function useFeedEvents({
   cacheKey,
   displayCount,
   feedConfig,
-  hideEventsByUnknownUsers,
   sortFn,
   relayUrls,
   bottomVisibleEventTimestamp = Infinity,
@@ -154,15 +152,11 @@ export default function useFeedEvents({
     }
 
     const inAuthors = filters.authors?.includes(event.pubkey)
-    // Pass `allowUnknown` based on the `hideEventsByUnknownUsers` flag so that
-    // disabling the flag actually shows posts from users outside the follow graph.
-    if (!inAuthors && shouldHideEvent(event, 3, !hideEventsByUnknownUsers)) {
-      return false
-    }
+    // Check if event should be hidden based on mute/overmute status only
+    // Don't apply follow distance check here since it's already done above
     if (
-      hideEventsByUnknownUsers &&
-      socialGraph().getFollowDistance(event.pubkey) >= 5 &&
-      !(filters.authors && filters.authors.includes(event.pubkey))
+      !inAuthors &&
+      shouldHideEvent(event, 3, true) // Always pass true to skip follow distance check in shouldHideEvent
     ) {
       return false
     }
@@ -255,22 +249,22 @@ export default function useFeedEvents({
     feedConfig.repliesTo,
     feedConfig.excludeSeen,
     feedConfig.relayUrls,
-    hideEventsByUnknownUsers,
     displayAs,
   ])
 
   const eventsByUnknownUsers = useMemo(() => {
-    if (!hideEventsByUnknownUsers) {
+    // Only show events by unknown users when followDistance is set
+    if (feedConfig.followDistance === undefined) {
       return []
     }
     return Array.from(eventsRef.current.values()).filter(
       (event) =>
-        socialGraph().getFollowDistance(event.pubkey) >= 5 &&
+        socialGraph().getFollowDistance(event.pubkey) > feedConfig.followDistance! &&
         !(filters.authors && filters.authors.includes(event.pubkey)) &&
         // Only include events that aren't heavily muted
         !shouldHideUser(event.pubkey, undefined, true)
     )
-  }, [eventsVersion, hideEventsByUnknownUsers, filters.authors])
+  }, [eventsVersion, feedConfig.followDistance, filters.authors])
 
   const prevFiltersStringRef = useRef<string | undefined>(undefined)
 

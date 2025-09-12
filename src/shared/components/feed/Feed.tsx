@@ -137,7 +137,6 @@ const Feed = memo(function Feed({
     cacheKey,
     displayCount,
     feedConfig,
-    hideEventsByUnknownUsers: feedConfig.followDistance !== undefined,
     sortFn,
     relayUrls: feedConfig.relayUrls,
     bottomVisibleEventTimestamp,

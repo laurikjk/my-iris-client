@@ -386,6 +386,8 @@ function FeedItem({
               sortType: "followDistance",
               showRepliedTo: false,
               filter: {kinds: [KIND_TEXT_NOTE], "#e": [eventIdHex]},
+              followDistance:
+                useSettingsStore.getState().content.maxFollowDistanceForReplies,
             }}
             onEvent={(e) => {
               onEvent?.(e)

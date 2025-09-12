@@ -117,16 +117,15 @@ export const startNotificationsSubscription = debounce(async (myPubKey?: string)
   let latest = 0
 
   const settings = useSettingsStore.getState()
-  const hideRepliesAndReactionsByUnknownUsers =
-    settings.content?.hideRepliesAndReactionsByUnknownUsers
+  const maxFollowDistanceForReplies = settings.content?.maxFollowDistanceForReplies
 
   sub.on("event", async (event: NDKEvent) => {
     if (event.kind !== KIND_ZAP_RECEIPT) {
       // allow zap notifs from self & unknown users
       if (event.pubkey === myPubKey) return
       if (
-        hideRepliesAndReactionsByUnknownUsers &&
-        socialGraph().getFollowDistance(event.pubkey) > 5
+        maxFollowDistanceForReplies !== undefined &&
+        socialGraph().getFollowDistance(event.pubkey) > maxFollowDistanceForReplies
       )
         return
       // Use shouldHideEvent which checks both author and mentions

@@ -14,7 +14,7 @@ interface SettingsState {
   // Content settings
   content: {
     blurNSFW: boolean
-    hideRepliesAndReactionsByUnknownUsers: boolean
+    maxFollowDistanceForReplies: number | undefined // 1=followed, 2=friends of friends, 3-5=extended network, undefined=unlimited
     hidePostsByMutedMoreThanFollowed: boolean
     autoplayVideos: boolean
     showLikes: boolean
@@ -63,7 +63,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       content: {
         blurNSFW: true,
-        hideRepliesAndReactionsByUnknownUsers: true,
+        maxFollowDistanceForReplies: 5, // Default to 5
         hidePostsByMutedMoreThanFollowed: true,
         autoplayVideos: true,
         showLikes: true,
