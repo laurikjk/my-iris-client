@@ -25,13 +25,17 @@ export default function MarketFilters({
   const {category} = useParams()
   const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
-  // Get search query from URL
+  // Get search query and additional tags from URL
   const urlParams = new URLSearchParams(window.location.search)
   const searchFromUrl = urlParams.get("q")
+  const additionalTagsFromUrl = urlParams.get("t")?.split(",").filter(Boolean) || []
   const [searchTerm, setSearchTerm] = useState(searchFromUrl || "")
-  const [availableTags, setAvailableTags] = useState<{tag: string; userCount: number}[]>(
-    []
+  const [selectedTags, setSelectedTags] = useState<string[]>(
+    category ? [category, ...additionalTagsFromUrl] : additionalTagsFromUrl
   )
+  const [availableTags, setAvailableTags] = useState<
+    {tag: string; userCount: number; cooccurrenceScore?: number}[]
+  >([])
   const [mapEvents, setMapEvents] = useState<NDKEvent[]>([])
   // Market should show all events regardless of follow distance
   const showEventsByUnknownUsers = true
@@ -47,18 +51,33 @@ export default function MarketFilters({
 
   const hasCategory = Boolean(category?.trim())
 
-  // Show map by default when category is selected on initial load
-  const [showMap, setShowMap] = useState(hasCategory)
+  // Show map by default when category is selected on initial load (URL navigation)
+  // But don't auto-switch when selecting in single column mode
+  const [showMap, setShowMap] = useState(() => {
+    // Only show map initially if we navigated here with a category already in URL
+    return hasCategory && window.location.pathname.includes("/m/")
+  })
 
-  // Listen for URL changes to update selected geohash and search
+  // Listen for URL changes to update selected geohash, search, and tags
   // Also restore query params if they're missing
   useEffect(() => {
     const handleLocationChange = () => {
       const params = new URLSearchParams(window.location.search)
       const g = params.get("g")
       const q = params.get("q")
+      const t = params.get("t")
+      const additionalTags = t?.split(",").filter(Boolean) || []
+
       setSelectedGeohash(g || undefined)
       setSearchTerm(q || "")
+
+      // Update selected tags based on URL
+      const currentCategory = window.location.pathname.match(/\/m\/([^/]+)/)?.[1]
+      if (currentCategory) {
+        setSelectedTags([decodeURIComponent(currentCategory), ...additionalTags])
+      } else {
+        setSelectedTags(additionalTags)
+      }
     }
 
     // Check if we have a stored geohash but it's not in the URL
@@ -78,14 +97,18 @@ export default function MarketFilters({
 
   useEffect(() => {
     const loadTags = async () => {
-      const tags = await marketStore.getTagsWithCounts()
+      // Load tags based on selected categories for co-occurrence filtering
+      const tags =
+        selectedTags.length > 0
+          ? await marketStore.getCooccurringTags(selectedTags)
+          : await marketStore.getTagsWithCounts()
       setAvailableTags(tags)
     }
     loadTags()
-  }, [])
+  }, [selectedTags])
 
   // Create feed config for collecting market events
-  // Don't filter by category for map collection - show all events on map
+  // Don't filter - we want ALL events to build complete co-occurrence data
   const feedConfig = useMemo(() => {
     const filter: NDKFilter = {
       kinds: [KIND_CLASSIFIED],
@@ -210,22 +233,56 @@ export default function MarketFilters({
                 </button>
               </span>
             )}
-            {hasCategory && (
-              <span className="badge p-4 badge-primary badge-lg">
-                {category}
+            {selectedTags.map((tag, index) => (
+              <span key={tag} className="badge p-4 badge-primary badge-lg">
+                {tag}
                 <button
                   onClick={() => {
-                    // Preserve query params when clearing category
+                    // Remove this tag from selection
+                    const newTags = selectedTags.filter((t) => t !== tag)
+                    setSelectedTags(newTags)
+
+                    // Update URL
                     const params = new URLSearchParams(window.location.search)
-                    const queryString = params.toString()
-                    navigate(`/m${queryString ? `?${queryString}` : ""}`)
+
+                    if (index === 0 && newTags.length > 0) {
+                      // First tag removed, promote next tag to URL path
+                      const [newMain, ...rest] = newTags
+                      if (rest.length > 0) {
+                        params.set("t", rest.join(","))
+                      } else {
+                        params.delete("t")
+                      }
+                      const queryString = params.toString()
+                      navigate(
+                        `/m/${encodeURIComponent(newMain)}${queryString ? `?${queryString}` : ""}`
+                      )
+                    } else if (newTags.length === 0) {
+                      // All tags removed
+                      params.delete("t")
+                      const queryString = params.toString()
+                      navigate(`/m${queryString ? `?${queryString}` : ""}`)
+                    } else {
+                      // Non-primary tag removed, just update query params
+                      // Keep the first tag in the URL path, update the rest in query params
+                      const [mainTag, ...rest] = newTags
+                      if (rest.length > 0) {
+                        params.set("t", rest.join(","))
+                      } else {
+                        params.delete("t")
+                      }
+                      const queryString = params.toString()
+                      const newUrl = `/m/${encodeURIComponent(mainTag)}${queryString ? `?${queryString}` : ""}`
+                      window.history.pushState({}, "", newUrl)
+                      window.dispatchEvent(new PopStateEvent("popstate"))
+                    }
                   }}
                   className="ml-2 hover:text-primary-content/80 text-lg"
                 >
                   ×
                 </button>
               </span>
-            )}
+            ))}
             {selectedGeohash && (
               <span className="badge p-4 badge-info badge-lg flex items-center gap-1">
                 <RiMapPinLine className="w-4 h-4" />
@@ -255,24 +312,75 @@ export default function MarketFilters({
           <div
             className={`${categoriesHeight} overflow-y-auto flex flex-wrap gap-2 content-start`}
           >
-            {availableTags.map((item) => (
-              <CategoryLabel
-                key={item.tag}
-                category={item.tag}
-                isActive={category === item.tag}
-                userCount={item.userCount}
-                className="h-fit"
-                onClick={(e) => {
-                  e.preventDefault()
-                  // Preserve query params when navigating
-                  const params = new URLSearchParams(window.location.search)
-                  const queryString = params.toString()
-                  navigate(
-                    `/m/${encodeURIComponent(item.tag)}${queryString ? `?${queryString}` : ""}`
-                  )
-                }}
-              />
-            ))}
+            {availableTags.map((item) => {
+              const isSelected = selectedTags.includes(item.tag)
+              return (
+                <CategoryLabel
+                  key={item.tag}
+                  category={item.tag}
+                  isActive={isSelected}
+                  userCount={item.userCount}
+                  className="h-fit"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+
+                    if (isSelected) {
+                      // Deselect
+                      const newTags = selectedTags.filter((t) => t !== item.tag)
+                      setSelectedTags(newTags)
+
+                      // Update URL
+                      const params = new URLSearchParams(window.location.search)
+                      if (newTags.length === 0) {
+                        params.delete("t")
+                        navigate(`/m${params.toString() ? `?${params}` : ""}`)
+                      } else {
+                        const [main, ...rest] = newTags
+                        if (rest.length > 0) {
+                          params.set("t", rest.join(","))
+                        } else {
+                          params.delete("t")
+                        }
+                        navigate(
+                          `/m/${encodeURIComponent(main)}${params.toString() ? `?${params}` : ""}`
+                        )
+                      }
+                    } else {
+                      // Select - Don't navigate on single column, just add to filter
+                      // Get current tags from URL instead of state to avoid race conditions
+                      const currentPath = window.location.pathname
+                      const currentCategory = currentPath.match(/\/m\/([^/]+)/)?.[1]
+                      const params = new URLSearchParams(window.location.search)
+                      const currentAdditionalTags =
+                        params.get("t")?.split(",").filter(Boolean) || []
+
+                      if (!currentCategory || currentCategory === "undefined") {
+                        // First selection - go to /m/category
+                        const newUrl = `/m/${encodeURIComponent(item.tag)}${params.toString() ? `?${params}` : ""}`
+                        navigate(newUrl)
+                      } else {
+                        // Additional selection - keep main tag in path, add new tag to query params
+                        const allAdditionalTags = [...currentAdditionalTags, item.tag]
+                        params.set("t", allAdditionalTags.join(","))
+                        const newUrl = `/m/${encodeURIComponent(currentCategory)}?${params}`
+                        navigate(newUrl)
+                      }
+
+                      // Update local state
+                      const newTags = currentCategory
+                        ? [
+                            decodeURIComponent(currentCategory),
+                            ...currentAdditionalTags,
+                            item.tag,
+                          ]
+                        : [item.tag]
+                      setSelectedTags(newTags)
+                    }
+                  }}
+                />
+              )
+            })}
           </div>
         )}
 
@@ -289,7 +397,7 @@ export default function MarketFilters({
       {/* Hidden feed to collect events for the map - always render to collect events */}
       <div className="hidden">
         <Feed
-          key={category || "all"}
+          key="market-map-all"
           feedConfig={feedConfig}
           onEvent={async (event) => {
             setMapEvents((prev) => {
@@ -305,12 +413,16 @@ export default function MarketFilters({
             if (shouldCount) {
               const tTags = event.tags.filter((tag) => tag[0] === "t" && tag[1])
               if (tTags.length > 0) {
+                // Always track all co-occurrences between all tags in the event
                 await marketStore.addTags(
                   tTags.map((tag) => tag[1]),
                   event.pubkey
                 )
                 // Update available tags after adding new ones
-                const updatedTags = await marketStore.getTagsWithCounts()
+                const updatedTags =
+                  selectedTags.length > 0
+                    ? await marketStore.getCooccurringTags(selectedTags)
+                    : await marketStore.getTagsWithCounts()
                 setAvailableTags(updatedTags)
               }
             }

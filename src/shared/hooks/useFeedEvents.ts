@@ -136,15 +136,16 @@ export default function useFeedEvents({
           ?.filter((tag) => tag[0] === "t" && tag[1])
           ?.map((tag) => tag[1].toLowerCase()) || []
 
-      // Check if all search terms are present (either in content or t tags)
+      // Check if all search terms are present
       const allTermsMatch = searchTerms.every((term) => {
-        const cleanTerm = term.startsWith("#") ? term.substring(1) : term
-        // Check in content or t tags
-        return (
-          eventContent.includes(term) ||
-          eventContent.includes(cleanTerm) ||
-          tTags.includes(cleanTerm)
-        )
+        if (term.startsWith("#")) {
+          // For hashtags, only check in t tags, not content
+          const cleanTerm = term.substring(1)
+          return tTags.includes(cleanTerm)
+        } else {
+          // For regular words, check in content
+          return eventContent.includes(term)
+        }
       })
 
       if (!allTermsMatch) {
@@ -312,12 +313,29 @@ export default function useFeedEvents({
         baseFilter.until = untilTimestamp
       }
 
-      // For hashtag-only searches, use only #t filter (no search filter)
+      // For hashtag-only searches
       if (hashtags.length > 0 && regularWords.length === 0) {
-        // Single filter with just hashtags - this ensures ALL relays can handle it
+        // Include both lowercase and original case versions if different
+        const hashtagVariants: string[] = []
+        hashtags.forEach((tag) => {
+          hashtagVariants.push(tag) // Already lowercase from line 294
+          // Check if original search had uppercase variants
+          const originalTerms = filters.search!.split(/\s+/)
+          originalTerms.forEach((original) => {
+            if (original.startsWith("#") && original.substring(1).toLowerCase() === tag) {
+              const originalTag = original.substring(1)
+              if (originalTag !== tag) {
+                hashtagVariants.push(originalTag)
+              }
+            }
+          })
+        })
+
+        // Use #t filter with OR logic (relay returns posts with ANY of these tags)
+        // For multiple tags, client-side filtering will ensure AND logic
         subscriptionFilters = {
           ...baseFilter,
-          "#t": hashtags,
+          "#t": hashtagVariants,
         }
       } else {
         // For searches with regular words or mixed content
@@ -325,9 +343,28 @@ export default function useFeedEvents({
 
         // If we have hashtags, add them as #t filter
         if (hashtags.length > 0) {
+          // Include both lowercase and original case versions if different
+          const hashtagVariants: string[] = []
+          hashtags.forEach((tag) => {
+            hashtagVariants.push(tag) // Already lowercase from line 294
+            // Check if original search had uppercase variants
+            const originalTerms = filters.search!.split(/\s+/)
+            originalTerms.forEach((original) => {
+              if (
+                original.startsWith("#") &&
+                original.substring(1).toLowerCase() === tag
+              ) {
+                const originalTag = original.substring(1)
+                if (originalTag !== tag) {
+                  hashtagVariants.push(originalTag)
+                }
+              }
+            })
+          })
+
           filterArray.push({
             ...baseFilter,
-            "#t": hashtags,
+            "#t": hashtagVariants,
           })
         }
 

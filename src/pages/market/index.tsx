@@ -1,5 +1,4 @@
 import {useParams} from "@/navigation"
-import {useState, useEffect} from "react"
 import Feed from "@/shared/components/feed/Feed"
 import {KIND_CLASSIFIED} from "@/utils/constants"
 import {useUIStore} from "@/stores/ui"
@@ -16,65 +15,52 @@ export default function MarketPage() {
   const displayAs = useUIStore((state) => state.marketDisplayAs)
   const setMarketDisplayAs = useUIStore((state) => state.setMarketDisplayAs)
 
-  // Get geohash and search query from URL query params
-  const [selectedGeohash, setSelectedGeohash] = useState<string | undefined>()
-  const [searchQuery, setSearchQuery] = useState<string | undefined>()
+  // Parse URL params directly without state to avoid stale values
+  const params = new URLSearchParams(window.location.search)
+  const selectedGeohash = params.get("g") || undefined
+  const searchQuery = params.get("q") || undefined
+  const additionalTags = params.get("t")?.split(",").filter(Boolean) || []
 
   const hasCategory = Boolean(category?.trim())
 
-  // Update selectedGeohash and searchQuery when URL changes
-  useEffect(() => {
-    const handleLocationChange = () => {
-      const params = new URLSearchParams(window.location.search)
-      const g = params.get("g")
-      const q = params.get("q")
-      setSelectedGeohash(g || undefined)
-      setSearchQuery(q || undefined)
-    }
-
-    // Initial load
-    handleLocationChange()
-
-    // Listen for popstate events (browser back/forward)
-    window.addEventListener("popstate", handleLocationChange)
-
-    return () => {
-      window.removeEventListener("popstate", handleLocationChange)
-    }
-  }, [])
-
   // Shared feed component
   const FeedComponent = () => {
-    if (hasCategory || selectedGeohash || searchQuery) {
+    if (hasCategory || additionalTags.length > 0 || selectedGeohash || searchQuery) {
       const filter: NDKFilter = {
         kinds: [KIND_CLASSIFIED],
       }
 
+      // Collect all selected tags
+      const allTags: string[] = []
       if (hasCategory) {
-        // Always include both original and lowercase versions
-        const tagVariations = [category, category.toLowerCase()]
-        // Remove duplicates if original was already lowercase
-        filter["#t"] = [...new Set(tagVariations)]
+        allTags.push(category)
+      }
+      allTags.push(...additionalTags)
+
+      if (allTags.length > 0) {
+        // For multiple tags, use search to implement AND logic
+        // The search filter in useFeedEvents already handles hashtag AND logic
+        const searchTerms = allTags.map((tag) => `#${tag}`).join(" ")
+        filter.search = searchQuery ? `${searchQuery} ${searchTerms}` : searchTerms
+      } else if (searchQuery) {
+        filter.search = searchQuery
       }
 
       if (selectedGeohash) {
         filter["#g"] = [selectedGeohash]
       }
 
-      if (searchQuery) {
-        // Add search filter for full-text search
-        filter.search = searchQuery
+      const feedConfig = {
+        name: `Market${allTags.length > 0 ? `: ${allTags.join(", ")}` : ""}${selectedGeohash ? " (filtered by location)" : ""}${searchQuery ? ` (search: ${searchQuery})` : ""}`,
+        id: `search-market-${allTags.join("-")}-${selectedGeohash || ""}-${searchQuery || ""}`,
+        showRepliedTo: false,
+        filter,
       }
 
       return (
         <Feed
-          key={`market-${category || ""}-${selectedGeohash || ""}-${searchQuery || ""}`}
-          feedConfig={{
-            name: `Market${category ? `: ${category}` : ""}${selectedGeohash ? " (filtered by location)" : ""}${searchQuery ? ` (search: ${searchQuery})` : ""}`,
-            id: `search-market-${category || ""}-${selectedGeohash || ""}-${searchQuery || ""}`,
-            showRepliedTo: false,
-            filter,
-          }}
+          key={`market-${allTags.join("-")}-${selectedGeohash || ""}-${searchQuery || ""}`}
+          feedConfig={feedConfig}
           displayAs={displayAs}
           onDisplayAsChange={setMarketDisplayAs}
           showDisplayAsSelector={true}
