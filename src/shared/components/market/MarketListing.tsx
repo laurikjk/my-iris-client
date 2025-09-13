@@ -5,6 +5,7 @@ import MarketDetails from "./MarketDetails"
 import MarketImage from "./MarketImage"
 import HyperText from "../HyperText"
 import {CategoryLabel} from "./CategoryLabel"
+import {useNavigate} from "@/navigation"
 
 type MarketListingProps = {
   event: NDKEvent
@@ -22,6 +23,8 @@ function CategoryTags({
   event: NDKEvent
   showCategories: boolean
 }) {
+  const navigate = useNavigate()
+
   if (!showCategories) return null
 
   const categoryTags = event.tags.filter((tag) => tag[0] === "t" && tag[1])
@@ -34,7 +37,11 @@ function CategoryTags({
         <CategoryLabel
           key={`${tag[1]}-${index}`}
           category={tag[1]}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+            navigate(`/m/${encodeURIComponent(tag[1])}`)
+          }}
         />
       ))}
     </div>

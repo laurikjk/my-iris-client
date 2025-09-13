@@ -1,13 +1,14 @@
 import {useState, useMemo} from "react"
 import {useNavigate} from "@/navigation"
 import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
-import {ALL_GEOHASHES} from "@/utils/geohash"
 import Feed from "@/shared/components/feed/Feed"
 import {KIND_TEXT_NOTE, KIND_EPHEMERAL} from "@/utils/constants"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {type FeedConfig} from "@/stores/feed"
 
 interface MapWithEventsProps {
   selectedGeohashes: string[]
+  feedConfig?: FeedConfig // Optional, will create default if not provided
   height?: string
   className?: string
   displayAs?: "list" | "grid"
@@ -15,6 +16,7 @@ interface MapWithEventsProps {
 
 export default function MapWithEvents({
   selectedGeohashes,
+  feedConfig: providedFeedConfig,
   height = "20rem",
   className = "w-full",
   displayAs = "list",
@@ -22,20 +24,23 @@ export default function MapWithEvents({
   const navigate = useNavigate()
   const [feedEvents, setFeedEvents] = useState<NDKEvent[]>([])
 
-  // Create feed config to get events for the map
+  // Use provided feedConfig or create default
   const feedConfig = useMemo(() => {
-    const isGlobalView = selectedGeohashes.length === 0
+    if (providedFeedConfig) {
+      return providedFeedConfig
+    }
 
+    // Fallback for when no config is provided
+    const isGlobalView = selectedGeohashes.length === 0
     const filter = isGlobalView
       ? {
           kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL],
-          "#g": ALL_GEOHASHES,
-          limit: 200,
+          limit: 500,
         }
       : {
           kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL],
           "#g": selectedGeohashes,
-          limit: 100,
+          limit: 200,
         }
 
     return {
@@ -47,12 +52,12 @@ export default function MapWithEvents({
       hideReplies: false,
       displayAs,
     }
-  }, [selectedGeohashes, displayAs])
+  }, [selectedGeohashes, displayAs, providedFeedConfig])
 
   return (
     <div className={className} style={{height}}>
       <GeohashMap
-        geohashes={selectedGeohashes.length === 0 ? ALL_GEOHASHES : selectedGeohashes}
+        geohashes={selectedGeohashes}
         feedEvents={feedEvents}
         onGeohashSelect={(geohash) => {
           if (geohash === "*") {
@@ -72,6 +77,16 @@ export default function MapWithEvents({
           feedConfig={feedConfig}
           onEvent={(event) => {
             setFeedEvents((prev) => {
+              // Log events with location tags
+              const locationTags = event.tags?.filter(
+                (tag) => tag[0] === "location" && tag[1]
+              )
+              if (locationTags?.length > 0) {
+                console.log(
+                  "MapWithEvents received event with location:",
+                  locationTags[0][1]
+                )
+              }
               if (prev.some((e) => e.id === event.id)) return prev
               return [...prev.slice(-199), event]
             })

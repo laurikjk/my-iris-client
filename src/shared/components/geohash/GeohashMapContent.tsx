@@ -3,6 +3,7 @@ import L, {type Map as LeafletMap} from "leaflet"
 import type {NDKEvent} from "@nostr-dev-kit/ndk"
 import worldGeoJSON from "./world-110m.json"
 import {decodeGeohash} from "@/utils/geohash"
+import {getGeohashesFromEvent} from "@/utils/locationGeocoding"
 
 interface GeohashMapContentProps {
   geohashes?: string[]
@@ -73,18 +74,16 @@ export default function GeohashMapContent({
   const [inputValue, setInputValue] = useState<string>("")
   const [isEditing, setIsEditing] = useState(false)
 
-  // Extract geohashes from feed events (only highest resolution per event)
+  // Extract geohashes from feed events (including location tags)
   const eventGeohashes = useMemo(() => {
     const geoMap = new Map<string, number>()
     feedEvents.forEach((event) => {
-      const gTags = event.tags
-        .filter((tag) => tag[0] === "g")
-        .map((tag) => tag[1])
-        .filter(Boolean)
+      // Get geohashes from both geohash tags and location tags
+      const geohashes = getGeohashesFromEvent(event.tags)
 
       // Find the longest (highest resolution) geohash for this event
-      if (gTags.length > 0) {
-        const longestGeohash = gTags.reduce((longest, current) =>
+      if (geohashes.length > 0) {
+        const longestGeohash = geohashes.reduce((longest, current) =>
           current.length > longest.length ? current : longest
         )
         geoMap.set(longestGeohash, (geoMap.get(longestGeohash) || 0) + 1)
@@ -348,18 +347,16 @@ export default function GeohashMapContent({
     if (dotsLayerRef.current) {
       dotsLayerRef.current.clearLayers()
 
-      // Only show dots for geohashes that are children of the selected geohashes
+      // Show dots for event geohashes
       eventGeohashes.forEach((count, eventGh) => {
-        // In global view, show all dots. Otherwise only show within selection
-        const isWithinSelection =
-          isGlobalView || geohashes.some((selectedGh) => eventGh.startsWith(selectedGh))
+        // When no geohash is selected (empty array), show all dots
+        // When geohash is selected, only show dots within that area
+        const shouldShowDot =
+          geohashes.length === 0 || // No selection = show all
+          isGlobalView || // Global view = show all
+          geohashes.some((selectedGh) => eventGh.startsWith(selectedGh)) // Within selection
 
-        if (
-          isWithinSelection &&
-          (isGlobalView ||
-            geohashes.length === 0 ||
-            eventGh.length > Math.max(...geohashes.map((g) => g.length)))
-        ) {
+        if (shouldShowDot) {
           const bounds = decodeGeohash(eventGh)
           const lat = (bounds[0] + bounds[1]) / 2
           const lng = (bounds[2] + bounds[3]) / 2

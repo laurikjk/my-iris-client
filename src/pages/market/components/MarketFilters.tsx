@@ -127,6 +127,9 @@ export default function MarketFilters({
     return buildMarketFeedConfig(currentCategory, tags, geohash, query)
   }, [needsLocalCollection, window.location.pathname, window.location.search])
 
+  // Track current filter to clear events when it changes
+  const [lastFilterId, setLastFilterId] = useState<string | null>(null)
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const params = new URLSearchParams(window.location.search)
@@ -387,6 +390,7 @@ export default function MarketFilters({
 
         {showMap && (
           <GeohashMap
+            key={`map-${selectedTags.join("-")}-${searchFromUrl || ""}`}
             geohashes={selectedGeohash ? [selectedGeohash] : []}
             feedEvents={mapEvents}
             onGeohashSelect={handleGeohashSelect}
@@ -402,10 +406,19 @@ export default function MarketFilters({
             key="market-map-local"
             feedConfig={mapFeedConfig}
             onEvent={async (event) => {
-              // Only add events that have geohash tags
+              // Add events that have either geohash tags or location tags
               const hasGeohash = event.tags.some((tag) => tag[0] === "g" && tag[1])
-              if (hasGeohash) {
+              const hasLocation = event.tags.some(
+                (tag) => tag[0] === "location" && tag[1]
+              )
+              if (hasGeohash || hasLocation) {
                 setLocalMapEvents((prev) => {
+                  // Clear old events if filter changed
+                  const currentFilterId = mapFeedConfig?.id || ""
+                  if (lastFilterId !== currentFilterId) {
+                    setLastFilterId(currentFilterId)
+                    return [event]
+                  }
                   if (prev.some((e) => e.id === event.id)) return prev
                   return [...prev.slice(-499), event]
                 })

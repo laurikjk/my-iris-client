@@ -23,27 +23,51 @@ export default function MarketPage() {
   const selectedGeohash = params.get("g") || undefined
   const searchQuery = params.get("q") || undefined
   const additionalTags = params.get("t")?.split(",").filter(Boolean) || []
+  const [lastFilterKey, setLastFilterKey] = useState<string | null>(null)
 
   // Callback to collect events for the map and track categories
-  const handleMarketEvent = useCallback(async (event: NDKEvent) => {
-    // Only add events that have geohash tags for map display
-    const hasGeohash = event.tags.some((tag) => tag[0] === "g" && tag[1])
-    if (hasGeohash) {
-      setMapEvents((prev) => {
-        if (prev.some((e) => e.id === event.id)) return prev
-        return [...prev.slice(-499), event] // Keep last 500 events
-      })
-    }
+  const handleMarketEvent = useCallback(
+    async (event: NDKEvent) => {
+      // Create a filter key to track when filters change
+      const currentFilterKey = `${category}-${selectedGeohash}-${searchQuery}-${additionalTags.join(",")}`
 
-    // Track category tags for co-occurrence
-    const tTags = event.tags.filter((tag) => tag[0] === "t" && tag[1])
-    if (tTags.length > 0) {
-      await marketStore.addTags(
-        tTags.map((tag) => tag[1]),
-        event.pubkey
-      )
-    }
-  }, [])
+      // Check if event matches current category filter
+      const eventCategories = event.tags
+        .filter((tag) => tag[0] === "t" && tag[1])
+        .map((tag) => tag[1])
+      const matchesCategory = !category || eventCategories.includes(category)
+      const matchesAdditionalTags =
+        additionalTags.length === 0 ||
+        additionalTags.every((tag) => eventCategories.includes(tag))
+
+      // Only add to map if it matches the current filters AND has location data
+      if (matchesCategory && matchesAdditionalTags) {
+        const hasGeohash = event.tags.some((tag) => tag[0] === "g" && tag[1])
+        const hasLocation = event.tags.some((tag) => tag[0] === "location" && tag[1])
+        if (hasGeohash || hasLocation) {
+          setMapEvents((prev) => {
+            // Clear old events if filter changed
+            if (lastFilterKey !== currentFilterKey) {
+              setLastFilterKey(currentFilterKey)
+              return [event]
+            }
+            if (prev.some((e) => e.id === event.id)) return prev
+            return [...prev.slice(-499), event] // Keep last 500 events
+          })
+        }
+      }
+
+      // Track category tags for co-occurrence
+      const tTags = event.tags.filter((tag) => tag[0] === "t" && tag[1])
+      if (tTags.length > 0) {
+        await marketStore.addTags(
+          tTags.map((tag) => tag[1]),
+          event.pubkey
+        )
+      }
+    },
+    [category, additionalTags, selectedGeohash, searchQuery, lastFilterKey]
+  )
 
   // Shared feed component
   const FeedComponent = () => {

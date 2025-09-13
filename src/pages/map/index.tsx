@@ -2,7 +2,6 @@ import {useParams} from "@/navigation"
 import {useState, useMemo, useEffect} from "react"
 import Feed from "@/shared/components/feed/Feed"
 import {KIND_TEXT_NOTE, KIND_EPHEMERAL} from "@/utils/constants"
-import {ALL_GEOHASHES} from "@/utils/geohash"
 import MapWithEvents from "@/shared/components/map/MapWithEvents"
 import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
@@ -34,19 +33,19 @@ export default function MapPage() {
   const geohashes = selectedGeohashes
 
   const feedConfig = useMemo(() => {
-    // When no geohashes selected, show global view with all geohashes
+    // When no geohashes selected, show global view
     const isGlobalView = geohashes.length === 0
 
+    // For global view, get more events to catch location-tagged ones
     const filter = isGlobalView
       ? {
           kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL],
-          "#g": ALL_GEOHASHES,
-          limit: 100,
+          limit: 500, // Increased to catch location-tagged events
         }
       : {
           kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL],
           "#g": geohashes,
-          limit: 100,
+          limit: 200,
         }
 
     const config = {
@@ -102,6 +101,7 @@ export default function MapPage() {
               <div className="mt-4">
                 <MapWithEvents
                   selectedGeohashes={geohashes}
+                  feedConfig={feedConfig}
                   height="20rem"
                   className="w-full max-w-full"
                   displayAs={displayAs}
