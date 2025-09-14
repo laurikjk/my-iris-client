@@ -11,6 +11,22 @@ export function Network() {
     useUserStore()
   const {showRelayIndicator, setShowRelayIndicator} = useUIStore()
 
+  const appVersion = import.meta.env.VITE_APP_VERSION || "dev"
+  const buildTime = import.meta.env.VITE_BUILD_TIME || "development"
+
+  const formatBuildTime = (timestamp: string) => {
+    if (timestamp === "development") return timestamp
+    try {
+      const date = new Date(timestamp)
+      return new Intl.DateTimeFormat("default", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(date)
+    } catch {
+      return timestamp
+    }
+  }
+
   const resetDefaults = () => {
     const defaultConfigs = DEFAULT_RELAYS.map((url) => ({url})) // No disabled flag means enabled
     setRelayConfigs(defaultConfigs)
@@ -81,12 +97,18 @@ export function Network() {
           <SettingsGroup title="Maintenance">
             <SettingsGroupItem isLast>
               <div className="flex flex-col space-y-2">
-                <button
-                  onClick={() => window.location.reload()}
-                  className="text-info text-left"
-                >
-                  Refresh Application
-                </button>
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="text-info text-left"
+                  >
+                    Refresh Application
+                  </button>
+                  <div className="flex flex-col items-end text-xs text-base-content/60">
+                    <span>{appVersion}</span>
+                    <span>{formatBuildTime(buildTime)}</span>
+                  </div>
+                </div>
                 <p className="text-xs text-base-content/60">
                   Reload the application to apply any pending updates or fix issues.
                 </p>
