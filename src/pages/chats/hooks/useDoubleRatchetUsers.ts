@@ -51,7 +51,6 @@ export const useDoubleRatchetUsers = () => {
 
     // Handle incoming events
     const handleEvent = (event: NDKEvent) => {
-      console.log("Received event", event)
       if (event.kind !== KIND_APP_DATA) {
         return
       }

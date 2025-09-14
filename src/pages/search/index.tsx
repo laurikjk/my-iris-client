@@ -14,6 +14,7 @@ import {KIND_TEXT_NOTE} from "@/utils/constants"
 import Icon from "@/shared/components/Icons/Icon"
 import {useIsTwoColumnLayout} from "@/shared/hooks/useIsTwoColumnLayout"
 import {HomeRightColumn} from "@/pages/home/components/HomeRightColumn"
+import {handleNostrIdentifier} from "@/utils/handleNostrIdentifier"
 
 function SearchPage() {
   const {query} = useParams()
@@ -55,12 +56,22 @@ function SearchPage() {
     searchInputRef.current?.focus()
   }, [navItemClicked])
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (searchTerm.trim()) {
-      setSearchQuery(searchTerm.trim())
-      navigate(`/search/${searchTerm}`)
+    const currentValue = searchTerm
+    // Clear immediately for hex-like values
+    if (currentValue.match(/^[0-9a-fA-F]{64}$/)) {
+      setSearchTerm("")
     }
+    await handleNostrIdentifier({
+      input: currentValue,
+      navigate,
+      clearInput: () => setSearchTerm(""),
+      onTextSearch: (query) => {
+        setSearchQuery(query)
+        navigate(`/search/${query}`)
+      },
+    })
   }
 
   // Memoize the feed config to prevent unnecessary re-renders
@@ -104,6 +115,21 @@ function SearchPage() {
                     placeholder="Search posts..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    onPaste={async (e) => {
+                      const pastedText = e.clipboardData.getData("text")
+                      e.preventDefault()
+
+                      // Check if pasted value is a Nostr identifier
+                      await handleNostrIdentifier({
+                        input: pastedText,
+                        navigate,
+                        clearInput: () => setSearchTerm(""),
+                        onTextSearch: (query) => {
+                          // For regular text, set it
+                          setSearchTerm(query)
+                        },
+                      })
+                    }}
                   />
                   <Icon name="search-outline" className="text-neutral-content/60" />
                 </label>

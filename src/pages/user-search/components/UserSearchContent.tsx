@@ -10,6 +10,7 @@ import Icon from "@/shared/components/Icons/Icon"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
 import classNames from "classnames"
+import {handleNostrIdentifier} from "@/utils/handleNostrIdentifier"
 
 export default function UserSearchContent() {
   const {query} = useParams()
@@ -114,6 +115,20 @@ export default function UserSearchContent() {
                   placeholder="Search people..."
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
+                  onPaste={async (e) => {
+                    const pastedText = e.clipboardData.getData("text")
+                    e.preventDefault()
+
+                    await handleNostrIdentifier({
+                      input: pastedText,
+                      navigate,
+                      clearInput: () => setSearchValue(""),
+                      onTextSearch: (query) => {
+                        // For regular text, set it
+                        setSearchValue(query)
+                      },
+                    })
+                  }}
                 />
                 <Icon name="search-outline" className="text-neutral-content/60" />
               </label>

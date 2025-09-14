@@ -13,6 +13,7 @@ import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
 import {Helmet} from "react-helmet"
 import {useIsTwoColumnLayout} from "@/shared/hooks/useIsTwoColumnLayout"
 import {HomeRightColumn} from "@/pages/home/components/HomeRightColumn"
+import {handleNostrIdentifier} from "@/utils/handleNostrIdentifier"
 
 export default function UserSearchPage() {
   const {query} = useParams()
@@ -22,6 +23,11 @@ export default function UserSearchPage() {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [displayCount, setDisplayCount] = useState(20)
   const [searchValue, setSearchValue] = useState(decodedQuery)
+
+  // Update search value when URL changes
+  useEffect(() => {
+    setSearchValue(decodedQuery)
+  }, [decodedQuery])
 
   const peopleSearch = useSearch({
     maxResults: 10,
@@ -86,11 +92,16 @@ export default function UserSearchPage() {
             <div className="w-full">
               <div className="w-full p-2">
                 <form
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault()
-                    if (searchValue.trim()) {
-                      navigate(`/u/${encodeURIComponent(searchValue.trim())}`)
-                    }
+                    await handleNostrIdentifier({
+                      input: searchValue,
+                      navigate,
+                      clearInput: () => setSearchValue(""),
+                      onTextSearch: (query) => {
+                        navigate(`/u/${encodeURIComponent(query)}`)
+                      },
+                    })
                   }}
                   className="w-full"
                 >
@@ -102,6 +113,20 @@ export default function UserSearchPage() {
                       placeholder="Search people..."
                       value={searchValue}
                       onChange={(e) => setSearchValue(e.target.value)}
+                      onPaste={async (e) => {
+                        const pastedText = e.clipboardData.getData("text")
+                        e.preventDefault()
+
+                        await handleNostrIdentifier({
+                          input: pastedText,
+                          navigate,
+                          clearInput: () => setSearchValue(""),
+                          onTextSearch: (query) => {
+                            // For regular text, set it
+                            setSearchValue(query)
+                          },
+                        })
+                      }}
                     />
                     <Icon name="search-outline" className="text-neutral-content/60" />
                   </label>

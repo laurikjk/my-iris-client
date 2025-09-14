@@ -97,27 +97,28 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
         let result
         try {
           result = nip19.decode(v)
+          setValue("")
           if (result.type === "npub") {
             onSelect(result.data)
           } else {
             navigate(`/${v}`)
           }
         } catch (e) {
+          setValue("")
           navigate(`/${v}`)
         }
-        setValue("")
         return
       } else if (v.match(HEX_REGEX)) {
-        onSelect(v)
         setValue("")
+        onSelect(v)
         return
       } else if (v.match(NIP05_REGEX)) {
         ndk()
           .getUserFromNip05(v)
           .then((user) => {
             if (user) {
-              onSelect(user.pubkey)
               setValue("")
+              onSelect(user.pubkey)
             }
           })
       }

@@ -198,7 +198,7 @@ const Message = ({
   return (
     <div
       className={classNames(
-        "group relative w-full flex",
+        "group relative w-full flex min-w-0",
         isUser ? "justify-end" : "justify-start"
       )}
       id={message.id}
@@ -226,7 +226,7 @@ const Message = ({
               <Name pubKey={message.pubkey} className="text-xs font-medium" />
             </Link>
           )}
-          <div className={messageClassName}>
+          <div className={classNames(messageClassName, "max-w-[85vw] md:max-w-md")}>
             {repliedId && (
               <ReplyPreview isUser={isUser} sessionId={sessionId} replyToId={repliedId} />
             )}
