@@ -199,11 +199,17 @@ const Message = ({
     <div
       className={classNames(
         "group relative w-full flex min-w-0",
-        isUser ? "justify-end" : "justify-start"
+        isUser ? "justify-end" : "justify-start",
+        isUser ? "pr-2" : "pl-2"
       )}
       id={message.id}
     >
-      <div className="flex items-center justify-center gap-2">
+      <div
+        className={classNames(
+          "flex items-center justify-center gap-2",
+          isUser ? "max-w-[calc(100%-3rem)]" : "max-w-[calc(100%-1rem)]"
+        )}
+      >
         {isUser && (
           <MessageActionButtons
             messageId={message.id}
@@ -216,7 +222,7 @@ const Message = ({
           />
         )}
 
-        <div className="flex flex-col">
+        <div className="flex flex-col min-w-0">
           {showAuthor && !isUser && isFirst && (
             <Link
               to={`/${nip19.npubEncode(message.pubkey)}`}
@@ -226,7 +232,7 @@ const Message = ({
               <Name pubKey={message.pubkey} className="text-xs font-medium" />
             </Link>
           )}
-          <div className={classNames(messageClassName, "max-w-[85vw] md:max-w-md")}>
+          <div className={classNames(messageClassName, "max-w-[70vw] md:max-w-md")}>
             {repliedId && (
               <ReplyPreview isUser={isUser} sessionId={sessionId} replyToId={repliedId} />
             )}
@@ -237,11 +243,11 @@ const Message = ({
                 isShortEmoji && "flex-col gap-1 items-center"
               )}
             >
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 min-w-0">
                 <div
                   className={classNames(
                     isShortEmoji ? "text-6xl" : "text-sm",
-                    "whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                    "whitespace-pre-wrap break-words [overflow-wrap:anywhere] min-w-0"
                   )}
                 >
                   <HyperText small={true} truncate={500} event={message}>

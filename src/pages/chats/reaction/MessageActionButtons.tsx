@@ -70,26 +70,26 @@ const MessageActionButtons = ({
   return (
     <div className="relative -mb-1">
       <div
-        className={classNames("flex items-center", {
-          "flex-row-reverse": !isUser,
+        className={classNames("flex md:flex-row flex-col items-center", {
+          "md:flex-row-reverse": !isUser,
         })}
       >
         {onReply && (
           <div
-            className="p-2 text-base-content/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity flex-shrink-0"
+            className="p-1 md:p-2 text-base-content/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity flex-shrink-0"
             onClick={onReply}
           >
-            <RiReplyLine className="w-6 h-6" />
+            <RiReplyLine className="w-5 h-5 md:w-6 md:h-6" />
           </div>
         )}
         <div
           data-testid="reaction-button"
           role="button"
           aria-label="Add reaction"
-          className="p-2 text-base-content/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity flex-shrink-0"
+          className="p-1 md:p-2 text-base-content/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity flex-shrink-0"
           onClick={handleReactionClick}
         >
-          <RiHeartAddLine className="w-6 h-6" />
+          <RiHeartAddLine className="w-5 h-5 md:w-6 md:h-6" />
         </div>
         <MessageDropdown
           messageId={messageId}

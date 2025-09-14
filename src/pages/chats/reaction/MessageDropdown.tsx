@@ -45,10 +45,10 @@ export const MessageDropdown = ({
         data-testid="more-button"
         role="button"
         aria-label="More options"
-        className="p-2 text-base-content/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity flex-shrink-0"
+        className="p-1 md:p-2 text-base-content/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity flex-shrink-0"
         onClick={handleMoreClick}
       >
-        <RiMoreLine className="w-6 h-6" />
+        <RiMoreLine className="w-5 h-5 md:w-6 md:h-6" />
       </div>
 
       {showDropdown && (
