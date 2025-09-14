@@ -77,6 +77,22 @@ export function Network() {
               </div>
             </SettingsGroupItem>
           </SettingsGroup>
+
+          <SettingsGroup title="Maintenance">
+            <SettingsGroupItem isLast>
+              <div className="flex flex-col space-y-2">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="text-info text-left"
+                >
+                  Refresh Application
+                </button>
+                <p className="text-xs text-base-content/60">
+                  Reload the application to apply any pending updates or fix issues.
+                </p>
+              </div>
+            </SettingsGroupItem>
+          </SettingsGroup>
         </div>
       </div>
     </div>

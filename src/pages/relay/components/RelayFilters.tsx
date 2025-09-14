@@ -1,4 +1,4 @@
-import {useState, useEffect} from "react"
+import {useEffect} from "react"
 import {useParams, useNavigate} from "@/navigation"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import RelaySelector from "@/shared/components/ui/RelaySelector"
@@ -9,11 +9,11 @@ export default function RelayFilters() {
   const {url} = useParams()
   const navigate = useNavigate()
   const decodedRelay = url ? decodeURIComponent(url) : ""
-  const initialRelayUrl = decodedRelay ? `wss://${decodedRelay}` : ""
+  const urlRelayUrl = decodedRelay ? `wss://${decodedRelay}` : ""
 
-  const [selectedRelayUrl, setSelectedRelayUrl] = useState(initialRelayUrl)
-
-  // Use store for the unknown users toggle to persist state
+  // Use store for persistent state
+  const storedRelayUrl = useSearchStore((state) => state.selectedRelayUrl)
+  const setStoredRelayUrl = useSearchStore((state) => state.setSelectedRelayUrl)
   const showEventsByUnknownUsers = useSearchStore(
     (state) => state.showEventsByUnknownUsers
   )
@@ -21,10 +21,15 @@ export default function RelayFilters() {
     (state) => state.setShowEventsByUnknownUsers
   )
 
-  // Update selectedRelayUrl when the URL changes
+  // Use URL if provided, otherwise use stored value
+  const selectedRelayUrl = urlRelayUrl || storedRelayUrl
+
+  // Update stored relay when URL changes
   useEffect(() => {
-    setSelectedRelayUrl(initialRelayUrl)
-  }, [initialRelayUrl])
+    if (urlRelayUrl) {
+      setStoredRelayUrl(urlRelayUrl)
+    }
+  }, [urlRelayUrl, setStoredRelayUrl])
 
   return (
     <div className="flex flex-col gap-2 h-full">
@@ -34,7 +39,7 @@ export default function RelayFilters() {
         <RelaySelector
           selectedRelay={selectedRelayUrl}
           onRelaySelect={(newRelay) => {
-            setSelectedRelayUrl(newRelay)
+            setStoredRelayUrl(newRelay)
             const cleanUrl = newRelay
               .replace(/^(https?:\/\/)?(wss?:\/\/)?/, "")
               .replace(/\/$/, "") // Remove trailing slash

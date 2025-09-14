@@ -11,10 +11,12 @@ interface SearchState {
   recentSearches: CustomSearchResult[]
   searchQuery: string
   showEventsByUnknownUsers: boolean
+  selectedRelayUrl: string
 
   setRecentSearches: (searches: CustomSearchResult[]) => void
   setSearchQuery: (query: string) => void
   setShowEventsByUnknownUsers: (show: boolean) => void
+  setSelectedRelayUrl: (url: string) => void
 }
 
 export const useSearchStore = create<SearchState>()(
@@ -24,6 +26,7 @@ export const useSearchStore = create<SearchState>()(
         recentSearches: [] as CustomSearchResult[],
         searchQuery: "",
         showEventsByUnknownUsers: false,
+        selectedRelayUrl: "",
       }
 
       const actions = {
@@ -32,6 +35,7 @@ export const useSearchStore = create<SearchState>()(
         setSearchQuery: (searchQuery: string) => set({searchQuery}),
         setShowEventsByUnknownUsers: (showEventsByUnknownUsers: boolean) =>
           set({showEventsByUnknownUsers}),
+        setSelectedRelayUrl: (selectedRelayUrl: string) => set({selectedRelayUrl}),
       }
 
       return {

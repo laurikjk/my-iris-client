@@ -21,16 +21,34 @@ function RelayPage() {
   const navigate = useNavigate()
   const isInTwoColumnLayout = useIsTwoColumnLayout()
   const decodedRelay = url ? decodeURIComponent(url) : ""
-  const initialRelayUrl = decodedRelay ? `wss://${decodedRelay}` : ""
-  const relayDisplayName = decodedRelay || ""
+  const urlRelayUrl = decodedRelay ? `wss://${decodedRelay}` : ""
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  const [selectedRelayUrl, setSelectedRelayUrl] = useState(initialRelayUrl)
+  // Use persisted state in two-column layout
+  const storedRelayUrl = useSearchStore((state) => state.selectedRelayUrl)
+  const setStoredRelayUrl = useSearchStore((state) => state.setSelectedRelayUrl)
+  const [localRelayUrl, setLocalRelayUrl] = useState(urlRelayUrl)
 
-  // Update selectedRelayUrl when the URL changes
+  // Use URL if provided, otherwise use stored value in two-column layout
+  const selectedRelayUrl = isInTwoColumnLayout
+    ? urlRelayUrl || storedRelayUrl
+    : urlRelayUrl || localRelayUrl
+  const setSelectedRelayUrl = isInTwoColumnLayout ? setStoredRelayUrl : setLocalRelayUrl
+
+  const relayDisplayName = selectedRelayUrl
+    ? selectedRelayUrl.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
+    : ""
+
+  // Update stored relay when URL changes in two-column layout
   useEffect(() => {
-    setSelectedRelayUrl(initialRelayUrl)
-  }, [initialRelayUrl])
+    if (urlRelayUrl) {
+      if (isInTwoColumnLayout) {
+        setStoredRelayUrl(urlRelayUrl)
+      } else {
+        setLocalRelayUrl(urlRelayUrl)
+      }
+    }
+  }, [urlRelayUrl, isInTwoColumnLayout, setStoredRelayUrl])
 
   // Use shared state from store for two-column layout consistency
   const storeShowEventsByUnknownUsers = useSearchStore(
