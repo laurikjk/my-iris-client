@@ -106,6 +106,7 @@ const PublicChat = () => {
         kind: KIND_CHANNEL_MESSAGE,
         reactions: {},
         sentToRelays: true, // Messages from subscription are already on relays
+        nostrEventId: event.id, // Add nostrEventId for public messages
       }
 
       setMessages((prev) => {
@@ -171,6 +172,7 @@ const PublicChat = () => {
         kind: KIND_CHANNEL_MESSAGE,
         reactions: {},
         sentToRelays: publishedRelays.size > 0, // Only true if actually published to relays
+        nostrEventId: event.id, // Add nostrEventId for public messages
       }
 
       setMessages((prev) => {
