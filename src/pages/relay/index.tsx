@@ -1,7 +1,6 @@
 import {useMemo, useState, useEffect, useRef} from "react"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import Header from "@/shared/components/header/Header"
-import useHistoryState from "@/shared/hooks/useHistoryState"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
 import {RelayStats} from "@/shared/components/RelayStats"
@@ -13,10 +12,14 @@ import {Helmet} from "react-helmet"
 import RelaySelector from "@/shared/components/ui/RelaySelector"
 import RelayDetails from "@/shared/components/relay/RelayDetails"
 import {KIND_TEXT_NOTE} from "@/utils/constants"
+import {useIsTwoColumnLayout} from "@/shared/hooks/useIsTwoColumnLayout"
+import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
+import {useSearchStore} from "@/stores/search"
 
 function RelayPage() {
   const {url} = useParams()
   const navigate = useNavigate()
+  const isInTwoColumnLayout = useIsTwoColumnLayout()
   const decodedRelay = url ? decodeURIComponent(url) : ""
   const initialRelayUrl = decodedRelay ? `wss://${decodedRelay}` : ""
   const relayDisplayName = decodedRelay || ""
@@ -29,11 +32,21 @@ function RelayPage() {
     setSelectedRelayUrl(initialRelayUrl)
   }, [initialRelayUrl])
 
-  // Relay view should show all events regardless of follow distance
-  const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
-    true,
-    "relayShowEventsByUnknownUsers"
+  // Use shared state from store for two-column layout consistency
+  const storeShowEventsByUnknownUsers = useSearchStore(
+    (state) => state.showEventsByUnknownUsers
   )
+  const storeSetShowEventsByUnknownUsers = useSearchStore(
+    (state) => state.setShowEventsByUnknownUsers
+  )
+  const [localShowEventsByUnknownUsers, setLocalShowEventsByUnknownUsers] = useState(true)
+
+  const showEventsByUnknownUsers = isInTwoColumnLayout
+    ? storeShowEventsByUnknownUsers
+    : localShowEventsByUnknownUsers
+  const setShowEventsByUnknownUsers = isInTwoColumnLayout
+    ? storeSetShowEventsByUnknownUsers
+    : setLocalShowEventsByUnknownUsers
 
   const filters: NDKFilter = useMemo(
     () => ({
@@ -43,6 +56,45 @@ function RelayPage() {
     []
   )
 
+  // In two-column layout, only show the feed (selector is in middle column)
+  if (isInTwoColumnLayout) {
+    return (
+      <div className="flex flex-1 flex-row relative h-full">
+        <div className="flex flex-col flex-1 h-full relative">
+          <Header title={decodedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"} />
+          <ScrollablePageContainer className="flex flex-col items-center">
+            <div className="flex-1 w-full flex flex-col gap-2 md:pt-2">
+              {selectedRelayUrl ? (
+                <Feed
+                  key={selectedRelayUrl}
+                  feedConfig={{
+                    name: "Relay Feed",
+                    id: `relay-${selectedRelayUrl}`,
+                    showRepliedTo: true,
+                    followDistance: showEventsByUnknownUsers ? undefined : 5,
+                    sortType: "chronological",
+                    relayUrls: [selectedRelayUrl],
+                    filter: filters,
+                  }}
+                />
+              ) : (
+                <div className="p-4">
+                  <RelayStats />
+                </div>
+              )}
+            </div>
+            <Helmet>
+              <title>
+                {decodedRelay ? `Relay: ${relayDisplayName}` : "Relay Feed"} / Iris
+              </title>
+            </Helmet>
+          </ScrollablePageContainer>
+        </div>
+      </div>
+    )
+  }
+
+  // Single column layout - show full interface
   return (
     <div className="flex flex-row h-screen">
       <div className="flex flex-col items-center flex-1 h-full relative">

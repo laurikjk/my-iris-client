@@ -3,6 +3,7 @@ import UserSearchContent from "@/pages/user-search/components/UserSearchContent"
 import SearchFilters from "@/pages/search/components/SearchFilters"
 import MarketFilters from "@/pages/market/components/MarketFilters"
 import MapFilters from "@/pages/map/components/MapFilters"
+import RelayFilters from "@/pages/relay/components/RelayFilters"
 
 interface UnifiedSearchContentProps {
   searchRoute: string
@@ -37,6 +38,14 @@ const UnifiedSearchContent = memo(function UnifiedSearchContent({
     return (
       <div className="pt-4">
         <MarketFilters />
+      </div>
+    )
+  }
+
+  if (searchRoute.startsWith("/relay")) {
+    return (
+      <div className="pt-4">
+        <RelayFilters />
       </div>
     )
   }

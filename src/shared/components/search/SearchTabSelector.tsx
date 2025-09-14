@@ -1,7 +1,7 @@
 import {useLocation, useNavigate} from "@/navigation"
 
 interface SearchTabSelectorProps {
-  activeTab?: "people" | "posts" | "market" | "map"
+  activeTab?: "people" | "posts" | "market" | "map" | "relay"
 }
 
 export default function SearchTabSelector({activeTab}: SearchTabSelectorProps) {
@@ -16,6 +16,7 @@ export default function SearchTabSelector({activeTab}: SearchTabSelectorProps) {
       if (path.startsWith("/u")) return "people"
       if (path.startsWith("/m")) return "market"
       if (path.startsWith("/map")) return "map"
+      if (path.startsWith("/relay")) return "relay"
       if (path.startsWith("/search")) return "posts"
       return "posts"
     })()
@@ -45,6 +46,12 @@ export default function SearchTabSelector({activeTab}: SearchTabSelectorProps) {
         onClick={() => navigate("/map")}
       >
         Map
+      </button>
+      <button
+        className={`btn btn-sm ${currentTab === "relay" ? "btn-primary" : "btn-neutral"}`}
+        onClick={() => navigate("/relay")}
+      >
+        Relay
       </button>
     </div>
   )

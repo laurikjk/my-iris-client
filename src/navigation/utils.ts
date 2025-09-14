@@ -58,6 +58,8 @@ export function getCurrentRouteInfo(pathname: string) {
   const searchRoutes = [
     "/map",
     "/map/:query",
+    "/relay",
+    "/relay/:url",
     "/u",
     "/u/:query",
     "/search",
@@ -70,9 +72,12 @@ export function getCurrentRouteInfo(pathname: string) {
   for (const route of searchRoutes) {
     const match = matchPath(pathOnly, route)
     if (match) {
-      // Return the base route type - check /map first to avoid /m conflict
+      // Return the base route type - check /map and /relay first to avoid conflicts
       if (route.startsWith("/map")) {
         return {type: "map", baseRoute: "/map"}
+      }
+      if (route.startsWith("/relay")) {
+        return {type: "relay", baseRoute: "/relay"}
       }
       if (route.startsWith("/u")) {
         return {type: "user-search", baseRoute: "/u"}
