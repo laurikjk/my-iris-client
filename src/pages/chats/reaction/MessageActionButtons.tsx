@@ -70,8 +70,8 @@ const MessageActionButtons = ({
   return (
     <div className="relative -mb-1">
       <div
-        className={classNames("flex md:flex-row flex-col items-center", {
-          "md:flex-row-reverse": !isUser,
+        className={classNames("flex items-center", {
+          "flex-row-reverse": !isUser,
         })}
       >
         {onReply && (
