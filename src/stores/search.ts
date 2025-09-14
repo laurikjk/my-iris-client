@@ -9,8 +9,12 @@ export type CustomSearchResult = SearchResult & {
 
 interface SearchState {
   recentSearches: CustomSearchResult[]
+  searchQuery: string
+  showEventsByUnknownUsers: boolean
 
   setRecentSearches: (searches: CustomSearchResult[]) => void
+  setSearchQuery: (query: string) => void
+  setShowEventsByUnknownUsers: (show: boolean) => void
 }
 
 export const useSearchStore = create<SearchState>()(
@@ -18,11 +22,16 @@ export const useSearchStore = create<SearchState>()(
     (set) => {
       const initialState = {
         recentSearches: [] as CustomSearchResult[],
+        searchQuery: "",
+        showEventsByUnknownUsers: false,
       }
 
       const actions = {
         setRecentSearches: (recentSearches: CustomSearchResult[]) =>
           set({recentSearches}),
+        setSearchQuery: (searchQuery: string) => set({searchQuery}),
+        setShowEventsByUnknownUsers: (showEventsByUnknownUsers: boolean) =>
+          set({showEventsByUnknownUsers}),
       }
 
       return {

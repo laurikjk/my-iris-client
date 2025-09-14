@@ -1,3 +1,4 @@
+import {memo} from "react"
 import UserSearchContent from "@/pages/user-search/components/UserSearchContent"
 import SearchFilters from "@/pages/search/components/SearchFilters"
 import MarketFilters from "@/pages/market/components/MarketFilters"
@@ -7,7 +8,9 @@ interface UnifiedSearchContentProps {
   searchRoute: string
 }
 
-export default function UnifiedSearchContent({searchRoute}: UnifiedSearchContentProps) {
+const UnifiedSearchContent = memo(function UnifiedSearchContent({
+  searchRoute,
+}: UnifiedSearchContentProps) {
   // For /u search, show everything (filters + results) like before
   if (searchRoute.startsWith("/u")) {
     return <UserSearchContent />
@@ -40,4 +43,6 @@ export default function UnifiedSearchContent({searchRoute}: UnifiedSearchContent
 
   // Default fallback to user search
   return <UserSearchContent />
-}
+})
+
+export default UnifiedSearchContent

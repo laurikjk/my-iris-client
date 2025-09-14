@@ -1,7 +1,7 @@
-import {useEffect, useRef, useState, FormEvent} from "react"
+import {useEffect, useRef, useState, FormEvent, useMemo} from "react"
 import RightColumn from "@/shared/components/RightColumn.tsx"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
-import useHistoryState from "@/shared/hooks/useHistoryState"
+import {useSearchStore} from "@/stores/search"
 import Header from "@/shared/components/header/Header"
 import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import {useParams, useNavigate} from "@/navigation"
@@ -22,18 +22,32 @@ function SearchPage() {
   const isInTwoColumnLayout = useIsTwoColumnLayout()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const navItemClicked = useUIStore((state) => state.navItemClicked)
-  const [searchTerm, setSearchTerm] = useState(decodedQuery)
 
-  // Update search term when URL query changes
-  useEffect(() => {
-    setSearchTerm(decodedQuery)
-  }, [decodedQuery])
-
-  // Search should show all events regardless of follow distance
-  const [showEventsByUnknownUsers, setShowEventsByUnknownUsers] = useHistoryState(
-    true,
-    "searchShowEventsByUnknownUsers"
+  // Use store for persistent state
+  const searchQuery = useSearchStore((state) => state.searchQuery)
+  const setSearchQuery = useSearchStore((state) => state.setSearchQuery)
+  const showEventsByUnknownUsers = useSearchStore(
+    (state) => state.showEventsByUnknownUsers
   )
+  const setShowEventsByUnknownUsers = useSearchStore(
+    (state) => state.setShowEventsByUnknownUsers
+  )
+
+  // Initialize from URL or store
+  const [searchTerm, setSearchTerm] = useState(() => {
+    // If we have a query in the URL, use that
+    if (decodedQuery) return decodedQuery
+    // Otherwise use the stored search query
+    return searchQuery
+  })
+
+  // Update store when URL query changes (navigation)
+  useEffect(() => {
+    if (decodedQuery && decodedQuery !== searchQuery) {
+      setSearchQuery(decodedQuery)
+      setSearchTerm(decodedQuery)
+    }
+  }, [decodedQuery, searchQuery, setSearchQuery])
 
   // Focus search input when search nav item is clicked
   useEffect(() => {
@@ -44,9 +58,27 @@ function SearchPage() {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (searchTerm.trim()) {
+      setSearchQuery(searchTerm.trim())
       navigate(`/search/${searchTerm}`)
     }
   }
+
+  // Memoize the feed config to prevent unnecessary re-renders
+  // Use the actual query being displayed (from URL or store)
+  const activeQuery = decodedQuery || searchQuery
+  const feedConfig = useMemo(() => {
+    if (!activeQuery) return null
+    return {
+      name: "Search Results",
+      id: `search-posts-${activeQuery}`,
+      showRepliedTo: false,
+      followDistance: showEventsByUnknownUsers ? undefined : 5,
+      filter: {
+        kinds: [KIND_TEXT_NOTE],
+        ...(activeQuery.trim() && {search: activeQuery}),
+      },
+    }
+  }, [activeQuery, showEventsByUnknownUsers])
 
   // If in two-column layout, show the home-style right column
   if (isInTwoColumnLayout) {
@@ -78,7 +110,7 @@ function SearchPage() {
               </form>
             </div>
 
-            {decodedQuery && (
+            {activeQuery && (
               <div className="flex items-center gap-2 p-2 mx-2">
                 <input
                   type="checkbox"
@@ -90,20 +122,8 @@ function SearchPage() {
               </div>
             )}
 
-            {decodedQuery ? (
-              <Feed
-                key={`posts-${decodedQuery}`}
-                feedConfig={{
-                  name: "Search Results",
-                  id: `search-posts-${decodedQuery}`,
-                  showRepliedTo: false,
-                  followDistance: showEventsByUnknownUsers ? undefined : 5,
-                  filter: {
-                    kinds: [KIND_TEXT_NOTE],
-                    ...(decodedQuery.trim() && {search: decodedQuery}),
-                  },
-                }}
-              />
+            {feedConfig ? (
+              <Feed feedConfig={feedConfig} />
             ) : (
               <div className="mt-4">
                 <AlgorithmicFeed
