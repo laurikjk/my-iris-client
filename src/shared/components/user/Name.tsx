@@ -43,6 +43,7 @@ export function Name({pubKey, className}: {pubKey: string; className?: string}) 
           italic: !!animal,
           "opacity-50": !!animal,
         },
+        "inline-block min-w-0",
         className
       )}
     >

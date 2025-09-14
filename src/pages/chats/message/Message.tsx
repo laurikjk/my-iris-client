@@ -226,10 +226,10 @@ const Message = ({
           {showAuthor && !isUser && isFirst && (
             <Link
               to={`/${nip19.npubEncode(message.pubkey)}`}
-              className="flex items-center gap-2 mb-1 ml-1"
+              className="flex items-center gap-2 mb-1 ml-1 max-w-[60vw] md:max-w-xs"
             >
               <Avatar pubKey={message.pubkey} width={24} showBadge={true} />
-              <Name pubKey={message.pubkey} className="text-xs font-medium" />
+              <Name pubKey={message.pubkey} className="text-xs font-medium truncate" />
             </Link>
           )}
           <div className={classNames(messageClassName, "max-w-[70vw] md:max-w-md")}>
