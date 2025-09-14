@@ -20,6 +20,7 @@ export interface FeedConfig {
   followDistance?: number // undefined = no follow distance filtering, number = max degrees
   requiresMedia?: boolean
   requiresReplies?: boolean
+  requiresLocationTag?: boolean // For map feeds - only show events with g or location tags
   excludeSeen?: boolean
   relayUrls?: string[]
   // For reply feeds - only show replies to this specific event

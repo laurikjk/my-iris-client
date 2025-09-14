@@ -36,7 +36,8 @@ export default function MapPage() {
     // When no geohashes selected, show global view
     const isGlobalView = geohashes.length === 0
 
-    // For global view, get more events to catch location-tagged ones
+    // For global view, we need to filter client-side for location-tagged events
+    // since we can't query for "has any g tag or location tag" at relay level
     const filter = isGlobalView
       ? {
           kinds: [KIND_TEXT_NOTE, KIND_EPHEMERAL],
@@ -56,6 +57,8 @@ export default function MapPage() {
       showRepliedTo: true,
       hideReplies: false,
       displayAs,
+      // For map page in global view, require location tags
+      requiresLocationTag: isGlobalView,
     }
 
     return config

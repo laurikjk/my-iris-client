@@ -51,6 +51,8 @@ export default function MapWithEvents({
       showRepliedTo: true,
       hideReplies: false,
       displayAs,
+      // For map feeds in global view, require location tags
+      requiresLocationTag: isGlobalView,
     }
   }, [selectedGeohashes, displayAs, providedFeedConfig])
 

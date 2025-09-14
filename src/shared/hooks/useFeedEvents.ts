@@ -104,6 +104,15 @@ export default function useFeedEvents({
       return false
     }
 
+    // Location tag filtering for map feeds
+    if (feedConfig.requiresLocationTag) {
+      const hasGeohashTag = event.tags?.some((tag) => tag[0] === "g" && tag[1])
+      const hasLocationTag = event.tags?.some((tag) => tag[0] === "location" && tag[1])
+      if (!hasGeohashTag && !hasLocationTag) {
+        return false
+      }
+    }
+
     // Relay filtering (from combinedDisplayFilterFn)
     if (feedConfig.relayUrls?.length) {
       if (!event.onRelays?.length) return false
