@@ -51,27 +51,32 @@ describe("SessionManager", () => {
       sharedRelay
     )
 
-    const initialMessage: Partial<Rumor> = {
+    const msg1: Partial<Rumor> = {
       kind: KIND_CHAT_MESSAGE,
       content: "Hello Bob from Alice device 1",
       created_at: Math.floor(Date.now() / 1000),
     }
-    await aliceDevice1.sendEvent(bobPubkey, initialMessage)
-
-    const syncMessage: Partial<Rumor> = {
+    const msg2: Partial<Rumor> = {
       kind: KIND_CHAT_MESSAGE,
       content: "Hello Bob from Alice device 2",
       created_at: Math.floor(Date.now() / 1000),
     }
-    await aliceDevice2.sendEvent(bobPubkey, syncMessage)
 
+    await aliceDevice1.sendEvent(bobPubkey, msg1)
+    await aliceDevice2.sendEvent(bobPubkey, msg2)
+
+    expect(onEventBob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "Hello Bob from Alice device 1",
+      }),
+      alicePubkey
+    )
     expect(onEventBob).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "Hello Bob from Alice device 2",
       }),
       alicePubkey
     )
-
     expect(onEventAliceDevice1).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "Hello Bob from Alice device 2",
@@ -202,19 +207,11 @@ describe("SessionManager", () => {
     // Phase 1: Initial communication to establish sessions
     const sharedRelay = new MockRelay()
 
-    const {
-      manager: aliceManager1,
-      secretKey: aliceSecretKey,
-      publicKey: alicePubkey,
-      mockStorage: aliceStorage,
-    } = await createMockSessionManager("alice-device-1", sharedRelay)
+    const {manager: aliceManager1, mockStorage: aliceStorage} =
+      await createMockSessionManager("alice-device-1", sharedRelay)
 
-    const {
-      manager: bobManager1,
-      secretKey: bobSecretKey,
-      publicKey: bobPubkey,
-      mockStorage: bobStorage,
-    } = await createMockSessionManager("bob-device-1", sharedRelay)
+    const {publicKey: bobPubkey, mockStorage: bobStorage} =
+      await createMockSessionManager("bob-device-1", sharedRelay)
 
     const initialMessage: Partial<Rumor> = {
       kind: KIND_CHAT_MESSAGE,
