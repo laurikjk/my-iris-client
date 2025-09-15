@@ -8,8 +8,8 @@ export const MEDIASERVERS = {
     protocol: "blossom" as const,
   },
   nostr_build: {
-    url: "https://nostr.build/api/v2/nip96/upload",
-    protocol: "nip96" as const,
+    url: "https://blossom.nostr.build",
+    protocol: "blossom" as const,
   },
   nostr_check: {
     url: "https://cdn.nostrcheck.me",
