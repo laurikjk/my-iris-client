@@ -4,7 +4,6 @@ import {
   Rumor,
   Unsubscribe,
   serializeSessionState,
-  deserializeSessionState,
   Invite,
   Session,
 } from "nostr-double-ratchet"
@@ -117,32 +116,14 @@ export default class SessionManager {
     this.invite.listen(
       this.ourIdentityKey,
       this.nostrSubscribe,
-      (session, inviteePubkey, deviceId) => {
+      async (session, inviteePubkey, deviceId) => {
         console.warn(
           `Invite accepted by ${inviteePubkey} (device: ${deviceId}), setting up session...`
         )
         if (!inviteePubkey || !deviceId) return
 
-        const targetUserKey = inviteePubkey
-
         try {
-          const deviceKey = deviceId
-          this.upsertDeviceSession(targetUserKey, deviceKey, session)
-
-          this.saveSession(targetUserKey, deviceKey, session)
-
-          const sessionSubscriptionId = `session/${targetUserKey}/${deviceKey}`
-          this.unsubscribeSessionsByDevice(targetUserKey, deviceKey)
-
-          const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-            this._processReceivedMessage(session, _event, targetUserKey, deviceKey).catch(
-              (error) => {
-                console.error("Error processing received message:", error)
-              }
-            )
-          })
-
-          this.sessionSubscriptions.set(sessionSubscriptionId, sessionUnsubscribe)
+          await this.setupSessionWithDevice(inviteePubkey, deviceId, session)
         } catch (err) {
           console.error("Error handling invite acceptance:", err)
         }
@@ -157,22 +138,8 @@ export default class SessionManager {
           return
         }
 
-        const existingRecord = this.userRecords.get(ourPublicKey)
-        if (existingRecord && !existingRecord.isStale) {
-          let hasExistingSession = false
-          for (const device of existingRecord.devices.values()) {
-            if (
-              !device.isStale &&
-              device.activeSession &&
-              device.deviceId === inviteDeviceId
-            ) {
-              hasExistingSession = true
-              break
-            }
-          }
-          if (hasExistingSession) {
-            return
-          }
+        if (this.hasActiveSessionForDevice(ourPublicKey, inviteDeviceId)) {
+          return
         }
 
         const {session, event} = await invite.accept(
@@ -183,24 +150,7 @@ export default class SessionManager {
         )
         this.nostrPublish(event)
 
-        this.saveSession(ourPublicKey, inviteDeviceId, session)
-
-        const deviceId = invite["deviceId"] || "unknown"
-        this.upsertDeviceSession(ourPublicKey, deviceId, session)
-        this.saveSession(ourPublicKey, deviceId, session)
-
-        const sessionSubscriptionId = `session/${ourPublicKey}/${deviceId}`
-        this.unsubscribeSessionsByDevice(ourPublicKey, deviceId)
-
-        const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-          this._processReceivedMessage(session, _event, ourPublicKey, deviceId).catch(
-            (error) => {
-              console.error("Error processing received message:", error)
-            }
-          )
-        })
-
-        this.sessionSubscriptions.set(sessionSubscriptionId, sessionUnsubscribe)
+        await this.setupSessionWithDevice(ourPublicKey, inviteDeviceId, session)
       } catch (err) {
         console.error("Own-invite accept failed", err)
       }
@@ -224,6 +174,62 @@ export default class SessionManager {
       unsubscribe()
       this.sessionSubscriptions.delete(sessionKey)
     }
+  }
+
+  private hasActiveSessionForDevice(userPubkey: string, deviceId: string): boolean {
+    const userRecord = this.userRecords.get(userPubkey)
+    if (!userRecord || userRecord.isStale) {
+      return false
+    }
+
+    for (const device of userRecord.devices.values()) {
+      if (!device.isStale && device.activeSession && device.deviceId === deviceId) {
+        return true
+      }
+    }
+    return false
+  }
+
+  private async processQueuedMessages(userPubkey: string): Promise<void> {
+    const queuedMessages = this.messageQueue.get(userPubkey)
+    if (!queuedMessages || queuedMessages.length === 0) {
+      return
+    }
+
+    const messagesToProcess = [...queuedMessages]
+    this.messageQueue.delete(userPubkey)
+
+    for (const {event: queuedEvent, resolve} of messagesToProcess) {
+      try {
+        const results = await this.sendEvent(userPubkey, queuedEvent)
+        resolve(results)
+      } catch (error) {
+        console.error("Error processing queued message:", error)
+        resolve([])
+      }
+    }
+  }
+
+  private async setupSessionWithDevice(
+    userPubkey: string,
+    deviceId: string,
+    session: Session
+  ): Promise<void> {
+    this.upsertDeviceSession(userPubkey, deviceId, session)
+    await this.saveSession(userPubkey, deviceId, session)
+
+    const sessionSubscriptionId = `session/${userPubkey}/${deviceId}`
+    this.unsubscribeSessionsByDevice(userPubkey, deviceId)
+
+    const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
+      this._processReceivedMessage(session, _event, userPubkey, deviceId).catch(
+        (error) => {
+          console.error("Error processing received message:", error)
+        }
+      )
+    })
+
+    this.sessionSubscriptions.set(sessionSubscriptionId, sessionUnsubscribe)
   }
 
   private createOrGetUserRecord(userPubkey: string): UserRecord {
@@ -292,22 +298,8 @@ export default class SessionManager {
           const deviceId =
             _invite instanceof Invite && _invite.deviceId ? _invite.deviceId : "unknown"
 
-          const userRecord = this.userRecords.get(userPubkey)
-          if (userRecord && !userRecord.isStale) {
-            let hasExistingSession = false
-            for (const device of userRecord.devices.values()) {
-              if (
-                !device.isStale &&
-                device.activeSession &&
-                device.deviceId === deviceId
-              ) {
-                hasExistingSession = true
-                break
-              }
-            }
-            if (hasExistingSession) {
-              return
-            }
+          if (this.hasActiveSessionForDevice(userPubkey, deviceId)) {
+            return
           }
 
           console.log(
@@ -323,38 +315,8 @@ export default class SessionManager {
             console.error("Failed to publish acceptance:", err)
           )
 
-          this.upsertDeviceSession(userPubkey, deviceId, session)
-
-          this.saveSession(userPubkey, deviceId, session)
-
-          const sessionSubscriptionId = `session/${userPubkey}/${deviceId}`
-          this.unsubscribeSessionsByDevice(userPubkey, deviceId)
-
-          const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-            this._processReceivedMessage(session, _event, userPubkey, deviceId).catch(
-              (error) => {
-                console.error("Error processing received message:", error)
-              }
-            )
-          })
-
-          this.sessionSubscriptions.set(sessionSubscriptionId, sessionUnsubscribe)
-
-          const queuedMessages = this.messageQueue.get(userPubkey)
-          if (queuedMessages && queuedMessages.length > 0) {
-            setTimeout(async () => {
-              const currentQueuedMessages = this.messageQueue.get(userPubkey)
-              if (currentQueuedMessages && currentQueuedMessages.length > 0) {
-                const messagesToProcess = [...currentQueuedMessages]
-                this.messageQueue.delete(userPubkey)
-
-                for (const {event: queuedEvent, resolve} of messagesToProcess) {
-                  const results = await this.sendEvent(userPubkey, queuedEvent)
-                  resolve(results)
-                }
-              }
-            }, 1000)
-          }
+          await this.setupSessionWithDevice(userPubkey, deviceId, session)
+          await this.processQueuedMessages(userPubkey)
 
           return event
         } catch (err) {
@@ -414,23 +376,7 @@ export default class SessionManager {
       this.ourIdentityKey
     )
     const deviceId = invite.deviceId || "unknown"
-    this.upsertDeviceSession(ourPublicKey, deviceId, session)
-
-    await this.saveSession(ourPublicKey, deviceId, session)
-
-    // Set up session subscription
-    const sessionSubscriptionId = `session/${ourPublicKey}/${deviceId}`
-    this.unsubscribeSessionsByDevice(ourPublicKey, deviceId)
-
-    const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-      this._processReceivedMessage(session, _event, ourPublicKey, deviceId).catch(
-        (error) => {
-          console.error("Error processing received message:", error)
-        }
-      )
-    })
-
-    this.sessionSubscriptions.set(sessionSubscriptionId, sessionUnsubscribe)
+    await this.setupSessionWithDevice(ourPublicKey, deviceId, session)
     this.nostrPublish(event)?.catch(() => {})
   }
 
