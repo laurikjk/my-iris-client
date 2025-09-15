@@ -34,87 +34,10 @@ interface UserRecord {
   readonly lastActivity?: number
 }
 
-interface SubscriptionRecord {
-  readonly id: string
-  readonly type: "invite" | "session" | "self-invite"
-  readonly userId?: string
-  readonly deviceId?: string
-  readonly unsubscribe: Unsubscribe
-  readonly createdAt: number
-  readonly metadata?: Record<string, unknown>
-}
-
-class SubscriptionManager {
-  private subscriptions: Map<string, SubscriptionRecord> = new Map()
-
-  subscribe(
-    id: string,
-    unsubscribe: Unsubscribe,
-    type: SubscriptionRecord["type"],
-    metadata?: {userId?: string; deviceId?: string; [key: string]: unknown}
-  ): void {
-    this.unsubscribe(id)
-
-    this.subscriptions.set(id, {
-      id,
-      type,
-      unsubscribe,
-      createdAt: Date.now(),
-      ...metadata,
-    })
-  }
-
-  unsubscribe(id: string): boolean {
-    const subscription = this.subscriptions.get(id)
-    if (!subscription) return false
-
-    subscription.unsubscribe()
-    return this.subscriptions.delete(id)
-  }
-
-  unsubscribeByUser(userId: string): number {
-    let count = 0
-    for (const [id, sub] of this.subscriptions) {
-      if (sub.userId === userId) {
-        sub.unsubscribe()
-        this.subscriptions.delete(id)
-        count++
-      }
-    }
-    return count
-  }
-
-  unsubscribeByDevice(userId: string, deviceId: string): number {
-    let count = 0
-    for (const [id, sub] of this.subscriptions) {
-      if (sub.userId === userId && sub.deviceId === deviceId) {
-        sub.unsubscribe()
-        this.subscriptions.delete(id)
-        count++
-      }
-    }
-    return count
-  }
-
-  close(): void {
-    for (const subscription of this.subscriptions.values()) {
-      subscription.unsubscribe()
-    }
-    this.subscriptions.clear()
-  }
-
-  debugInfo(): string {
-    const byType = new Map<string, number>()
-    for (const sub of this.subscriptions.values()) {
-      byType.set(sub.type, (byType.get(sub.type) || 0) + 1)
-    }
-    return `Subscriptions: ${this.subscriptions.size} total, by type: ${JSON.stringify(Object.fromEntries(byType))}`
-  }
-}
-
 export default class SessionManager {
   private userRecords: Map<string, UserRecord> = new Map()
-  private subscriptionManager = new SubscriptionManager()
+  private inviteSubscriptions: Map<string, Unsubscribe> = new Map()
+  private sessionSubscriptions: Map<string, Unsubscribe> = new Map()
   private nostrSubscribe: NostrSubscribe
   private nostrPublish: NostrPublish
   private ourIdentityKey: Uint8Array
@@ -212,7 +135,7 @@ export default class SessionManager {
           this.saveSession(targetUserKey, deviceKey, session)
 
           const sessionSubscriptionId = `session:${targetUserKey}:${deviceKey}`
-          this.subscriptionManager.unsubscribeByDevice(targetUserKey, deviceKey)
+          this.unsubscribeSessionsByDevice(targetUserKey, deviceKey)
 
           const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
             this._processReceivedMessage(session, _event, targetUserKey, deviceKey).catch(
@@ -222,12 +145,7 @@ export default class SessionManager {
             )
           })
 
-          this.subscriptionManager.subscribe(
-            sessionSubscriptionId,
-            sessionUnsubscribe,
-            "session",
-            {userId: targetUserKey, deviceId: deviceKey}
-          )
+          this.sessionSubscriptions.set(sessionSubscriptionId, sessionUnsubscribe)
         } catch (err) {
           console.error("Error handling invite acceptance:", err)
         }
@@ -275,7 +193,7 @@ export default class SessionManager {
         this.saveSession(ourPublicKey, deviceId, session)
 
         const sessionSubscriptionId = `session:${ourPublicKey}:${deviceId}`
-        this.subscriptionManager.unsubscribeByDevice(ourPublicKey, deviceId)
+        this.unsubscribeSessionsByDevice(ourPublicKey, deviceId)
 
         const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
           this._processReceivedMessage(session, _event, ourPublicKey, deviceId).catch(
@@ -285,12 +203,7 @@ export default class SessionManager {
           )
         })
 
-        this.subscriptionManager.subscribe(
-          sessionSubscriptionId,
-          sessionUnsubscribe,
-          "session",
-          {userId: ourPublicKey, deviceId: deviceId}
-        )
+        this.sessionSubscriptions.set(sessionSubscriptionId, sessionUnsubscribe)
       } catch (err) {
         console.error("Own-invite accept failed", err)
       }
@@ -320,7 +233,7 @@ export default class SessionManager {
         this.upsertDeviceSession(ownerPubKey, deviceId, session)
 
         const sessionSubscriptionId = `session:${ownerPubKey}:${deviceId}`
-        this.subscriptionManager.unsubscribeByDevice(ownerPubKey, deviceId)
+        this.unsubscribeSessionsByDevice(ownerPubKey, deviceId)
 
         const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
           this._processReceivedMessage(session, _event, ownerPubKey, deviceId).catch(
@@ -330,12 +243,7 @@ export default class SessionManager {
           )
         })
 
-        this.subscriptionManager.subscribe(
-          sessionSubscriptionId,
-          sessionUnsubscribe,
-          "session",
-          {userId: ownerPubKey, deviceId: deviceId}
-        )
+        this.sessionSubscriptions.set(sessionSubscriptionId, sessionUnsubscribe)
 
         if (ownerPubKey !== ourPublicKey) {
           uniqueUsers.add(ownerPubKey)
@@ -357,6 +265,15 @@ export default class SessionManager {
       console.warn("Saved session for", deviceId)
     } catch {
       // ignore
+    }
+  }
+
+  private unsubscribeSessionsByDevice(userId: string, deviceId: string): void {
+    const sessionKey = `session:${userId}:${deviceId}`
+    const unsubscribe = this.sessionSubscriptions.get(sessionKey)
+    if (unsubscribe) {
+      unsubscribe()
+      this.sessionSubscriptions.delete(sessionKey)
     }
   }
 
@@ -412,7 +329,11 @@ export default class SessionManager {
 
   private setupUserInviteSubscription(userPubkey: string) {
     const inviteSubscriptionId = `invite:${userPubkey}`
-    this.subscriptionManager.unsubscribe(inviteSubscriptionId)
+    const existingUnsubscribe = this.inviteSubscriptions.get(inviteSubscriptionId)
+    if (existingUnsubscribe) {
+      existingUnsubscribe()
+      this.inviteSubscriptions.delete(inviteSubscriptionId)
+    }
 
     const unsubscribe = Invite.fromUser(
       userPubkey,
@@ -458,7 +379,7 @@ export default class SessionManager {
           this.saveSession(userPubkey, deviceId, session)
 
           const sessionSubscriptionId = `session:${userPubkey}:${deviceId}`
-          this.subscriptionManager.unsubscribeByDevice(userPubkey, deviceId)
+          this.unsubscribeSessionsByDevice(userPubkey, deviceId)
 
           const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
             this._processReceivedMessage(session, _event, userPubkey, deviceId).catch(
@@ -468,12 +389,7 @@ export default class SessionManager {
             )
           })
 
-          this.subscriptionManager.subscribe(
-            sessionSubscriptionId,
-            sessionUnsubscribe,
-            "session",
-            {userId: userPubkey, deviceId: deviceId}
-          )
+          this.sessionSubscriptions.set(sessionSubscriptionId, sessionUnsubscribe)
 
           const queuedMessages = this.messageQueue.get(userPubkey)
           if (queuedMessages && queuedMessages.length > 0) {
@@ -501,9 +417,7 @@ export default class SessionManager {
       }
     )
 
-    this.subscriptionManager.subscribe(inviteSubscriptionId, unsubscribe, "invite", {
-      userId: userPubkey,
-    })
+    this.inviteSubscriptions.set(inviteSubscriptionId, unsubscribe)
   }
 
   listenToUser(userPubkey: string) {
@@ -521,7 +435,17 @@ export default class SessionManager {
   }
 
   close() {
-    this.subscriptionManager.close()
+    // Unsubscribe all invite subscriptions
+    for (const unsubscribe of this.inviteSubscriptions.values()) {
+      unsubscribe()
+    }
+    this.inviteSubscriptions.clear()
+
+    // Unsubscribe all session subscriptions
+    for (const unsubscribe of this.sessionSubscriptions.values()) {
+      unsubscribe()
+    }
+    this.sessionSubscriptions.clear()
 
     for (const userRecord of this.userRecords.values()) {
       for (const device of userRecord.devices.values()) {
@@ -547,7 +471,7 @@ export default class SessionManager {
 
     // Set up session subscription
     const sessionSubscriptionId = `session:${ourPublicKey}:${deviceId}`
-    this.subscriptionManager.unsubscribeByDevice(ourPublicKey, deviceId)
+    this.unsubscribeSessionsByDevice(ourPublicKey, deviceId)
 
     const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
       this._processReceivedMessage(session, _event, ourPublicKey, deviceId).catch(
@@ -557,12 +481,7 @@ export default class SessionManager {
       )
     })
 
-    this.subscriptionManager.subscribe(
-      sessionSubscriptionId,
-      sessionUnsubscribe,
-      "session",
-      {userId: ourPublicKey, deviceId: deviceId}
-    )
+    this.sessionSubscriptions.set(sessionSubscriptionId, sessionUnsubscribe)
     this.nostrPublish(event)?.catch(() => {})
   }
 
@@ -684,6 +603,10 @@ export default class SessionManager {
       }
     }
 
-    return `SessionManager: ${userCount} users, ${deviceCount} devices, ${activeSessionCount} active sessions. ${this.subscriptionManager.debugInfo()}`
+    const totalSubscriptions =
+      this.inviteSubscriptions.size + this.sessionSubscriptions.size
+    const subscriptionInfo = `Subscriptions: ${totalSubscriptions} total, by type: {"invite":${this.inviteSubscriptions.size},"session":${this.sessionSubscriptions.size}}`
+
+    return `SessionManager: ${userCount} users, ${deviceCount} devices, ${activeSessionCount} active sessions. ${subscriptionInfo}`
   }
 }
