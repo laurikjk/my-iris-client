@@ -86,9 +86,6 @@ export default class SessionManager {
   private async _init(): Promise<void> {
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
 
-    // 1. Hydrate existing sessions (placeholder for future implementation)
-    // await this.loadSessions()
-
     // 2. Create or load our own invite
     let invite: Invite | undefined
     try {
@@ -208,54 +205,6 @@ export default class SessionManager {
         console.error("Own-invite accept failed", err)
       }
     })
-  }
-
-  private async loadSessions() {
-    const base = "session/"
-    const keys = await this.storage.list(base)
-    const ourPublicKey = getPublicKey(this.ourIdentityKey)
-    const uniqueUsers = new Set<string>()
-
-    for (const key of keys) {
-      const rest = key.substring(base.length)
-      const idx = rest.indexOf("/")
-      if (idx === -1) continue
-      const ownerPubKey = rest.substring(0, idx)
-      const deviceId = rest.substring(idx + 1) || "unknown"
-
-      const data = await this.storage.get<string>(key)
-      if (!data) continue
-      try {
-        const state = deserializeSessionState(data)
-        const session = new Session(this.nostrSubscribe, state)
-
-        console.log(`Loading session for ${ownerPubKey} with deviceId: ${deviceId}`)
-        this.upsertDeviceSession(ownerPubKey, deviceId, session)
-
-        const sessionSubscriptionId = `session:${ownerPubKey}:${deviceId}`
-        this.unsubscribeSessionsByDevice(ownerPubKey, deviceId)
-
-        const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-          this._processReceivedMessage(session, _event, ownerPubKey, deviceId).catch(
-            (error) => {
-              console.error("Error processing received message:", error)
-            }
-          )
-        })
-
-        this.sessionSubscriptions.set(sessionSubscriptionId, sessionUnsubscribe)
-
-        if (ownerPubKey !== ourPublicKey) {
-          uniqueUsers.add(ownerPubKey)
-        }
-      } catch {
-        // ignore
-      }
-    }
-
-    for (const userPubKey of uniqueUsers) {
-      this.setupUserInviteSubscription(userPubKey)
-    }
   }
 
   private async saveSession(ownerPubKey: string, deviceId: string, session: Session) {
