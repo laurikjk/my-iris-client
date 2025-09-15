@@ -198,6 +198,9 @@ export default class SessionManager {
       this.ourIdentityKey,
       this.nostrSubscribe,
       (session, inviteePubkey, deviceId) => {
+        console.warn(
+          `Invite accepted by ${inviteePubkey} (device: ${deviceId}), setting up session...`
+        )
         if (!inviteePubkey || !deviceId) return
 
         const targetUserKey = inviteePubkey
@@ -260,7 +263,8 @@ export default class SessionManager {
         const {session, event} = await invite.accept(
           this.nostrSubscribe,
           ourPublicKey,
-          this.ourIdentityKey
+          this.ourIdentityKey,
+          this.deviceId
         )
         this.nostrPublish(event)
 
@@ -442,7 +446,8 @@ export default class SessionManager {
           const {session, event} = await _invite.accept(
             this.nostrSubscribe,
             getPublicKey(this.ourIdentityKey),
-            this.ourIdentityKey
+            this.ourIdentityKey,
+            this.deviceId
           )
           this.nostrPublish(event)?.catch((err) =>
             console.error("Failed to publish acceptance:", err)
