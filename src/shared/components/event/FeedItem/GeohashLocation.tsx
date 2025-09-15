@@ -30,22 +30,70 @@ export function GeohashLocation({event, className = ""}: GeohashLocationProps) {
     ...new Set(geohashTags.map((tag) => tag[1].toLowerCase())),
   ].sort((a, b) => b.length - a.length)
 
-  // Limit to first 10 geohashes for safety
-  const geohashes = uniqueGeohashes.slice(0, 10)
-  const hasMoreGeohashes = uniqueGeohashes.length > 10
+  // Filter to only show the most specific geohashes for each location root
+  const mostSpecificGeohashes: string[] = []
+  for (const geohash of uniqueGeohashes) {
+    // Check if this geohash is already represented by a more specific one
+    const isRepresented = mostSpecificGeohashes.some((specific) =>
+      specific.startsWith(geohash)
+    )
+    if (!isRepresented) {
+      // Remove any less specific geohashes that this one represents
+      const filtered = mostSpecificGeohashes.filter(
+        (existing) => !geohash.startsWith(existing)
+      )
+      filtered.push(geohash)
+      mostSpecificGeohashes.length = 0
+      mostSpecificGeohashes.push(...filtered)
+    }
+  }
 
+  // Sort alphabetically for consistent display
+  mostSpecificGeohashes.sort()
+
+  // Determine what to show based on the rules
+  const hasSingleLocation = mostSpecificGeohashes.length === 1
+  const hasNoGeohashes = mostSpecificGeohashes.length === 0
+
+  // If only location text and no geohashes, show just the location
+  if (hasNoGeohashes && locationText) {
+    return (
+      <div
+        className={`flex items-center gap-1 text-xs text-base-content/50 flex-wrap ${className}`}
+      >
+        <RiMapPinLine className="w-3 h-3 flex-shrink-0" />
+        <span title={locationText}>{truncatedLocation}</span>
+      </div>
+    )
+  }
+
+  // If single location and has location tag, show only location text but link to most specific geohash
+  if (hasSingleLocation && locationText) {
+    const mostSpecificGeohash = uniqueGeohashes[0] // Already sorted by length
+    return (
+      <div
+        className={`flex items-center gap-1 text-xs text-base-content/50 flex-wrap ${className}`}
+      >
+        <RiMapPinLine className="w-3 h-3 flex-shrink-0" />
+        <Link
+          to={`/map/${mostSpecificGeohash}`}
+          className="hover:text-base-content/70 hover:underline"
+          onClick={(e) => e.stopPropagation()}
+          title={locationText}
+        >
+          {truncatedLocation}
+        </Link>
+      </div>
+    )
+  }
+
+  // Otherwise show geohashes (most specific ones only)
   return (
     <div
       className={`flex items-center gap-1 text-xs text-base-content/50 flex-wrap ${className}`}
     >
       <RiMapPinLine className="w-3 h-3 flex-shrink-0" />
-      {truncatedLocation && (
-        <>
-          <span title={locationText || undefined}>{truncatedLocation}</span>
-          {geohashes.length > 0 && <span className="mx-1">·</span>}
-        </>
-      )}
-      {geohashes.map((geohash, index) => (
+      {mostSpecificGeohashes.map((geohash, index) => (
         <span key={geohash}>
           <Link
             to={`/map/${geohash}`}
@@ -54,10 +102,9 @@ export function GeohashLocation({event, className = ""}: GeohashLocationProps) {
           >
             {geohash}
           </Link>
-          {index < geohashes.length - 1 && <span className="mx-1">·</span>}
+          {index < mostSpecificGeohashes.length - 1 && <span className="mx-1">·</span>}
         </span>
       ))}
-      {hasMoreGeohashes && <span className="ml-1">...</span>}
     </div>
   )
 }
