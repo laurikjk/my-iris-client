@@ -164,7 +164,7 @@ export default class SessionManager {
             if (
               !device.isStale &&
               device.activeSession &&
-              device.activeSession.name === inviteDeviceId
+              device.deviceId === inviteDeviceId
             ) {
               hasExistingSession = true
               break
@@ -299,7 +299,7 @@ export default class SessionManager {
               if (
                 !device.isStale &&
                 device.activeSession &&
-                device.activeSession.name === deviceId
+                device.deviceId === deviceId
               ) {
                 hasExistingSession = true
                 break
@@ -413,7 +413,7 @@ export default class SessionManager {
       ourPublicKey,
       this.ourIdentityKey
     )
-    const deviceId = session.name || "unknown"
+    const deviceId = invite.deviceId || "unknown"
     this.upsertDeviceSession(ourPublicKey, deviceId, session)
 
     await this.saveSession(ourPublicKey, deviceId, session)
@@ -470,19 +470,23 @@ export default class SessionManager {
       })
     }
 
-    const activeSessions: Session[] = []
+    const activeDevices: DeviceRecord[] = []
     if (!userRecord.isStale) {
       for (const device of userRecord.devices.values()) {
         if (!device.isStale && device.activeSession) {
-          activeSessions.push(device.activeSession)
+          activeDevices.push(device)
         }
       }
     }
-    const sendableSessions = activeSessions.filter(
-      (s) => !!(s.state?.theirNextNostrPublicKey && s.state?.ourCurrentNostrKey)
+    const sendableDevices = activeDevices.filter(
+      (device) =>
+        !!(
+          device.activeSession?.state?.theirNextNostrPublicKey &&
+          device.activeSession?.state?.ourCurrentNostrKey
+        )
     )
 
-    if (sendableSessions.length === 0) {
+    if (sendableDevices.length === 0) {
       return new Promise<unknown[]>((resolve) => {
         if (!this.messageQueue.has(recipientIdentityKey)) {
           this.messageQueue.set(recipientIdentityKey, [])
@@ -492,13 +496,14 @@ export default class SessionManager {
       })
     }
 
-    for (const session of sendableSessions) {
+    for (const device of sendableDevices) {
+      const session = device.activeSession!
       const {event: encryptedEvent} = session.sendEvent(event)
       results.push(encryptedEvent)
       publishPromises.push(
         this.nostrPublish(encryptedEvent)
           .then(() => {
-            this.saveSession(recipientIdentityKey, session.name || "unknown", session)
+            this.saveSession(recipientIdentityKey, device.deviceId, session)
           })
           .catch(() => {})
       )
@@ -507,24 +512,22 @@ export default class SessionManager {
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
     const ownUserRecord = this.userRecords.get(ourPublicKey)
     if (ownUserRecord) {
-      const ownActiveSessions: Session[] = []
+      const ownActiveDevices: DeviceRecord[] = []
       if (!ownUserRecord.isStale) {
         for (const device of ownUserRecord.devices.values()) {
           if (!device.isStale && device.activeSession) {
-            ownActiveSessions.push(device.activeSession)
+            ownActiveDevices.push(device)
           }
         }
       }
-      const ownSendableSessions = ownActiveSessions.filter(
-        (s) => !!(s.state?.theirNextNostrPublicKey && s.state?.ourCurrentNostrKey)
-      )
-      for (const session of ownSendableSessions) {
+      for (const device of ownActiveDevices) {
+        const session = device.activeSession!
         const {event: encryptedEvent} = session.sendEvent(event)
         results.push(encryptedEvent)
         publishPromises.push(
           this.nostrPublish(encryptedEvent)
             .then(() => {
-              this.saveSession(ourPublicKey, session.name || "unknown", session)
+              this.saveSession(ourPublicKey, device.deviceId, session)
             })
             .catch(() => {})
         )
