@@ -277,7 +277,7 @@ export default class SessionManager {
   }
 
   private setupUserInviteSubscription(userPubkey: string) {
-    const inviteSubscriptionId = `invite:${userPubkey}`
+    const inviteSubscriptionId = `invite/${userPubkey}`
     const existingUnsubscribe = this.inviteSubscriptions.get(inviteSubscriptionId)
     if (existingUnsubscribe) {
       existingUnsubscribe()
@@ -327,7 +327,7 @@ export default class SessionManager {
 
           this.saveSession(userPubkey, deviceId, session)
 
-          const sessionSubscriptionId = `session:${userPubkey}:${deviceId}`
+          const sessionSubscriptionId = `session/${userPubkey}/${deviceId}`
           this.unsubscribeSessionsByDevice(userPubkey, deviceId)
 
           const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
