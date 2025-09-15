@@ -16,6 +16,7 @@ import {useNavigate} from "@/navigation"
 import classNames from "classnames"
 import {nip19} from "nostr-tools"
 import Icon from "../Icons/Icon"
+import SearchInput from "./SearchInput"
 import {ndk} from "@/utils/ndk"
 import {NOSTR_REGEX, HEX_REGEX, NIP05_REGEX} from "@/utils/validation"
 import {useUIStore} from "@/stores/ui"
@@ -281,18 +282,15 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
         className={classNames("dropdown dropdown-open w-full", className)}
         ref={dropdownRef}
       >
-        <label className={classNames("input flex items-center gap-2 w-full", className)}>
-          <input
-            type="text"
-            className="grow"
-            placeholder="Search"
-            value={value}
-            ref={inputRef}
-            onChange={(e) => setValue(e.target.value)}
-            onFocus={() => setIsFocused(true)}
-          />
-          <Icon name="search-outline" className="text-neutral-content/60" />
-        </label>
+        <SearchInput
+          ref={inputRef}
+          placeholder="Search"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onClear={() => setValue("")}
+          onFocus={() => setIsFocused(true)}
+          containerClassName={className}
+        />
         {(searchResults.length > 0 ||
           (isFocused && !value && recentSearches.length > 0)) && (
           <ul className="dropdown-content menu shadow bg-base-200 rounded-box z-10 w-full border border-info">

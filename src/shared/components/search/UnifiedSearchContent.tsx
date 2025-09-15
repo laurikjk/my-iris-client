@@ -21,7 +21,7 @@ const UnifiedSearchContent = memo(function UnifiedSearchContent({
   if (searchRoute.startsWith("/search")) {
     return (
       <div className="pt-4">
-        <SearchFilters />
+        <SearchFilters showTabSelector={true} />
       </div>
     )
   }

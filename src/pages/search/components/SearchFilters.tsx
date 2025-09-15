@@ -6,9 +6,16 @@ import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import Feed from "@/shared/components/feed/Feed"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import {KIND_TEXT_NOTE} from "@/utils/constants"
-import Icon from "@/shared/components/Icons/Icon"
+import SearchInput from "@/shared/components/ui/SearchInput"
+import {handleNostrIdentifier} from "@/utils/handleNostrIdentifier"
 
-const SearchFilters = memo(function SearchFilters() {
+interface SearchFiltersProps {
+  showTabSelector?: boolean
+}
+
+const SearchFilters = memo(function SearchFilters({
+  showTabSelector = true,
+}: SearchFiltersProps = {}) {
   const {query} = useParams()
   const decodedQuery = query ? decodeURIComponent(query) : ""
   const navigate = useNavigate()
@@ -35,9 +42,15 @@ const SearchFilters = memo(function SearchFilters() {
 
   // Update store when URL query changes (navigation)
   useEffect(() => {
-    if (decodedQuery && decodedQuery !== searchQuery) {
+    if (decodedQuery) {
+      // URL has a query, update both store and local state
       setSearchQuery(decodedQuery)
       setSearchTerm(decodedQuery)
+    } else if (!decodedQuery && searchQuery) {
+      // URL has no query but store has query - we navigated to /search
+      // This happens when user clears search and submits
+      // Keep the input empty (don't populate from store)
+      setSearchTerm("")
     }
   }, [decodedQuery, searchQuery, setSearchQuery])
 
@@ -47,12 +60,31 @@ const SearchFilters = memo(function SearchFilters() {
     searchInputRef.current?.focus()
   }, [navItemClicked])
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (searchTerm.trim()) {
-      setSearchQuery(searchTerm.trim())
-      navigate(`/search/${searchTerm}`)
+    const currentValue = searchTerm.trim()
+
+    // If empty string, reset and go back to /search
+    if (!currentValue || currentValue === "") {
+      setSearchQuery("")
+      setSearchTerm("")
+      navigate("/search")
+      return
     }
+
+    // Clear immediately for hex-like values
+    if (currentValue.match(/^[0-9a-fA-F]{64}$/)) {
+      setSearchTerm("")
+    }
+    await handleNostrIdentifier({
+      input: currentValue,
+      navigate,
+      clearInput: () => setSearchTerm(""),
+      onTextSearch: (query) => {
+        setSearchQuery(query)
+        navigate(`/search/${query}`)
+      },
+    })
   }
 
   // Memoize the feed config to prevent unnecessary re-renders
@@ -74,21 +106,36 @@ const SearchFilters = memo(function SearchFilters() {
 
   return (
     <div className="flex flex-col gap-2 h-full">
-      <SearchTabSelector activeTab="posts" />
+      {showTabSelector && <SearchTabSelector activeTab="posts" />}
 
       <div className="w-full p-2">
         <form onSubmit={handleSubmit} className="w-full">
-          <label className="input input-bordered flex items-center gap-2 w-full">
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="grow"
-              placeholder="Search posts..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Icon name="search-outline" className="text-neutral-content/60" />
-          </label>
+          <SearchInput
+            ref={searchInputRef}
+            placeholder="Search posts..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onClear={() => {
+              setSearchTerm("")
+              setSearchQuery("")
+              navigate("/search")
+            }}
+            onPaste={async (e) => {
+              const pastedText = e.clipboardData.getData("text")
+              e.preventDefault()
+
+              // Check if pasted value is a Nostr identifier
+              await handleNostrIdentifier({
+                input: pastedText,
+                navigate,
+                clearInput: () => setSearchTerm(""),
+                onTextSearch: (query) => {
+                  // For regular text, set it
+                  setSearchTerm(query)
+                },
+              })
+            }}
+          />
         </form>
       </div>
 

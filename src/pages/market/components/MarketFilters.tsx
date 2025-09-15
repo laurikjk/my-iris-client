@@ -1,7 +1,7 @@
 import {useParams, useNavigate} from "@/navigation"
 import {useRef, useState, useEffect, FormEvent, useMemo} from "react"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
-import Icon from "@/shared/components/Icons/Icon"
+import SearchInput from "@/shared/components/ui/SearchInput"
 import {marketStore} from "@/stores/marketstore"
 import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -180,17 +180,13 @@ export default function MarketFilters({
 
           <div className="w-full p-2">
             <form onSubmit={handleSubmit} className="w-full">
-              <label className="input input-bordered flex items-center gap-2 w-full">
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  className="grow"
-                  placeholder="Search market..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <Icon name="search-outline" className="text-neutral-content/60" />
-              </label>
+              <SearchInput
+                ref={searchInputRef}
+                placeholder="Search market..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onClear={() => setSearchTerm("")}
+              />
             </form>
           </div>
         </>
