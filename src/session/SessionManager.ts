@@ -87,7 +87,7 @@ export default class SessionManager {
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
 
     // 1. Hydrate existing sessions (placeholder for future implementation)
-    await this.loadSessions()
+    // await this.loadSessions()
 
     // 2. Create or load our own invite
     let invite: Invite | undefined

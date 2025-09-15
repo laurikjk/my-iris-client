@@ -582,12 +582,10 @@ export default function SessionTest() {
           {/* Messages */}
           <div className="h-64 border rounded bg-gray-50 p-2 mb-4 overflow-y-auto">
             {aliceMessages.map((msg, i) => (
-              <div
-                key={i}
-                className={`mb-2 ${msg.isOwn ? "text-blue-600" : "text-green-600"}`}
-              >
+              <div key={i} className="mb-2 text-gray-800">
                 <span className="text-xs text-gray-500">
-                  {new Date(msg.timestamp).toLocaleTimeString()}
+                  {new Date(msg.timestamp).toLocaleTimeString()} -{" "}
+                  <span className="font-mono">{msg.from.slice(0, 8)}...</span>
                 </span>
                 <div>{msg.content}</div>
               </div>
@@ -628,12 +626,10 @@ export default function SessionTest() {
           {/* Messages */}
           <div className="h-64 border rounded bg-gray-50 p-2 mb-4 overflow-y-auto">
             {bobMessages.map((msg, i) => (
-              <div
-                key={i}
-                className={`mb-2 ${msg.isOwn ? "text-blue-600" : "text-green-600"}`}
-              >
+              <div key={i} className="mb-2 text-gray-800">
                 <span className="text-xs text-gray-500">
-                  {new Date(msg.timestamp).toLocaleTimeString()}
+                  {new Date(msg.timestamp).toLocaleTimeString()} -{" "}
+                  <span className="font-mono">{msg.from.slice(0, 8)}...</span>
                 </span>
                 <div>{msg.content}</div>
               </div>
