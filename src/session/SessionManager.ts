@@ -131,7 +131,7 @@ export default class SessionManager {
 
           this.saveSession(targetUserKey, deviceKey, session)
 
-          const sessionSubscriptionId = `session:${targetUserKey}:${deviceKey}`
+          const sessionSubscriptionId = `session/${targetUserKey}/${deviceKey}`
           this.unsubscribeSessionsByDevice(targetUserKey, deviceKey)
 
           const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
@@ -189,7 +189,7 @@ export default class SessionManager {
         this.upsertDeviceSession(ourPublicKey, deviceId, session)
         this.saveSession(ourPublicKey, deviceId, session)
 
-        const sessionSubscriptionId = `session:${ourPublicKey}:${deviceId}`
+        const sessionSubscriptionId = `session/${ourPublicKey}/${deviceId}`
         this.unsubscribeSessionsByDevice(ourPublicKey, deviceId)
 
         const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
@@ -218,7 +218,7 @@ export default class SessionManager {
   }
 
   private unsubscribeSessionsByDevice(userId: string, deviceId: string): void {
-    const sessionKey = `session:${userId}:${deviceId}`
+    const sessionKey = `session/${userId}/${deviceId}`
     const unsubscribe = this.sessionSubscriptions.get(sessionKey)
     if (unsubscribe) {
       unsubscribe()
@@ -419,7 +419,7 @@ export default class SessionManager {
     await this.saveSession(ourPublicKey, deviceId, session)
 
     // Set up session subscription
-    const sessionSubscriptionId = `session:${ourPublicKey}:${deviceId}`
+    const sessionSubscriptionId = `session/${ourPublicKey}/${deviceId}`
     this.unsubscribeSessionsByDevice(ourPublicKey, deviceId)
 
     const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
