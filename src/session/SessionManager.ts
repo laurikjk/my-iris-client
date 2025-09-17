@@ -82,8 +82,14 @@ export default class SessionManager {
     }
   }
 
+  private async loadSessions(): Promise<void> {
+    const sessions = await this.storage.list("session/")
+    console.warn("Loaded sessions:", sessions)
+  }
+
   private async _init(): Promise<void> {
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
+    await this.loadSessions()
 
     // 2. Create or load our own invite
     let invite: Invite | undefined
