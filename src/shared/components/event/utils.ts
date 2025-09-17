@@ -52,11 +52,15 @@ export const getEventIdHex = (event?: NDKEvent, eventId?: string) => {
     return event.id
   }
   if (eventId!.indexOf("n") === 0) {
-    const data = nip19.decode(eventId!).data
-    if (typeof data === "string") {
-      return data
+    try {
+      const data = nip19.decode(eventId!).data
+      if (typeof data === "string") {
+        return data
+      }
+      return (data as nip19.EventPointer).id || ""
+    } catch (err) {
+      throw new Error(`Invalid note ID format: ${eventId}`)
     }
-    return (data as nip19.EventPointer).id || ""
   }
   if (!eventId) {
     throw new Error("FeedItem requires either an event or an eventId")

@@ -2,7 +2,7 @@ import {CLOUDFLARE_CSAM_FLAGGED} from "@/utils/cloudflare_banned_users"
 import {hexToBytes, bytesToHex} from "@noble/hashes/utils"
 import {useParams, Link} from "@/navigation"
 import {sha256} from "@noble/hashes/sha256"
-import {useEffect, useState, useMemo} from "react"
+import {useEffect, useState, useMemo, ReactNode} from "react"
 import {nip05, nip19} from "nostr-tools"
 import {Page404} from "@/pages/Page404"
 import ThreadPage from "@/pages/thread"
@@ -14,76 +14,50 @@ const CLOUDFLARE_CSAM_EXPLANATION_NOTE =
   "note1pu5kvxwfzytxsw6vkqd4eu6e0xr8znaur6sl38r4swl3klgsn6dqzlpnsl"
 const CLOUDFLARE_CSAM_MESSAGE = "Flagged as CSAM by Cloudflare. See explanation at"
 
-export default function NostrLinkHandler() {
-  const {link} = useParams()
+type ResolvedLink =
+  | nip19.DecodedResult
+  | {type: "username"; value: string}
+  | {type: "error"; message: string}
+  | {type: "unknown"}
+
+function parseNostrLink(link: string | undefined, myPubKey?: string): ResolvedLink {
+  if (!link) return {type: "unknown"}
+
+  // Check cached username first
+  if (myPubKey && getCachedUsername(myPubKey) === link) {
+    return nip19.decode(nip19.npubEncode(myPubKey))
+  }
+
+  // Try nip19 decode for all bech32 formats
+  try {
+    return nip19.decode(link)
+  } catch {
+    // Not a valid bech32 format, assume username
+    return {type: "username", value: link}
+  }
+}
+
+function useResolvedNostrLink(link: string | undefined) {
+  const myPubKey = useUserStore((state) => state.publicKey)
   const [error, setError] = useState<string>()
   const [asyncPubkey, setAsyncPubkey] = useState<string>()
-  const myPubKey = useUserStore((state) => state.publicKey)
 
-  // Memoize link parsing to prevent recalculation
-  const linkData = useMemo(() => {
-    const isProfile = link?.startsWith("npub") || link?.startsWith("nprofile")
-    const isNote = link?.startsWith("note") || link?.startsWith("nevent")
-    const isAddress = link?.startsWith("naddr")
+  const linkData = useMemo(() => parseNostrLink(link, myPubKey), [link, myPubKey])
+  const [loading, setLoading] = useState(linkData.type === "username")
 
-    let pubkey: string | undefined
-    let naddrData: {pubkey: string; kind: number; identifier: string} | undefined
-    let needsAsyncResolution = false
-
-    try {
-      if (link) {
-        if (isProfile) {
-          const decoded = nip19.decode(link)
-          if (
-            typeof decoded.data === "object" &&
-            decoded.data !== null &&
-            "pubkey" in decoded.data
-          ) {
-            pubkey = decoded.data.pubkey
-          } else if (typeof decoded.data === "string" && decoded.data.length === 64) {
-            pubkey = decoded.data
-          }
-        } else if (isAddress) {
-          const decoded = nip19.decode(link)
-          naddrData = decoded.data as {pubkey: string; kind: number; identifier: string}
-        } else if (!isNote && !isProfile && !isAddress) {
-          // Username/nip05 - check if it's our own cached username first
-          if (myPubKey && getCachedUsername(myPubKey) === link) {
-            pubkey = myPubKey
-          } else {
-            // Username/nip05 - needs async resolution
-            needsAsyncResolution = true
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Decode error:", err)
-    }
-
-    return {isProfile, isNote, isAddress, pubkey, naddrData, needsAsyncResolution}
-  }, [link, myPubKey])
-
-  const [loading, setLoading] = useState(linkData.needsAsyncResolution)
-
+  // Handle async NIP-05 resolution
   useEffect(() => {
-    if (!linkData.needsAsyncResolution || !link) return
+    if (linkData.type !== "username" || !link) return
 
     setError(undefined)
 
     const resolveLink = async () => {
       try {
-        // Try exact match first
         let resolved = await nip05.queryProfile(link)
-
-        // If not found and doesn't include @iris.to, try with @iris.to
         if (!resolved && !link.includes("@iris.to")) {
-          const withIris = `${link}@iris.to`
-          resolved = await nip05.queryProfile(withIris)
+          resolved = await nip05.queryProfile(`${link}@iris.to`)
         }
-
-        if (resolved) {
-          setAsyncPubkey(resolved.pubkey)
-        }
+        if (resolved) setAsyncPubkey(resolved.pubkey)
       } catch (err) {
         console.error("Resolution error:", err)
       } finally {
@@ -92,32 +66,62 @@ export default function NostrLinkHandler() {
     }
 
     resolveLink()
-  }, [link, linkData.needsAsyncResolution])
+  }, [link, linkData.type])
 
-  // Use either sync or async pubkey
-  const finalPubkey = linkData.pubkey || asyncPubkey
+  const finalPubkey = (() => {
+    if (linkData.type === "npub") return linkData.data
+    if (linkData.type === "nprofile") return linkData.data.pubkey
+    return asyncPubkey
+  })()
 
+  // CSAM checking
   useEffect(() => {
-    if (finalPubkey && (linkData.isProfile || !linkData.isNote)) {
+    if (finalPubkey && linkData.type !== "note" && linkData.type !== "nevent") {
       const hash = bytesToHex(sha256(hexToBytes(finalPubkey)))
       if (CLOUDFLARE_CSAM_FLAGGED.includes(hash)) {
         setError(`${CLOUDFLARE_CSAM_MESSAGE} /${CLOUDFLARE_CSAM_EXPLANATION_NOTE}`)
       }
     }
-  }, [finalPubkey, linkData.isProfile, linkData.isNote])
+  }, [finalPubkey, linkData.type])
 
-  // Memoize content to prevent re-renders
-  const content = useMemo(() => {
-    // If link is not yet available, show loading
-    if (!link) {
-      return (
-        <div className="flex justify-center items-center">
-          <div className="loading loading-spinner loading-lg" />
+  return {linkData, finalPubkey, loading, error}
+}
+
+// Reusable Error Screen Component
+interface ErrorScreenProps {
+  title: string
+  message: string | ReactNode
+  buttonText?: string
+  onButtonClick?: () => void
+}
+
+function ErrorScreen({
+  title,
+  message,
+  buttonText = "Go back to homepage",
+  onButtonClick = () => (window.location.href = "/"),
+}: ErrorScreenProps) {
+  return (
+    <section className="hero min-h-screen bg-base-200">
+      <div className="hero-content text-center">
+        <div className="max-w-md">
+          <h1 className="text-5xl font-bold text-primary mb-2">{title}</h1>
+          <p className="text-xl mb-8">{message}</p>
+          <button onClick={onButtonClick} className="btn btn-primary btn-lg">
+            {buttonText}
+          </button>
         </div>
-      )
-    }
+      </div>
+    </section>
+  )
+}
 
-    if (loading) {
+export default function NostrLinkHandler() {
+  const {link} = useParams()
+  const {linkData, finalPubkey, loading, error} = useResolvedNostrLink(link)
+
+  const content = useMemo(() => {
+    if (!link || loading) {
       return (
         <div className="flex justify-center items-center min-h-screen">
           <div className="loading loading-spinner loading-lg" />
@@ -127,73 +131,42 @@ export default function NostrLinkHandler() {
 
     if (error) {
       return (
-        <section className="hero min-h-screen bg-base-200">
-          <div className="hero-content text-center">
-            <div className="max-w-md">
-              <h1 className="text-5xl font-bold text-primary mb-2">Error</h1>
-              <p className="text-xl mb-8">
-                {CLOUDFLARE_CSAM_MESSAGE}{" "}
-                <Link
-                  to={`/${CLOUDFLARE_CSAM_EXPLANATION_NOTE}`}
-                  className="link link-primary"
-                >
-                  {CLOUDFLARE_CSAM_EXPLANATION_NOTE}
-                </Link>
-              </p>
-              <button
-                onClick={() => (window.location.href = "/")}
-                className="btn btn-primary btn-lg"
+        <ErrorScreen
+          title="Error"
+          message={
+            <>
+              {CLOUDFLARE_CSAM_MESSAGE}{" "}
+              <Link
+                to={`/${CLOUDFLARE_CSAM_EXPLANATION_NOTE}`}
+                className="link link-primary"
               >
-                Go back to homepage
-              </button>
-            </div>
-          </div>
-        </section>
+                {CLOUDFLARE_CSAM_EXPLANATION_NOTE}
+              </Link>
+            </>
+          }
+        />
       )
     }
 
-    if (linkData.isProfile && finalPubkey) {
-      return <ProfilePage pubKey={finalPubkey} />
+    switch (linkData.type) {
+      case "npub":
+        return <ProfilePage pubKey={linkData.data} />
+      case "nprofile":
+        return <ProfilePage pubKey={linkData.data.pubkey} />
+      case "note":
+        return <ThreadPage id={linkData.data} />
+      case "nevent":
+        return <ThreadPage id={linkData.data.id} />
+      case "naddr":
+        return <ThreadPage id={link} isNaddr={true} naddrData={linkData.data} />
+      case "username":
+        return finalPubkey ? <ProfilePage pubKey={finalPubkey} /> : <Page404 />
+      case "error":
+        return <ErrorScreen title="Invalid Link" message={linkData.message} />
+      case "unknown":
+        return <Page404 />
     }
-
-    if (linkData.isNote) {
-      return <ThreadPage id={link!} />
-    }
-
-    if (linkData.isAddress && linkData.naddrData) {
-      return <ThreadPage id={link!} isNaddr={true} naddrData={linkData.naddrData} />
-    }
-
-    if (!linkData.isNote && !linkData.isProfile && !linkData.isAddress && finalPubkey) {
-      // Username resolved to pubkey
-      return <ProfilePage pubKey={finalPubkey} />
-    }
-
-    if (linkData.isProfile && !finalPubkey) {
-      // Invalid npub/nprofile - show error instead of 404
-      return (
-        <section className="hero min-h-screen bg-base-200">
-          <div className="hero-content text-center">
-            <div className="max-w-md">
-              <h1 className="text-5xl font-bold text-primary mb-2">
-                Invalid Profile Link
-              </h1>
-              <p className="text-xl mb-8">The profile link appears to be invalid.</p>
-              <button
-                onClick={() => (window.location.href = "/")}
-                className="btn btn-primary btn-lg"
-              >
-                Go back to homepage
-              </button>
-            </div>
-          </div>
-        </section>
-      )
-    }
-
-    return <Page404 />
   }, [link, loading, error, linkData, finalPubkey])
 
-  // Keep the same root structure to prevent remounting
   return <div className="flex flex-col flex-1 min-h-0">{content}</div>
 }
