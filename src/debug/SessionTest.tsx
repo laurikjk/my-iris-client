@@ -17,11 +17,13 @@ type Message = {
   from: string
   timestamp: number
   isOwn: boolean
+  deviceId?: string // Track which device sent this message
 }
 
 export default function SessionTest() {
   const [aliceManager, setAliceManager] = useState<SessionManager | null>(null)
   const [bobManager, setBobManager] = useState<SessionManager | null>(null)
+  const [bobManager2, setBobManager2] = useState<SessionManager | null>(null)
   const [aliceMessages, setAliceMessages] = useState<Message[]>([])
   const [bobMessages, setBobMessages] = useState<Message[]>([])
   const [aliceInput, setAliceInput] = useState("")
@@ -31,21 +33,28 @@ export default function SessionTest() {
   const [bobInfo, setBobInfo] = useState({pubkey: "", deviceId: "bob-device-1"})
   const [aliceConnected, setAliceConnected] = useState(false)
   const [bobConnected, setBobConnected] = useState(false)
+  const [bobDevice2Connected, setBobDevice2Connected] = useState(false)
   const [showSessionDetails, setShowSessionDetails] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [aliceSetupBob, setAliceSetupBob] = useState(false)
+  const [aliceSetupBobDevice2, setAliceSetupBobDevice2] = useState(false)
   const [bobSetupAlice, setBobSetupAlice] = useState(false)
+  const [bobDevice2SetupAlice, setBobDevice2SetupAlice] = useState(false)
+  const [activeBobDevice, setActiveBobDevice] = useState<"device-1" | "device-2">("device-1")
 
   const aliceSecretKey = useRef(generateSecretKey())
   const bobSecretKey = useRef(generateSecretKey())
   const aliceNDK = useRef<NDK | null>(null)
   const bobNDK = useRef<NDK | null>(null)
+  const bobNDK2 = useRef<NDK | null>(null)
   const aliceSeenMessages = useRef(new Set<string>())
   const bobSeenMessages = useRef(new Set<string>())
+  const bobDevice2SeenMessages = useRef(new Set<string>())
 
   // Persistent storage instances to test session restoration
   const aliceStorage = useRef(new LocalStorageAdapter("alice_session_"))
   const bobStorage = useRef(new LocalStorageAdapter("bob_session_"))
+  const bobStorage2 = useRef(new LocalStorageAdapter("bob2_session_"))
 
   const addEventLog = (type: string, source: string, data: unknown) => {
     const logEntry = {
@@ -141,6 +150,7 @@ export default function SessionTest() {
     return () => {
       aliceManager?.close()
       bobManager?.close()
+      bobManager2?.close()
       // Close NDK connections - NDK doesn't have destroy method
       // Connections will be cleaned up automatically
     }
@@ -161,6 +171,7 @@ export default function SessionTest() {
         from: aliceInfo.pubkey,
         timestamp: Date.now(),
         isOwn: true,
+        deviceId: "alice-device-1",
       },
     ])
 
@@ -168,13 +179,18 @@ export default function SessionTest() {
   }
 
   const sendBobMessage = async () => {
-    if (!bobManager || !bobInput.trim()) return
+    if (!bobInput.trim()) return
 
-    addEventLog("SENDING_MESSAGE", "bob", {content: bobInput})
+    const manager = activeBobDevice === "device-1" ? bobManager : bobManager2
+    const deviceId = activeBobDevice
 
-    const sentMessage = await bobManager.sendMessage(aliceInfo.pubkey, bobInput)
+    if (!manager) return
 
-    // Add to Bob's chat history immediately
+    addEventLog("SENDING_MESSAGE", `bob-${deviceId}`, {content: bobInput})
+
+    const sentMessage = await manager.sendMessage(aliceInfo.pubkey, bobInput)
+
+    // Add to Bob's chat history immediately with device info
     setBobMessages((prev) => [
       ...prev,
       {
@@ -182,6 +198,7 @@ export default function SessionTest() {
         from: bobInfo.pubkey,
         timestamp: Date.now(),
         isOwn: true,
+        deviceId: deviceId,
       },
     ])
 
@@ -194,20 +211,25 @@ export default function SessionTest() {
     setEventLog([])
     aliceSeenMessages.current.clear()
     bobSeenMessages.current.clear()
+    bobDevice2SeenMessages.current.clear()
     setAliceSetupBob(false)
+    setAliceSetupBobDevice2(false)
     setBobSetupAlice(false)
+    setBobDevice2SetupAlice(false)
+    setActiveBobDevice("device-1")
     // Recreate managers would require reloading - for now just clear UI
   }
 
   const clearStorage = async () => {
-    // Clear localStorage for both Alice and Bob
+    // Clear localStorage for Alice and both Bob devices
     const aliceKeys = await aliceStorage.current.list()
     const bobKeys = await bobStorage.current.list()
+    const bobKeys2 = await bobStorage2.current.list()
 
     addEventLog(
       "CLEARING_STORAGE",
       "system",
-      `Clearing ${aliceKeys.length + bobKeys.length} stored sessions`
+      `Clearing ${aliceKeys.length + bobKeys.length + bobKeys2.length} stored sessions`
     )
 
     for (const key of aliceKeys) {
@@ -215,6 +237,9 @@ export default function SessionTest() {
     }
     for (const key of bobKeys) {
       await bobStorage.current.del(key)
+    }
+    for (const key of bobKeys2) {
+      await bobStorage2.current.del(key)
     }
 
     addEventLog("STORAGE_CLEARED", "system", "All session data cleared from storage")
@@ -231,14 +256,19 @@ export default function SessionTest() {
     // Close existing managers
     aliceManager?.close()
     bobManager?.close()
+    bobManager2?.close()
 
     // Clear state
     setAliceManager(null)
     setBobManager(null)
+    setBobManager2(null)
     setAliceConnected(false)
     setBobConnected(false)
+    setBobDevice2Connected(false)
     setAliceSetupBob(false)
+    setAliceSetupBobDevice2(false)
     setBobSetupAlice(false)
+    setBobDevice2SetupAlice(false)
 
     // Wait a moment for cleanup
     await new Promise((resolve) => setTimeout(resolve, 500))
@@ -285,6 +315,39 @@ export default function SessionTest() {
     addEventLog("USER_SETUP_COMPLETE", "bob", `Set up user: ${aliceInfo.pubkey}`)
   }
 
+  const aliceSetupBobDevice2User = async () => {
+    if (!aliceManager || !bobInfo.pubkey) {
+      addEventLog(
+        "SETUP_ERROR",
+        "alice",
+        "Manager not initialized or Bob pubkey not available"
+      )
+      return
+    }
+
+    addEventLog("SETUP_USER", "alice", `Setting up Bob Device 2`)
+    // Note: setupUser with same pubkey since it's the same user, just different device
+    aliceManager.setupUser(bobInfo.pubkey)
+    setAliceSetupBobDevice2(true)
+    addEventLog("USER_SETUP_COMPLETE", "alice", `Set up Bob Device 2: ${bobInfo.pubkey}`)
+  }
+
+  const bobDevice2SetupAliceUser = async () => {
+    if (!bobManager2 || !aliceInfo.pubkey) {
+      addEventLog(
+        "SETUP_ERROR",
+        "bob-device-2",
+        "Manager not initialized or Alice pubkey not available"
+      )
+      return
+    }
+
+    addEventLog("SETUP_USER", "bob-device-2", `Setting up Alice as user`)
+    bobManager2.setupUser(aliceInfo.pubkey)
+    setBobDevice2SetupAlice(true)
+    addEventLog("USER_SETUP_COMPLETE", "bob-device-2", `Set up user: ${aliceInfo.pubkey}`)
+  }
+
   const initManagers = async () => {
     // Alice setup - using persistent storage to test restoration
     const alicePubkey = getPublicKey(aliceSecretKey.current)
@@ -292,6 +355,7 @@ export default function SessionTest() {
     // Debug storage contents before initialization
     const aliceKeys = await aliceStorage.current.list()
     const bobKeys = await bobStorage.current.list()
+    const bobKeys2 = await bobStorage2.current.list()
     addEventLog(
       "STORAGE_STATE",
       "alice",
@@ -301,6 +365,11 @@ export default function SessionTest() {
       "STORAGE_STATE",
       "bob",
       `Found ${bobKeys.length} stored keys: ${bobKeys.join(", ")}`
+    )
+    addEventLog(
+      "STORAGE_STATE",
+      "bob-device-2",
+      `Found ${bobKeys2.length} stored keys: ${bobKeys2.join(", ")}`
     )
 
     aliceNDK.current = createNDK(aliceSecretKey.current)
@@ -416,6 +485,7 @@ export default function SessionTest() {
           from,
           timestamp: Date.now(),
           isOwn: from === bobPubkey,
+          deviceId: "bob-device-1", // Mark as device 1 messages
         },
       ])
     })
@@ -423,6 +493,64 @@ export default function SessionTest() {
     await bobManager.init()
     setBobManager(bobManager)
     setBobInfo({pubkey: bobPubkey, deviceId: "bob-device-1"})
+
+    // Bob Device 2 setup - using same secret key but different device ID
+    bobNDK2.current = createNDK(bobSecretKey.current)
+    bobNDK2.current.connect()
+    addEventLog("NDK_CONNECTING", "bob-device-2", "Attempting to connect to relays")
+
+    // Listen for when relays connect
+    bobNDK2.current.pool.on("relay:connect", (relay) => {
+      addEventLog("RELAY_CONNECT", "bob-device-2", `Connected to ${relay.url}`)
+      setBobDevice2Connected(true)
+    })
+
+    bobNDK2.current.pool.on("relay:disconnect", (relay) => {
+      addEventLog("RELAY_DISCONNECT", "bob-device-2", `Disconnected from ${relay.url}`)
+    })
+
+    // Wait a bit for initial connections
+    setTimeout(() => {
+      const connectedRelays = Array.from(bobNDK2.current!.pool.relays.values()).filter(
+        (r) => r.connected
+      ).length
+      addEventLog("CONNECTION_STATUS", "bob-device-2", `${connectedRelays} relays connected`)
+      if (connectedRelays > 0) {
+        setBobDevice2Connected(true)
+      }
+    }, 2000)
+
+    const bobManager2 = new SessionManager(
+      bobSecretKey.current,
+      "bob-device-2",
+      createSubscribe(bobNDK2.current, "BobDevice2"),
+      createPublish(bobNDK2.current, "BobDevice2"),
+      bobStorage2.current
+    )
+
+    bobManager2.onEvent((event: Rumor, from: string) => {
+      const messageKey = `${from}-${event.content}-${event.created_at}-device2`
+      if (bobDevice2SeenMessages.current.has(messageKey)) {
+        addEventLog("DUPLICATE_MESSAGE", "bob-device-2", {event, from})
+        return
+      }
+      bobDevice2SeenMessages.current.add(messageKey)
+
+      addEventLog("MESSAGE_RECEIVED", "bob-device-2", {event, from, decrypted: true})
+      setBobMessages((prev) => [
+        ...prev,
+        {
+          content: event.content || "",
+          from,
+          timestamp: Date.now(),
+          isOwn: from === bobPubkey,
+          deviceId: "bob-device-2",
+        },
+      ])
+    })
+
+    await bobManager2.init()
+    setBobManager2(bobManager2)
   }
 
   // Helper to truncate hex keys for display
@@ -506,6 +634,28 @@ export default function SessionTest() {
           {bobSetupAlice ? "Bob → Alice ✓" : "Bob Setup Alice"}
         </button>
         <button
+          onClick={aliceSetupBobDevice2User}
+          className={`px-3 py-1 rounded text-sm font-medium ${
+            aliceSetupBobDevice2
+              ? "bg-green-600 text-white"
+              : "bg-purple-500 text-white hover:bg-purple-600"
+          }`}
+          disabled={!aliceManager || !bobInfo.pubkey || aliceSetupBobDevice2}
+        >
+          {aliceSetupBobDevice2 ? "Alice → Bob D2 ✓" : "Alice Setup Bob D2"}
+        </button>
+        <button
+          onClick={bobDevice2SetupAliceUser}
+          className={`px-3 py-1 rounded text-sm font-medium ${
+            bobDevice2SetupAlice
+              ? "bg-green-600 text-white"
+              : "bg-purple-500 text-white hover:bg-purple-600"
+          }`}
+          disabled={!bobManager2 || !aliceInfo.pubkey || bobDevice2SetupAlice}
+        >
+          {bobDevice2SetupAlice ? "Bob D2 → Alice ✓" : "Bob D2 Setup Alice"}
+        </button>
+        <button
           onClick={clearStorage}
           className="px-3 py-1 rounded text-sm font-medium bg-red-500 text-white hover:bg-red-600"
         >
@@ -585,8 +735,17 @@ export default function SessionTest() {
             {aliceMessages.map((msg, i) => (
               <div key={i} className="mb-2 text-gray-800">
                 <span className="text-xs text-gray-500">
-                  {new Date(msg.timestamp).toLocaleTimeString()} -{" "}
-                  <span className="font-mono">{msg.from.slice(0, 8)}...</span>
+                  {new Date(msg.timestamp).toLocaleTimeString()} -
+                  <span className="font-mono ml-1">{msg.from.slice(0, 8)}...</span>
+                  {msg.deviceId && msg.from === bobInfo.pubkey && (
+                    <span className={`ml-1 px-1 rounded text-xs ${
+                      msg.deviceId === "bob-device-1"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-indigo-100 text-indigo-700"
+                    }`}>
+                      From {msg.deviceId === "bob-device-1" ? "D1" : "D2"}
+                    </span>
+                  )}
                 </span>
                 <div>{msg.content}</div>
               </div>
@@ -612,32 +771,72 @@ export default function SessionTest() {
           </div>
         </div>
 
-        {/* Bob Column */}
+        {/* Bob Column with Multi-Device Support */}
         <div className="border rounded-lg p-4 bg-white">
-          <h2 className="font-semibold text-lg mb-2 text-black">Bob</h2>
-          <div className="text-xs text-gray-700 mb-4">
-            <div>
-              Device: <span className="font-mono">{bobInfo.deviceId}</span>
-            </div>
-            <div>
-              Pubkey: <span className="font-mono">{bobInfo.pubkey.slice(0, 16)}...</span>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-semibold text-lg text-black">Bob</h2>
+            {/* Device Selector Tabs */}
+            <div className="flex gap-1">
+              <button
+                onClick={() => setActiveBobDevice("device-1")}
+                className={`px-3 py-1 text-xs rounded ${
+                  activeBobDevice === "device-1"
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                Device 1
+              </button>
+              <button
+                onClick={() => setActiveBobDevice("device-2")}
+                className={`px-3 py-1 text-xs rounded ${
+                  activeBobDevice === "device-2"
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                Device 2
+              </button>
             </div>
           </div>
 
-          {/* Messages */}
+          {/* Device Info */}
+          <div className="text-xs text-gray-700 mb-4">
+            <div>Active: <span className="font-mono">{activeBobDevice}</span></div>
+            <div>Pubkey: <span className="font-mono">{bobInfo.pubkey.slice(0, 16)}...</span></div>
+            <div className="flex gap-4 mt-1">
+              <span className={bobConnected ? "text-green-600" : "text-red-600"}>
+                D1: {bobConnected ? "Connected ✓" : "Disconnected ✗"}
+              </span>
+              <span className={bobDevice2Connected ? "text-green-600" : "text-red-600"}>
+                D2: {bobDevice2Connected ? "Connected ✓" : "Disconnected ✗"}
+              </span>
+            </div>
+          </div>
+
+          {/* Messages - unified view showing both devices */}
           <div className="h-64 border rounded bg-gray-50 p-2 mb-4 overflow-y-auto">
             {bobMessages.map((msg, i) => (
               <div key={i} className="mb-2 text-gray-800">
                 <span className="text-xs text-gray-500">
-                  {new Date(msg.timestamp).toLocaleTimeString()} -{" "}
-                  <span className="font-mono">{msg.from.slice(0, 8)}...</span>
+                  {new Date(msg.timestamp).toLocaleTimeString()} -
+                  <span className="font-mono ml-1">{msg.from.slice(0, 8)}...</span>
+                  {msg.deviceId && msg.from === bobInfo.pubkey && (
+                    <span className={`ml-1 px-1 rounded text-xs ${
+                      msg.deviceId === "bob-device-1"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-emerald-100 text-emerald-700"
+                    }`}>
+                      {msg.deviceId === "bob-device-1" ? "D1" : "D2"}
+                    </span>
+                  )}
                 </span>
                 <div>{msg.content}</div>
               </div>
             ))}
           </div>
 
-          {/* Input */}
+          {/* Input with device indicator */}
           <div className="flex gap-2">
             <input
               type="text"
@@ -645,11 +844,15 @@ export default function SessionTest() {
               onChange={(e) => setBobInput(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && sendBobMessage()}
               className="flex-1 border border-gray-300 rounded px-3 py-2 text-black bg-white focus:outline-none focus:border-green-500"
-              placeholder="Type message..."
+              placeholder={`Type as ${activeBobDevice}...`}
             />
             <button
               onClick={sendBobMessage}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 font-medium"
+              className={`px-4 py-2 rounded font-medium text-white ${
+                activeBobDevice === "device-1"
+                  ? "bg-green-500 hover:bg-green-600"
+                  : "bg-emerald-500 hover:bg-emerald-600"
+              }`}
             >
               Send
             </button>
