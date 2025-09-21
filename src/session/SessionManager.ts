@@ -130,7 +130,6 @@ export default class SessionManager {
               for (const callback of this.internalSubscriptions) {
                 callback(event, inviteePubkey)
               }
-              this.storeUserRecord(inviteePubkey)
             })
             this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
           }
@@ -228,7 +227,6 @@ export default class SessionManager {
               for (const callback of this.internalSubscriptions) {
                 callback(event, userPubkey)
               }
-              this.storeUserRecord(userPubkey)
             })
             this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
           })
@@ -279,6 +277,7 @@ export default class SessionManager {
     }
     console.warn(
       "Storing user record with these keys in state",
+      this.deviceId,
       data.devices.map((d) => d.activeSession && JSON.parse(d.activeSession))
     )
     return this.storage.put(`user/${publicKey}`, data)
@@ -325,7 +324,6 @@ export default class SessionManager {
           for (const callback of this.internalSubscriptions) {
             callback(event, publicKey)
           }
-          this.storeUserRecord(publicKey)
         })
         if (unsubscribe) this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
       }
