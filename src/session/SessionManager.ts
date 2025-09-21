@@ -305,13 +305,17 @@ export default class SessionManager {
           activeSession,
           inactiveSessions,
         })
-
-        activeSession?.onEvent((event) => {
+        const sessionSubscriptionId = `session/${publicKey}/${deviceId}`
+        if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
+          return
+        }
+        const unsubscribe = activeSession?.onEvent((event) => {
           for (const callback of this.internalSubscriptions) {
             callback(event, publicKey)
           }
           this.storeUserRecord(publicKey)
         })
+        if (unsubscribe) this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
       }
       console.warn(
         "Loaded user record with these keys in state",
