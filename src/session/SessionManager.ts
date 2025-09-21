@@ -5,6 +5,8 @@ import {
   Unsubscribe,
   Invite,
   Session,
+  serializeSessionState,
+  deserializeSessionState,
 } from "nostr-double-ratchet"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {getPublicKey} from "nostr-tools"
@@ -61,8 +63,11 @@ export default class SessionManager {
     // 2. Create or load our own invite
   }
 
-  init() {
+  async init() {
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
+
+    await this.loadAllUserRecords()
+
     return this.storage
       .get<string>(`invite/${this.deviceId}`)
       .then((data) => {
@@ -244,7 +249,68 @@ export default class SessionManager {
         }
         const {event: verifiedEvent} = activeSession.sendEvent(event)
         await this.nostrPublish(verifiedEvent)
+        await this.storeUserRecord(recipientIdentityKey)
       })
     )
+  }
+
+  private storeUserRecord(publicKey: string) {
+    const data = JSON.stringify({
+      publicKey: publicKey,
+      devices: Array.from(this.userRecords.get(publicKey)?.devices.values() || []).map(
+        (device) => ({
+          deviceId: device.deviceId,
+          activeSession: device.activeSession
+            ? serializeSessionState(device.activeSession.state)
+            : null,
+          inactiveSessions: device.inactiveSessions.map((session) =>
+            serializeSessionState(session.state)
+          ),
+        })
+      ),
+    })
+    return this.storage.put(`user/${publicKey}`, data)
+  }
+
+  private loadUserRecord(publicKey: string) {
+    return this.storage.get<string>(`user/${publicKey}`).then((data) => {
+      if (!data) return
+      const parsed = JSON.parse(data)
+      const devices = new Map<string, DeviceRecord>()
+      for (const deviceData of parsed.devices) {
+        const deviceId = deviceData.deviceId
+        const activeSession = deviceData.activeSession
+          ? new Session(
+              this.nostrSubscribe,
+              deserializeSessionState(deviceData.activeSession)
+            )
+          : undefined
+        const inactiveSessions = deviceData.inactiveSessions.map(
+          (state: string) =>
+            new Session(this.nostrSubscribe, deserializeSessionState(state))
+        )
+        devices.set(deviceId, {
+          deviceId,
+          activeSession,
+          inactiveSessions,
+        })
+      }
+      this.userRecords.set(publicKey, {
+        publicKey: parsed.publicKey,
+        devices,
+        foundInvites: new Map(),
+      })
+    })
+  }
+  private loadAllUserRecords() {
+    return this.storage.list().then((keys) => {
+      const userKeys = keys.filter((key) => key.startsWith("user/"))
+      return Promise.all(
+        userKeys.map((key) => {
+          const publicKey = key.slice(5)
+          return this.loadUserRecord(publicKey)
+        })
+      )
+    })
   }
 }
