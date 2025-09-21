@@ -305,6 +305,13 @@ export default class SessionManager {
           activeSession,
           inactiveSessions,
         })
+
+        activeSession?.onEvent((event) => {
+          for (const callback of this.internalSubscriptions) {
+            callback(event, publicKey)
+          }
+          this.storeUserRecord(publicKey)
+        })
       }
       console.warn(
         "Loaded user record with these keys in state",
