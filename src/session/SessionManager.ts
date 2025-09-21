@@ -66,10 +66,13 @@ export default class SessionManager {
     this.ourIdentityKey = ourIdentityKey
     this.deviceId = deviceId
     this.storage = storage || new InMemoryStorageAdapter()
-    const ourPublicKey = getPublicKey(this.ourIdentityKey)
 
     // 2. Create or load our own invite
-    this.storage
+  }
+
+  init() {
+    const ourPublicKey = getPublicKey(this.ourIdentityKey)
+    return this.storage
       .get<string>(`invite/${this.deviceId}`)
       .then((data) => {
         if (!data) return null
