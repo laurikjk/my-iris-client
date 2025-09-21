@@ -59,14 +59,14 @@ export default class SessionManager {
     this.ourIdentityKey = ourIdentityKey
     this.deviceId = deviceId
     this.storage = storage || new InMemoryStorageAdapter()
-
-    // 2. Create or load our own invite
   }
 
   async init() {
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
 
     await this.loadAllUserRecords()
+
+    console.warn("Loaded user records", this.userRecords.keys())
 
     return this.storage
       .get<string>(`invite/${this.deviceId}`)
@@ -101,6 +101,13 @@ export default class SessionManager {
           this.nostrSubscribe,
           async (session, inviteePubkey, deviceId) => {
             console.warn("GOT ACCEPTANCE FROM", deviceId)
+
+            // important: check if this is an old acceptance
+
+            if (this.userRecords.get(inviteePubkey)?.devices.has(deviceId)) {
+              console.warn("Already have session for", deviceId)
+              return
+            }
             const deviceRecord: DeviceRecord = {
               deviceId: deviceId,
               activeSession: session,
@@ -123,6 +130,7 @@ export default class SessionManager {
               for (const callback of this.internalSubscriptions) {
                 callback(event, inviteePubkey)
               }
+              this.storeUserRecord(inviteePubkey)
             })
             this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
           }
@@ -139,9 +147,7 @@ export default class SessionManager {
   }
 
   setupUser(userPubkey: string) {
-    const inviteSubscriptionId = `invite/${userPubkey}`
-
-    if (this.inviteSubscriptions.has(inviteSubscriptionId)) {
+    if (this.userRecords.has(userPubkey)) {
       return
     }
 
@@ -151,6 +157,7 @@ export default class SessionManager {
       foundInvites: new Map(),
     })
 
+    const inviteSubscriptionId = `invite/${userPubkey}`
     const unsubscribe = Invite.fromUser(
       userPubkey,
       this.nostrSubscribe,
@@ -221,6 +228,7 @@ export default class SessionManager {
               for (const callback of this.internalSubscriptions) {
                 callback(event, userPubkey)
               }
+              this.storeUserRecord(userPubkey)
             })
             this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
           })
@@ -255,7 +263,7 @@ export default class SessionManager {
   }
 
   private storeUserRecord(publicKey: string) {
-    const data = JSON.stringify({
+    const data = {
       publicKey: publicKey,
       devices: Array.from(this.userRecords.get(publicKey)?.devices.values() || []).map(
         (device) => ({
@@ -268,16 +276,19 @@ export default class SessionManager {
           ),
         })
       ),
-    })
+    }
+    console.warn(
+      "Storing user record with these keys in state",
+      data.devices.map((d) => d.activeSession && JSON.parse(d.activeSession))
+    )
     return this.storage.put(`user/${publicKey}`, data)
   }
 
   private loadUserRecord(publicKey: string) {
-    return this.storage.get<string>(`user/${publicKey}`).then((data) => {
+    return this.storage.get<any>(`user/${publicKey}`).then((data) => {
       if (!data) return
-      const parsed = JSON.parse(data)
       const devices = new Map<string, DeviceRecord>()
-      for (const deviceData of parsed.devices) {
+      for (const deviceData of data.devices) {
         const deviceId = deviceData.deviceId
         const activeSession = deviceData.activeSession
           ? new Session(
@@ -295,8 +306,12 @@ export default class SessionManager {
           inactiveSessions,
         })
       }
+      console.warn(
+        "Loaded user record with these keys in state",
+        Array.from(devices.values()).map((d) => d.activeSession?.state)
+      )
       this.userRecords.set(publicKey, {
-        publicKey: parsed.publicKey,
+        publicKey: data.publicKey,
         devices,
         foundInvites: new Map(),
       })
