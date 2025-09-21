@@ -305,17 +305,6 @@ export default class SessionManager {
           activeSession,
           inactiveSessions,
         })
-        const sessionSubscriptionId = `session/${publicKey}/${deviceId}`
-        if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-          return
-        }
-        const unsubscribe = activeSession?.onEvent((event) => {
-          for (const callback of this.internalSubscriptions) {
-            callback(event, publicKey)
-          }
-          this.storeUserRecord(publicKey)
-        })
-        if (unsubscribe) this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
       }
       console.warn(
         "Loaded user record with these keys in state",
@@ -324,6 +313,22 @@ export default class SessionManager {
             d.activeSession && JSON.parse(serializeSessionState(d.activeSession.state))
         )
       )
+      for (const device of devices.values()) {
+        const {deviceId, activeSession} = device
+        if (!activeSession || !deviceId) continue
+
+        const sessionSubscriptionId = `session/${publicKey}/${deviceId}`
+        if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
+          return
+        }
+        const unsubscribe = activeSession.onEvent((event) => {
+          for (const callback of this.internalSubscriptions) {
+            callback(event, publicKey)
+          }
+          this.storeUserRecord(publicKey)
+        })
+        if (unsubscribe) this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+      }
       this.userRecords.set(publicKey, {
         publicKey: data.publicKey,
         devices,
