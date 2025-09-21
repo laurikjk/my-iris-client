@@ -138,8 +138,12 @@ describe("SessionManager", () => {
     // Verify sessions exist in storage (should be stored as user records)
     const aliceStorageKeys = await aliceStorage.list()
     const bobStorageKeys = await bobStorage.list()
-    expect(aliceStorageKeys.filter(key => key.startsWith("user/")).length).toBeGreaterThan(0)
-    expect(bobStorageKeys.filter(key => key.startsWith("user/")).length).toBeGreaterThan(0)
+    expect(
+      aliceStorageKeys.filter((key) => key.startsWith("user/")).length
+    ).toBeGreaterThan(0)
+    expect(
+      bobStorageKeys.filter((key) => key.startsWith("user/")).length
+    ).toBeGreaterThan(0)
 
     // Close the managers
     aliceManager1.close()
@@ -235,11 +239,17 @@ describe("SessionManager", () => {
   it("should store user records when sending messages", async () => {
     const sharedRelay = new MockRelay()
 
-    const {manager: aliceManager1, mockStorage: aliceStorage, publicKey: alicePubkey} =
-      await createMockSessionManager("alice-device-1", sharedRelay)
+    const {
+      manager: aliceManager1,
+      mockStorage: aliceStorage,
+      publicKey: alicePubkey,
+    } = await createMockSessionManager("alice-device-1", sharedRelay)
 
-    const {publicKey: bobPubkey, mockStorage: bobStorage, manager: bobManager} =
-      await createMockSessionManager("bob-device-1", sharedRelay)
+    const {
+      publicKey: bobPubkey,
+      mockStorage: bobStorage,
+      manager: bobManager,
+    } = await createMockSessionManager("bob-device-1", sharedRelay)
 
     // Set up users
     aliceManager1.setupUser(bobPubkey)
@@ -256,7 +266,7 @@ describe("SessionManager", () => {
     // Check for user records (not session keys)
     const aliceStorageKeys = await aliceStorage.list()
     const bobStorageKeys = await bobStorage.list()
-    expect(aliceStorageKeys.filter(key => key.startsWith("user/")).length).toBe(1)
-    expect(bobStorageKeys.filter(key => key.startsWith("user/")).length).toBe(0) // Bob hasn't sent anything
+    expect(aliceStorageKeys.filter((key) => key.startsWith("user/")).length).toBe(1)
+    expect(bobStorageKeys.filter((key) => key.startsWith("user/")).length).toBe(0) // Bob hasn't sent anything
   })
 })
