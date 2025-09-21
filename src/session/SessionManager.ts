@@ -308,7 +308,10 @@ export default class SessionManager {
       }
       console.warn(
         "Loaded user record with these keys in state",
-        Array.from(devices.values()).map((d) => d.activeSession?.state)
+        Array.from(devices.values()).map(
+          (d) =>
+            d.activeSession && JSON.parse(serializeSessionState(d.activeSession.state))
+        )
       )
       this.userRecords.set(publicKey, {
         publicKey: data.publicKey,
