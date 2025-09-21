@@ -190,6 +190,9 @@ export default class SessionManager {
       invites.map((invite) => {
         const {deviceId} = invite
         if (!deviceId) return Promise.resolve()
+        if (this.userRecords.get(userPubkey)?.devices.has(deviceId)) {
+          return Promise.resolve()
+        }
 
         return invite
           .accept(
@@ -205,6 +208,16 @@ export default class SessionManager {
               activeSession: session,
               inactiveSessions: [],
             })
+            const sessionSubscriptionId = `session/${userPubkey}/${deviceId}`
+            if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
+              return
+            }
+            const unsubscribe = session.onEvent((event) => {
+              for (const callback of this.internalSubscriptions) {
+                callback(event, userPubkey)
+              }
+            })
+            this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
           })
       })
     )
@@ -221,6 +234,7 @@ export default class SessionManager {
       await this.acceptInvitesFromUser(recipientIdentityKey)
     }
 
+    console.warn("Sending event to", userRecord.devices.keys())
     return Promise.all(
       Array.from(userRecord.devices.values()).map(async (device) => {
         const {activeSession} = device
