@@ -80,14 +80,22 @@ export default class SessionManager {
         await this.storage.put(`invite/${this.deviceId}`, newInvite.serialize())
         const event = newInvite.getEvent()
         await this.nostrPublish(event)
+        console.warn(
+          "Created new invite for our device",
+          this.deviceId,
+          newInvite,
+          ourPublicKey
+        )
         return newInvite
       })
       .then((invite) => {
         this.ourDeviceInvites.set(this.deviceId, invite)
+
         this.ourDeviceInviteSubscription = invite.listen(
           this.ourIdentityKey,
           this.nostrSubscribe,
           async (session, inviteePubkey, deviceId) => {
+            console.warn("GOT ACCEPTANCE FROM", deviceId)
             const deviceRecord: DeviceRecord = {
               deviceId: deviceId,
               activeSession: session,
@@ -142,8 +150,10 @@ export default class SessionManager {
       userPubkey,
       this.nostrSubscribe,
       async (invite) => {
+        console.warn("FOUND INVITE", userPubkey, invite.deviceId)
         if (!invite.deviceId) return
-        if (this.userRecords.get(userPubkey)?.foundInvites.has(invite.deviceId)) {
+        console.warn("Storing invite", invite.deviceId)
+        if (!this.userRecords.get(userPubkey)?.foundInvites.has(invite.deviceId)) {
           this.userRecords.get(userPubkey)?.foundInvites.set(invite.deviceId, invite)
         }
       }
@@ -206,6 +216,7 @@ export default class SessionManager {
       console.warn("No user record for", recipientIdentityKey)
       return Promise.resolve([])
     }
+
     if (userRecord.devices.size !== userRecord.foundInvites.size) {
       await this.acceptInvitesFromUser(recipientIdentityKey)
     }
