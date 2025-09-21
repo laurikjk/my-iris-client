@@ -13,41 +13,45 @@ import {getPublicKey} from "nostr-tools"
 export type OnEventCallback = (event: Rumor, from: string) => void
 
 interface DeviceRecord {
-  readonly deviceId: string
-  readonly userId: string
-  readonly publicKey: string
-  readonly activeSession?: Session
-  readonly inactiveSessions: Session[]
-  readonly isStale: boolean
-  readonly staleTimestamp?: number
-  readonly lastActivity?: number
-  readonly createdAt: number
+  deviceId: string
+  activeSession?: Session
+  inactiveSessions: Session[]
 }
 
 interface UserRecord {
-  readonly userId: string
-  readonly devices: Map<string, DeviceRecord>
-  readonly isStale: boolean
-  readonly staleTimestamp?: number
-  readonly createdAt: number
-  readonly lastActivity?: number
+  publicKey: string
+  devices: Map<string, DeviceRecord>
+  foundInvites: Map<string, Invite>
 }
 
 export default class SessionManager {
-  private userRecords: Map<string, UserRecord> = new Map()
-  private inviteSubscriptions: Map<string, Unsubscribe> = new Map()
-  private sessionSubscriptions: Map<string, Unsubscribe> = new Map()
+  // Params
+  private deviceId: string
+  private storage: StorageAdapter
   private nostrSubscribe: NostrSubscribe
   private nostrPublish: NostrPublish
   private ourIdentityKey: Uint8Array
-  private deviceId: string
-  private invite?: Invite
-  private storage: StorageAdapter
+
+  // Data
+  private userRecords: Map<string, UserRecord> = new Map()
+  private ourDeviceInvites: Map<string, Invite> = new Map()
+
+  // Subscriptions
+  private ourDeviceInviteSubscription: Unsubscribe | null = null
+  private ourOtherDeviceInviteSubscription: Unsubscribe | null = null
+  private inviteSubscriptions: Map<string, Unsubscribe> = new Map()
+  private sessionSubscriptions: Map<string, Unsubscribe> = new Map()
+
+  // Callbacks
+  private internalSubscriptions: Set<OnEventCallback> = new Set()
+
+  private initialised = false
+
+  // messageQueue
   private messageQueue: Map<
     string,
     Array<{event: Partial<Rumor>; resolve: (results: unknown[]) => void}>
   > = new Map()
-  private _initialised = false
 
   constructor(
     ourIdentityKey: Uint8Array,
@@ -62,286 +66,97 @@ export default class SessionManager {
     this.ourIdentityKey = ourIdentityKey
     this.deviceId = deviceId
     this.storage = storage || new InMemoryStorageAdapter()
-  }
-
-  private async _processReceivedMessage(
-    session: Session,
-    event: Rumor,
-    pubkey: string,
-    deviceId: string
-  ): Promise<void> {
-    await this.saveSession(pubkey, deviceId, session)
-    this.internalSubscriptions.forEach((cb) => cb(event, pubkey))
-  }
-
-  public async init(): Promise<void> {
-    if (!this._initialised) {
-      await this._init()
-      this._initialised = true
-      return
-    }
-  }
-
-  private async loadSessions(): Promise<void> {
-    const sessions = await this.storage.list("session/")
-    console.warn("Loaded sessions:", sessions)
-  }
-
-  private async _init(): Promise<void> {
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
-    await this.loadSessions()
 
     // 2. Create or load our own invite
-    let invite: Invite | undefined
-    try {
-      const stored = await this.storage.get<string>(`invite/${this.deviceId}`)
-      if (stored) {
-        invite = Invite.deserialize(stored)
-      }
-    } catch {
-      // ignore
-    }
-
-    if (!invite) {
-      invite = Invite.createNew(ourPublicKey, this.deviceId)
-      await this.storage
-        .put(`invite/${this.deviceId}`, invite.serialize())
-        .catch(() => {})
-    }
-    this.invite = invite
-
-    console.log("Publishing our own invite", invite)
-    const event = invite.getEvent()
-    this.nostrPublish(event)
-      .then((verifiedEvent) => {
-        console.log("Invite published", verifiedEvent)
+    this.storage
+      .get<string>(`invite/${this.deviceId}`)
+      .then((data) => {
+        if (!data) return null
+        const invite = Invite.deserialize(data)
+        if (invite) {
+          this.ourDeviceInvites.set(this.deviceId, invite)
+          return invite
+        }
       })
-      .catch((e) => console.error("Failed to publish our own invite", e))
-
-    // 2b. Listen for acceptances of *our* invite and create sessions
-    this.invite.listen(
-      this.ourIdentityKey,
-      this.nostrSubscribe,
-      async (session, inviteePubkey, deviceId) => {
-        console.warn(
-          `Invite accepted by ${inviteePubkey} (device: ${deviceId}), setting up session...`
-        )
-        if (!inviteePubkey || !deviceId) return
-
-        try {
-          await this.setupSessionWithDevice(inviteePubkey, deviceId, session)
-        } catch (err) {
-          console.error("Error handling invite acceptance:", err)
-        }
-      }
-    )
-
-    // 3. Subscribe to our own invites from other devices
-    Invite.fromUser(ourPublicKey, this.nostrSubscribe, async (invite) => {
-      try {
-        const inviteDeviceId = invite["deviceId"] || "unknown"
-        if (!inviteDeviceId || inviteDeviceId === this.deviceId) {
-          return
-        }
-
-        if (this.hasActiveSessionForDevice(ourPublicKey, inviteDeviceId)) {
-          return
-        }
-
-        const {session, event} = await invite.accept(
-          this.nostrSubscribe,
-          ourPublicKey,
+      .catch(() => null)
+      .then(async (invite) => {
+        if (invite) return invite
+        const newInvite = Invite.createNew(ourPublicKey, this.deviceId)
+        await this.storage.put(`invite/${this.deviceId}`, newInvite.serialize())
+        const event = newInvite.getEvent()
+        await this.nostrPublish(event)
+        return newInvite
+      })
+      .then((invite) => {
+        this.ourDeviceInvites.set(this.deviceId, invite)
+        this.ourDeviceInviteSubscription = invite.listen(
           this.ourIdentityKey,
-          this.deviceId
+          this.nostrSubscribe,
+          async (session, inviteePubkey, deviceId) => {
+            const deviceRecord: DeviceRecord = {
+              deviceId: deviceId,
+              activeSession: session,
+              inactiveSessions: [],
+            }
+            if (!this.userRecords.has(inviteePubkey)) {
+              this.userRecords.set(inviteePubkey, {
+                publicKey: inviteePubkey,
+                devices: new Map([[deviceId, deviceRecord]]),
+                foundInvites: new Map(),
+              })
+            } else {
+              this.userRecords.get(inviteePubkey)?.devices.set(deviceId, deviceRecord)
+            }
+            const sessionSubscriptionId = `session/${inviteePubkey}/${deviceId}`
+            if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
+              return
+            }
+            const unsubscribe = session.onEvent((event) => {
+              for (const callback of this.internalSubscriptions) {
+                callback(event, inviteePubkey)
+              }
+            })
+            this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+          }
         )
-        this.nostrPublish(event)
-
-        await this.setupSessionWithDevice(ourPublicKey, inviteDeviceId, session)
-      } catch (err) {
-        console.error("Own-invite accept failed", err)
-      }
-    })
+        // 3. Subscribe to our own invites from other devices
+        this.ourOtherDeviceInviteSubscription = Invite.fromUser(
+          ourPublicKey,
+          this.nostrSubscribe,
+          async (invite) => {
+            // TODO
+          }
+        )
+        this.initialised = true
+      })
   }
 
-  private async saveSession(ownerPubKey: string, deviceId: string, session: Session) {
-    try {
-      const key = `session/${ownerPubKey}/${deviceId}`
-      await this.storage.put(key, serializeSessionState(session.state))
-      console.warn("Saved session for", deviceId)
-    } catch {
-      // ignore
-    }
-  }
+  setupUser(userPubkey: string) {
+    const inviteSubscriptionId = `invite/${userPubkey}`
 
-  private unsubscribeSessionsByDevice(userId: string, deviceId: string): void {
-    const sessionKey = `session/${userId}/${deviceId}`
-    const unsubscribe = this.sessionSubscriptions.get(sessionKey)
-    if (unsubscribe) {
-      unsubscribe()
-      this.sessionSubscriptions.delete(sessionKey)
-    }
-  }
-
-  private hasActiveSessionForDevice(userPubkey: string, deviceId: string): boolean {
-    const userRecord = this.userRecords.get(userPubkey)
-    if (!userRecord || userRecord.isStale) {
-      return false
-    }
-
-    for (const device of userRecord.devices.values()) {
-      if (!device.isStale && device.activeSession && device.deviceId === deviceId) {
-        return true
-      }
-    }
-    return false
-  }
-
-  private async processQueuedMessages(userPubkey: string): Promise<void> {
-    const queuedMessages = this.messageQueue.get(userPubkey)
-    if (!queuedMessages || queuedMessages.length === 0) {
+    if (this.inviteSubscriptions.has(inviteSubscriptionId)) {
       return
     }
 
-    const messagesToProcess = [...queuedMessages]
-    this.messageQueue.delete(userPubkey)
-
-    for (const {event: queuedEvent, resolve} of messagesToProcess) {
-      try {
-        const results = await this.sendEvent(userPubkey, queuedEvent)
-        resolve(results)
-      } catch (error) {
-        console.error("Error processing queued message:", error)
-        resolve([])
-      }
-    }
-  }
-
-  private async setupSessionWithDevice(
-    userPubkey: string,
-    deviceId: string,
-    session: Session
-  ): Promise<void> {
-    this.upsertDeviceSession(userPubkey, deviceId, session)
-    await this.saveSession(userPubkey, deviceId, session)
-
-    const sessionSubscriptionId = `session/${userPubkey}/${deviceId}`
-    this.unsubscribeSessionsByDevice(userPubkey, deviceId)
-
-    const sessionUnsubscribe = session.onEvent((_event: Rumor) => {
-      this._processReceivedMessage(session, _event, userPubkey, deviceId).catch(
-        (error) => {
-          console.error("Error processing received message:", error)
-        }
-      )
-    })
-
-    this.sessionSubscriptions.set(sessionSubscriptionId, sessionUnsubscribe)
-  }
-
-  private createOrGetUserRecord(userPubkey: string): UserRecord {
-    let userRecord = this.userRecords.get(userPubkey)
-    if (!userRecord) {
-      userRecord = {
-        userId: userPubkey,
-        devices: new Map(),
-        isStale: false,
-        createdAt: Date.now(),
-        lastActivity: Date.now(),
-      }
-      this.userRecords.set(userPubkey, userRecord)
-    }
-    return userRecord
-  }
-
-  private upsertDeviceSession(
-    userPubkey: string,
-    deviceId: string,
-    session: Session
-  ): void {
-    const userRecord = this.createOrGetUserRecord(userPubkey)
-
-    session.name = deviceId
-
-    const device = userRecord.devices.get(deviceId)
-    const updatedInactive = device?.activeSession
-      ? [device.activeSession, ...(device.inactiveSessions || [])]
-      : device?.inactiveSessions || []
-
-    const updatedDevice: DeviceRecord = {
-      deviceId: deviceId,
-      userId: userPubkey,
-      publicKey: session.state?.theirNextNostrPublicKey || "",
-      activeSession: session,
-      inactiveSessions: updatedInactive,
-      isStale: false,
-      createdAt: device?.createdAt || Date.now(),
-      lastActivity: Date.now(),
-    }
-
-    const updatedDevices = new Map(userRecord.devices)
-    updatedDevices.set(deviceId, updatedDevice)
-
     this.userRecords.set(userPubkey, {
-      ...userRecord,
-      devices: updatedDevices,
-      lastActivity: Date.now(),
+      publicKey: userPubkey,
+      devices: new Map(),
+      foundInvites: new Map(),
     })
-  }
-
-  private setupUserInviteSubscription(userPubkey: string) {
-    const inviteSubscriptionId = `invite/${userPubkey}`
-    const existingUnsubscribe = this.inviteSubscriptions.get(inviteSubscriptionId)
-    if (existingUnsubscribe) {
-      existingUnsubscribe()
-      this.inviteSubscriptions.delete(inviteSubscriptionId)
-    }
 
     const unsubscribe = Invite.fromUser(
       userPubkey,
       this.nostrSubscribe,
-      async (_invite) => {
-        try {
-          const deviceId =
-            _invite instanceof Invite && _invite.deviceId ? _invite.deviceId : "unknown"
-
-          if (this.hasActiveSessionForDevice(userPubkey, deviceId)) {
-            return
-          }
-
-          console.log(
-            `${getPublicKey(this.ourIdentityKey)} accepting invite from ${userPubkey}...`
-          )
-          const {session, event} = await _invite.accept(
-            this.nostrSubscribe,
-            getPublicKey(this.ourIdentityKey),
-            this.ourIdentityKey,
-            this.deviceId
-          )
-          this.nostrPublish(event)?.catch((err) =>
-            console.error("Failed to publish acceptance:", err)
-          )
-
-          await this.setupSessionWithDevice(userPubkey, deviceId, session)
-          await this.processQueuedMessages(userPubkey)
-
-          return event
-        } catch (err) {
-          console.error(
-            `${getPublicKey(this.ourIdentityKey)} failed to accept invite from ${userPubkey}:`,
-            err
-          )
+      async (invite) => {
+        if (!invite.deviceId) return
+        if (this.userRecords.get(userPubkey)?.foundInvites.has(invite.deviceId)) {
+          this.userRecords.get(userPubkey)?.foundInvites.set(invite.deviceId, invite)
         }
       }
     )
-
     this.inviteSubscriptions.set(inviteSubscriptionId, unsubscribe)
   }
-
-  listenToUser(userPubkey: string) {
-    this.setupUserInviteSubscription(userPubkey)
-  }
-
-  private internalSubscriptions: Set<OnEventCallback> = new Set()
 
   onEvent(callback: OnEventCallback) {
     this.internalSubscriptions.add(callback)
@@ -352,165 +167,66 @@ export default class SessionManager {
   }
 
   close() {
-    // Unsubscribe all invite subscriptions
     for (const unsubscribe of this.inviteSubscriptions.values()) {
       unsubscribe()
     }
-    this.inviteSubscriptions.clear()
 
-    // Unsubscribe all session subscriptions
     for (const unsubscribe of this.sessionSubscriptions.values()) {
       unsubscribe()
     }
-    this.sessionSubscriptions.clear()
 
-    for (const userRecord of this.userRecords.values()) {
-      for (const device of userRecord.devices.values()) {
-        device.activeSession?.close()
-        device.inactiveSessions.forEach((session) => session.close())
-      }
-    }
-    this.userRecords.clear()
-    this.internalSubscriptions.clear()
+    this.ourDeviceInviteSubscription?.()
+    this.ourOtherDeviceInviteSubscription?.()
   }
 
-  public async acceptOwnInvite(invite: Invite) {
-    const ourPublicKey = getPublicKey(this.ourIdentityKey)
-    const {session, event} = await invite.accept(
-      this.nostrSubscribe,
-      ourPublicKey,
-      this.ourIdentityKey
+  private acceptInvitesFromUser(userPubkey: string): Promise<void[]> {
+    const invites = this.userRecords.get(userPubkey)?.foundInvites.values()
+    if (!invites) return Promise.resolve([])
+
+    return Promise.all(
+      invites.map((invite) => {
+        const {deviceId} = invite
+        if (!deviceId) return Promise.resolve()
+
+        return invite
+          .accept(
+            this.nostrSubscribe,
+            getPublicKey(this.ourIdentityKey),
+            this.ourIdentityKey,
+            this.deviceId
+          )
+          .then(async ({session, event}) => {
+            await this.nostrPublish(event)
+            this.userRecords.get(userPubkey)?.devices.set(deviceId, {
+              deviceId: deviceId,
+              activeSession: session,
+              inactiveSessions: [],
+            })
+          })
+      })
     )
-    const deviceId = invite.deviceId || "unknown"
-    await this.setupSessionWithDevice(ourPublicKey, deviceId, session)
-    this.nostrPublish(event)?.catch(() => {})
   }
 
-  async sendText(recipientIdentityKey: string, text: string) {
-    const event = {
-      kind: 14,
-      content: text,
-    }
-    return await this.sendEvent(recipientIdentityKey, event)
-  }
-
-  async sendEvent(
-    recipientIdentityKey: string,
-    event: Partial<Rumor>
-  ): Promise<unknown[]> {
-    return await this._sendEvent(recipientIdentityKey, event)
-  }
-
-  private async _sendEvent(
-    recipientIdentityKey: string,
-    event: Partial<Rumor>
-  ): Promise<unknown[]> {
-    console.log("Sending event to", recipientIdentityKey, event)
-    this.internalSubscriptions.forEach((cb) => cb(event as Rumor, recipientIdentityKey))
-
-    const results = []
-    const publishPromises: Promise<unknown>[] = []
-
+  async sendEvent(recipientIdentityKey: string, event: Partial<Rumor>): Promise<void[]> {
     const userRecord = this.userRecords.get(recipientIdentityKey)
     if (!userRecord) {
-      return new Promise<unknown[]>((resolve) => {
-        if (!this.messageQueue.has(recipientIdentityKey)) {
-          this.messageQueue.set(recipientIdentityKey, [])
-        }
-        this.messageQueue.get(recipientIdentityKey)!.push({event, resolve})
-        this.listenToUser(recipientIdentityKey)
-      })
+      console.warn("No user record for", recipientIdentityKey)
+      return Promise.resolve([])
+    }
+    if (userRecord.devices.size !== userRecord.foundInvites.size) {
+      await this.acceptInvitesFromUser(recipientIdentityKey)
     }
 
-    const activeDevices: DeviceRecord[] = []
-    if (!userRecord.isStale) {
-      for (const device of userRecord.devices.values()) {
-        if (!device.isStale && device.activeSession) {
-          activeDevices.push(device)
+    return Promise.all(
+      Array.from(userRecord.devices.values()).map(async (device) => {
+        const {activeSession} = device
+        if (!activeSession) {
+          console.warn("No active session for device", device.deviceId)
+          return
         }
-      }
-    }
-    const sendableDevices = activeDevices.filter(
-      (device) =>
-        !!(
-          device.activeSession?.state?.theirNextNostrPublicKey &&
-          device.activeSession?.state?.ourCurrentNostrKey
-        )
+        const {event: verifiedEvent, innerEvent} = activeSession.sendEvent(event)
+        await this.nostrPublish(verifiedEvent)
+      })
     )
-
-    if (sendableDevices.length === 0) {
-      return new Promise<unknown[]>((resolve) => {
-        if (!this.messageQueue.has(recipientIdentityKey)) {
-          this.messageQueue.set(recipientIdentityKey, [])
-        }
-        this.messageQueue.get(recipientIdentityKey)!.push({event, resolve})
-        this.listenToUser(recipientIdentityKey)
-      })
-    }
-
-    for (const device of sendableDevices) {
-      const session = device.activeSession!
-      const {event: encryptedEvent} = session.sendEvent(event)
-      results.push(encryptedEvent)
-      publishPromises.push(
-        this.nostrPublish(encryptedEvent)
-          .then(() => {
-            this.saveSession(recipientIdentityKey, device.deviceId, session)
-          })
-          .catch(() => {})
-      )
-    }
-
-    const ourPublicKey = getPublicKey(this.ourIdentityKey)
-    const ownUserRecord = this.userRecords.get(ourPublicKey)
-    if (ownUserRecord) {
-      const ownActiveDevices: DeviceRecord[] = []
-      if (!ownUserRecord.isStale) {
-        for (const device of ownUserRecord.devices.values()) {
-          if (!device.isStale && device.activeSession) {
-            ownActiveDevices.push(device)
-          }
-        }
-      }
-      for (const device of ownActiveDevices) {
-        const session = device.activeSession!
-        const {event: encryptedEvent} = session.sendEvent(event)
-        results.push(encryptedEvent)
-        publishPromises.push(
-          this.nostrPublish(encryptedEvent)
-            .then(() => {
-              this.saveSession(ourPublicKey, device.deviceId, session)
-            })
-            .catch(() => {})
-        )
-      }
-    }
-
-    if (publishPromises.length > 0) {
-      await Promise.all(publishPromises)
-    }
-
-    return results
-  }
-
-  debugInfo(): string {
-    const userCount = this.userRecords.size
-    let deviceCount = 0
-    let activeSessionCount = 0
-
-    for (const userRecord of this.userRecords.values()) {
-      deviceCount += userRecord.devices.size
-      for (const device of userRecord.devices.values()) {
-        if (device.activeSession && !device.isStale) {
-          activeSessionCount++
-        }
-      }
-    }
-
-    const totalSubscriptions =
-      this.inviteSubscriptions.size + this.sessionSubscriptions.size
-    const subscriptionInfo = `Subscriptions: ${totalSubscriptions} total, by type: {"invite":${this.inviteSubscriptions.size},"session":${this.sessionSubscriptions.size}}`
-
-    return `SessionManager: ${userCount} users, ${deviceCount} devices, ${activeSessionCount} active sessions. ${subscriptionInfo}`
   }
 }
