@@ -3,7 +3,6 @@ import {
   NostrPublish,
   Rumor,
   Unsubscribe,
-  serializeSessionState,
   Invite,
   Session,
 } from "nostr-double-ratchet"
@@ -44,14 +43,6 @@ export default class SessionManager {
 
   // Callbacks
   private internalSubscriptions: Set<OnEventCallback> = new Set()
-
-  private initialised = false
-
-  // messageQueue
-  private messageQueue: Map<
-    string,
-    Array<{event: Partial<Rumor>; resolve: (results: unknown[]) => void}>
-  > = new Map()
 
   constructor(
     ourIdentityKey: Uint8Array,
@@ -127,11 +118,10 @@ export default class SessionManager {
         this.ourOtherDeviceInviteSubscription = Invite.fromUser(
           ourPublicKey,
           this.nostrSubscribe,
-          async (invite) => {
-            // TODO
+          async () => {
+            // TODO: Handle invites from our other devices
           }
         )
-        this.initialised = true
       })
   }
 
@@ -227,7 +217,7 @@ export default class SessionManager {
           console.warn("No active session for device", device.deviceId)
           return
         }
-        const {event: verifiedEvent, innerEvent} = activeSession.sendEvent(event)
+        const {event: verifiedEvent} = activeSession.sendEvent(event)
         await this.nostrPublish(verifiedEvent)
       })
     )

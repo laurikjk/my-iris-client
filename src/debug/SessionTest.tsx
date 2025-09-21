@@ -3,7 +3,7 @@ import SessionManager from "../session/SessionManager"
 import {generateSecretKey, getPublicKey, VerifiedEvent} from "nostr-tools"
 import {LocalStorageAdapter} from "../session/StorageAdapter"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
-import {Rumor, NostrPublish, SessionState} from "nostr-double-ratchet"
+import {Rumor, NostrPublish} from "nostr-double-ratchet"
 import NDK, {NDKEvent, NDKPrivateKeySigner, NDKFilter} from "@nostr-dev-kit/ndk"
 
 type EventLog = {
@@ -34,6 +34,8 @@ export default function SessionTest() {
   const [bobConnected, setBobConnected] = useState(false)
   const [showSessionDetails, setShowSessionDetails] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [aliceSetupBob, setAliceSetupBob] = useState(false)
+  const [bobSetupAlice, setBobSetupAlice] = useState(false)
 
   const aliceSecretKey = useRef(generateSecretKey())
   const bobSecretKey = useRef(generateSecretKey())
@@ -179,6 +181,8 @@ export default function SessionTest() {
     setEventLog([])
     aliceSeenMessages.current.clear()
     bobSeenMessages.current.clear()
+    setAliceSetupBob(false)
+    setBobSetupAlice(false)
     // Recreate managers would require reloading - for now just clear UI
   }
 
@@ -220,6 +224,8 @@ export default function SessionTest() {
     setBobManager(null)
     setAliceConnected(false)
     setBobConnected(false)
+    setAliceSetupBob(false)
+    setBobSetupAlice(false)
 
     // Wait a moment for cleanup
     await new Promise((resolve) => setTimeout(resolve, 500))
@@ -232,6 +238,38 @@ export default function SessionTest() {
       "system",
       "Managers reinitialized, sessions should be restored from storage"
     )
+  }
+
+  const aliceSetupBobUser = async () => {
+    if (!aliceManager || !bobInfo.pubkey) {
+      addEventLog(
+        "SETUP_ERROR",
+        "alice",
+        "Manager not initialized or Bob pubkey not available"
+      )
+      return
+    }
+
+    addEventLog("SETUP_USER", "alice", `Setting up Bob as user`)
+    aliceManager.setupUser(bobInfo.pubkey)
+    setAliceSetupBob(true)
+    addEventLog("USER_SETUP_COMPLETE", "alice", `Set up user: ${bobInfo.pubkey}`)
+  }
+
+  const bobSetupAliceUser = async () => {
+    if (!bobManager || !aliceInfo.pubkey) {
+      addEventLog(
+        "SETUP_ERROR",
+        "bob",
+        "Manager not initialized or Alice pubkey not available"
+      )
+      return
+    }
+
+    addEventLog("SETUP_USER", "bob", `Setting up Alice as user`)
+    bobManager.setupUser(aliceInfo.pubkey)
+    setBobSetupAlice(true)
+    addEventLog("USER_SETUP_COMPLETE", "bob", `Set up user: ${aliceInfo.pubkey}`)
   }
 
   const initManagers = async () => {
@@ -380,99 +418,19 @@ export default function SessionTest() {
     return key.length > length ? `${key.slice(0, length)}...` : key
   }
 
-  // Helper to format Uint8Array keys
-  const formatUint8Array = (arr: Uint8Array | undefined) => {
-    if (!arr) return "none"
-    const hex = Array.from(arr)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("")
-    return truncateKey(hex)
-  }
-
-  // Session state renderer
-  const SessionStateDisplay = ({
-    state,
-    title,
-  }: {
-    state: SessionState | undefined
-    title: string
-  }) => {
-    if (!state) return <div className="text-gray-500">No state</div>
-
-    return (
-      <div className="border rounded p-2 bg-gray-50 text-xs">
-        <div className="font-semibold mb-2 text-black">{title}</div>
-        <div className="space-y-1 text-gray-700">
-          <div>
-            <span className="font-medium">Root Key:</span>{" "}
-            {formatUint8Array(state.rootKey)}
-          </div>
-          <div>
-            <span className="font-medium">Their Current PubKey:</span>{" "}
-            {truncateKey(state.theirCurrentNostrPublicKey)}
-          </div>
-          <div>
-            <span className="font-medium">Their Next PubKey:</span>{" "}
-            {truncateKey(state.theirNextNostrPublicKey)}
-          </div>
-          <div>
-            <span className="font-medium">Our Current PubKey:</span>{" "}
-            {truncateKey(state.ourCurrentNostrKey?.publicKey)}
-          </div>
-          <div>
-            <span className="font-medium">Our Current PrivKey:</span>{" "}
-            {formatUint8Array(state.ourCurrentNostrKey?.privateKey)}
-          </div>
-          <div>
-            <span className="font-medium">Our Next PubKey:</span>{" "}
-            {truncateKey(state.ourNextNostrKey.publicKey)}
-          </div>
-          <div>
-            <span className="font-medium">Our Next PrivKey:</span>{" "}
-            {formatUint8Array(state.ourNextNostrKey.privateKey)}
-          </div>
-          <div>
-            <span className="font-medium">Receiving Chain Key:</span>{" "}
-            {formatUint8Array(state.receivingChainKey)}
-          </div>
-          <div>
-            <span className="font-medium">Sending Chain Key:</span>{" "}
-            {formatUint8Array(state.sendingChainKey)}
-          </div>
-          <div>
-            <span className="font-medium">Send Chain Msg #:</span>{" "}
-            {state.sendingChainMessageNumber}
-          </div>
-          <div>
-            <span className="font-medium">Recv Chain Msg #:</span>{" "}
-            {state.receivingChainMessageNumber}
-          </div>
-          <div>
-            <span className="font-medium">Prev Send Chain Count:</span>{" "}
-            {state.previousSendingChainMessageCount}
-          </div>
-          <div>
-            <span className="font-medium">Skipped Keys:</span>{" "}
-            {Object.keys(state.skippedKeys || {}).length}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   // Manager state renderer
   const ManagerStateDisplay = ({
     manager,
     title,
+    deviceId,
+    pubkey,
   }: {
     manager: SessionManager | null
     title: string
+    deviceId: string
+    pubkey: string
   }) => {
     if (!manager) return <div className="text-gray-500">Manager not initialized</div>
-
-    const deviceId = manager.getDeviceId()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const invite = (manager as any).invite
 
     return (
       <div className="border rounded p-3 bg-white">
@@ -484,15 +442,23 @@ export default function SessionTest() {
             <span className="font-medium">Device ID:</span> {deviceId}
           </div>
           <div>
-            <span className="font-medium">Invite Present:</span> {invite ? "Yes" : "No"}
+            <span className="font-medium">Public Key:</span> {truncateKey(pubkey)}
           </div>
           <div>
-            <span className="font-medium">Debug Info:</span> See below
+            <span className="font-medium">Manager Status:</span>{" "}
+            {manager ? "Initialized" : "Not Initialized"}
+          </div>
+          <div>
+            <span className="font-medium">Setup Status:</span>{" "}
+            {title === "Alice"
+              ? aliceSetupBob
+                ? "Bob user setup ✓"
+                : "Bob user not setup"
+              : bobSetupAlice
+                ? "Alice user setup ✓"
+                : "Alice user not setup"}
           </div>
         </div>
-
-        {/* Users with sessions */}
-        <div className="text-sm text-gray-600">{manager.debugInfo()}</div>
       </div>
     )
   }
@@ -503,6 +469,28 @@ export default function SessionTest() {
         <h1 className="text-2xl font-bold">SessionManager Debug Chat (NDK)</h1>
         <button onClick={resetAll} className="btn btn-sm btn-secondary">
           Reset
+        </button>
+        <button
+          onClick={aliceSetupBobUser}
+          className={`px-3 py-1 rounded text-sm font-medium ${
+            aliceSetupBob
+              ? "bg-green-600 text-white"
+              : "bg-blue-500 text-white hover:bg-blue-600"
+          }`}
+          disabled={!aliceManager || !bobInfo.pubkey || aliceSetupBob}
+        >
+          {aliceSetupBob ? "Alice → Bob ✓" : "Alice Setup Bob"}
+        </button>
+        <button
+          onClick={bobSetupAliceUser}
+          className={`px-3 py-1 rounded text-sm font-medium ${
+            bobSetupAlice
+              ? "bg-green-600 text-white"
+              : "bg-blue-500 text-white hover:bg-blue-600"
+          }`}
+          disabled={!bobManager || !aliceInfo.pubkey || bobSetupAlice}
+        >
+          {bobSetupAlice ? "Bob → Alice ✓" : "Bob Setup Alice"}
         </button>
         <button
           onClick={clearStorage}
@@ -661,8 +649,18 @@ export default function SessionTest() {
         <div className="mb-6 border rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto">
           <h2 className="font-semibold text-lg mb-4 text-black">Session Manager State</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ManagerStateDisplay manager={aliceManager} title="Alice" />
-            <ManagerStateDisplay manager={bobManager} title="Bob" />
+            <ManagerStateDisplay
+              manager={aliceManager}
+              title="Alice"
+              deviceId={aliceInfo.deviceId}
+              pubkey={aliceInfo.pubkey}
+            />
+            <ManagerStateDisplay
+              manager={bobManager}
+              title="Bob"
+              deviceId={bobInfo.deviceId}
+              pubkey={bobInfo.pubkey}
+            />
           </div>
         </div>
       )}
