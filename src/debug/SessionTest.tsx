@@ -2,7 +2,6 @@ import {useState, useEffect, useRef} from "react"
 import SessionManager from "../session/SessionManager"
 import {generateSecretKey, getPublicKey, VerifiedEvent} from "nostr-tools"
 import {LocalStorageAdapter} from "../session/StorageAdapter"
-import {KIND_CHAT_MESSAGE} from "../utils/constants"
 import {Rumor, NostrPublish} from "nostr-double-ratchet"
 import NDK, {NDKEvent, NDKPrivateKeySigner, NDKFilter} from "@nostr-dev-kit/ndk"
 
@@ -150,28 +149,42 @@ export default function SessionTest() {
   const sendAliceMessage = async () => {
     if (!aliceManager || !aliceInput.trim()) return
 
-    const message = {
-      kind: KIND_CHAT_MESSAGE,
-      content: aliceInput,
-      created_at: Math.floor(Date.now() / 1000),
-    }
+    addEventLog("SENDING_MESSAGE", "alice", {content: aliceInput})
 
-    addEventLog("SENDING_MESSAGE", "alice", message)
-    await aliceManager.sendEvent(bobInfo.pubkey, message)
+    const sentMessage = await aliceManager.sendMessage(bobInfo.pubkey, aliceInput)
+
+    // Add to Alice's chat history immediately
+    setAliceMessages((prev) => [
+      ...prev,
+      {
+        content: sentMessage.content || "",
+        from: aliceInfo.pubkey,
+        timestamp: Date.now(),
+        isOwn: true,
+      },
+    ])
+
     setAliceInput("")
   }
 
   const sendBobMessage = async () => {
     if (!bobManager || !bobInput.trim()) return
 
-    const message = {
-      kind: KIND_CHAT_MESSAGE,
-      content: bobInput,
-      created_at: Math.floor(Date.now() / 1000),
-    }
+    addEventLog("SENDING_MESSAGE", "bob", {content: bobInput})
 
-    addEventLog("SENDING_MESSAGE", "bob", message)
-    await bobManager.sendEvent(aliceInfo.pubkey, message)
+    const sentMessage = await bobManager.sendMessage(aliceInfo.pubkey, bobInput)
+
+    // Add to Bob's chat history immediately
+    setBobMessages((prev) => [
+      ...prev,
+      {
+        content: sentMessage.content || "",
+        from: bobInfo.pubkey,
+        timestamp: Date.now(),
+        isOwn: true,
+      },
+    ])
+
     setBobInput("")
   }
 

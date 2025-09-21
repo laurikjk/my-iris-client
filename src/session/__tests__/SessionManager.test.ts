@@ -38,7 +38,6 @@ describe("SessionManager", () => {
 
     const {
       manager: aliceDevice1,
-      onEvent: onEventAliceDevice1,
       publicKey: alicePubkey,
       secretKey: aliceSecretKey,
     } = await createMockSessionManager("alice-device-1", sharedRelay)
@@ -186,7 +185,6 @@ describe("SessionManager", () => {
 
     const {
       manager: aliceDevice1,
-      onEvent: onEventAliceDevice1,
       publicKey: alicePubkey,
       secretKey: aliceSecretKey,
     } = await createMockSessionManager("alice-device-1", sharedRelay)
@@ -268,5 +266,43 @@ describe("SessionManager", () => {
     const bobStorageKeys = await bobStorage.list()
     expect(aliceStorageKeys.filter((key) => key.startsWith("user/")).length).toBe(1)
     expect(bobStorageKeys.filter((key) => key.startsWith("user/")).length).toBe(0) // Bob hasn't sent anything
+  })
+
+  it("should return complete message events when sending", async () => {
+    const sharedRelay = new MockRelay()
+
+    const {manager: aliceManager, publicKey: alicePubkey} =
+      await createMockSessionManager("alice-device-1", sharedRelay)
+
+    const {manager: bobManager, publicKey: bobPubkey} = await createMockSessionManager(
+      "bob-device-1",
+      sharedRelay
+    )
+
+    // Set up users
+    aliceManager.setupUser(bobPubkey)
+    bobManager.setupUser(alicePubkey)
+
+    // Send initial message to establish session
+    const initialMessage: Partial<Rumor> = {
+      kind: KIND_CHAT_MESSAGE,
+      content: "Hello Bob",
+      created_at: Math.floor(Date.now() / 1000),
+    }
+    await aliceManager.sendEvent(bobPubkey, initialMessage)
+
+    // Now test sendMessage
+    const messageContent = "Test message with sendMessage"
+    const sentMessage = await aliceManager.sendMessage(bobPubkey, messageContent)
+
+    expect(sentMessage).toMatchObject({
+      content: messageContent,
+      pubkey: alicePubkey,
+      kind: KIND_CHAT_MESSAGE,
+    })
+    expect(sentMessage.id).toBeDefined()
+    expect(sentMessage.created_at).toBeDefined()
+    expect(sentMessage.tags).toBeDefined()
+    expect(Array.isArray(sentMessage.tags)).toBe(true)
   })
 })

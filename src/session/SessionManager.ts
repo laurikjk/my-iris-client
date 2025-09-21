@@ -10,6 +10,7 @@ import {
 } from "nostr-double-ratchet"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {getPublicKey} from "nostr-tools"
+import {KIND_CHAT_MESSAGE} from "../utils/constants"
 
 export type OnEventCallback = (event: Rumor, from: string) => void
 
@@ -258,6 +259,28 @@ export default class SessionManager {
         await this.storeUserRecord(recipientIdentityKey)
       })
     )
+  }
+
+  async sendMessage(
+    recipientPublicKey: string,
+    content: string,
+    kind: number = KIND_CHAT_MESSAGE
+  ): Promise<Rumor> {
+    const ourPubkey = getPublicKey(this.ourIdentityKey)
+
+    const message: Partial<Rumor> = {
+      id: crypto.randomUUID(),
+      pubkey: ourPubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      kind,
+      tags: [],
+      content,
+    }
+
+    await this.sendEvent(recipientPublicKey, message)
+
+    // Return the complete message for chat history
+    return message as Rumor
   }
 
   private storeUserRecord(publicKey: string) {
