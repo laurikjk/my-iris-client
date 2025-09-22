@@ -11,7 +11,6 @@ import {
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {getPublicKey} from "nostr-tools"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
-import {get} from "lodash"
 
 export type OnEventCallback = (event: Rumor, from: string) => void
 
