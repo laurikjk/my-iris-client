@@ -1,4 +1,4 @@
-import {useState, useEffect, useRef, KeyboardEvent, DragEvent} from "react"
+import {useState, useEffect, useRef, KeyboardEvent, DragEvent, useCallback} from "react"
 import {Link, useNavigate} from "@/navigation"
 import {nip19} from "nostr-tools"
 import {NDKEvent, NDKKind} from "@nostr-dev-kit/ndk"
@@ -14,6 +14,8 @@ import {ExpirationSelector} from "@/shared/components/create/ExpirationSelector"
 import {getExpirationLabel} from "@/utils/expiration"
 import {RiAttachment2, RiMapPinLine, RiTimeLine} from "@remixicon/react"
 import HyperText from "@/shared/components/HyperText"
+import {searchIndex, SearchResult} from "@/utils/profileSearch"
+import {UserRow} from "@/shared/components/user/UserRow"
 
 // Extract hashtags from text content per NIP-24
 const extractHashtags = (text: string): string[] => {
@@ -125,8 +127,16 @@ export function BaseNoteCreator({
     currentFileIndex: 0,
   })
   const [isDragOver, setIsDragOver] = useState(false)
+  const [mentionSearch, setMentionSearch] = useState<string | null>(null)
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState<number>(0)
+  const [mentionCursorPosition, setMentionCursorPosition] = useState<{
+    top: number
+    left: number
+  } | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const searchResultsRef = useRef<HTMLDivElement>(null)
 
   // Load draft when store hydrates, or set quote link for new quotes
   useEffect(() => {
@@ -203,6 +213,93 @@ export function BaseNoteCreator({
       adjustTextareaHeight()
     }
   }, [text, isFocused, expandOnFocus])
+
+  // Handle mention search
+  useEffect(() => {
+    if (mentionSearch !== null) {
+      const results = searchIndex
+        .search(mentionSearch, {limit: 10})
+        .map((result) => result.item)
+      setSearchResults(results)
+      setSelectedMentionIndex(0)
+    } else {
+      setSearchResults([])
+      setSelectedMentionIndex(0)
+    }
+  }, [mentionSearch])
+
+  const updateMentionCursorPosition = useCallback(() => {
+    if (textareaRef.current && containerRef.current) {
+      const textarea = textareaRef.current
+      const container = containerRef.current
+      const {selectionEnd} = textarea
+      const {lineHeight} = getComputedStyle(textarea)
+      const lines = textarea.value.substring(0, selectionEnd).split("\n")
+      const lineNumber = lines.length - 1
+
+      // Get container position for proper dropdown placement
+      const containerRect = container.getBoundingClientRect()
+      const textareaRect = textarea.getBoundingClientRect()
+
+      setMentionCursorPosition({
+        left: 0,
+        top:
+          textareaRect.top - containerRect.top + parseInt(lineHeight) * (lineNumber + 1),
+      })
+    }
+  }, [])
+
+  const handleSelectMention = useCallback(
+    (result: SearchResult) => {
+      if (textareaRef.current) {
+        const currentValue = text
+        const cursorPosition = textareaRef.current.selectionStart
+
+        // Find the @ symbol position
+        const mentionRegex = /(?:^|\s)@\S*$/
+        const beforeCursor = currentValue.slice(0, cursorPosition)
+        const lastMentionStart = beforeCursor.search(mentionRegex)
+
+        if (lastMentionStart !== -1) {
+          const mentionText = `nostr:${nip19.npubEncode(result.pubKey)} `
+          const newValue =
+            currentValue.slice(0, lastMentionStart) +
+            (lastMentionStart > 0 ? currentValue[lastMentionStart] : "") + // Preserve space if exists
+            mentionText +
+            currentValue.slice(cursorPosition)
+
+          setText(newValue)
+          setMentionSearch(null)
+
+          // Set cursor after the mention
+          const newCursorPosition =
+            lastMentionStart + mentionText.length + (lastMentionStart > 0 ? 1 : 0)
+          setTimeout(() => {
+            if (textareaRef.current) {
+              textareaRef.current.setSelectionRange(newCursorPosition, newCursorPosition)
+              textareaRef.current.focus()
+            }
+          }, 0)
+        }
+      }
+    },
+    [text]
+  )
+
+  const scrollActiveItemIntoView = useCallback(() => {
+    if (searchResultsRef.current && selectedMentionIndex >= 0) {
+      const activeItem = searchResultsRef.current.children[
+        selectedMentionIndex
+      ] as HTMLElement
+      if (activeItem) {
+        activeItem.scrollIntoView({block: "nearest"})
+      }
+    }
+  }, [selectedMentionIndex])
+
+  useEffect(() => {
+    scrollActiveItemIntoView()
+  }, [selectedMentionIndex, scrollActiveItemIntoView])
 
   const handleSubmit = async () => {
     if (!myPubKey || !ndkInstance || !text.trim() || publishing) return
@@ -342,6 +439,40 @@ export function BaseNoteCreator({
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle mention dropdown navigation first
+    if (searchResults.length > 0 && mentionSearch !== null) {
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault()
+          setSelectedMentionIndex((prev) =>
+            prev < searchResults.length - 1 ? prev + 1 : 0
+          )
+          return
+        case "ArrowUp":
+          e.preventDefault()
+          setSelectedMentionIndex((prev) =>
+            prev > 0 ? prev - 1 : searchResults.length - 1
+          )
+          return
+        case "Tab":
+        case "Enter":
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+            // Allow Cmd/Ctrl+Enter to submit
+            break
+          }
+          e.preventDefault()
+          if (selectedMentionIndex >= 0 && searchResults[selectedMentionIndex]) {
+            handleSelectMention(searchResults[selectedMentionIndex])
+          }
+          return
+        case "Escape":
+          e.preventDefault()
+          setMentionSearch(null)
+          return
+      }
+    }
+
+    // Normal key handling
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault()
       handleSubmit()
@@ -350,6 +481,26 @@ export function BaseNoteCreator({
       if (!text.trim() && expandOnFocus) {
         setIsFocused(false)
         textareaRef.current?.blur()
+      }
+    }
+  }
+
+  const handleTextChange = (value: string) => {
+    setText(value)
+
+    if (textareaRef.current) {
+      const cursorPosition = textareaRef.current.selectionStart
+      // Check for @ mention pattern
+      const mentionRegex = /(?:^|\s)@(\S*)$/
+      const beforeCursor = value.slice(0, cursorPosition)
+      const match = beforeCursor.match(mentionRegex)
+
+      if (match) {
+        const mention = match[1]
+        setMentionSearch(mention)
+        updateMentionCursorPosition()
+      } else {
+        setMentionSearch(null)
       }
     }
   }
@@ -415,7 +566,7 @@ export function BaseNoteCreator({
   return (
     <div
       ref={containerRef}
-      className={`${containerClass} ${isDragOver ? "relative" : ""}`}
+      className={`${containerClass} ${isDragOver ? "relative" : ""} relative`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -474,7 +625,7 @@ export function BaseNoteCreator({
               <textarea
                 ref={textareaRef}
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => handleTextChange(e.target.value)}
                 onFocus={() => setIsFocused(true)}
                 onKeyDown={handleKeyDown}
                 placeholder={placeholder}
@@ -678,6 +829,30 @@ export function BaseNoteCreator({
                 )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Mention search results dropdown */}
+      {searchResults.length > 0 && mentionCursorPosition && (
+        <div
+          ref={searchResultsRef}
+          className="absolute left-4 right-4 bg-base-200 rounded-lg z-20 overflow-hidden max-h-60 overflow-y-auto border border-base-300"
+          style={{
+            top: `${mentionCursorPosition.top + 24}px`,
+            left: mentionCursorPosition.left,
+          }}
+        >
+          {searchResults.map((result, index) => (
+            <div
+              key={result.pubKey}
+              className={`p-2 hover:bg-neutral cursor-pointer ${
+                index === selectedMentionIndex ? "bg-neutral" : ""
+              }`}
+              onClick={() => handleSelectMention(result)}
+            >
+              <UserRow pubKey={result.pubKey} linkToProfile={false} avatarWidth={24} />
+            </div>
+          ))}
         </div>
       )}
     </div>
