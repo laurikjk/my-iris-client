@@ -241,7 +241,6 @@ export default class SessionManager {
               }
             })
             this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
-            this.userRecords.get(userPubkey)?.foundInvites.delete(deviceId)
           })
       })
     )
