@@ -36,6 +36,7 @@ export default class SessionManager {
 
   // Data
   private userRecords: Map<string, UserRecord> = new Map()
+  private messageHistory: Map<string, Rumor[]> = new Map()
 
   // Subscriptions
   private ourDeviceInviteSubscription: Unsubscribe | null = null
@@ -241,9 +242,37 @@ export default class SessionManager {
               }
             })
             this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+            this.sendMessageHistory(userPubkey, deviceId)
           })
       })
     )
+  }
+
+  private async sendMessageHistory(
+    recipientPublicKey: string,
+    deviceId: string
+  ): Promise<void> {
+    const history = this.messageHistory.get(recipientPublicKey) || []
+    const userRecord = this.userRecords.get(recipientPublicKey)
+    if (!userRecord) {
+      console.warn("No user record for", recipientPublicKey)
+      return
+    }
+    const device = userRecord.devices.get(deviceId)
+    if (!device) {
+      console.warn("No device record for", deviceId)
+      return
+    }
+    for (const event of history) {
+      const {activeSession} = device
+      if (!activeSession) {
+        console.warn("No active session for device", device.deviceId)
+        return
+      }
+      const {event: verifiedEvent} = activeSession.sendEvent(event)
+      await this.nostrPublish(verifiedEvent)
+      await this.storeUserRecord(recipientPublicKey)
+    }
   }
 
   async sendEvent(recipientIdentityKey: string, event: Partial<Rumor>): Promise<void[]> {
@@ -297,6 +326,10 @@ export default class SessionManager {
       content,
     }
 
+    this.messageHistory.set(recipientPublicKey, [
+      ...(this.messageHistory.get(recipientPublicKey) || []),
+      message as Rumor,
+    ])
     await this.sendEvent(recipientPublicKey, message)
 
     // Return the complete message for chat history
