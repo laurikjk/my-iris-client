@@ -254,13 +254,8 @@ export default class SessionManager {
       return Promise.resolve([])
     }
 
-    if (userRecord.devices.size !== userRecord.foundInvites.size) {
-      await this.acceptInvitesFromUser(recipientIdentityKey)
-    }
-
-    if (ourUserRecord?.devices.size === 0) {
-      await this.acceptInvitesFromUser(getPublicKey(this.ourIdentityKey))
-    }
+    await this.acceptInvitesFromUser(recipientIdentityKey)
+    await this.acceptInvitesFromUser(getPublicKey(this.ourIdentityKey))
 
     const devices = [
       ...Array.from(userRecord.devices.values()),
