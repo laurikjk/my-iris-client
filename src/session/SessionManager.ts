@@ -247,6 +247,7 @@ export default class SessionManager {
 
   async sendEvent(recipientIdentityKey: string, event: Partial<Rumor>): Promise<void[]> {
     const userRecord = this.userRecords.get(recipientIdentityKey)
+    const ourUserRecord = this.userRecords.get(getPublicKey(this.ourIdentityKey))
     if (!userRecord) {
       console.warn("No user record for", recipientIdentityKey)
       return Promise.resolve([])
@@ -256,13 +257,22 @@ export default class SessionManager {
       await this.acceptInvitesFromUser(recipientIdentityKey)
     }
 
-    if (this.userRecords.get(getPublicKey(this.ourIdentityKey))?.devices.size === 0) {
-      this.setupUser(getPublicKey(this.ourIdentityKey))
+    if (ourUserRecord?.devices.size === 0) {
+      await this.acceptInvitesFromUser(getPublicKey(this.ourIdentityKey))
     }
 
-    console.warn("Sending event to", userRecord.devices.keys())
+    const devices = [
+      ...Array.from(userRecord.devices.values()),
+      ...Array.from(ourUserRecord?.devices.values() || []),
+    ]
+
+    console.warn(
+      "Sending event to devices",
+      devices.map((d) => d.deviceId)
+    )
+
     return Promise.all(
-      Array.from(userRecord.devices.values()).map(async (device) => {
+      devices.map(async (device) => {
         const {activeSession} = device
         if (!activeSession) {
           console.warn("No active session for device", device.deviceId)
