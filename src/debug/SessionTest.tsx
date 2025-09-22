@@ -743,7 +743,7 @@ export default function SessionTest() {
                         ? "bg-blue-100 text-blue-700"
                         : "bg-indigo-100 text-indigo-700"
                     }`}>
-                      From {msg.deviceId === "bob-device-1" ? "D1" : "D2"}
+                      From Bob {msg.deviceId === "bob-device-1" ? "D1" : "D2"}
                     </span>
                   )}
                 </span>
@@ -821,14 +821,32 @@ export default function SessionTest() {
                 <span className="text-xs text-gray-500">
                   {new Date(msg.timestamp).toLocaleTimeString()} -
                   <span className="font-mono ml-1">{msg.from.slice(0, 8)}...</span>
-                  {msg.deviceId && msg.from === bobInfo.pubkey && (
-                    <span className={`ml-1 px-1 rounded text-xs ${
-                      msg.deviceId === "bob-device-1"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-emerald-100 text-emerald-700"
-                    }`}>
-                      {msg.deviceId === "bob-device-1" ? "D1" : "D2"}
-                    </span>
+
+                  {/* Show device info for messages */}
+                  {msg.deviceId && (
+                    <>
+                      {/* For Bob's own sent messages */}
+                      {msg.from === bobInfo.pubkey && (
+                        <span className={`ml-1 px-1 rounded text-xs ${
+                          msg.deviceId === "bob-device-1"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}>
+                          Sent from {msg.deviceId === "bob-device-1" ? "D1" : "D2"}
+                        </span>
+                      )}
+
+                      {/* For received messages from others */}
+                      {msg.from !== bobInfo.pubkey && (
+                        <span className={`ml-1 px-1 rounded text-xs ${
+                          msg.deviceId === "bob-device-1"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-indigo-100 text-indigo-700"
+                        }`}>
+                          Received by {msg.deviceId === "bob-device-1" ? "D1" : "D2"}
+                        </span>
+                      )}
+                    </>
                   )}
                 </span>
                 <div>{msg.content}</div>

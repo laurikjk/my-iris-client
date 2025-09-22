@@ -11,6 +11,7 @@ import {
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {getPublicKey} from "nostr-tools"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
+import {get} from "lodash"
 
 export type OnEventCallback = (event: Rumor, from: string) => void
 
@@ -36,7 +37,6 @@ export default class SessionManager {
 
   // Data
   private userRecords: Map<string, UserRecord> = new Map()
-  private ourDeviceInvites: Map<string, Invite> = new Map()
 
   // Subscriptions
   private ourDeviceInviteSubscription: Unsubscribe | null = null
@@ -67,6 +67,14 @@ export default class SessionManager {
 
     await this.loadAllUserRecords()
 
+    if (!this.userRecords.has(ourPublicKey)) {
+      this.userRecords.set(getPublicKey(this.ourIdentityKey), {
+        publicKey: getPublicKey(this.ourIdentityKey),
+        devices: new Map(),
+        foundInvites: new Map(),
+      })
+    }
+
     console.warn("Loaded user records", this.userRecords.keys())
 
     return this.storage
@@ -75,7 +83,6 @@ export default class SessionManager {
         if (!data) return null
         const invite = Invite.deserialize(data)
         if (invite) {
-          this.ourDeviceInvites.set(this.deviceId, invite)
           return invite
         }
       })
@@ -95,8 +102,6 @@ export default class SessionManager {
         return newInvite
       })
       .then((invite) => {
-        this.ourDeviceInvites.set(this.deviceId, invite)
-
         this.ourDeviceInviteSubscription = invite.listen(
           this.ourIdentityKey,
           this.nostrSubscribe,
@@ -135,12 +140,17 @@ export default class SessionManager {
             this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
           }
         )
+
         // 3. Subscribe to our own invites from other devices
         this.ourOtherDeviceInviteSubscription = Invite.fromUser(
           ourPublicKey,
           this.nostrSubscribe,
-          async () => {
-            // TODO: Handle invites from our other devices
+          async (invite) => {
+            if (!invite.deviceId) return
+            if (this.userRecords.get(ourPublicKey)?.foundInvites.has(invite.deviceId))
+              return
+
+            this.userRecords.get(ourPublicKey)?.foundInvites.set(invite.deviceId, invite)
           }
         )
       })
@@ -244,6 +254,10 @@ export default class SessionManager {
 
     if (userRecord.devices.size !== userRecord.foundInvites.size) {
       await this.acceptInvitesFromUser(recipientIdentityKey)
+    }
+
+    if (this.userRecords.get(getPublicKey(this.ourIdentityKey))?.devices.size === 0) {
+      this.setupUser(getPublicKey(this.ourIdentityKey))
     }
 
     console.warn("Sending event to", userRecord.devices.keys())
