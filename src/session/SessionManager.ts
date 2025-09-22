@@ -92,7 +92,9 @@ export default class SessionManager {
         const newInvite = Invite.createNew(ourPublicKey, this.deviceId)
         await this.storage.put(`invite/${this.deviceId}`, newInvite.serialize())
         const event = newInvite.getEvent()
-        await this.nostrPublish(event)
+        await this.nostrPublish(event).catch((e) => {
+          console.error("Failed to publish our own invite for", this.deviceId, e)
+        })
         console.warn(
           "Created new invite for our device",
           this.deviceId,
