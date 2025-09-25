@@ -159,6 +159,7 @@ export default class SessionManager {
   }
 
   setupUser(userPubkey: string) {
+    console.warn("Setting up user", userPubkey)
     if (this.userRecords.has(userPubkey)) {
       return
     }
@@ -180,6 +181,40 @@ export default class SessionManager {
         if (!this.userRecords.get(userPubkey)?.foundInvites.has(invite.deviceId)) {
           this.userRecords.get(userPubkey)?.foundInvites.set(invite.deviceId, invite)
         }
+        const {deviceId} = invite
+        if (!deviceId) return Promise.resolve()
+        if (this.userRecords.get(userPubkey)?.devices.has(deviceId)) {
+          return Promise.resolve()
+        }
+
+        return invite
+          .accept(
+            this.nostrSubscribe,
+            getPublicKey(this.ourIdentityKey),
+            this.ourIdentityKey,
+            this.deviceId
+          )
+          .then(async ({session, event}) => {
+            await this.nostrPublish(event).catch((e) => {
+              console.error("Failed to publish acceptance to", deviceId, e)
+            })
+            this.userRecords.get(userPubkey)?.devices.set(deviceId, {
+              deviceId: deviceId,
+              activeSession: session,
+              inactiveSessions: [],
+            })
+            const sessionSubscriptionId = `session/${userPubkey}/${deviceId}`
+            if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
+              return
+            }
+            const unsubscribe = session.onEvent((event) => {
+              for (const callback of this.internalSubscriptions) {
+                callback(event, userPubkey)
+              }
+            })
+            this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+            this.sendMessageHistory(userPubkey, deviceId)
+          })
       }
     )
     this.inviteSubscriptions.set(inviteSubscriptionId, unsubscribe)
@@ -204,48 +239,6 @@ export default class SessionManager {
 
     this.ourDeviceInviteSubscription?.()
     this.ourOtherDeviceInviteSubscription?.()
-  }
-
-  private acceptInvitesFromUser(userPubkey: string): Promise<void[]> {
-    const invites = this.userRecords.get(userPubkey)?.foundInvites.values()
-    if (!invites) return Promise.resolve([])
-
-    return Promise.all(
-      invites.map((invite) => {
-        const {deviceId} = invite
-        if (!deviceId) return Promise.resolve()
-        if (this.userRecords.get(userPubkey)?.devices.has(deviceId)) {
-          return Promise.resolve()
-        }
-
-        return invite
-          .accept(
-            this.nostrSubscribe,
-            getPublicKey(this.ourIdentityKey),
-            this.ourIdentityKey,
-            this.deviceId
-          )
-          .then(async ({session, event}) => {
-            await this.nostrPublish(event)
-            this.userRecords.get(userPubkey)?.devices.set(deviceId, {
-              deviceId: deviceId,
-              activeSession: session,
-              inactiveSessions: [],
-            })
-            const sessionSubscriptionId = `session/${userPubkey}/${deviceId}`
-            if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-              return
-            }
-            const unsubscribe = session.onEvent((event) => {
-              for (const callback of this.internalSubscriptions) {
-                callback(event, userPubkey)
-              }
-            })
-            this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
-            this.sendMessageHistory(userPubkey, deviceId)
-          })
-      })
-    )
   }
 
   private async sendMessageHistory(
@@ -278,16 +271,16 @@ export default class SessionManager {
   async sendEvent(recipientIdentityKey: string, event: Partial<Rumor>): Promise<void[]> {
     const userRecord = this.userRecords.get(recipientIdentityKey)
     const ourUserRecord = this.userRecords.get(getPublicKey(this.ourIdentityKey))
-    if (!userRecord) {
-      console.warn("No user record for", recipientIdentityKey)
-      return Promise.resolve([])
-    }
+    // if (!userRecord) {
+    //   console.warn("No user record for", recipientIdentityKey)
+    //   return Promise.resolve([])
+    // }
 
-    await this.acceptInvitesFromUser(recipientIdentityKey)
-    await this.acceptInvitesFromUser(getPublicKey(this.ourIdentityKey))
+    this.setupUser(recipientIdentityKey)
+    this.setupUser(getPublicKey(this.ourIdentityKey))
 
     const devices = [
-      ...Array.from(userRecord.devices.values()),
+      ...Array.from(userRecord?.devices.values() || []),
       ...Array.from(ourUserRecord?.devices.values() || []),
     ]
 
