@@ -47,6 +47,9 @@ export default class SessionManager {
   // Callbacks
   private internalSubscriptions: Set<OnEventCallback> = new Set()
 
+  // Initialization flag
+  private initialized: boolean = false
+
   constructor(
     ourIdentityKey: Uint8Array,
     deviceId: string,
@@ -63,6 +66,8 @@ export default class SessionManager {
   }
 
   async init() {
+    if (this.initialized) return
+
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
 
     await this.loadAllUserRecords()
@@ -140,6 +145,7 @@ export default class SessionManager {
               }
             })
             this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+            this.initialized = true
           }
         )
 
@@ -269,6 +275,7 @@ export default class SessionManager {
   }
 
   async sendEvent(recipientIdentityKey: string, event: Partial<Rumor>): Promise<void[]> {
+    await this.init()
     const userRecord = this.userRecords.get(recipientIdentityKey)
     const ourUserRecord = this.userRecords.get(getPublicKey(this.ourIdentityKey))
     // if (!userRecord) {
