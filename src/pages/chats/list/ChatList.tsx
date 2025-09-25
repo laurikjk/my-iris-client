@@ -1,6 +1,5 @@
 import {usePublicChatsStore} from "@/stores/publicChats"
 import Header from "@/shared/components/header/Header"
-import {usePrivateChatsStore} from "@/stores/privateChatsNew"
 import ChatListItem from "./ChatListItem"
 import {NavLink} from "@/navigation"
 import classNames from "classnames"
@@ -16,9 +15,23 @@ interface ChatListProps {
 }
 
 const ChatList = ({className}: ChatListProps) => {
-  const {getChatsList} = usePrivateChatsStore()
   const {publicChats, timestamps, addOrRefreshChatById} = usePublicChatsStore()
   const {groups} = useGroupsStore()
+  const {events} = usePrivateMessagesStore()
+
+  const getChatsList = () => {
+    // userPubKey: string
+    // lastMessage?: MessageType
+    // lastMessageTime: number
+    // unreadCount: number
+    return events.keys().map((userPubKey) => {
+      return {
+        userPubKey,
+        lastMessageTime: 0,
+        unreadCount: 0,
+      }
+    })
+  }
 
   useEffect(() => {
     Object.keys(publicChats).forEach((chatId) => {

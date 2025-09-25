@@ -11,6 +11,7 @@ import {ndk} from "./utils/ndk"
 import socialGraph from "./utils/socialGraph"
 import DebugManager from "./utils/DebugManager"
 import Layout from "@/shared/components/Layout"
+import {usePrivateMessagesStore} from "./stores/privateMessages"
 import {getSessionManager} from "./shared/services/PrivateChats"
 
 // Move initialization to a function to avoid side effects
@@ -31,7 +32,20 @@ const initializeApp = () => {
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
-      getSessionManager().init()
+      const sessionManager = getSessionManager()
+      sessionManager.init().then(() => {
+        sessionManager.onEvent((event, from) => {
+          usePrivateMessagesStore
+            .getState()
+            .upsert(from, event)
+            .then(() => {
+              console.warn("New private message from", from, "with event", event)
+            })
+            .catch((err) => {
+              console.error("Failed to upsert private message:", err)
+            })
+        })
+      })
     }
   }
 
@@ -72,7 +86,20 @@ const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
-      getSessionManager().init()
+      const sessionManager = getSessionManager()
+      sessionManager.init().then(() => {
+        sessionManager.onEvent((event, from) => {
+          usePrivateMessagesStore
+            .getState()
+            .upsert(from, event)
+            .then(() => {
+              console.warn("New private message from", from, "with event", event)
+            })
+            .catch((err) => {
+              console.error("Failed to upsert private message:", err)
+            })
+        })
+      })
     }
   }
 })

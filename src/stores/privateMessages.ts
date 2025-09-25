@@ -36,7 +36,7 @@ interface PrivateMessagesStoreActions {
 
 type PrivateMessagesStore = PrivateMessagesStoreState & PrivateMessagesStoreActions
 
-const makeOrModifyMessage = async (_chatId: string, message: MessageType) => {
+const makeOrModifyMessage = async (chatId: string, message: MessageType) => {
   const isReaction = message.kind === KIND_REACTION
   const eTag = message.tags.find(([key]) => key === "e")
   if (isReaction && eTag) {
@@ -100,9 +100,13 @@ export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
     events: new Map(),
 
     upsert: async (chatId, event) => {
+      console.warn("Upsert called for chatId", chatId, event)
       await rehydration
+      console.warn("Upserting message", chatId, event)
       const message = await makeOrModifyMessage(chatId, event)
+      console.warn("Upserted/modified message", chatId, message)
       await messageRepository.save(chatId, message)
+      console.warn("Saved message to repository", chatId, message)
       set((state) => ({
         events: addToMap(new Map(state.events), chatId, message),
       }))

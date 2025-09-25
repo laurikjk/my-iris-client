@@ -35,7 +35,6 @@ const createPublish = (ndk: NDK): NostrPublish => {
 let manager: SessionManager | null = null
 
 export const getSessionManager = () => {
-  console.warn("\n\n\ngetSessionManager called", manager, "\n\n\n")
   if (manager) return manager
 
   const privateKey = useUserStore.getState().privateKey
