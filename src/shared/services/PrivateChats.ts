@@ -32,6 +32,17 @@ const createPublish = (ndk: NDK): NostrPublish => {
   }) as NostrPublish
 }
 
+const getOrCreateDeviceId = (): string => {
+  let deviceId = localStorage.getItem("deviceId")
+  if (!deviceId) {
+    deviceId =
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    localStorage.setItem("deviceId", deviceId)
+  }
+  return deviceId
+}
+
 let manager: SessionManager | null = null
 
 export const getSessionManager = () => {
@@ -49,7 +60,7 @@ export const getSessionManager = () => {
 
   manager = new SessionManager(
     privateKeyOrEncryptFunction,
-    "alice-device-1",
+    getOrCreateDeviceId(),
     createSubscribe(ndkInstance),
     createPublish(ndkInstance),
     new LocalStorageAdapter("yeyeyeyeyyeyey")

@@ -17,6 +17,7 @@ import EmojiType from "@/types/emoji"
 import {MessageType} from "./Message"
 import {UnsignedEvent} from "nostr-tools"
 import {getSessionManager} from "@/shared/services/PrivateChats"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 
 interface MessageFormProps {
   id: string
@@ -91,7 +92,10 @@ const MessageForm = ({
         }
       })
 
-      await sessionManager.sendMessage(id, text)
+      const sentMessage = await sessionManager.sendMessage(id, text)
+      await usePrivateMessagesStore
+        .getState()
+        .upsert(id, sentMessage as MessageType)
       setEncryptionMetadata(new Map()) // Clear after sending
     } catch (error) {
       console.error("Failed to send message:", error)
