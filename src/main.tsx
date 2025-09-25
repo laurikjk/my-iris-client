@@ -7,14 +7,11 @@ import ReactDOM from "react-dom/client"
 import {subscribeToDMNotifications, subscribeToNotifications} from "./utils/notifications"
 import {migrateUserState, migratePublicChats} from "./utils/migration"
 import {useSettingsStore} from "@/stores/settings"
-import {
-  initializeSessionManager,
-  resetSessionManagerInitialization,
-} from "@/stores/privateChatsNew"
 import {ndk} from "./utils/ndk"
 import socialGraph from "./utils/socialGraph"
 import DebugManager from "./utils/DebugManager"
 import Layout from "@/shared/components/Layout"
+import {getSessionManager} from "./shared/services/PrivateChats"
 
 // Move initialization to a function to avoid side effects
 const initializeApp = () => {
@@ -34,7 +31,7 @@ const initializeApp = () => {
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
-      initializeSessionManager().catch(console.error)
+      getSessionManager().init()
     }
   }
 
@@ -69,14 +66,13 @@ const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
   // Only proceed if public key actually changed
   if (state.publicKey && state.publicKey !== prevState.publicKey) {
     console.log("Public key changed, initializing chat modules")
-    resetSessionManagerInitialization() // Reset to allow re-initialization
     subscribeToNotifications()
     subscribeToDMNotifications()
     migratePublicChats()
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
-      initializeSessionManager().catch(console.error)
+      getSessionManager().init()
     }
   }
 })
