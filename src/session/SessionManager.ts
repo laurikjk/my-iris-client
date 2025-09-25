@@ -66,6 +66,7 @@ export default class SessionManager {
   }
 
   async init() {
+    console.warn("Initializing SessionManager for device", this.deviceId)
     if (this.initialized) return
 
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
@@ -146,6 +147,7 @@ export default class SessionManager {
             })
             this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
             this.initialized = true
+            console.warn("SessionManager initialized for device", this.deviceId)
           }
         )
 

@@ -5,6 +5,7 @@ import Message, {MessageType} from "../message/Message"
 import {groupMessages} from "../utils/messageGrouping"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {useUserStore} from "@/stores/user"
+import {getSessionManager} from "@/shared/services/PrivateChats"
 
 interface ChatContainerProps {
   messages: SortedMap<string, MessageType>

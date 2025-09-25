@@ -40,7 +40,9 @@ export default function SessionTest() {
   const [aliceSetupBobDevice2, setAliceSetupBobDevice2] = useState(false)
   const [bobSetupAlice, setBobSetupAlice] = useState(false)
   const [bobDevice2SetupAlice, setBobDevice2SetupAlice] = useState(false)
-  const [activeBobDevice, setActiveBobDevice] = useState<"device-1" | "device-2">("device-1")
+  const [activeBobDevice, setActiveBobDevice] = useState<"device-1" | "device-2">(
+    "device-1"
+  )
 
   const aliceSecretKey = useRef(generateSecretKey())
   const bobSecretKey = useRef(generateSecretKey())
@@ -514,7 +516,11 @@ export default function SessionTest() {
       const connectedRelays = Array.from(bobNDK2.current!.pool.relays.values()).filter(
         (r) => r.connected
       ).length
-      addEventLog("CONNECTION_STATUS", "bob-device-2", `${connectedRelays} relays connected`)
+      addEventLog(
+        "CONNECTION_STATUS",
+        "bob-device-2",
+        `${connectedRelays} relays connected`
+      )
       if (connectedRelays > 0) {
         setBobDevice2Connected(true)
       }
@@ -738,11 +744,13 @@ export default function SessionTest() {
                   {new Date(msg.timestamp).toLocaleTimeString()} -
                   <span className="font-mono ml-1">{msg.from.slice(0, 8)}...</span>
                   {msg.deviceId && msg.from === bobInfo.pubkey && (
-                    <span className={`ml-1 px-1 rounded text-xs ${
-                      msg.deviceId === "bob-device-1"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-indigo-100 text-indigo-700"
-                    }`}>
+                    <span
+                      className={`ml-1 px-1 rounded text-xs ${
+                        msg.deviceId === "bob-device-1"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-indigo-100 text-indigo-700"
+                      }`}
+                    >
                       From Bob {msg.deviceId === "bob-device-1" ? "D1" : "D2"}
                     </span>
                   )}
@@ -802,8 +810,12 @@ export default function SessionTest() {
 
           {/* Device Info */}
           <div className="text-xs text-gray-700 mb-4">
-            <div>Active: <span className="font-mono">{activeBobDevice}</span></div>
-            <div>Pubkey: <span className="font-mono">{bobInfo.pubkey.slice(0, 16)}...</span></div>
+            <div>
+              Active: <span className="font-mono">{activeBobDevice}</span>
+            </div>
+            <div>
+              Pubkey: <span className="font-mono">{bobInfo.pubkey.slice(0, 16)}...</span>
+            </div>
             <div className="flex gap-4 mt-1">
               <span className={bobConnected ? "text-green-600" : "text-red-600"}>
                 D1: {bobConnected ? "Connected ✓" : "Disconnected ✗"}
@@ -821,28 +833,31 @@ export default function SessionTest() {
                 <span className="text-xs text-gray-500">
                   {new Date(msg.timestamp).toLocaleTimeString()} -
                   <span className="font-mono ml-1">{msg.from.slice(0, 8)}...</span>
-
                   {/* Show device info for messages */}
                   {msg.deviceId && (
                     <>
                       {/* For Bob's own sent messages */}
                       {msg.from === bobInfo.pubkey && (
-                        <span className={`ml-1 px-1 rounded text-xs ${
-                          msg.deviceId === "bob-device-1"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-emerald-100 text-emerald-700"
-                        }`}>
+                        <span
+                          className={`ml-1 px-1 rounded text-xs ${
+                            msg.deviceId === "bob-device-1"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
                           Sent from {msg.deviceId === "bob-device-1" ? "D1" : "D2"}
                         </span>
                       )}
 
                       {/* For received messages from others */}
                       {msg.from !== bobInfo.pubkey && (
-                        <span className={`ml-1 px-1 rounded text-xs ${
-                          msg.deviceId === "bob-device-1"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-indigo-100 text-indigo-700"
-                        }`}>
+                        <span
+                          className={`ml-1 px-1 rounded text-xs ${
+                            msg.deviceId === "bob-device-1"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-indigo-100 text-indigo-700"
+                          }`}
+                        >
                           Received by {msg.deviceId === "bob-device-1" ? "D1" : "D2"}
                         </span>
                       )}

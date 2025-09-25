@@ -2,7 +2,6 @@ import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "../utils/messageGrouping"
 import PrivateChatHeader from "./PrivateChatHeader"
-import {usePrivateChatsStore} from "@/stores/privateChatsNew"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import MessageForm from "../message/MessageForm"
 import {MessageType} from "../message/Message"
@@ -10,9 +9,10 @@ import {useEffect, useState} from "react"
 import {useUserStore} from "@/stores/user"
 import {KIND_REACTION} from "@/utils/constants"
 
+const updateLastSeen = (id: string) => {}
+
 const Chat = ({id}: {id: string}) => {
   // id is now userPubKey instead of sessionId
-  const {updateLastSeen} = usePrivateChatsStore()
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
@@ -65,8 +65,6 @@ const Chat = ({id}: {id: string}) => {
     }
   }, [id, updateLastSeen])
 
-  const {sendToUser} = usePrivateChatsStore()
-
   const handleSendReaction = async (messageId: string, emoji: string) => {
     const myPubKey = useUserStore.getState().publicKey
     if (!myPubKey) return
@@ -81,7 +79,7 @@ const Chat = ({id}: {id: string}) => {
       ],
     }
 
-    await sendToUser(id, event)
+    // TODO: actually do somethign
   }
 
   if (!id) {
