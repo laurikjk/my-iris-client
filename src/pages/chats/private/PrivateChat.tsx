@@ -21,7 +21,6 @@ const Chat = ({id}: {id: string}) => {
 
   // Get messages reactively from events store - this will update when new messages are added
   const eventsMap = usePrivateMessagesStore((state) => state.events)
-  console.warn("Rendering chat with ID:", id, eventsMap)
   const messages = eventsMap.get(id) ?? new SortedMap<string, MessageType>([], comparator)
 
   useEffect(() => {
