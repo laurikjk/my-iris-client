@@ -333,7 +333,9 @@ export default class SessionManager {
       pubkey: ourPubkey,
       created_at: Math.floor(Date.now() / 1000),
       kind,
-      tags: [],
+      // TODO: spec says specify relay url too:https://github.com/nostr-protocol/nips/blob/master/17.md
+      // Let's think about this when looking at invite revoking etc.
+      tags: [["p", recipientPublicKey]],
       content,
     }
 
