@@ -70,33 +70,19 @@ export default class SessionManager {
   }
 
   async init() {
-    console.warn("Initializing SessionManager for device", this.deviceId)
     if (this.initialized) return
+    this.initialized = true
 
     const ourPublicKey = getPublicKey(this.ourIdentityKey)
 
     await this.loadAllUserRecords()
-    this.initialized = true
-    console.warn("SessionManager initialized for device", this.deviceId)
-
-    if (!this.userRecords.has(ourPublicKey)) {
-      this.userRecords.set(getPublicKey(this.ourIdentityKey), {
-        publicKey: getPublicKey(this.ourIdentityKey),
-        devices: new Map(),
-        foundInvites: new Map(),
-      })
-    }
-
-    console.warn("Loaded user records", this.userRecords.keys())
 
     return this.storage
       .get<string>(`invite/${this.deviceId}`)
       .then((data) => {
         if (!data) return null
         const invite = Invite.deserialize(data)
-        if (invite) {
-          return invite
-        }
+        return invite
       })
       .catch(() => null)
       .then(async (invite) => {
@@ -104,18 +90,11 @@ export default class SessionManager {
         const newInvite = Invite.createNew(ourPublicKey, this.deviceId)
         await this.storage.put(`invite/${this.deviceId}`, newInvite.serialize())
         const event = newInvite.getEvent()
-        await this.nostrPublish(event).catch((e) => {
-          console.error("Failed to publish our own invite for", this.deviceId, e)
-        })
-        console.warn(
-          "Created new invite for our device",
-          this.deviceId,
-          newInvite,
-          ourPublicKey
-        )
+        await this.nostrPublish(event).catch(console.error)
         return newInvite
       })
       .then((invite) => {
+        // Listen to our invite
         this.ourDeviceInviteSubscription = invite.listen(
           this.ourIdentityKey,
           this.nostrSubscribe,
@@ -123,19 +102,8 @@ export default class SessionManager {
             this.attachSessionSubscription(inviteePubkey, deviceId, session)
           }
         )
-
-        // 3. Subscribe to our own invites from other devices
-        this.ourOtherDeviceInviteSubscription = Invite.fromUser(
-          ourPublicKey,
-          this.nostrSubscribe,
-          async (invite) => {
-            if (!invite.deviceId) return
-            if (this.userRecords.get(ourPublicKey)?.foundInvites.has(invite.deviceId))
-              return
-
-            this.userRecords.get(ourPublicKey)?.foundInvites.set(invite.deviceId, invite)
-          }
-        )
+        // Listen to invites of our other devices
+        this.attachInviteSubscription(ourPublicKey)
       })
   }
 
@@ -236,35 +204,6 @@ export default class SessionManager {
     this.inviteSubscriptions.set(key, unsubscribe)
   }
 
-  private attachSession(userPubkey: string, deviceId: string, session: Session) {
-    const key = `session/${userPubkey}/${deviceId}`
-    const ur = this.userRecords.get(userPubkey)!
-    const existing = ur.devices.get(deviceId)
-
-    // If we already have a subscribed session, keep it and drop the newcomer.
-    if (this.sessionSubscriptions.has(key)) {
-      // optional: session.close?.()
-      return
-    }
-
-    // If we had an old session without a subscription, replace it cleanly.
-    if (existing?.activeSession && this.sessionSubscriptions.has(key)) {
-      this.sessionSubscriptions.get(key)!()
-      this.sessionSubscriptions.delete(key)
-    }
-
-    ur.devices.set(deviceId, {
-      deviceId,
-      activeSession: session,
-      inactiveSessions: existing?.inactiveSessions ?? [],
-    })
-
-    const unsub = session.onEvent((event) => {
-      for (const cb of this.internalSubscriptions) cb(event, userPubkey)
-    })
-    this.sessionSubscriptions.set(key, unsub)
-  }
-
   setupUser(userPubkey: string) {
     this.getOrCreateUserRecord(userPubkey)
 
@@ -287,21 +226,6 @@ export default class SessionManager {
       await this.nostrPublish(event).catch((e) => {
         console.error("Failed to publish acceptance to", deviceId, e)
       })
-      // this.userRecords.get(userPubkey)?.devices.set(deviceId, {
-      //   deviceId: deviceId,
-      //   activeSession: session,
-      //   inactiveSessions: [],
-      // })
-      // const sessionSubscriptionId = `session/${userPubkey}/${deviceId}`
-      // if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-      //   return
-      // }
-      // const unsubscribe = session.onEvent((event) => {
-      //   for (const callback of this.internalSubscriptions) {
-      //     callback(event, userPubkey)
-      //   }
-      // })
-      // this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
       this.attachSessionSubscription(userPubkey, deviceId, session)
       await this.sendMessageHistory(userPubkey, deviceId)
     })
@@ -355,14 +279,13 @@ export default class SessionManager {
     }
   }
 
-  async sendEvent(recipientIdentityKey: string, event: Partial<Rumor>): Promise<void[]> {
+  async sendEvent(
+    recipientIdentityKey: string,
+    event: Partial<Rumor>
+  ): Promise<PromiseSettledResult<void>[]> {
     await this.init()
     const userRecord = this.userRecords.get(recipientIdentityKey)
     const ourUserRecord = this.userRecords.get(getPublicKey(this.ourIdentityKey))
-    // if (!userRecord) {
-    //   console.warn("No user record for", recipientIdentityKey)
-    //   return Promise.resolve([])
-    // }
 
     this.setupUser(recipientIdentityKey)
     this.setupUser(getPublicKey(this.ourIdentityKey))
@@ -372,18 +295,10 @@ export default class SessionManager {
       ...Array.from(ourUserRecord?.devices.values() || []),
     ]
 
-    console.warn(
-      "Sending event to devices",
-      devices.map((d) => d.deviceId)
-    )
-
-    return Promise.all(
+    return Promise.allSettled(
       devices.map(async (device) => {
         const {activeSession} = device
-        if (!activeSession) {
-          console.warn("No active session for device", device.deviceId)
-          return
-        }
+        if (!activeSession) return
         const {event: verifiedEvent} = activeSession.sendEvent(event)
         await this.nostrPublish(verifiedEvent)
         await this.storeUserRecord(recipientIdentityKey)
@@ -432,11 +347,6 @@ export default class SessionManager {
         })
       ),
     }
-    console.warn(
-      "Storing user record with these keys in state",
-      this.deviceId,
-      data.devices.map((d) => d.activeSession && JSON.parse(d.activeSession))
-    )
     return this.storage.put(`user/${publicKey}`, data)
   }
 
