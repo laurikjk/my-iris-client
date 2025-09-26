@@ -372,13 +372,6 @@ export default class SessionManager {
           inactiveSessions,
         })
       }
-      console.warn(
-        "Loaded user record with these keys in state",
-        Array.from(devices.values()).map(
-          (d) =>
-            d.activeSession && JSON.parse(serializeSessionState(d.activeSession.state))
-        )
-      )
       for (const device of devices.values()) {
         const {deviceId, activeSession} = device
         if (!activeSession || !deviceId) continue
