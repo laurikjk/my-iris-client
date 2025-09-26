@@ -63,7 +63,7 @@ export const getSessionManager = () => {
     getOrCreateDeviceId(),
     createSubscribe(ndkInstance),
     createPublish(ndkInstance),
-    new LocalStorageAdapter("yeyeyeyeyyeyey")
+    new LocalStorageAdapter("private")
   )
 
   return manager

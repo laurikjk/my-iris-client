@@ -104,19 +104,24 @@ export default class SessionManager {
         )
         // Listen to invites of our other devices
         this.attachInviteSubscription(ourPublicKey, async (invite) => {
+          console.warn("\n\n\n FOUND OUR OWN INVITE \n\n\n", invite)
           const {deviceId} = invite
           if (!deviceId) return
 
           const dr = this.getOrCreateDeviceRecord(ourPublicKey, deviceId)
+          console.warn("Device record for our device", dr)
           if (dr.activeSession) return // already have session
 
+          console.warn("Accepting invite for our device", deviceId)
           const {session, event} = await invite.accept(
             this.nostrSubscribe,
             getPublicKey(this.ourIdentityKey),
             this.ourIdentityKey,
             this.deviceId
           )
+          console.warn("Accepted invite, got session", session)
           await this.nostrPublish(event).catch(console.error)
+          console.warn("Published acceptance event")
           this.attachSessionSubscription(ourPublicKey, deviceId, session)
         })
       })
@@ -247,6 +252,7 @@ export default class SessionManager {
   }
 
   onEvent(callback: OnEventCallback) {
+    console.warn("SessionManager: onEvent callback added")
     this.internalSubscriptions.add(callback)
 
     return () => {
@@ -299,16 +305,18 @@ export default class SessionManager {
     event: Partial<Rumor>
   ): Promise<PromiseSettledResult<void>[]> {
     await this.init()
-    const userRecord = this.userRecords.get(recipientIdentityKey)
-    const ourUserRecord = this.userRecords.get(getPublicKey(this.ourIdentityKey))
+    const userRecord = this.getOrCreateUserRecord(recipientIdentityKey)
+    const ourUserRecord = this.getOrCreateUserRecord(getPublicKey(this.ourIdentityKey))
 
     this.setupUser(recipientIdentityKey)
     this.setupUser(getPublicKey(this.ourIdentityKey))
 
     const devices = [
-      ...Array.from(userRecord?.devices.values() || []),
-      ...Array.from(ourUserRecord?.devices.values() || []),
+      ...Array.from(userRecord.devices.values()),
+      ...Array.from(ourUserRecord.devices.values()),
     ]
+
+    console.warn("my devices", ourUserRecord.devices)
 
     return Promise.allSettled(
       devices.map(async (device) => {
@@ -317,7 +325,6 @@ export default class SessionManager {
         const {event: verifiedEvent} = activeSession.sendEvent(event)
         await this.nostrPublish(verifiedEvent)
         await this.storeUserRecord(recipientIdentityKey)
-        await this.storeUserRecord(getPublicKey(this.ourIdentityKey))
       })
     )
   }
