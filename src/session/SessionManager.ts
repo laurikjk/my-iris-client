@@ -12,6 +12,10 @@ import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {getPublicKey} from "nostr-tools"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
 
+type AttachSessionResult =
+  | {attached: true; used: "existing-session" | "new-session"}
+  | {attached: false; reason: "already-subscribed"}
+
 export type OnEventCallback = (event: Rumor, from: string) => void
 
 interface DeviceRecord {
@@ -115,39 +119,8 @@ export default class SessionManager {
         this.ourDeviceInviteSubscription = invite.listen(
           this.ourIdentityKey,
           this.nostrSubscribe,
-          async (session, inviteePubkey, deviceId) => {
-            console.warn("GOT ACCEPTANCE FROM", deviceId)
-
-            // important: check if this is an old acceptance
-
-            if (this.userRecords.get(inviteePubkey)?.devices.has(deviceId)) {
-              console.warn("Already have session for", deviceId)
-              return
-            }
-            const deviceRecord: DeviceRecord = {
-              deviceId: deviceId,
-              activeSession: session,
-              inactiveSessions: [],
-            }
-            if (!this.userRecords.has(inviteePubkey)) {
-              this.userRecords.set(inviteePubkey, {
-                publicKey: inviteePubkey,
-                devices: new Map([[deviceId, deviceRecord]]),
-                foundInvites: new Map(),
-              })
-            } else {
-              this.userRecords.get(inviteePubkey)?.devices.set(deviceId, deviceRecord)
-            }
-            const sessionSubscriptionId = `session/${inviteePubkey}/${deviceId}`
-            if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-              return
-            }
-            const unsubscribe = session.onEvent((event) => {
-              for (const callback of this.internalSubscriptions) {
-                callback(event, inviteePubkey)
-              }
-            })
-            this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+          (session, inviteePubkey, deviceId) => {
+            this.attachSessionSubscription(inviteePubkey, deviceId, session)
           }
         )
 
@@ -165,6 +138,104 @@ export default class SessionManager {
         )
       })
   }
+
+  // -------------------
+  // Idempotency helpers
+  // -------------------
+
+  /** Idempotently get or create a UserRecord. Never overwrites existing maps. */
+  private getOrCreateUserRecord(userPubkey: string): UserRecord {
+    let rec = this.userRecords.get(userPubkey)
+    if (!rec) {
+      rec = {publicKey: userPubkey, devices: new Map(), foundInvites: new Map()}
+      this.userRecords.set(userPubkey, rec)
+    }
+    return rec
+  }
+
+  /** Idempotently get or create a DeviceRecord under a user. Never overwrites existing fields. */
+  private getOrCreateDeviceRecord(userPubkey: string, deviceId: string): DeviceRecord {
+    const ur = this.getOrCreateUserRecord(userPubkey)
+    let dr = ur.devices.get(deviceId)
+    if (!dr) {
+      dr = {deviceId, inactiveSessions: []}
+      ur.devices.set(deviceId, dr)
+    }
+    return dr
+  }
+
+  private sessionKey(userPubkey: string, deviceId: string) {
+    return `session/${userPubkey}/${deviceId}`
+  }
+  private inviteKey(userPubkey: string) {
+    return `invite/${userPubkey}`
+  }
+
+  /**
+   * Attach a session subscription with strong guards.
+   * - Never overwrites an existing activeSession.
+   * - If a session exists but there's no subscription (e.g., after restore), subscribes to the existing one.
+   * - If no session exists, uses the provided `session`.
+   */
+  private attachSessionSubscription(
+    userPubkey: string,
+    deviceId: string,
+    session: Session
+  ): AttachSessionResult {
+    const key = this.sessionKey(userPubkey, deviceId)
+    if (this.sessionSubscriptions.has(key)) {
+      return {attached: false, reason: "already-subscribed"}
+    }
+
+    const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+    const targetSession = dr.activeSession ?? session
+    if (!dr.activeSession) {
+      // Never overwrite; only set if absent
+      dr.activeSession = session
+    }
+
+    const unsub = targetSession.onEvent((event) => {
+      for (const cb of this.internalSubscriptions) cb(event, userPubkey)
+    })
+    this.sessionSubscriptions.set(key, unsub)
+
+    return {
+      attached: true,
+      used: dr.activeSession === session ? "new-session" : "existing-session",
+    }
+  }
+
+  /**
+   * Attach an invite subscription with guards.
+   * - Never duplicates subscriptions for the same user.
+   * - Caches found invites under user.foundInvites.
+   * - Optional hook lets you implement accept policy at call sites.
+   */
+  private attachInviteSubscription(
+    userPubkey: string,
+    onInvite?: (invite: Invite) => void | Promise<void>
+  ): void {
+    const key = this.inviteKey(userPubkey)
+    if (this.inviteSubscriptions.has(key)) return
+
+    const unsubscribe = Invite.fromUser(
+      userPubkey,
+      this.nostrSubscribe,
+      async (invite) => {
+        if (!invite.deviceId) return
+
+        const ur = this.getOrCreateUserRecord(userPubkey)
+        if (!ur.foundInvites.has(invite.deviceId)) {
+          ur.foundInvites.set(invite.deviceId, invite)
+        }
+
+        if (onInvite) await onInvite(invite)
+      }
+    )
+
+    this.inviteSubscriptions.set(key, unsubscribe)
+  }
+
   private attachSession(userPubkey: string, deviceId: string, session: Session) {
     const key = `session/${userPubkey}/${deviceId}`
     const ur = this.userRecords.get(userPubkey)!
@@ -195,69 +266,45 @@ export default class SessionManager {
   }
 
   setupUser(userPubkey: string) {
-    console.warn("Setting up user", userPubkey)
-    if (!this.userRecords.has(userPubkey)) {
-      this.userRecords.set(userPubkey, {
-        publicKey: userPubkey,
-        devices: new Map(),
-        foundInvites: new Map(),
-      })
-    }
+    this.getOrCreateUserRecord(userPubkey)
 
-    this.userRecords.set(userPubkey, {
-      publicKey: userPubkey,
-      devices: new Map(),
-      foundInvites: new Map(),
-    })
+    this.attachInviteSubscription(userPubkey, async (invite) => {
+      const {deviceId} = invite
 
-    const inviteSubscriptionId = `invite/${userPubkey}`
-    if (this.inviteSubscriptions.has(inviteSubscriptionId)) return
-
-    const unsubscribe = Invite.fromUser(
-      userPubkey,
-      this.nostrSubscribe,
-      async (invite) => {
-        console.warn("FOUND INVITE", userPubkey, invite.deviceId)
-        if (!invite.deviceId) return
-        console.warn("Storing invite", invite.deviceId)
-        if (!this.userRecords.get(userPubkey)?.foundInvites.has(invite.deviceId)) {
-          this.userRecords.get(userPubkey)?.foundInvites.set(invite.deviceId, invite)
-        }
-        const {deviceId} = invite
-        if (!deviceId) return Promise.resolve()
-        if (this.userRecords.get(userPubkey)?.devices.has(deviceId)) {
-          return Promise.resolve()
-        }
-
-        const {session, event} = await invite.accept(
-          this.nostrSubscribe,
-          getPublicKey(this.ourIdentityKey),
-          this.ourIdentityKey,
-          this.deviceId
-        )
-        await this.nostrPublish(event).catch((e) => {
-          console.error("Failed to publish acceptance to", deviceId, e)
-        })
-        // this.userRecords.get(userPubkey)?.devices.set(deviceId, {
-        //   deviceId: deviceId,
-        //   activeSession: session,
-        //   inactiveSessions: [],
-        // })
-        // const sessionSubscriptionId = `session/${userPubkey}/${deviceId}`
-        // if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-        //   return
-        // }
-        // const unsubscribe = session.onEvent((event) => {
-        //   for (const callback of this.internalSubscriptions) {
-        //     callback(event, userPubkey)
-        //   }
-        // })
-        // this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
-        this.attachSession(userPubkey, deviceId, session)
-        this.sendMessageHistory(userPubkey, deviceId)
+      if (!deviceId) return
+      const deviceRecord = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+      if (deviceRecord.activeSession) {
+        // Already have a session with this device
+        return
       }
-    )
-    this.inviteSubscriptions.set(inviteSubscriptionId, unsubscribe)
+
+      const {session, event} = await invite.accept(
+        this.nostrSubscribe,
+        getPublicKey(this.ourIdentityKey),
+        this.ourIdentityKey,
+        this.deviceId
+      )
+      await this.nostrPublish(event).catch((e) => {
+        console.error("Failed to publish acceptance to", deviceId, e)
+      })
+      // this.userRecords.get(userPubkey)?.devices.set(deviceId, {
+      //   deviceId: deviceId,
+      //   activeSession: session,
+      //   inactiveSessions: [],
+      // })
+      // const sessionSubscriptionId = `session/${userPubkey}/${deviceId}`
+      // if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
+      //   return
+      // }
+      // const unsubscribe = session.onEvent((event) => {
+      //   for (const callback of this.internalSubscriptions) {
+      //     callback(event, userPubkey)
+      //   }
+      // })
+      // this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+      this.attachSessionSubscription(userPubkey, deviceId, session)
+      await this.sendMessageHistory(userPubkey, deviceId)
+    })
   }
 
   onEvent(callback: OnEventCallback) {
