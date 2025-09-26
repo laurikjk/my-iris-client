@@ -349,6 +349,7 @@ export default class SessionManager {
               deserializeSessionState(deviceData.activeSession)
             )
           : undefined
+
         const inactiveSessions = deviceData.inactiveSessions.map(
           (state: string) =>
             new Session(this.nostrSubscribe, deserializeSessionState(state))

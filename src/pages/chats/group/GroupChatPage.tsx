@@ -3,7 +3,6 @@ import {useParams} from "@/navigation"
 import {useGroupsStore} from "@/stores/groups"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useUserStore} from "@/stores/user"
-import {usePrivateChatsStore} from "@/stores/privateChatsNew"
 import ChatContainer from "../components/ChatContainer"
 import MessageForm from "../message/MessageForm"
 import GroupChatHeader from "./GroupChatHeader"
@@ -20,7 +19,6 @@ const GroupChatPage = () => {
   // Fix: Use the events store with proper subscription to get reactive updates
   const {events} = usePrivateMessagesStore()
   const myPubKey = useUserStore((state) => state.publicKey)
-  const {sendToUser} = usePrivateChatsStore()
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
   if (!id || !group) {
@@ -41,10 +39,11 @@ const GroupChatPage = () => {
       ],
     }
 
+    //TODO: Implement sendMessage function to handle optimistic UI update and sending
     // Send to all group members
     // For ourselves, the optimistic update in sendMessage will handle display
     // For others, we need to actually send the message
-    await Promise.all(group.members.map((pubkey: string) => sendToUser(pubkey, event)))
+    // await Promise.all(group.members.map((pubkey: string) => sendToUser(pubkey, event)))
   }
 
   const handleSendReaction = async (messageId: string, emoji: string) => {

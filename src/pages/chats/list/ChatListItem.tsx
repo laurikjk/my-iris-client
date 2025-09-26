@@ -17,7 +17,6 @@ import debounce from "lodash/debounce"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
 import {useGroupsStore} from "@/stores/groups"
-import {usePrivateChatsStore} from "@/stores/privateChatsNew"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "@/pages/chats/utils/messageGrouping"
 
@@ -47,7 +46,6 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
   } = usePublicChatsStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const {groups} = useGroupsStore()
-  const {getChatsList} = usePrivateChatsStore()
   const group = groups[id]
 
   const chat = isPublic ? publicChats[id] : null
@@ -65,12 +63,8 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
   const actualLatest = type === "group" ? groupLatest : latest
 
   // Get chat data for unread counts
-  const chatsList = getChatsList()
-  const chatData = chatsList.find((c) => c.userPubKey === id)
 
-  const lastSeenPrivateTime = chatData?.lastMessage?.created_at
-    ? chatData.lastMessage.created_at * 1000
-    : 0
+  const lastSeenPrivateTime = 0
   const lastSeenPublicTime = lastSeenPublic[id] || 0
 
   useEffect(() => {
