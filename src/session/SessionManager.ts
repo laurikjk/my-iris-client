@@ -99,6 +99,8 @@ export default class SessionManager {
           this.ourIdentityKey,
           this.nostrSubscribe,
           (session, inviteePubkey, deviceId) => {
+            if (!deviceId || deviceId === this.deviceId) return
+
             this.attachSessionSubscription(inviteePubkey, deviceId, session)
           }
         )
@@ -137,30 +139,23 @@ export default class SessionManager {
     return `invite/${userPubkey}`
   }
 
-  /**
-   * Attach a session subscription with strong guards.
-   * - Never overwrites an existing activeSession.
-   * - If a session exists but there's no subscription (e.g., after restore), subscribes to the existing one.
-   * - If no session exists, uses the provided `session`.
-   */
   private attachSessionSubscription(
     userPubkey: string,
     deviceId: string,
     session: Session
   ): AttachSessionResult {
     const key = this.sessionKey(userPubkey, deviceId)
-    if (this.sessionSubscriptions.has(key)) {
-      return {attached: false, reason: "already-subscribed"}
-    }
+    // if (this.sessionSubscriptions.has(key)) {
+    //   return {attached: false, reason: "already-subscribed"}
+    // }
 
     const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
-    const targetSession = dr.activeSession ?? session
-    if (!dr.activeSession) {
-      // Never overwrite; only set if absent
-      dr.activeSession = session
+    if (dr.activeSession) {
+      dr.inactiveSessions.push(dr.activeSession)
     }
+    dr.activeSession = session
 
-    const unsub = targetSession.onEvent((event) => {
+    const unsub = session.onEvent((event) => {
       for (const cb of this.internalSubscriptions) cb(event, userPubkey)
     })
     this.sessionSubscriptions.set(key, unsub)
@@ -171,12 +166,6 @@ export default class SessionManager {
     }
   }
 
-  /**
-   * Attach an invite subscription with guards.
-   * - Never duplicates subscriptions for the same user.
-   * - Caches found invites under user.foundInvites.
-   * - Optional hook lets you implement accept policy at call sites.
-   */
   private attachInviteSubscription(
     userPubkey: string,
     onInvite?: (invite: Invite) => void | Promise<void>
@@ -209,11 +198,6 @@ export default class SessionManager {
       const {deviceId} = invite
 
       if (!deviceId) return
-      const deviceRecord = this.getOrCreateDeviceRecord(userPubkey, deviceId)
-      if (deviceRecord.activeSession) {
-        // Already have a session with this device
-        return
-      }
 
       const {session, event} = await invite.accept(
         this.nostrSubscribe,
