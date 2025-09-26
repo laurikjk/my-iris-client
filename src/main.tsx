@@ -35,15 +35,7 @@ const initializeApp = () => {
       const sessionManager = getSessionManager()
       sessionManager.init().then(() => {
         sessionManager.onEvent((event, from) => {
-          usePrivateMessagesStore
-            .getState()
-            .upsert(from, event)
-            .then(() => {
-              console.warn("New private message from", from, "with event", event)
-            })
-            .catch((err) => {
-              console.error("Failed to upsert private message:", err)
-            })
+          usePrivateMessagesStore.getState().upsert(from, event)
         })
       })
     }
@@ -89,15 +81,7 @@ const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
       const sessionManager = getSessionManager()
       sessionManager.init().then(() => {
         sessionManager.onEvent((event, from) => {
-          usePrivateMessagesStore
-            .getState()
-            .upsert(from, event)
-            .then(() => {
-              console.warn("New private message from", from, "with event", event)
-            })
-            .catch((err) => {
-              console.error("Failed to upsert private message:", err)
-            })
+          usePrivateMessagesStore.getState().upsert(from, event)
         })
       })
     }
