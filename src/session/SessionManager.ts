@@ -102,28 +102,6 @@ export default class SessionManager {
             this.attachSessionSubscription(inviteePubkey, deviceId, session)
           }
         )
-        // Listen to invites of our other devices
-        this.attachInviteSubscription(ourPublicKey, async (invite) => {
-          console.warn("\n\n\n FOUND OUR OWN INVITE \n\n\n", invite)
-          const {deviceId} = invite
-          if (!deviceId) return
-
-          const dr = this.getOrCreateDeviceRecord(ourPublicKey, deviceId)
-          console.warn("Device record for our device", dr)
-          if (dr.activeSession) return // already have session
-
-          console.warn("Accepting invite for our device", deviceId)
-          const {session, event} = await invite.accept(
-            this.nostrSubscribe,
-            getPublicKey(this.ourIdentityKey),
-            this.ourIdentityKey,
-            this.deviceId
-          )
-          console.warn("Accepted invite, got session", session)
-          await this.nostrPublish(event).catch(console.error)
-          console.warn("Published acceptance event")
-          this.attachSessionSubscription(ourPublicKey, deviceId, session)
-        })
       })
   }
 
