@@ -8,8 +8,10 @@ import {hexToBytes} from "@noble/hashes/utils"
 import {useUserStore} from "./user"
 import {LocalStorageAdapter} from "@/session/StorageAdapter"
 import {ndk} from "@/utils/ndk"
-import {NDKEventFromRawEvent} from "@/utils/nostr"
+import {getTag, NDKEventFromRawEvent} from "@/utils/nostr"
 import {Rumor} from "nostr-double-ratchet"
+import {getSessionManager} from "@/shared/services/PrivateChats"
+import SessionManager from "@/session/SessionManager"
 
 interface PrivateChatsStoreState {
   chats: Map<string, {lastSeen: number}> // userPubKey -> chat metadata

@@ -317,6 +317,7 @@ export default class SessionManager {
         const {event: verifiedEvent} = activeSession.sendEvent(event)
         await this.nostrPublish(verifiedEvent)
         await this.storeUserRecord(recipientIdentityKey)
+        await this.storeUserRecord(getPublicKey(this.ourIdentityKey))
       })
     )
   }
@@ -395,7 +396,7 @@ export default class SessionManager {
 
         const sessionSubscriptionId = `session/${publicKey}/${deviceId}`
         if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-          return
+          continue
         }
         const unsubscribe = activeSession.onEvent((event) => {
           for (const callback of this.internalSubscriptions) {
