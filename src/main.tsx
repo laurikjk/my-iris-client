@@ -81,14 +81,6 @@ const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
-      const sessionManager = getSessionManager()
-      sessionManager.init().then(() => {
-        sessionManager.onEvent((event, pubKey) => {
-          const pTag = getTag("p", event.tags)
-          const from = pubKey === state.publicKey ? pTag : pubKey
-          usePrivateMessagesStore.getState().upsert(from, event)
-        })
-      })
     }
   }
 })

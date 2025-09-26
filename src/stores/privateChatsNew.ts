@@ -39,50 +39,14 @@ export const usePrivateChatsStore = create<PrivateChatsStore>()((set, get) => ({
     if (!userStore.privateKey || !userStore.publicKey) {
       throw new Error("User not logged in")
     }
-
-    // Generate device ID if not exists
-    let deviceId = localStorage.getItem("deviceId")
-    if (!deviceId) {
-      deviceId = crypto.randomUUID()
-      localStorage.setItem("deviceId", deviceId)
-    }
-
-    // Create nostr subscribe and publish functions
-    const nostrSubscribe = (filter: Filter, onEvent: (event: VerifiedEvent) => void) => {
-      const sub = ndk().subscribe(filter)
-      sub.on("event", (e) => onEvent(e as unknown as VerifiedEvent))
-      return () => sub.stop()
-    }
-
-    const nostrPublish = async (event: VerifiedEvent) => {
-      const ndkEvent = NDKEventFromRawEvent(event)
-      await ndkEvent.publish(undefined, undefined, 0)
-    }
-
-    // Initialize SessionManager
-    const sessionManager = new SessionManager(
-      hexToBytes(userStore.privateKey),
-      deviceId,
-      nostrSubscribe,
-      nostrPublish,
-      new LocalStorageAdapter("iris_session_") // Persistent storage for sessions
-    )
-
-    await sessionManager.init()
-
-    // Set up event listener for incoming messages
-    sessionManager.onEvent((event: Rumor, fromPubKey: string) => {
-      // Convert to MessageType format and add to private messages store
-      const messageEvent: MessageType = {
-        ...event,
-        pubkey: fromPubKey,
-        created_at: event.created_at || Math.floor(Date.now() / 1000),
-        id: event.id || crypto.randomUUID(),
-        tags: event.tags || [],
-        kind: event.kind || 14, // Default to chat message kind
-      } as MessageType
-
-      usePrivateMessagesStore.getState().upsert(fromPubKey, messageEvent as MessageType)
+    const sessionManager = getSessionManager()
+    sessionManager.init().then(() => {
+      sessionManager.onEvent((event, pubKey) => {
+        // const pTag = getTag("p", event.tags)
+        // const from = pubKey === userStore.publicKey ? pTag : pubKey
+        // console.warn("Received DM event", {from, pubKey, pTag})
+        // usePrivateMessagesStore.getState().upsert(from, event)
+      })
     })
 
     set({sessionManager})
