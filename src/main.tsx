@@ -13,6 +13,7 @@ import DebugManager from "./utils/DebugManager"
 import Layout from "@/shared/components/Layout"
 import {usePrivateMessagesStore} from "./stores/privateMessages"
 import {getSessionManager} from "./shared/services/PrivateChats"
+import {getTag} from "./utils/tagUtils"
 
 // Move initialization to a function to avoid side effects
 const initializeApp = () => {
@@ -34,7 +35,9 @@ const initializeApp = () => {
     if (state.privateKey || state.nip07Login) {
       const sessionManager = getSessionManager()
       sessionManager.init().then(() => {
-        sessionManager.onEvent((event, from) => {
+        sessionManager.onEvent((event, pubKey) => {
+          const pTag = getTag("p", event.tags)
+          const from = pubKey === state.publicKey ? pTag : pubKey
           usePrivateMessagesStore.getState().upsert(from, event)
         })
       })
@@ -80,7 +83,9 @@ const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
     if (state.privateKey || state.nip07Login) {
       const sessionManager = getSessionManager()
       sessionManager.init().then(() => {
-        sessionManager.onEvent((event, from) => {
+        sessionManager.onEvent((event, pubKey) => {
+          const pTag = getTag("p", event.tags)
+          const from = pubKey === state.publicKey ? pTag : pubKey
           usePrivateMessagesStore.getState().upsert(from, event)
         })
       })
