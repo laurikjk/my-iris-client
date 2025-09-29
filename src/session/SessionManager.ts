@@ -132,6 +132,18 @@ export default class SessionManager {
     return `invite/${userPubkey}`
   }
 
+  private setAsActiveSession(
+    userPubkey: string,
+    deviceId: string,
+    session: Session
+  ): void {
+    const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+    if (dr.activeSession) {
+      dr.inactiveSessions.push(dr.activeSession)
+    }
+    dr.activeSession = session
+  }
+
   private attachSessionSubscription(
     userPubkey: string,
     deviceId: string,
@@ -147,6 +159,7 @@ export default class SessionManager {
 
     const unsub = session.onEvent((event) => {
       for (const cb of this.internalSubscriptions) cb(event, userPubkey)
+      this.setAsActiveSession(userPubkey, deviceId, session)
     })
     this.sessionSubscriptions.set(key, unsub)
   }
@@ -362,6 +375,7 @@ export default class SessionManager {
             for (const callback of this.internalSubscriptions) {
               callback(event, publicKey)
             }
+            this.setAsActiveSession(publicKey, deviceId, activeSession)
           })
           if (unsubscribe)
             this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
@@ -375,6 +389,7 @@ export default class SessionManager {
             for (const callback of this.internalSubscriptions) {
               callback(event, publicKey)
             }
+            this.setAsActiveSession(publicKey, deviceId, session)
           })
           if (unsubscribe)
             this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
