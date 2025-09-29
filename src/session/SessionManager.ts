@@ -12,10 +12,6 @@ import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {getPublicKey} from "nostr-tools"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
 
-type AttachSessionResult =
-  | {attached: true; used: "existing-session" | "new-session"}
-  | {attached: false; reason: "already-subscribed"}
-
 export type OnEventCallback = (event: Rumor, from: string) => void
 
 interface DeviceRecord {
@@ -140,7 +136,7 @@ export default class SessionManager {
     userPubkey: string,
     deviceId: string,
     session: Session
-  ): AttachSessionResult {
+  ): void {
     const key = this.sessionKey(userPubkey, deviceId)
     // if (this.sessionSubscriptions.has(key)) {
     //   return {attached: false, reason: "already-subscribed"}
@@ -156,11 +152,6 @@ export default class SessionManager {
       for (const cb of this.internalSubscriptions) cb(event, userPubkey)
     })
     this.sessionSubscriptions.set(key, unsub)
-
-    return {
-      attached: true,
-      used: dr.activeSession === session ? "new-session" : "existing-session",
-    }
   }
 
   private attachInviteSubscription(
