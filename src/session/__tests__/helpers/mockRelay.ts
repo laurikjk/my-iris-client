@@ -12,6 +12,11 @@ export class MockRelay {
   private events: VerifiedEvent[] = []
   private subscribers: Map<string, Subscriber> = new Map()
   private subscriptionCounter = 0
+  private debug: boolean = false
+
+  constructor(debug: boolean = false) {
+    this.debug = debug
+  }
 
   getEvents(): VerifiedEvent[] {
     return [...this.events]
@@ -76,6 +81,7 @@ export class MockRelay {
   }
   private deliverToSubscriber(subscriber: Subscriber, event: VerifiedEvent): void {
     if (!subscriber.delivered.has(event.id) && matchFilter(subscriber.filter, event)) {
+      console.log("Delivering event", event.id, "to subscriber", subscriber.id)
       subscriber.delivered.add(event.id)
       subscriber.onEvent(event)
     }

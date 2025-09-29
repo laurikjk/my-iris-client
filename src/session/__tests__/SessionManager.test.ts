@@ -18,16 +18,11 @@ describe("SessionManager", () => {
       sharedRelay
     )
 
-    // Alice needs to set up Bob as a user to discover his invites
-    managerAlice.setupUser(bobPubkey)
+    const chatMessage = "Hello Bob from Alice!"
 
-    const chatMessage: Partial<Rumor> = {
-      kind: KIND_CHAT_MESSAGE,
-      content: "Hello Bob from Alice!",
-      created_at: Math.floor(Date.now() / 1000),
-    }
+    await managerAlice.sendMessage(bobPubkey, chatMessage)
 
-    await managerAlice.sendEvent(bobPubkey, chatMessage)
+    await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait for async events
 
     expect(publishAlice).toHaveBeenCalled()
     expect(onEventBob).toHaveBeenCalled()
