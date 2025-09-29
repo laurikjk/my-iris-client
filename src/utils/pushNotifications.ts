@@ -156,9 +156,10 @@ export function handlePushNotification(data: unknown) {
   console.log("Received push notification:", data)
 
   // Parse the notification data based on your server format
-  if (data.event) {
+  if (typeof data === "object" && data && "event" in data) {
     // Navigate to the appropriate screen
-    const eventData = typeof data.event === "string" ? JSON.parse(data.event) : data.event
+    const eventData =
+      typeof data.event === "string" ? JSON.parse(data.event) : (data.event as any)
 
     // Handle different event kinds
     switch (eventData.kind) {
@@ -169,7 +170,7 @@ export function handlePushNotification(data: unknown) {
         break
       default:
         // Navigate to the note
-        if (data.url) {
+        if ("url" in data && typeof data.url === "string") {
           window.location.href = data.url
         }
     }

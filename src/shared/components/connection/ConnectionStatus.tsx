@@ -22,7 +22,7 @@ export const ConnectionStatus = ({
   }
 
   useEffect(() => {
-    let peerConnection: Awaited<ReturnType<typeof getPeerConnection>> | null = null
+    let peerConnection: Awaited<ReturnType<typeof getPeerConnection>> = undefined
 
     const updateStatus = async () => {
       peerConnection = await getPeerConnection(peerId, {create: false})
@@ -40,12 +40,14 @@ export const ConnectionStatus = ({
     const intervalId = setInterval(updateStatus, 1000)
 
     // Set up connection state change listener if connection exists
-    if (peerConnection) {
-      peerConnection.peerConnection.addEventListener(
-        "connectionstatechange",
-        handleConnectionStateChange
-      )
-    }
+    void updateStatus().then(() => {
+      if (peerConnection) {
+        peerConnection.peerConnection.addEventListener(
+          "connectionstatechange",
+          handleConnectionStateChange
+        )
+      }
+    })
 
     return () => {
       clearInterval(intervalId)
