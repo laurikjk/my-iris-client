@@ -11,6 +11,7 @@
 ## 2. Update Gradle Files
 
 ### Project-level build.gradle
+
 In `src-tauri/gen/android/build.gradle.kts`, add:
 
 ```kotlin
@@ -22,6 +23,7 @@ buildscript {
 ```
 
 ### App-level build.gradle
+
 In `src-tauri/gen/android/app/build.gradle.kts`, add:
 
 ```kotlin
@@ -212,6 +214,7 @@ fcm_service_account_key = '''
 ```
 
 Get the service account key from:
+
 1. Firebase Console → Project Settings
 2. Service Accounts tab
 3. Generate new private key

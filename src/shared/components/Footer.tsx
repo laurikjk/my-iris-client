@@ -62,7 +62,7 @@ const Footer = () => {
   return (
     // -mb-[1px] because weird 1px gap under footer?
     <ErrorBoundary>
-      <footer className="-mb-[1px] md:hidden fixed bottom-0 z-10 w-full bg-base-200 pb-[env(safe-area-inset-bottom)] bg-bg-color">
+      <footer className="-mb-[1px] md:hidden fixed bottom-0 z-10 w-full bg-base-200 bg-bg-color pb-[env(safe-area-inset-bottom)]">
         {myPubKey && !ndk().signer && (
           <div className="flex items-center justify-center gap-1 text-error text-xs py-1 border-b border-error/20">
             <RiLockLine className="w-3 h-3" />

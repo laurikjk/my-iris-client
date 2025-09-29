@@ -14,18 +14,18 @@ export const ConnectionStatus = ({
 }: ConnectionStatusProps) => {
   const [status, setStatus] = useState<string>()
 
-  const handleDisconnect = () => {
-    const peerConnection = getPeerConnection(peerId, {create: false})
+  const handleDisconnect = async () => {
+    const peerConnection = await getPeerConnection(peerId, {create: false})
     if (peerConnection) {
       peerConnection.close()
     }
   }
 
   useEffect(() => {
-    let peerConnection = getPeerConnection(peerId, {create: false})
+    let peerConnection: Awaited<ReturnType<typeof getPeerConnection>> | null = null
 
-    const updateStatus = () => {
-      peerConnection = getPeerConnection(peerId, {create: false})
+    const updateStatus = async () => {
+      peerConnection = await getPeerConnection(peerId, {create: false})
       setStatus(peerConnection?.peerConnection.connectionState)
     }
 

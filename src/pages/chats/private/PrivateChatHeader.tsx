@@ -27,9 +27,9 @@ const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
     }
   }
 
-  const handleSendFile = () => {
+  const handleSendFile = async () => {
     if (session) {
-      const peerConnection = getPeerConnection(id, {
+      const peerConnection = await getPeerConnection(id, {
         ask: false,
         create: true,
         connect: true,

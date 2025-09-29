@@ -3,6 +3,7 @@
 ## 1. Enable Push Notifications Capability
 
 In Xcode:
+
 1. Open `src-tauri/gen/apple/iris.xcodeproj`
 2. Select your app target
 3. Go to "Signing & Capabilities"
@@ -96,6 +97,7 @@ func application(_ application: UIApplication,
    - Note the Key ID and Team ID
 
 2. Add to your notification server's config:
+
 ```toml
 apns_key_id = "YOUR_KEY_ID"
 apns_team_id = "YOUR_TEAM_ID"

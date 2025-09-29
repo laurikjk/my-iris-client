@@ -70,7 +70,10 @@ const Header = ({
         "fixed md:sticky"
       )}
     >
-      <div ref={contentRef} className="flex justify-between items-center flex-1 w-full">
+      <div
+        ref={contentRef}
+        className="flex justify-between items-center flex-1 w-full py-2"
+      >
         <div className="flex items-center gap-2 w-full">
           {leftButton}
           <div

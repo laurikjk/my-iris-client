@@ -35,4 +35,8 @@ yarn tauri build
 # Mobile
 yarn tauri [android|ios] init
 yarn tauri [android|ios] dev
+
+# App Store builds
+yarn tauri ios build --open        # Opens Xcode → Archive → Distribute
+yarn tauri android build --aab     # Requires keystore setup: https://v2.tauri.app/distribute/sign/android/
 ```

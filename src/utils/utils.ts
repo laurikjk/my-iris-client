@@ -1,3 +1,5 @@
+export const isTauri = () => typeof window !== "undefined" && window.__TAURI__
+
 export const formatAmount = (n: number, maxSignificantDigits = 4) => {
   if (n < 1000) return n.toString()
 

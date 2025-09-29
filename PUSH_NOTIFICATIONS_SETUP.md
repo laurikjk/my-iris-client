@@ -17,6 +17,7 @@ When Event Matches Filter → Server sends via FCM/APNs → Device receives noti
 ## What's Been Added
 
 ### 1. Backend (nostr-notification-server)
+
 - ✅ FCM support for Android push notifications
 - ✅ APNs support for iOS push notifications
 - ✅ Token management and automatic cleanup
@@ -24,6 +25,7 @@ When Event Matches Filter → Server sends via FCM/APNs → Device receives noti
 - ✅ Tests for push notification services
 
 ### 2. Tauri App
+
 - ✅ Notification plugin added to Cargo.toml
 - ✅ Push token registration command in lib.rs
 - ✅ Push notification service (utils/pushNotifications.ts)
@@ -31,6 +33,7 @@ When Event Matches Filter → Server sends via FCM/APNs → Device receives noti
 - ✅ Initialization in main.tsx
 
 ### 3. Platform Configurations
+
 - 📱 iOS setup guide (ios-push-setup.md)
 - 🤖 Android setup guide (android-fcm-setup.md)
 
@@ -71,11 +74,13 @@ npm run tauri android build
 ### 3. Platform-Specific Setup
 
 #### iOS
+
 1. Open Xcode project in `src-tauri/gen/apple/`
 2. Add Push Notifications capability
 3. Follow instructions in `ios-push-setup.md`
 
 #### Android
+
 1. Add Firebase to your project
 2. Place `google-services.json` in `src-tauri/gen/android/app/`
 3. Follow instructions in `android-fcm-setup.md`
@@ -121,11 +126,13 @@ curl -X POST https://your-server.com/api/test-notification \
 ## Troubleshooting
 
 ### iOS Issues
+
 - **No token received**: Check Push Notifications capability is enabled
 - **Not receiving notifications**: Verify APNs certificates and environment (sandbox vs production)
 - **Token invalid**: Ensure using correct bundle ID and certificates
 
 ### Android Issues
+
 - **No FCM token**: Check google-services.json is in correct location
 - **Notifications not showing**: Verify notification channel is created
 - **Token registration fails**: Check Firebase project configuration

@@ -71,5 +71,5 @@ const tryParseHex = (eventId: string) => {
 export const getEventIdHex = (eventOrId?: NDKEvent | string) => {
   if (!eventOrId) return null
   if (typeof eventOrId !== "string") return eventOrId.id
-  return  tryDecodeNip19(eventOrId)||tryParseHex(eventOrId) || null
+  return tryDecodeNip19(eventOrId) || tryParseHex(eventOrId) || null
 }

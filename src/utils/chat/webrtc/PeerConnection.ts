@@ -1,14 +1,14 @@
 import type {RTCSessionDescriptionInit, RTCIceCandidateInit} from "@/types/dom-types"
 import {EventEmitter} from "tseep"
 
-import {getCachedName, NDKEventFromRawEvent} from "@/utils/nostr"
+import {NDKEventFromRawEvent} from "@/utils/nostr"
 import {Rumor, Session} from "nostr-double-ratchet/src"
 import {useSessionsStore} from "@/stores/sessions"
 import socialGraph from "@/utils/socialGraph"
 import {KIND_APP_DATA} from "@/utils/constants"
 
 const connections = new Map<string, PeerConnection>()
-export function getPeerConnection(
+export async function getPeerConnection(
   sessionId: string,
   options: {
     ask?: boolean
@@ -27,13 +27,18 @@ export function getPeerConnection(
     console.log("Rejected connection request from untrusted user:", pubKey)
     return
   }
-  if (
-    !connections.has(sessionId) &&
-    create &&
-    (pubKey === socialGraph().getRoot() ||
-      !ask ||
-      confirm(`WebRTC connect with ${getCachedName(pubKey)}?`))
-  ) {
+
+  let shouldCreate = false
+  if (!connections.has(sessionId) && create) {
+    if (pubKey === socialGraph().getRoot() || !ask) {
+      shouldCreate = true
+    } else {
+      const {getCachedName} = await import("@/utils/nostr")
+      shouldCreate = confirm(`WebRTC connect with ${getCachedName(pubKey)}?`)
+    }
+  }
+
+  if (shouldCreate) {
     const sessionData = useSessionsStore.getState().sessions.get(sessionId)
     if (!sessionData) {
       console.error("Session not found for peer:", sessionId)
@@ -286,6 +291,7 @@ export default class PeerConnection extends EventEmitter {
 
     const sessionData = useSessionsStore.getState().sessions.get(this.peerId)
     const pubkey = sessionData?.userPubKey || this.peerId.split(":")[0]
+    const {getCachedName} = await import("@/utils/nostr")
     const name = getCachedName(pubkey)
     const confirmString = `Save ${this.incomingFileMetadata.name} from ${name}?`
     if (!confirm(confirmString)) {

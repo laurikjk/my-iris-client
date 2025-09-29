@@ -110,7 +110,7 @@ export default class IrisAPI {
   registerPushNotifications(
     web_push_subscriptions: PushNotifications[],
     filter: Filter,
-    mobile_tokens?: { fcm_tokens?: string[]; apns_tokens?: string[] }
+    mobile_tokens?: {fcm_tokens?: string[]; apns_tokens?: string[]}
   ) {
     return this.getJsonAuthd<void>(`subscriptions`, "POST", {
       web_push_subscriptions,
