@@ -140,6 +140,54 @@ describe("SessionManager", () => {
     expect(await bobReceivedMessageAfterRestart)
   })
 
+  it("should not accumulate additional sessions after restart", async () => {
+
+    const sharedRelay = new MockRelay(true)
+
+    const {
+      manager: aliceManager,
+      secretKey: aliceSecretKey,
+      publicKey: alicePubkey,
+      mockStorage: aliceStorage,
+    } = await createMockSessionManager("alice-device-1", sharedRelay)
+
+    const {
+      manager: bobManager,
+      secretKey: bobSecretKey,
+      publicKey: bobPubkey,
+      mockStorage: bobStorage,
+    } = await createMockSessionManager("bob-device-1", sharedRelay)
+
+    await aliceManager.sendMessage(bobPubkey, "hello")
+    await bobManager.sendMessage(alicePubkey, "reply")
+
+    aliceManager.close()
+    bobManager.close()
+
+    const {manager: aliceManagerRestart} = await createMockSessionManager(
+      "alice-device-1",
+      sharedRelay,
+      aliceSecretKey,
+      aliceStorage
+    )
+
+    const {manager: bobManagerRestart} = await createMockSessionManager(
+      "bob-device-1",
+      sharedRelay,
+      bobSecretKey,
+      bobStorage
+    )
+
+    await aliceManagerRestart.sendMessage(bobPubkey, "after restart")
+
+    const aliceUserRecord = (aliceManagerRestart as any).userRecords
+      ?.get?.(bobPubkey)
+    const aliceInactiveCount = aliceUserRecord?.devices
+      ?.get?.("bob-device-1")?.inactiveSessions?.length ?? 0
+
+    expect(aliceInactiveCount).toBe(0)
+  })
+
   it("should handle messages from multiple Alice devices to Bob", async () => {
     const sharedRelay = new MockRelay()
 

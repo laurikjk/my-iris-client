@@ -95,6 +95,12 @@ export default class SessionManager {
           this.ourIdentityKey,
           this.nostrSubscribe,
           (session, inviteePubkey, deviceId) => {
+            console.log(
+              "Received invite acceptance on our device",
+              this.deviceId,
+              "from",
+              deviceId
+            )
             if (!deviceId || deviceId === this.deviceId) return
 
             this.attachSessionSubscription(inviteePubkey, deviceId, session)
@@ -146,6 +152,15 @@ export default class SessionManager {
       dr.inactiveSessions.push(dr.activeSession)
     }
     dr.activeSession = session
+    console.log(
+      "SessionManager:setAsActiveSession",
+      JSON.stringify({
+        deviceId,
+        userPubkey,
+        inactiveCount: dr.inactiveSessions.length,
+        activeSessionName: session.name,
+      })
+    )
   }
 
   private attachSessionSubscription(
@@ -156,6 +171,16 @@ export default class SessionManager {
     const key = this.sessionKey(userPubkey, deviceId, session.name)
 
     const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+    console.log(
+      "SessionManager:attachSessionSubscription",
+      JSON.stringify({
+        scopeDevice: this.deviceId,
+        userPubkey,
+        deviceId,
+        sessionName: session.name,
+        inactiveCountBefore: dr.inactiveSessions.length + (dr.activeSession ? 1 : 0),
+      })
+    )
     this.setAsActiveSession(userPubkey, deviceId, session)
 
     const unsub = session.onEvent((event) => {
@@ -171,6 +196,11 @@ export default class SessionManager {
   ): void {
     const key = this.inviteKey(userPubkey)
     if (this.inviteSubscriptions.has(key)) return
+
+    console.log(
+      "SessionManager:attachInviteSubscription",
+      JSON.stringify({scopeDevice: this.deviceId, userPubkey})
+    )
 
     const unsubscribe = Invite.fromUser(
       userPubkey,
@@ -191,6 +221,10 @@ export default class SessionManager {
   }
 
   setupUser(userPubkey: string) {
+    console.log(
+      "SessionManager:setupUser",
+      JSON.stringify({scopeDevice: this.deviceId, userPubkey})
+    )
     this.getOrCreateUserRecord(userPubkey)
 
     this.attachInviteSubscription(userPubkey, async (invite) => {
@@ -203,6 +237,15 @@ export default class SessionManager {
         getPublicKey(this.ourIdentityKey),
         this.ourIdentityKey,
         this.deviceId
+      )
+      console.log(
+        "SessionManager:invite.accept",
+        JSON.stringify({
+          scopeDevice: this.deviceId,
+          userPubkey,
+          deviceId,
+          sessionName: session.name,
+        })
       )
       await this.nostrPublish(event).catch((e) => {
         console.error("Failed to publish acceptance to", deviceId, e)
@@ -389,7 +432,11 @@ export default class SessionManager {
             continue
           }
           const unsubscribe = activeSession.onEvent((event) => {
-            console.log("restored handler - Received event in activeSession from", deviceId, event)
+            console.log(
+              "restored handler - Received event in activeSession from",
+              deviceId,
+              event
+            )
             for (const callback of this.internalSubscriptions) {
               callback(event, publicKey)
             }
@@ -404,7 +451,11 @@ export default class SessionManager {
             continue
           }
           const unsubscribe = session.onEvent((event) => {
-            console.log("restored handler - Received event in inactiveSession from", deviceId, event)
+            console.log(
+              "restored handler - Received event in inactiveSession from",
+              deviceId,
+              event
+            )
             for (const callback of this.internalSubscriptions) {
               callback(event, publicKey)
             }
