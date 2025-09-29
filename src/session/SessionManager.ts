@@ -110,8 +110,6 @@ export default class SessionManager {
   // -------------------
   // Idempotency helpers
   // -------------------
-
-  /** Idempotently get or create a UserRecord. Never overwrites existing maps. */
   private getOrCreateUserRecord(userPubkey: string): UserRecord {
     let rec = this.userRecords.get(userPubkey)
     if (!rec) {
@@ -121,7 +119,6 @@ export default class SessionManager {
     return rec
   }
 
-  /** Idempotently get or create a DeviceRecord under a user. Never overwrites existing fields. */
   private getOrCreateDeviceRecord(userPubkey: string, deviceId: string): DeviceRecord {
     const ur = this.getOrCreateUserRecord(userPubkey)
     let dr = ur.devices.get(deviceId)
