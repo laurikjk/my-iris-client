@@ -6,6 +6,7 @@ import ReactDOM from "react-dom/client"
 
 import {subscribeToDMNotifications, subscribeToNotifications} from "./utils/notifications"
 import {migrateUserState, migratePublicChats} from "./utils/migration"
+import pushNotifications from "./utils/pushNotifications"
 import {useSettingsStore} from "@/stores/settings"
 import {useUserRecordsStore} from "@/stores/userRecords"
 import {
@@ -32,6 +33,11 @@ const initializeApp = () => {
     subscribeToDMNotifications()
     migratePublicChats()
     socialGraph().recalculateFollowDistances()
+
+    // Initialize mobile push notifications for Tauri
+    if (window.__TAURI__) {
+      pushNotifications.init().catch(console.error)
+    }
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {

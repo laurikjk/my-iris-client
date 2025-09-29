@@ -2,6 +2,22 @@ declare global {
   interface Window {
     cf_turnstile_callback?: (token: string) => void
     webln?: WebLNProvider
+    __TAURI__?: any
+    webkit?: {
+      messageHandlers?: {
+        push?: {
+          postMessage?: (message: any) => void
+        }
+        pushNotification?: {
+          postMessage?: (message: any) => void
+        }
+      }
+    }
+    Android?: {
+      requestPushPermission?: () => void
+      setFCMToken?: (token: string) => void
+      registerForPushNotifications?: () => void
+    }
   }
 }
 
