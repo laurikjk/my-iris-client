@@ -13,7 +13,7 @@ describe("SessionManager", () => {
       sharedRelay
     )
 
-    const {onEvent: onEventBob, publicKey: bobPubkey} = await createMockSessionManager(
+    const {manager: managerBob, publicKey: bobPubkey} = await createMockSessionManager(
       "bob-device-1",
       sharedRelay
     )
@@ -22,10 +22,13 @@ describe("SessionManager", () => {
 
     await managerAlice.sendMessage(bobPubkey, chatMessage)
 
-    await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait for async events
-
     expect(publishAlice).toHaveBeenCalled()
-    expect(onEventBob).toHaveBeenCalled()
+    const bobReceivedMessage = await new Promise((resolve) => {
+      managerBob.onEvent((event) => {
+        if (event.content === chatMessage) resolve(true)
+      })
+    })
+    expect(bobReceivedMessage).toBe(true)
   })
 
   it("should sync messages across multiple devices", async () => {

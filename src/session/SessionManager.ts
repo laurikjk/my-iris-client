@@ -233,10 +233,7 @@ export default class SessionManager {
     this.ourOtherDeviceInviteSubscription?.()
   }
 
-  private async sendMessageHistory(
-    recipientPublicKey: string,
-    deviceId: string
-  ): Promise<void> {
+  async sendMessageHistory(recipientPublicKey: string, deviceId: string): Promise<void> {
     const history = this.messageHistory.get(recipientPublicKey) || []
     const userRecord = this.userRecords.get(recipientPublicKey)
     if (!userRecord) {
