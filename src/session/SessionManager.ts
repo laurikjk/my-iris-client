@@ -138,6 +138,10 @@ export default class SessionManager {
     session: Session
   ): void {
     const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+    if (dr.activeSession === session) return
+
+    dr.inactiveSessions = dr.inactiveSessions.filter((s) => s !== session)
+
     if (dr.activeSession) {
       dr.inactiveSessions.push(dr.activeSession)
     }
@@ -152,10 +156,7 @@ export default class SessionManager {
     const key = this.sessionKey(userPubkey, deviceId, session.name)
 
     const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
-    if (dr.activeSession) {
-      dr.inactiveSessions.push(dr.activeSession)
-    }
-    dr.activeSession = session
+    this.setAsActiveSession(userPubkey, deviceId, session)
 
     const unsub = session.onEvent((event) => {
       for (const cb of this.internalSubscriptions) cb(event, userPubkey)
@@ -273,15 +274,34 @@ export default class SessionManager {
       ...Array.from(ourUserRecord.devices.values()),
     ]
 
-    return Promise.allSettled(
+    const results = await Promise.allSettled(
       devices.map(async (device) => {
-        const {activeSession} = device
-        if (!activeSession) return
-        const {event: verifiedEvent} = activeSession.sendEvent(event)
+        let session = device.activeSession
+
+        if (!session || !session.state.ourCurrentNostrKey) {
+          session = device.inactiveSessions.find((inactive) =>
+            Boolean(inactive.state.ourCurrentNostrKey)
+          )
+
+          if (session) {
+            this.setAsActiveSession(recipientIdentityKey, device.deviceId, session)
+          }
+        }
+
+        if (!session || !session.state.ourCurrentNostrKey) {
+          console.warn(
+            "SessionManager: no sendable session available for",
+            device.deviceId
+          )
+          return
+        }
+
+        const {event: verifiedEvent} = session.sendEvent(event)
         await this.nostrPublish(verifiedEvent)
         await this.storeUserRecord(recipientIdentityKey)
       })
     )
+    return results
   }
 
   async sendMessage(
