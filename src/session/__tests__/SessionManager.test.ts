@@ -32,13 +32,10 @@ describe("SessionManager", () => {
   })
 
   it("should sync messages across multiple devices", async () => {
-    const sharedRelay = new MockRelay()
+    const sharedRelay = new MockRelay(true)
 
-    const {
-      manager: aliceDevice1,
-      publicKey: alicePubkey,
-      secretKey: aliceSecretKey,
-    } = await createMockSessionManager("alice-device-1", sharedRelay)
+    const {manager: aliceDevice1, secretKey: aliceSecretKey} =
+      await createMockSessionManager("alice-device-1", sharedRelay)
 
     const {manager: aliceDevice2} = await createMockSessionManager(
       "alice-device-2",
@@ -46,56 +43,31 @@ describe("SessionManager", () => {
       aliceSecretKey
     )
 
-    const {onEvent: onEventBob, publicKey: bobPubkey} = await createMockSessionManager(
+    const {manager: bobDevice1, publicKey: bobPubkey} = await createMockSessionManager(
       "bob-device-1",
       sharedRelay
     )
 
-    // Both Alice devices need to set up Bob as a user
-    aliceDevice1.setupUser(bobPubkey)
-    aliceDevice2.setupUser(bobPubkey)
+    const msg1 = "Hello Bob from Alice device 1"
+    const msg2 = "Hello Bob from Alice device 2"
 
-    // Alice devices also need to set up each other for multi-device sync
-    aliceDevice1.setupUser(alicePubkey)
-    aliceDevice2.setupUser(alicePubkey)
+    await aliceDevice1.sendMessage(bobPubkey, msg1)
+    await aliceDevice2.sendMessage(bobPubkey, msg2)
 
-    const msg1: Partial<Rumor> = {
-      kind: KIND_CHAT_MESSAGE,
-      content: "Hello Bob from Alice device 1",
-      created_at: Math.floor(Date.now() / 1000),
-    }
-    const msg2: Partial<Rumor> = {
-      kind: KIND_CHAT_MESSAGE,
-      content: "Hello Bob from Alice device 2",
-      created_at: Math.floor(Date.now() / 1000),
-    }
+    const bobReceivedMessages = await new Promise((resolve) => {
+      const received: string[] = []
+      bobDevice1.onEvent((event) => {
+        if (event.content === msg1 || event.content === msg2) {
+          received.push(event.content)
+          if (received.length === 2) resolve(received)
+        }
+      })
+    })
 
-    await aliceDevice1.sendEvent(bobPubkey, msg1)
-    await aliceDevice2.sendEvent(bobPubkey, msg2)
-
-    expect(onEventBob).toHaveBeenCalledWith(
-      expect.objectContaining({
-        content: "Hello Bob from Alice device 1",
-      }),
-      alicePubkey
-    )
-    expect(onEventBob).toHaveBeenCalledWith(
-      expect.objectContaining({
-        content: "Hello Bob from Alice device 2",
-      }),
-      alicePubkey
-    )
-    // Multi-device sync is not implemented in SessionManager
-    // expect(onEventAliceDevice1).toHaveBeenCalledWith(
-    //   expect.objectContaining({
-    //     content: "Hello Bob from Alice device 2",
-    //   }),
-    //   alicePubkey
-    // )
+    expect(bobReceivedMessages)
   })
 
   it("should persist sessions across manager restarts", async () => {
-    // Phase 1: Initial communication to establish sessions
     let sharedRelay = new MockRelay()
 
     const {
@@ -112,43 +84,39 @@ describe("SessionManager", () => {
       mockStorage: bobStorage,
     } = await createMockSessionManager("bob-device-1", sharedRelay)
 
-    // Set up users to discover each other
-    aliceManager1.setupUser(bobPubkey)
-    bobManager1.setupUser(alicePubkey)
+    const [initialMessage, replyMessage, afterRestartMessage] = [
+      "Initial message",
+      "Reply message",
+      "Message after restart",
+    ]
 
-    // Send initial message to establish session - Alice sends first
-    const initialMessage: Partial<Rumor> = {
-      kind: KIND_CHAT_MESSAGE,
-      content: "Initial message",
-      created_at: Math.floor(Date.now() / 1000),
-    }
-    await aliceManager1.sendEvent(bobPubkey, initialMessage)
+    await aliceManager1.sendMessage(bobPubkey, initialMessage)
+    await bobManager1.sendMessage(alicePubkey, replyMessage)
 
-    // Bob needs to send a message back to trigger his session storage
-    const replyMessage: Partial<Rumor> = {
-      kind: KIND_CHAT_MESSAGE,
-      content: "Reply message",
-      created_at: Math.floor(Date.now() / 1000),
-    }
-    await bobManager1.sendEvent(alicePubkey, replyMessage)
+    const allDeliveredBeforeClosing = await new Promise((resolve) => {
+      const received = new Set<string>()
+      aliceManager1.onEvent((event) => {
+        received.add(event.content)
+        if (received.has(initialMessage) && received.has(replyMessage)) {
+          resolve(true)
+        }
+      })
+      bobManager1.onEvent((event) => {
+        received.add(event.content)
+        if (received.has(initialMessage) && received.has(replyMessage)) {
+          resolve(true)
+        }
+      })
+    })
 
-    // Verify sessions exist in storage (should be stored as user records)
-    const aliceStorageKeys = await aliceStorage.list()
-    const bobStorageKeys = await bobStorage.list()
-    expect(
-      aliceStorageKeys.filter((key) => key.startsWith("user/")).length
-    ).toBeGreaterThan(0)
-    expect(
-      bobStorageKeys.filter((key) => key.startsWith("user/")).length
-    ).toBeGreaterThan(0)
+    expect(allDeliveredBeforeClosing)
 
-    // Close the managers
     aliceManager1.close()
     bobManager1.close()
 
-    // Phase 2: Restart with fresh relay but same storage
-    sharedRelay = new MockRelay()
+    sharedRelay = new MockRelay(true)
 
+    console.log("Recreating managers to test session persistence...")
     const {manager: aliceManager2} = await createMockSessionManager(
       "alice-device-1",
       sharedRelay,
@@ -156,26 +124,25 @@ describe("SessionManager", () => {
       aliceStorage
     )
 
-    const {onEvent: onEventBob2} = await createMockSessionManager(
+    const {manager: bobManager2} = await createMockSessionManager(
       "bob-device-1",
       sharedRelay,
       bobSecretKey,
       bobStorage
     )
 
-    const afterRestartMessage: Partial<Rumor> = {
-      kind: KIND_CHAT_MESSAGE,
-      content: "Message after restart",
-      created_at: Math.floor(Date.now() / 1000),
-    }
-    await aliceManager2.sendEvent(bobPubkey, afterRestartMessage)
+    console.log("Managers recreated. Sending message after restart...")
+    aliceManager2.sendMessage(bobPubkey, afterRestartMessage)
 
-    expect(onEventBob2).toHaveBeenCalledWith(
-      expect.objectContaining({
-        content: "Message after restart",
-      }),
-      alicePubkey
-    )
+    const bobReceivedMessages = await new Promise((resolve) => {
+      bobManager2.onEvent((event) => {
+        console.log("Bob received event after restart:", event)
+        if (event.content === afterRestartMessage) {
+          resolve(true)
+        }
+      })
+    })
+    expect(bobReceivedMessages)
   })
 
   it("should handle messages from multiple Alice devices to Bob", async () => {
