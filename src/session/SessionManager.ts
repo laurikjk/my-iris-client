@@ -343,10 +343,12 @@ export default class SessionManager {
             )
           : undefined
 
+        console.log("Deserialized active session for", deviceId, activeSession)
         const inactiveSessions = deviceData.inactiveSessions.map(
           (state: string) =>
             new Session(this.nostrSubscribe, deserializeSessionState(state))
         )
+        console.log("Deserialized inactive sessions for", deviceId, inactiveSessions)
         devices.set(deviceId, {
           deviceId,
           activeSession,
@@ -367,6 +369,7 @@ export default class SessionManager {
             continue
           }
           const unsubscribe = activeSession.onEvent((event) => {
+            console.log("restored handler - Received event in activeSession from", deviceId, event)
             for (const callback of this.internalSubscriptions) {
               callback(event, publicKey)
             }
@@ -381,6 +384,7 @@ export default class SessionManager {
             continue
           }
           const unsubscribe = session.onEvent((event) => {
+            console.log("restored handler - Received event in inactiveSession from", deviceId, event)
             for (const callback of this.internalSubscriptions) {
               callback(event, publicKey)
             }
@@ -395,6 +399,7 @@ export default class SessionManager {
         devices,
         foundInvites: new Map(),
       })
+      console.log("Loaded user record for", this.deviceId, devices)
     })
   }
   private loadAllUserRecords() {

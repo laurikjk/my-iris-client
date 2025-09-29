@@ -111,38 +111,36 @@ describe("SessionManager", () => {
 
     expect(allDeliveredBeforeClosing)
 
-    aliceManager1.close()
-    bobManager1.close()
+    // Log storage contents for debugging
+    console.log("Alice storage keys before restart:", await aliceStorage.list())
+    console.log("Bob storage keys before restart:", await bobStorage.list())
 
-    sharedRelay = new MockRelay(true)
+    const sharedRelay2 = new MockRelay(true)
 
-    console.log("Recreating managers to test session persistence...")
     const {manager: aliceManager2} = await createMockSessionManager(
       "alice-device-1",
-      sharedRelay,
+      sharedRelay2,
       aliceSecretKey,
       aliceStorage
     )
 
     const {manager: bobManager2} = await createMockSessionManager(
       "bob-device-1",
-      sharedRelay,
+      sharedRelay2,
       bobSecretKey,
       bobStorage
     )
 
-    console.log("Managers recreated. Sending message after restart...")
-    aliceManager2.sendMessage(bobPubkey, afterRestartMessage)
-
-    const bobReceivedMessages = await new Promise((resolve) => {
+    await aliceManager2.sendMessage(bobPubkey, afterRestartMessage)
+    const bobReceivedMessageAfterRestart = await new Promise((resolve) => {
       bobManager2.onEvent((event) => {
-        console.log("Bob received event after restart:", event)
         if (event.content === afterRestartMessage) {
           resolve(true)
         }
       })
     })
-    expect(bobReceivedMessages)
+
+    expect(bobReceivedMessageAfterRestart)
   })
 
   it("should handle messages from multiple Alice devices to Bob", async () => {
