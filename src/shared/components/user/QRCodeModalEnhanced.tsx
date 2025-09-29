@@ -1,4 +1,4 @@
-import {useEffect, useState, useMemo} from "react"
+import {useEffect, useState, useMemo, lazy, Suspense} from "react"
 import useProfile from "@/shared/hooks/useProfile"
 import {Avatar} from "@/shared/components/user/Avatar"
 import {Name} from "@/shared/components/user/Name"
@@ -6,7 +6,8 @@ import Icon from "@/shared/components/Icons/Icon"
 import Modal from "@/shared/components/ui/Modal"
 import {RiArrowLeftLine, RiFlashlightFill} from "@remixicon/react"
 import {generateProxyUrl} from "@/shared/utils/imgproxy"
-import QRScanner from "@/shared/components/QRScanner"
+
+const QRScanner = lazy(() => import("@/shared/components/QRScanner"))
 import ostrichBlack from "@/assets/ostrich-black.png"
 import {useNavigate} from "@/navigation"
 
@@ -166,7 +167,15 @@ function QRCodeModalEnhanced({onClose, data, pubKey}: QRCodeModalEnhancedProps) 
             {/* Scanner area */}
             <div className="bg-white rounded-2xl p-1 mb-8 shadow-2xl">
               <div className="w-80 h-80 rounded-2xl overflow-hidden relative">
-                <QRScanner onScanSuccess={handleQRScanSuccess} />
+                <Suspense
+                  fallback={
+                    <div className="flex items-center justify-center w-full h-full">
+                      Loading...
+                    </div>
+                  }
+                >
+                  <QRScanner onScanSuccess={handleQRScanSuccess} />
+                </Suspense>
               </div>
             </div>
 

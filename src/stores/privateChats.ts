@@ -156,9 +156,6 @@ export async function subscribeToOwnDeviceInvites() {
 
   ownDeviceInvitesInitialized = true
 
-  // Import here to avoid circular dependency at module scope
-  const {useUserRecordsStore} = await import("./userRecords")
-
   // Initialize listeners for current device's invite
   useUserRecordsStore.getState().initializeListeners()
 

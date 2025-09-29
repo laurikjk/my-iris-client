@@ -159,7 +159,7 @@ export function handlePushNotification(data: unknown) {
   if (typeof data === "object" && data && "event" in data) {
     // Navigate to the appropriate screen
     const eventData =
-      typeof data.event === "string" ? JSON.parse(data.event) : (data.event as any)
+      typeof data.event === "string" ? JSON.parse(data.event) : (data.event as object)
 
     // Handle different event kinds
     switch (eventData.kind) {
