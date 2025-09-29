@@ -276,8 +276,6 @@ export default class SessionManager {
       ...Array.from(ourUserRecord.devices.values()),
     ]
 
-    console.warn("my devices", ourUserRecord.devices)
-
     return Promise.allSettled(
       devices.map(async (device) => {
         const {activeSession} = device
