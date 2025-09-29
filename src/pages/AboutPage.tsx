@@ -13,6 +13,7 @@ import Header from "@/shared/components/header/Header"
 import Widget from "@/shared/components/ui/Widget"
 import {useState, useEffect} from "react"
 import {Link} from "@/navigation"
+import {openExternalLink} from "@/utils/utils"
 
 export const AboutPage = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false)
@@ -71,8 +72,10 @@ export const AboutPage = () => {
               <p>
                 <a
                   href="https://soapbox.pub/blog/nostr101/"
-                  target="_blank"
-                  rel="noreferrer"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    openExternalLink("https://soapbox.pub/blog/nostr101/")
+                  }}
                   className="flex items-center gap-1 w-fit"
                 >
                   <RiInformationLine className="inline" /> What is Nostr?
@@ -88,15 +91,24 @@ export const AboutPage = () => {
                 </Link>
               </p>
               <p>
-                <a href={CONFIG.repository} className="flex items-center gap-1 w-fit">
+                <a
+                  href={CONFIG.repository}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    openExternalLink(CONFIG.repository)
+                  }}
+                  className="flex items-center gap-1 w-fit"
+                >
                   <RiGithubLine className="inline" /> Source code
                 </a>
               </p>
               <p>
                 <a
                   href="https://following.space/"
-                  target="_blank"
-                  rel="noreferrer"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    openExternalLink("https://following.space/")
+                  }}
                   className="flex items-center gap-1 w-fit"
                 >
                   <RiUserFollowLine className="inline" /> Find people to follow
@@ -105,8 +117,10 @@ export const AboutPage = () => {
               <p>
                 <a
                   href="https://github.com/irislib/iris-client/releases"
-                  target="_blank"
-                  rel="noreferrer"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    openExternalLink("https://github.com/irislib/iris-client/releases")
+                  }}
                   className="flex items-center gap-1 w-fit"
                 >
                   <RiDownload2Line className="inline" /> Download Iris for desktop

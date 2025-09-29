@@ -32,6 +32,9 @@ pub fn run() {
       // Add notification plugin
       app.handle().plugin(tauri_plugin_notification::init())?;
 
+      // Add opener plugin for external links
+      app.handle().plugin(tauri_plugin_opener::init())?;
+
       // Add iOS swipe navigation
       #[cfg(target_os = "ios")]
       app.handle().plugin(tauri_plugin_swipe_back_ios::init())?;

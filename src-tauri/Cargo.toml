@@ -25,3 +25,4 @@ tauri = { version = "2.6.2", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-swipe-back-ios = "1.0.0"
+tauri-plugin-opener = "2"

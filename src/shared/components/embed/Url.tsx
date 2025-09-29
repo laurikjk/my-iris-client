@@ -1,4 +1,5 @@
 import {Link} from "@/navigation"
+import {openExternalLink} from "@/utils/utils"
 import Embed from "./index.ts"
 
 const Url: Embed = {
@@ -22,7 +23,14 @@ const Url: Embed = {
       }
 
       return (
-        <a className="link link-info" target="_blank" href={match} rel="noreferrer">
+        <a
+          className="link link-info"
+          href={match}
+          onClick={(e) => {
+            e.preventDefault()
+            openExternalLink(match)
+          }}
+        >
           {displayText}
         </a>
       )
