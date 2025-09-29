@@ -151,13 +151,13 @@ function QRCodeModalEnhanced({onClose, data, pubKey}: QRCodeModalEnhancedProps) 
           {/* Header with back button */}
           <button
             onClick={() => setShowScanner(false)}
-            className="absolute top-2 left-2 z-20 flex items-center justify-center text-white p-2 rounded-lg transition-colors hover:bg-white/10 qr-modal-shadow-btn"
+            className="absolute top-[calc(0.5rem+env(safe-area-inset-top))] left-2 z-20 flex items-center justify-center text-white p-2 rounded-lg transition-colors hover:bg-white/10 qr-modal-shadow-btn"
             aria-label="Go back"
           >
             <RiArrowLeftLine className="w-7 h-7" />
           </button>
 
-          <div className="text-center pt-8 pb-4">
+          <div className="text-center pt-[calc(0.8rem+env(safe-area-inset-top))] pb-4">
             <h1 className="text-2xl font-semibold text-white">Scan QR Code</h1>
           </div>
 
@@ -222,7 +222,7 @@ function QRCodeModalEnhanced({onClose, data, pubKey}: QRCodeModalEnhancedProps) 
         {/* Header with close button - absolute positioned */}
         <button
           onClick={onClose}
-          className="absolute top-2 left-2 z-20 flex items-center justify-center text-white p-2 rounded-lg transition-colors hover:bg-white/10 qr-modal-shadow-btn"
+          className="absolute top-[calc(0.5rem+env(safe-area-inset-top))] left-2 z-20 flex items-center justify-center text-white p-2 rounded-lg transition-colors hover:bg-white/10 qr-modal-shadow-btn"
           aria-label="Go back"
         >
           <RiArrowLeftLine className="w-7 h-7" />
