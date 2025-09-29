@@ -125,8 +125,8 @@ export default class SessionManager {
     return dr
   }
 
-  private sessionKey(userPubkey: string, deviceId: string) {
-    return `session/${userPubkey}/${deviceId}`
+  private sessionKey(userPubkey: string, deviceId: string, sessionName: string) {
+    return `session/${userPubkey}/${deviceId}/${sessionName}`
   }
   private inviteKey(userPubkey: string) {
     return `invite/${userPubkey}`
@@ -137,10 +137,7 @@ export default class SessionManager {
     deviceId: string,
     session: Session
   ): void {
-    const key = this.sessionKey(userPubkey, deviceId)
-    // if (this.sessionSubscriptions.has(key)) {
-    //   return {attached: false, reason: "already-subscribed"}
-    // }
+    const key = this.sessionKey(userPubkey, deviceId, session.name)
 
     const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
     if (dr.activeSession) {
@@ -349,19 +346,39 @@ export default class SessionManager {
         })
       }
       for (const device of devices.values()) {
-        const {deviceId, activeSession} = device
-        if (!activeSession || !deviceId) continue
+        const {deviceId, activeSession, inactiveSessions} = device
+        if (!deviceId) continue
 
-        const sessionSubscriptionId = `session/${publicKey}/${deviceId}`
-        if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-          continue
-        }
-        const unsubscribe = activeSession.onEvent((event) => {
-          for (const callback of this.internalSubscriptions) {
-            callback(event, publicKey)
+        if (activeSession) {
+          const sessionSubscriptionId = this.sessionKey(
+            publicKey,
+            deviceId,
+            activeSession.name
+          )
+          if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
+            continue
           }
-        })
-        if (unsubscribe) this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+          const unsubscribe = activeSession.onEvent((event) => {
+            for (const callback of this.internalSubscriptions) {
+              callback(event, publicKey)
+            }
+          })
+          if (unsubscribe)
+            this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+        }
+        for (const session of inactiveSessions) {
+          const sessionSubscriptionId = this.sessionKey(publicKey, deviceId, session.name)
+          if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
+            continue
+          }
+          const unsubscribe = session.onEvent((event) => {
+            for (const callback of this.internalSubscriptions) {
+              callback(event, publicKey)
+            }
+          })
+          if (unsubscribe)
+            this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+        }
       }
       this.userRecords.set(publicKey, {
         publicKey: data.publicKey,
