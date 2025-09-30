@@ -2,6 +2,7 @@ import {FollowButton} from "@/shared/components/button/FollowButton"
 import {ProfileAbout} from "@/shared/components/user/ProfileAbout"
 import {UserRow} from "@/shared/components/user/UserRow"
 import FollowedBy from "./FollowedBy"
+import MutedBy from "./MutedBy"
 import socialGraph from "@/utils/socialGraph"
 import {usePublicKey} from "@/stores/user"
 import {useMemo} from "react"
@@ -30,6 +31,7 @@ const ProfileCard = ({
         <FollowButton pubKey={pubKey} />
       </div>
       {showAbout && <ProfileAbout pubKey={pubKey} className="mb-2" />}
+      <MutedBy pubkey={pubKey} />
       {showFollows && <FollowedBy pubkey={pubKey} />}
       {showFollows && followsMe && (
         <span className="badge badge-neutral">Follows you</span>
