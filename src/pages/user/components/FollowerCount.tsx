@@ -7,6 +7,8 @@ import {ndk} from "@/utils/ndk"
 import {shouldHideUser} from "@/utils/visibility"
 
 import Modal from "@/shared/components/ui/Modal.tsx"
+import {Avatar} from "@/shared/components/user/Avatar"
+import {Name} from "@/shared/components/user/Name"
 
 import FollowList from "./FollowList.tsx"
 
@@ -58,9 +60,15 @@ const FollowerCount = ({pubKey}: {pubKey: string}) => {
       </button>
       {showFollowList && (
         <Modal onClose={() => setShowFollowList(false)}>
-          <div className=" w-[400px] max-w-full">
-            <h3 className="text-xl font-semibold mb-4">Known followers</h3>
-            <div className="overflow-y-auto max-h-[50vh]">
+          <div className="w-full md:w-[400px] h-full flex flex-col">
+            <div className="flex items-center gap-3 mb-4">
+              <Avatar pubKey={pubKey} width={40} showBadge={false} />
+              <div className="flex flex-col">
+                <span className="text-sm opacity-70">Known followers of</span>
+                <Name pubKey={pubKey} className="font-semibold" />
+              </div>
+            </div>
+            <div className="overflow-y-auto flex-1">
               <FollowList follows={followers} />
             </div>
           </div>

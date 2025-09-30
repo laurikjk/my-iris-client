@@ -5,6 +5,8 @@ import {formatAmount} from "@/utils/utils.ts"
 import FollowsList from "./FollowList.tsx"
 import {usePublicKey} from "@/stores/user"
 import {useState, useMemo} from "react"
+import {Avatar} from "@/shared/components/user/Avatar"
+import {Name} from "@/shared/components/user/Name"
 
 interface FollowsCountProps {
   pubKey: string
@@ -37,11 +39,17 @@ function FollowsCount({pubKey}: FollowsCountProps) {
       )}
       {showFollowsList && (
         <Modal onClose={() => setShowFollowsList(false)}>
-          <div className=" w-[400px] max-w-full">
-            <h3 className="text-xl font-semibold mb-4">Follows</h3>
-          </div>
-          <div className="overflow-y-auto max-h-[50vh]">
-            <FollowsList follows={follows} />
+          <div className="w-full md:w-[400px] h-full flex flex-col">
+            <div className="flex items-center gap-3 mb-4">
+              <Avatar pubKey={pubKey} width={40} showBadge={false} />
+              <div className="flex flex-col">
+                <span className="text-sm opacity-70">Followed by</span>
+                <Name pubKey={pubKey} className="font-semibold" />
+              </div>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              <FollowsList follows={follows} />
+            </div>
           </div>
         </Modal>
       )}

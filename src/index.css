@@ -135,6 +135,22 @@ iframe {
   max-width: fit-content !important;
 }
 
+@media (max-width: 768px) {
+  .modal {
+    align-items: stretch;
+  }
+
+  .modal-box {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    background-color: oklch(var(--b2)) !important;
+  }
+}
+
 /* QR Modal text shadows - using solid black with opacity for better visibility */
 .qr-modal-shadow {
   text-shadow:

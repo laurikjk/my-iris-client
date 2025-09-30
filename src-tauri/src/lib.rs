@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tauri::{Manager, Listener};
+use tauri::Listener;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PushTokenPayload {
@@ -42,7 +42,7 @@ pub fn run() {
       // Setup push notification handler for mobile
       #[cfg(mobile)]
       {
-        let handle = app.handle().clone();
+        let _handle = app.handle().clone();
 
         // Listen for notification events
         app.listen("notification-received", move |event| {

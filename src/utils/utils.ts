@@ -2,8 +2,16 @@ export const isTauri = () => typeof window !== "undefined" && window.__TAURI__
 
 export const openExternalLink = async (url: string) => {
   if (isTauri()) {
-    const {openUrl} = await import("@tauri-apps/plugin-opener")
-    await openUrl(url)
+    try {
+      const {openUrl} = await import("@tauri-apps/plugin-opener")
+      console.log("Opening external URL in Tauri:", url)
+      await openUrl(url)
+      console.log("Successfully opened URL")
+    } catch (error) {
+      console.error("Failed to open URL in Tauri:", error)
+      // Fallback to window.open
+      window.open(url, "_blank")
+    }
   } else {
     window.open(url, "_blank")
   }
