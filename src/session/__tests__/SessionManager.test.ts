@@ -178,8 +178,8 @@ describe("SessionManager", () => {
     })
 
     console.log("\n\n\n Sesnigng initial messages")
-    await aliceManager.sendMessage(bobPubkey, "hello")
-    await bobManager.sendMessage(alicePubkey, "reply")
+    await aliceManager.sendMessage(bobPubkey, msg1)
+    await bobManager.sendMessage(alicePubkey, msg2)
 
     await Promise.all([messagesReceivedBob, messagesReceivedAlice])
 
