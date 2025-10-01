@@ -200,6 +200,9 @@ export default class SessionManager {
     const unsub = session.onEvent((event) => {
       for (const cb of this.internalSubscriptions) cb(event, userPubkey)
       this.setAsActiveSession(userPubkey, deviceId, session)
+      // this.storeUserRecord(userPubkey).catch((err) =>
+      //   console.error("Failed to store user record after event", err)
+      // )
     })
     this.sessionSubscriptions.set(key, unsub)
   }
@@ -340,23 +343,21 @@ export default class SessionManager {
     this.setupUser(recipientIdentityKey)
     this.setupUser(getPublicKey(this.ourIdentityKey))
 
-    const devices = [
-      ...Array.from(userRecord.devices.values()),
-      ...Array.from(ourUserRecord.devices.values()),
-    ]
+    const tasks: Array<Promise<void>> = []
 
-    const results = await Promise.allSettled(
-      devices.map(async (device) => {
-        const {activeSession} = device
-        if (!activeSession) {
-          console.warn("No active session for device", device.deviceId)
-          return
-        }
-        const {event: verifiedEvent} = activeSession.sendEvent(event)
-        await this.nostrPublish(verifiedEvent)
-        await this.storeUserRecord(recipientIdentityKey)
-      })
-    )
+    for (const [pubkey, record] of [
+      [recipientIdentityKey, userRecord] as const,
+      [getPublicKey(this.ourIdentityKey), ourUserRecord] as const,
+    ]) {
+      for (const device of record.devices.values()) {
+        tasks.push(this.sendEventToDevice(pubkey, device, event))
+      }
+    }
+
+    const results = await Promise.allSettled(tasks)
+
+    await this.storeUserRecord(recipientIdentityKey)
+    await this.storeUserRecord(getPublicKey(this.ourIdentityKey))
 
     for (const result of results) {
       if (result.status === "rejected") {
@@ -364,6 +365,40 @@ export default class SessionManager {
       }
     }
     return results
+  }
+
+  private async sendEventToDevice(
+    userPubkey: string,
+    device: DeviceRecord,
+    event: Partial<Rumor>
+  ): Promise<void> {
+    let session = device.activeSession
+    if (!session) {
+      console.warn("No active session for device", device.deviceId)
+      return
+    }
+
+    if (!session.state.ourCurrentNostrKey) {
+      const promotable = device.inactiveSessions.find(
+        (candidate) => !!candidate.state.ourCurrentNostrKey
+      )
+      if (promotable) {
+        this.setAsActiveSession(userPubkey, device.deviceId, promotable)
+        session = promotable
+      }
+    }
+
+    if (!session.state.ourCurrentNostrKey) {
+      console.warn(
+        "Skipping send for session without ourCurrentNostrKey",
+        JSON.stringify({deviceId: device.deviceId, session: session.name})
+      )
+      return
+    }
+
+    const {event: verifiedEvent} = session.sendEvent(event)
+    await this.nostrPublish(verifiedEvent)
+    await this.storeUserRecord(userPubkey)
   }
 
   async sendMessage(
