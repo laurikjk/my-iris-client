@@ -200,9 +200,12 @@ export default class SessionManager {
     const unsub = session.onEvent((event) => {
       for (const cb of this.internalSubscriptions) cb(event, userPubkey)
       this.setAsActiveSession(userPubkey, deviceId, session)
-      // this.storeUserRecord(userPubkey).catch((err) =>
-      //   console.error("Failed to store user record after event", err)
-      // )
+      this.storeUserRecord(userPubkey).catch((error) => {
+        console.error("Failed to store user record after event", error)
+      })
+      this.storeUserRecord(getPublicKey(this.ourIdentityKey)).catch((error) => {
+        console.error("Failed to store self record after event", error)
+      })
     })
     this.sessionSubscriptions.set(key, unsub)
   }
@@ -372,6 +375,12 @@ export default class SessionManager {
     device: DeviceRecord,
     event: Partial<Rumor>
   ): Promise<void> {
+    if (
+      userPubkey === getPublicKey(this.ourIdentityKey) &&
+      device.deviceId === this.deviceId
+    ) {
+      return
+    }
     let session = device.activeSession
     if (!session) {
       console.warn("No active session for device", device.deviceId)
@@ -561,6 +570,12 @@ export default class SessionManager {
         callback(event, userPubkey)
       }
       this.setAsActiveSession(userPubkey, deviceId, session)
+      this.storeUserRecord(userPubkey).catch((error) => {
+        console.error("Failed to store user record after restored event", error)
+      })
+      this.storeUserRecord(getPublicKey(this.ourIdentityKey)).catch((error) => {
+        console.error("Failed to store self record after restored event", error)
+      })
     })
 
     this.sessionSubscriptions.set(key, unsubscribe)

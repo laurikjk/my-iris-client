@@ -1,8 +1,8 @@
 import {describe, it, expect} from "vitest"
-import {Rumor} from "nostr-double-ratchet"
 import {KIND_CHAT_MESSAGE} from "../../utils/constants"
 import {createMockSessionManager} from "./helpers/mockSessionManager"
 import {MockRelay} from "./helpers/mockRelay"
+import {runScenario} from "./helpers/scenario"
 
 describe("SessionManager", () => {
   it("should receive a message", async () => {
@@ -68,154 +68,59 @@ describe("SessionManager", () => {
   })
 
   it("should persist sessions across manager restarts", async () => {
-    let sharedRelay = new MockRelay()
-
-    const {
-      manager: aliceManager1,
-      secretKey: aliceSecretKey,
-      publicKey: alicePubkey,
-      mockStorage: aliceStorage,
-    } = await createMockSessionManager("alice-device-1", sharedRelay)
-
-    const {
-      manager: bobManager1,
-      secretKey: bobSecretKey,
-      publicKey: bobPubkey,
-      mockStorage: bobStorage,
-    } = await createMockSessionManager("bob-device-1", sharedRelay)
-
-    const [initialMessage, replyMessage, afterRestartMessage] = [
-      "Initial message",
-      "Reply message",
-      "Message after restart",
-    ]
-
-    await aliceManager1.sendMessage(bobPubkey, initialMessage)
-    await bobManager1.sendMessage(alicePubkey, replyMessage)
-
-    const allDeliveredBeforeClosing = await new Promise((resolve) => {
-      const received = new Set<string>()
-      aliceManager1.onEvent((event) => {
-        received.add(event.content)
-        if (received.has(initialMessage) && received.has(replyMessage)) {
-          resolve(true)
-        }
-      })
-      bobManager1.onEvent((event) => {
-        received.add(event.content)
-        if (received.has(initialMessage) && received.has(replyMessage)) {
-          resolve(true)
-        }
-      })
+    await runScenario({
+      steps: [
+        {type: "send", from: "alice", to: "bob", message: "Initial message"},
+        {type: "send", from: "bob", to: "alice", message: "Reply message"},
+        {type: "expect", actor: "bob", message: "Initial message"},
+        {type: "expect", actor: "alice", message: "Reply message"},
+        {type: "restart", actor: "alice"},
+        {type: "restart", actor: "bob"},
+        {type: "send", from: "alice", to: "bob", message: "Message after restart"},
+        {type: "expect", actor: "bob", message: "Message after restart"},
+      ],
     })
-
-    expect(allDeliveredBeforeClosing)
-
-    const sharedRelay2 = new MockRelay(true)
-
-    const {manager: aliceManager2} = await createMockSessionManager(
-      "alice-device-1",
-      sharedRelay2,
-      aliceSecretKey,
-      aliceStorage
-    )
-
-    const {manager: bobManager2} = await createMockSessionManager(
-      "bob-device-1",
-      sharedRelay2,
-      bobSecretKey,
-      bobStorage
-    )
-
-    console.warn("\n\n\nManagers restarted")
-
-    const bobReceivedMessageAfterRestart = new Promise((resolve) => {
-      bobManager2.onEvent((event) => {
-        console.warn("\n\n\n Bob received event", event)
-        if (event.content === afterRestartMessage) {
-          resolve(true)
-        }
-      })
-    })
-
-    console.warn("\n\n\n sending")
-    await aliceManager2.sendMessage(bobPubkey, afterRestartMessage)
-    console.warn("\n\n\n sent")
-
-    expect(await bobReceivedMessageAfterRestart)
   })
 
   it("should resume communication after restart with stored sessions", async () => {
-    const relay = new MockRelay()
-
-    const {
-      manager: aliceManager,
-      secretKey: aliceSecretKey,
-      publicKey: alicePubkey,
-      mockStorage: aliceStorage,
-    } = await createMockSessionManager("alice-device-1", relay)
-
-    const {
-      manager: bobManager,
-      secretKey: bobSecretKey,
-      publicKey: bobPubkey,
-      mockStorage: bobStorage,
-    } = await createMockSessionManager("bob-device-1", relay)
-
-    const aliceToBob = "hello from alice"
-    const bobBurst = ["hey alice 1", "hey alice 2", "hey alice 3"]
-
-    const bobReceivedAlice = new Promise<void>((resolve) => {
-      bobManager.onEvent((event) => {
-        if (event.content === aliceToBob) resolve()
-      })
+    await runScenario({
+      steps: [
+        {type: "send", from: "alice", to: "bob", message: "hello from alice"},
+        {
+          type: "send",
+          from: "bob",
+          to: "alice",
+          message: "hey alice 1",
+        },
+        {
+          type: "send",
+          from: "bob",
+          to: "alice",
+          message: "hey alice 2",
+        },
+        {
+          type: "send",
+          from: "bob",
+          to: "alice",
+          message: "hey alice 3",
+        },
+        {type: "expect", actor: "bob", message: "hello from alice"},
+        {
+          type: "expectAll",
+          actor: "alice",
+          messages: ["hey alice 1", "hey alice 2", "hey alice 3"],
+        },
+        {type: "close", actor: "bob"},
+        {type: "restart", actor: "bob"},
+        {
+          type: "send",
+          from: "bob",
+          to: "alice",
+          message: "hey alice after restart",
+        },
+        {type: "expect", actor: "alice", message: "hey alice after restart"},
+      ],
     })
-
-    const aliceReceivedBurst = new Promise<void>((resolve) => {
-      const seen = new Set<string>()
-      aliceManager.onEvent((event) => {
-        if (bobBurst.includes(event.content)) {
-          seen.add(event.content)
-          if (seen.size === bobBurst.length) resolve()
-        }
-      })
-    })
-
-    await aliceManager.sendMessage(bobPubkey, aliceToBob)
-    for (const msg of bobBurst) {
-      await bobManager.sendMessage(alicePubkey, msg)
-    }
-
-    await Promise.all([bobReceivedAlice, aliceReceivedBurst])
-
-    aliceManager.close()
-    bobManager.close()
-
-    const {manager: aliceManagerRestarted} = await createMockSessionManager(
-      "alice-device-1",
-      relay,
-      aliceSecretKey,
-      aliceStorage
-    )
-
-    const {manager: bobManagerRestarted} = await createMockSessionManager(
-      "bob-device-1",
-      relay,
-      bobSecretKey,
-      bobStorage
-    )
-
-    const postRestartMessage = "hey alice after restart"
-
-    const aliceReceivedAfterRestart = new Promise<void>((resolve) => {
-      aliceManagerRestarted.onEvent((event) => {
-        if (event.content === postRestartMessage) resolve()
-      })
-    })
-
-    await bobManagerRestarted.sendMessage(alicePubkey, postRestartMessage)
-
-    await aliceReceivedAfterRestart
   })
 
   it("should not accumulate additional sessions after restart", async () => {
