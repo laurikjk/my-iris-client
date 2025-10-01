@@ -18,6 +18,7 @@ interface DeviceRecord {
   deviceId: string
   activeSession?: Session
   inactiveSessions: Session[]
+  acceptedInviteKeys: Set<string>
 }
 
 interface UserRecord {
@@ -125,8 +126,10 @@ export default class SessionManager {
     const ur = this.getOrCreateUserRecord(userPubkey)
     let dr = ur.devices.get(deviceId)
     if (!dr) {
-      dr = {deviceId, inactiveSessions: []}
+      dr = {deviceId, inactiveSessions: [], acceptedInviteKeys: new Set()}
       ur.devices.set(deviceId, dr)
+    } else if (!dr.acceptedInviteKeys) {
+      dr.acceptedInviteKeys = new Set()
     }
     return dr
   }
@@ -152,6 +155,17 @@ export default class SessionManager {
       dr.inactiveSessions.push(dr.activeSession)
     }
     dr.activeSession = session
+    const seenNames = new Set<string>()
+    dr.inactiveSessions = dr.inactiveSessions.filter((s) => {
+      if (s === dr.activeSession) return false
+      const name = s.name
+      if (seenNames.has(name)) return false
+      seenNames.add(name)
+      return true
+    })
+    if (dr.inactiveSessions.length > 1) {
+      dr.inactiveSessions = dr.inactiveSessions.slice(-1)
+    }
     console.warn(
       "SessionManager:setAsActiveSession",
       JSON.stringify({
@@ -231,6 +245,14 @@ export default class SessionManager {
 
       if (!deviceId) return
       const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+      const inviteKey = invite.inviterEphemeralPublicKey
+      if (inviteKey && dr.acceptedInviteKeys.has(inviteKey)) {
+        console.warn(
+          "SessionManager:invite.skip",
+          JSON.stringify({scopeDevice: this.deviceId, userPubkey, deviceId, inviteKey})
+        )
+        return
+      }
       if (dr.activeSession) {
         console.warn("Already have active session with", deviceId, "on user", userPubkey)
         return
@@ -251,11 +273,15 @@ export default class SessionManager {
           sessionName: session.name,
         })
       )
+      if (inviteKey) {
+        dr.acceptedInviteKeys.add(inviteKey)
+      }
       await this.nostrPublish(event).catch((e) => {
         console.error("Failed to publish acceptance to", deviceId, e)
       })
       this.attachSessionSubscription(userPubkey, deviceId, session)
       await this.sendMessageHistory(userPubkey, deviceId)
+      await this.storeUserRecord(userPubkey)
     })
   }
 
@@ -381,6 +407,7 @@ export default class SessionManager {
           inactiveSessions: device.inactiveSessions.map((session) =>
             serializeSessionState(session.state)
           ),
+          acceptedInviteKeys: Array.from(device.acceptedInviteKeys.values()),
         })
       ),
     }
@@ -408,8 +435,9 @@ export default class SessionManager {
           : undefined
         console.warn("Deserialized active session for", deviceId, activeSession)
 
-        const inactiveSessions = deviceData.inactiveSessions.map((state: string) =>
-          new Session(this.nostrSubscribe, deserializeSessionState(state))
+        const inactiveSessions = deviceData.inactiveSessions.map(
+          (state: string) =>
+            new Session(this.nostrSubscribe, deserializeSessionState(state))
         )
         console.warn("Deserialized inactive sessions for", deviceId, inactiveSessions)
 
@@ -417,24 +445,15 @@ export default class SessionManager {
           deviceId,
           activeSession,
           inactiveSessions,
+          acceptedInviteKeys: new Set<string>(deviceData.acceptedInviteKeys || []),
         })
 
         if (activeSession) {
-          this.attachRestoredSessionSubscription(
-            publicKey,
-            deviceId,
-            activeSession,
-            true
-          )
+          this.attachRestoredSessionSubscription(publicKey, deviceId, activeSession, true)
         }
 
         for (const session of inactiveSessions) {
-          this.attachRestoredSessionSubscription(
-            publicKey,
-            deviceId,
-            session,
-            false
-          )
+          this.attachRestoredSessionSubscription(publicKey, deviceId, session, false)
         }
 
         const deviceRecord = this.getOrCreateDeviceRecord(publicKey, deviceId)
@@ -451,11 +470,7 @@ export default class SessionManager {
 
       userRecord.foundInvites = new Map()
 
-      console.warn(
-        "Loaded user record for",
-        this.deviceId,
-        userRecord.devices
-      )
+      console.warn("Loaded user record for", this.deviceId, userRecord.devices)
     })
   }
   private loadAllUserRecords() {
@@ -489,7 +504,13 @@ export default class SessionManager {
 
     console.warn(
       "SessionManager:restoreSessionSubscription",
-      JSON.stringify({scopeDevice: this.deviceId, userPubkey, deviceId, sessionName: session.name, makeActive})
+      JSON.stringify({
+        scopeDevice: this.deviceId,
+        userPubkey,
+        deviceId,
+        sessionName: session.name,
+        makeActive,
+      })
     )
 
     if (makeActive) {

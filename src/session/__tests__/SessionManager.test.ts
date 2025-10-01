@@ -227,7 +227,6 @@ describe("SessionManager", () => {
 
     console.log("a", aliceDeviceRecords)
     console.log("b", bobDeviceRecords)
-
     ;[...aliceDeviceRecords, ...bobDeviceRecords].forEach((record) => {
       expect(record.inactiveSessions.length).toBeLessThanOrEqual(1)
     })

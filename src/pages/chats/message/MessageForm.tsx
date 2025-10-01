@@ -93,9 +93,7 @@ const MessageForm = ({
       })
 
       const sentMessage = await sessionManager.sendMessage(id, text)
-      await usePrivateMessagesStore
-        .getState()
-        .upsert(id, sentMessage as MessageType)
+      await usePrivateMessagesStore.getState().upsert(id, sentMessage as MessageType)
       setEncryptionMetadata(new Map()) // Clear after sending
     } catch (error) {
       console.error("Failed to send message:", error)

@@ -99,10 +99,7 @@ export class MockRelay {
     if (!(error instanceof Error)) return false
     const message = error.message?.toLowerCase()
     if (!message) return false
-    return (
-      message.includes("invalid mac") ||
-      message.includes("failed to decrypt header")
-    )
+    return message.includes("invalid mac") || message.includes("failed to decrypt header")
   }
 
   reset(): void {
