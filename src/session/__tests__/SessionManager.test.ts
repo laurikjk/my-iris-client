@@ -123,6 +123,32 @@ describe("SessionManager", () => {
     })
   })
 
+  it("should deliver alice's message after bob restarts", async () => {
+    await runScenario({
+      steps: [
+        {type: "send", from: "alice", to: "bob", message: "alice to bob 1"},
+        {type: "expect", actor: "bob", message: "alice to bob 1"},
+        {type: "send", from: "bob", to: "alice", message: "bob to alice 1"},
+        {type: "expect", actor: "alice", message: "bob to alice 1"},
+        {type: "send", from: "alice", to: "bob", message: "alice to bob 2"},
+        {type: "send", from: "alice", to: "bob", message: "alice to bob 3"},
+        {
+          type: "expectAll",
+          actor: "bob",
+          messages: ["alice to bob 2", "alice to bob 3"],
+        },
+        {type: "restart", actor: "bob"},
+        {
+          type: "send",
+          from: "bob",
+          to: "alice",
+          message: "bob after restart",
+        },
+        {type: "expect", actor: "alice", message: "bob after restart"},
+      ],
+    })
+  })
+
   it("should not accumulate additional sessions after restart", async () => {
     const sharedRelay = new MockRelay(true)
 
