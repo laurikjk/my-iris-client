@@ -331,6 +331,12 @@ export default class SessionManager {
         await this.storeUserRecord(recipientIdentityKey)
       })
     )
+
+    for (const result of results) {
+      if (result.status === "rejected") {
+        console.warn("sendEvent failed", result.reason)
+      }
+    }
     return results
   }
 
@@ -386,81 +392,70 @@ export default class SessionManager {
       console.warn("Loading user record for", publicKey, data)
       if (!data) return
       console.warn("Starting to deserialize user record for", publicKey)
-      const devices = new Map<string, DeviceRecord>()
+
+      const userRecord = this.getOrCreateUserRecord(publicKey)
+      userRecord.devices.clear()
+
       for (const deviceData of data.devices) {
         const deviceId = deviceData.deviceId
+        if (!deviceId) continue
+
         const activeSession = deviceData.activeSession
           ? new Session(
               this.nostrSubscribe,
               deserializeSessionState(deviceData.activeSession)
             )
           : undefined
-
         console.warn("Deserialized active session for", deviceId, activeSession)
-        const inactiveSessions = deviceData.inactiveSessions.map(
-          (state: string) =>
-            new Session(this.nostrSubscribe, deserializeSessionState(state))
+
+        const inactiveSessions = deviceData.inactiveSessions.map((state: string) =>
+          new Session(this.nostrSubscribe, deserializeSessionState(state))
         )
         console.warn("Deserialized inactive sessions for", deviceId, inactiveSessions)
-        devices.set(deviceId, {
+
+        userRecord.devices.set(deviceId, {
           deviceId,
           activeSession,
           inactiveSessions,
         })
-      }
-      for (const device of devices.values()) {
-        const {deviceId, activeSession, inactiveSessions} = device
-        if (!deviceId) continue
 
         if (activeSession) {
-          const sessionSubscriptionId = this.sessionKey(
+          this.attachRestoredSessionSubscription(
             publicKey,
             deviceId,
-            activeSession.name
+            activeSession,
+            true
           )
-          if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-            continue
-          }
-          const unsubscribe = activeSession.onEvent((event) => {
-            console.warn(
-              "restored handler - Received event in activeSession from",
-              deviceId,
-              event
-            )
-            for (const callback of this.internalSubscriptions) {
-              callback(event, publicKey)
-            }
-            this.setAsActiveSession(publicKey, deviceId, activeSession)
-          })
-          if (unsubscribe)
-            this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
         }
+
         for (const session of inactiveSessions) {
-          const sessionSubscriptionId = this.sessionKey(publicKey, deviceId, session.name)
-          if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-            continue
+          this.attachRestoredSessionSubscription(
+            publicKey,
+            deviceId,
+            session,
+            false
+          )
+        }
+
+        const deviceRecord = this.getOrCreateDeviceRecord(publicKey, deviceId)
+        const activeCanSend = !!deviceRecord.activeSession?.state.ourCurrentNostrKey
+        if (!activeCanSend) {
+          const promotable = deviceRecord.inactiveSessions.find(
+            (candidate) => !!candidate.state.ourCurrentNostrKey
+          )
+          if (promotable) {
+            this.setAsActiveSession(publicKey, deviceId, promotable)
           }
-          const unsubscribe = session.onEvent((event) => {
-            console.warn(
-              "restored handler - Received event in inactiveSession from",
-              deviceId,
-              event
-            )
-            for (const callback of this.internalSubscriptions) {
-              callback(event, publicKey)
-            }
-            this.setAsActiveSession(publicKey, deviceId, session)
-          })
-          if (unsubscribe)
-            this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
         }
       }
-      this.userRecords.set(publicKey, {
-        publicKey: data.publicKey,
-        devices,
-        foundInvites: new Map(),
-      })
-      console.warn("Loaded user record for", this.deviceId, devices)
+
+      userRecord.foundInvites = new Map()
+
+      console.warn(
+        "Loaded user record for",
+        this.deviceId,
+        userRecord.devices
+      )
     })
   }
   private loadAllUserRecords() {
@@ -481,5 +476,37 @@ export default class SessionManager {
     return Array.from(this.userRecords.values()).flatMap((ur) =>
       Array.from(ur.devices.values())
     )
+  }
+
+  private attachRestoredSessionSubscription(
+    userPubkey: string,
+    deviceId: string,
+    session: Session,
+    makeActive: boolean
+  ) {
+    const key = this.sessionKey(userPubkey, deviceId, session.name)
+    if (this.sessionSubscriptions.has(key)) return
+
+    console.warn(
+      "SessionManager:restoreSessionSubscription",
+      JSON.stringify({scopeDevice: this.deviceId, userPubkey, deviceId, sessionName: session.name, makeActive})
+    )
+
+    if (makeActive) {
+      this.setAsActiveSession(userPubkey, deviceId, session)
+    }
+
+    const unsubscribe = session.onEvent((event) => {
+      console.warn(
+        "restored handler - Received event",
+        JSON.stringify({deviceId, userPubkey, session: session.name})
+      )
+      for (const callback of this.internalSubscriptions) {
+        callback(event, userPubkey)
+      }
+      this.setAsActiveSession(userPubkey, deviceId, session)
+    })
+
+    this.sessionSubscriptions.set(key, unsubscribe)
   }
 }
