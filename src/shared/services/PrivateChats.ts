@@ -7,11 +7,29 @@ import {ndk} from "@/utils/ndk"
 import {useUserStore} from "../../stores/user"
 import {getEncryptFunction} from "@/utils/nostrCrypto"
 
+
+// TODO: this should not be needed
+const seenEvents = new Set<string>()
+const persistSeenEvents = () => {
+  localStorage.setItem("seenEvents", JSON.stringify(Array.from(seenEvents)))
+}
+
 const createSubscribe = (ndk: NDK): NostrSubscribe => {
   return (filter: NDKFilter, onEvent: (event: VerifiedEvent) => void) => {
     const subscription = ndk.subscribe(filter)
 
     subscription.on("event", (event: NDKEvent) => {
+      if (seenEvents.size <= 0) {
+        const stored = localStorage.getItem("seenEvents")
+        if (stored) {
+          const parsed: string[] = JSON.parse(stored)
+          parsed.forEach((id) => seenEvents.add(id))
+        }
+      }
+
+      if (seenEvents.has(event.id)) return
+      seenEvents.add(event.id)
+      persistSeenEvents()
       onEvent(event as unknown as VerifiedEvent)
     })
 
