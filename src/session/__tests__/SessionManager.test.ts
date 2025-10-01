@@ -145,6 +145,81 @@ describe("SessionManager", () => {
     expect(await bobReceivedMessageAfterRestart)
   })
 
+  it("should resume communication after restart with stored sessions", async () => {
+    const initialRelay = new MockRelay()
+
+    const {
+      manager: aliceManager,
+      secretKey: aliceSecretKey,
+      publicKey: alicePubkey,
+      mockStorage: aliceStorage,
+    } = await createMockSessionManager("alice-device-1", initialRelay)
+
+    const {
+      manager: bobManager,
+      secretKey: bobSecretKey,
+      publicKey: bobPubkey,
+      mockStorage: bobStorage,
+    } = await createMockSessionManager("bob-device-1", initialRelay)
+
+    const aliceToBob = "hello from alice"
+    const bobBurst = ["hey alice 1", "hey alice 2", "hey alice 3"]
+
+    const bobReceivedAlice = new Promise<void>((resolve) => {
+      bobManager.onEvent((event) => {
+        if (event.content === aliceToBob) resolve()
+      })
+    })
+
+    const aliceReceivedBurst = new Promise<void>((resolve) => {
+      const seen = new Set<string>()
+      aliceManager.onEvent((event) => {
+        if (bobBurst.includes(event.content)) {
+          seen.add(event.content)
+          if (seen.size === bobBurst.length) resolve()
+        }
+      })
+    })
+
+    await aliceManager.sendMessage(bobPubkey, aliceToBob)
+    for (const msg of bobBurst) {
+      await bobManager.sendMessage(alicePubkey, msg)
+    }
+
+    await Promise.all([bobReceivedAlice, aliceReceivedBurst])
+
+    aliceManager.close()
+    bobManager.close()
+
+    const restartedRelay = new MockRelay(true)
+
+    const {manager: aliceManagerRestarted} = await createMockSessionManager(
+      "alice-device-1",
+      restartedRelay,
+      aliceSecretKey,
+      aliceStorage
+    )
+
+    const {manager: bobManagerRestarted} = await createMockSessionManager(
+      "bob-device-1",
+      restartedRelay,
+      bobSecretKey,
+      bobStorage
+    )
+
+    const postRestartMessage = "hey alice after restart"
+
+    const aliceReceivedAfterRestart = new Promise<void>((resolve) => {
+      aliceManagerRestarted.onEvent((event) => {
+        if (event.content === postRestartMessage) resolve()
+      })
+    })
+
+    await bobManagerRestarted.sendMessage(alicePubkey, postRestartMessage)
+
+    await aliceReceivedAfterRestart
+  })
+
   it("should not accumulate additional sessions after restart", async () => {
     const sharedRelay = new MockRelay(true)
 
