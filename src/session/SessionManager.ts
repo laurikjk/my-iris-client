@@ -383,7 +383,9 @@ export default class SessionManager {
 
   private loadUserRecord(publicKey: string) {
     return this.storage.get<any>(`user/${publicKey}`).then((data) => {
+      console.warn("Loading user record for", publicKey, data)
       if (!data) return
+      console.warn("Starting to deserialize user record for", publicKey)
       const devices = new Map<string, DeviceRecord>()
       for (const deviceData of data.devices) {
         const deviceId = deviceData.deviceId

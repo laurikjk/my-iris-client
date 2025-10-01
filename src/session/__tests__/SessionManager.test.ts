@@ -127,15 +127,20 @@ describe("SessionManager", () => {
       bobStorage
     )
 
+    console.warn("\n\n\nManagers restarted")
+
     const bobReceivedMessageAfterRestart = new Promise((resolve) => {
       bobManager2.onEvent((event) => {
+        console.warn("\n\n\n Bob received event", event)
         if (event.content === afterRestartMessage) {
           resolve(true)
         }
       })
     })
 
+    console.warn("\n\n\n sending")
     await aliceManager2.sendMessage(bobPubkey, afterRestartMessage)
+    console.warn("\n\n\n sent")
 
     expect(await bobReceivedMessageAfterRestart)
   })
