@@ -180,7 +180,8 @@ export default class SessionManager {
   private attachSessionSubscription(
     userPubkey: string,
     deviceId: string,
-    session: Session
+    session: Session,
+    makeActive: boolean = true
   ): void {
     const key = this.sessionKey(userPubkey, deviceId, session.name)
 
@@ -195,17 +196,13 @@ export default class SessionManager {
         inactiveCountBefore: dr.inactiveSessions.length + (dr.activeSession ? 1 : 0),
       })
     )
-    this.setAsActiveSession(userPubkey, deviceId, session)
+    if (makeActive) {
+      this.setAsActiveSession(userPubkey, deviceId, session)
+    }
 
     const unsub = session.onEvent((event) => {
       for (const cb of this.internalSubscriptions) cb(event, userPubkey)
       this.setAsActiveSession(userPubkey, deviceId, session)
-      this.storeUserRecord(userPubkey).catch((error) => {
-        console.error("Failed to store user record after event", error)
-      })
-      this.storeUserRecord(getPublicKey(this.ourIdentityKey)).catch((error) => {
-        console.error("Failed to store self record after event", error)
-      })
     })
     this.sessionSubscriptions.set(key, unsub)
   }
@@ -493,11 +490,11 @@ export default class SessionManager {
         })
 
         if (activeSession) {
-          this.attachRestoredSessionSubscription(publicKey, deviceId, activeSession, true)
+          this.attachSessionSubscription(publicKey, deviceId, activeSession, true)
         }
 
         for (const session of inactiveSessions) {
-          this.attachRestoredSessionSubscription(publicKey, deviceId, session, false)
+          this.attachSessionSubscription(publicKey, deviceId, session, false)
         }
 
         const deviceRecord = this.getOrCreateDeviceRecord(publicKey, deviceId)
@@ -535,49 +532,5 @@ export default class SessionManager {
     return Array.from(this.userRecords.values()).flatMap((ur) =>
       Array.from(ur.devices.values())
     )
-  }
-
-  private attachRestoredSessionSubscription(
-    userPubkey: string,
-    deviceId: string,
-    session: Session,
-    makeActive: boolean
-  ) {
-    const key = this.sessionKey(userPubkey, deviceId, session.name)
-    if (this.sessionSubscriptions.has(key)) return
-
-    console.warn(
-      "SessionManager:restoreSessionSubscription",
-      JSON.stringify({
-        scopeDevice: this.deviceId,
-        userPubkey,
-        deviceId,
-        sessionName: session.name,
-        makeActive,
-      })
-    )
-
-    if (makeActive) {
-      this.setAsActiveSession(userPubkey, deviceId, session)
-    }
-
-    const unsubscribe = session.onEvent((event) => {
-      console.warn(
-        "restored handler - Received event",
-        JSON.stringify({deviceId, userPubkey, session: session.name})
-      )
-      for (const callback of this.internalSubscriptions) {
-        callback(event, userPubkey)
-      }
-      this.setAsActiveSession(userPubkey, deviceId, session)
-      this.storeUserRecord(userPubkey).catch((error) => {
-        console.error("Failed to store user record after restored event", error)
-      })
-      this.storeUserRecord(getPublicKey(this.ourIdentityKey)).catch((error) => {
-        console.error("Failed to store self record after restored event", error)
-      })
-    })
-
-    this.sessionSubscriptions.set(key, unsubscribe)
   }
 }
