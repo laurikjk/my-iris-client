@@ -225,7 +225,6 @@ export default class SessionManager {
       "SessionManager:setupUser",
       JSON.stringify({scopeDevice: this.deviceId, userPubkey})
     )
-    const userRecord = this.getOrCreateUserRecord(userPubkey)
 
     this.attachInviteSubscription(userPubkey, async (invite) => {
       const {deviceId} = invite
@@ -324,27 +323,12 @@ export default class SessionManager {
 
     const results = await Promise.allSettled(
       devices.map(async (device) => {
-        let session = device.activeSession
-
-        if (!session || !session.state.ourCurrentNostrKey) {
-          session = device.inactiveSessions.find((inactive) =>
-            Boolean(inactive.state.ourCurrentNostrKey)
-          )
-
-          if (session) {
-            this.setAsActiveSession(recipientIdentityKey, device.deviceId, session)
-          }
-        }
-
-        if (!session || !session.state.ourCurrentNostrKey) {
-          console.warn(
-            "SessionManager: no sendable session available for",
-            device.deviceId
-          )
+        const {activeSession} = device
+        if (!activeSession) {
+          console.warn("No active session for device", device.deviceId)
           return
         }
-
-        const {event: verifiedEvent} = session.sendEvent(event)
+        const {event: verifiedEvent} = activeSession.sendEvent(event)
         await this.nostrPublish(verifiedEvent)
         await this.storeUserRecord(recipientIdentityKey)
       })
@@ -370,6 +354,7 @@ export default class SessionManager {
       content,
     }
 
+    // TODO: switch from this to message records (check Sesame spec)
     this.messageHistory.set(recipientPublicKey, [
       ...(this.messageHistory.get(recipientPublicKey) || []),
       message as Rumor,
