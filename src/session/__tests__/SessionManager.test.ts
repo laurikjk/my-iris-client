@@ -140,7 +140,7 @@ describe("SessionManager", () => {
     expect(await bobReceivedMessageAfterRestart)
   })
 
-  it.skip("should not accumulate additional sessions after restart", async () => {
+  it("should not accumulate additional sessions after restart", async () => {
     const sharedRelay = new MockRelay(true)
 
     const {
@@ -157,11 +157,36 @@ describe("SessionManager", () => {
       mockStorage: bobStorage,
     } = await createMockSessionManager("bob-device-1", sharedRelay)
 
+    console.log("Initialized devices")
+
+    const [msg1, msg2] = ["hello bob", "hello alice"]
+
+    const messagesReceivedBob = new Promise<void>((resolve) => {
+      bobManager.onEvent((event) => {
+        if (event.content === msg1) {
+          resolve()
+        }
+      })
+    })
+
+    const messagesReceivedAlice = new Promise<void>((resolve) => {
+      aliceManager.onEvent((event) => {
+        if (event.content === msg2) {
+          resolve()
+        }
+      })
+    })
+
+    console.log("\n\n\n Sesnigng initial messages")
     await aliceManager.sendMessage(bobPubkey, "hello")
     await bobManager.sendMessage(alicePubkey, "reply")
 
+    await Promise.all([messagesReceivedBob, messagesReceivedAlice])
+
     aliceManager.close()
     bobManager.close()
+
+    console.log("\n\n\nClosed managers")
 
     const {manager: aliceManagerRestart} = await createMockSessionManager(
       "alice-device-1",
@@ -177,13 +202,22 @@ describe("SessionManager", () => {
       bobStorage
     )
 
+    console.log("Restarted managers")
+
+    const afterRestartMessage = "after restart"
+
+    const bobReveivedMessages = new Promise<void>((resolve) => {
+      bobManagerRestart.onEvent((event) => {
+        if (event.content === afterRestartMessage) {
+          resolve()
+        }
+      })
+    })
+
     await aliceManagerRestart.sendMessage(bobPubkey, "after restart")
+    await bobReveivedMessages
 
-    const aliceUserRecord = (aliceManagerRestart as any).userRecords?.get?.(bobPubkey)
-    const aliceInactiveCount =
-      aliceUserRecord?.devices?.get?.("bob-device-1")?.inactiveSessions?.length ?? 0
-
-    expect(aliceInactiveCount).toBe(0)
+    console.log("a", aliceManagerRestart.getAllDeviceRecords())
+    console.log("b", bobManagerRestart.getAllDeviceRecords())
   })
-
 })

@@ -225,12 +225,17 @@ export default class SessionManager {
       "SessionManager:setupUser",
       JSON.stringify({scopeDevice: this.deviceId, userPubkey})
     )
-    this.getOrCreateUserRecord(userPubkey)
+    const userRecord = this.getOrCreateUserRecord(userPubkey)
 
     this.attachInviteSubscription(userPubkey, async (invite) => {
       const {deviceId} = invite
 
       if (!deviceId) return
+      const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+      if (dr.activeSession) {
+        console.log("Already have active session with", deviceId, "on user", userPubkey)
+        return
+      }
 
       const {session, event} = await invite.accept(
         this.nostrSubscribe,
@@ -483,5 +488,13 @@ export default class SessionManager {
         })
       )
     })
+  }
+  getUserRecords() {
+    return this.userRecords
+  }
+  getAllDeviceRecords() {
+    return Array.from(this.userRecords.values()).flatMap((ur) =>
+      Array.from(ur.devices.values())
+    )
   }
 }
