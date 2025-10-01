@@ -95,7 +95,7 @@ export default class SessionManager {
           this.ourIdentityKey,
           this.nostrSubscribe,
           (session, inviteePubkey, deviceId) => {
-            console.log(
+            console.warn(
               "Received invite acceptance on our device",
               this.deviceId,
               "from",
@@ -152,7 +152,7 @@ export default class SessionManager {
       dr.inactiveSessions.push(dr.activeSession)
     }
     dr.activeSession = session
-    console.log(
+    console.warn(
       "SessionManager:setAsActiveSession",
       JSON.stringify({
         deviceId,
@@ -171,7 +171,7 @@ export default class SessionManager {
     const key = this.sessionKey(userPubkey, deviceId, session.name)
 
     const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
-    console.log(
+    console.warn(
       "SessionManager:attachSessionSubscription",
       JSON.stringify({
         scopeDevice: this.deviceId,
@@ -197,7 +197,7 @@ export default class SessionManager {
     const key = this.inviteKey(userPubkey)
     if (this.inviteSubscriptions.has(key)) return
 
-    console.log(
+    console.warn(
       "SessionManager:attachInviteSubscription",
       JSON.stringify({scopeDevice: this.deviceId, userPubkey})
     )
@@ -221,7 +221,7 @@ export default class SessionManager {
   }
 
   setupUser(userPubkey: string) {
-    console.log(
+    console.warn(
       "SessionManager:setupUser",
       JSON.stringify({scopeDevice: this.deviceId, userPubkey})
     )
@@ -232,7 +232,7 @@ export default class SessionManager {
       if (!deviceId) return
       const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
       if (dr.activeSession) {
-        console.log("Already have active session with", deviceId, "on user", userPubkey)
+        console.warn("Already have active session with", deviceId, "on user", userPubkey)
         return
       }
 
@@ -242,7 +242,7 @@ export default class SessionManager {
         this.ourIdentityKey,
         this.deviceId
       )
-      console.log(
+      console.warn(
         "SessionManager:invite.accept",
         JSON.stringify({
           scopeDevice: this.deviceId,
@@ -260,9 +260,7 @@ export default class SessionManager {
   }
 
   onEvent(callback: OnEventCallback) {
-    console.warn("SessionManager: onEvent callback added")
     this.internalSubscriptions.add(callback)
-
     return () => {
       this.internalSubscriptions.delete(callback)
     }
@@ -396,12 +394,12 @@ export default class SessionManager {
             )
           : undefined
 
-        console.log("Deserialized active session for", deviceId, activeSession)
+        console.warn("Deserialized active session for", deviceId, activeSession)
         const inactiveSessions = deviceData.inactiveSessions.map(
           (state: string) =>
             new Session(this.nostrSubscribe, deserializeSessionState(state))
         )
-        console.log("Deserialized inactive sessions for", deviceId, inactiveSessions)
+        console.warn("Deserialized inactive sessions for", deviceId, inactiveSessions)
         devices.set(deviceId, {
           deviceId,
           activeSession,
@@ -422,7 +420,7 @@ export default class SessionManager {
             continue
           }
           const unsubscribe = activeSession.onEvent((event) => {
-            console.log(
+            console.warn(
               "restored handler - Received event in activeSession from",
               deviceId,
               event
@@ -441,7 +439,7 @@ export default class SessionManager {
             continue
           }
           const unsubscribe = session.onEvent((event) => {
-            console.log(
+            console.warn(
               "restored handler - Received event in inactiveSession from",
               deviceId,
               event
@@ -460,7 +458,7 @@ export default class SessionManager {
         devices,
         foundInvites: new Map(),
       })
-      console.log("Loaded user record for", this.deviceId, devices)
+      console.warn("Loaded user record for", this.deviceId, devices)
     })
   }
   private loadAllUserRecords() {
