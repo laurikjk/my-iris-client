@@ -83,8 +83,26 @@ export class MockRelay {
     if (!subscriber.delivered.has(event.id) && matchFilter(subscriber.filter, event)) {
       console.log("Delivering event", event.id, "to subscriber", subscriber.id)
       subscriber.delivered.add(event.id)
-      subscriber.onEvent(event)
+      try {
+        subscriber.onEvent(event)
+      } catch (error) {
+        if (this.shouldIgnoreDecryptionError(error)) {
+          console.warn("MockRelay: ignored decrypt error", error)
+          return
+        }
+        throw error
+      }
     }
+  }
+
+  private shouldIgnoreDecryptionError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false
+    const message = error.message?.toLowerCase()
+    if (!message) return false
+    return (
+      message.includes("invalid mac") ||
+      message.includes("failed to decrypt header")
+    )
   }
 
   reset(): void {

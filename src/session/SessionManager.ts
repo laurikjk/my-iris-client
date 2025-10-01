@@ -58,21 +58,7 @@ export default class SessionManager {
     storage?: StorageAdapter
   ) {
     this.userRecords = new Map()
-    this.nostrSubscribe = (filter, onEvent) => {
-      const wrappedHandler: Parameters<NostrSubscribe>[1] = (event) => {
-        try {
-          onEvent(event)
-        } catch (error) {
-          if (this.shouldIgnoreDecryptionError(error)) {
-            console.warn("SessionManager: ignored decrypt error", error)
-            return
-          }
-          throw error
-        }
-      }
-
-      return nostrSubscribe(filter, wrappedHandler)
-    }
+    this.nostrSubscribe = nostrSubscribe
     this.nostrPublish = nostrPublish
     this.ourIdentityKey = ourIdentityKey
     this.deviceId = deviceId
@@ -294,16 +280,6 @@ export default class SessionManager {
 
     this.ourDeviceInviteSubscription?.()
     this.ourOtherDeviceInviteSubscription?.()
-  }
-
-  private shouldIgnoreDecryptionError(error: unknown): boolean {
-    if (!(error instanceof Error)) return false
-    const message = error.message?.toLowerCase()
-    if (!message) return false
-    return (
-      message.includes("invalid mac") ||
-      message.includes("failed to decrypt header")
-    )
   }
 
   async sendMessageHistory(recipientPublicKey: string, deviceId: string): Promise<void> {
