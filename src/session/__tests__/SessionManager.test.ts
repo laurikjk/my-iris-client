@@ -146,21 +146,21 @@ describe("SessionManager", () => {
   })
 
   it("should resume communication after restart with stored sessions", async () => {
-    const initialRelay = new MockRelay()
+    const relay = new MockRelay()
 
     const {
       manager: aliceManager,
       secretKey: aliceSecretKey,
       publicKey: alicePubkey,
       mockStorage: aliceStorage,
-    } = await createMockSessionManager("alice-device-1", initialRelay)
+    } = await createMockSessionManager("alice-device-1", relay)
 
     const {
       manager: bobManager,
       secretKey: bobSecretKey,
       publicKey: bobPubkey,
       mockStorage: bobStorage,
-    } = await createMockSessionManager("bob-device-1", initialRelay)
+    } = await createMockSessionManager("bob-device-1", relay)
 
     const aliceToBob = "hello from alice"
     const bobBurst = ["hey alice 1", "hey alice 2", "hey alice 3"]
@@ -191,18 +191,16 @@ describe("SessionManager", () => {
     aliceManager.close()
     bobManager.close()
 
-    const restartedRelay = new MockRelay(true)
-
     const {manager: aliceManagerRestarted} = await createMockSessionManager(
       "alice-device-1",
-      restartedRelay,
+      relay,
       aliceSecretKey,
       aliceStorage
     )
 
     const {manager: bobManagerRestarted} = await createMockSessionManager(
       "bob-device-1",
-      restartedRelay,
+      relay,
       bobSecretKey,
       bobStorage
     )
