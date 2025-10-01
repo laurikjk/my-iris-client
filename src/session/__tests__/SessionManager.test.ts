@@ -217,7 +217,14 @@ describe("SessionManager", () => {
     await aliceManagerRestart.sendMessage(bobPubkey, "after restart")
     await bobReveivedMessages
 
-    console.log("a", aliceManagerRestart.getAllDeviceRecords())
-    console.log("b", bobManagerRestart.getAllDeviceRecords())
+    const aliceDeviceRecords = aliceManagerRestart.getAllDeviceRecords()
+    const bobDeviceRecords = bobManagerRestart.getAllDeviceRecords()
+
+    console.log("a", aliceDeviceRecords)
+    console.log("b", bobDeviceRecords)
+
+    ;[...aliceDeviceRecords, ...bobDeviceRecords].forEach((record) => {
+      expect(record.inactiveSessions.length).toBeLessThanOrEqual(1)
+    })
   })
 })
