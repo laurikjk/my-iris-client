@@ -10,6 +10,14 @@ export interface ScenarioContext {
   actors: Record<ActorId, ActorState>
 }
 
+interface MessageWaiter {
+  message: string
+  targetCount: number
+  resolve: () => void
+  reject: (error: Error) => void
+  timeout: ReturnType<typeof setTimeout>
+}
+
 interface ActorState {
   deviceId: string
   manager: SessionManager
@@ -17,6 +25,8 @@ interface ActorState {
   publicKey: string
   storage: any
   events: Rumor[]
+  messageCounts: Map<string, number>
+  waiters: MessageWaiter[]
   unsub?: () => void
 }
 
@@ -86,19 +96,20 @@ async function bootstrapActor(
   } = await createMockSessionManager(deviceId, relay, existingSecretKey, existingStorage)
 
   const events: Rumor[] = []
-  const unsub = manager.onEvent((event) => {
-    events.push(event)
-  })
-
-  return {
+  const state: ActorState = {
     deviceId,
     manager,
     secretKey,
     publicKey,
     storage: mockStorage,
     events,
-    unsub,
+    messageCounts: new Map(),
+    waiters: [],
   }
+
+  state.unsub = attachManagerListener(state)
+
+  return state
 }
 
 async function sendMessage(
@@ -109,28 +120,14 @@ async function sendMessage(
 ) {
   const sender = context.actors[from]
   const recipient = context.actors[to]
+  const wait = waitForMessage(recipient, to, message, {existingOk: false})
   await sender.manager.sendMessage(recipient.publicKey, message)
+  await wait
 }
 
 async function expectMessage(context: ScenarioContext, actor: ActorId, message: string) {
   const state = context.actors[actor]
-  const existing = state.events.find((event) => event.content === message)
-  if (existing) return
-  await new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(
-      () => reject(new Error(`Timed out waiting for message '${message}' on ${actor}`)),
-      5000
-    )
-    const check = () => {
-      if (state.events.some((event) => event.content === message)) {
-        clearTimeout(timeout)
-        resolve()
-      } else {
-        setTimeout(check, 10)
-      }
-    }
-    check()
-  })
+  await waitForMessage(state, actor, message, {existingOk: true})
 }
 
 async function expectAllMessages(
@@ -140,34 +137,108 @@ async function expectAllMessages(
 ) {
   console.log(`\n\n\nExpecting all messages on ${actor}:`, messages)
   for (const msg of messages) {
-    await expectMessage(context, actor, msg)
+    await waitForMessage(context.actors[actor], actor, msg, {existingOk: true})
   }
 }
 
 function closeActor(context: ScenarioContext, actor: ActorId) {
   const state = context.actors[actor]
+  rejectPendingWaiters(state, new Error(`Actor ${actor} closed`))
   state.unsub?.()
   state.manager.close()
 }
 
 async function restartActor(context: ScenarioContext, actor: ActorId) {
   const state = context.actors[actor]
-  const {deviceId, manager, secretKey, storage, events, unsub} = state
+  const {deviceId, manager, secretKey, storage, unsub} = state
   unsub?.()
   manager.close()
   const {
     manager: newManager,
   } = await createMockSessionManager(deviceId, context.relay, secretKey, storage)
 
-  const newEvents = events.slice()
-  const newUnsub = newManager.onEvent((event) => {
-    newEvents.push(event)
-  })
+  state.manager = newManager
+  state.unsub = attachManagerListener(state)
+}
 
-  context.actors[actor] = {
-    ...state,
-    manager: newManager,
-    events: newEvents,
-    unsub: newUnsub,
+function attachManagerListener(state: ActorState): () => void {
+  const onEvent = (event: Rumor) => {
+    state.events.push(event)
+    const content = event.content ?? ""
+    const currentCount = state.messageCounts.get(content) ?? 0
+    const nextCount = currentCount + 1
+    state.messageCounts.set(content, nextCount)
+    resolveWaiters(state, content, nextCount)
+  }
+
+  const unsubscribe = state.manager.onEvent(onEvent)
+  return () => {
+    unsubscribe()
+  }
+}
+
+function resolveWaiters(state: ActorState, content: string, count: number) {
+  const pending = state.waiters.slice()
+  for (const waiter of pending) {
+    if (waiter.message === content && count >= waiter.targetCount) {
+      waiter.resolve()
+    }
+  }
+}
+
+function waitForMessage(
+  state: ActorState,
+  actor: ActorId,
+  message: string,
+  options: {existingOk: boolean}
+): Promise<void> {
+  const {existingOk} = options
+  const currentCount = state.messageCounts.get(message) ?? 0
+  if (existingOk && currentCount > 0) {
+    return Promise.resolve()
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    let waiter: MessageWaiter
+
+    const finalizeResolve = () => {
+      clearTimeout(waiter.timeout)
+      removeWaiter(state, waiter)
+      resolve()
+    }
+
+    const finalizeReject = (error: Error) => {
+      clearTimeout(waiter.timeout)
+      removeWaiter(state, waiter)
+      reject(error)
+    }
+
+    const timeout = setTimeout(() => {
+      finalizeReject(new Error(`Timed out waiting for message '${message}' on ${actor}`))
+    }, 5000)
+
+    waiter = {
+      message,
+      targetCount: currentCount + 1,
+      resolve: finalizeResolve,
+      reject: finalizeReject,
+      timeout,
+    }
+
+    state.waiters.push(waiter)
+  })
+}
+
+function removeWaiter(state: ActorState, waiter: MessageWaiter) {
+  const index = state.waiters.indexOf(waiter)
+  if (index >= 0) {
+    state.waiters.splice(index, 1)
+  }
+}
+
+function rejectPendingWaiters(state: ActorState, error: Error) {
+  const waiters = state.waiters.slice()
+  for (const waiter of waiters) {
+    waiter.reject(error)
   }
 }

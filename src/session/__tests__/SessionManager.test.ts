@@ -72,11 +72,6 @@ describe("SessionManager", () => {
         {type: "send", from: "bob", to: "alice", message: "bob to alice 1"},
         {type: "send", from: "alice", to: "bob", message: "alice to bob 2"},
         {type: "send", from: "alice", to: "bob", message: "alice to bob 3"},
-        {
-          type: "expectAll",
-          actor: "bob",
-          messages: ["alice to bob 2", "alice to bob 3"],
-        },
       ],
     })
   })
@@ -86,9 +81,6 @@ describe("SessionManager", () => {
         {type: "send", from: "alice", to: "bob", message: "Initial message"},
         {type: "send", from: "bob", to: "alice", message: "Reply message"},
         {type: "send", from: "bob", to: "alice", message: "Reply message 2"},
-        {type: "expect", actor: "bob", message: "Initial message"},
-        {type: "expect", actor: "alice", message: "Reply message"},
-        {type: "expect", actor: "alice", message: "Reply message 2"},
       ],
     })
   })
@@ -99,9 +91,6 @@ describe("SessionManager", () => {
         {type: "send", from: "alice", to: "bob", message: "Initial message"},
         {type: "send", from: "bob", to: "alice", message: "Reply message"},
         {type: "send", from: "bob", to: "alice", message: "Reply message 2"},
-        {type: "expect", actor: "bob", message: "Initial message"},
-        {type: "expect", actor: "alice", message: "Reply message"},
-        {type: "expect", actor: "alice", message: "Reply message 2"},
         {type: "restart", actor: "alice"},
         {type: "restart", actor: "bob"},
         {type: "send", from: "alice", to: "bob", message: "Message after restart"},
@@ -132,12 +121,6 @@ describe("SessionManager", () => {
           to: "alice",
           message: "hey alice 3",
         },
-        {type: "expect", actor: "bob", message: "hello from alice"},
-        {
-          type: "expectAll",
-          actor: "alice",
-          messages: ["hey alice 1", "hey alice 2", "hey alice 3"],
-        },
         {type: "close", actor: "bob"},
         {type: "restart", actor: "bob"},
         {
@@ -158,11 +141,6 @@ describe("SessionManager", () => {
         {type: "send", from: "bob", to: "alice", message: "bob to alice 1"},
         {type: "send", from: "alice", to: "bob", message: "alice to bob 2"},
         {type: "send", from: "alice", to: "bob", message: "alice to bob 3"},
-        {
-          type: "expectAll",
-          actor: "bob",
-          messages: ["alice to bob 2", "alice to bob 3"],
-        },
         {type: "restart", actor: "bob"},
         {
           type: "send",
