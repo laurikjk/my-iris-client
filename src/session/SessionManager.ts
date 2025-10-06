@@ -247,6 +247,13 @@ export default class SessionManager {
       const {deviceId} = invite
 
       if (!deviceId) return
+      if (deviceId === this.deviceId) {
+        console.warn(
+          "SessionManager:invite.skipSelf",
+          JSON.stringify({scopeDevice: this.deviceId, userPubkey, deviceId})
+        )
+        return
+      }
       const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
       const inviteKey = invite.inviterEphemeralPublicKey
       if (inviteKey && dr.acceptedInviteKeys.has(inviteKey)) {
