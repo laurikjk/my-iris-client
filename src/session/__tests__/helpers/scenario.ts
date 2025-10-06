@@ -137,6 +137,7 @@ async function expectAllMessages(
   actor: ActorId,
   messages: string[]
 ) {
+  console.log(`\n\n\nExpecting all messages on ${actor}:`, messages)
   for (const msg of messages) {
     await expectMessage(context, actor, msg)
   }

@@ -1,5 +1,4 @@
 import {describe, it, expect} from "vitest"
-import {KIND_CHAT_MESSAGE} from "../../utils/constants"
 import {createMockSessionManager} from "./helpers/mockSessionManager"
 import {MockRelay} from "./helpers/mockRelay"
 import {runScenario} from "./helpers/scenario"

@@ -71,6 +71,8 @@ export class MockRelay {
 
     this.subscribers.set(subId, subscriber)
 
+    console.log("MockRelay: new subscription", subId, "with filter", filter)
+    console.log("MockRelay: delivering", this.events.length, "existing events to new subscriber")
     for (const event of this.events) {
       this.deliverToSubscriber(subscriber, event)
     }
