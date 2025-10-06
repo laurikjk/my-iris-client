@@ -7,10 +7,12 @@ import {Helmet} from "react-helmet"
 import classNames from "classnames"
 import NewChat from "./NewChat"
 import GroupGroupRoutes from "./group"
+import {getSessionManager} from "@/shared/services/PrivateChats"
 
 function Messages() {
   const location = useLocation()
   const isMessagesRoot = location.pathname === "/chats"
+  getSessionManager()
 
   return (
     <div className="flex flex-1 h-full relative overflow-hidden">

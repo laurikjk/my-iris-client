@@ -7,15 +7,13 @@ import ReactDOM from "react-dom/client"
 import {subscribeToDMNotifications, subscribeToNotifications} from "./utils/notifications"
 import {migrateUserState, migratePublicChats} from "./utils/migration"
 import {useSettingsStore} from "@/stores/settings"
-import {useUserRecordsStore} from "@/stores/userRecords"
-import {
-  subscribeToOwnDeviceInvites,
-  resetDeviceInvitesInitialization,
-} from "@/stores/privateChats"
 import {ndk} from "./utils/ndk"
 import socialGraph from "./utils/socialGraph"
 import DebugManager from "./utils/DebugManager"
 import Layout from "@/shared/components/Layout"
+import {usePrivateMessagesStore} from "./stores/privateMessages"
+import {getSessionManager} from "./shared/services/PrivateChats"
+import {getTag} from "./utils/tagUtils"
 
 // Move initialization to a function to avoid side effects
 const initializeApp = () => {
@@ -35,8 +33,21 @@ const initializeApp = () => {
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
-      useUserRecordsStore.getState().createDefaultInvites()
-      subscribeToOwnDeviceInvites().catch(console.error)
+      const sessionManager = getSessionManager()
+      sessionManager.init().then(() => {
+        sessionManager.onEvent((event, pubKey) => {
+          const pTag = getTag("p", event.tags)
+          const from = pubKey === state.publicKey ? pTag : pubKey
+          console.warn("Received DM event in main:", {
+            eventContent: event.content,
+            eventId: event.id,
+            from,
+            pTag,
+            pubKey,
+          })
+          usePrivateMessagesStore.getState().upsert(from, event)
+        })
+      })
     }
   }
 
@@ -71,15 +82,12 @@ const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
   // Only proceed if public key actually changed
   if (state.publicKey && state.publicKey !== prevState.publicKey) {
     console.log("Public key changed, initializing chat modules")
-    resetDeviceInvitesInitialization() // Reset to allow re-initialization
     subscribeToNotifications()
     subscribeToDMNotifications()
     migratePublicChats()
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
-      useUserRecordsStore.getState().createDefaultInvites()
-      subscribeToOwnDeviceInvites().catch(console.error)
     }
   }
 })

@@ -2,7 +2,6 @@ import {DoubleRatchetUser} from "../utils/doubleRatchetUsers"
 import {MemberSelection, GroupDetailsStep} from "./components"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import {useState, useEffect, FormEvent} from "react"
-import {useUserRecordsStore} from "@/stores/userRecords"
 import {useGroupsStore} from "@/stores/groups"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "@/navigation"
@@ -108,13 +107,13 @@ const GroupChatCreation = () => {
         ],
       }
 
+      // TODO: re-enable sending group creation event to members'
       // Send create group message to all invited members except self
-      const {sendToUser} = useUserRecordsStore.getState()
-      await Promise.all(
-        selectedMembers
-          .filter((pubkey: string) => pubkey !== myPubKey)
-          .map((pubkey: string) => sendToUser(pubkey, event))
-      )
+      // await Promise.all(
+      //   selectedMembers
+      //     .filter((pubkey: string) => pubkey !== myPubKey)
+      //     .map((pubkey: string) => sendToUser(pubkey, event))
+      // )
 
       navigate(`/chats/group/${groupId}`)
     } catch (err) {
