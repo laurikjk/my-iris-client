@@ -43,6 +43,7 @@ export async function runScenario(def: ScenarioDefinition): Promise<ScenarioCont
   }
 
   for (const step of def.steps) {
+    console.log(`\n\n\nExecuting step: ${JSON.stringify(step)}`)
     switch (step.type) {
       case "send":
         await sendMessage(context, step.from, step.to, step.message)

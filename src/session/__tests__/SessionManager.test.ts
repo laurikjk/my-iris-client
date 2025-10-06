@@ -65,14 +65,43 @@ describe("SessionManager", () => {
 
     expect(bobReceivedMessages)
   })
+  it("should handle back to back messages after initial, answer, and then", async () => {
+    await runScenario({
+      steps: [
+        {type: "send", from: "alice", to: "bob", message: "alice to bob 1"},
+        {type: "send", from: "bob", to: "alice", message: "bob to alice 1"},
+        {type: "send", from: "alice", to: "bob", message: "alice to bob 2"},
+        {type: "send", from: "alice", to: "bob", message: "alice to bob 3"},
+        {
+          type: "expectAll",
+          actor: "bob",
+          messages: ["alice to bob 2", "alice to bob 3"],
+        },
+      ],
+    })
+  })
+  it("should handle back to back messages after initial", async () => {
+    await runScenario({
+      steps: [
+        {type: "send", from: "alice", to: "bob", message: "Initial message"},
+        {type: "send", from: "bob", to: "alice", message: "Reply message"},
+        {type: "send", from: "bob", to: "alice", message: "Reply message 2"},
+        {type: "expect", actor: "bob", message: "Initial message"},
+        {type: "expect", actor: "alice", message: "Reply message"},
+        {type: "expect", actor: "alice", message: "Reply message 2"},
+      ],
+    })
+  })
 
   it("should persist sessions across manager restarts", async () => {
     await runScenario({
       steps: [
         {type: "send", from: "alice", to: "bob", message: "Initial message"},
         {type: "send", from: "bob", to: "alice", message: "Reply message"},
+        {type: "send", from: "bob", to: "alice", message: "Reply message 2"},
         {type: "expect", actor: "bob", message: "Initial message"},
         {type: "expect", actor: "alice", message: "Reply message"},
+        {type: "expect", actor: "alice", message: "Reply message 2"},
         {type: "restart", actor: "alice"},
         {type: "restart", actor: "bob"},
         {type: "send", from: "alice", to: "bob", message: "Message after restart"},
@@ -126,9 +155,7 @@ describe("SessionManager", () => {
     await runScenario({
       steps: [
         {type: "send", from: "alice", to: "bob", message: "alice to bob 1"},
-        {type: "expect", actor: "bob", message: "alice to bob 1"},
         {type: "send", from: "bob", to: "alice", message: "bob to alice 1"},
-        {type: "expect", actor: "alice", message: "bob to alice 1"},
         {type: "send", from: "alice", to: "bob", message: "alice to bob 2"},
         {type: "send", from: "alice", to: "bob", message: "alice to bob 3"},
         {
