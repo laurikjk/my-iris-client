@@ -199,7 +199,6 @@ export default class SessionManager {
   }
 
   onEvent(callback: OnEventCallback) {
-    console.warn("SessionManager: onEvent callback added")
     this.internalSubscriptions.add(callback)
 
     return () => {
@@ -283,7 +282,7 @@ export default class SessionManager {
   ): Promise<Rumor> {
     const ourPubkey = getPublicKey(this.ourIdentityKey)
 
-    const message: Partial<Rumor> = {
+    const message: Rumor = {
       id: crypto.randomUUID(),
       pubkey: ourPubkey,
       created_at: Math.floor(Date.now() / 1000),
@@ -296,12 +295,11 @@ export default class SessionManager {
 
     this.messageHistory.set(recipientPublicKey, [
       ...(this.messageHistory.get(recipientPublicKey) || []),
-      message as Rumor,
+      message,
     ])
     await this.sendEvent(recipientPublicKey, message)
 
-    // Return the complete message for chat history
-    return message as Rumor
+    return message
   }
 
   private storeUserRecord(publicKey: string) {

@@ -37,29 +37,12 @@ interface PrivateMessagesStoreActions {
 type PrivateMessagesStore = PrivateMessagesStoreState & PrivateMessagesStoreActions
 
 const makeOrModifyMessage = async (chatId: string, message: MessageType) => {
+  console.warn("makeOrModifyMessage", chatId, message)
   const isReaction = message.kind === KIND_REACTION
   const eTag = message.tags.find(([key]) => key === "e")
   if (isReaction && eTag) {
     const [, messageId] = eTag
-    // First try to find by the exact ID (for inner message IDs)
-    let oldMsg = await messageRepository.getById(messageId)
-
-    // If not found, search through all messages to find by canonical ID
-    if (!oldMsg) {
-      const state = usePrivateMessagesStore.getState()
-
-      // Search through all chats for a message with matching ID
-      for (const [, chatMessages] of state.events.entries()) {
-        // Find message with matching ID
-        for (const [, msg] of chatMessages.entries()) {
-          if (msg.id === messageId) {
-            oldMsg = msg
-            break
-          }
-        }
-        if (oldMsg) break
-      }
-    }
+    const oldMsg = await messageRepository.getById(messageId)
 
     const pubKey = message.pubkey
 
@@ -71,7 +54,7 @@ const makeOrModifyMessage = async (chatId: string, message: MessageType) => {
           [pubKey]: message.content,
         },
       }
-      // Find which chat this message belongs to
+
       let messageChatId = null
       for (const [cid, chatMessages] of usePrivateMessagesStore
         .getState()
