@@ -249,7 +249,7 @@ export default class SessionManager {
   async sendEvent(
     recipientIdentityKey: string,
     event: Partial<Rumor>
-  ): Promise<PromiseSettledResult<void>[]> {
+  ): Promise<Rumor | undefined> {
     await this.init()
     const userRecord = this.getOrCreateUserRecord(recipientIdentityKey)
     const ourUserRecord = this.getOrCreateUserRecord(getPublicKey(this.ourIdentityKey))
@@ -264,15 +264,22 @@ export default class SessionManager {
 
     console.warn("my devices", ourUserRecord.devices)
 
-    return Promise.allSettled(
+    const sendingResults = await Promise.allSettled(
       devices.map(async (device) => {
         const {activeSession} = device
         if (!activeSession) return
-        const {event: verifiedEvent} = activeSession.sendEvent(event)
+        const {event: verifiedEvent, innerEvent} = activeSession.sendEvent(event)
         await this.nostrPublish(verifiedEvent)
         await this.storeUserRecord(recipientIdentityKey)
+        return innerEvent
       })
-    )
+    ).then((results) => {
+      return results.find((res) => res !== undefined)
+    })
+
+    return sendingResults && sendingResults.status === "fulfilled"
+      ? sendingResults.value
+      : undefined
   }
 
   async sendMessage(
@@ -297,9 +304,14 @@ export default class SessionManager {
       ...(this.messageHistory.get(recipientPublicKey) || []),
       message,
     ])
-    await this.sendEvent(recipientPublicKey, message)
 
-    return message
+    const sentEvent = await this.sendEvent(recipientPublicKey, message)
+
+    if (!sentEvent) {
+      throw new Error("Failed to send message, no session available")
+    }
+
+    return sentEvent
   }
 
   private storeUserRecord(publicKey: string) {

@@ -55,20 +55,8 @@ const makeOrModifyMessage = async (chatId: string, message: MessageType) => {
         },
       }
 
-      let messageChatId = null
-      for (const [cid, chatMessages] of usePrivateMessagesStore
-        .getState()
-        .events.entries()) {
-        if (chatMessages.has(oldMsg.id)) {
-          messageChatId = cid
-          break
-        }
-      }
-
-      if (messageChatId) {
-        await messageRepository.save(messageChatId, updatedMsg)
-        return updatedMsg
-      }
+      await messageRepository.save(chatId, updatedMsg)
+      return updatedMsg
     }
   }
   return message

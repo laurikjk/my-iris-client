@@ -87,9 +87,7 @@ const Chat = ({id}: {id: string}) => {
       }
 
       await sessionManager.sendEvent(id, reactionEvent)
-      await usePrivateMessagesStore
-        .getState()
-        .upsert(id, reactionEvent as MessageType)
+      await usePrivateMessagesStore.getState().upsert(id, reactionEvent)
     } catch (error) {
       console.error("Failed to send reaction:", error)
     }
