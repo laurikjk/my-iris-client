@@ -8,6 +8,7 @@ import {MessageType} from "../message/Message"
 import {useEffect, useState} from "react"
 import {useUserStore} from "@/stores/user"
 import {KIND_REACTION} from "@/utils/constants"
+import {getSessionManager} from "@/shared/services/PrivateChats"
 
 const updateLastSeen = (id: string) => {}
 
@@ -67,19 +68,31 @@ const Chat = ({id}: {id: string}) => {
 
   const handleSendReaction = async (messageId: string, emoji: string) => {
     const myPubKey = useUserStore.getState().publicKey
-    if (!myPubKey) return
+    if (!myPubKey || !emoji.trim()) return
 
-    const event = {
-      kind: KIND_REACTION,
-      content: emoji,
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [
-        ["e", messageId],
-        ["ms", String(Date.now())],
-      ],
+    try {
+      const sessionManager = getSessionManager()
+      const timestampSeconds = Math.floor(Date.now() / 1000)
+      const reactionEvent = {
+        id: crypto.randomUUID(),
+        pubkey: myPubKey,
+        kind: KIND_REACTION,
+        content: emoji,
+        created_at: timestampSeconds,
+        tags: [
+          ["p", id],
+          ["e", messageId],
+          ["ms", String(Date.now())],
+        ],
+      }
+
+      await sessionManager.sendEvent(id, reactionEvent)
+      await usePrivateMessagesStore
+        .getState()
+        .upsert(id, reactionEvent as MessageType)
+    } catch (error) {
+      console.error("Failed to send reaction:", error)
     }
-
-    // TODO: actually do somethign
   }
 
   if (!id) {
