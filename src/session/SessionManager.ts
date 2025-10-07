@@ -138,12 +138,17 @@ export default class SessionManager {
     session: Session
   ): void {
     const key = this.sessionKey(userPubkey, deviceId, session.name)
+    if (this.sessionSubscriptions.has(key)) return
 
     const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
     if (dr.activeSession) {
       dr.inactiveSessions.push(dr.activeSession)
     }
     dr.activeSession = session
+
+    if (dr.inactiveSessions.length > 10) {
+      dr.inactiveSessions = dr.inactiveSessions.slice(-10)
+    }
 
     const unsub = session.onEvent((event) => {
       for (const cb of this.internalSubscriptions) cb(event, userPubkey)
@@ -183,6 +188,18 @@ export default class SessionManager {
       const {deviceId} = invite
 
       if (!deviceId) return
+
+      const currentActiveSession = this.getOrCreateDeviceRecord(
+        userPubkey,
+        deviceId
+      ).activeSession
+
+      const currentInactiveSessions = this.getOrCreateDeviceRecord(
+        userPubkey,
+        deviceId
+      ).inactiveSessions
+
+      console.warn("Current sessions", currentActiveSession, currentInactiveSessions)
 
       const {session, event} = await invite.accept(
         this.nostrSubscribe,
@@ -294,8 +311,6 @@ export default class SessionManager {
       pubkey: ourPubkey,
       created_at: Math.floor(Date.now() / 1000),
       kind,
-      // TODO: spec says specify relay url too:https://github.com/nostr-protocol/nips/blob/master/17.md
-      // Let's think about this when looking at invite revoking etc.
       tags: [["p", recipientPublicKey]],
       content,
     }

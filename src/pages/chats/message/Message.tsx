@@ -12,7 +12,6 @@ import classNames from "classnames"
 import {Link} from "@/navigation"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
-import {RiCheckLine, RiAlertLine} from "@remixicon/react"
 import {KIND_CHANNEL_CREATE, KIND_REACTION} from "@/utils/constants"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {EMOJI_REGEX} from "@/utils/validation"
@@ -88,7 +87,6 @@ const Message = ({
   const [localReactions, setLocalReactions] = useState<Record<string, string>>(
     propReactions || {}
   )
-  const [notOnRelays, setNotOnRelays] = useState(false)
   const isShortEmoji = useMemo(
     () => EMOJI_REGEX.test(message.content?.trim() ?? ""),
     [message.content]
@@ -120,31 +118,6 @@ const Message = ({
     }
   }, [message.id])
 
-  // Set up timer to mark message as not on relays after 10 seconds
-  useEffect(() => {
-    if (!isUser || !message.created_at) return
-
-    // Reset notOnRelays if message becomes confirmed on relays
-    if (message.sentToRelays) {
-      setNotOnRelays(false)
-      return
-    }
-
-    const now = Math.floor(Date.now() / 1000)
-    const messageAge = now - message.created_at
-    const timeUntilAlert = 5 - messageAge
-
-    if (timeUntilAlert > 0) {
-      const timer = setTimeout(() => {
-        setNotOnRelays(true)
-      }, timeUntilAlert * 1000)
-
-      return () => clearTimeout(timer)
-    } else {
-      // Message is already older than 10 seconds
-      setNotOnRelays(true)
-    }
-  }, [isUser, message.sentToRelays, message.created_at])
 
   const repliedId = useMemo(() => {
     // First check for explicit reply tag
@@ -254,22 +227,10 @@ const Message = ({
                     {message.content}
                   </HyperText>
                 </div>
-                {isUser && (
-                  <div className="w-3 h-3 flex-shrink-0">
-                    {notOnRelays && !message.sentToRelays && (
-                      <RiAlertLine className="w-3 h-3 text-orange-400/70" />
-                    )}
-                  </div>
-                )}
               </div>
               {isLast && (
                 <div className="flex items-center gap-1 ml-2">
                   <p className="text-xs opacity-50 whitespace-nowrap">{formattedTime}</p>
-                  <div className="w-3 h-3 flex-shrink-0">
-                    {isUser && message.sentToRelays && (
-                      <RiCheckLine className="w-3 h-3 text-white/60" />
-                    )}
-                  </div>
                 </div>
               )}
             </div>
