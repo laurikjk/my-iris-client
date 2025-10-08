@@ -7,7 +7,7 @@ import {
   Session,
   serializeSessionState,
   deserializeSessionState,
-} from "nostr-double-ratchet"
+} from "nostr-double-ratchet/src"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {getPublicKey} from "nostr-tools"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
