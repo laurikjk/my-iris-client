@@ -4677,8 +4677,10 @@ normalize-range@^0.1.2:
   resolved "https://registry.npmjs.org/normalize-range/-/normalize-range-0.1.2.tgz"
   integrity sha512-bdok/XvKII3nUpklnV6P2hxtMNrCboOjAcyBuQnWEhO665FwrSNRxU+AqpsyvO6LgGYPspN+lu5CLtw4jPRKNA==
 
-"nostr-double-ratchet@file:.yalc/nostr-double-ratchet":
+nostr-double-ratchet@^0.0.34:
   version "0.0.34"
+  resolved "https://registry.yarnpkg.com/nostr-double-ratchet/-/nostr-double-ratchet-0.0.34.tgz#33208ee3f01d95b81e22ecd447256b1fd43ba556"
+  integrity sha512-6+G4OVr3SSRyrRELD9VVuei/d9NZU9HA93bMHZ0zx/BUxY8GZByWTNfjrxrIu9mau0TIuw6drpEoo687HxRAuA==
   dependencies:
     nostr-tools "^2.15.2"
 
