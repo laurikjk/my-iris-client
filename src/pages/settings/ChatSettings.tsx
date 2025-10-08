@@ -15,8 +15,6 @@ interface DeviceInfo {
 }
 
 // TEMP: Dummy store data - moved outside component to prevent recreation on every render
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const invites = new Map()
 const sessions = new Map()
 const lastSeen = new Map()
 const deleteInvite = (id: string) => console.log("TEMP: deleteInvite", id)

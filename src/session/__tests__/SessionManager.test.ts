@@ -3,6 +3,18 @@ import {createMockSessionManager} from "./helpers/mockSessionManager"
 import {MockRelay} from "./helpers/mockRelay"
 import {runScenario} from "./helpers/scenario"
 
+type DeviceRecordSnapshot = {inactiveSessions: unknown[]}
+
+const extractDeviceRecords = (manager: unknown): DeviceRecordSnapshot[] => {
+  const internal = manager as {
+    userRecords?: Map<string, {devices: Map<string, DeviceRecordSnapshot>}>
+  }
+  if (!internal.userRecords) return []
+  return Array.from(internal.userRecords.values()).flatMap((record) =>
+    Array.from(record.devices.values())
+  )
+}
+
 describe("SessionManager", () => {
   it("should receive a message", async () => {
     const sharedRelay = new MockRelay()
@@ -230,8 +242,8 @@ describe("SessionManager", () => {
     await aliceManagerRestart.sendMessage(bobPubkey, "after restart")
     await bobReveivedMessages
 
-    const aliceDeviceRecords = aliceManagerRestart.getAllDeviceRecords()
-    const bobDeviceRecords = bobManagerRestart.getAllDeviceRecords()
+    const aliceDeviceRecords = extractDeviceRecords(aliceManagerRestart)
+    const bobDeviceRecords = extractDeviceRecords(bobManagerRestart)
 
     console.log("a", aliceDeviceRecords)
     console.log("b", bobDeviceRecords)

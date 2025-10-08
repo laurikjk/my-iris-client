@@ -71,12 +71,14 @@ export class MockRelay {
 
     this.subscribers.set(subId, subscriber)
 
-    console.log("MockRelay: new subscription", subId, "with filter", filter)
-    console.log(
-      "MockRelay: delivering",
-      this.events.length,
-      "existing events to new subscriber"
-    )
+    if (this.debug) {
+      console.log("MockRelay: new subscription", subId, "with filter", filter)
+      console.log(
+        "MockRelay: delivering",
+        this.events.length,
+        "existing events to new subscriber"
+      )
+    }
     for (const event of this.events) {
       this.deliverToSubscriber(subscriber, event)
     }
@@ -87,7 +89,9 @@ export class MockRelay {
   }
   private deliverToSubscriber(subscriber: Subscriber, event: VerifiedEvent): void {
     if (!subscriber.delivered.has(event.id) && matchFilter(subscriber.filter, event)) {
-      console.log("Delivering event", event.id, "to subscriber", subscriber.id)
+      if (this.debug) {
+        console.log("Delivering event", event.id, "to subscriber", subscriber.id)
+      }
       subscriber.delivered.add(event.id)
       try {
         subscriber.onEvent(event)
