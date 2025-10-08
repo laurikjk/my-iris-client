@@ -236,6 +236,56 @@ export default class SessionManager {
     this.ourOtherDeviceInviteSubscription?.()
   }
 
+  async deleteUser(userPubkey: string): Promise<void> {
+    await this.init()
+
+    const userRecord = this.userRecords.get(userPubkey)
+
+    if (userRecord) {
+      for (const device of userRecord.devices.values()) {
+        if (device.activeSession) {
+          this.removeSessionSubscription(userPubkey, device.deviceId, device.activeSession.name)
+        }
+
+        for (const session of device.inactiveSessions) {
+          this.removeSessionSubscription(userPubkey, device.deviceId, session.name)
+        }
+      }
+
+      this.userRecords.delete(userPubkey)
+    }
+
+    const inviteKey = this.inviteKey(userPubkey)
+    const inviteUnsub = this.inviteSubscriptions.get(inviteKey)
+    if (inviteUnsub) {
+      inviteUnsub()
+      this.inviteSubscriptions.delete(inviteKey)
+    }
+
+    this.messageHistory.delete(userPubkey)
+
+    await Promise.allSettled([
+      this.storage.del(this.inviteKey(userPubkey)),
+      this.deleteUserSessionsFromStorage(userPubkey),
+      this.storage.del(`user/${userPubkey}`),
+    ])
+  }
+
+  private removeSessionSubscription(userPubkey: string, deviceId: string, sessionName: string) {
+    const key = this.sessionKey(userPubkey, deviceId, sessionName)
+    const unsubscribe = this.sessionSubscriptions.get(key)
+    if (unsubscribe) {
+      unsubscribe()
+      this.sessionSubscriptions.delete(key)
+    }
+  }
+
+  private async deleteUserSessionsFromStorage(userPubkey: string): Promise<void> {
+    const prefix = `session/${userPubkey}/`
+    const keys = await this.storage.list(prefix)
+    await Promise.all(keys.map((key) => this.storage.del(key)))
+  }
+
   private async sendMessageHistory(
     recipientPublicKey: string,
     deviceId: string
