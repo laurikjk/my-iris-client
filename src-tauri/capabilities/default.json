@@ -9,10 +9,10 @@
     {
       "identifier": "opener:allow-open-url",
       "allow": [
-        { "url": "http://*" },
-        { "url": "https://*" },
-        { "url": "mailto:*" },
-        { "url": "tel:*" }
+        {"url": "http://*"},
+        {"url": "https://*"},
+        {"url": "mailto:*"},
+        {"url": "tel:*"}
       ]
     }
   ]

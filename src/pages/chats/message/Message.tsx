@@ -118,7 +118,6 @@ const Message = ({
     }
   }, [message.id])
 
-
   const repliedId = useMemo(() => {
     // First check for explicit reply tag
     const replyTag = message.tags?.find(

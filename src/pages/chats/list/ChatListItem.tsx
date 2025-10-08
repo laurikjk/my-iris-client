@@ -64,7 +64,9 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
 
   // Get chat data for unread counts
 
-  const lastSeenPrivateTime = usePrivateMessagesStore((state) => state.lastSeen.get(id) || 0)
+  const lastSeenPrivateTime = usePrivateMessagesStore(
+    (state) => state.lastSeen.get(id) || 0
+  )
   const updateLastSeenPrivate = usePrivateMessagesStore((state) => state.updateLastSeen)
 
   const lastSeenPublicTime = lastSeenPublic[id] || 0

@@ -8,7 +8,10 @@ interface MessageFormReplyPreviewProps {
   setReplyingTo: (message?: MessageType) => void
 }
 
-const MessageFormReplyPreview = ({replyingTo, setReplyingTo}: MessageFormReplyPreviewProps) => {
+const MessageFormReplyPreview = ({
+  replyingTo,
+  setReplyingTo,
+}: MessageFormReplyPreviewProps) => {
   const myPublicKey = useUserStore.getState().publicKey
 
   // Function to handle scrolling to the replied message
@@ -31,7 +34,11 @@ const MessageFormReplyPreview = ({replyingTo, setReplyingTo}: MessageFormReplyPr
     <div className="px-4 pt-2 flex items-center">
       <div className="flex-1 cursor-pointer" onClick={handleScrollToReply}>
         <div className="text-xs text-base-content/60 mb-1 font-bold">
-          {replyingTo.pubkey === myPublicKey ? "You" : <Name pubKey={replyingTo.pubkey} />}
+          {replyingTo.pubkey === myPublicKey ? (
+            "You"
+          ) : (
+            <Name pubKey={replyingTo.pubkey} />
+          )}
         </div>
         <div className="text-sm truncate border-l-2 border-primary pl-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
           {replyingTo.content.length > 200

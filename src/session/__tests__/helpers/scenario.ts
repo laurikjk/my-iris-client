@@ -87,12 +87,12 @@ async function bootstrapActor(
   existingSecretKey?: Uint8Array,
   existingStorage?: any
 ): Promise<ActorState> {
-  const {
-    manager,
-    secretKey,
-    publicKey,
-    mockStorage,
-  } = await createMockSessionManager(deviceId, relay, existingSecretKey, existingStorage)
+  const {manager, secretKey, publicKey, mockStorage} = await createMockSessionManager(
+    deviceId,
+    relay,
+    existingSecretKey,
+    existingStorage
+  )
 
   const events: Rumor[] = []
   const state: ActorState = {
@@ -152,9 +152,12 @@ async function restartActor(context: ScenarioContext, actor: ActorId) {
   const {deviceId, manager, secretKey, storage, unsub} = state
   unsub?.()
   manager.close()
-  const {
-    manager: newManager,
-  } = await createMockSessionManager(deviceId, context.relay, secretKey, storage)
+  const {manager: newManager} = await createMockSessionManager(
+    deviceId,
+    context.relay,
+    secretKey,
+    storage
+  )
 
   state.manager = newManager
   state.unsub = attachManagerListener(state)

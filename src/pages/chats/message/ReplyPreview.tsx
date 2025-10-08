@@ -91,7 +91,11 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
       onClick={handleScrollToReply}
     >
       <div className="font-semibold">
-        {repliedToMessage.pubkey === myPublicKey ? "You" : <Name pubKey={repliedToMessage.pubkey} />}{" "}
+        {repliedToMessage.pubkey === myPublicKey ? (
+          "You"
+        ) : (
+          <Name pubKey={repliedToMessage.pubkey} />
+        )}{" "}
       </div>
       <div className="truncate max-w-[225px]">{repliedToMessage.content}</div>
     </div>

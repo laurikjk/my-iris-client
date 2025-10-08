@@ -244,7 +244,11 @@ export default class SessionManager {
     if (userRecord) {
       for (const device of userRecord.devices.values()) {
         if (device.activeSession) {
-          this.removeSessionSubscription(userPubkey, device.deviceId, device.activeSession.name)
+          this.removeSessionSubscription(
+            userPubkey,
+            device.deviceId,
+            device.activeSession.name
+          )
         }
 
         for (const session of device.inactiveSessions) {
@@ -271,7 +275,11 @@ export default class SessionManager {
     ])
   }
 
-  private removeSessionSubscription(userPubkey: string, deviceId: string, sessionName: string) {
+  private removeSessionSubscription(
+    userPubkey: string,
+    deviceId: string,
+    sessionName: string
+  ) {
     const key = this.sessionKey(userPubkey, deviceId, sessionName)
     const unsubscribe = this.sessionSubscriptions.get(key)
     if (unsubscribe) {
@@ -374,13 +382,20 @@ export default class SessionManager {
     const sentEvent = await this.sendEvent(recipientPublicKey, message)
 
     if (!sentEvent) {
-      throw new Error("Failed to send message, no session available")
+      // TODO: Library removes dashes from innerEvent IDs
+      // Remove this workaround when sentEvent can be quaranteed
+      // e.g. when at least one session exists
+      const patchedId = message.id.replace("-", "")
+      return {...message, id: patchedId}
     }
 
     return sentEvent
   }
 
-  private buildMessageTags(recipientPublicKey: string, extraTags: string[][]): string[][] {
+  private buildMessageTags(
+    recipientPublicKey: string,
+    extraTags: string[][]
+  ): string[][] {
     const hasRecipientPTag = extraTags.some(
       (tag) => tag[0] === "p" && tag[1] === recipientPublicKey
     )
