@@ -31,33 +31,31 @@ const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
   }
 
   const handleSendFile = async () => {
-    if (session) {
-      const peerConnection = await getPeerConnection(id, {
-        ask: false,
-        create: true,
-        connect: true,
-      })
-      if (peerConnection) {
-        // Create a hidden file input
-        const fileInput = document.createElement("input")
-        fileInput.type = "file"
-        fileInput.style.display = "none"
-        fileInput.onchange = (e) => {
-          const file = (e.target as HTMLInputElement).files?.[0]
-          if (file) {
-            peerConnection.sendFile(file)
-          }
-        }
-        document.body.appendChild(fileInput)
-        fileInput.click()
-        document.body.removeChild(fileInput)
+    // WebRTC disabled until session metadata is restored
+    const peerConnection = await getPeerConnection(id, {
+      ask: false,
+      create: true,
+      connect: true,
+    })
+    if (!peerConnection) return
+
+    const fileInput = document.createElement("input")
+    fileInput.type = "file"
+    fileInput.style.display = "none"
+    fileInput.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        peerConnection.sendFile(file)
       }
     }
+    document.body.appendChild(fileInput)
+    fileInput.click()
+    document.body.removeChild(fileInput)
   }
 
   const user = id.split(":").shift()!
 
-  const showWebRtc = false // socialGraph().getFollowedByUser(user).has(myPubKey) || user === myPubKey
+  const showWebRtc = false // button hidden until WebRTC flow is re-enabled
 
   return (
     <Header showNotifications={false} scrollDown={true} slideUp={false} bold={false}>
