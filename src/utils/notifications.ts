@@ -149,7 +149,8 @@ export const subscribeToDMNotifications = debounce(async () => {
   if (!pushSubscription) {
     return
   }
-  // TEMP: Dummy invites and sessions data - unused
+  // TODO: Re-enable message decryption after improving session rehydration
+
   // const invites = new Map()
   // const sessions = new Map()
 
@@ -158,7 +159,6 @@ export const subscribeToDMNotifications = debounce(async () => {
   // .map((i) => i.inviterEphemeralPublicKey)
   // .filter((a) => typeof a === "string") as string[]
 
-  // TEMP: Empty session authors
   const sessionAuthors: string[] = []
 
   const webPushData = {
