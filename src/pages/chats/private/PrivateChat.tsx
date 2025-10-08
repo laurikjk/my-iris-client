@@ -25,14 +25,18 @@ const Chat = ({id}: {id: string}) => {
   const messages = eventsMap.get(id) ?? new SortedMap<string, MessageType>([], comparator)
   const lastMessageEntry = messages.last()
   const lastMessage = lastMessageEntry ? lastMessageEntry[1] : undefined
-  const lastMessageTimestamp = lastMessage ? getMillisecondTimestamp(lastMessage) : undefined
+  const lastMessageTimestamp = lastMessage
+    ? getMillisecondTimestamp(lastMessage)
+    : undefined
   const lastMessageId = lastMessage?.id
 
   const markChatOpened = useCallback(() => {
     if (!id) return
     const events = usePrivateMessagesStore.getState().events
     const latestMessage = events.get(id)?.last()?.[1]
-    const latestTimestamp = latestMessage ? getMillisecondTimestamp(latestMessage) : undefined
+    const latestTimestamp = latestMessage
+      ? getMillisecondTimestamp(latestMessage)
+      : undefined
     const targetTimestamp = Math.max(Date.now(), latestTimestamp ?? 0)
     const current = usePrivateMessagesStore.getState().lastSeen.get(id) || 0
     if (targetTimestamp > current) {
@@ -111,7 +115,9 @@ const Chat = ({id}: {id: string}) => {
       }
 
       await sessionManager.sendEvent(id, reactionEvent)
-      await usePrivateMessagesStore.getState().upsert(id, reactionEvent)
+      await usePrivateMessagesStore
+        .getState()
+        .upsert(useUserStore.getState().publicKey, id, reactionEvent)
     } catch (error) {
       console.error("Failed to send reaction:", error)
     }

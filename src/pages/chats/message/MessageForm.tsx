@@ -17,6 +17,7 @@ import EmojiType from "@/types/emoji"
 import {MessageType} from "./Message"
 import {getSessionManager} from "@/shared/services/PrivateChats"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
+import {useUserStore} from "@/stores/user"
 
 interface MessageFormProps {
   id: string
@@ -101,7 +102,7 @@ const MessageForm = ({
           : await sessionManager.sendMessage(id, text)
       await usePrivateMessagesStore
         .getState()
-        .upsert(id, sentMessage as MessageType)
+        .upsert(id, useUserStore.getState().publicKey, sentMessage)
       setEncryptionMetadata(new Map()) // Clear after sending
     } catch (error) {
       console.error("Failed to send message:", error)
@@ -144,10 +145,7 @@ const MessageForm = ({
   return (
     <footer className="border-t border-custom fixed md:sticky bottom-0 w-full pb-[env(safe-area-inset-bottom)] bg-base-200">
       {replyingTo && (
-        <MessageFormReplyPreview
-          replyingTo={replyingTo}
-          setReplyingTo={setReplyingTo}
-        />
+        <MessageFormReplyPreview replyingTo={replyingTo} setReplyingTo={setReplyingTo} />
       )}
 
       <div className="flex gap-2 p-4 relative">

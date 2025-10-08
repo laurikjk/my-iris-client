@@ -44,14 +44,8 @@ const initializeApp = () => {
         sessionManager.onEvent((event, pubKey) => {
           const pTag = getTag("p", event.tags)
           const from = pubKey === state.publicKey ? pTag : pubKey
-          console.warn("Received DM event in main:", {
-            eventContent: event.content,
-            eventId: event.id,
-            from,
-            pTag,
-            pubKey,
-          })
-          usePrivateMessagesStore.getState().upsert(from, event)
+          const to = pubKey === state.publicKey ? pubKey : pTag
+          usePrivateMessagesStore.getState().upsert(from, to, event)
         })
       })
     }

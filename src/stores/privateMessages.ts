@@ -4,6 +4,7 @@ import * as messageRepository from "@/utils/messageRepository"
 import {KIND_REACTION} from "@/utils/constants"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {create} from "zustand"
+import {useUserStore} from "./user"
 
 const addToMap = (
   chatEventMap: Map<string, SortedMap<string, MessageType>>,
@@ -24,7 +25,7 @@ interface PrivateMessagesStoreState {
 }
 
 interface PrivateMessagesStoreActions {
-  upsert: (chatId: string, message: MessageType) => Promise<void>
+  upsert: (from: string, to: string, message: MessageType) => Promise<void>
   updateMessage: (
     chatId: string,
     messageId: string,
@@ -38,8 +39,7 @@ interface PrivateMessagesStoreActions {
 
 type PrivateMessagesStore = PrivateMessagesStoreState & PrivateMessagesStoreActions
 
-const makeOrModifyMessage = async (chatId: string, message: MessageType) => {
-  console.warn("makeOrModifyMessage", chatId, message)
+const makeOrModifyMessage = async (message: MessageType) => {
   const isReaction = message.kind === KIND_REACTION
   const eTag = message.tags.find(([key]) => key === "e")
   if (isReaction && eTag) {
@@ -57,7 +57,6 @@ const makeOrModifyMessage = async (chatId: string, message: MessageType) => {
         },
       }
 
-      await messageRepository.save(chatId, updatedMsg)
       return updatedMsg
     }
   }
@@ -75,9 +74,11 @@ export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
     events: new Map(),
     lastSeen: new Map(),
 
-    upsert: async (chatId, event) => {
+    upsert: async (from, to, event) => {
       await rehydration
-      const message = await makeOrModifyMessage(chatId, event)
+      const message = await makeOrModifyMessage(event)
+      const myPubKey = useUserStore.getState().publicKey
+      const chatId = from === myPubKey ? to : from
       await messageRepository.save(chatId, message)
       set((state) => ({
         events: addToMap(new Map(state.events), chatId, message),
