@@ -26,6 +26,19 @@ interface UserRecord {
   foundInvites: Map<string, Invite>
 }
 
+type SerializedSessionState = ReturnType<typeof serializeSessionState>
+
+interface StoredDeviceRecord {
+  deviceId: string
+  activeSession: SerializedSessionState | null
+  inactiveSessions: SerializedSessionState[]
+}
+
+interface StoredUserRecord {
+  publicKey: string
+  devices: StoredDeviceRecord[]
+}
+
 export default class SessionManager {
   // Params
   private deviceId: string
@@ -422,21 +435,21 @@ export default class SessionManager {
   }
 
   private loadUserRecord(publicKey: string) {
-    return this.storage.get<any>(`user/${publicKey}`).then((data) => {
+    return this.storage.get<StoredUserRecord>(`user/${publicKey}`).then((data) => {
       if (!data) return
       const devices = new Map<string, DeviceRecord>()
       for (const deviceData of data.devices) {
-        const deviceId = deviceData.deviceId
-        const activeSession = deviceData.activeSession
-          ? new Session(
-              this.nostrSubscribe,
-              deserializeSessionState(deviceData.activeSession)
-            )
+        const {
+          deviceId,
+          activeSession: serializedActive,
+          inactiveSessions: serializedInactive,
+        } = deviceData
+        const activeSession = serializedActive
+          ? new Session(this.nostrSubscribe, deserializeSessionState(serializedActive))
           : undefined
 
-        const inactiveSessions = deviceData.inactiveSessions.map(
-          (state: string) =>
-            new Session(this.nostrSubscribe, deserializeSessionState(state))
+        const inactiveSessions = serializedInactive.map(
+          (state) => new Session(this.nostrSubscribe, deserializeSessionState(state))
         )
         devices.set(deviceId, {
           deviceId,

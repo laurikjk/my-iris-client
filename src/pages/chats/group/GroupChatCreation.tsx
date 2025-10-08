@@ -97,7 +97,7 @@ const GroupChatCreation = () => {
       }
       addGroup(group)
 
-      const event = {
+      const groupCreationEvent = {
         kind: KIND_CHANNEL_CREATE,
         content: JSON.stringify(group),
         created_at: Math.round(Date.now() / 1000),
@@ -106,6 +106,9 @@ const GroupChatCreation = () => {
           ["ms", Date.now().toString()],
         ],
       }
+
+      // TODO: use groupCreationEvent when wiring up group messaging delivery
+      void groupCreationEvent
 
       // TODO: re-enable sending group creation event to members'
       // Send create group message to all invited members except self

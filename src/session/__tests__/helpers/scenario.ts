@@ -2,6 +2,7 @@ import {MockRelay} from "./mockRelay"
 import {createMockSessionManager} from "./mockSessionManager"
 import SessionManager from "../../SessionManager"
 import {Rumor} from "nostr-double-ratchet"
+import type {InMemoryStorageAdapter} from "../../StorageAdapter"
 
 export type ActorId = "alice" | "bob"
 
@@ -23,7 +24,7 @@ interface ActorState {
   manager: SessionManager
   secretKey: Uint8Array
   publicKey: string
-  storage: any
+  storage: InMemoryStorageAdapter
   events: Rumor[]
   messageCounts: Map<string, number>
   waiters: MessageWaiter[]
@@ -72,9 +73,10 @@ export async function runScenario(def: ScenarioDefinition): Promise<ScenarioCont
       case "noop":
         await Promise.resolve()
         break
-      default:
+      default: {
         const exhaustive: never = step
         throw new Error(`Unhandled step ${JSON.stringify(exhaustive)}`)
+      }
     }
   }
 
@@ -85,7 +87,7 @@ async function bootstrapActor(
   deviceId: string,
   relay: MockRelay,
   existingSecretKey?: Uint8Array,
-  existingStorage?: any
+  existingStorage?: InMemoryStorageAdapter
 ): Promise<ActorState> {
   const {manager, secretKey, publicKey, mockStorage} = await createMockSessionManager(
     deviceId,
@@ -201,30 +203,29 @@ function waitForMessage(
   }
 
   return new Promise<void>((resolve, reject) => {
-    let waiter: MessageWaiter
-
-    const finalizeResolve = () => {
+    const handleResolve = (waiter: MessageWaiter) => {
       clearTimeout(waiter.timeout)
       removeWaiter(state, waiter)
       resolve()
     }
 
-    const finalizeReject = (error: Error) => {
+    const handleReject = (waiter: MessageWaiter, error: Error) => {
       clearTimeout(waiter.timeout)
       removeWaiter(state, waiter)
       reject(error)
     }
 
-    const timeout = setTimeout(() => {
-      finalizeReject(new Error(`Timed out waiting for message '${message}' on ${actor}`))
-    }, 5000)
-
-    waiter = {
+    const waiter: MessageWaiter = {
       message,
       targetCount: currentCount + 1,
-      resolve: finalizeResolve,
-      reject: finalizeReject,
-      timeout,
+      resolve: () => handleResolve(waiter),
+      reject: (error: Error) => handleReject(waiter, error),
+      timeout: setTimeout(() => {
+        handleReject(
+          waiter,
+          new Error(`Timed out waiting for message '${message}' on ${actor}`)
+        )
+      }, 5000),
     }
 
     state.waiters.push(waiter)

@@ -29,7 +29,7 @@ const GroupChatPage = () => {
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !myPubKey) return
-    const event = {
+    const messageEvent = {
       kind: 0,
       content,
       created_at: Math.floor(Date.now() / 1000),
@@ -43,13 +43,13 @@ const GroupChatPage = () => {
     // Send to all group members
     // For ourselves, the optimistic update in sendMessage will handle display
     // For others, we need to actually send the message
-    // await Promise.all(group.members.map((pubkey: string) => sendToUser(pubkey, event)))
+    void messageEvent
   }
 
   const handleSendReaction = async (messageId: string, emoji: string) => {
     if (!myPubKey) return
 
-    const event = {
+    const reactionEvent = {
       kind: KIND_REACTION,
       content: emoji,
       created_at: Math.floor(Date.now() / 1000),
@@ -61,7 +61,8 @@ const GroupChatPage = () => {
     }
 
     // Send reaction to all group members including self for multi-device support
-    await Promise.all(group.members.map((pubkey: string) => sendToUser(pubkey, event)))
+    // TODO: once delivery is available, dispatch reactionEvent to members
+    void reactionEvent
   }
 
   return (

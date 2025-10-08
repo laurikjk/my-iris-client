@@ -16,6 +16,33 @@ import {usePrivateMessagesStore} from "./stores/privateMessages"
 import {getSessionManager} from "./shared/services/PrivateChats"
 import {getTag} from "./utils/tagUtils"
 
+let unsubscribeSessionEvents: (() => void) | null = null
+
+const attachSessionEventListener = () => {
+  try {
+    const sessionManager = getSessionManager()
+    void sessionManager.init().then(() => {
+      unsubscribeSessionEvents?.()
+      unsubscribeSessionEvents = sessionManager.onEvent((event, pubKey) => {
+        const {publicKey} = useUserStore.getState()
+        if (!publicKey) return
+
+        const pTag = getTag("p", event.tags)
+        if (!pTag) return
+
+        const from = pubKey === publicKey ? pTag : pubKey
+        const to = pubKey === publicKey ? publicKey : pTag
+
+        if (!from || !to) return
+
+        void usePrivateMessagesStore.getState().upsert(from, to, event)
+      })
+    })
+  } catch (error) {
+    console.error("Failed to attach session event listener", error)
+  }
+}
+
 // Move initialization to a function to avoid side effects
 const initializeApp = () => {
   ndk()
@@ -39,15 +66,7 @@ const initializeApp = () => {
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
-      const sessionManager = getSessionManager()
-      sessionManager.init().then(() => {
-        sessionManager.onEvent((event, pubKey) => {
-          const pTag = getTag("p", event.tags)
-          const from = pubKey === state.publicKey ? pTag : pubKey
-          const to = pubKey === state.publicKey ? pubKey : pTag
-          usePrivateMessagesStore.getState().upsert(from, to, event)
-        })
-      })
+      attachSessionEventListener()
     }
   }
 
@@ -88,6 +107,7 @@ const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
+      attachSessionEventListener()
     }
   }
 })
@@ -106,5 +126,6 @@ if (import.meta.hot) {
     // Clean up subscriptions on hot reload
     unsubscribeUser()
     unsubscribeTheme()
+    unsubscribeSessionEvents?.()
   })
 }
