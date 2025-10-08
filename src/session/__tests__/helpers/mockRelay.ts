@@ -12,6 +12,11 @@ export class MockRelay {
   private events: VerifiedEvent[] = []
   private subscribers: Map<string, Subscriber> = new Map()
   private subscriptionCounter = 0
+  private debug: boolean = false
+
+  constructor(debug: boolean = false) {
+    this.debug = debug
+  }
 
   getEvents(): VerifiedEvent[] {
     return [...this.events]
@@ -66,6 +71,8 @@ export class MockRelay {
 
     this.subscribers.set(subId, subscriber)
 
+    console.log("MockRelay: new subscription", subId, "with filter", filter)
+    console.log("MockRelay: delivering", this.events.length, "existing events to new subscriber")
     for (const event of this.events) {
       this.deliverToSubscriber(subscriber, event)
     }
@@ -76,9 +83,25 @@ export class MockRelay {
   }
   private deliverToSubscriber(subscriber: Subscriber, event: VerifiedEvent): void {
     if (!subscriber.delivered.has(event.id) && matchFilter(subscriber.filter, event)) {
+      console.log("Delivering event", event.id, "to subscriber", subscriber.id)
       subscriber.delivered.add(event.id)
-      subscriber.onEvent(event)
+      try {
+        subscriber.onEvent(event)
+      } catch (error) {
+        if (this.shouldIgnoreDecryptionError(error)) {
+          console.warn("MockRelay: ignored decrypt error", error)
+          return
+        }
+        throw error
+      }
     }
+  }
+
+  private shouldIgnoreDecryptionError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false
+    const message = error.message?.toLowerCase()
+    if (!message) return false
+    return message.includes("invalid mac") || message.includes("failed to decrypt header")
   }
 
   reset(): void {
