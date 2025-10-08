@@ -304,5 +304,6 @@ describe("SessionManager", () => {
     expect(sentMessage.created_at).toBeDefined()
     expect(sentMessage.tags).toBeDefined()
     expect(Array.isArray(sentMessage.tags)).toBe(true)
+    expect(sentMessage.tags).toEqual(expect.arrayContaining([["p", bobPubkey]]))
   })
 })

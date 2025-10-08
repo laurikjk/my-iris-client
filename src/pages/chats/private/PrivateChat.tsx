@@ -5,12 +5,11 @@ import PrivateChatHeader from "./PrivateChatHeader"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import MessageForm from "../message/MessageForm"
 import {MessageType} from "../message/Message"
-import {useEffect, useState} from "react"
+import {useEffect, useState, useCallback} from "react"
 import {useUserStore} from "@/stores/user"
 import {KIND_REACTION} from "@/utils/constants"
 import {getSessionManager} from "@/shared/services/PrivateChats"
-
-const updateLastSeen = (id: string) => {}
+import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 
 const Chat = ({id}: {id: string}) => {
   // id is now userPubKey instead of sessionId
@@ -22,7 +21,24 @@ const Chat = ({id}: {id: string}) => {
 
   // Get messages reactively from events store - this will update when new messages are added
   const eventsMap = usePrivateMessagesStore((state) => state.events)
+  const updateLastSeen = usePrivateMessagesStore((state) => state.updateLastSeen)
   const messages = eventsMap.get(id) ?? new SortedMap<string, MessageType>([], comparator)
+  const lastMessageEntry = messages.last()
+  const lastMessage = lastMessageEntry ? lastMessageEntry[1] : undefined
+  const lastMessageTimestamp = lastMessage ? getMillisecondTimestamp(lastMessage) : undefined
+  const lastMessageId = lastMessage?.id
+
+  const markChatOpened = useCallback(() => {
+    if (!id) return
+    const events = usePrivateMessagesStore.getState().events
+    const latestMessage = events.get(id)?.last()?.[1]
+    const latestTimestamp = latestMessage ? getMillisecondTimestamp(latestMessage) : undefined
+    const targetTimestamp = Math.max(Date.now(), latestTimestamp ?? 0)
+    const current = usePrivateMessagesStore.getState().lastSeen.get(id) || 0
+    if (targetTimestamp > current) {
+      updateLastSeen(id, targetTimestamp)
+    }
+  }, [id, updateLastSeen])
 
   useEffect(() => {
     if (!id) {
@@ -45,16 +61,16 @@ const Chat = ({id}: {id: string}) => {
   useEffect(() => {
     if (!id) return
 
-    updateLastSeen(id)
+    markChatOpened()
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        updateLastSeen(id)
+        markChatOpened()
       }
     }
 
     const handleFocus = () => {
-      updateLastSeen(id)
+      markChatOpened()
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
@@ -64,7 +80,15 @@ const Chat = ({id}: {id: string}) => {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("focus", handleFocus)
     }
-  }, [id, updateLastSeen])
+  }, [id, markChatOpened])
+
+  useEffect(() => {
+    if (!id || lastMessageTimestamp === undefined) return
+    const existing = usePrivateMessagesStore.getState().lastSeen.get(id) || 0
+    if (lastMessageTimestamp > existing) {
+      updateLastSeen(id, lastMessageTimestamp)
+    }
+  }, [id, lastMessageId, lastMessageTimestamp, updateLastSeen])
 
   const handleSendReaction = async (messageId: string, emoji: string) => {
     const myPubKey = useUserStore.getState().publicKey

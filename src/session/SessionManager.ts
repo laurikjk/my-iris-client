@@ -302,8 +302,9 @@ export default class SessionManager {
   async sendMessage(
     recipientPublicKey: string,
     content: string,
-    kind: number = KIND_CHAT_MESSAGE
+    options: {kind?: number; tags?: string[][]} = {}
   ): Promise<Rumor> {
+    const {kind = KIND_CHAT_MESSAGE, tags = []} = options
     const ourPubkey = getPublicKey(this.ourIdentityKey)
 
     const message: Rumor = {
@@ -311,7 +312,7 @@ export default class SessionManager {
       pubkey: ourPubkey,
       created_at: Math.floor(Date.now() / 1000),
       kind,
-      tags: [["p", recipientPublicKey]],
+      tags: this.buildMessageTags(recipientPublicKey, tags),
       content,
     }
 
@@ -327,6 +328,16 @@ export default class SessionManager {
     }
 
     return sentEvent
+  }
+
+  private buildMessageTags(recipientPublicKey: string, extraTags: string[][]): string[][] {
+    const hasRecipientPTag = extraTags.some(
+      (tag) => tag[0] === "p" && tag[1] === recipientPublicKey
+    )
+    const tags = hasRecipientPTag
+      ? [...extraTags]
+      : [["p", recipientPublicKey], ...extraTags]
+    return tags
   }
 
   private storeUserRecord(publicKey: string) {

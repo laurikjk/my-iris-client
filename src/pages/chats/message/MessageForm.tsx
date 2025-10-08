@@ -15,7 +15,6 @@ import Icon from "@/shared/components/Icons/Icon"
 import {RiAttachment2} from "@remixicon/react"
 import EmojiType from "@/types/emoji"
 import {MessageType} from "./Message"
-import {UnsignedEvent} from "nostr-tools"
 import {getSessionManager} from "@/shared/services/PrivateChats"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 
@@ -45,7 +44,6 @@ const MessageForm = ({
     Map<string, EncryptionMetaWithImeta>
   >(new Map())
   const textareaRef = useAutosizeTextarea(newMessage)
-  const theirPublicKey = id // id is now userPubKey directly
 
   useEffect(() => {
     if (!isTouchDevice && textareaRef.current) {
@@ -92,7 +90,15 @@ const MessageForm = ({
         }
       })
 
-      const sentMessage = await sessionManager.sendMessage(id, text)
+      const extraTags: string[][] = []
+      if (replyingTo) {
+        extraTags.push(["e", replyingTo.id, "", "reply"])
+      }
+
+      const sentMessage =
+        extraTags.length > 0
+          ? await sessionManager.sendMessage(id, text, {tags: extraTags})
+          : await sessionManager.sendMessage(id, text)
       await usePrivateMessagesStore
         .getState()
         .upsert(id, sentMessage as MessageType)
@@ -141,7 +147,6 @@ const MessageForm = ({
         <MessageFormReplyPreview
           replyingTo={replyingTo}
           setReplyingTo={setReplyingTo}
-          theirPublicKey={theirPublicKey}
         />
       )}
 

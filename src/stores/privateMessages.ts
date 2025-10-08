@@ -20,6 +20,7 @@ const addToMap = (
 
 interface PrivateMessagesStoreState {
   events: Map<string, SortedMap<string, MessageType>>
+  lastSeen: Map<string, number>
 }
 
 interface PrivateMessagesStoreActions {
@@ -29,6 +30,7 @@ interface PrivateMessagesStoreActions {
     messageId: string,
     updates: Partial<MessageType>
   ) => Promise<void>
+  updateLastSeen: (chatId: string, timestamp?: number) => void
   removeSession: (chatId: string) => Promise<void>
   removeMessage: (chatId: string, messageId: string) => Promise<void>
   clear: () => Promise<void>
@@ -63,12 +65,15 @@ const makeOrModifyMessage = async (chatId: string, message: MessageType) => {
 }
 
 export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
-  const rehydration = messageRepository
-    .loadAll()
-    .then((data) => set({events: data}))
+  const rehydration = Promise.all([
+    messageRepository.loadAll(),
+    messageRepository.loadLastSeen(),
+  ])
+    .then(([events, lastSeen]) => set({events, lastSeen}))
     .catch(console.error)
   return {
     events: new Map(),
+    lastSeen: new Map(),
 
     upsert: async (chatId, event) => {
       await rehydration
@@ -82,17 +87,21 @@ export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
     removeSession: async (chatId) => {
       await rehydration
       await messageRepository.deleteBySession(chatId)
+      await messageRepository.deleteLastSeen(chatId)
       set((state) => {
         const events = new Map(state.events)
         events.delete(chatId)
-        return {events}
+        const lastSeen = new Map(state.lastSeen)
+        lastSeen.delete(chatId)
+        return {events, lastSeen}
       })
     },
 
     clear: async () => {
       await rehydration
       await messageRepository.clearAll()
-      set({events: new Map()})
+      await messageRepository.clearLastSeen()
+      set({events: new Map(), lastSeen: new Map()})
     },
 
     updateMessage: async (
@@ -132,6 +141,16 @@ export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
         }
         return {events}
       })
+    },
+
+    updateLastSeen: (chatId: string, timestamp?: number) => {
+      const effectiveTimestamp = typeof timestamp === "number" ? timestamp : Date.now()
+      set((state) => {
+        const lastSeen = new Map(state.lastSeen)
+        lastSeen.set(chatId, effectiveTimestamp)
+        return {lastSeen}
+      })
+      messageRepository.saveLastSeen(chatId, effectiveTimestamp).catch(console.error)
     },
   }
 })

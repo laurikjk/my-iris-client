@@ -37,7 +37,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
     kind: number
   } | null>(null)
   const [showPlaceholder, setShowPlaceholder] = useState(false)
-  const {events} = usePrivateMessagesStore()
+  const events = usePrivateMessagesStore((state) => state.events)
   const {
     publicChats,
     lastSeen: lastSeenPublic,
@@ -64,7 +64,9 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
 
   // Get chat data for unread counts
 
-  const lastSeenPrivateTime = 0
+  const lastSeenPrivateTime = usePrivateMessagesStore((state) => state.lastSeen.get(id) || 0)
+  const updateLastSeenPrivate = usePrivateMessagesStore((state) => state.updateLastSeen)
+
   const lastSeenPublicTime = lastSeenPublic[id] || 0
 
   useEffect(() => {
@@ -243,8 +245,8 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
     }
   } else if (!group) {
     if (actualLatest?.created_at && actualLatest.pubkey !== myPubKey) {
-      const hasUnread =
-        getMillisecondTimestamp(actualLatest as MessageType) > lastSeenPrivateTime
+      const latestTimestamp = getMillisecondTimestamp(actualLatest as MessageType)
+      const hasUnread = latestTimestamp > lastSeenPrivateTime
       if (!lastSeenPrivateTime || hasUnread) {
         unreadBadge = <div className="indicator-item badge badge-primary badge-xs" />
       }
@@ -267,7 +269,13 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
       to={chatRoute}
       state={{id}}
       key={id}
-      onClick={() => isPublic && updateLastSeenPublic(id)}
+      onClick={() => {
+        if (isPublic) {
+          updateLastSeenPublic(id)
+        } else if (!group) {
+          updateLastSeenPrivate(id)
+        }
+      }}
       className={classNames("px-2 py-4 flex items-center border-b border-custom", {
         "bg-base-300": isActive,
         "hover:bg-base-300": !isActive,

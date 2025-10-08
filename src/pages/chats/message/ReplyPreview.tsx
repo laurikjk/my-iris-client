@@ -16,10 +16,7 @@ type ReplyPreviewProps = {
 const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
   const [repliedToMessage, setRepliedToMessage] = useState<MessageType | null>(null)
   const {events} = usePrivateMessagesStore()
-
-  // No need to find the reply tag here since we're passing it directly
-  // TEMP: Dummy implementation
-  const theirPublicKey = sessionId.split(":")[0]
+  const myPublicKey = useUserStore.getState().publicKey
 
   // Function to handle scrolling to the replied message
   const handleScrollToReply = () => {
@@ -41,15 +38,20 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
 
     const fetchReplyMessage = async () => {
       try {
-        // For private chats (sessionId contains ":")
-        if (sessionId.includes(":")) {
-          const sessionEvents = events.get(sessionId)
-          if (sessionEvents) {
-            const replyMsg = sessionEvents.get(replyToId)
-            if (replyMsg) {
-              setRepliedToMessage(replyMsg)
-              return
-            }
+        const sessionEvents = events.get(sessionId)
+        if (sessionEvents) {
+          const replyMsg = sessionEvents.get(replyToId)
+          if (replyMsg) {
+            setRepliedToMessage(replyMsg)
+            return
+          }
+        }
+
+        for (const messageMap of events.values()) {
+          const replyMsg = messageMap.get(replyToId)
+          if (replyMsg) {
+            setRepliedToMessage(replyMsg)
+            return
           }
         }
 
@@ -76,7 +78,7 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
     }
 
     fetchReplyMessage()
-  }, [replyToId, sessionId, theirPublicKey, events])
+  }, [replyToId, sessionId, events])
 
   if (!repliedToMessage) return null
 
@@ -89,13 +91,7 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
       onClick={handleScrollToReply}
     >
       <div className="font-semibold">
-        {repliedToMessage.pubkey === useUserStore.getState().publicKey ? (
-          "You"
-        ) : (
-          <Name
-            pubKey={sessionId.includes(":") ? theirPublicKey : repliedToMessage.pubkey}
-          />
-        )}{" "}
+        {repliedToMessage.pubkey === myPublicKey ? "You" : <Name pubKey={repliedToMessage.pubkey} />}{" "}
       </div>
       <div className="truncate max-w-[225px]">{repliedToMessage.content}</div>
     </div>

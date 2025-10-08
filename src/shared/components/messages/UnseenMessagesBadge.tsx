@@ -1,9 +1,8 @@
-// import {getMillisecondTimestamp} from "nostr-double-ratchet/src" // TEMP: Unused
-// import {useUserRecordsStore} from "@/stores/userRecords" // TEMP: Removed
-// import {usePrivateMessagesStore} from "@/stores/privateMessages" // TEMP: Unused
+import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {MessageType} from "@/pages/chats/message/Message"
-// import {useMemo} from "react" // TEMP: Unused
+import {useMemo} from "react"
 import {useUserStore} from "@/stores/user"
 
 interface UnseenMessagesBadgeProps {
@@ -12,23 +11,32 @@ interface UnseenMessagesBadgeProps {
 }
 
 const UnseenMessagesBadge = ({messages, lastSeen}: UnseenMessagesBadgeProps) => {
-  // TEMP: Dummy global last seen data and events
-  // const globalLastSeen = new Map<string, number>()
-  // const {events} = usePrivateMessagesStore()
+  const {events, lastSeen: lastSeenFromStore} = usePrivateMessagesStore()
 
-  // TEMP: Always return false for unread
-  const hasUnread = false
+  // Global usage - check all sessions (for navsidebar/footer)
+  const hasUnread = useMemo(() => {
+    const myPubKey = useUserStore.getState().publicKey
+    for (const [chatId, sessionEvents] of events.entries()) {
+      const [, latest] = sessionEvents.last() ?? []
+      if (!latest) continue
+      if (latest.pubkey === myPubKey) continue
+      const lastSeenForChat = lastSeenFromStore.get(chatId) || 0
+      const latestTime = getMillisecondTimestamp(latest as MessageType)
+      if (latestTime > lastSeenForChat) {
+        return true
+      }
+    }
+    return false
+  }, [events, lastSeenFromStore])
 
   // If props are provided, use them (for specific session usage)
   if (messages && lastSeen !== undefined) {
-    const unseenMessages = Array.from(messages.entries())
-      .filter(([, message]) => {
-        if (!message.created_at) return false
-        const myPubKey = useUserStore.getState().publicKey
-        if (message.pubkey === myPubKey) return false
-        return message.created_at * 1000 > lastSeen
-      })
-      .slice(-10)
+    const unseenMessages = Array.from(messages.entries()).filter(([, message]) => {
+      if (!message.created_at) return false
+      const myPubKey = useUserStore.getState().publicKey
+      if (message.pubkey === myPubKey) return false
+      return getMillisecondTimestamp(message) > lastSeen
+    })
 
     if (unseenMessages.length === 0) {
       return null

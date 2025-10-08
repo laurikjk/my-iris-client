@@ -4,14 +4,27 @@ import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import Dexie, {type EntityTable} from "dexie"
 
 export type MessageEntity = MessageType & {session_id: string}
+export interface SessionMetaEntity {
+  session_id: string
+  last_seen: number
+}
 
 class MessageDb extends Dexie {
   public messages!: EntityTable<MessageEntity, "id">
+  public session_meta!: EntityTable<SessionMetaEntity, "session_id">
   constructor() {
     super("Messages")
     this.version(1).stores({
       messages: "id, session_id, created_at",
     })
+    this.version(2)
+      .stores({
+        messages: "id, session_id, created_at",
+        session_meta: "session_id",
+      })
+      .upgrade(async (tx) => {
+        await tx.table("session_meta").clear()
+      })
   }
 }
 
@@ -28,6 +41,23 @@ export async function loadAll(): Promise<Map<string, SortedMap<string, MessageTy
     sessionMap.set(session_id, m)
   })
   return sessionMap
+}
+
+export async function loadLastSeen(): Promise<Map<string, number>> {
+  const rows = await db.session_meta.toArray()
+  return new Map(rows.map(({session_id, last_seen}) => [session_id, last_seen]))
+}
+
+export async function saveLastSeen(sessionId: string, timestamp: number): Promise<void> {
+  await db.session_meta.put({session_id: sessionId, last_seen: timestamp})
+}
+
+export async function deleteLastSeen(sessionId: string): Promise<void> {
+  await db.session_meta.delete(sessionId)
+}
+
+export async function clearLastSeen(): Promise<void> {
+  await db.session_meta.clear()
 }
 
 export async function save(sessionId: string, message: MessageType): Promise<void> {
