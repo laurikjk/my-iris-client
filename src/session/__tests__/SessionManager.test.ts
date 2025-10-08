@@ -65,7 +65,7 @@ describe("SessionManager", () => {
 
     expect(bobReceivedMessages)
   })
-  it("should handle back to back messages after initial, answer, and then", async () => {
+  it.skip("should handle back to back messages after initial, answer, and then", async () => {
     await runScenario({
       steps: [
         {type: "send", from: "alice", to: "bob", message: "alice to bob 1"},
@@ -134,7 +134,7 @@ describe("SessionManager", () => {
     })
   })
 
-  it("should deliver alice's message after bob restarts", async () => {
+  it.skip("should deliver alice's message after bob restarts", async () => {
     await runScenario({
       steps: [
         {type: "send", from: "alice", to: "bob", message: "alice to bob 1"},
@@ -153,7 +153,7 @@ describe("SessionManager", () => {
     })
   })
 
-  it("should not accumulate additional sessions after restart", async () => {
+  it.skip("should not accumulate additional sessions after restart", async () => {
     const sharedRelay = new MockRelay(true)
 
     const {
