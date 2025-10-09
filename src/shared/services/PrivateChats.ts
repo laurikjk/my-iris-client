@@ -6,6 +6,7 @@ import NDK, {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 import {useUserStore} from "../../stores/user"
 import {getEncryptFunction} from "@/utils/nostrCrypto"
+import {hexToBytes} from "nostr-tools/utils"
 
 const createSubscribe = (ndk: NDK): NostrSubscribe => {
   return (filter: NDKFilter, onEvent: (event: VerifiedEvent) => void) => {
@@ -48,18 +49,22 @@ let manager: SessionManager | null = null
 export const getSessionManager = () => {
   if (manager) return manager
 
-  const privateKey = useUserStore.getState().privateKey
-  if (!privateKey) throw new Error("No private key")
+  const {publicKey, privateKey} = useUserStore.getState()
 
-  // TODO: support encrypt function
-  const privateKeyOrEncryptFunction = getEncryptFunction(privateKey)
-  if (typeof privateKeyOrEncryptFunction === "function")
-    throw new Error("Encrypt function not supported")
+  const encrypt = privateKey
+    ? hexToBytes(privateKey)
+    : async (plaintext: string, pubkey: string) => {
+        if (window.nostr?.nip44) {
+          return window.nostr.nip44.encrypt(pubkey, plaintext)
+        }
+        throw new Error("No nostr extension or private key")
+      }
 
   const ndkInstance = ndk()
 
   manager = new SessionManager(
-    privateKeyOrEncryptFunction,
+    publicKey,
+    encrypt,
     getOrCreateDeviceId(),
     createSubscribe(ndkInstance),
     createPublish(ndkInstance),
