@@ -1,4 +1,5 @@
 import {
+  DecryptFunction,
   NostrSubscribe,
   NostrPublish,
   Rumor,
@@ -9,7 +10,6 @@ import {
   deserializeSessionState,
 } from "nostr-double-ratchet/src"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
-import {getPublicKey} from "nostr-tools"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
 
 export type OnEventCallback = (event: Rumor, from: string) => void
@@ -45,7 +45,8 @@ export default class SessionManager {
   private storage: StorageAdapter
   private nostrSubscribe: NostrSubscribe
   private nostrPublish: NostrPublish
-  private ourIdentityKey: Uint8Array
+  private ourIdentityKey: Uint8Array | DecryptFunction
+  private ourPublicKey: string
 
   // Data
   private userRecords: Map<string, UserRecord> = new Map()
@@ -64,7 +65,8 @@ export default class SessionManager {
   private initialized: boolean = false
 
   constructor(
-    ourIdentityKey: Uint8Array,
+    ourPublicKey: string,
+    ourIdentityKey: Uint8Array | DecryptFunction,
     deviceId: string,
     nostrSubscribe: NostrSubscribe,
     nostrPublish: NostrPublish,
@@ -73,6 +75,7 @@ export default class SessionManager {
     this.userRecords = new Map()
     this.nostrSubscribe = nostrSubscribe
     this.nostrPublish = nostrPublish
+    this.ourPublicKey = ourPublicKey
     this.ourIdentityKey = ourIdentityKey
     this.deviceId = deviceId
     this.storage = storage || new InMemoryStorageAdapter()
@@ -81,8 +84,6 @@ export default class SessionManager {
   async init() {
     if (this.initialized) return
     this.initialized = true
-
-    const ourPublicKey = getPublicKey(this.ourIdentityKey)
 
     await this.loadAllUserRecords()
 
@@ -96,7 +97,7 @@ export default class SessionManager {
       .catch(() => null)
       .then(async (invite) => {
         if (invite) return invite
-        const newInvite = Invite.createNew(ourPublicKey, this.deviceId)
+        const newInvite = Invite.createNew(this.ourPublicKey, this.deviceId)
         await this.storage.put(`invite/${this.deviceId}`, newInvite.serialize())
         const event = newInvite.getEvent()
         await this.nostrPublish(event).catch(console.error)
@@ -216,7 +217,7 @@ export default class SessionManager {
 
       const {session, event} = await invite.accept(
         this.nostrSubscribe,
-        getPublicKey(this.ourIdentityKey),
+        this.ourPublicKey,
         this.ourIdentityKey,
         this.deviceId
       )
@@ -340,10 +341,10 @@ export default class SessionManager {
   ): Promise<Rumor | undefined> {
     await this.init()
     const userRecord = this.getOrCreateUserRecord(recipientIdentityKey)
-    const ourUserRecord = this.getOrCreateUserRecord(getPublicKey(this.ourIdentityKey))
+    const ourUserRecord = this.getOrCreateUserRecord(this.ourPublicKey)
 
     this.setupUser(recipientIdentityKey)
-    this.setupUser(getPublicKey(this.ourIdentityKey))
+    this.setupUser(this.ourPublicKey)
 
     const devices = [
       ...Array.from(userRecord.devices.values()),
@@ -374,11 +375,10 @@ export default class SessionManager {
     options: {kind?: number; tags?: string[][]} = {}
   ): Promise<Rumor> {
     const {kind = KIND_CHAT_MESSAGE, tags = []} = options
-    const ourPubkey = getPublicKey(this.ourIdentityKey)
 
     const message: Rumor = {
       id: crypto.randomUUID(),
-      pubkey: ourPubkey,
+      pubkey: this.ourPublicKey,
       created_at: Math.floor(Date.now() / 1000),
       kind,
       tags: this.buildMessageTags(recipientPublicKey, tags),

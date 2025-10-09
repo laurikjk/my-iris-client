@@ -39,7 +39,14 @@ export const createMockSessionManager = async (
     return await mockRelay.publish(event, secretKey)
   })
 
-  const manager = new SessionManager(secretKey, deviceId, subscribe, publish, mockStorage)
+  const manager = new SessionManager(
+    publicKey,
+    secretKey,
+    deviceId,
+    subscribe,
+    publish,
+    mockStorage
+  )
 
   await manager.init()
 
