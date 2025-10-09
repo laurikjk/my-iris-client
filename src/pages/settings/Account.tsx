@@ -1,6 +1,6 @@
 import {unsubscribeAll} from "@/utils/notifications"
 import {useUserStore} from "@/stores/user"
-import {useUserRecordsStore} from "@/stores/userRecords"
+// import {useUserRecordsStore} from "@/stores/userRecords" // TEMP: Removed
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useDraftStore} from "@/stores/draft"
 import {MouseEvent, useEffect, useState} from "react"
@@ -79,8 +79,8 @@ function Account() {
       // Clear events store (clears message repository)
       await usePrivateMessagesStore.getState().clear()
 
-      // Reset stores with reset methods
-      useUserRecordsStore.getState().reset()
+      // TEMP: Skip resetting userRecords store
+      // useUserRecordsStore.getState().reset()
       useDraftStore.getState().clearAll()
 
       // For stores without reset methods, we'll rely on storage clearing
@@ -92,7 +92,8 @@ function Account() {
 
   async function publishInviteTombstones() {
     try {
-      const invites = useUserRecordsStore.getState().getOwnDeviceInvites()
+      // TEMP: Skip publishing invite tombstones
+      const invites = new Map() // useUserRecordsStore.getState().getOwnDeviceInvites()
       for (const invite of invites.values()) {
         const deletionEvent = new NDKEvent(ndk(), {
           kind: 30078,

@@ -17,7 +17,6 @@ import debounce from "lodash/debounce"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
 import {useGroupsStore} from "@/stores/groups"
-import {usePrivateChatsStore} from "@/stores/privateChats"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "@/pages/chats/utils/messageGrouping"
 
@@ -38,7 +37,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
     kind: number
   } | null>(null)
   const [showPlaceholder, setShowPlaceholder] = useState(false)
-  const {events} = usePrivateMessagesStore()
+  const events = usePrivateMessagesStore((state) => state.events)
   const {
     publicChats,
     lastSeen: lastSeenPublic,
@@ -47,7 +46,6 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
   } = usePublicChatsStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const {groups} = useGroupsStore()
-  const {getChatsList} = usePrivateChatsStore()
   const group = groups[id]
 
   const chat = isPublic ? publicChats[id] : null
@@ -65,12 +63,12 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
   const actualLatest = type === "group" ? groupLatest : latest
 
   // Get chat data for unread counts
-  const chatsList = getChatsList()
-  const chatData = chatsList.find((c) => c.userPubKey === id)
 
-  const lastSeenPrivateTime = chatData?.lastMessage?.created_at
-    ? chatData.lastMessage.created_at * 1000
-    : 0
+  const lastSeenPrivateTime = usePrivateMessagesStore(
+    (state) => state.lastSeen.get(id) || 0
+  )
+  const updateLastSeenPrivate = usePrivateMessagesStore((state) => state.updateLastSeen)
+
   const lastSeenPublicTime = lastSeenPublic[id] || 0
 
   useEffect(() => {
@@ -249,8 +247,8 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
     }
   } else if (!group) {
     if (actualLatest?.created_at && actualLatest.pubkey !== myPubKey) {
-      const hasUnread =
-        getMillisecondTimestamp(actualLatest as MessageType) > lastSeenPrivateTime
+      const latestTimestamp = getMillisecondTimestamp(actualLatest as MessageType)
+      const hasUnread = latestTimestamp > lastSeenPrivateTime
       if (!lastSeenPrivateTime || hasUnread) {
         unreadBadge = <div className="indicator-item badge badge-primary badge-xs" />
       }
@@ -273,7 +271,13 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
       to={chatRoute}
       state={{id}}
       key={id}
-      onClick={() => isPublic && updateLastSeenPublic(id)}
+      onClick={() => {
+        if (isPublic) {
+          updateLastSeenPublic(id)
+        } else if (!group) {
+          updateLastSeenPrivate(id)
+        }
+      }}
       className={classNames("px-2 py-4 flex items-center border-b border-custom", {
         "bg-base-300": isActive,
         "hover:bg-base-300": !isActive,

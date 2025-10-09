@@ -1,24 +1,47 @@
 import {usePublicChatsStore} from "@/stores/publicChats"
 import Header from "@/shared/components/header/Header"
-import {usePrivateChatsStore} from "@/stores/privateChats"
 import ChatListItem from "./ChatListItem"
 import {NavLink} from "@/navigation"
 import classNames from "classnames"
-import {useEffect} from "react"
+import {useEffect, useMemo} from "react"
 import {RiChatNewLine} from "@remixicon/react"
 import {useGroupsStore} from "@/stores/groups"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "@/pages/chats/utils/messageGrouping"
+import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
+import {MessageType} from "@/pages/chats/message/Message"
 
 interface ChatListProps {
   className?: string
 }
 
 const ChatList = ({className}: ChatListProps) => {
-  const {getChatsList} = usePrivateChatsStore()
   const {publicChats, timestamps, addOrRefreshChatById} = usePublicChatsStore()
   const {groups} = useGroupsStore()
+  const {events} = usePrivateMessagesStore()
+
+  const privateChatLatestTimestamps = useMemo(() => {
+    const latestMap = new Map<string, number>()
+    for (const [userPubKey, messageMap] of events.entries()) {
+      const [, latest] = messageMap.last() ?? []
+      if (!latest) {
+        latestMap.set(userPubKey, 0)
+        continue
+      }
+      const timestamp = getMillisecondTimestamp(latest as MessageType)
+      latestMap.set(userPubKey, timestamp)
+    }
+    return latestMap
+  }, [events])
+
+  const privateChatsList = useMemo(
+    () =>
+      Array.from(privateChatLatestTimestamps.entries()).map(
+        ([userPubKey, lastMessageTime]) => ({userPubKey, lastMessageTime})
+      ),
+    [privateChatLatestTimestamps]
+  )
 
   useEffect(() => {
     Object.keys(publicChats).forEach((chatId) => {
@@ -46,14 +69,10 @@ const ChatList = ({className}: ChatListProps) => {
     if (type === "group") return latestForGroup(id)
     if (type === "public") return latestForPublicChat(id)
     // For private chats, use the lastMessageTime from chats store
-    const chatsList = getChatsList()
-    const chat = chatsList.find((c) => c.userPubKey === id)
-    return chat?.lastMessageTime || 0
+    return privateChatLatestTimestamps.get(id) || 0
   }
 
   // Get private chats from chats store
-  const privateChatsList = getChatsList()
-
   const allChatItems = [
     ...Object.values(groups).map((group) => ({id: group.id, type: "group"})),
     ...privateChatsList.map((chat) => ({id: chat.userPubKey, type: "private"})),

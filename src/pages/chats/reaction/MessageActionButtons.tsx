@@ -1,6 +1,6 @@
 import {FloatingEmojiPicker} from "@/shared/components/emoji/FloatingEmojiPicker"
 import {RiHeartAddLine, RiReplyLine} from "@remixicon/react"
-import {useSessionsStore} from "@/stores/sessions"
+// import {useSessionsStore} from "@/stores/sessions" // TEMP: Removed
 import {MouseEvent, useState} from "react"
 import classNames from "classnames"
 import {KIND_REACTION} from "@/utils/constants"
@@ -34,7 +34,10 @@ const MessageActionButtons = ({
   nostrEventId,
   message,
 }: MessageActionButtonsProps) => {
-  const {sendMessage} = useSessionsStore()
+  // TEMP: Dummy sendMessage function
+  const sendMessage = async (sessionId: string, event: unknown) => {
+    console.log("TEMP: sendMessage called but not implemented", sessionId, event)
+  }
   const [showReactionsPicker, setShowReactionsPicker] = useState(false)
   const [pickerPosition, setPickerPosition] = useState<{clientY?: number}>({})
   const [showInfoModal, setShowInfoModal] = useState(false)

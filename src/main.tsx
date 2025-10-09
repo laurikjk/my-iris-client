@@ -8,15 +8,40 @@ import {subscribeToDMNotifications, subscribeToNotifications} from "./utils/noti
 import {migrateUserState, migratePublicChats} from "./utils/migration"
 import pushNotifications from "./utils/pushNotifications"
 import {useSettingsStore} from "@/stores/settings"
-import {useUserRecordsStore} from "@/stores/userRecords"
-import {
-  subscribeToOwnDeviceInvites,
-  resetDeviceInvitesInitialization,
-} from "@/stores/privateChats"
 import {ndk} from "./utils/ndk"
 import socialGraph from "./utils/socialGraph"
 import DebugManager from "./utils/DebugManager"
 import Layout from "@/shared/components/Layout"
+import {usePrivateMessagesStore} from "./stores/privateMessages"
+import {getSessionManager} from "./shared/services/PrivateChats"
+import {getTag} from "./utils/tagUtils"
+
+let unsubscribeSessionEvents: (() => void) | null = null
+
+const attachSessionEventListener = () => {
+  try {
+    const sessionManager = getSessionManager()
+    void sessionManager.init().then(() => {
+      unsubscribeSessionEvents?.()
+      unsubscribeSessionEvents = sessionManager.onEvent((event, pubKey) => {
+        const {publicKey} = useUserStore.getState()
+        if (!publicKey) return
+
+        const pTag = getTag("p", event.tags)
+        if (!pTag) return
+
+        const from = pubKey === publicKey ? pTag : pubKey
+        const to = pubKey === publicKey ? publicKey : pTag
+
+        if (!from || !to) return
+
+        void usePrivateMessagesStore.getState().upsert(from, to, event)
+      })
+    })
+  } catch (error) {
+    console.error("Failed to attach session event listener", error)
+  }
+}
 
 // Move initialization to a function to avoid side effects
 const initializeApp = () => {
@@ -41,8 +66,7 @@ const initializeApp = () => {
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
-      useUserRecordsStore.getState().createDefaultInvites()
-      subscribeToOwnDeviceInvites().catch(console.error)
+      attachSessionEventListener()
     }
   }
 
@@ -77,15 +101,13 @@ const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
   // Only proceed if public key actually changed
   if (state.publicKey && state.publicKey !== prevState.publicKey) {
     console.log("Public key changed, initializing chat modules")
-    resetDeviceInvitesInitialization() // Reset to allow re-initialization
     subscribeToNotifications()
     subscribeToDMNotifications()
     migratePublicChats()
 
     // Only initialize DM sessions if not in readonly mode
     if (state.privateKey || state.nip07Login) {
-      useUserRecordsStore.getState().createDefaultInvites()
-      subscribeToOwnDeviceInvites().catch(console.error)
+      attachSessionEventListener()
     }
   }
 })
@@ -104,5 +126,6 @@ if (import.meta.hot) {
     // Clean up subscriptions on hot reload
     unsubscribeUser()
     unsubscribeTheme()
+    unsubscribeSessionEvents?.()
   })
 }

@@ -3,7 +3,6 @@ import {useParams} from "@/navigation"
 import {useGroupsStore} from "@/stores/groups"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useUserStore} from "@/stores/user"
-import {useUserRecordsStore} from "@/stores/userRecords"
 import ChatContainer from "../components/ChatContainer"
 import MessageForm from "../message/MessageForm"
 import GroupChatHeader from "./GroupChatHeader"
@@ -20,7 +19,6 @@ const GroupChatPage = () => {
   // Fix: Use the events store with proper subscription to get reactive updates
   const {events} = usePrivateMessagesStore()
   const myPubKey = useUserStore((state) => state.publicKey)
-  const {sendToUser} = useUserRecordsStore()
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
   if (!id || !group) {
@@ -31,7 +29,7 @@ const GroupChatPage = () => {
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !myPubKey) return
-    const event = {
+    const messageEvent = {
       kind: 0,
       content,
       created_at: Math.floor(Date.now() / 1000),
@@ -41,16 +39,17 @@ const GroupChatPage = () => {
       ],
     }
 
+    //TODO: Implement sendMessage function to handle optimistic UI update and sending
     // Send to all group members
     // For ourselves, the optimistic update in sendMessage will handle display
     // For others, we need to actually send the message
-    await Promise.all(group.members.map((pubkey: string) => sendToUser(pubkey, event)))
+    void messageEvent
   }
 
   const handleSendReaction = async (messageId: string, emoji: string) => {
     if (!myPubKey) return
 
-    const event = {
+    const reactionEvent = {
       kind: KIND_REACTION,
       content: emoji,
       created_at: Math.floor(Date.now() / 1000),
@@ -62,7 +61,8 @@ const GroupChatPage = () => {
     }
 
     // Send reaction to all group members including self for multi-device support
-    await Promise.all(group.members.map((pubkey: string) => sendToUser(pubkey, event)))
+    // TODO: once delivery is available, dispatch reactionEvent to members
+    void reactionEvent
   }
 
   return (

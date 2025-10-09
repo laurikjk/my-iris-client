@@ -247,7 +247,7 @@ const NOTIFICATION_CONFIGS: Record<
     icon: "/favicon.png",
   },
   [INVITE_RESPONSE_KIND]: {
-    title: "New chat via invite", // TODO get invite label public or private
+    title: "New messages",
     url: "/chats",
     icon: "/favicon.png",
   },

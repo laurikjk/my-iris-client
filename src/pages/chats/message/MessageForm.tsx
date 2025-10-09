@@ -11,12 +11,13 @@ import UploadButton from "@/shared/components/button/UploadButton"
 import EmojiButton from "@/shared/components/emoji/EmojiButton"
 import MessageFormReplyPreview from "./MessageFormReplyPreview"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
-import {usePrivateChatsStore} from "@/stores/privateChats"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiAttachment2} from "@remixicon/react"
 import EmojiType from "@/types/emoji"
 import {MessageType} from "./Message"
-import {UnsignedEvent} from "nostr-tools"
+import {getSessionManager} from "@/shared/services/PrivateChats"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
+import {useUserStore} from "@/stores/user"
 
 interface MessageFormProps {
   id: string
@@ -38,13 +39,12 @@ const MessageForm = ({
   onSendMessage,
   isPublicChat = false,
 }: MessageFormProps) => {
-  const {sendToUser} = usePrivateChatsStore()
+  const sessionManager = getSessionManager()
   const [newMessage, setNewMessage] = useState("")
   const [encryptionMetadata, setEncryptionMetadata] = useState<
     Map<string, EncryptionMetaWithImeta>
   >(new Map())
   const textareaRef = useAutosizeTextarea(newMessage)
-  const theirPublicKey = id // id is now userPubKey directly
 
   useEffect(() => {
     if (!isTouchDevice && textareaRef.current) {
@@ -91,18 +91,18 @@ const MessageForm = ({
         }
       })
 
-      // Construct the event object
-      const event: Partial<UnsignedEvent> = {
-        content: text,
-        kind: replyingTo ? 4 : 4, // Replace with correct kind if needed
-        tags: [
-          ...(replyingTo?.id ? [["e", replyingTo.id]] : []),
-          ["ms", Date.now().toString()],
-          ...imetaTags,
-        ],
+      const extraTags: string[][] = []
+      if (replyingTo) {
+        extraTags.push(["e", replyingTo.id, "", "reply"])
       }
 
-      await sendToUser(id, event)
+      const sentMessage =
+        extraTags.length > 0
+          ? await sessionManager.sendMessage(id, text, {tags: extraTags})
+          : await sessionManager.sendMessage(id, text)
+      await usePrivateMessagesStore
+        .getState()
+        .upsert(id, useUserStore.getState().publicKey, sentMessage)
       setEncryptionMetadata(new Map()) // Clear after sending
     } catch (error) {
       console.error("Failed to send message:", error)
@@ -145,11 +145,7 @@ const MessageForm = ({
   return (
     <footer className="border-t border-custom fixed md:sticky bottom-0 w-full pb-[env(safe-area-inset-bottom)] bg-base-200">
       {replyingTo && (
-        <MessageFormReplyPreview
-          replyingTo={replyingTo}
-          setReplyingTo={setReplyingTo}
-          theirPublicKey={theirPublicKey}
-        />
+        <MessageFormReplyPreview replyingTo={replyingTo} setReplyingTo={setReplyingTo} />
       )}
 
       <div className="flex gap-2 p-4 relative">

@@ -5,10 +5,11 @@ import {UserRow} from "@/shared/components/user/UserRow"
 import Header from "@/shared/components/header/Header"
 import Dropdown from "@/shared/components/ui/Dropdown"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {useUserRecordsStore} from "@/stores/userRecords"
 import {MessageType} from "../message/Message"
 import {useNavigate} from "@/navigation"
 import {useState} from "react"
+import {getSessionManager} from "@/shared/services/PrivateChats"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
 interface PrivateChatHeaderProps {
   id: string
   messages: SortedMap<string, MessageType>
@@ -17,44 +18,47 @@ interface PrivateChatHeaderProps {
 const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const navigate = useNavigate()
-  const {sessions, deleteSession} = useUserRecordsStore()
-  const session = sessions.get(id)
+  const handleDeleteChat = async () => {
+    if (!id) return
 
-  const handleDeleteChat = () => {
-    if (id && confirm("Delete this chat?")) {
-      deleteSession(id)
+    if (!confirm("Delete this chat?")) return
+
+    try {
+      const sessionManager = getSessionManager()
+      await sessionManager.deleteUser(id)
+      await usePrivateMessagesStore.getState().removeSession(id)
       navigate("/chats")
+    } catch (error) {
+      console.error("Failed to delete chat", error)
     }
   }
 
   const handleSendFile = async () => {
-    if (session) {
-      const peerConnection = await getPeerConnection(id, {
-        ask: false,
-        create: true,
-        connect: true,
-      })
-      if (peerConnection) {
-        // Create a hidden file input
-        const fileInput = document.createElement("input")
-        fileInput.type = "file"
-        fileInput.style.display = "none"
-        fileInput.onchange = (e) => {
-          const file = (e.target as HTMLInputElement).files?.[0]
-          if (file) {
-            peerConnection.sendFile(file)
-          }
-        }
-        document.body.appendChild(fileInput)
-        fileInput.click()
-        document.body.removeChild(fileInput)
+    // WebRTC disabled until session metadata is restored
+    const peerConnection = await getPeerConnection(id, {
+      ask: false,
+      create: true,
+      connect: true,
+    })
+    if (!peerConnection) return
+
+    const fileInput = document.createElement("input")
+    fileInput.type = "file"
+    fileInput.style.display = "none"
+    fileInput.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        peerConnection.sendFile(file)
       }
     }
+    document.body.appendChild(fileInput)
+    fileInput.click()
+    document.body.removeChild(fileInput)
   }
 
   const user = id.split(":").shift()!
 
-  const showWebRtc = false // socialGraph().getFollowedByUser(user).has(myPubKey) || user === myPubKey
+  const showWebRtc = false // button hidden until WebRTC flow is re-enabled
 
   return (
     <Header showNotifications={false} scrollDown={true} slideUp={false} bold={false}>

@@ -4,6 +4,7 @@ import * as messageRepository from "@/utils/messageRepository"
 import {KIND_REACTION} from "@/utils/constants"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {create} from "zustand"
+import {useUserStore} from "./user"
 
 const addToMap = (
   chatEventMap: Map<string, SortedMap<string, MessageType>>,
@@ -20,15 +21,17 @@ const addToMap = (
 
 interface PrivateMessagesStoreState {
   events: Map<string, SortedMap<string, MessageType>>
+  lastSeen: Map<string, number>
 }
 
 interface PrivateMessagesStoreActions {
-  upsert: (chatId: string, message: MessageType) => Promise<void>
+  upsert: (from: string, to: string, message: MessageType) => Promise<void>
   updateMessage: (
     chatId: string,
     messageId: string,
     updates: Partial<MessageType>
   ) => Promise<void>
+  updateLastSeen: (chatId: string, timestamp?: number) => void
   removeSession: (chatId: string) => Promise<void>
   removeMessage: (chatId: string, messageId: string) => Promise<void>
   clear: () => Promise<void>
@@ -36,30 +39,12 @@ interface PrivateMessagesStoreActions {
 
 type PrivateMessagesStore = PrivateMessagesStoreState & PrivateMessagesStoreActions
 
-const makeOrModifyMessage = async (_chatId: string, message: MessageType) => {
+const makeOrModifyMessage = async (message: MessageType) => {
   const isReaction = message.kind === KIND_REACTION
   const eTag = message.tags.find(([key]) => key === "e")
   if (isReaction && eTag) {
     const [, messageId] = eTag
-    // First try to find by the exact ID (for inner message IDs)
-    let oldMsg = await messageRepository.getById(messageId)
-
-    // If not found, search through all messages to find by canonical ID
-    if (!oldMsg) {
-      const state = usePrivateMessagesStore.getState()
-
-      // Search through all chats for a message with matching ID
-      for (const [, chatMessages] of state.events.entries()) {
-        // Find message with matching ID
-        for (const [, msg] of chatMessages.entries()) {
-          if (msg.id === messageId) {
-            oldMsg = msg
-            break
-          }
-        }
-        if (oldMsg) break
-      }
-    }
+    const oldMsg = await messageRepository.getById(messageId)
 
     const pubKey = message.pubkey
 
@@ -71,37 +56,29 @@ const makeOrModifyMessage = async (_chatId: string, message: MessageType) => {
           [pubKey]: message.content,
         },
       }
-      // Find which chat this message belongs to
-      let messageChatId = null
-      for (const [cid, chatMessages] of usePrivateMessagesStore
-        .getState()
-        .events.entries()) {
-        if (chatMessages.has(oldMsg.id)) {
-          messageChatId = cid
-          break
-        }
-      }
 
-      if (messageChatId) {
-        await messageRepository.save(messageChatId, updatedMsg)
-        return updatedMsg
-      }
+      return updatedMsg
     }
   }
   return message
 }
 
 export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
-  const rehydration = messageRepository
-    .loadAll()
-    .then((data) => set({events: data}))
+  const rehydration = Promise.all([
+    messageRepository.loadAll(),
+    messageRepository.loadLastSeen(),
+  ])
+    .then(([events, lastSeen]) => set({events, lastSeen}))
     .catch(console.error)
   return {
     events: new Map(),
+    lastSeen: new Map(),
 
-    upsert: async (chatId, event) => {
+    upsert: async (from, to, event) => {
       await rehydration
-      const message = await makeOrModifyMessage(chatId, event)
+      const message = await makeOrModifyMessage(event)
+      const myPubKey = useUserStore.getState().publicKey
+      const chatId = from === myPubKey ? to : from
       await messageRepository.save(chatId, message)
       set((state) => ({
         events: addToMap(new Map(state.events), chatId, message),
@@ -111,17 +88,21 @@ export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
     removeSession: async (chatId) => {
       await rehydration
       await messageRepository.deleteBySession(chatId)
+      await messageRepository.deleteLastSeen(chatId)
       set((state) => {
         const events = new Map(state.events)
         events.delete(chatId)
-        return {events}
+        const lastSeen = new Map(state.lastSeen)
+        lastSeen.delete(chatId)
+        return {events, lastSeen}
       })
     },
 
     clear: async () => {
       await rehydration
       await messageRepository.clearAll()
-      set({events: new Map()})
+      await messageRepository.clearLastSeen()
+      set({events: new Map(), lastSeen: new Map()})
     },
 
     updateMessage: async (
@@ -161,6 +142,16 @@ export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
         }
         return {events}
       })
+    },
+
+    updateLastSeen: (chatId: string, timestamp?: number) => {
+      const effectiveTimestamp = typeof timestamp === "number" ? timestamp : Date.now()
+      set((state) => {
+        const lastSeen = new Map(state.lastSeen)
+        lastSeen.set(chatId, effectiveTimestamp)
+        return {lastSeen}
+      })
+      messageRepository.saveLastSeen(chatId, effectiveTimestamp).catch(console.error)
     },
   }
 })

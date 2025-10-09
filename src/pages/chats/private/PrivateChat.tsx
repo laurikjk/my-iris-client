@@ -2,35 +2,50 @@ import ChatContainer from "../components/ChatContainer"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {comparator} from "../utils/messageGrouping"
 import PrivateChatHeader from "./PrivateChatHeader"
-import {usePrivateChatsStore} from "@/stores/privateChats"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import MessageForm from "../message/MessageForm"
 import {MessageType} from "../message/Message"
-import {useEffect, useState} from "react"
-import {useUserRecordsStore} from "@/stores/userRecords"
+import {useEffect, useState, useCallback} from "react"
 import {useUserStore} from "@/stores/user"
 import {KIND_REACTION} from "@/utils/constants"
+import {getSessionManager} from "@/shared/services/PrivateChats"
+import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 
 const Chat = ({id}: {id: string}) => {
   // id is now userPubKey instead of sessionId
-  const {updateLastSeen} = usePrivateChatsStore()
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
-  // Get all sessions for this user
-  const sessions = useUserRecordsStore((state) => state.sessions)
-  const userSessions = Array.from(sessions.keys()).filter((sessionId) =>
-    sessionId.startsWith(`${id}:`)
-  )
-  const hasAnySessions = userSessions.length > 0
+  // Allow messaging regardless of session state - sessions will be created automatically
 
   // Get messages reactively from events store - this will update when new messages are added
   const eventsMap = usePrivateMessagesStore((state) => state.events)
+  const updateLastSeen = usePrivateMessagesStore((state) => state.updateLastSeen)
   const messages = eventsMap.get(id) ?? new SortedMap<string, MessageType>([], comparator)
+  const lastMessageEntry = messages.last()
+  const lastMessage = lastMessageEntry ? lastMessageEntry[1] : undefined
+  const lastMessageTimestamp = lastMessage
+    ? getMillisecondTimestamp(lastMessage)
+    : undefined
+  const lastMessageId = lastMessage?.id
+
+  const markChatOpened = useCallback(() => {
+    if (!id) return
+    const events = usePrivateMessagesStore.getState().events
+    const latestMessage = events.get(id)?.last()?.[1]
+    const latestTimestamp = latestMessage
+      ? getMillisecondTimestamp(latestMessage)
+      : undefined
+    const targetTimestamp = Math.max(Date.now(), latestTimestamp ?? 0)
+    const current = usePrivateMessagesStore.getState().lastSeen.get(id) || 0
+    if (targetTimestamp > current) {
+      updateLastSeen(id, targetTimestamp)
+    }
+  }, [id, updateLastSeen])
 
   useEffect(() => {
-    if (!id || !hasAnySessions) {
+    if (!id) {
       return
     }
 
@@ -45,21 +60,21 @@ const Chat = ({id}: {id: string}) => {
         setHaveSent(true)
       }
     })
-  }, [id, messages, haveReply, haveSent, hasAnySessions])
+  }, [id, messages, haveReply, haveSent])
 
   useEffect(() => {
     if (!id) return
 
-    updateLastSeen(id)
+    markChatOpened()
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        updateLastSeen(id)
+        markChatOpened()
       }
     }
 
     const handleFocus = () => {
-      updateLastSeen(id)
+      markChatOpened()
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
@@ -69,25 +84,43 @@ const Chat = ({id}: {id: string}) => {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("focus", handleFocus)
     }
-  }, [id, updateLastSeen])
+  }, [id, markChatOpened])
 
-  const {sendToUser} = useUserRecordsStore()
+  useEffect(() => {
+    if (!id || lastMessageTimestamp === undefined) return
+    const existing = usePrivateMessagesStore.getState().lastSeen.get(id) || 0
+    if (lastMessageTimestamp > existing) {
+      updateLastSeen(id, lastMessageTimestamp)
+    }
+  }, [id, lastMessageId, lastMessageTimestamp, updateLastSeen])
 
   const handleSendReaction = async (messageId: string, emoji: string) => {
     const myPubKey = useUserStore.getState().publicKey
-    if (!myPubKey) return
+    if (!myPubKey || !emoji.trim()) return
 
-    const event = {
-      kind: KIND_REACTION,
-      content: emoji,
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [
-        ["e", messageId],
-        ["ms", String(Date.now())],
-      ],
+    try {
+      const sessionManager = getSessionManager()
+      const timestampSeconds = Math.floor(Date.now() / 1000)
+      const reactionEvent = {
+        id: crypto.randomUUID(),
+        pubkey: myPubKey,
+        kind: KIND_REACTION,
+        content: emoji,
+        created_at: timestampSeconds,
+        tags: [
+          ["p", id],
+          ["e", messageId],
+          ["ms", String(Date.now())],
+        ],
+      }
+
+      await sessionManager.sendEvent(id, reactionEvent)
+      await usePrivateMessagesStore
+        .getState()
+        .upsert(useUserStore.getState().publicKey, id, reactionEvent)
+    } catch (error) {
+      console.error("Failed to send reaction:", error)
     }
-
-    await sendToUser(id, event)
   }
 
   if (!id) {

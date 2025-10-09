@@ -1,7 +1,7 @@
 import {INVITE_RESPONSE_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
 import {useSettingsStore} from "@/stores/settings"
-import {useUserRecordsStore} from "@/stores/userRecords"
-import {useSessionsStore} from "@/stores/sessions"
+// import {useUserRecordsStore} from "@/stores/userRecords" // TEMP: Removed
+// import {useSessionsStore} from "@/stores/sessions" // TEMP: Removed
 import {SortedMap} from "./SortedMap/SortedMap"
 import {useUserStore} from "@/stores/user"
 import {NDKTag, NDKEvent} from "@nostr-dev-kit/ndk"
@@ -149,19 +149,17 @@ export const subscribeToDMNotifications = debounce(async () => {
   if (!pushSubscription) {
     return
   }
-  const invites = useUserRecordsStore.getState().invites
-  const sessions = useSessionsStore.getState().sessions
+  // TODO: Re-enable message decryption after improving session rehydration
 
-  const inviteRecipients = Array.from(invites.values())
-    .map((i) => i.inviterEphemeralPublicKey)
-    .filter((a) => typeof a === "string") as string[]
+  // const invites = new Map()
+  // const sessions = new Map()
 
-  const sessionAuthors = Array.from(sessions.values())
-    .flatMap((s) => [
-      s?.session.state.theirCurrentNostrPublicKey,
-      s?.session.state.theirNextNostrPublicKey,
-    ])
-    .filter((a) => typeof a === "string") as string[]
+  const inviteRecipients: string[] = []
+  // Array.from(invites.values())
+  // .map((i) => i.inviterEphemeralPublicKey)
+  // .filter((a) => typeof a === "string") as string[]
+
+  const sessionAuthors: string[] = []
 
   const webPushData = {
     endpoint: pushSubscription.endpoint,
