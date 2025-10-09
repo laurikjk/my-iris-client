@@ -5,7 +5,6 @@ import {NostrPublish, NostrSubscribe} from "nostr-double-ratchet"
 import NDK, {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 import {useUserStore} from "../../stores/user"
-import {getEncryptFunction} from "@/utils/nostrCrypto"
 import {hexToBytes} from "nostr-tools/utils"
 
 const createSubscribe = (ndk: NDK): NostrSubscribe => {
