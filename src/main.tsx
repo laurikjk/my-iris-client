@@ -21,23 +21,31 @@ let unsubscribeSessionEvents: (() => void) | null = null
 const attachSessionEventListener = () => {
   try {
     const sessionManager = getSessionManager()
-    void sessionManager.init().then(() => {
-      unsubscribeSessionEvents?.()
-      unsubscribeSessionEvents = sessionManager.onEvent((event, pubKey) => {
-        const {publicKey} = useUserStore.getState()
-        if (!publicKey) return
+    void sessionManager
+      .init()
+      .then(() => {
+        unsubscribeSessionEvents?.()
+        unsubscribeSessionEvents = sessionManager.onEvent((event, pubKey) => {
+          const {publicKey} = useUserStore.getState()
+          if (!publicKey) return
 
-        const pTag = getTag("p", event.tags)
-        if (!pTag) return
+          const pTag = getTag("p", event.tags)
+          if (!pTag) return
 
-        const from = pubKey === publicKey ? pTag : pubKey
-        const to = pubKey === publicKey ? publicKey : pTag
+          const from = pubKey === publicKey ? pTag : pubKey
+          const to = pubKey === publicKey ? publicKey : pTag
 
-        if (!from || !to) return
+          if (!from || !to) return
 
-        void usePrivateMessagesStore.getState().upsert(from, to, event)
+          void usePrivateMessagesStore.getState().upsert(from, to, event)
+        })
       })
-    })
+      .catch((error) => {
+        console.error(
+          "Failed to initialize session manager (possibly corrupt data):",
+          error
+        )
+      })
   } catch (error) {
     console.error("Failed to attach session event listener", error)
   }

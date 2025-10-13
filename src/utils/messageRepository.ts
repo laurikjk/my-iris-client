@@ -31,16 +31,22 @@ class MessageDb extends Dexie {
 const db = new MessageDb()
 
 export async function loadAll(): Promise<Map<string, SortedMap<string, MessageType>>> {
-  const msgArray = await db.messages.toArray()
-  const sessionMap = new Map<string, SortedMap<string, MessageType>>()
-  msgArray.forEach((msg) => {
-    const {session_id, ...event} = msg
-    const m =
-      sessionMap.get(session_id) || new SortedMap<string, MessageType>([], comparator)
-    m.set(event.id, event)
-    sessionMap.set(session_id, m)
-  })
-  return sessionMap
+  try {
+    const msgArray = await db.messages.toArray()
+    const sessionMap = new Map<string, SortedMap<string, MessageType>>()
+    msgArray.forEach((msg) => {
+      const {session_id, ...event} = msg
+      const m =
+        sessionMap.get(session_id) || new SortedMap<string, MessageType>([], comparator)
+      m.set(event.id, event)
+      sessionMap.set(session_id, m)
+    })
+    return sessionMap
+  } catch (error) {
+    console.error("Failed to load messages, clearing corrupt data:", error)
+    await clearAll()
+    return new Map()
+  }
 }
 
 export async function loadLastSeen(): Promise<Map<string, number>> {

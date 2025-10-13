@@ -85,7 +85,11 @@ export default class SessionManager {
     if (this.initialized) return
     this.initialized = true
 
-    await this.loadAllUserRecords()
+    try {
+      await this.loadAllUserRecords()
+    } catch (error) {
+      console.error("Failed to load user records (possibly corrupt data):", error)
+    }
 
     return this.storage
       .get<string>(`invite/${this.deviceId}`)
@@ -94,7 +98,10 @@ export default class SessionManager {
         const invite = Invite.deserialize(data)
         return invite
       })
-      .catch(() => null)
+      .catch((error) => {
+        console.error("Failed to load invite:", error)
+        return null
+      })
       .then(async (invite) => {
         if (invite) return invite
         const newInvite = Invite.createNew(this.ourPublicKey, this.deviceId)
@@ -114,6 +121,9 @@ export default class SessionManager {
             this.attachSessionSubscription(inviteePubkey, deviceId, session)
           }
         )
+      })
+      .catch((error) => {
+        console.error("Failed to initialize session manager:", error)
       })
   }
 
