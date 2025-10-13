@@ -12,7 +12,7 @@ export const Badge = ({
   const publicKey = useUserStore((state) => state.publicKey)
   const loggedIn = !!publicKey
 
-  if (!loggedIn) {
+  if (!loggedIn || !pubKeyHex) {
     return null
   }
 
