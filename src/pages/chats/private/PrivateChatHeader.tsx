@@ -25,6 +25,10 @@ const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
 
     try {
       const sessionManager = getSessionManager()
+      if (!sessionManager) {
+        console.error("Session manager not available")
+        return
+      }
       await sessionManager.deleteUser(id)
       await usePrivateMessagesStore.getState().removeSession(id)
       navigate("/chats")

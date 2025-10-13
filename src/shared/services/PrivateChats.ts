@@ -45,30 +45,35 @@ const getOrCreateDeviceId = (): string => {
 
 let manager: SessionManager | null = null
 
-export const getSessionManager = () => {
+export const getSessionManager = (): SessionManager | null => {
   if (manager) return manager
 
-  const {publicKey, privateKey} = useUserStore.getState()
+  try {
+    const {publicKey, privateKey} = useUserStore.getState()
 
-  const encrypt = privateKey
-    ? hexToBytes(privateKey)
-    : async (plaintext: string, pubkey: string) => {
-        if (window.nostr?.nip44) {
-          return window.nostr.nip44.encrypt(pubkey, plaintext)
+    const encrypt = privateKey
+      ? hexToBytes(privateKey)
+      : async (plaintext: string, pubkey: string) => {
+          if (window.nostr?.nip44) {
+            return window.nostr.nip44.encrypt(pubkey, plaintext)
+          }
+          throw new Error("No nostr extension or private key")
         }
-        throw new Error("No nostr extension or private key")
-      }
 
-  const ndkInstance = ndk()
+    const ndkInstance = ndk()
 
-  manager = new SessionManager(
-    publicKey,
-    encrypt,
-    getOrCreateDeviceId(),
-    createSubscribe(ndkInstance),
-    createPublish(ndkInstance),
-    new LocalStorageAdapter("private")
-  )
+    manager = new SessionManager(
+      publicKey,
+      encrypt,
+      getOrCreateDeviceId(),
+      createSubscribe(ndkInstance),
+      createPublish(ndkInstance),
+      new LocalStorageAdapter("private")
+    )
 
-  return manager
+    return manager
+  } catch (error) {
+    console.error("Failed to create session manager:", error)
+    return null
+  }
 }

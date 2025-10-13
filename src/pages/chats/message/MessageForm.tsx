@@ -83,6 +83,10 @@ const MessageForm = ({
 
     try {
       const sessionManager = getSessionManager()
+      if (!sessionManager) {
+        console.error("Session manager not available")
+        return
+      }
       // Create imeta tags for encrypted files
       const imetaTags: string[][] = []
       encryptionMetadata.forEach((meta, url) => {

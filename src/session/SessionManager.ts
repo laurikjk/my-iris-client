@@ -445,78 +445,90 @@ export default class SessionManager {
   }
 
   private loadUserRecord(publicKey: string) {
-    return this.storage.get<StoredUserRecord>(`user/${publicKey}`).then((data) => {
-      if (!data) return
-      const devices = new Map<string, DeviceRecord>()
-      for (const deviceData of data.devices) {
-        const {
-          deviceId,
-          activeSession: serializedActive,
-          inactiveSessions: serializedInactive,
-        } = deviceData
-
-        try {
-          const activeSession = serializedActive
-            ? new Session(this.nostrSubscribe, deserializeSessionState(serializedActive))
-            : undefined
-
-          const inactiveSessions = serializedInactive.map(
-            (state) => new Session(this.nostrSubscribe, deserializeSessionState(state))
-          )
-          devices.set(deviceId, {
+    return this.storage
+      .get<StoredUserRecord>(`user/${publicKey}`)
+      .then((data) => {
+        if (!data) return
+        const devices = new Map<string, DeviceRecord>()
+        for (const deviceData of data.devices) {
+          const {
             deviceId,
-            activeSession,
-            inactiveSessions,
-          })
-        } catch (e) {
-          console.warn(
-            `Failed to deserialize session for ${publicKey}/${deviceId}, skipping:`,
-            e
-          )
-          continue
-        }
-      }
-      for (const device of devices.values()) {
-        const {deviceId, activeSession, inactiveSessions} = device
-        if (!deviceId) continue
+            activeSession: serializedActive,
+            inactiveSessions: serializedInactive,
+          } = deviceData
 
-        if (activeSession) {
-          const sessionSubscriptionId = this.sessionKey(
-            publicKey,
-            deviceId,
-            activeSession.name
-          )
-          if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
+          try {
+            const activeSession = serializedActive
+              ? new Session(
+                  this.nostrSubscribe,
+                  deserializeSessionState(serializedActive)
+                )
+              : undefined
+
+            const inactiveSessions = serializedInactive.map(
+              (state) => new Session(this.nostrSubscribe, deserializeSessionState(state))
+            )
+            devices.set(deviceId, {
+              deviceId,
+              activeSession,
+              inactiveSessions,
+            })
+          } catch (e) {
+            console.warn(
+              `Failed to deserialize session for ${publicKey}/${deviceId}, skipping:`,
+              e
+            )
             continue
           }
-          const unsubscribe = activeSession.onEvent((event) => {
-            for (const callback of this.internalSubscriptions) {
-              callback(event, publicKey)
-            }
-          })
-          if (unsubscribe)
-            this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
         }
-        for (const session of inactiveSessions) {
-          const sessionSubscriptionId = this.sessionKey(publicKey, deviceId, session.name)
-          if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-            continue
+        for (const device of devices.values()) {
+          const {deviceId, activeSession, inactiveSessions} = device
+          if (!deviceId) continue
+
+          if (activeSession) {
+            const sessionSubscriptionId = this.sessionKey(
+              publicKey,
+              deviceId,
+              activeSession.name
+            )
+            if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
+              continue
+            }
+            const unsubscribe = activeSession.onEvent((event) => {
+              for (const callback of this.internalSubscriptions) {
+                callback(event, publicKey)
+              }
+            })
+            if (unsubscribe)
+              this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
           }
-          const unsubscribe = session.onEvent((event) => {
-            for (const callback of this.internalSubscriptions) {
-              callback(event, publicKey)
+          for (const session of inactiveSessions) {
+            const sessionSubscriptionId = this.sessionKey(
+              publicKey,
+              deviceId,
+              session.name
+            )
+            if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
+              continue
             }
-          })
-          if (unsubscribe)
-            this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+            const unsubscribe = session.onEvent((event) => {
+              for (const callback of this.internalSubscriptions) {
+                callback(event, publicKey)
+              }
+            })
+            if (unsubscribe)
+              this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+          }
         }
-      }
-      this.userRecords.set(publicKey, {
-        publicKey: data.publicKey,
-        devices,
-        foundInvites: new Map(),
+        this.userRecords.set(publicKey, {
+          publicKey: data.publicKey,
+          devices,
+          foundInvites: new Map(),
+        })
       })
-    })
+      .catch((error) => {
+        console.error(`Failed to load user record for ${publicKey}:`, error)
+      })
   }
   private loadAllUserRecords() {
     return this.storage.list().then((keys) => {

@@ -100,6 +100,10 @@ const Chat = ({id}: {id: string}) => {
 
     try {
       const sessionManager = getSessionManager()
+      if (!sessionManager) {
+        console.error("Session manager not available")
+        return
+      }
       const timestampSeconds = Math.floor(Date.now() / 1000)
       const reactionEvent = {
         id: crypto.randomUUID(),

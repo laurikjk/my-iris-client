@@ -21,6 +21,10 @@ let unsubscribeSessionEvents: (() => void) | null = null
 const attachSessionEventListener = () => {
   try {
     const sessionManager = getSessionManager()
+    if (!sessionManager) {
+      console.error("Session manager not available")
+      return
+    }
     void sessionManager
       .init()
       .then(() => {

@@ -5,6 +5,7 @@ import {matchPath} from "./utils"
 import {LoadingFallback} from "@/shared/components/LoadingFallback"
 import {RouteProvider} from "./RouteContext"
 import {RouteBaseContext} from "./contexts"
+import ErrorBoundary from "@/shared/components/ui/ErrorBoundary"
 
 export const Router = () => {
   const {stack, currentIndex} = useNavigation()
@@ -50,13 +51,15 @@ export const Router = () => {
           >
             <RouteProvider params={params} url={item.url}>
               <RouteBaseContext.Provider value={basePath}>
-                <Suspense fallback={<LoadingFallback />}>
-                  {RouteComponent ? (
-                    <RouteComponent {...params} />
-                  ) : (
-                    <div>Page not found</div>
-                  )}
-                </Suspense>
+                <ErrorBoundary>
+                  <Suspense fallback={<LoadingFallback />}>
+                    {RouteComponent ? (
+                      <RouteComponent {...params} />
+                    ) : (
+                      <div>Page not found</div>
+                    )}
+                  </Suspense>
+                </ErrorBoundary>
               </RouteBaseContext.Provider>
             </RouteProvider>
           </div>
