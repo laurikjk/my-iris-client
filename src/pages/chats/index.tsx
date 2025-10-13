@@ -12,7 +12,11 @@ import {getSessionManager} from "@/shared/services/PrivateChats"
 function Messages() {
   const location = useLocation()
   const isMessagesRoot = location.pathname === "/chats"
-  getSessionManager()
+  try {
+    getSessionManager()
+  } catch (error) {
+    console.error("Failed to get session manager:", error)
+  }
 
   return (
     <div className="flex flex-1 h-full relative overflow-hidden">

@@ -39,7 +39,6 @@ const MessageForm = ({
   onSendMessage,
   isPublicChat = false,
 }: MessageFormProps) => {
-  const sessionManager = getSessionManager()
   const [newMessage, setNewMessage] = useState("")
   const [encryptionMetadata, setEncryptionMetadata] = useState<
     Map<string, EncryptionMetaWithImeta>
@@ -83,6 +82,7 @@ const MessageForm = ({
     }
 
     try {
+      const sessionManager = getSessionManager()
       // Create imeta tags for encrypted files
       const imetaTags: string[][] = []
       encryptionMetadata.forEach((meta, url) => {
