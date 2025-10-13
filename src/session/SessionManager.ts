@@ -444,18 +444,27 @@ export default class SessionManager {
           activeSession: serializedActive,
           inactiveSessions: serializedInactive,
         } = deviceData
-        const activeSession = serializedActive
-          ? new Session(this.nostrSubscribe, deserializeSessionState(serializedActive))
-          : undefined
 
-        const inactiveSessions = serializedInactive.map(
-          (state) => new Session(this.nostrSubscribe, deserializeSessionState(state))
-        )
-        devices.set(deviceId, {
-          deviceId,
-          activeSession,
-          inactiveSessions,
-        })
+        try {
+          const activeSession = serializedActive
+            ? new Session(this.nostrSubscribe, deserializeSessionState(serializedActive))
+            : undefined
+
+          const inactiveSessions = serializedInactive.map(
+            (state) => new Session(this.nostrSubscribe, deserializeSessionState(state))
+          )
+          devices.set(deviceId, {
+            deviceId,
+            activeSession,
+            inactiveSessions,
+          })
+        } catch (e) {
+          console.warn(
+            `Failed to deserialize session for ${publicKey}/${deviceId}, skipping:`,
+            e
+          )
+          continue
+        }
       }
       for (const device of devices.values()) {
         const {deviceId, activeSession, inactiveSessions} = device
