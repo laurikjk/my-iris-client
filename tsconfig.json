@@ -23,7 +23,8 @@
     /* Path aliases */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@core/*": ["src/lib/cashu/core/*"]
     }
   },
   "include": ["custom.d.ts", "src"],

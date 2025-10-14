@@ -43,6 +43,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": "/src",
+      "@core": "/src/lib/cashu/core",
     },
   },
   build: {

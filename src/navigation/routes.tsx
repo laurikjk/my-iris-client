@@ -4,7 +4,7 @@ import {RouteDefinition} from "./types"
 // Import pages
 import NostrLinkHandler from "@/pages/NostrLinkHandler"
 import Notifications from "@/pages/notifications/Notifications"
-import WalletPage from "@/pages/wallet/WalletPage"
+import CashuWallet from "@/pages/wallet/CashuWallet"
 import {AboutPage} from "@/pages/AboutPage"
 import SearchPage from "@/pages/search"
 import HomePage from "@/pages/home"
@@ -23,7 +23,7 @@ export const routes: RouteDefinition[] = [
   {path: "/", component: HomePage, alwaysKeep: true},
   {path: "/new", component: NewNote},
   {path: "/notifications", component: Notifications},
-  {path: "/wallet", component: WalletPage},
+  {path: "/wallet", component: CashuWallet},
   {path: "/chats/*", component: ChatsPage},
   {path: "/settings/*", component: SettingsPage},
   {path: "/subscribe", component: SubscriptionPage},

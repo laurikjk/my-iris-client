@@ -31,15 +31,18 @@ const WalletSettings = () => {
   // Local state to track selected wallet - this ensures UI updates immediately
   const [selectedWallet, setSelectedWallet] = useState<string>(() => {
     if (activeProviderType === "disabled") return "disabled"
+    if (activeProviderType === "cashu") return "cashu"
     if (activeProviderType === "native") return "native"
     if (activeProviderType === "nwc" && activeNWCId) return `nwc:${activeNWCId}`
-    return "disabled"
+    return "cashu"
   })
 
   // Sync local state with store changes
   useEffect(() => {
     if (activeProviderType === "disabled") {
       setSelectedWallet("disabled")
+    } else if (activeProviderType === "cashu") {
+      setSelectedWallet("cashu")
     } else if (activeProviderType === "native") {
       setSelectedWallet("native")
     } else if (activeProviderType === "nwc" && activeNWCId) {
@@ -104,15 +107,15 @@ const WalletSettings = () => {
       nwcConnectionsCount: nwcConnections.length,
     })
 
-    if (activeProviderType === "disabled" || activeProviderType === undefined)
-      return "No wallet connected"
+    if (activeProviderType === "disabled") return "No wallet connected"
+    if (activeProviderType === "cashu") return "Cashu Wallet"
     if (activeProviderType === "native") return "Native WebLN"
     if (activeProviderType === "nwc" && activeNWCId) {
       const connection = nwcConnections.find((c) => c.id === activeNWCId)
       console.log("📱 Found NWC connection:", connection?.name)
       return connection ? connection.name : "Unknown NWC"
     }
-    return "No wallet selected"
+    return "Cashu Wallet"
   }
 
   return (
@@ -142,6 +145,38 @@ const WalletSettings = () => {
           </SettingsGroup>
 
           <SettingsGroup title="Select Wallet">
+            {/* Cashu wallet option */}
+            <SettingsGroupItem
+              onClick={() => {
+                console.log("🖱️ Div clicked for cashu wallet")
+                setSelectedWallet("cashu")
+                setActiveProviderType("cashu")
+                useWalletProviderStore.getState().refreshActiveProvider()
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="wallet-selection"
+                    className="radio radio-primary"
+                    checked={selectedWallet === "cashu"}
+                    onChange={() => {
+                      setSelectedWallet("cashu")
+                      setActiveProviderType("cashu")
+                      useWalletProviderStore.getState().refreshActiveProvider()
+                    }}
+                  />
+                  <div>
+                    <div className="font-medium">Cashu Wallet</div>
+                    <div className="text-sm text-base-content/60">
+                      Default built-in wallet
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </SettingsGroupItem>
+
             {/* No wallet option */}
             <SettingsGroupItem
               onClick={() => {
@@ -341,6 +376,27 @@ const WalletSettings = () => {
               placeholder="Optional comment for quick zaps"
               isLast
             />
+          </SettingsGroup>
+
+          <SettingsGroup title="Legacy Wallet">
+            <SettingsGroupItem isLast>
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="font-medium">Access Legacy Cashu Wallet</div>
+                  <div className="text-sm text-base-content/60">
+                    If you have funds in the old wallet, recover them here
+                  </div>
+                </div>
+                <a
+                  href="/cashu/index.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-sm btn-outline"
+                >
+                  Open Legacy Wallet
+                </a>
+              </div>
+            </SettingsGroupItem>
           </SettingsGroup>
         </div>
       </div>

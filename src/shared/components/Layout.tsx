@@ -28,6 +28,7 @@ import {
   useEnabledFeedIds,
   type FeedConfig,
 } from "@/stores/feed"
+import {initCashuManager} from "@/lib/cashu/manager"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -45,7 +46,6 @@ const Layout = ({children}: {children: ReactNode}) => {
   const goToNotifications = useUIStore((state) => state.goToNotifications)
   const showLoginDialog = useUIStore((state) => state.showLoginDialog)
   const setShowLoginDialog = useUIStore((state) => state.setShowLoginDialog)
-  const activeProviderType = useWalletProviderStore((state) => state.activeProviderType)
   const initializeProviders = useWalletProviderStore((state) => state.initializeProviders)
   const navigate = useNavigate()
   const location = useLocation()
@@ -115,6 +115,12 @@ const Layout = ({children}: {children: ReactNode}) => {
 
   // Initialize wallet providers on app startup
   useEffect(() => {
+    // Initialize Cashu manager first
+    initCashuManager().catch((error) => {
+      console.error("Failed to initialize Cashu manager:", error)
+    })
+
+    // Then initialize other providers
     initializeProviders()
   }, [initializeProviders])
 
@@ -277,20 +283,7 @@ const Layout = ({children}: {children: ReactNode}) => {
             </div>
           </div>
         )}
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          {children}
-          {activeProviderType !== "disabled" && (
-            <iframe
-              id="cashu-wallet"
-              title="Background Cashu Wallet"
-              src="/cashu/index.html#/"
-              className="fixed top-0 left-0 w-0 h-0 border-none"
-              style={{zIndex: -1}}
-              referrerPolicy="no-referrer"
-              sandbox="allow-scripts allow-same-origin allow-forms"
-            />
-          )}
-        </div>
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">{children}</div>
       </div>
       <ErrorBoundary>
         {newPostOpen && (

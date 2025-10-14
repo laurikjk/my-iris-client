@@ -2,9 +2,10 @@ import {create} from "zustand"
 import {persist} from "zustand/middleware"
 import {SimpleWebLNWallet} from "@/utils/webln"
 import {SimpleNWCWallet} from "@/utils/nwc"
+import {getCashuManager} from "@/lib/cashu/manager"
 import throttle from "lodash/throttle"
 
-export type WalletProviderType = "native" | "nwc" | "disabled" | undefined
+export type WalletProviderType = "native" | "nwc" | "cashu" | "disabled" | undefined
 
 export interface NWCConnection {
   id: string
@@ -270,20 +271,21 @@ export const useWalletProviderStore = create<WalletProviderState>()(
 
         // Only run wallet discovery if activeProviderType is undefined
         if (state.activeProviderType === undefined) {
-          console.log("🔍 Starting wallet discovery...")
+          console.log("🔍 Starting wallet discovery - defaulting to Cashu")
 
-          // Check for native WebLN first
+          // Default to Cashu wallet
+          set({
+            activeProviderType: "cashu",
+          })
+
+          // Also check for native WebLN
           if (window.webln) {
             try {
               const nativeWallet = new SimpleWebLNWallet()
               const connected = await nativeWallet.connect()
               if (connected) {
-                console.log("🔍 Found native WebLN, setting as active")
-                set({
-                  nativeWallet,
-                  activeProviderType: "native",
-                  activeWallet: nativeWallet,
-                })
+                console.log("🔍 Found native WebLN, but keeping Cashu as default")
+                set({nativeWallet})
               }
             } catch (error) {
               console.warn("Failed to enable native WebLN provider:", error)
@@ -349,6 +351,12 @@ export const useWalletProviderStore = create<WalletProviderState>()(
         })
 
         switch (state.activeProviderType) {
+          case "cashu":
+            console.log("🔄 Using Cashu wallet")
+            // Cashu manager is initialized separately, no need to set activeWallet
+            set({activeWallet: null})
+            break
+
           case "native":
             console.log("🔄 Setting native wallet")
             set({activeWallet: state.nativeWallet})
@@ -514,6 +522,29 @@ export const useWalletProviderStore = create<WalletProviderState>()(
       sendPayment: async (invoice: string) => {
         const {activeWallet, activeProviderType, nativeWallet} = get()
 
+        // Handle Cashu wallet
+        if (activeProviderType === "cashu") {
+          const manager = getCashuManager()
+          if (!manager) {
+            throw new Error("Cashu manager not initialized")
+          }
+
+          // Get available mints with balance
+          const balances = await manager.wallet.getBalances()
+          const mints = Object.keys(balances).filter((mint) => balances[mint] > 0)
+
+          if (mints.length === 0) {
+            throw new Error("No mints with balance available")
+          }
+
+          // Use first mint with balance
+          const mintUrl = mints[0]
+          const quote = await manager.quotes.createMeltQuote(mintUrl, invoice)
+          await manager.quotes.payMeltQuote(mintUrl, quote.quote)
+
+          return {preimage: quote.payment_preimage || undefined}
+        }
+
         // Handle NWC wallets with our SimpleNWCWallet
         if (activeProviderType === "nwc" && activeWallet instanceof SimpleNWCWallet) {
           const result = await activeWallet.payInvoice(invoice)
@@ -536,6 +567,26 @@ export const useWalletProviderStore = create<WalletProviderState>()(
 
       createInvoice: async (amount: number, description?: string) => {
         const {activeWallet, activeProviderType} = get()
+
+        // Handle Cashu wallet
+        if (activeProviderType === "cashu") {
+          const manager = getCashuManager()
+          if (!manager) {
+            throw new Error("Cashu manager not initialized")
+          }
+
+          // Get available mints
+          const mints = await manager.mint.getAllMints()
+          if (mints.length === 0) {
+            throw new Error("No mints configured. Add a mint first.")
+          }
+
+          // Use first mint
+          const mintUrl = mints[0].mintUrl
+          const quote = await manager.quotes.createMintQuote(mintUrl, amount)
+
+          return {invoice: quote.request}
+        }
 
         if (!activeWallet) {
           throw new Error("No wallet connected")
@@ -571,6 +622,22 @@ export const useWalletProviderStore = create<WalletProviderState>()(
               "hasActiveWallet:",
               !!activeWallet
             )
+
+            // Handle Cashu wallet
+            if (activeProviderType === "cashu") {
+              const manager = getCashuManager()
+              if (!manager) {
+                console.log("🔍 Cashu manager not initialized yet")
+                return null
+              }
+              const balances = await manager.wallet.getBalances()
+              const totalBalance = Object.values(balances).reduce(
+                (sum, val) => sum + val,
+                0
+              )
+              console.log("🔍 Cashu wallet balance:", totalBalance)
+              return totalBalance
+            }
 
             if (!activeWallet) {
               console.log("🔍 No active wallet, returning null")
