@@ -247,6 +247,14 @@ export default class SessionManager {
     }
   }
 
+  getDeviceId(): string {
+    return this.deviceId
+  }
+
+  getUserRecords(): Map<string, UserRecord> {
+    return this.userRecords
+  }
+
   close() {
     for (const unsubscribe of this.inviteSubscriptions.values()) {
       unsubscribe()
