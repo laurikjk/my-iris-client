@@ -21,7 +21,7 @@ function NewNote() {
   return (
     <>
       <Header title="New Post" />
-      <div className="pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
+      <div className="flex-1 overflow-y-auto pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
         <InlineNoteCreator
           onPublish={handlePublish}
           placeholder="What's on your mind?"
