@@ -25,6 +25,8 @@ interface MessageFormProps {
   setReplyingTo: (message?: MessageType) => void
   onSendMessage?: (content: string) => Promise<void>
   isPublicChat?: boolean
+  groupId?: string
+  groupMembers?: string[]
 }
 
 // Extend EncryptionMeta locally to allow imetaTag
@@ -38,6 +40,8 @@ const MessageForm = ({
   setReplyingTo,
   onSendMessage,
   isPublicChat = false,
+  groupId,
+  groupMembers,
 }: MessageFormProps) => {
   const [newMessage, setNewMessage] = useState("")
   const [encryptionMetadata, setEncryptionMetadata] = useState<
@@ -91,22 +95,45 @@ const MessageForm = ({
       const myPubKey = useUserStore.getState().publicKey
       if (!myPubKey) return
 
-      // Create imeta tags for encrypted files
-      const imetaTags: string[][] = []
-      encryptionMetadata.forEach((meta, url) => {
-        if (text.includes(url) && meta.imetaTag) {
-          imetaTags.push(meta.imetaTag)
-        }
-      })
-
+      // Build tags (shared for DMs and groups)
       const extraTags: string[][] = []
       if (replyingTo) {
         extraTags.push(["e", replyingTo.id, "", "reply"])
       }
-      // Add imeta tags
-      extraTags.push(...imetaTags)
+      // Add imeta tags for encrypted files
+      encryptionMetadata.forEach((meta, url) => {
+        if (text.includes(url) && meta.imetaTag) {
+          extraTags.push(meta.imetaTag)
+        }
+      })
 
-      // Send message and store result
+      // Handle group messages
+      if (groupId && groupMembers) {
+        const {getEventHash} = await import("nostr-tools")
+        const now = Date.now()
+        const messageEvent = {
+          content: text,
+          kind: 0,
+          created_at: Math.floor(now / 1000),
+          tags: [["l", groupId], ["ms", String(now)], ...extraTags],
+          pubkey: myPubKey,
+          id: "",
+        }
+        messageEvent.id = getEventHash(messageEvent)
+
+        await usePrivateMessagesStore.getState().upsert(groupId, myPubKey, messageEvent)
+
+        Promise.all(
+          groupMembers.map((memberPubKey) =>
+            sessionManager.sendEvent(memberPubKey, messageEvent)
+          )
+        ).catch(console.error)
+
+        setEncryptionMetadata(new Map())
+        return
+      }
+
+      // DM messages
       const sentMessage =
         extraTags.length > 0
           ? await sessionManager.sendMessage(id, text, {tags: extraTags})

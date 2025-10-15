@@ -5,6 +5,10 @@ import Message, {MessageType} from "../message/Message"
 import {groupMessages} from "../utils/messageGrouping"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {useUserStore} from "@/stores/user"
+import {getSessionManager} from "@/shared/services/PrivateChats"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
+import {KIND_REACTION} from "@/utils/constants"
+import {getEventHash} from "nostr-tools"
 
 interface ChatContainerProps {
   messages: SortedMap<string, MessageType>
@@ -15,6 +19,8 @@ interface ChatContainerProps {
   initialLoadDone?: boolean
   showNoMessages?: boolean
   onSendReaction?: (messageId: string, emoji: string) => Promise<void>
+  groupId?: string
+  groupMembers?: string[]
 }
 
 const ChatContainer = ({
@@ -26,6 +32,8 @@ const ChatContainer = ({
   initialLoadDone = false,
   showNoMessages = false,
   onSendReaction,
+  groupId,
+  groupMembers,
 }: ChatContainerProps) => {
   const [showScrollDown, setShowScrollDown] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -38,6 +46,45 @@ const ChatContainer = ({
   const hasInitiallyScrolledRef = useRef(false)
 
   const messageGroups = groupMessages(messages, undefined, isPublicChat)
+
+  // Create reaction handler for groups
+  const handleReaction = async (messageId: string, emoji: string) => {
+    if (onSendReaction) {
+      return onSendReaction(messageId, emoji)
+    }
+
+    // Group reaction handling
+    if (groupId && groupMembers) {
+      const myPubKey = useUserStore.getState().publicKey
+      if (!myPubKey) return
+
+      const sessionManager = getSessionManager()
+      if (!sessionManager) return
+
+      const now = Date.now()
+      const reactionEvent = {
+        content: emoji,
+        kind: KIND_REACTION,
+        created_at: Math.floor(now / 1000),
+        tags: [
+          ["e", messageId],
+          ["l", groupId],
+          ["ms", String(now)],
+        ],
+        pubkey: myPubKey,
+        id: "",
+      }
+      reactionEvent.id = getEventHash(reactionEvent)
+
+      await usePrivateMessagesStore.getState().upsert(groupId, myPubKey, reactionEvent)
+
+      Promise.all(
+        groupMembers.map((memberPubKey) =>
+          sessionManager.sendEvent(memberPubKey, reactionEvent)
+        )
+      ).catch(console.error)
+    }
+  }
 
   const handleScroll = () => {
     const container = chatContainerRef.current
@@ -173,7 +220,7 @@ const ChatContainer = ({
                         sessionId={sessionId}
                         onReply={() => onReply(message)}
                         showAuthor={showAuthor}
-                        onSendReaction={onSendReaction}
+                        onSendReaction={handleReaction}
                       />
                     ))}
                   </ErrorBoundary>
