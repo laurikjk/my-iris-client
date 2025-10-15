@@ -93,26 +93,33 @@ const GroupChatCreation = () => {
       }
       addGroup(group)
 
+      const now = Date.now()
       const groupCreationEvent = {
-        kind: KIND_CHANNEL_CREATE,
         content: JSON.stringify(group),
-        created_at: Math.round(Date.now() / 1000),
+        kind: KIND_CHANNEL_CREATE,
+        created_at: Math.floor(now / 1000),
         tags: [
           ["l", groupId],
-          ["ms", Date.now().toString()],
+          ["ms", String(now)],
         ],
+        pubkey: myPubKey,
+        id: "",
       }
 
-      // TODO: use groupCreationEvent when wiring up group messaging delivery
-      void groupCreationEvent
+      // Compute ID
+      const {getEventHash} = await import("nostr-tools")
+      groupCreationEvent.id = getEventHash(groupCreationEvent)
 
-      // TODO: re-enable sending group creation event to members'
-      // Send create group message to all invited members except self
-      // await Promise.all(
-      //   selectedMembers
-      //     .filter((pubkey: string) => pubkey !== myPubKey)
-      //     .map((pubkey: string) => sendToUser(pubkey, event))
-      // )
+      // Send to all members including self (for multi-device support)
+      const {getSessionManager} = await import("@/shared/services/PrivateChats")
+      const sessionManager = getSessionManager()
+      if (sessionManager) {
+        await Promise.all(
+          group.members.map((memberPubKey) =>
+            sessionManager.sendEvent(memberPubKey, groupCreationEvent).catch(console.error)
+          )
+        )
+      }
 
       navigate(`/chats/group/${groupId}`)
     } catch (err) {

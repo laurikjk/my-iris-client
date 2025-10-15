@@ -15,6 +15,8 @@ import Layout from "@/shared/components/Layout"
 import {usePrivateMessagesStore} from "./stores/privateMessages"
 import {getSessionManager} from "./shared/services/PrivateChats"
 import {getTag} from "./utils/tagUtils"
+import {useGroupsStore} from "./stores/groups"
+import {KIND_CHANNEL_CREATE} from "./utils/constants"
 
 let unsubscribeSessionEvents: (() => void) | null = null
 
@@ -32,6 +34,43 @@ const attachSessionEventListener = () => {
         unsubscribeSessionEvents = sessionManager.onEvent((event, pubKey) => {
           const {publicKey} = useUserStore.getState()
           if (!publicKey) return
+
+          // Check if it's a group creation event
+          const lTag = getTag("l", event.tags)
+          if (event.kind === KIND_CHANNEL_CREATE && lTag) {
+            try {
+              const group = JSON.parse(event.content)
+              const {addGroup} = useGroupsStore.getState()
+              addGroup(group)
+              console.log("Received group creation:", group.name, group.id)
+            } catch (e) {
+              console.error("Failed to parse group creation event:", e)
+            }
+            return
+          }
+
+          // Check if it's a group message (has l tag but not group creation)
+          if (lTag) {
+            // Create placeholder group if we don't have metadata yet
+            const {groups, addGroup} = useGroupsStore.getState()
+            if (!groups[lTag]) {
+              const placeholderGroup = {
+                id: lTag,
+                name: `Group ${lTag.slice(0, 8)}`,
+                description: "",
+                picture: "",
+                members: [publicKey],
+                createdAt: Date.now(),
+              }
+              addGroup(placeholderGroup)
+              console.log("Created placeholder group:", lTag)
+            }
+
+            // Group message or reaction - store under group ID
+            console.log("Received group message for group:", lTag)
+            void usePrivateMessagesStore.getState().upsert(lTag, publicKey, event)
+            return
+          }
 
           const pTag = getTag("p", event.tags)
           if (!pTag) return

@@ -58,11 +58,11 @@ const GroupChatPage = () => {
       // Store message locally for immediate display
       await usePrivateMessagesStore.getState().upsert(id, myPubKey, messageEvent)
 
-      // Send to all group members (excluding self) in background
+      // Send to all group members including self (for multi-device) in background
       Promise.all(
-        group.members
-          .filter((memberPubKey) => memberPubKey !== myPubKey)
-          .map((memberPubKey) => sessionManager.sendEvent(memberPubKey, messageEvent))
+        group.members.map((memberPubKey) =>
+          sessionManager.sendEvent(memberPubKey, messageEvent)
+        )
       ).catch(console.error)
     } catch (error) {
       console.error("Failed to send group message:", error)
@@ -98,11 +98,11 @@ const GroupChatPage = () => {
       // Store locally first (optimistic)
       await usePrivateMessagesStore.getState().upsert(id, myPubKey, reactionEvent)
 
-      // Send to all group members (excluding self) in background
+      // Send to all group members including self (for multi-device) in background
       Promise.all(
-        group.members
-          .filter((memberPubKey) => memberPubKey !== myPubKey)
-          .map((memberPubKey) => sessionManager.sendEvent(memberPubKey, reactionEvent))
+        group.members.map((memberPubKey) =>
+          sessionManager.sendEvent(memberPubKey, reactionEvent)
+        )
       ).catch(console.error)
     } catch (error) {
       console.error("Failed to send group reaction:", error)
