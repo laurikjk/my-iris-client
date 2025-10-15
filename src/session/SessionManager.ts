@@ -103,7 +103,12 @@ export default class SessionManager {
         return null
       })
       .then(async (invite) => {
-        if (invite) return invite
+        if (invite) {
+          // Republish existing invite to ensure relay propagation
+          const event = invite.getEvent()
+          await this.nostrPublish(event).catch(console.error)
+          return invite
+        }
         const newInvite = Invite.createNew(this.ourPublicKey, this.deviceId)
         await this.storage.put(`invite/${this.deviceId}`, newInvite.serialize())
         const event = newInvite.getEvent()
