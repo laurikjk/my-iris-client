@@ -170,7 +170,7 @@ const MessageForm = ({
     encryptionMeta?: EncryptionMetaWithImeta,
     imetaTag?: string[]
   ) => {
-    setNewMessage((prev) => prev + " " + url)
+    setNewMessage((prev) => (prev ? prev + " " + url : url))
     if (encryptionMeta) {
       setEncryptionMetadata((prev) =>
         new Map(prev).set(url, {...encryptionMeta, imetaTag})
