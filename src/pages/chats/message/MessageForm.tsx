@@ -103,6 +103,8 @@ const MessageForm = ({
       if (replyingTo) {
         extraTags.push(["e", replyingTo.id, "", "reply"])
       }
+      // Add imeta tags
+      extraTags.push(...imetaTags)
 
       // Send message and store result
       const sentMessage =

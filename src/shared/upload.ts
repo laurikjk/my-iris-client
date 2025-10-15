@@ -129,7 +129,7 @@ async function uploadChunk(
       keyOverride
     )
     const hash = await calculateSHA256(encryptedFile)
-    chunkFileName = `${hash}.bin`
+    chunkFileName = `${hash}.enc`
     uploadBlob = encryptedFile
     encryptionMeta = {
       decryptionKey: key,
@@ -184,7 +184,7 @@ async function uploadSingleFile(
   if (encrypt) {
     const {encryptedFile, key} = await encryptFileWithAesGcm(file)
     const hash = await calculateSHA256(encryptedFile)
-    uploadFileObj = new File([encryptedFile], `${hash}.bin`, {
+    uploadFileObj = new File([encryptedFile], `${hash}.enc`, {
       type: "application/octet-stream",
     })
     encryptionMeta = {
@@ -352,7 +352,7 @@ async function uploadChunkedFile(
         keyBytes
       )
       const hash = await calculateSHA256(encryptedFile)
-      const indexFile = new File([encryptedFile], `${hash}.bin`, {
+      const indexFile = new File([encryptedFile], `${hash}.enc`, {
         type: "application/octet-stream",
       })
       encryptionMeta = {
