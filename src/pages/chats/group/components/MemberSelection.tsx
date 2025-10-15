@@ -58,12 +58,7 @@ const MemberSelection = ({
         )}
 
         {/* Next Button */}
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={onNext}
-          disabled={selectedMembers.length === 0}
-        >
+        <button type="button" className="btn btn-primary" onClick={onNext}>
           Next ({selectedMembers.length} members)
         </button>
       </div>

@@ -43,7 +43,6 @@ const ChatSettings = () => {
       await manager.init()
 
       const currentDeviceId = manager.getDeviceId()
-      console.log("Current device ID:", currentDeviceId)
 
       // Query Nostr for device invites published by current user
       const filter: NDKFilter = {
@@ -54,7 +53,6 @@ const ChatSettings = () => {
 
       const ndkInstance = ndk()
       const events = await ndkInstance.fetchEvents(filter)
-      console.log(`Found ${events.size} invite events`)
 
       const deviceList: DeviceInfo[] = []
       let foundCurrentDevice = false
@@ -69,8 +67,6 @@ const ChatSettings = () => {
           const isCurrent = invite.deviceId === currentDeviceId
           if (isCurrent) foundCurrentDevice = true
 
-          console.log(`Device ${invite.deviceId} - isCurrent: ${isCurrent}`)
-
           deviceList.push({
             id: invite.deviceId,
             isCurrent,
@@ -82,7 +78,6 @@ const ChatSettings = () => {
 
       // If current device not found in relay events, add it with warning
       if (!foundCurrentDevice) {
-        console.log("Current device invite not yet propagated to relays")
         deviceList.push({
           id: currentDeviceId,
           isCurrent: true,
@@ -114,21 +109,88 @@ const ChatSettings = () => {
       const {NDKEvent} = await import("@nostr-dev-kit/ndk")
 
       // Publish tombstone event - same kind and d tag, empty content
+      const dTag = `double-ratchet/invites/${deviceId}`
+
       const deletionEvent = new NDKEvent(ndkInstance, {
         kind: INVITE_EVENT_KIND,
         pubkey: publicKey,
         content: "",
         created_at: Math.floor(Date.now() / 1000),
-        tags: [["d", `double-ratchet/invites/${deviceId}`]],
+        tags: [["d", dTag]],
       })
 
       await deletionEvent.sign()
       await deletionEvent.publish()
 
-      setDevices((prev) => prev.filter((d) => d.id !== deviceId))
+      // Delete invite from localStorage to prevent republishing
+      const {LocalStorageAdapter} = await import("@/session/StorageAdapter")
+      const storage = new LocalStorageAdapter("private")
+      await storage.del(`invite/${deviceId}`)
+
+      // Wait for relay propagation
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Reload list from relays to confirm deletion
+      setLoading(true)
+      const manager = getSessionManager()
+      if (!manager) return
+
+      const currentDeviceId = manager.getDeviceId()
+
+      const filter: NDKFilter = {
+        kinds: [INVITE_EVENT_KIND],
+        authors: [publicKey],
+        "#l": ["double-ratchet/invites"],
+      }
+
+      // Force fresh fetch from relays, bypass cache
+      const events = await ndkInstance.fetchEvents(filter, {
+        closeOnEose: true,
+        cacheUsage: "ONLY_RELAY" as any,
+      })
+
+      const deviceList: DeviceInfo[] = []
+      let foundCurrentDevice = false
+
+      for (const event of events) {
+        try {
+          const invite = Invite.fromEvent(
+            event as unknown as Parameters<typeof Invite.fromEvent>[0]
+          )
+          if (!invite.deviceId) continue
+
+          const isCurrent = invite.deviceId === currentDeviceId
+          if (isCurrent) foundCurrentDevice = true
+
+          deviceList.push({
+            id: invite.deviceId,
+            isCurrent,
+          })
+        } catch (error) {
+          console.error("Failed to parse invite event:", error)
+        }
+      }
+
+      if (!foundCurrentDevice) {
+        deviceList.push({
+          id: currentDeviceId,
+          isCurrent: true,
+          notYetPropagated: true,
+        })
+      }
+
+      deviceList.sort((a, b) => {
+        if (a.isCurrent) return -1
+        if (b.isCurrent) return 1
+        return a.id.localeCompare(b.id)
+      })
+
+      setDevices(deviceList)
+      setLoading(false)
     } catch (error) {
       console.error("Failed to delete invite:", error)
       window.alert(`Failed to delete invite: ${error}`)
+      setLoading(false)
     }
   }
 

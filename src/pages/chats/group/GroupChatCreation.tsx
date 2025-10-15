@@ -53,10 +53,6 @@ const GroupChatCreation = () => {
   }
 
   const handleNextStep = () => {
-    if (selectedMembers.length === 0) {
-      setCreateError("Please add at least one member to the group")
-      return
-    }
     setCreateError(null)
     setCurrentStep("details")
     // Push a new history entry for the details step

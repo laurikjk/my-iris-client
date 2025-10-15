@@ -1,12 +1,15 @@
 import {UserRow} from "@/shared/components/user/UserRow"
-import {useParams} from "@/navigation"
+import {useLocation} from "@/navigation"
 import {useGroupsStore} from "@/stores/groups"
 import Header from "@/shared/components/header/Header"
 import {shouldHideUser} from "@/utils/visibility"
 
 const GroupDetailsPage = () => {
-  const params = useParams()
-  const id = params.id || ""
+  const location = useLocation()
+  // Extract group ID from pathname: /chats/group/:id/details
+  const pathSegments = location.pathname.split("/").filter(Boolean)
+  const id = pathSegments[2] || ""
+
   const {groups} = useGroupsStore()
   const group = id ? groups[id] : undefined
 

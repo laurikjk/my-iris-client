@@ -1,5 +1,5 @@
 import {useState} from "react"
-import {useParams} from "@/navigation"
+import {useLocation} from "@/navigation"
 import {useGroupsStore} from "@/stores/groups"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useUserStore} from "@/stores/user"
@@ -12,11 +12,13 @@ import {comparator} from "../utils/messageGrouping"
 import {KIND_REACTION} from "@/utils/constants"
 
 const GroupChatPage = () => {
-  const params = useParams()
-  const id = params.id || ""
-  const {groups} = useGroupsStore()
+  const location = useLocation()
+  // Extract group ID from pathname: /chats/group/:id
+  const pathSegments = location.pathname.split("/").filter(Boolean)
+  const id = pathSegments[2] || ""
+
+  const groups = useGroupsStore((state) => state.groups)
   const group = id ? groups[id] : undefined
-  // Fix: Use the events store with proper subscription to get reactive updates
   const {events} = usePrivateMessagesStore()
   const myPubKey = useUserStore((state) => state.publicKey)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
