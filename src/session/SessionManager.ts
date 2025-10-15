@@ -11,6 +11,7 @@ import {
 } from "nostr-double-ratchet/src"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
+import {getEventHash} from "nostr-tools"
 
 export type OnEventCallback = (event: Rumor, from: string) => void
 
@@ -374,22 +375,20 @@ export default class SessionManager {
       ...Array.from(ourUserRecord.devices.values()),
     ]
 
-    const sendingResults = await Promise.allSettled(
+    // Send to all devices in background
+    Promise.all(
       devices.map(async (device) => {
         const {activeSession} = device
         if (!activeSession) return
-        const {event: verifiedEvent, innerEvent} = activeSession.sendEvent(event)
-        await this.nostrPublish(verifiedEvent)
-        await this.storeUserRecord(recipientIdentityKey)
-        return innerEvent
+        const {event: verifiedEvent} = activeSession.sendEvent(event)
+        await this.nostrPublish(verifiedEvent).catch(console.error)
       })
-    ).then((results) => {
-      return results.find((res) => res !== undefined)
-    })
+    )
+      .then(() => this.storeUserRecord(recipientIdentityKey))
+      .catch(console.error)
 
-    return sendingResults && sendingResults.status === "fulfilled"
-      ? sendingResults.value
-      : undefined
+    // Return the event with computed ID (same as library would compute)
+    return event as Rumor
   }
 
   async sendMessage(
@@ -399,25 +398,36 @@ export default class SessionManager {
   ): Promise<Rumor> {
     const {kind = KIND_CHAT_MESSAGE, tags = []} = options
 
-    const message: Rumor = {
-      id: crypto.randomUUID(),
-      pubkey: this.ourPublicKey,
-      created_at: Math.floor(Date.now() / 1000),
-      kind,
-      tags: this.buildMessageTags(recipientPublicKey, tags),
+    // Build message exactly as library does (Session.ts sendEvent)
+    const now = Date.now()
+    const builtTags = this.buildMessageTags(recipientPublicKey, tags)
+
+    const rumor: Rumor = {
       content,
+      kind,
+      created_at: Math.floor(now / 1000),
+      tags: builtTags,
+      pubkey: this.ourPublicKey,
+      id: "", // Will compute next
     }
+
+    // Add ms tag if not present (exactly like library)
+    if (!rumor.tags.some(([k]) => k === "ms")) {
+      rumor.tags.push(["ms", String(now)])
+    }
+
+    // Compute ID exactly as library does
+    rumor.id = getEventHash(rumor)
 
     this.messageHistory.set(recipientPublicKey, [
       ...(this.messageHistory.get(recipientPublicKey) || []),
-      message,
+      rumor,
     ])
 
-    // Return message immediately for optimistic UI
-    // Send in background without blocking
-    this.sendEvent(recipientPublicKey, message).catch(console.error)
+    // Send in background
+    this.sendEvent(recipientPublicKey, rumor).catch(console.error)
 
-    return message
+    return rumor
   }
 
   private buildMessageTags(

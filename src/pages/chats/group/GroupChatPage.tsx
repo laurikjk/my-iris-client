@@ -10,6 +10,7 @@ import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {MessageType} from "../message/Message"
 import {comparator} from "../utils/messageGrouping"
 import {KIND_REACTION} from "@/utils/constants"
+import {getEventHash} from "nostr-tools"
 
 const GroupChatPage = () => {
   const location = useLocation()
@@ -39,27 +40,30 @@ const GroupChatPage = () => {
         return
       }
 
+      const now = Date.now()
       const messageEvent = {
-        id: crypto.randomUUID(),
-        pubkey: myPubKey,
-        kind: 0,
         content,
-        created_at: Math.floor(Date.now() / 1000),
+        kind: 0,
+        created_at: Math.floor(now / 1000),
         tags: [
           ["l", group.id],
-          ["ms", String(Date.now())],
+          ["ms", String(now)],
         ],
+        pubkey: myPubKey,
+        id: "",
       }
 
-      // Send to all group members (excluding self)
-      await Promise.all(
-        group.members
-          .filter((memberPubKey) => memberPubKey !== myPubKey)
-          .map((memberPubKey) => sessionManager.sendEvent(memberPubKey, messageEvent))
-      )
+      messageEvent.id = getEventHash(messageEvent)
 
       // Store message locally for immediate display
       await usePrivateMessagesStore.getState().upsert(id, myPubKey, messageEvent)
+
+      // Send to all group members (excluding self) in background
+      Promise.all(
+        group.members
+          .filter((memberPubKey) => memberPubKey !== myPubKey)
+          .map((memberPubKey) => sessionManager.sendEvent(memberPubKey, messageEvent))
+      ).catch(console.error)
     } catch (error) {
       console.error("Failed to send group message:", error)
     }
@@ -75,28 +79,31 @@ const GroupChatPage = () => {
         return
       }
 
+      const now = Date.now()
       const reactionEvent = {
-        id: crypto.randomUUID(),
-        pubkey: myPubKey,
-        kind: KIND_REACTION,
         content: emoji,
-        created_at: Math.floor(Date.now() / 1000),
+        kind: KIND_REACTION,
+        created_at: Math.floor(now / 1000),
         tags: [
           ["e", messageId],
           ["l", group.id],
-          ["ms", String(Date.now())],
+          ["ms", String(now)],
         ],
+        pubkey: myPubKey,
+        id: "",
       }
+
+      reactionEvent.id = getEventHash(reactionEvent)
 
       // Store locally first (optimistic)
       await usePrivateMessagesStore.getState().upsert(id, myPubKey, reactionEvent)
 
-      // Send to all group members (excluding self)
-      await Promise.all(
+      // Send to all group members (excluding self) in background
+      Promise.all(
         group.members
           .filter((memberPubKey) => memberPubKey !== myPubKey)
           .map((memberPubKey) => sessionManager.sendEvent(memberPubKey, reactionEvent))
-      )
+      ).catch(console.error)
     } catch (error) {
       console.error("Failed to send group reaction:", error)
     }

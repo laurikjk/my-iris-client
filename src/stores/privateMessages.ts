@@ -54,8 +54,6 @@ export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
       const myPubKey = useUserStore.getState().publicKey
       const chatId = from === myPubKey ? to : from
 
-      // Process reactions synchronously using current state
-      let processedMessage: MessageType = event
       set((state) => {
         const isReaction = event.kind === KIND_REACTION
         const eTag = event.tags.find(([key]) => key === "e")
@@ -64,31 +62,43 @@ export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
           const [, messageId] = eTag
           const pubKey = event.pubkey
 
-          // Find target message in current state
-          for (const messageMap of state.events.values()) {
+          // Find target message and update it in place
+          const events = new Map(state.events)
+          for (const [existingChatId, messageMap] of events.entries()) {
             const oldMsg = messageMap.get(messageId)
             if (oldMsg) {
-              processedMessage = {
+              const updatedMsg = {
                 ...oldMsg,
                 reactions: {
                   ...oldMsg.reactions,
                   [pubKey]: event.content,
                 },
               }
-              break
+              messageMap.set(messageId, updatedMsg)
+              events.set(existingChatId, messageMap)
+
+              // Persist in background
+              rehydration.then(() => messageRepository.save(existingChatId, updatedMsg)).catch(console.error)
+
+              return {events}
             }
           }
+
+          // Target message not found - ignore reaction
+          console.warn("Reaction target message not found:", messageId)
+          return state
         }
 
+        // Regular message - add to chat
         return {
-          events: addToMap(new Map(state.events), chatId, processedMessage),
+          events: addToMap(new Map(state.events), chatId, event),
         }
       })
 
-      // Handle persistence in background
-      rehydration
-        .then(() => messageRepository.save(chatId, processedMessage))
-        .catch(console.error)
+      // For non-reaction messages, persist in background
+      if (event.kind !== KIND_REACTION) {
+        rehydration.then(() => messageRepository.save(chatId, event)).catch(console.error)
+      }
     },
 
     removeSession: async (chatId) => {

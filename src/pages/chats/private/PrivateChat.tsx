@@ -10,6 +10,7 @@ import {useUserStore} from "@/stores/user"
 import {KIND_REACTION} from "@/utils/constants"
 import {getSessionManager} from "@/shared/services/PrivateChats"
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
+import {getEventHash} from "nostr-tools"
 
 const Chat = ({id}: {id: string}) => {
   // id is now userPubKey instead of sessionId
@@ -104,19 +105,21 @@ const Chat = ({id}: {id: string}) => {
         console.error("Session manager not available")
         return
       }
-      const timestampSeconds = Math.floor(Date.now() / 1000)
+      const now = Date.now()
       const reactionEvent = {
-        id: crypto.randomUUID(),
-        pubkey: myPubKey,
-        kind: KIND_REACTION,
         content: emoji,
-        created_at: timestampSeconds,
+        kind: KIND_REACTION,
+        created_at: Math.floor(now / 1000),
         tags: [
           ["p", id],
           ["e", messageId],
-          ["ms", String(Date.now())],
+          ["ms", String(now)],
         ],
+        pubkey: myPubKey,
+        id: "",
       }
+
+      reactionEvent.id = getEventHash(reactionEvent)
 
       // Add optimistically
       await usePrivateMessagesStore.getState().upsert(id, myPubKey, reactionEvent)
