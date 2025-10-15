@@ -104,10 +104,32 @@ const ChatSettings = () => {
     loadDeviceInfo()
   }, [publicKey])
 
-  const handleDeleteDevice = async () => {
-    window.alert(
-      "Device / app invite deletion is not yet implemented. You can manually delete the invite event from relays using other tools."
-    )
+  const handleDeleteDevice = async (deviceId: string) => {
+    if (!window.confirm(`Delete invite for device ${deviceId.slice(0, 8)}?`)) {
+      return
+    }
+
+    try {
+      const ndkInstance = ndk()
+      const {NDKEvent} = await import("@nostr-dev-kit/ndk")
+
+      // Publish tombstone event - same kind and d tag, empty content
+      const deletionEvent = new NDKEvent(ndkInstance, {
+        kind: INVITE_EVENT_KIND,
+        pubkey: publicKey,
+        content: "",
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [["d", `double-ratchet/invites/${deviceId}`]],
+      })
+
+      await deletionEvent.sign()
+      await deletionEvent.publish()
+
+      setDevices((prev) => prev.filter((d) => d.id !== deviceId))
+    } catch (error) {
+      console.error("Failed to delete invite:", error)
+      window.alert(`Failed to delete invite: ${error}`)
+    }
   }
 
   if (!publicKey) {
@@ -169,9 +191,9 @@ const ChatSettings = () => {
                       </div>
                       {!device.isCurrent && (
                         <button
-                          onClick={handleDeleteDevice}
+                          onClick={() => handleDeleteDevice(device.id)}
                           className="btn btn-ghost btn-sm text-error hover:bg-error/20 ml-4"
-                          title="Delete device invite"
+                          title="Delete device / app invite"
                         >
                           <RiDeleteBin6Line size={16} />
                         </button>
