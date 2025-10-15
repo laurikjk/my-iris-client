@@ -12,13 +12,10 @@ import {MessageType} from "../message/Message"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {RiEarthLine} from "@remixicon/react"
 import {useUserStore} from "@/stores/user"
-import {useEffect, useState} from "react"
-import debounce from "lodash/debounce"
+import {useEffect, useState, useMemo, useRef} from "react"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
 import {useGroupsStore} from "@/stores/groups"
-import {SortedMap} from "@/utils/SortedMap/SortedMap"
-import {comparator} from "@/pages/chats/utils/messageGrouping"
 
 interface ChatListItemProps {
   id: string
@@ -30,63 +27,54 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
   const location = useLocation()
   const pubKey = isPublic ? "" : id
   const isActive = location.state?.id === id
-  const [latestMessage, setLatestMessage] = useState<{
-    content: string
-    created_at: number
-    pubkey: string
-    kind: number
-  } | null>(null)
   const [showPlaceholder, setShowPlaceholder] = useState(false)
-  const events = usePrivateMessagesStore((state) => state.events)
-  const {
-    publicChats,
-    lastSeen: lastSeenPublic,
-    updateLastSeen: updateLastSeenPublic,
-    updateTimestamp,
-  } = usePublicChatsStore()
+
+  // Subscribe only to this specific chat's messages to avoid unnecessary rerenders
+  const privateMessages = usePrivateMessagesStore((state) =>
+    type === "private" ? state.events.get(id) : null
+  )
+  const groupMessages = usePrivateMessagesStore((state) =>
+    type === "group" ? state.events.get(id) : null
+  )
+
+  // Subscribe only to this specific public chat's data to avoid unnecessary rerenders
+  const chat = usePublicChatsStore((state) => (isPublic ? state.publicChats[id] : null))
+  const latestMessage = usePublicChatsStore((state) =>
+    isPublic ? state.latestMessages[id] : null
+  )
+  const lastSeenPublicTime = usePublicChatsStore((state) =>
+    isPublic ? state.lastSeen[id] || 0 : 0
+  )
+  const updateLastSeenPublic = usePublicChatsStore((state) => state.updateLastSeen)
+  const updateLatestMessage = usePublicChatsStore((state) => state.updateLatestMessage)
+
   const myPubKey = useUserStore((state) => state.publicKey)
   const {groups} = useGroupsStore()
   const group = groups[id]
 
-  const chat = isPublic ? publicChats[id] : null
-
-  // For private chats, get aggregated messages from all sessions
-  const privateMessages =
-    type === "private" ? (events.get(id) ?? new SortedMap([], comparator)) : null
-  const [, latest] = privateMessages?.last() ?? []
-
-  // For groups, get messages normally
-  const groupMessages = type === "group" ? events.get(id) : null
-  const [, groupLatest] = groupMessages?.last() ?? []
-
-  // Choose the appropriate latest message
-  const actualLatest = type === "group" ? groupLatest : latest
+  // Memoize latest message to prevent flash when other chats update
+  const actualLatest = useMemo(() => {
+    if (type === "group") {
+      return groupMessages?.last()?.[1]
+    }
+    if (type === "private") {
+      return privateMessages?.last()?.[1]
+    }
+    return undefined
+  }, [type, groupMessages, privateMessages])
 
   // Get chat data for unread counts
-
   const lastSeenPrivateTime = usePrivateMessagesStore(
     (state) => state.lastSeen.get(id) || 0
   )
   const updateLastSeenPrivate = usePrivateMessagesStore((state) => state.updateLastSeen)
 
-  const lastSeenPublicTime = lastSeenPublic[id] || 0
+  // Use ref to avoid effect recreation when store updates
+  const updateLatestMessageRef = useRef(updateLatestMessage)
+  updateLatestMessageRef.current = updateLatestMessage
 
   useEffect(() => {
     if (!isPublic) return
-
-    let latestMessageInMemory: {
-      content: string
-      created_at: number
-      pubkey: string
-      kind: number
-    } | null = null
-
-    const debouncedUpdate = debounce(() => {
-      if (latestMessageInMemory) {
-        setLatestMessage(latestMessageInMemory)
-        updateTimestamp(id, latestMessageInMemory.created_at)
-      }
-    }, 300)
 
     const sub = ndk().subscribe({
       kinds: [KIND_CHANNEL_MESSAGE],
@@ -97,22 +85,21 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
     sub.on("event", (event) => {
       if (!event || !event.id) return
       if (shouldHideUser(event.pubkey)) return
-      if (!latestMessageInMemory || event.created_at > latestMessageInMemory.created_at) {
-        latestMessageInMemory = {
+      const currentLatest = usePublicChatsStore.getState().latestMessages[id]
+      if (!currentLatest || event.created_at > currentLatest.created_at) {
+        updateLatestMessageRef.current(id, {
           content: event.content,
           created_at: event.created_at,
           pubkey: event.pubkey,
           kind: event.kind,
-        }
-        debouncedUpdate()
+        })
       }
     })
 
     return () => {
       sub.stop()
-      debouncedUpdate.cancel()
     }
-  }, [id, isPublic, updateTimestamp])
+  }, [id, isPublic])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -138,7 +125,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
     )
   }
 
-  const getPreviewContent = () => {
+  const previewContent = useMemo(() => {
     if (isPublic && latestMessage?.content) {
       // Show special preview for group invite messages
       if (latestMessage.kind === KIND_CHANNEL_CREATE) {
@@ -164,9 +151,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
     }
 
     return ""
-  }
-
-  const previewContent = getPreviewContent()
+  }, [isPublic, latestMessage, actualLatest, myPubKey])
 
   // Avatar rendering
   let avatar

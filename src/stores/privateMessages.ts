@@ -78,7 +78,9 @@ export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
               events.set(existingChatId, messageMap)
 
               // Persist in background
-              rehydration.then(() => messageRepository.save(existingChatId, updatedMsg)).catch(console.error)
+              rehydration
+                .then(() => messageRepository.save(existingChatId, updatedMsg))
+                .catch(console.error)
 
               return {events}
             }

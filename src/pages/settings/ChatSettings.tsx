@@ -6,7 +6,7 @@ import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {getSessionManager} from "@/shared/services/PrivateChats"
 import {ndk} from "@/utils/ndk"
 import {Invite} from "nostr-double-ratchet/src"
-import {NDKFilter} from "@nostr-dev-kit/ndk"
+import {NDKFilter, NDKSubscriptionCacheUsage} from "@nostr-dev-kit/ndk"
 
 interface DeviceInfo {
   id: string
@@ -146,7 +146,7 @@ const ChatSettings = () => {
       // Force fresh fetch from relays, bypass cache
       const events = await ndkInstance.fetchEvents(filter, {
         closeOnEose: true,
-        cacheUsage: "ONLY_RELAY" as any,
+        cacheUsage: NDKSubscriptionCacheUsage.ONLY_RELAY,
       })
 
       const deviceList: DeviceInfo[] = []
@@ -218,19 +218,21 @@ const ChatSettings = () => {
 
         <div className="space-y-6">
           <SettingsGroup title="Your Devices / Apps">
-            {loading ? (
+            {loading && (
               <SettingsGroupItem isLast>
                 <div className="text-center py-4">
                   <p className="text-base-content/70">Loading devices / apps...</p>
                 </div>
               </SettingsGroupItem>
-            ) : devices.length === 0 ? (
+            )}
+            {!loading && devices.length === 0 && (
               <SettingsGroupItem isLast>
                 <div className="text-center py-4">
                   <p className="text-base-content/70">No device / app invites found.</p>
                 </div>
               </SettingsGroupItem>
-            ) : (
+            )}
+            {!loading && devices.length > 0 && (
               <>
                 {devices.map((device, index) => (
                   <SettingsGroupItem
@@ -240,7 +242,9 @@ const ChatSettings = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium font-mono text-sm">{device.id}</span>
+                          <span className="font-medium font-mono text-sm">
+                            {device.id}
+                          </span>
                           {device.isCurrent && (
                             <span className="badge badge-primary badge-sm">Current</span>
                           )}

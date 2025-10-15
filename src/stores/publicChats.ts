@@ -11,13 +11,22 @@ export interface PublicChat {
   metadata?: ChannelMetadata
 }
 
+export interface LatestMessage {
+  content: string
+  created_at: number
+  pubkey: string
+  kind: number
+}
+
 interface PublicChatStore {
   publicChats: Record<string, PublicChat>
   lastSeen: Record<string, number>
   timestamps: Record<string, number>
+  latestMessages: Record<string, LatestMessage>
 
   updateLastSeen: (chatId: string) => void
   updateTimestamp: (chatId: string, timestamp: number) => void
+  updateLatestMessage: (chatId: string, message: LatestMessage) => void
   addOrRefreshChatById: (chatId: string) => Promise<void>
   removePublicChat: (chatId: string) => void
 }
@@ -28,6 +37,7 @@ const store = create<PublicChatStore>()(
       publicChats: {},
       lastSeen: {},
       timestamps: {},
+      latestMessages: {},
 
       updateLastSeen: (chatId: string) => {
         set((state) => ({
@@ -43,6 +53,19 @@ const store = create<PublicChatStore>()(
           timestamps: {
             ...state.timestamps,
             [chatId]: timestamp,
+          },
+        }))
+      },
+
+      updateLatestMessage: (chatId: string, message: LatestMessage) => {
+        set((state) => ({
+          latestMessages: {
+            ...state.latestMessages,
+            [chatId]: message,
+          },
+          timestamps: {
+            ...state.timestamps,
+            [chatId]: message.created_at,
           },
         }))
       },
@@ -75,6 +98,9 @@ const store = create<PublicChatStore>()(
           ),
           timestamps: Object.fromEntries(
             Object.entries(state.timestamps).filter(([id]) => id !== chatId)
+          ),
+          latestMessages: Object.fromEntries(
+            Object.entries(state.latestMessages).filter(([id]) => id !== chatId)
           ),
         }))
       },

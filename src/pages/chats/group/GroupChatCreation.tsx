@@ -116,7 +116,9 @@ const GroupChatCreation = () => {
       if (sessionManager) {
         await Promise.all(
           group.members.map((memberPubKey) =>
-            sessionManager.sendEvent(memberPubKey, groupCreationEvent).catch(console.error)
+            sessionManager
+              .sendEvent(memberPubKey, groupCreationEvent)
+              .catch(console.error)
           )
         )
       }

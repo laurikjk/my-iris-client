@@ -19,7 +19,9 @@ interface ChatListProps {
 const ChatList = ({className}: ChatListProps) => {
   const {publicChats, timestamps, addOrRefreshChatById} = usePublicChatsStore()
   const {groups} = useGroupsStore()
-  const {events} = usePrivateMessagesStore()
+
+  // Subscribe only to events Map keys (chat IDs) to minimize rerenders
+  const events = usePrivateMessagesStore((state) => state.events)
 
   const privateChatLatestTimestamps = useMemo(() => {
     const latestMap = new Map<string, number>()
@@ -76,11 +78,15 @@ const ChatList = ({className}: ChatListProps) => {
   }
 
   // Get private chats from chats store
-  const allChatItems = [
-    ...Object.values(groups).map((group) => ({id: group.id, type: "group"})),
-    ...privateChatsList.map((chat) => ({id: chat.userPubKey, type: "private"})),
-    ...Object.keys(publicChats).map((chatId) => ({id: chatId, type: "public"})),
-  ].sort((a, b) => getLatest(b.id, b.type) - getLatest(a.id, a.type))
+  const allChatItems = useMemo(
+    () =>
+      [
+        ...Object.values(groups).map((group) => ({id: group.id, type: "group"})),
+        ...privateChatsList.map((chat) => ({id: chat.userPubKey, type: "private"})),
+        ...Object.keys(publicChats).map((chatId) => ({id: chatId, type: "public"})),
+      ].sort((a, b) => getLatest(b.id, b.type) - getLatest(a.id, a.type)),
+    [groups, privateChatsList, publicChats, timestamps, privateChatLatestTimestamps]
+  )
 
   return (
     <nav className={classNames("flex flex-col h-full", className)}>
