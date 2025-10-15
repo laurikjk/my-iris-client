@@ -24,6 +24,9 @@ const ChatList = ({className}: ChatListProps) => {
   const privateChatLatestTimestamps = useMemo(() => {
     const latestMap = new Map<string, number>()
     for (const [userPubKey, messageMap] of events.entries()) {
+      // Skip group IDs (groups are handled separately)
+      if (groups[userPubKey]) continue
+
       const [, latest] = messageMap.last() ?? []
       if (!latest) {
         latestMap.set(userPubKey, 0)
@@ -33,7 +36,7 @@ const ChatList = ({className}: ChatListProps) => {
       latestMap.set(userPubKey, timestamp)
     }
     return latestMap
-  }, [events])
+  }, [events, groups])
 
   const privateChatsList = useMemo(
     () =>

@@ -68,20 +68,38 @@ const GroupChatPage = () => {
   const handleSendReaction = async (messageId: string, emoji: string) => {
     if (!myPubKey) return
 
-    const reactionEvent = {
-      kind: KIND_REACTION,
-      content: emoji,
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [
-        ["e", messageId],
-        ["l", group.id],
-        ["ms", String(Date.now())],
-      ],
-    }
+    try {
+      const sessionManager = (await import("@/shared/services/PrivateChats")).getSessionManager()
+      if (!sessionManager) {
+        console.error("Session manager not available")
+        return
+      }
 
-    // Send reaction to all group members including self for multi-device support
-    // TODO: once delivery is available, dispatch reactionEvent to members
-    void reactionEvent
+      const reactionEvent = {
+        id: crypto.randomUUID(),
+        pubkey: myPubKey,
+        kind: KIND_REACTION,
+        content: emoji,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [
+          ["e", messageId],
+          ["l", group.id],
+          ["ms", String(Date.now())],
+        ],
+      }
+
+      // Store locally first (optimistic)
+      await usePrivateMessagesStore.getState().upsert(id, myPubKey, reactionEvent)
+
+      // Send to all group members (excluding self)
+      await Promise.all(
+        group.members
+          .filter((memberPubKey) => memberPubKey !== myPubKey)
+          .map((memberPubKey) => sessionManager.sendEvent(memberPubKey, reactionEvent))
+      )
+    } catch (error) {
+      console.error("Failed to send group reaction:", error)
+    }
   }
 
   return (
