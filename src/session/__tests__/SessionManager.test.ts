@@ -251,4 +251,27 @@ describe("SessionManager", () => {
       expect(record.inactiveSessions.length).toBeLessThanOrEqual(1)
     })
   })
+
+  it("should reproduce dropped message after alternating restarts", async () => {
+    await runScenario({
+      steps: [
+        {type: "send", from: "alice", to: "bob", message: "alice-init"},
+        {type: "send", from: "bob", to: "alice", message: "bob-init"},
+        {type: "send", from: "alice", to: "bob", message: "alice-after-init"},
+        {type: "restart", actor: "alice"},
+        {type: "send", from: "bob", to: "alice", message: "bob-after-alice-restart"},
+        {type: "restart", actor: "alice"},
+        {type: "send", from: "bob", to: "alice", message: "bob-post-double-restart"},
+        {type: "restart", actor: "alice"},
+        {type: "send", from: "alice", to: "bob", message: "alice-fresh-1"},
+        {type: "send", from: "bob", to: "alice", message: "bob-fresh-1"},
+        {type: "restart", actor: "alice"},
+        {type: "send", from: "alice", to: "bob", message: "alice-fresh-2"},
+        {type: "restart", actor: "alice"},
+        {type: "send", from: "bob", to: "alice", message: "bob-after-many"},
+        {type: "send", from: "alice", to: "bob", message: "alice-final"},
+        {type: "restart", actor: "alice"},
+      ],
+    })
+  })
 })
