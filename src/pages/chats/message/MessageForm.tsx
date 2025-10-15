@@ -87,6 +87,10 @@ const MessageForm = ({
         console.error("Session manager not available")
         return
       }
+
+      const myPubKey = useUserStore.getState().publicKey
+      if (!myPubKey) return
+
       // Create imeta tags for encrypted files
       const imetaTags: string[][] = []
       encryptionMetadata.forEach((meta, url) => {
@@ -100,14 +104,14 @@ const MessageForm = ({
         extraTags.push(["e", replyingTo.id, "", "reply"])
       }
 
+      // Send message and store result
       const sentMessage =
         extraTags.length > 0
           ? await sessionManager.sendMessage(id, text, {tags: extraTags})
           : await sessionManager.sendMessage(id, text)
-      await usePrivateMessagesStore
-        .getState()
-        .upsert(id, useUserStore.getState().publicKey, sentMessage)
-      setEncryptionMetadata(new Map()) // Clear after sending
+
+      await usePrivateMessagesStore.getState().upsert(id, myPubKey, sentMessage)
+      setEncryptionMetadata(new Map())
     } catch (error) {
       console.error("Failed to send message:", error)
     }

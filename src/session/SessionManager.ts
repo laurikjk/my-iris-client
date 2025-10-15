@@ -413,17 +413,11 @@ export default class SessionManager {
       message,
     ])
 
-    const sentEvent = await this.sendEvent(recipientPublicKey, message)
+    // Return message immediately for optimistic UI
+    // Send in background without blocking
+    this.sendEvent(recipientPublicKey, message).catch(console.error)
 
-    if (!sentEvent) {
-      // TODO: Library removes dashes from innerEvent IDs
-      // Remove this workaround when sentEvent can be quaranteed
-      // e.g. when at least one session exists
-      const patchedId = message.id.replace("-", "")
-      return {...message, id: patchedId}
-    }
-
-    return sentEvent
+    return message
   }
 
   private buildMessageTags(

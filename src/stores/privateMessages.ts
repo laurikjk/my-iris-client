@@ -39,30 +39,6 @@ interface PrivateMessagesStoreActions {
 
 type PrivateMessagesStore = PrivateMessagesStoreState & PrivateMessagesStoreActions
 
-const makeOrModifyMessage = async (message: MessageType) => {
-  const isReaction = message.kind === KIND_REACTION
-  const eTag = message.tags.find(([key]) => key === "e")
-  if (isReaction && eTag) {
-    const [, messageId] = eTag
-    const oldMsg = await messageRepository.getById(messageId)
-
-    const pubKey = message.pubkey
-
-    if (oldMsg) {
-      const updatedMsg = {
-        ...oldMsg,
-        reactions: {
-          ...oldMsg.reactions,
-          [pubKey]: message.content,
-        },
-      }
-
-      return updatedMsg
-    }
-  }
-  return message
-}
-
 export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
   const rehydration = Promise.all([
     messageRepository.loadAll(),
@@ -75,14 +51,44 @@ export const usePrivateMessagesStore = create<PrivateMessagesStore>((set) => {
     lastSeen: new Map(),
 
     upsert: async (from, to, event) => {
-      await rehydration
-      const message = await makeOrModifyMessage(event)
       const myPubKey = useUserStore.getState().publicKey
       const chatId = from === myPubKey ? to : from
-      await messageRepository.save(chatId, message)
-      set((state) => ({
-        events: addToMap(new Map(state.events), chatId, message),
-      }))
+
+      // Process reactions synchronously using current state
+      let processedMessage: MessageType = event
+      set((state) => {
+        const isReaction = event.kind === KIND_REACTION
+        const eTag = event.tags.find(([key]) => key === "e")
+
+        if (isReaction && eTag) {
+          const [, messageId] = eTag
+          const pubKey = event.pubkey
+
+          // Find target message in current state
+          for (const messageMap of state.events.values()) {
+            const oldMsg = messageMap.get(messageId)
+            if (oldMsg) {
+              processedMessage = {
+                ...oldMsg,
+                reactions: {
+                  ...oldMsg.reactions,
+                  [pubKey]: event.content,
+                },
+              }
+              break
+            }
+          }
+        }
+
+        return {
+          events: addToMap(new Map(state.events), chatId, processedMessage),
+        }
+      })
+
+      // Handle persistence in background
+      rehydration
+        .then(() => messageRepository.save(chatId, processedMessage))
+        .catch(console.error)
     },
 
     removeSession: async (chatId) => {

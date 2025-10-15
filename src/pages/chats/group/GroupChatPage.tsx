@@ -31,21 +31,38 @@ const GroupChatPage = () => {
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !myPubKey) return
-    const messageEvent = {
-      kind: 0,
-      content,
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [
-        ["l", group.id],
-        ["ms", String(Date.now())],
-      ],
-    }
 
-    //TODO: Implement sendMessage function to handle optimistic UI update and sending
-    // Send to all group members
-    // For ourselves, the optimistic update in sendMessage will handle display
-    // For others, we need to actually send the message
-    void messageEvent
+    try {
+      const sessionManager = (await import("@/shared/services/PrivateChats")).getSessionManager()
+      if (!sessionManager) {
+        console.error("Session manager not available")
+        return
+      }
+
+      const messageEvent = {
+        id: crypto.randomUUID(),
+        pubkey: myPubKey,
+        kind: 0,
+        content,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [
+          ["l", group.id],
+          ["ms", String(Date.now())],
+        ],
+      }
+
+      // Send to all group members (excluding self)
+      await Promise.all(
+        group.members
+          .filter((memberPubKey) => memberPubKey !== myPubKey)
+          .map((memberPubKey) => sessionManager.sendEvent(memberPubKey, messageEvent))
+      )
+
+      // Store message locally for immediate display
+      await usePrivateMessagesStore.getState().upsert(id, myPubKey, messageEvent)
+    } catch (error) {
+      console.error("Failed to send group message:", error)
+    }
   }
 
   const handleSendReaction = async (messageId: string, emoji: string) => {
