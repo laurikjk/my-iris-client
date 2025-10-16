@@ -120,8 +120,33 @@ export default class SessionManager {
         this.ourDeviceInviteSubscription = invite.listen(
           this.ourIdentityKey,
           this.nostrSubscribe,
-          (session, inviteePubkey, deviceId) => {
+          async (session, inviteePubkey, deviceId) => {
             if (!deviceId || deviceId === this.deviceId) return
+
+            // Session name is event id currently
+            const nostrEventId = session.name
+
+            const accKey = `invite-accept/${this.ourPublicKey}/${deviceId}/${nostrEventId}`
+
+            const nostrEventIdInStorage = await this.storage.get<string>(accKey)
+            console.warn(accKey, nostrEventIdInStorage)
+
+            if (nostrEventIdInStorage) {
+              console.warn(
+                "Already accepted invite from",
+                inviteePubkey,
+                "for device",
+                deviceId
+              )
+              return
+            }
+
+            console.warn("storing acceptance key", accKey)
+            if (nostrEventId) {
+              await this.storage.put(accKey, "1")
+            }
+
+            console.warn("Accepted invite", deviceId, "from", inviteePubkey)
 
             this.attachSessionSubscription(inviteePubkey, deviceId, session)
           }
@@ -181,7 +206,9 @@ export default class SessionManager {
 
     const unsub = session.onEvent((event) => {
       for (const cb of this.internalSubscriptions) cb(event, userPubkey)
+      this.storeUserRecord(userPubkey).catch(console.error)
     })
+    this.storeUserRecord(userPubkey).catch(console.error)
     this.sessionSubscriptions.set(key, unsub)
   }
 
@@ -229,6 +256,10 @@ export default class SessionManager {
       ).inactiveSessions
 
       console.warn("Current sessions", currentActiveSession, currentInactiveSessions)
+
+      if (currentActiveSession) {
+        return
+      }
 
       const {session, event} = await invite.accept(
         this.nostrSubscribe,
@@ -511,6 +542,7 @@ export default class SessionManager {
               for (const callback of this.internalSubscriptions) {
                 callback(event, publicKey)
               }
+              this.storeUserRecord(publicKey).catch(console.error)
             })
             if (unsubscribe)
               this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
@@ -528,6 +560,7 @@ export default class SessionManager {
               for (const callback of this.internalSubscriptions) {
                 callback(event, publicKey)
               }
+              this.storeUserRecord(publicKey).catch(console.error)
             })
             if (unsubscribe)
               this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
