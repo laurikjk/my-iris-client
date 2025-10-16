@@ -165,7 +165,20 @@ describe("SessionManager", () => {
     })
   })
 
-  it.skip("should not accumulate additional sessions after restart", async () => {
+  it("should deliver messages sent while bob is offline once he reconnects", async () => {
+    await runScenario({
+      steps: [
+        {type: "send", from: "alice", to: "bob", message: "alice pre offline"},
+        {type: "offline", actor: "bob"},
+        {type: "send", from: "alice", to: "bob", message: "alice queued 1"},
+        {type: "send", from: "alice", to: "bob", message: "alice queued 2"},
+        {type: "online", actor: "bob"},
+        {type: "expectAll", actor: "bob", messages: ["alice queued 1", "alice queued 2"]},
+      ],
+    })
+  })
+
+  it("should not accumulate additional sessions after restart", async () => {
     const sharedRelay = new MockRelay(true)
 
     const {

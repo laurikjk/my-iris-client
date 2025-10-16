@@ -1,5 +1,5 @@
 import {MockRelay} from "./mockRelay"
-import {createMockSessionManager} from "./mockSessionManager"
+import {createMockSessionManager, MockConnectionController} from "./mockSessionManager"
 import SessionManager from "../../SessionManager"
 import {Rumor} from "nostr-double-ratchet"
 import type {InMemoryStorageAdapter} from "../../StorageAdapter"
@@ -29,6 +29,8 @@ interface ActorState {
   messageCounts: Map<string, number>
   waiters: MessageWaiter[]
   unsub?: () => void
+  connection: MockConnectionController
+  online: boolean
 }
 
 type ScenarioStep =
@@ -38,6 +40,8 @@ type ScenarioStep =
   | {type: "close"; actor: ActorId}
   | {type: "restart"; actor: ActorId}
   | {type: "noop"}
+  | {type: "offline"; actor: ActorId}
+  | {type: "online"; actor: ActorId}
 
 type ScenarioDefinition = {
   steps: ScenarioStep[]
@@ -70,6 +74,12 @@ export async function runScenario(def: ScenarioDefinition): Promise<ScenarioCont
       case "restart":
         await restartActor(context, step.actor)
         break
+      case "offline":
+        setOffline(context, step.actor)
+        break
+      case "online":
+        setOnline(context, step.actor)
+        break
       case "noop":
         await Promise.resolve()
         break
@@ -89,12 +99,13 @@ async function bootstrapActor(
   existingSecretKey?: Uint8Array,
   existingStorage?: InMemoryStorageAdapter
 ): Promise<ActorState> {
-  const {manager, secretKey, publicKey, mockStorage} = await createMockSessionManager(
-    deviceId,
-    relay,
-    existingSecretKey,
-    existingStorage
-  )
+  const {
+    manager,
+    secretKey,
+    publicKey,
+    mockStorage,
+    connection,
+  } = await createMockSessionManager(deviceId, relay, existingSecretKey, existingStorage)
 
   const events: Rumor[] = []
   const state: ActorState = {
@@ -106,6 +117,8 @@ async function bootstrapActor(
     events,
     messageCounts: new Map(),
     waiters: [],
+    connection,
+    online: true,
   }
 
   state.unsub = attachManagerListener(state)
@@ -121,9 +134,13 @@ async function sendMessage(
 ) {
   const sender = context.actors[from]
   const recipient = context.actors[to]
-  const wait = waitForMessage(recipient, to, message, {existingOk: false})
+  const wait = recipient.online
+    ? waitForMessage(recipient, to, message, {existingOk: false})
+    : null
   await sender.manager.sendMessage(recipient.publicKey, message)
-  await wait
+  if (wait) {
+    await wait
+  }
 }
 
 async function expectMessage(context: ScenarioContext, actor: ActorId, message: string) {
@@ -154,7 +171,7 @@ async function restartActor(context: ScenarioContext, actor: ActorId) {
   const {deviceId, manager, secretKey, storage, unsub} = state
   unsub?.()
   manager.close()
-  const {manager: newManager} = await createMockSessionManager(
+  const {manager: newManager, connection} = await createMockSessionManager(
     deviceId,
     context.relay,
     secretKey,
@@ -162,7 +179,25 @@ async function restartActor(context: ScenarioContext, actor: ActorId) {
   )
 
   state.manager = newManager
+  state.connection = connection
+  if (!state.online) {
+    state.connection.goOffline()
+  }
   state.unsub = attachManagerListener(state)
+}
+
+function setOffline(context: ScenarioContext, actor: ActorId) {
+  const state = context.actors[actor]
+  if (!state.online) return
+  state.connection.goOffline()
+  state.online = false
+}
+
+function setOnline(context: ScenarioContext, actor: ActorId) {
+  const state = context.actors[actor]
+  if (state.online) return
+  state.connection.goOnline()
+  state.online = true
 }
 
 function attachManagerListener(state: ActorState): () => void {
