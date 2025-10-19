@@ -91,7 +91,7 @@ export default class SessionManager {
     if (this.initialized) return
     this.initialized = true
 
-    // TODO: await migrateToVersion1IfNeeded(this.storage)
+    await this.runMigrations()
 
     await this.loadAllUserRecords()
 
@@ -201,6 +201,9 @@ export default class SessionManager {
 
   private userRecordKeyPrefix() {
     return `${this.versionPrefix}/user/`
+  }
+  private versionKey() {
+    return `storage-version`
   }
 
   private attachSessionSubscription(
@@ -599,5 +602,20 @@ export default class SessionManager {
         })
       )
     })
+  }
+
+  private async runMigrations() {
+    // Run migrations sequentially
+    let version = await this.storage.get<string>(this.versionKey())
+
+    // First migration
+    if (!version) {
+      return
+    }
+
+    // Future migrations
+    if (version === "1") {
+      return
+    }
   }
 }
