@@ -2,6 +2,7 @@ import {useState, useEffect} from "react"
 import type {Manager} from "@/lib/cashu/core/index"
 import type {Token} from "@cashu/cashu-ts"
 import Modal from "@/shared/components/ui/Modal"
+import {decode} from "light-bolt11-decoder"
 
 interface SendDialogProps {
   isOpen: boolean
@@ -10,6 +11,7 @@ interface SendDialogProps {
   mintUrl: string
   onSuccess: () => void
   initialToken?: Token
+  initialInvoice?: string
 }
 
 export default function SendDialog({
@@ -19,10 +21,12 @@ export default function SendDialog({
   mintUrl,
   onSuccess,
   initialToken,
+  initialInvoice,
 }: SendDialogProps) {
   const [sendMode, setSendMode] = useState<"select" | "ecash" | "lightning">("select")
   const [sendAmount, setSendAmount] = useState<number>(100)
   const [sendInvoice, setSendInvoice] = useState<string>("")
+  const [invoiceAmount, setInvoiceAmount] = useState<number | null>(null)
   const [generatedToken, setGeneratedToken] = useState<string>("")
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [sending, setSending] = useState(false)
@@ -42,6 +46,39 @@ export default function SendDialog({
     }
     loadInitialToken()
   }, [initialToken, isOpen])
+
+  // Handle initial invoice (from QR scan)
+  useEffect(() => {
+    if (initialInvoice && isOpen) {
+      setSendInvoice(initialInvoice)
+      setSendMode("lightning")
+    }
+  }, [initialInvoice, isOpen])
+
+  // Decode Lightning invoice to get amount
+  useEffect(() => {
+    if (!sendInvoice.trim()) {
+      setInvoiceAmount(null)
+      return
+    }
+
+    try {
+      const decodedInvoice = decode(sendInvoice.trim())
+      const amountSection = decodedInvoice.sections.find(
+        (section) => section.name === "amount"
+      )
+      if (amountSection && "value" in amountSection) {
+        // Convert millisatoshis to satoshis
+        const sats = Math.floor(parseInt(amountSection.value) / 1000)
+        setInvoiceAmount(sats)
+      } else {
+        setInvoiceAmount(null)
+      }
+    } catch (error) {
+      console.warn("Failed to decode invoice:", error)
+      setInvoiceAmount(null)
+    }
+  }, [sendInvoice])
 
   useEffect(() => {
     const generateQR = async () => {
@@ -257,6 +294,14 @@ export default function SendDialog({
                 onChange={(e) => setSendInvoice(e.target.value)}
               />
             </div>
+            {invoiceAmount !== null && (
+              <div className="alert alert-info">
+                <div className="flex flex-col">
+                  <span className="font-bold">Amount</span>
+                  <span className="text-lg">{invoiceAmount.toLocaleString()} sats</span>
+                </div>
+              </div>
+            )}
             <button
               className="btn btn-primary w-full"
               onClick={sendLightning}

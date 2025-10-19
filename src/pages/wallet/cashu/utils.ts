@@ -21,19 +21,6 @@ export const formatDate = (timestamp: number): string => {
   return `${seconds}s`
 }
 
-export const getTransactionLabel = (entry: HistoryEntry): string => {
-  switch (entry.type) {
-    case "mint":
-      return "Mint"
-    case "melt":
-      return "Melt"
-    case "send":
-      return "Send"
-    case "receive":
-      return "Receive"
-  }
-}
-
 export const getTransactionAmount = (entry: HistoryEntry): number => {
   switch (entry.type) {
     case "mint":
@@ -48,10 +35,14 @@ export const getTransactionAmount = (entry: HistoryEntry): number => {
 }
 
 export const getTransactionStatus = (entry: HistoryEntry): string | null => {
-  if (entry.type === "mint" && entry.state !== "PAID") {
+  // Mint states: UNPAID | ISSUED | PAID
+  // Only show pending if UNPAID (not yet paid on Lightning)
+  if (entry.type === "mint" && entry.state === "UNPAID") {
     return "pending"
   }
-  if (entry.type === "melt" && entry.state !== "PAID") {
+  // Melt states: UNPAID | PENDING | PAID
+  // Show pending if not yet completed
+  if (entry.type === "melt" && (entry.state === "UNPAID" || entry.state === "PENDING")) {
     return "pending"
   }
   return null

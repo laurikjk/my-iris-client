@@ -1,4 +1,4 @@
-import {useState} from "react"
+import {useState, useEffect} from "react"
 import type {Manager} from "@/lib/cashu/core/index"
 import Modal from "@/shared/components/ui/Modal"
 
@@ -8,6 +8,7 @@ interface ReceiveDialogProps {
   manager: Manager | null
   mintUrl: string
   onSuccess: () => void
+  initialToken?: string
 }
 
 export default function ReceiveDialog({
@@ -16,6 +17,7 @@ export default function ReceiveDialog({
   manager,
   mintUrl,
   onSuccess,
+  initialToken,
 }: ReceiveDialogProps) {
   const [receiveMode, setReceiveMode] = useState<"select" | "ecash" | "lightning">(
     "select"
@@ -24,6 +26,14 @@ export default function ReceiveDialog({
   const [lightningAmount, setLightningAmount] = useState<number>(100)
   const [invoice, setInvoice] = useState<string>("")
   const [receiving, setReceiving] = useState(false)
+
+  // Handle initial token (from QR scan)
+  useEffect(() => {
+    if (initialToken && isOpen) {
+      setTokenInput(initialToken)
+      setReceiveMode("ecash")
+    }
+  }, [initialToken, isOpen])
 
   const handleClose = () => {
     onClose()
