@@ -1,6 +1,7 @@
 import {useWalletBalance} from "@/shared/hooks/useWalletBalance"
 import {useUserStore} from "@/stores/user"
 import {useWalletProviderStore} from "@/stores/walletProvider"
+import {useWalletStore} from "@/stores/wallet"
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
@@ -8,6 +9,7 @@ import {ChangeEvent, useState, useEffect} from "react"
 
 const WalletSettings = () => {
   const {balance} = useWalletBalance()
+  const {showBalanceInNav, setShowBalanceInNav} = useWalletStore()
   const {defaultZapAmount, setDefaultZapAmount, defaultZapComment, setDefaultZapComment} =
     useUserStore()
 
@@ -376,6 +378,28 @@ const WalletSettings = () => {
               placeholder="Optional comment for quick zaps"
               isLast
             />
+          </SettingsGroup>
+
+          <SettingsGroup title="Display">
+            <SettingsGroupItem
+              isLast
+              onClick={() => setShowBalanceInNav(!showBalanceInNav)}
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="font-medium">Show balance in navbar / footer</div>
+                  <div className="text-sm text-base-content/60">
+                    Display your wallet balance in the navigation
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  className="toggle toggle-primary"
+                  checked={showBalanceInNav}
+                  onChange={(e) => setShowBalanceInNav(e.target.checked)}
+                />
+              </div>
+            </SettingsGroupItem>
           </SettingsGroup>
 
           <SettingsGroup title="Legacy Wallet">

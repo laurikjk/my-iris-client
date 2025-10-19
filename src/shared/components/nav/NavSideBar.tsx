@@ -10,6 +10,7 @@ import PublishButton from "../ui/PublishButton"
 import ErrorBoundary from "../ui/ErrorBoundary"
 import {formatAmount} from "@/utils/utils"
 import {usePublicKey, useUserStore} from "@/stores/user"
+import {useWalletStore} from "@/stores/wallet"
 import {useSettingsStore} from "@/stores/settings"
 import {navItemsConfig} from "./navConfig"
 import {UserRow} from "../user/UserRow"
@@ -22,6 +23,7 @@ const NavSideBar = () => {
   const ref = useRef<HTMLDivElement>(null)
   const {setShowLoginDialog} = useUIStore()
   const {balance} = useWalletBalance()
+  const {showBalanceInNav} = useWalletStore()
   const myPubKey = usePublicKey()
   const myPrivKey = useUserStore((state) => state.privateKey)
   const nip07Login = useUserStore((state) => state.nip07Login)
@@ -98,7 +100,7 @@ const NavSideBar = () => {
                   label={label}
                   onClick={onClick}
                   badge={
-                    label === "Wallet" && balance !== null ? (
+                    label === "Wallet" && showBalanceInNav && balance !== null ? (
                       <>
                         {formatAmount(balance)}
                         <span className="text-[0.85em]">₿</span>

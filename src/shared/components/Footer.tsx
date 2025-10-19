@@ -9,6 +9,7 @@ import {ProfileLink} from "@/shared/components/user/ProfileLink"
 import ErrorBoundary from "./ui/ErrorBoundary"
 import {formatAmount} from "@/utils/utils"
 import {useUserStore} from "@/stores/user"
+import {useWalletStore} from "@/stores/wallet"
 import {useLocation} from "@/navigation"
 import {ndk} from "@/utils/ndk"
 
@@ -28,9 +29,8 @@ const Footer = () => {
   const readonly = false
   const location = useLocation()
   const {balance} = useWalletBalance()
+  const {showBalanceInNav} = useWalletStore()
   const myPubKey = useUserStore((state) => state.publicKey)
-
-  console.log("🔍 Footer balance:", balance)
 
   const MENU_ITEMS: MenuItem[] = [
     {link: "/", icon: "home"},
@@ -39,7 +39,7 @@ const Footer = () => {
       icon: "wallet",
       loggedInOnly: true,
       badge:
-        balance !== null ? (
+        showBalanceInNav && balance !== null ? (
           <>
             {formatAmount(balance)}
             <span className="text-[0.85em]">₿</span>

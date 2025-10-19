@@ -1,21 +1,68 @@
 import {useState, useEffect} from "react"
 import {initCashuManager, getCashuManager} from "@/lib/cashu/manager"
 import type {Manager} from "@/lib/cashu/core/index"
-import {getDecodedToken} from "@cashu/cashu-ts"
+import type {HistoryEntry, SendHistoryEntry} from "@/lib/cashu/core/models/History"
+import type {Token} from "@cashu/cashu-ts"
 import RightColumn from "@/shared/components/RightColumn"
 import Widget from "@/shared/components/ui/Widget"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
+import {useCashuWalletStore} from "@/stores/cashuWallet"
+import {useWalletProviderStore} from "@/stores/walletProvider"
+import {RiArrowRightUpLine, RiArrowLeftDownLine} from "@remixicon/react"
+import SendDialog from "./cashu/SendDialog"
+import ReceiveDialog from "./cashu/ReceiveDialog"
+import HistoryList from "./cashu/HistoryList"
+import MintsList from "./cashu/MintsList"
+import {formatUsd} from "./cashu/utils"
+import {useNavigate} from "@/navigation"
 
 const DEFAULT_MINT = "https://mint.minibits.cash/Bitcoin"
 
 export default function CashuWallet() {
+  const {expandHistory, activeTab, toggleExpandHistory, setActiveTab} =
+    useCashuWalletStore()
+  const {activeProviderType} = useWalletProviderStore()
+  const navigate = useNavigate()
+
   const [manager, setManager] = useState<Manager | null>(null)
   const [balance, setBalance] = useState<{[mintUrl: string]: number} | null>(null)
   const [loading, setLoading] = useState(true)
-  const [mintUrl, setMintUrl] = useState(DEFAULT_MINT)
-  const [amount, setAmount] = useState<number>(100)
-  const [invoice, setInvoice] = useState<string>("")
-  const [token, setToken] = useState<string>("")
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [showSendDialog, setShowSendDialog] = useState(false)
+  const [showReceiveDialog, setShowReceiveDialog] = useState(false)
+  const [usdRate, setUsdRate] = useState<number | null>(null)
+  const [sendDialogInitialToken, setSendDialogInitialToken] = useState<Token | undefined>(
+    undefined
+  )
+
+  const refreshData = async () => {
+    if (!manager) return
+    try {
+      const bal = await manager.wallet.getBalances()
+      setBalance(bal)
+      const hist = await manager.history.getPaginatedHistory(0, 50)
+      setHistory(hist)
+    } catch (error) {
+      console.error("Failed to refresh data:", error)
+    }
+  }
+
+  const handleSendEntryClick = (entry: SendHistoryEntry) => {
+    setSendDialogInitialToken(entry.token)
+    setShowSendDialog(true)
+  }
+
+  const handleCloseSendDialog = () => {
+    setShowSendDialog(false)
+    setSendDialogInitialToken(undefined)
+  }
+
+  // Redirect to settings if default Cashu wallet is not selected
+  useEffect(() => {
+    if (activeProviderType !== undefined && activeProviderType !== "cashu") {
+      navigate("/settings/wallet")
+    }
+  }, [activeProviderType, navigate])
 
   useEffect(() => {
     const init = async () => {
@@ -26,6 +73,10 @@ export default function CashuWallet() {
         // Load balance
         const bal = await mgr.wallet.getBalances()
         setBalance(bal)
+
+        // Load history
+        const hist = await mgr.history.getPaginatedHistory(0, 50)
+        setHistory(hist)
       } catch (error) {
         console.error("Failed to initialize Cashu manager:", error)
       } finally {
@@ -33,69 +84,25 @@ export default function CashuWallet() {
       }
     }
     init()
-  }, [])
 
-  const addMint = async () => {
-    if (!manager || !mintUrl) return
-    try {
-      await manager.mint.addMint(mintUrl)
-      const bal = await manager.wallet.getBalances()
-      setBalance(bal)
-    } catch (error) {
-      console.error("Failed to add mint:", error)
-    }
-  }
-
-  const createMintQuote = async () => {
-    if (!manager || !mintUrl || !amount) return
-    try {
-      const quote = await manager.quotes.createMintQuote(mintUrl, amount)
-      setInvoice(quote.request)
-    } catch (error) {
-      console.error("Failed to create mint quote:", error)
-    }
-  }
-
-  const receiveToken = async () => {
-    if (!manager || !token) return
-    try {
-      // Decode token to get mint URL
-      const decoded = getDecodedToken(token)
-      console.log("Decoded token:", decoded)
-
-      // Token structure is { mint: string, proofs: [...] }
-      const mintUrl = decoded.mint
-
-      if (mintUrl) {
-        // Check if mint is known, if not add it
-        const isKnown = await manager.mint.isKnownMint(mintUrl)
-        if (!isKnown) {
-          console.log("Adding unknown mint:", mintUrl)
-          await manager.mint.addMint(mintUrl)
-        }
+    // Fetch USD rate from Coinbase
+    const fetchUsdRate = async () => {
+      try {
+        const response = await fetch(
+          "https://api.coinbase.com/v2/exchange-rates?currency=BTC"
+        )
+        const data = await response.json()
+        setUsdRate(parseFloat(data.data.rates.USD))
+      } catch (error) {
+        console.error("Failed to fetch USD rate:", error)
       }
-
-      // Now receive the token
-      await manager.wallet.receive(token)
-      const bal = await manager.wallet.getBalances()
-      setBalance(bal)
-      setToken("")
-    } catch (error) {
-      console.error("Failed to receive token:", error)
     }
-  }
+    fetchUsdRate()
 
-  const sendToken = async () => {
-    if (!manager || !mintUrl || !amount) return
-    try {
-      const sentToken = await manager.wallet.send(mintUrl, amount)
-      setToken(JSON.stringify(sentToken))
-      const bal = await manager.wallet.getBalances()
-      setBalance(bal)
-    } catch (error) {
-      console.error("Failed to send token:", error)
-    }
-  }
+    // Refresh rate every 60 seconds
+    const rateInterval = setInterval(fetchUsdRate, 60000)
+    return () => clearInterval(rateInterval)
+  }, [])
 
   if (loading) {
     return (
@@ -111,119 +118,153 @@ export default function CashuWallet() {
 
   return (
     <div className="flex justify-center h-screen overflow-y-auto">
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
-              <h2 className="card-title">Cashu Wallet</h2>
-              <div className="text-3xl font-bold">{totalBalance} sats</div>
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto">
+          {/* Balance Section */}
+          <div className="pt-16 pb-8 text-center">
+            {/* Balance Display */}
+            <div className="text-5xl font-bold mb-2">{totalBalance} sat</div>
+            <div className="text-xl text-base-content/60">
+              {formatUsd(totalBalance, usdRate)}
             </div>
+
+            {/* Mint Info */}
+            {balance && Object.keys(balance).length > 0 && (
+              <div className="text-sm text-base-content/60 mt-4">
+                Mint:{" "}
+                <span className="font-medium">
+                  {Object.keys(balance)[0].replace(/^https?:\/\//, "")}
+                </span>
+              </div>
+            )}
           </div>
 
-          <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
-              <h3 className="card-title">Add Mint</h3>
-              <div className="form-control">
-                <input
-                  type="text"
-                  placeholder="Mint URL"
-                  className="input input-bordered"
-                  value={mintUrl}
-                  onChange={(e) => setMintUrl(e.target.value)}
+          {/* Action Buttons */}
+          <div className="flex items-center justify-center gap-4 px-4 py-8 relative">
+            <button
+              onClick={() => setShowReceiveDialog(true)}
+              className="btn btn-primary rounded-full px-6 flex-1 max-w-[150px]"
+            >
+              <RiArrowLeftDownLine className="w-5 h-5 mr-1" />
+              RECEIVE
+            </button>
+
+            <button className="btn btn-outline btn-primary btn-circle absolute z-10 btn-lg">
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
                 />
-              </div>
-              <button className="btn btn-primary" onClick={addMint}>
-                Add Mint
-              </button>
-            </div>
+              </svg>
+            </button>
+
+            <button
+              onClick={() => setShowSendDialog(true)}
+              className="btn btn-primary rounded-full px-6 flex-1 max-w-[150px]"
+            >
+              SEND
+              <RiArrowRightUpLine className="w-5 h-5 ml-1" />
+            </button>
           </div>
 
-          <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
-              <h3 className="card-title">Receive (Mint)</h3>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Amount (sats)</span>
-                </label>
-                <input
-                  type="number"
-                  placeholder="100"
-                  className="input input-bordered"
-                  value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
-                />
-              </div>
-              <button className="btn btn-primary" onClick={createMintQuote}>
-                Create Invoice
+          {/* History Section */}
+          <div className="px-4">
+            {/* Expand/Collapse Toggle */}
+            <div className="flex justify-center py-4">
+              <button onClick={toggleExpandHistory}>
+                <svg
+                  className={`w-6 h-6 transition-transform ${expandHistory ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
               </button>
-              {invoice && (
-                <div className="alert">
-                  <div className="text-sm break-all">{invoice}</div>
+            </div>
+
+            {/* Tabs and Content */}
+            {expandHistory && (
+              <>
+                <div className="flex border-b border-base-300">
+                  <button
+                    onClick={() => setActiveTab("history")}
+                    className={`px-4 py-2 ${
+                      activeTab === "history"
+                        ? "border-b-2 font-bold"
+                        : "text-base-content/60"
+                    }`}
+                  >
+                    History
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("mints")}
+                    className={`px-4 py-2 ${
+                      activeTab === "mints"
+                        ? "border-b-2 font-bold"
+                        : "text-base-content/60"
+                    }`}
+                  >
+                    Mints
+                  </button>
                 </div>
-              )}
-            </div>
+
+                {/* History Tab */}
+                {activeTab === "history" && (
+                  <div className="py-4">
+                    <HistoryList
+                      history={history}
+                      usdRate={usdRate}
+                      onSendEntryClick={handleSendEntryClick}
+                    />
+                  </div>
+                )}
+
+                {/* Mints Tab */}
+                {activeTab === "mints" && (
+                  <div className="py-4">
+                    <MintsList
+                      balance={balance}
+                      manager={manager}
+                      onBalanceUpdate={refreshData}
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
-          <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
-              <h3 className="card-title">Receive Token</h3>
-              <div className="form-control">
-                <textarea
-                  placeholder="Paste Cashu token here"
-                  className="textarea textarea-bordered h-24"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                />
-              </div>
-              <button className="btn btn-primary" onClick={receiveToken}>
-                Receive
-              </button>
-            </div>
-          </div>
+          <SendDialog
+            isOpen={showSendDialog}
+            onClose={handleCloseSendDialog}
+            manager={manager}
+            mintUrl={balance ? Object.keys(balance)[0] : DEFAULT_MINT}
+            onSuccess={refreshData}
+            initialToken={sendDialogInitialToken}
+          />
 
-          <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
-              <h3 className="card-title">Send</h3>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Amount (sats)</span>
-                </label>
-                <input
-                  type="number"
-                  placeholder="100"
-                  className="input input-bordered"
-                  value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
-                />
-              </div>
-              <button className="btn btn-primary" onClick={sendToken}>
-                Create Token
-              </button>
-              {token && (
-                <div className="alert">
-                  <div className="text-sm break-all font-mono">{token}</div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {balance && Object.keys(balance).length > 0 && (
-            <div className="card bg-base-100 shadow-xl">
-              <div className="card-body">
-                <h3 className="card-title">Balances by Mint</h3>
-                <div className="space-y-2">
-                  {Object.entries(balance).map(([mint, bal]) => (
-                    <div key={mint} className="flex justify-between">
-                      <span className="text-sm truncate">{mint}</span>
-                      <span className="font-bold">{bal} sats</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          <ReceiveDialog
+            isOpen={showReceiveDialog}
+            onClose={() => setShowReceiveDialog(false)}
+            manager={manager}
+            mintUrl={balance ? Object.keys(balance)[0] : DEFAULT_MINT}
+            onSuccess={refreshData}
+          />
         </div>
       </div>
+
       <RightColumn>
         {() => (
           <>
