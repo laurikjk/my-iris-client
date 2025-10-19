@@ -305,9 +305,8 @@ export function groupZapsByUser(
  * Decode bech32 LNURL to https URL
  */
 function decodeLNURL(lnurl: string): string {
-  const decoded = bech32.decode(lnurl, 2000)
-  const words = bech32.fromWords(decoded.words)
-  return new TextDecoder().decode(new Uint8Array(words))
+  const decoded = bech32.decodeToBytes(lnurl)
+  return new TextDecoder().decode(decoded.bytes)
 }
 
 /**

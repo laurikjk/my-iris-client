@@ -2,7 +2,7 @@ import {create} from "zustand"
 import {persist} from "zustand/middleware"
 import {SimpleWebLNWallet} from "@/utils/webln"
 import {SimpleNWCWallet} from "@/utils/nwc"
-import {getCashuManager} from "@/lib/cashu/manager"
+import {getCashuManager, initCashuManager} from "@/lib/cashu/manager"
 import throttle from "lodash/throttle"
 import {savePaymentMetadata} from "@/stores/paymentMetadata"
 
@@ -263,7 +263,34 @@ export const useWalletProviderStore = create<WalletProviderState>()(
           hasNativeWallet: !!state.nativeWallet,
         })
 
-        // No longer need NDK instance for WebLN
+        // Initialize Cashu manager early if it's the active provider or if undefined (default)
+        if (
+          state.activeProviderType === "cashu" ||
+          state.activeProviderType === undefined
+        ) {
+          console.log("🔍 Eagerly initializing Cashu manager...")
+          try {
+            const manager = await initCashuManager()
+            console.log("✅ Cashu manager initialized early")
+
+            // Trigger immediate balance update
+            try {
+              const balances = await manager.wallet.getBalances()
+              const totalBalance = Object.values(balances).reduce(
+                (sum, val) => sum + val,
+                0
+              )
+              // Import useWalletStore at runtime to avoid circular dependencies
+              const {useWalletStore} = await import("@/stores/wallet")
+              useWalletStore.getState().setBalance(totalBalance)
+              console.log("✅ Initial balance set:", totalBalance)
+            } catch (balanceError) {
+              console.error("Failed to fetch initial balance:", balanceError)
+            }
+          } catch (error) {
+            console.error("❌ Failed to initialize Cashu manager early:", error)
+          }
+        }
 
         // Start delayed Cashu NWC checking to give Cashu wallet time to initialize
         console.log("🔍 About to call startCashuNWCChecking...")
@@ -354,7 +381,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
         switch (state.activeProviderType) {
           case "cashu":
             console.log("🔄 Using Cashu wallet")
-            // Cashu manager is initialized separately, no need to set activeWallet
+            // Cashu manager should be initialized by initializeProviders
             set({activeWallet: null})
             break
 
@@ -548,15 +575,34 @@ export const useWalletProviderStore = create<WalletProviderState>()(
 
           // Use first mint with balance
           const mintUrl = mints[0]
-          console.log("⚡ Creating melt quote for invoice:", invoice.slice(0, 30) + "...")
-          const quote = await manager.quotes.createMeltQuote(mintUrl, invoice)
-          console.log("📝 Melt quote created:", {
-            quoteId: quote.quote,
-            request: quote.request?.slice(0, 30) + "...",
-          })
-          await manager.quotes.payMeltQuote(mintUrl, quote.quote)
 
-          return {preimage: quote.payment_preimage || undefined}
+          try {
+            console.log(
+              "⚡ Creating melt quote for invoice:",
+              invoice.slice(0, 30) + "..."
+            )
+            const quote = await manager.quotes.createMeltQuote(mintUrl, invoice)
+            console.log("📝 Melt quote created:", {
+              quoteId: quote.quote,
+              request: quote.request?.slice(0, 30) + "...",
+            })
+            await manager.quotes.payMeltQuote(mintUrl, quote.quote)
+
+            return {preimage: quote.payment_preimage || undefined}
+          } catch (error: unknown) {
+            // Check if it's a network/mint error
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            if (
+              errorMessage.includes("Failed to fetch") ||
+              errorMessage.includes("NetworkError")
+            ) {
+              const mintDomain = mintUrl.replace(/^https?:\/\//, "").split("/")[0]
+              throw new Error(
+                `Cashu mint (${mintDomain}) is offline. Try again later or change mints in wallet settings.`
+              )
+            }
+            throw error
+          }
         }
 
         // Handle NWC wallets with our SimpleNWCWallet

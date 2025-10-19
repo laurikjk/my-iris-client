@@ -31,7 +31,7 @@ export const initCashuManager = async (): Promise<Manager> => {
 
   await repos.init()
 
-  const logger = new ConsoleLogger("cashu", {level: "info"})
+  const logger = new ConsoleLogger("cashu", {level: "warn"})
 
   managerInstance = new Manager(repos, getSeed, logger)
 

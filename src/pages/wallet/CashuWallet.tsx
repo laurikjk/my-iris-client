@@ -38,7 +38,7 @@ const ensureMeltQuoteReposInit = async () => {
   }
 }
 
-const DEFAULT_MINT = "https://mint.minibits.cash/Bitcoin"
+const DEFAULT_MINT = "https://mint.coinos.io"
 
 export default function CashuWallet() {
   const {expandHistory, activeTab, toggleExpandHistory, setActiveTab} =

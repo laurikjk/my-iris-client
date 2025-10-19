@@ -28,7 +28,6 @@ import {
   useEnabledFeedIds,
   type FeedConfig,
 } from "@/stores/feed"
-import {initCashuManager} from "@/lib/cashu/manager"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -115,12 +114,6 @@ const Layout = ({children}: {children: ReactNode}) => {
 
   // Initialize wallet providers on app startup
   useEffect(() => {
-    // Initialize Cashu manager first
-    initCashuManager().catch((error) => {
-      console.error("Failed to initialize Cashu manager:", error)
-    })
-
-    // Then initialize other providers
     initializeProviders()
   }, [initializeProviders])
 
