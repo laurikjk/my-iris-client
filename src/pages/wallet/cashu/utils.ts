@@ -4,6 +4,7 @@ export const formatUsd = (bits: number, usdRate: number | null): string => {
   if (!usdRate) return "$0.00"
   const btc = bits / 100000000
   const usd = btc * usdRate
+  if (usd > 0 && usd < 0.01) return "< $0.01"
   return `$${usd.toFixed(2)}`
 }
 
