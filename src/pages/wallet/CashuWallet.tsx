@@ -278,7 +278,7 @@ export default function CashuWallet() {
             {/* Balance Section */}
             <div className="pt-16 md:pt-8 pb-8 text-center">
               {/* Balance Display */}
-              <div className="text-5xl font-bold mb-2">{totalBalance} sat</div>
+              <div className="text-5xl font-bold mb-2">{totalBalance} bit</div>
               <div className="text-xl text-base-content/60">
                 {formatUsd(totalBalance, usdRate)}
               </div>

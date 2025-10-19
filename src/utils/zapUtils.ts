@@ -30,7 +30,7 @@ export async function getZapAmount(event: NDKEvent) {
       (section) => section.name === "amount"
     )
     if (amountSection && "value" in amountSection) {
-      // Convert millisatoshis to satoshis
+      // Convert millisatoshis to bits
       return Math.floor(parseInt(amountSection.value) / 1000)
     }
   }
@@ -55,7 +55,7 @@ export const fetchZappedAmount = async (event: NDKEvent): Promise<number> => {
             (section) => section.name === "amount"
           )
           if (amountSection && "value" in amountSection) {
-            // Convert millisatoshis to satoshis
+            // Convert millisatoshis to bits
             zappedAmount = zappedAmount + Math.floor(parseInt(amountSection.value) / 1000)
           }
         }

@@ -89,7 +89,7 @@ function RelayDetails({relayUrl}: RelayDetailsProps) {
 
   const formatFee = (amount: number, unit: string) => {
     if (unit === "msats") {
-      return `${(amount / 1000).toLocaleString()} sats`
+      return `${(amount / 1000).toLocaleString()} bits`
     }
     return `${amount} ${unit}`
   }

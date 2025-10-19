@@ -247,7 +247,7 @@ export default function ReceiveDialog({
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text">
-                      Create invoice for specific amount (sats)
+                      Create invoice for specific amount (bits)
                     </span>
                   </label>
                   <input

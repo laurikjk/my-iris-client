@@ -38,7 +38,7 @@ export default function MintsList({balance, manager, onBalanceUpdate}: MintsList
           >
             <div className="flex justify-between items-center">
               <div className="text-sm truncate flex-1">{mint}</div>
-              <div className="font-bold ml-4">{bal} sat</div>
+              <div className="font-bold ml-4">{bal} bit</div>
             </div>
           </div>
         ))}

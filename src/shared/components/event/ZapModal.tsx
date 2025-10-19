@@ -275,7 +275,7 @@ function ZapModal({
               <Name pubKey={event.pubkey} className="font-semibold" />
             </div>
           </div>
-          <h3 className="font-semibold uppercase">Zap amount in sats</h3>
+          <h3 className="font-semibold uppercase">Zap amount in bits</h3>
         </div>
 
         <div className="grid grid-cols-4 gap-2 w-full">
@@ -307,7 +307,7 @@ function ZapModal({
               </div>
             )}
             <p className="text-center">
-              {hasWallet ? "Or scan" : "Scan"} the QR code to zap <b>{zapAmount} sats</b>
+              {hasWallet ? "Or scan" : "Scan"} the QR code to zap <b>{zapAmount} bits</b>
               {zapMessage && (
                 <>
                   <br />
@@ -393,7 +393,7 @@ function ZapModal({
               {isProcessing ? (
                 <div className="loading loading-spinner loading-sm" />
               ) : (
-                `Zap ${zapAmount} sats`
+                `Zap ${zapAmount} bits`
               )}
             </button>
           </form>

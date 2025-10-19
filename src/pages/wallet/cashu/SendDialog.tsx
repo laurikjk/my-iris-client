@@ -68,9 +68,9 @@ export default function SendDialog({
         (section) => section.name === "amount"
       )
       if (amountSection && "value" in amountSection) {
-        // Convert millisatoshis to satoshis
-        const sats = Math.floor(parseInt(amountSection.value) / 1000)
-        setInvoiceAmount(sats)
+        // Convert millisatoshis to bits
+        const bits = Math.floor(parseInt(amountSection.value) / 1000)
+        setInvoiceAmount(bits)
       } else {
         setInvoiceAmount(null)
       }
@@ -224,7 +224,7 @@ export default function SendDialog({
               <>
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">Amount (sats)</span>
+                    <span className="label-text">Amount (bits)</span>
                   </label>
                   <input
                     type="number"
@@ -298,7 +298,7 @@ export default function SendDialog({
               <div className="alert alert-info">
                 <div className="flex flex-col">
                   <span className="font-bold">Amount</span>
-                  <span className="text-lg">{invoiceAmount.toLocaleString()} sats</span>
+                  <span className="text-lg">{invoiceAmount.toLocaleString()} bits</span>
                 </div>
               </div>
             )}

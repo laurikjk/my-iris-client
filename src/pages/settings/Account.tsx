@@ -195,7 +195,7 @@ function Account() {
                 </div>
                 {cashuBalance !== null && cashuBalance > 0 && (
                   <div className="text-sm text-warning font-medium">
-                    Your Cashu wallet contains {cashuBalance} sats that will be lost!
+                    Your Cashu wallet contains {cashuBalance} bits that will be lost!
                   </div>
                 )}
               </div>

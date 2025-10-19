@@ -1,8 +1,8 @@
 import type {HistoryEntry} from "@/lib/cashu/core/models/History"
 
-export const formatUsd = (sats: number, usdRate: number | null): string => {
+export const formatUsd = (bits: number, usdRate: number | null): string => {
   if (!usdRate) return "$0.00"
-  const btc = sats / 100000000
+  const btc = bits / 100000000
   const usd = btc * usdRate
   return `$${usd.toFixed(2)}`
 }

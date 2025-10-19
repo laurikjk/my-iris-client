@@ -73,7 +73,7 @@ export default function HistoryList({
             <div className="text-right">
               <div className={`font-bold ${amount >= 0 ? "text-success" : ""}`}>
                 {amount >= 0 ? "+" : ""}
-                {amount} sat
+                {amount} bit
               </div>
               <div className="text-xs text-base-content/60">
                 {formatUsd(Math.abs(amount), usdRate)}

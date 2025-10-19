@@ -191,9 +191,9 @@ export class SimpleNWCWallet {
 
       if (response.result && "balance" in response.result) {
         const msats = response.result.balance as number
-        const sats = Math.floor(msats / 1000)
-        console.log(`💰 NWC: Balance: ${sats} sats`)
-        return sats
+        const bits = Math.floor(msats / 1000)
+        console.log(`💰 NWC: Balance: ${bits} bits`)
+        return bits
       }
 
       return null
