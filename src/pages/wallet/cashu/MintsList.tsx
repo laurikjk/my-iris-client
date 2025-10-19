@@ -1,5 +1,6 @@
 import {useState} from "react"
 import type {Manager} from "@/lib/cashu/core/index"
+import MintDetailsModal from "./MintDetailsModal"
 
 interface MintsListProps {
   balance: {[mintUrl: string]: number} | null
@@ -9,6 +10,7 @@ interface MintsListProps {
 
 export default function MintsList({balance, manager, onBalanceUpdate}: MintsListProps) {
   const [mintUrl, setMintUrl] = useState("")
+  const [selectedMintUrl, setSelectedMintUrl] = useState<string | null>(null)
 
   const addMint = async () => {
     if (!manager || !mintUrl) return
@@ -29,7 +31,11 @@ export default function MintsList({balance, manager, onBalanceUpdate}: MintsList
     <div className="space-y-4">
       {balance &&
         Object.entries(balance).map(([mint, bal]) => (
-          <div key={mint} className="p-4 bg-base-200 rounded-lg">
+          <div
+            key={mint}
+            className="p-4 bg-base-200 rounded-lg cursor-pointer hover:bg-base-300 transition-colors"
+            onClick={() => setSelectedMintUrl(mint)}
+          >
             <div className="flex justify-between items-center">
               <div className="text-sm truncate flex-1">{mint}</div>
               <div className="font-bold ml-4">{bal} sat</div>
@@ -52,6 +58,17 @@ export default function MintsList({balance, manager, onBalanceUpdate}: MintsList
           </button>
         </div>
       </div>
+
+      <MintDetailsModal
+        isOpen={selectedMintUrl !== null}
+        onClose={() => setSelectedMintUrl(null)}
+        mintUrl={selectedMintUrl || ""}
+        manager={manager}
+        onMintDeleted={() => {
+          setSelectedMintUrl(null)
+          onBalanceUpdate()
+        }}
+      />
     </div>
   )
 }
