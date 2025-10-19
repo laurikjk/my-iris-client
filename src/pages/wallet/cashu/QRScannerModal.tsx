@@ -17,25 +17,25 @@ export default function QRScannerModal({
   if (!isOpen) return null
 
   return (
-    <Modal onClose={onClose} hasBackground={false}>
-      <div className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg min-h-[500px]">
-        <h2 className="text-2xl font-bold text-white mb-6">Scan QR Code</h2>
-        <div className="bg-white rounded-2xl p-1 shadow-2xl">
-          <div className="w-80 h-80 rounded-2xl overflow-hidden relative">
+    <Modal onClose={onClose}>
+      <div className="p-4">
+        <h3 className="font-bold text-lg mb-4">Scan QR Code</h3>
+        <div className="flex flex-col items-center">
+          <div className="w-full max-w-sm aspect-square bg-base-200 rounded-lg overflow-hidden">
             <Suspense
               fallback={
-                <div className="flex items-center justify-center w-full h-full bg-gray-100">
-                  <span className="text-gray-600">Loading camera...</span>
+                <div className="flex items-center justify-center w-full h-full">
+                  <span>Loading camera...</span>
                 </div>
               }
             >
               <QRScanner onScanSuccess={onScanSuccess} />
             </Suspense>
           </div>
+          <p className="text-sm text-base-content/60 text-center mt-4">
+            Scan a Cashu token or Lightning invoice
+          </p>
         </div>
-        <p className="text-white text-center mt-6">
-          Scan a Cashu token or Lightning invoice
-        </p>
       </div>
     </Modal>
   )
