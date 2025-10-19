@@ -61,6 +61,7 @@ export default function CashuWallet() {
   const [sendDialogInitialInvoice, setSendDialogInitialInvoice] = useState<string>("")
   const [receiveDialogInitialToken, setReceiveDialogInitialToken] = useState<string>("")
   const [refreshing, setRefreshing] = useState(false)
+  const [qrError, setQrError] = useState<string>("")
 
   const enrichHistoryWithMetadata = async (
     entries: HistoryEntry[]
@@ -221,6 +222,7 @@ export default function CashuWallet() {
 
   const handleQRScanSuccess = (result: string) => {
     setShowQRScanner(false)
+    setQrError("")
 
     // Check if it's a Cashu token
     if (result.startsWith("cashu")) {
@@ -245,7 +247,7 @@ export default function CashuWallet() {
       return
     }
 
-    alert("Unrecognized QR code format")
+    setQrError("Unrecognized QR code format")
   }
 
   // Redirect to settings if default Cashu wallet is not selected
@@ -548,9 +550,23 @@ export default function CashuWallet() {
 
             <QRScannerModal
               isOpen={showQRScanner}
-              onClose={() => setShowQRScanner(false)}
+              onClose={() => {
+                setShowQRScanner(false)
+                setQrError("")
+              }}
               onScanSuccess={handleQRScanSuccess}
             />
+
+            {qrError && (
+              <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 max-w-md">
+                <div className="alert alert-error">
+                  <span>{qrError}</span>
+                  <button className="btn btn-sm btn-ghost" onClick={() => setQrError("")}>
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

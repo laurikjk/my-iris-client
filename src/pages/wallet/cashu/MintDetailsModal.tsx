@@ -32,6 +32,7 @@ export default function MintDetailsModal({
   const [mintInfo, setMintInfo] = useState<MintInfo | null>(null)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string>("")
 
   useEffect(() => {
     if (!isOpen || !mintUrl) return
@@ -89,6 +90,7 @@ export default function MintDetailsModal({
     if (!manager) return
     if (!confirm("Are you sure you want to delete this mint?")) return
 
+    setError("")
     try {
       // Note: We need to add a deleteMint method to the manager
       // For now, just close and notify parent
@@ -96,7 +98,7 @@ export default function MintDetailsModal({
       onClose()
     } catch (error) {
       console.error("Failed to delete mint:", error)
-      alert(
+      setError(
         "Failed to delete mint: " +
           (error instanceof Error ? error.message : "Unknown error")
       )
@@ -133,6 +135,11 @@ export default function MintDetailsModal({
           <div className="text-center py-8">Loading mint details...</div>
         ) : (
           <div className="space-y-6">
+            {error && (
+              <div className="alert alert-error">
+                <span>{error}</span>
+              </div>
+            )}
             {/* Mint Header */}
             <div className="text-center">
               <h2 className="text-2xl font-bold mb-2">

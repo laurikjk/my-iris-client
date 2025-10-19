@@ -28,6 +28,7 @@ export default function ReceiveDialog({
     "select"
   )
   const [tokenInput, setTokenInput] = useState<string>("")
+  const [error, setError] = useState<string>("")
   const [lightningAmount, setLightningAmount] = useState<number>(100)
   const [invoice, setInvoice] = useState<string>("")
   const [lightningAddressQR, setLightningAddressQR] = useState<string>("")
@@ -84,11 +85,13 @@ export default function ReceiveDialog({
     setReceiveMode("select")
     setTokenInput("")
     setInvoice("")
+    setError("")
   }
 
   const receiveEcash = async () => {
     if (!manager || !tokenInput.trim()) return
     setReceiving(true)
+    setError("")
     try {
       const {getDecodedToken} = await import("@cashu/cashu-ts")
       const decoded = getDecodedToken(tokenInput.trim())
@@ -107,7 +110,7 @@ export default function ReceiveDialog({
       onSuccess()
     } catch (error) {
       console.error("Failed to receive token:", error)
-      alert(
+      setError(
         "Failed to receive token: " +
           (error instanceof Error ? error.message : "Unknown error")
       )
@@ -119,12 +122,13 @@ export default function ReceiveDialog({
   const createLightningInvoice = async () => {
     if (!manager || !mintUrl || !lightningAmount) return
     setReceiving(true)
+    setError("")
     try {
       const quote = await manager.quotes.createMintQuote(mintUrl, lightningAmount)
       setInvoice(quote.request)
     } catch (error) {
       console.error("Failed to create mint quote:", error)
-      alert(
+      setError(
         "Failed to create invoice: " +
           (error instanceof Error ? error.message : "Unknown error")
       )
@@ -186,6 +190,11 @@ export default function ReceiveDialog({
 
         {receiveMode === "ecash" && (
           <div className="space-y-4">
+            {error && (
+              <div className="alert alert-error">
+                <span>{error}</span>
+              </div>
+            )}
             <div className="form-control">
               <label className="label">
                 <span className="label-text">Paste Cashu token</span>
@@ -209,6 +218,11 @@ export default function ReceiveDialog({
 
         {receiveMode === "lightning" && (
           <div className="space-y-4">
+            {error && (
+              <div className="alert alert-error">
+                <span>{error}</span>
+              </div>
+            )}
             {!invoice ? (
               <>
                 {/* Lightning Address */}

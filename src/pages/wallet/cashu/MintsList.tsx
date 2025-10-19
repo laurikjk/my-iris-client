@@ -11,16 +11,18 @@ interface MintsListProps {
 export default function MintsList({balance, manager, onBalanceUpdate}: MintsListProps) {
   const [mintUrl, setMintUrl] = useState("")
   const [selectedMintUrl, setSelectedMintUrl] = useState<string | null>(null)
+  const [error, setError] = useState<string>("")
 
   const addMint = async () => {
     if (!manager || !mintUrl) return
+    setError("")
     try {
       await manager.mint.addMint(mintUrl)
       setMintUrl("")
       onBalanceUpdate()
     } catch (error) {
       console.error("Failed to add mint:", error)
-      alert(
+      setError(
         "Failed to add mint: " +
           (error instanceof Error ? error.message : "Unknown error")
       )
@@ -46,6 +48,11 @@ export default function MintsList({balance, manager, onBalanceUpdate}: MintsList
       <div className="card bg-base-100 shadow-xl mt-4">
         <div className="card-body">
           <h3 className="card-title">Add Mint</h3>
+          {error && (
+            <div className="alert alert-error">
+              <span>{error}</span>
+            </div>
+          )}
           <input
             type="text"
             placeholder="Mint URL"
