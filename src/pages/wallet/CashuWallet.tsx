@@ -8,7 +8,7 @@ import Widget from "@/shared/components/ui/Widget"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import {useCashuWalletStore} from "@/stores/cashuWallet"
 import {useWalletProviderStore} from "@/stores/walletProvider"
-import {RiArrowRightUpLine, RiArrowLeftDownLine} from "@remixicon/react"
+import {RiArrowRightUpLine, RiArrowLeftDownLine, RiRefreshLine} from "@remixicon/react"
 import SendDialog from "./cashu/SendDialog"
 import ReceiveDialog from "./cashu/ReceiveDialog"
 import QRScannerModal from "./cashu/QRScannerModal"
@@ -18,6 +18,9 @@ import {formatUsd} from "./cashu/utils"
 import {Link, useNavigate} from "@/navigation"
 import Header from "@/shared/components/header/Header"
 import Icon from "@/shared/components/Icons/Icon"
+import {usePublicKey} from "@/stores/user"
+import {getNPubCashBalance, claimNPubCashTokens} from "@/lib/npubcash"
+import {ndk} from "@/utils/ndk"
 
 const DEFAULT_MINT = "https://mint.minibits.cash/Bitcoin"
 
@@ -26,6 +29,7 @@ export default function CashuWallet() {
     useCashuWalletStore()
   const {activeProviderType} = useWalletProviderStore()
   const navigate = useNavigate()
+  const myPubKey = usePublicKey()
 
   const [manager, setManager] = useState<Manager | null>(null)
   const [balance, setBalance] = useState<{[mintUrl: string]: number} | null>(null)
@@ -40,6 +44,7 @@ export default function CashuWallet() {
   )
   const [sendDialogInitialInvoice, setSendDialogInitialInvoice] = useState<string>("")
   const [receiveDialogInitialToken, setReceiveDialogInitialToken] = useState<string>("")
+  const [refreshing, setRefreshing] = useState(false)
 
   const refreshData = async () => {
     if (!manager) return
@@ -67,6 +72,32 @@ export default function CashuWallet() {
   const handleCloseReceiveDialog = () => {
     setShowReceiveDialog(false)
     setReceiveDialogInitialToken("")
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    try {
+      await refreshData()
+
+      // Also check npub.cash
+      if (myPubKey && ndk().signer) {
+        const signer = ndk().signer
+        if (signer) {
+          const balance = await getNPubCashBalance(signer)
+          if (balance > 0) {
+            const token = await claimNPubCashTokens(signer)
+            if (token && manager) {
+              await manager.wallet.receive(token)
+              await refreshData()
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to refresh:", error)
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   const handleQRScanSuccess = (result: string) => {
@@ -173,6 +204,38 @@ export default function CashuWallet() {
     }
   }, [])
 
+  // Check npub.cash balance periodically and auto-claim
+  useEffect(() => {
+    if (!myPubKey || !ndk().signer || !manager) return
+
+    const checkAndClaim = async () => {
+      const signer = ndk().signer
+      if (!signer) return
+
+      try {
+        const balance = await getNPubCashBalance(signer)
+
+        // Auto-claim if balance > 0
+        if (balance > 0) {
+          const token = await claimNPubCashTokens(signer)
+          if (token) {
+            await manager.wallet.receive(token)
+            await refreshData()
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check/claim npub.cash:", error)
+      }
+    }
+
+    checkAndClaim()
+
+    // Check every 60 seconds
+    const balanceInterval = setInterval(checkAndClaim, 60000)
+
+    return () => clearInterval(balanceInterval)
+  }, [myPubKey, manager])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -190,13 +253,23 @@ export default function CashuWallet() {
       <Header>
         <div className="flex items-center justify-between w-full min-w-0">
           <span className="truncate">Wallet</span>
-          <Link
-            to="/settings/wallet"
-            className="btn btn-circle btn-ghost btn-sm flex-shrink-0 ml-2"
-            title="Wallet Settings"
-          >
-            <Icon name="gear" className="w-5 h-5" />
-          </Link>
+          <div className="flex gap-2 md:gap-3 mr-6 md:mr-0">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="btn btn-circle btn-ghost btn-sm flex-shrink-0"
+              title="Refresh"
+            >
+              <RiRefreshLine className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`} />
+            </button>
+            <Link
+              to="/settings/wallet"
+              className="btn btn-circle btn-ghost btn-sm flex-shrink-0"
+              title="Wallet Settings"
+            >
+              <Icon name="gear" className="w-5 h-5" />
+            </Link>
+          </div>
         </div>
       </Header>
       <div className="flex justify-center h-screen overflow-y-auto">
