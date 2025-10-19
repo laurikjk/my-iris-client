@@ -6,6 +6,8 @@ import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import {getTransactionAmount, getTransactionStatus, formatDate, formatUsd} from "./utils"
 import {Avatar} from "@/shared/components/user/Avatar"
 import {Name} from "@/shared/components/user/Name"
+import {useNavigate} from "@/navigation"
+import {nip19} from "nostr-tools"
 
 const INITIAL_DISPLAY = 20
 const DISPLAY_INCREMENT = 20
@@ -22,6 +24,7 @@ export default function HistoryList({
   onSendEntryClick,
 }: HistoryListProps) {
   const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY)
+  const navigate = useNavigate()
 
   if (history.length === 0) {
     return (
@@ -41,11 +44,21 @@ export default function HistoryList({
         const amount = getTransactionAmount(entry)
         const status = getTransactionStatus(entry)
         const isSend = entry.type === "send"
-        const isClickable = isSend && onSendEntryClick
+        const isZapWithEvent =
+          entry.paymentMetadata?.type === "zap" && entry.paymentMetadata?.eventId
+        const isClickable = (isSend && onSendEntryClick) || isZapWithEvent
 
         // Determine if it's Lightning (mint/melt) or Ecash (send/receive)
         const label =
           entry.type === "mint" || entry.type === "melt" ? "Lightning" : "Ecash"
+
+        const handleClick = () => {
+          if (isZapWithEvent && entry.paymentMetadata?.eventId) {
+            navigate(`/${nip19.noteEncode(entry.paymentMetadata.eventId)}`)
+          } else if (isSend && onSendEntryClick) {
+            onSendEntryClick(entry as SendHistoryEntry)
+          }
+        }
 
         return (
           <div
@@ -53,11 +66,7 @@ export default function HistoryList({
             className={`flex items-center justify-between p-4 bg-base-200 rounded-lg ${
               isClickable ? "cursor-pointer hover:bg-base-300 transition-colors" : ""
             }`}
-            onClick={() => {
-              if (isSend && onSendEntryClick) {
-                onSendEntryClick(entry as SendHistoryEntry)
-              }
-            }}
+            onClick={handleClick}
           >
             <div className="flex items-center gap-3">
               {entry.paymentMetadata?.peerPubkey && (
