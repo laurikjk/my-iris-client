@@ -118,13 +118,37 @@ export default function CashuWallet() {
         // Load history
         const hist = await mgr.history.getPaginatedHistory(0, 1000)
         setHistory(hist)
+
+        // Listen to events for real-time updates
+        const updateData = async () => {
+          try {
+            const bal = await mgr.wallet.getBalances()
+            setBalance(bal)
+            const hist = await mgr.history.getPaginatedHistory(0, 1000)
+            setHistory(hist)
+          } catch (error) {
+            console.error("Failed to refresh data:", error)
+          }
+        }
+
+        const unsubscribers = [
+          mgr.on("melt-quote:paid", updateData),
+          mgr.on("send:created", updateData),
+          mgr.on("receive:created", updateData),
+          mgr.on("mint-quote:redeemed", updateData),
+        ]
+
+        return () => {
+          unsubscribers.forEach((unsub) => unsub())
+        }
       } catch (error) {
         console.error("Failed to initialize Cashu manager:", error)
       } finally {
         setLoading(false)
       }
     }
-    init()
+
+    const cleanup = init()
 
     // Fetch USD rate from Coinbase
     const fetchUsdRate = async () => {
@@ -142,7 +166,11 @@ export default function CashuWallet() {
 
     // Refresh rate every 60 seconds
     const rateInterval = setInterval(fetchUsdRate, 60000)
-    return () => clearInterval(rateInterval)
+
+    return () => {
+      cleanup.then((cleanupFn) => cleanupFn?.())
+      clearInterval(rateInterval)
+    }
   }, [])
 
   if (loading) {

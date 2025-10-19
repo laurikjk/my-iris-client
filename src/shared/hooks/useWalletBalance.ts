@@ -64,7 +64,30 @@ export const useWalletBalance = () => {
     // Initial update
     updateBalance()
 
-    // Poll every 30 seconds
+    // Listen to Cashu events for real-time updates
+    if (activeProviderType === "cashu") {
+      const manager = getCashuManager()
+      if (manager) {
+        const unsubscribers = [
+          manager.on("melt-quote:paid", () => updateBalance()),
+          manager.on("send:created", () => updateBalance()),
+          manager.on("receive:created", () => updateBalance()),
+          manager.on("mint-quote:redeemed", () => updateBalance()),
+        ]
+
+        // Still poll every 30 seconds as backup
+        pollIntervalRef.current = setInterval(updateBalance, 30000)
+
+        return () => {
+          unsubscribers.forEach((unsub) => unsub())
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current)
+          }
+        }
+      }
+    }
+
+    // Poll every 30 seconds for non-Cashu wallets
     pollIntervalRef.current = setInterval(updateBalance, 30000)
 
     return () => {
