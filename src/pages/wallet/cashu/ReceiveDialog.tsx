@@ -13,6 +13,7 @@ interface ReceiveDialogProps {
   mintUrl: string
   onSuccess: () => void
   initialToken?: string
+  balance?: number
 }
 
 export default function ReceiveDialog({
@@ -22,6 +23,7 @@ export default function ReceiveDialog({
   mintUrl,
   onSuccess,
   initialToken,
+  balance,
 }: ReceiveDialogProps) {
   const myPubKey = usePublicKey()
   const [receiveMode, setReceiveMode] = useState<"select" | "ecash" | "lightning">(
@@ -142,7 +144,12 @@ export default function ReceiveDialog({
   return (
     <Modal onClose={handleClose}>
       <div className="p-4">
-        <h3 className="font-bold text-lg mb-4">Receive</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-bold text-lg">Receive</h3>
+          {balance !== undefined && (
+            <div className="text-sm opacity-70">Balance: {balance} bit</div>
+          )}
+        </div>
 
         {receiveMode === "select" && (
           <div className="space-y-4">

@@ -537,6 +537,7 @@ export default function CashuWallet() {
               onSuccess={refreshData}
               initialToken={sendDialogInitialToken}
               initialInvoice={sendDialogInitialInvoice}
+              balance={totalBalance}
             />
 
             <ReceiveDialog
@@ -546,6 +547,7 @@ export default function CashuWallet() {
               mintUrl={balance ? Object.keys(balance)[0] : DEFAULT_MINT}
               onSuccess={refreshData}
               initialToken={receiveDialogInitialToken}
+              balance={totalBalance}
             />
 
             <QRScannerModal

@@ -1,6 +1,6 @@
-import Icon from "@/shared/components/Icons/Icon"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {nip19} from "nostr-tools"
+import {RiShare2Line} from "@remixicon/react"
 
 const FeedItemShare = ({event}: {event: NDKEvent}) => {
   if (!navigator.share) {
@@ -23,7 +23,7 @@ const FeedItemShare = ({event}: {event: NDKEvent}) => {
 
   return (
     <button onClick={handleShare} className="shareButton hover:text-info" title="Share">
-      <Icon name="share" size={16} />
+      <RiShare2Line size={16} />
     </button>
   )
 }

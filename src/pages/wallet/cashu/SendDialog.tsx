@@ -5,6 +5,7 @@ import Modal from "@/shared/components/ui/Modal"
 import {decode} from "light-bolt11-decoder"
 import {savePaymentMetadata} from "@/stores/paymentMetadata"
 import {getLNURLInvoice} from "@/utils/zapUtils"
+import {RiFileCopyLine, RiShare2Line} from "@remixicon/react"
 
 interface SendDialogProps {
   isOpen: boolean
@@ -14,6 +15,7 @@ interface SendDialogProps {
   onSuccess: () => void
   initialToken?: Token
   initialInvoice?: string
+  balance?: number
 }
 
 export default function SendDialog({
@@ -24,9 +26,10 @@ export default function SendDialog({
   onSuccess,
   initialToken,
   initialInvoice,
+  balance,
 }: SendDialogProps) {
   const [sendMode, setSendMode] = useState<"select" | "ecash" | "lightning">("select")
-  const [sendAmount, setSendAmount] = useState<number>(100)
+  const [sendAmount, setSendAmount] = useState<number>(0)
   const [sendInvoice, setSendInvoice] = useState<string>("")
   const [invoiceAmount, setInvoiceAmount] = useState<number | null>(null)
   const [generatedToken, setGeneratedToken] = useState<string>("")
@@ -137,7 +140,7 @@ export default function SendDialog({
   const handleClose = () => {
     onClose()
     setSendMode("select")
-    setSendAmount(100)
+    setSendAmount(0)
     setSendInvoice("")
     setGeneratedToken("")
     setQrCodeUrl("")
@@ -147,7 +150,19 @@ export default function SendDialog({
   }
 
   const sendEcash = async () => {
-    if (!manager || !sendAmount) return
+    if (!manager) return
+
+    if (!sendAmount || sendAmount <= 0) {
+      setError("Please enter a valid amount")
+      return
+    }
+
+    // Validate balance
+    if (balance !== undefined && sendAmount > balance) {
+      setError(`Insufficient balance. You have ${balance} bit`)
+      return
+    }
+
     setSending(true)
     setError("")
     try {
@@ -172,6 +187,18 @@ export default function SendDialog({
 
     if (isLightningAddress && (!sendAmount || sendAmount <= 0)) {
       setError("Please enter a valid amount")
+      return
+    }
+
+    // Validate balance for lightning address payments
+    if (isLightningAddress && balance !== undefined && sendAmount > balance) {
+      setError(`Insufficient balance. You have ${balance} bit`)
+      return
+    }
+
+    // Validate balance for invoice payments
+    if (!isLightningAddress && invoiceAmount && balance !== undefined && invoiceAmount > balance) {
+      setError(`Insufficient balance. You have ${balance} bit`)
       return
     }
 
@@ -233,7 +260,12 @@ export default function SendDialog({
   return (
     <Modal onClose={handleClose}>
       <div className="p-4">
-        <h3 className="font-bold text-lg mb-4">Send</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-bold text-lg">Send</h3>
+          {balance !== undefined && (
+            <div className="text-sm opacity-70">Balance: {balance} bit</div>
+          )}
+        </div>
 
         {sendMode === "select" && (
           <div className="space-y-4">
@@ -294,16 +326,32 @@ export default function SendDialog({
                   </label>
                   <input
                     type="number"
-                    className="input input-bordered"
-                    placeholder="100"
-                    value={sendAmount}
+                    className={`input input-bordered ${
+                      sendAmount > 0 && balance !== undefined && sendAmount > balance
+                        ? "input-error"
+                        : ""
+                    }`}
+                    placeholder="Amount in bits"
+                    value={sendAmount || ""}
                     onChange={(e) => setSendAmount(Number(e.target.value))}
+                    max={balance}
                   />
+                  {sendAmount > 0 && balance !== undefined && sendAmount > balance && (
+                    <label className="label">
+                      <span className="label-text-alt text-error">
+                        Exceeds balance ({balance} bit)
+                      </span>
+                    </label>
+                  )}
                 </div>
                 <button
                   className="btn btn-primary w-full"
                   onClick={sendEcash}
-                  disabled={!sendAmount || sending}
+                  disabled={
+                    !sendAmount ||
+                    sending ||
+                    (balance !== undefined && sendAmount > balance)
+                  }
                 >
                   {sending ? "Creating..." : "Create Token"}
                 </button>
@@ -331,14 +379,35 @@ export default function SendDialog({
                     readOnly
                   />
                 </div>
-                <button
-                  className="btn btn-primary w-full"
-                  onClick={() => {
-                    navigator.clipboard.writeText(generatedToken)
-                  }}
-                >
-                  Copy Token
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    className="btn btn-primary flex-1 gap-2"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedToken)
+                    }}
+                  >
+                    <RiFileCopyLine className="w-5 h-5" />
+                    Copy
+                  </button>
+                  {navigator.share && (
+                    <button
+                      className="btn btn-primary flex-1 gap-2"
+                      onClick={async () => {
+                        try {
+                          await navigator.share({
+                            text: generatedToken,
+                            title: "Cashu Token",
+                          })
+                        } catch (err) {
+                          console.warn("Share failed:", err)
+                        }
+                      }}
+                    >
+                      <RiShare2Line className="w-5 h-5" />
+                      Share
+                    </button>
+                  )}
+                </div>
                 <button className="btn btn-ghost w-full" onClick={handleClose}>
                   Done
                 </button>
@@ -376,11 +445,23 @@ export default function SendDialog({
                   </label>
                   <input
                     type="number"
-                    className="input input-bordered"
-                    placeholder="100"
-                    value={sendAmount}
+                    className={`input input-bordered ${
+                      sendAmount > 0 && balance !== undefined && sendAmount > balance
+                        ? "input-error"
+                        : ""
+                    }`}
+                    placeholder="Amount in bits"
+                    value={sendAmount || ""}
                     onChange={(e) => setSendAmount(Number(e.target.value))}
+                    max={balance}
                   />
+                  {sendAmount > 0 && balance !== undefined && sendAmount > balance && (
+                    <label className="label">
+                      <span className="label-text-alt text-error">
+                        Exceeds balance ({balance} bit)
+                      </span>
+                    </label>
+                  )}
                 </div>
                 <div className="form-control">
                   <label className="label">
@@ -392,16 +473,26 @@ export default function SendDialog({
                     placeholder="What's this payment for?"
                     value={lnurlComment}
                     onChange={(e) => setLnurlComment(e.target.value)}
+                    maxLength={500}
                   />
                 </div>
               </>
             )}
 
             {!isLightningAddress && invoiceAmount !== null && (
-              <div className="alert alert-info">
+              <div
+                className={`alert ${
+                  balance !== undefined && invoiceAmount > balance
+                    ? "alert-error"
+                    : "alert-info"
+                }`}
+              >
                 <div className="flex flex-col">
                   <span className="font-bold">Amount</span>
                   <span className="text-lg">{invoiceAmount.toLocaleString()} bits</span>
+                  {balance !== undefined && invoiceAmount > balance && (
+                    <span className="text-sm">Exceeds balance ({balance} bit)</span>
+                  )}
                 </div>
               </div>
             )}
@@ -409,7 +500,13 @@ export default function SendDialog({
             <button
               className="btn btn-primary w-full"
               onClick={sendLightning}
-              disabled={!sendInvoice.trim() || sending}
+              disabled={
+                !sendInvoice.trim() ||
+                sending ||
+                (invoiceAmount !== null &&
+                  balance !== undefined &&
+                  invoiceAmount > balance)
+              }
             >
               {sending ? "Paying..." : "Pay"}
             </button>
