@@ -32,6 +32,7 @@ export default function SendDialog({
   const [sendAmount, setSendAmount] = useState<number>(0)
   const [sendInvoice, setSendInvoice] = useState<string>("")
   const [invoiceAmount, setInvoiceAmount] = useState<number | null>(null)
+  const [invoiceDescription, setInvoiceDescription] = useState<string>("")
   const [generatedToken, setGeneratedToken] = useState<string>("")
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [sending, setSending] = useState(false)
@@ -63,10 +64,11 @@ export default function SendDialog({
     }
   }, [initialInvoice, isOpen])
 
-  // Detect lightning address and decode invoice amount
+  // Detect lightning address and decode invoice amount and description
   useEffect(() => {
     if (!sendInvoice.trim()) {
       setInvoiceAmount(null)
+      setInvoiceDescription("")
       setIsLightningAddress(false)
       return
     }
@@ -80,6 +82,7 @@ export default function SendDialog({
     ) {
       setIsLightningAddress(true)
       setInvoiceAmount(null)
+      setInvoiceDescription("")
       return
     }
 
@@ -96,6 +99,16 @@ export default function SendDialog({
         setInvoiceAmount(bits)
       } else {
         setInvoiceAmount(null)
+      }
+
+      // Extract description
+      const descSection = decodedInvoice.sections.find(
+        (section) => section.name === "description"
+      )
+      if (descSection && "value" in descSection) {
+        setInvoiceDescription(descSection.value as string)
+      } else {
+        setInvoiceDescription("")
       }
     } catch (error) {
       console.warn("Failed to decode invoice:", error)
@@ -492,11 +505,23 @@ export default function SendDialog({
                     : "alert-info"
                 }`}
               >
-                <div className="flex flex-col">
-                  <span className="font-bold">Amount</span>
-                  <span className="text-lg">{invoiceAmount.toLocaleString()} bits</span>
-                  {balance !== undefined && invoiceAmount > balance && (
-                    <span className="text-sm">Exceeds balance ({balance} bit)</span>
+                <div className="flex flex-col gap-2">
+                  <div>
+                    <span className="font-bold">Amount</span>
+                    <div className="text-lg">{invoiceAmount.toLocaleString()} bits</div>
+                    {balance !== undefined && invoiceAmount > balance && (
+                      <div className="text-sm text-error">
+                        Exceeds balance ({balance} bit)
+                      </div>
+                    )}
+                  </div>
+                  {invoiceDescription && (
+                    <div>
+                      <span className="font-bold">Description</span>
+                      <div className="text-sm text-base-content/70 break-words">
+                        {invoiceDescription}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
