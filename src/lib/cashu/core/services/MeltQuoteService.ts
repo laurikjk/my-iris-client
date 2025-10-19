@@ -115,13 +115,24 @@ export class MeltQuoteService {
         send.map((proof) => proof.secret),
         "inflight"
       )
-      await wallet.meltProofs(quote, send)
+      const meltResponse = await wallet.meltProofs(quote, send)
       await this.proofService.setProofState(
         mintUrl,
         send.map((proof) => proof.secret),
         "spent"
       )
-      await this.eventBus.emit("melt-quote:paid", {mintUrl, quoteId, quote})
+
+      // Emit state change event with updated quote state
+      const updatedQuote = meltResponse.quote
+      if (updatedQuote.state !== quote.state) {
+        await this.eventBus.emit("melt-quote:state-changed", {
+          mintUrl,
+          quoteId,
+          state: updatedQuote.state,
+        })
+      }
+
+      await this.eventBus.emit("melt-quote:paid", {mintUrl, quoteId, quote: updatedQuote})
     } catch (err) {
       this.logger?.error("Failed to pay melt quote", {mintUrl, quoteId, err})
       throw err

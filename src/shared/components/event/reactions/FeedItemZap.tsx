@@ -115,6 +115,16 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
         signer
       )
 
+      // Save zap metadata before payment
+      if (hasWallet) {
+        try {
+          const {savePaymentMetadata} = await import("@/stores/paymentMetadata")
+          await savePaymentMetadata(invoice, "zap", event.pubkey, event.id)
+        } catch (err) {
+          console.warn("Failed to save quick zap metadata:", err)
+        }
+      }
+
       // Try to pay with wallet
       try {
         await walletProviderSendPayment(invoice)

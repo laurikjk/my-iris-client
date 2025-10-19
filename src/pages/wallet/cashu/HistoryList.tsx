@@ -1,14 +1,17 @@
-import type {HistoryEntry, SendHistoryEntry} from "@/lib/cashu/core/models/History"
+import type {SendHistoryEntry} from "@/lib/cashu/core/models/History"
+import type {EnrichedHistoryEntry} from "../CashuWallet"
 import {RiFlashlightFill, RiCoinsFill} from "@remixicon/react"
 import {useState} from "react"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import {getTransactionAmount, getTransactionStatus, formatDate, formatUsd} from "./utils"
+import {Avatar} from "@/shared/components/user/Avatar"
+import {Name} from "@/shared/components/user/Name"
 
 const INITIAL_DISPLAY = 20
 const DISPLAY_INCREMENT = 20
 
 interface HistoryListProps {
-  history: HistoryEntry[]
+  history: EnrichedHistoryEntry[]
   usdRate: number | null
   onSendEntryClick?: (entry: SendHistoryEntry) => void
 }
@@ -57,13 +60,25 @@ export default function HistoryList({
             }}
           >
             <div className="flex items-center gap-3">
-              {label === "Lightning" ? (
+              {entry.paymentMetadata?.peerPubkey && (
+                <Avatar pubKey={entry.paymentMetadata.peerPubkey} width={32} />
+              )}
+              {!entry.paymentMetadata?.peerPubkey && label === "Lightning" && (
                 <RiFlashlightFill className="w-5 h-5" />
-              ) : (
+              )}
+              {!entry.paymentMetadata?.peerPubkey && label !== "Lightning" && (
                 <RiCoinsFill className="w-5 h-5" />
               )}
               <div>
-                <div className="font-medium">{label}</div>
+                {entry.paymentMetadata?.peerPubkey ? (
+                  <div className="font-medium">
+                    {entry.paymentMetadata.type === "zap" && amount < 0 && "Zapped "}
+                    {entry.paymentMetadata.type === "zap" && amount > 0 && "Zapped by "}
+                    <Name pubKey={entry.paymentMetadata.peerPubkey} />
+                  </div>
+                ) : (
+                  <div className="font-medium">{label}</div>
+                )}
                 <div className="text-sm text-base-content/60">
                   {formatDate(entry.createdAt)}
                   {status && <span className="ml-2 text-warning">• Pending</span>}

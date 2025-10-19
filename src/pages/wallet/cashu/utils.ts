@@ -38,12 +38,16 @@ export const getTransactionStatus = (entry: HistoryEntry): string | null => {
   // Mint states: UNPAID | ISSUED | PAID
   // Only show pending if UNPAID (not yet paid on Lightning)
   if (entry.type === "mint" && entry.state === "UNPAID") {
+    console.log("⏳ Mint pending:", entry.state)
     return "pending"
   }
   // Melt states: UNPAID | PENDING | PAID
   // Show pending if not yet completed
-  if (entry.type === "melt" && (entry.state === "UNPAID" || entry.state === "PENDING")) {
-    return "pending"
+  if (entry.type === "melt") {
+    console.log("⚡ Melt state:", entry.state, "quoteId:", entry.quoteId)
+    if (entry.state === "UNPAID" || entry.state === "PENDING") {
+      return "pending"
+    }
   }
   return null
 }

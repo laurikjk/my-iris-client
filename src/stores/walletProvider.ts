@@ -539,7 +539,12 @@ export const useWalletProviderStore = create<WalletProviderState>()(
 
           // Use first mint with balance
           const mintUrl = mints[0]
+          console.log("⚡ Creating melt quote for invoice:", invoice.slice(0, 30) + "...")
           const quote = await manager.quotes.createMeltQuote(mintUrl, invoice)
+          console.log("📝 Melt quote created:", {
+            quoteId: quote.quote,
+            request: quote.request?.slice(0, 30) + "...",
+          })
           await manager.quotes.payMeltQuote(mintUrl, quote.quote)
 
           return {preimage: quote.payment_preimage || undefined}

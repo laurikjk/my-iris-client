@@ -14,6 +14,7 @@ import Modal from "@/shared/components/ui/Modal.tsx"
 import {Name} from "@/shared/components/user/Name"
 import {useUserStore} from "@/stores/user"
 import {useWalletProviderStore} from "@/stores/walletProvider"
+import {savePaymentMetadata} from "@/stores/paymentMetadata"
 import {ndk} from "@/utils/ndk"
 import {getZapAmount} from "@/utils/nostr"
 import {KIND_ZAP_RECEIPT} from "@/utils/constants"
@@ -131,15 +132,29 @@ function ZapModal({
       }
 
       const lnPay: LnPayCb = async ({pr}) => {
+        console.log("🎯 lnPay callback called, invoice:", pr.slice(0, 30) + "...")
+        console.log("💳 hasWallet:", hasWallet, "activeProviderType:", activeProviderType)
+
         // Always set the invoice for QR code display
         setBolt11Invoice(pr)
         setShowQRCode(true)
 
         if (hasWallet) {
+          // Save zap metadata
+          console.log("💾 Saving zap metadata for invoice:", pr.slice(0, 30) + "...")
+          try {
+            await savePaymentMetadata(pr, "zap", event.pubkey, event.id)
+            console.log("✅ Zap metadata saved successfully")
+          } catch (err) {
+            console.error("❌ Failed to save zap metadata:", err)
+          }
+
           // Attempt wallet payment in background (fire-and-forget)
           setTimeout(() => {
+            console.log("💸 Starting wallet payment...")
             walletProviderSendPayment(pr)
               .then(() => {
+                console.log("✅ Payment succeeded")
                 setZapped(true)
                 setZapRefresh(!zapRefresh)
                 onClose()

@@ -127,8 +127,6 @@ export class WalletService {
 
     const seed = await this.seedService.getSeed()
 
-    console.log("seed", seed)
-
     const requestLimiter = this.getOrCreateRequestLimiter(mintUrl)
     const wallet = new CashuWallet(new CashuMint(mintUrl, requestLimiter.request), {
       mintInfo: mint.mintInfo,
