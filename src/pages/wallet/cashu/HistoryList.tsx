@@ -94,7 +94,8 @@ export default function HistoryList({
                 </div>
                 {entry.paymentMetadata?.destination && (
                   <div className="text-sm text-base-content/60 mt-1">
-                    → {entry.paymentMetadata.destination.toLowerCase().startsWith("lnurl")
+                    →{" "}
+                    {entry.paymentMetadata.destination.toLowerCase().startsWith("lnurl")
                       ? entry.paymentMetadata.destination.slice(0, 20) + "..."
                       : entry.paymentMetadata.destination}
                   </div>

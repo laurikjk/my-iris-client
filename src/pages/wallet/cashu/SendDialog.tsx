@@ -197,7 +197,12 @@ export default function SendDialog({
     }
 
     // Validate balance for invoice payments
-    if (!isLightningAddress && invoiceAmount && balance !== undefined && invoiceAmount > balance) {
+    if (
+      !isLightningAddress &&
+      invoiceAmount &&
+      balance !== undefined &&
+      invoiceAmount > balance
+    ) {
       setError(`Insufficient balance. You have ${balance} bit`)
       return
     }

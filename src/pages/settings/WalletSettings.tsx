@@ -411,12 +411,7 @@ const WalletSettings = () => {
                     If you have funds in the old wallet, recover them here
                   </div>
                 </div>
-                <a
-                  href="/cashu/index.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-sm btn-outline"
-                >
+                <a href="/old-wallet" className="btn btn-sm btn-outline">
                   Open Legacy Wallet
                 </a>
               </div>

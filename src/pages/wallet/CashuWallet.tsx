@@ -109,7 +109,10 @@ export default function CashuWallet() {
       console.warn("⚠️ No manager available for refresh")
       return
     }
-    console.log("🔄 Refreshing Cashu wallet data...", immediate ? "(immediate)" : "(delayed)")
+    console.log(
+      "🔄 Refreshing Cashu wallet data...",
+      immediate ? "(immediate)" : "(delayed)"
+    )
     try {
       // Add small delay to let cashu persist changes (unless immediate refresh)
       if (!immediate) {
@@ -121,11 +124,15 @@ export default function CashuWallet() {
       setBalance({...bal}) // Force new object reference
 
       const hist = await manager.history.getPaginatedHistory(0, 1000)
-      console.log("📜 Raw history entries from manager:", hist.length, hist.map(h => ({
-        type: h.type,
-        amount: h.amount,
-        timestamp: h.createdAt
-      })))
+      console.log(
+        "📜 Raw history entries from manager:",
+        hist.length,
+        hist.map((h) => ({
+          type: h.type,
+          amount: h.amount,
+          timestamp: h.createdAt,
+        }))
+      )
 
       const enrichedHist = await enrichHistoryWithMetadata(hist)
       console.log("✨ Enriched history:", enrichedHist.length)

@@ -360,7 +360,9 @@ export async function getLNURLInvoice(
     const truncated = comment.slice(0, maxCommentLength)
     invoiceUrl.searchParams.append("comment", truncated)
     if (comment.length > maxCommentLength) {
-      console.warn(`Comment truncated from ${comment.length} to ${maxCommentLength} chars`)
+      console.warn(
+        `Comment truncated from ${comment.length} to ${maxCommentLength} chars`
+      )
     }
   }
 
