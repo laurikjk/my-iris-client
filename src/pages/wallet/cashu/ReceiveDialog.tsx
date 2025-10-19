@@ -1,6 +1,10 @@
 import {useState, useEffect} from "react"
 import type {Manager} from "@/lib/cashu/core/index"
 import Modal from "@/shared/components/ui/Modal"
+import {usePublicKey} from "@/stores/user"
+import {getLightningAddress} from "@/lib/npubcash"
+import {truncateMiddle} from "@/utils/utils"
+import {RiFileCopyLine, RiCheckLine} from "@remixicon/react"
 
 interface ReceiveDialogProps {
   isOpen: boolean
@@ -19,13 +23,16 @@ export default function ReceiveDialog({
   onSuccess,
   initialToken,
 }: ReceiveDialogProps) {
+  const myPubKey = usePublicKey()
   const [receiveMode, setReceiveMode] = useState<"select" | "ecash" | "lightning">(
     "select"
   )
   const [tokenInput, setTokenInput] = useState<string>("")
   const [lightningAmount, setLightningAmount] = useState<number>(100)
   const [invoice, setInvoice] = useState<string>("")
+  const [lightningAddressQR, setLightningAddressQR] = useState<string>("")
   const [receiving, setReceiving] = useState(false)
+  const [addressCopied, setAddressCopied] = useState(false)
 
   // Handle initial token (from QR scan)
   useEffect(() => {
@@ -34,6 +41,43 @@ export default function ReceiveDialog({
       setReceiveMode("ecash")
     }
   }, [initialToken, isOpen])
+
+  // Generate QR code for Lightning address
+  useEffect(() => {
+    const generateQR = async () => {
+      if (!myPubKey || receiveMode !== "lightning" || invoice) {
+        setLightningAddressQR("")
+        return
+      }
+
+      try {
+        const QRCode = await import("qrcode")
+        const address = getLightningAddress(myPubKey)
+        const url = await new Promise<string>((resolve, reject) => {
+          QRCode.toDataURL(
+            `lightning:${address}`,
+            {
+              errorCorrectionLevel: "H",
+              margin: 1,
+              width: 256,
+              color: {
+                dark: "#000000",
+                light: "#FFFFFF",
+              },
+            },
+            (error, url) => {
+              if (error) reject(error)
+              else resolve(url)
+            }
+          )
+        })
+        setLightningAddressQR(url)
+      } catch (error) {
+        console.error("Error generating QR code:", error)
+      }
+    }
+    generateQR()
+  }, [myPubKey, receiveMode, invoice])
 
   const handleClose = () => {
     onClose()
@@ -167,9 +211,44 @@ export default function ReceiveDialog({
           <div className="space-y-4">
             {!invoice ? (
               <>
+                {/* Lightning Address */}
+                {myPubKey && lightningAddressQR && (
+                  <div className="space-y-4">
+                    <div className="flex justify-center">
+                      <div className="bg-white rounded-lg p-4">
+                        <img
+                          src={lightningAddressQR}
+                          alt="Lightning Address QR Code"
+                          className="w-64 h-64"
+                        />
+                      </div>
+                    </div>
+                    <div
+                      className="flex items-center justify-center gap-2 bg-base-200 rounded-lg p-3 cursor-pointer hover:bg-base-300 transition-colors"
+                      onClick={() => {
+                        const address = getLightningAddress(myPubKey)
+                        navigator.clipboard.writeText(address)
+                        setAddressCopied(true)
+                        setTimeout(() => setAddressCopied(false), 2000)
+                      }}
+                    >
+                      <span className="text-sm font-mono">
+                        {truncateMiddle(getLightningAddress(myPubKey))}
+                      </span>
+                      {addressCopied ? (
+                        <RiCheckLine className="w-5 h-5 text-success" />
+                      ) : (
+                        <RiFileCopyLine className="w-5 h-5 opacity-60" />
+                      )}
+                    </div>
+                    <div className="divider">OR</div>
+                  </div>
+                )}
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">Amount (sats)</span>
+                    <span className="label-text">
+                      Create invoice for specific amount (sats)
+                    </span>
                   </label>
                   <input
                     type="number"

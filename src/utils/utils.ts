@@ -46,3 +46,8 @@ export const formatAmount = (n: number, maxSignificantDigits = 4) => {
 
   return formatted + suffix
 }
+
+export const truncateMiddle = (str: string, startChars = 12, endChars = 12) => {
+  if (str.length <= startChars + endChars) return str
+  return `${str.slice(0, startChars)}...${str.slice(-endChars)}`
+}
