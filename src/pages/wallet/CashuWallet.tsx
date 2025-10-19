@@ -29,6 +29,14 @@ export type EnrichedHistoryEntry = HistoryEntry & {
 }
 
 const meltQuoteRepos = new IndexedDbRepositories({name: "iris-cashu-db"})
+let meltQuoteReposInitialized = false
+
+const ensureMeltQuoteReposInit = async () => {
+  if (!meltQuoteReposInitialized) {
+    await meltQuoteRepos.init()
+    meltQuoteReposInitialized = true
+  }
+}
 
 const DEFAULT_MINT = "https://mint.minibits.cash/Bitcoin"
 
@@ -57,7 +65,7 @@ export default function CashuWallet() {
   const enrichHistoryWithMetadata = async (
     entries: HistoryEntry[]
   ): Promise<EnrichedHistoryEntry[]> => {
-    await meltQuoteRepos.init()
+    await ensureMeltQuoteReposInit()
     const enriched = await Promise.all(
       entries.map(async (entry) => {
         let invoice: string | undefined
@@ -95,19 +103,35 @@ export default function CashuWallet() {
     return enriched
   }
 
-  const refreshData = async () => {
-    if (!manager) return
-    console.log("🔄 Refreshing Cashu wallet data...")
+  const refreshData = async (immediate = false) => {
+    if (!manager) {
+      console.warn("⚠️ No manager available for refresh")
+      return
+    }
+    console.log("🔄 Refreshing Cashu wallet data...", immediate ? "(immediate)" : "(delayed)")
     try {
+      // Add small delay to let cashu persist changes (unless immediate refresh)
+      if (!immediate) {
+        await new Promise((resolve) => setTimeout(resolve, 200))
+      }
+
       const bal = await manager.wallet.getBalances()
-      setBalance(bal)
+      console.log("💰 Balance fetched:", bal)
+      setBalance({...bal}) // Force new object reference
+
       const hist = await manager.history.getPaginatedHistory(0, 1000)
-      console.log("📜 History entries:", hist.length)
+      console.log("📜 Raw history entries from manager:", hist.length, hist.map(h => ({
+        type: h.type,
+        amount: h.amount,
+        timestamp: h.createdAt
+      })))
+
       const enrichedHist = await enrichHistoryWithMetadata(hist)
-      setHistory(enrichedHist)
-      console.log("✅ Wallet data refreshed")
+      console.log("✨ Enriched history:", enrichedHist.length)
+      setHistory([...enrichedHist]) // Force new array reference
+      console.log("✅ Wallet data refreshed, history count:", enrichedHist.length)
     } catch (error) {
-      console.error("Failed to refresh data:", error)
+      console.error("❌ Failed to refresh data:", error)
     }
   }
 
@@ -128,6 +152,7 @@ export default function CashuWallet() {
   }
 
   const handleRefresh = async () => {
+    console.log("🔄 Manual refresh button clicked")
     setRefreshing(true)
     try {
       // Check pending melt quotes (for stuck Lightning payments)
@@ -141,7 +166,7 @@ export default function CashuWallet() {
             const mint = new CashuMint(mintUrl)
 
             // Get pending quotes from our DB
-            await meltQuoteRepos.init()
+            await ensureMeltQuoteReposInit()
             const pendingQuotes =
               await meltQuoteRepos.meltQuoteRepository.getPendingMeltQuotes()
 
@@ -171,7 +196,7 @@ export default function CashuWallet() {
         }
       }
 
-      await refreshData()
+      await refreshData(true) // immediate = true for manual refresh
 
       // Also check npub.cash
       if (myPubKey && ndk().signer) {
@@ -182,7 +207,7 @@ export default function CashuWallet() {
             const token = await claimNPubCashTokens(signer)
             if (token && manager) {
               await manager.wallet.receive(token)
-              await refreshData()
+              await refreshData(true)
             }
           }
         }

@@ -4,6 +4,7 @@ import {SimpleWebLNWallet} from "@/utils/webln"
 import {SimpleNWCWallet} from "@/utils/nwc"
 import {getCashuManager} from "@/lib/cashu/manager"
 import throttle from "lodash/throttle"
+import {savePaymentMetadata} from "@/stores/paymentMetadata"
 
 export type WalletProviderType = "native" | "nwc" | "cashu" | "disabled" | undefined
 
@@ -521,6 +522,14 @@ export const useWalletProviderStore = create<WalletProviderState>()(
       // Wallet operations
       sendPayment: async (invoice: string) => {
         const {activeWallet, activeProviderType, nativeWallet} = get()
+
+        // Save payment metadata (with type "other" for non-zap payments)
+        // Description will be auto-extracted from invoice
+        try {
+          await savePaymentMetadata(invoice, "other")
+        } catch (err) {
+          console.warn("Failed to save payment metadata:", err)
+        }
 
         // Handle Cashu wallet
         if (activeProviderType === "cashu") {

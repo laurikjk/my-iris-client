@@ -9,6 +9,7 @@ import NDK, {
 import NDKCacheAdapterDexie from "@nostr-dev-kit/ndk-cache-dexie"
 import {useUserStore} from "@/stores/user"
 import {DEFAULT_RELAYS} from "@/shared/constants/relays"
+import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
@@ -77,9 +78,11 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
 
 /**
  * Setup visibility change listener to force immediate reconnection
- * when PWA returns to foreground
+ * when PWA returns to foreground (mobile only)
  */
 function setupVisibilityReconnection(instance: NDK) {
+  if (!isTouchDevice) return
+
   let wasHidden = false
 
   const handleVisibilityChange = () => {

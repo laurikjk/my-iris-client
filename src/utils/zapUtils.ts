@@ -4,6 +4,7 @@ import {nip19, type NostrEvent} from "nostr-tools"
 import {makeZapRequest} from "nostr-tools/nip57"
 import {ndk, DEFAULT_RELAYS} from "@/utils/ndk"
 import {KIND_ZAP_RECEIPT} from "@/utils/constants"
+import {bech32} from "@scure/base"
 
 export function getZappingUser(event: NDKEvent, npub = true) {
   const description = event.tags?.find((t) => t[0] === "description")?.[1]
@@ -298,4 +299,84 @@ export function groupZapsByUser(
   }
 
   return grouped
+}
+
+/**
+ * Decode bech32 LNURL to https URL
+ */
+function decodeLNURL(lnurl: string): string {
+  const decoded = bech32.decode(lnurl, 2000)
+  const words = bech32.fromWords(decoded.words)
+  return new TextDecoder().decode(new Uint8Array(words))
+}
+
+/**
+ * Get invoice from lightning address or LNURL with optional comment
+ */
+export async function getLNURLInvoice(
+  input: string,
+  amountSats: number,
+  comment?: string
+): Promise<string> {
+  let lnurlEndpoint: string
+
+  // Check if it's a bech32 LNURL
+  if (input.toLowerCase().startsWith("lnurl")) {
+    lnurlEndpoint = decodeLNURL(input)
+  } else {
+    // Lightning address format
+    const [name, domain] = input.split("@")
+    if (!name || !domain) {
+      throw new Error("Invalid lightning address format")
+    }
+    lnurlEndpoint = `https://${domain}/.well-known/lnurlp/${name}`
+  }
+
+  const lnurlResponse = await fetch(lnurlEndpoint)
+  if (!lnurlResponse.ok) {
+    throw new Error(`Failed to fetch LNURL endpoint: ${lnurlResponse.status}`)
+  }
+
+  const lnurlData = await lnurlResponse.json()
+
+  const amountMsats = amountSats * 1000
+  if (lnurlData.minSendable && amountMsats < lnurlData.minSendable) {
+    throw new Error(
+      `Amount ${amountSats} is below minimum ${lnurlData.minSendable / 1000} bits`
+    )
+  }
+  if (lnurlData.maxSendable && amountMsats > lnurlData.maxSendable) {
+    throw new Error(
+      `Amount ${amountSats} exceeds maximum ${lnurlData.maxSendable / 1000} bits`
+    )
+  }
+
+  const invoiceUrl = new URL(lnurlData.callback)
+  invoiceUrl.searchParams.append("amount", amountMsats.toString())
+
+  // Add comment if supported
+  const maxCommentLength = lnurlData.commentAllowed || 0
+  if (comment && maxCommentLength > 0) {
+    const truncated = comment.slice(0, maxCommentLength)
+    invoiceUrl.searchParams.append("comment", truncated)
+    if (comment.length > maxCommentLength) {
+      console.warn(`Comment truncated from ${comment.length} to ${maxCommentLength} chars`)
+    }
+  }
+
+  const invoiceResponse = await fetch(invoiceUrl.toString())
+  if (!invoiceResponse.ok) {
+    throw new Error(`Failed to fetch invoice: ${invoiceResponse.status}`)
+  }
+
+  const invoiceData = await invoiceResponse.json()
+  if (invoiceData.status === "ERROR") {
+    throw new Error(invoiceData.reason || "LNURL server returned error")
+  }
+
+  if (!invoiceData.pr) {
+    throw new Error("No invoice returned from LNURL endpoint")
+  }
+
+  return invoiceData.pr
 }

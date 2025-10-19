@@ -3,6 +3,8 @@ import type {Manager} from "@/lib/cashu/core/index"
 import type {Token} from "@cashu/cashu-ts"
 import Modal from "@/shared/components/ui/Modal"
 import {decode} from "light-bolt11-decoder"
+import {savePaymentMetadata} from "@/stores/paymentMetadata"
+import {getLNURLInvoice} from "@/utils/zapUtils"
 
 interface SendDialogProps {
   isOpen: boolean
@@ -30,6 +32,9 @@ export default function SendDialog({
   const [generatedToken, setGeneratedToken] = useState<string>("")
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [sending, setSending] = useState(false)
+  const [isLightningAddress, setIsLightningAddress] = useState(false)
+  const [lnurlComment, setLnurlComment] = useState<string>("")
+  const [error, setError] = useState<string>("")
 
   // Handle initial token (from history)
   useEffect(() => {
@@ -55,15 +60,30 @@ export default function SendDialog({
     }
   }, [initialInvoice, isOpen])
 
-  // Decode Lightning invoice to get amount
+  // Detect lightning address and decode invoice amount
   useEffect(() => {
     if (!sendInvoice.trim()) {
+      setInvoiceAmount(null)
+      setIsLightningAddress(false)
+      return
+    }
+
+    const trimmed = sendInvoice.trim()
+
+    // Check if it's a lightning address or LNURL
+    if (
+      (trimmed.includes("@") && !trimmed.toLowerCase().startsWith("lnbc")) ||
+      trimmed.toLowerCase().startsWith("lnurl")
+    ) {
+      setIsLightningAddress(true)
       setInvoiceAmount(null)
       return
     }
 
+    setIsLightningAddress(false)
+
     try {
-      const decodedInvoice = decode(sendInvoice.trim())
+      const decodedInvoice = decode(trimmed)
       const amountSection = decodedInvoice.sections.find(
         (section) => section.name === "amount"
       )
@@ -121,11 +141,15 @@ export default function SendDialog({
     setSendInvoice("")
     setGeneratedToken("")
     setQrCodeUrl("")
+    setIsLightningAddress(false)
+    setLnurlComment("")
+    setError("")
   }
 
   const sendEcash = async () => {
     if (!manager || !sendAmount) return
     setSending(true)
+    setError("")
     try {
       const token = await manager.wallet.send(mintUrl, sendAmount)
       const {getEncodedToken} = await import("@cashu/cashu-ts")
@@ -134,7 +158,7 @@ export default function SendDialog({
       onSuccess()
     } catch (error) {
       console.error("Failed to create ecash token:", error)
-      alert(
+      setError(
         "Failed to create token: " +
           (error instanceof Error ? error.message : "Unknown error")
       )
@@ -145,20 +169,57 @@ export default function SendDialog({
 
   const sendLightning = async () => {
     if (!manager || !sendInvoice.trim()) return
+
+    if (isLightningAddress && (!sendAmount || sendAmount <= 0)) {
+      setError("Please enter a valid amount")
+      return
+    }
+
     setSending(true)
+    setError("")
     try {
+      let invoice = sendInvoice.trim()
+
+      // If it's a lightning address, fetch invoice with comment
+      if (isLightningAddress) {
+        const originalDestination = invoice
+        invoice = await getLNURLInvoice(invoice, sendAmount, lnurlComment || undefined)
+
+        // Save metadata with custom comment and destination for LNURL payments
+        try {
+          await savePaymentMetadata(
+            invoice,
+            "other",
+            undefined,
+            undefined,
+            lnurlComment || undefined,
+            originalDestination
+          )
+        } catch (err) {
+          console.warn("Failed to save payment metadata:", err)
+        }
+      } else {
+        // Save payment metadata (description auto-extracted from invoice)
+        try {
+          await savePaymentMetadata(invoice, "other")
+        } catch (err) {
+          console.warn("Failed to save payment metadata:", err)
+        }
+      }
+
       // Create melt quote
-      const quote = await manager.quotes.createMeltQuote(mintUrl, sendInvoice.trim())
+      const quote = await manager.quotes.createMeltQuote(mintUrl, invoice)
 
       // Pay the quote
       await manager.quotes.payMeltQuote(mintUrl, quote.quote)
 
       setSendInvoice("")
-      handleClose()
+      setLnurlComment("")
       onSuccess()
+      handleClose()
     } catch (error) {
       console.error("Failed to pay lightning invoice:", error)
-      alert(
+      setError(
         "Failed to pay invoice: " +
           (error instanceof Error ? error.message : "Unknown error")
       )
@@ -220,6 +281,11 @@ export default function SendDialog({
 
         {sendMode === "ecash" && (
           <div className="space-y-4">
+            {error && (
+              <div className="alert alert-error">
+                <span>{error}</span>
+              </div>
+            )}
             {!generatedToken ? (
               <>
                 <div className="form-control">
@@ -283,18 +349,55 @@ export default function SendDialog({
 
         {sendMode === "lightning" && (
           <div className="space-y-4">
+            {error && (
+              <div className="alert alert-error">
+                <span>{error}</span>
+              </div>
+            )}
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Lightning Invoice</span>
+                <span className="label-text">
+                  {isLightningAddress ? "Lightning Address / LNURL" : "Lightning Invoice"}
+                </span>
               </label>
               <textarea
                 className="textarea textarea-bordered h-24"
-                placeholder="lnbc..."
+                placeholder="lnbc..., user@domain.com, or lnurl..."
                 value={sendInvoice}
                 onChange={(e) => setSendInvoice(e.target.value)}
               />
             </div>
-            {invoiceAmount !== null && (
+
+            {isLightningAddress && (
+              <>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Amount (bits)</span>
+                  </label>
+                  <input
+                    type="number"
+                    className="input input-bordered"
+                    placeholder="100"
+                    value={sendAmount}
+                    onChange={(e) => setSendAmount(Number(e.target.value))}
+                  />
+                </div>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Comment (optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input input-bordered"
+                    placeholder="What's this payment for?"
+                    value={lnurlComment}
+                    onChange={(e) => setLnurlComment(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+
+            {!isLightningAddress && invoiceAmount !== null && (
               <div className="alert alert-info">
                 <div className="flex flex-col">
                   <span className="font-bold">Amount</span>
@@ -302,12 +405,13 @@ export default function SendDialog({
                 </div>
               </div>
             )}
+
             <button
               className="btn btn-primary w-full"
               onClick={sendLightning}
               disabled={!sendInvoice.trim() || sending}
             >
-              {sending ? "Paying..." : "Pay Invoice"}
+              {sending ? "Paying..." : "Pay"}
             </button>
           </div>
         )}

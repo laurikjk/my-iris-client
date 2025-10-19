@@ -1,10 +1,13 @@
 import Dexie, {type Table} from "dexie"
+import {decode} from "light-bolt11-decoder"
 
 export type PaymentMetadata = {
   invoice: string
   type: "zap" | "dm" | "other"
   peerPubkey?: string // who we paid or who paid us
   eventId?: string // zapped event or dm event
+  message?: string // description from invoice
+  destination?: string // lightning address or lnurl we paid to
   timestamp: number
 }
 
@@ -14,6 +17,14 @@ class PaymentMetadataDB extends Dexie {
   constructor() {
     super("PaymentMetadata")
     this.version(1).stores({
+      paymentMetadata: "invoice, timestamp",
+    })
+    // Version 2: add message field
+    this.version(2).stores({
+      paymentMetadata: "invoice, timestamp",
+    })
+    // Version 3: add destination field
+    this.version(3).stores({
       paymentMetadata: "invoice, timestamp",
     })
   }
@@ -26,19 +37,47 @@ function normalizeInvoice(invoice: string): string {
   return invoice.replace(/^lightning:/i, "").toLowerCase()
 }
 
+function extractDescriptionFromInvoice(invoice: string): string | undefined {
+  try {
+    const decoded = decode(invoice)
+    const descSection = decoded.sections.find((s) => s.name === "description")
+    if (descSection && "value" in descSection) {
+      return descSection.value as string
+    }
+  } catch (err) {
+    console.warn("Failed to decode invoice for description:", err)
+  }
+  return undefined
+}
+
 export async function savePaymentMetadata(
   invoice: string,
   type: PaymentMetadata["type"],
   peerPubkey?: string,
-  eventId?: string
+  eventId?: string,
+  message?: string,
+  destination?: string
 ) {
   const normalized = normalizeInvoice(invoice)
-  console.log("💾 Saving payment metadata:", {normalized, type, peerPubkey, eventId})
+
+  // If no message provided, try to extract from invoice
+  const finalMessage = message || extractDescriptionFromInvoice(invoice)
+
+  console.log("💾 Saving payment metadata:", {
+    normalized,
+    type,
+    peerPubkey,
+    eventId,
+    message: finalMessage,
+    destination,
+  })
   await db.paymentMetadata.put({
     invoice: normalized,
     type,
     peerPubkey,
     eventId,
+    message: finalMessage,
+    destination,
     timestamp: Date.now(),
   })
 }
