@@ -610,6 +610,53 @@ export default class SessionManager {
 
     // First migration
     if (!version) {
+      // Fetch all existing invites
+      // Assume no version prefix
+      // Re-save invites with proper keys
+      const oldInvitePrefix = "invite/"
+      const inviteKeys = await this.storage.list(oldInvitePrefix)
+      await Promise.all(
+        inviteKeys.map(async (key) => {
+          const publicKey = key.slice(oldInvitePrefix.length)
+          const inviteData = await this.storage.get<string>(key)
+          if (inviteData) {
+            const newKey = this.userInviteKey(publicKey)
+            await this.storage.put(newKey, inviteData)
+            await this.storage.del(key)
+          }
+        })
+      )
+
+      // Fetch all existing user records
+      // Assume no version prefix
+      // Remove all old sessions as these may have key issues
+      // Re-save user records without sessions with proper keys
+      const oldSessionPrefix = "user/"
+      const sessionKeys = await this.storage.list(oldSessionPrefix)
+      await Promise.all(
+        sessionKeys.map(async (key) => {
+          const publicKey = key.slice(oldSessionPrefix.length)
+          const userRecordData = await this.storage.get<StoredUserRecord>(key)
+          if (userRecordData) {
+            const newKey = this.userRecordKey(publicKey)
+            const newUserRecordData: StoredUserRecord = {
+              publicKey: userRecordData.publicKey,
+              devices: userRecordData.devices.map((device) => ({
+                deviceId: device.deviceId,
+                activeSession: null,
+                inactiveSessions: [],
+              })),
+            }
+            await this.storage.put(newKey, newUserRecordData)
+            await this.storage.del(key)
+          }
+        })
+      )
+
+      // Set version to 1 so next migration can run
+      version = "1"
+      await this.storage.put(this.versionKey(), version)
+
       return
     }
 
