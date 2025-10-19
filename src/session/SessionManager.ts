@@ -415,7 +415,7 @@ export default class SessionManager {
     ]
 
     // Send to all devices in background
-    Promise.all(
+    Promise.allSettled(
       devices.map(async (device) => {
         const {activeSession} = device
         if (!activeSession) return
