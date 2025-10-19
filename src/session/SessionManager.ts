@@ -90,9 +90,13 @@ export default class SessionManager {
     if (this.initialized) return
     this.initialized = true
 
-    await this.runMigrations()
+    await this.runMigrations().catch((error) => {
+      console.error("Failed to run migrations:", error)
+    })
 
-    await this.loadAllUserRecords()
+    await this.loadAllUserRecords().catch((error) => {
+      console.error("Failed to load user records:", error)
+    })
 
     return this.storage
       .get<string>(this.deviceInviteKey(this.deviceId))
@@ -623,11 +627,11 @@ export default class SessionManager {
       // Assume no version prefix
       // Remove all old sessions as these may have key issues
       // Re-save user records without sessions with proper keys
-      const oldSessionPrefix = "user/"
-      const sessionKeys = await this.storage.list(oldSessionPrefix)
+      const oldUserRecordPrefix = "user/"
+      const sessionKeys = await this.storage.list(oldUserRecordPrefix)
       await Promise.all(
         sessionKeys.map(async (key) => {
-          const publicKey = key.slice(oldSessionPrefix.length)
+          const publicKey = key.slice(oldUserRecordPrefix.length)
           const userRecordData = await this.storage.get<StoredUserRecord>(key)
           if (userRecordData) {
             const newKey = this.userRecordKey(publicKey)
