@@ -611,17 +611,24 @@ export default class SessionManager {
     if (!version) {
       // Fetch all existing invites
       // Assume no version prefix
+      // Deserialize and serialize to start using persistent createdAt
       // Re-save invites with proper keys
       const oldInvitePrefix = "invite/"
       const inviteKeys = await this.storage.list(oldInvitePrefix)
       await Promise.all(
         inviteKeys.map(async (key) => {
-          const publicKey = key.slice(oldInvitePrefix.length)
-          const inviteData = await this.storage.get<string>(key)
-          if (inviteData) {
-            const newKey = this.userInviteKey(publicKey)
-            await this.storage.put(newKey, inviteData)
-            await this.storage.del(key)
+          try {
+            const publicKey = key.slice(oldInvitePrefix.length)
+            const inviteData = await this.storage.get<string>(key)
+            if (inviteData) {
+              const newKey = this.userInviteKey(publicKey)
+              const invite = Invite.deserialize(inviteData)
+              const serializedInvite = invite.serialize()
+              await this.storage.put(newKey, serializedInvite)
+              await this.storage.del(key)
+            }
+          } catch (e) {
+            console.warn(`Failed to migrate invite ${key}, skipping:`, e)
           }
         })
       )
@@ -634,20 +641,24 @@ export default class SessionManager {
       const sessionKeys = await this.storage.list(oldUserRecordPrefix)
       await Promise.all(
         sessionKeys.map(async (key) => {
-          const publicKey = key.slice(oldUserRecordPrefix.length)
-          const userRecordData = await this.storage.get<StoredUserRecord>(key)
-          if (userRecordData) {
-            const newKey = this.userRecordKey(publicKey)
-            const newUserRecordData: StoredUserRecord = {
-              publicKey: userRecordData.publicKey,
-              devices: userRecordData.devices.map((device) => ({
-                deviceId: device.deviceId,
-                activeSession: null,
-                inactiveSessions: [],
-              })),
+          try {
+            const publicKey = key.slice(oldUserRecordPrefix.length)
+            const userRecordData = await this.storage.get<StoredUserRecord>(key)
+            if (userRecordData) {
+              const newKey = this.userRecordKey(publicKey)
+              const newUserRecordData: StoredUserRecord = {
+                publicKey: userRecordData.publicKey,
+                devices: userRecordData.devices.map((device) => ({
+                  deviceId: device.deviceId,
+                  activeSession: null,
+                  inactiveSessions: [],
+                })),
+              }
+              await this.storage.put(newKey, newUserRecordData)
+              await this.storage.del(key)
             }
-            await this.storage.put(newKey, newUserRecordData)
-            await this.storage.del(key)
+          } catch (e) {
+            console.warn(`Failed to migrate user record ${key}, skipping:`, e)
           }
         })
       )
