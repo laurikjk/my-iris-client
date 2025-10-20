@@ -28,6 +28,7 @@ import {
   useEnabledFeedIds,
   type FeedConfig,
 } from "@/stores/feed"
+import Toast from "@/shared/components/ui/Toast"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -296,6 +297,7 @@ const Layout = ({children}: {children: ReactNode}) => {
         )}
       </ErrorBoundary>
       <Footer />
+      <Toast />
       <Helmet titleTemplate={`%s / ${CONFIG.appName}`} defaultTitle={CONFIG.appName}>
         <title>{CONFIG.appName}</title>
       </Helmet>

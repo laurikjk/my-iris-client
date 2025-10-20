@@ -149,21 +149,34 @@ function ZapModal({
             console.error("❌ Failed to save zap metadata:", err)
           }
 
-          // Attempt wallet payment in background (fire-and-forget)
+          // Optimistic update: immediately close modal and show zapped state
+          setZapped(true)
+          setZapRefresh(!zapRefresh)
+          onClose()
+
+          // Attempt wallet payment in background
           setTimeout(() => {
             console.log("💸 Starting wallet payment...")
             walletProviderSendPayment(pr)
               .then(() => {
                 console.log("✅ Payment succeeded")
-                setZapped(true)
+              })
+              .catch(async (error: Error) => {
+                console.warn("Wallet payment failed:", error)
+                // Revert optimistic update
+                setZapped(false)
                 setZapRefresh(!zapRefresh)
-                onClose()
+                // Show error toast with link to event
+                const {useToastStore} = await import("@/stores/toast")
+                const {nip19} = await import("nostr-tools")
+                const errorMsg = error instanceof Error ? error.message : "Payment failed"
+                const noteId = nip19.noteEncode(event.id)
+                const recipientName =
+                  profile?.name || profile?.displayName || event.pubkey.slice(0, 8)
+                const message = `Zap to ${recipientName} (${Number(zapAmount)} bits) failed. ${errorMsg}`
+                useToastStore.getState().addToast(message, "error", 10000, `/${noteId}`)
               })
-              .catch((error: Error) => {
-                console.warn("Wallet payment failed, user can use QR code:", error)
-                setError("Wallet payment failed. Please use the QR code below.")
-              })
-          }, 100) // Small delay to let QR code render first
+          }, 100)
         }
 
         // Always return undefined to let NDK know we're handling payment via QR

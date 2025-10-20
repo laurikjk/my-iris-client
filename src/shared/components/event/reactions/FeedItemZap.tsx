@@ -29,7 +29,6 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
   const {defaultZapAmount, defaultZapComment} = useUserStore()
   const {activeProviderType, sendPayment: walletProviderSendPayment} =
     useWalletProviderStore()
-  const [isZapping, setIsZapping] = useState(false)
   const {
     handleMouseDown: handleLongPressDown,
     handleMouseMove: handleLongPressMove,
@@ -85,65 +84,100 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
   }
 
   const handleOneClickZap = async () => {
-    try {
-      setIsZapping(true)
-      // Don't flash until payment succeeds
-      const amount = Number(defaultZapAmount) * 1000
+    const amount = Number(defaultZapAmount) * 1000
 
-      // Check if profile has lightning address
-      if (!profile?.lud16 && !profile?.lud06) {
-        console.warn("Quick zap: No lightning address found")
-        setShowZapModal(true)
-        return
-      }
+    // Check if profile has lightning address
+    if (!profile?.lud16 && !profile?.lud06) {
+      console.warn("Quick zap: No lightning address found")
+      setShowZapModal(true)
+      return
+    }
 
-      const ndkInstance = ndk()
-      const signer = ndkInstance.signer
-      if (!signer) {
-        console.warn("Quick zap: No signer available")
-        setShowZapModal(true)
-        return
-      }
+    const ndkInstance = ndk()
+    const signer = ndkInstance.signer
+    if (!signer) {
+      console.warn("Quick zap: No signer available")
+      setShowZapModal(true)
+      return
+    }
 
-      // Use the shared function that publishes the zap request
-      const {createAndPublishZapInvoice} = await import("@/utils/nostr")
-      const invoice = await createAndPublishZapInvoice(
-        event,
-        amount,
-        defaultZapComment || "", // Use default comment for quick zap
-        profile.lud16 || profile.lud06!,
-        signer
-      )
+    // Optimistic update: immediately add zap and flash
+    const optimisticZapId = `optimistic-${Date.now()}`
+    const optimisticZap: ZapInfo = {
+      id: optimisticZapId,
+      amount: amount / 1000, // Store in sats
+      pubkey: myPubKey || "",
+      comment: defaultZapComment || "",
+      event: event as NDKEvent,
+    }
 
-      // Save zap metadata before payment
-      if (hasWallet) {
-        try {
-          const {savePaymentMetadata} = await import("@/stores/paymentMetadata")
-          await savePaymentMetadata(invoice, "zap", event.pubkey, event.id)
-        } catch (err) {
-          console.warn("Failed to save quick zap metadata:", err)
-        }
-      }
+    setZapsByAuthor((prev) => {
+      const newMap = new Map(prev)
+      const myZaps = newMap.get(myPubKey || "") || []
+      newMap.set(myPubKey || "", [...myZaps, optimisticZap])
+      zapsByEventCache.set(event.id, newMap)
+      return newMap
+    })
 
-      // Try to pay with wallet
+    // Flash immediately
+    flashElement()
+
+    // Fire off payment in background
+    ;(async () => {
       try {
+        // Use the shared function that publishes the zap request
+        const {createAndPublishZapInvoice} = await import("@/utils/nostr")
+        const invoice = await createAndPublishZapInvoice(
+          event,
+          amount,
+          defaultZapComment || "",
+          profile.lud16 || profile.lud06!,
+          signer
+        )
+
+        // Save zap metadata before payment
+        if (hasWallet) {
+          try {
+            const {savePaymentMetadata} = await import("@/stores/paymentMetadata")
+            await savePaymentMetadata(invoice, "zap", event.pubkey, event.id)
+          } catch (err) {
+            console.warn("Failed to save quick zap metadata:", err)
+          }
+        }
+
+        // Try to pay with wallet
         await walletProviderSendPayment(invoice)
-        // Flash the element on success
-        flashElement()
+        // Payment succeeded - optimistic zap stays
       } catch (error) {
         console.warn("Quick zap payment failed:", error)
-        // Store the failed invoice for the modal
-        setFailedInvoice(invoice)
-        setShowZapModal(true)
+
+        // Remove optimistic zap
+        setZapsByAuthor((prev) => {
+          const newMap = new Map(prev)
+          const myZaps = newMap.get(myPubKey || "") || []
+          const filteredZaps = myZaps.filter((z) => z.id !== optimisticZapId)
+
+          if (filteredZaps.length > 0) {
+            newMap.set(myPubKey || "", filteredZaps)
+          } else {
+            newMap.delete(myPubKey || "") // Remove key if no zaps left
+          }
+
+          zapsByEventCache.set(event.id, newMap)
+          return newMap
+        })
+
+        // Show error toast with link to event
+        const {useToastStore} = await import("@/stores/toast")
+        const {nip19} = await import("nostr-tools")
+        const errorMsg = error instanceof Error ? error.message : "Payment failed"
+        const noteId = nip19.noteEncode(event.id)
+        const recipientName =
+          profile?.name || profile?.displayName || event.pubkey.slice(0, 8)
+        const message = `Zap to ${recipientName} (${amount / 1000} bits) failed. ${errorMsg}`
+        useToastStore.getState().addToast(message, "error", 10000, `/${noteId}`)
       }
-    } catch (error) {
-      console.warn("Unable to one-click zap:", error)
-      // Open zap modal on zap failure
-      setFailedInvoice("")
-      setShowZapModal(true)
-    } finally {
-      setIsZapping(false)
-    }
+    })()
   }
 
   const handleClick = () => {
@@ -249,11 +283,7 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
         onTouchMove={handleLongPressMove}
         onTouchEnd={handleLongPressUp}
       >
-        {isZapping ? (
-          <div className="loading loading-spinner loading-xs" />
-        ) : (
-          <Icon name={iconName} size={16} />
-        )}
+        <Icon name={iconName} size={16} />
         <span>{showReactionCounts ? formatAmount(zappedAmount) : ""}</span>
       </button>
     </>
