@@ -110,6 +110,9 @@ export default class SessionManager {
       })
       .then(async (invite) => {
         if (invite) {
+          // Republish our existing invite to ensure it's live
+          const event = invite.getEvent()
+          await this.nostrPublish(event).catch(console.error)
           return invite
         }
         const newInvite = Invite.createNew(this.ourPublicKey, this.deviceId)
