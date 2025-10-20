@@ -85,7 +85,13 @@ export class WalletApi {
         throw new Error("Failed to create outputs for receive")
       }
 
-      const newProofs = await wallet.receive({mint, proofs}, {outputData})
+      // Get all proofs for offline receive via deterministic secrets
+      const allProofs = await this.proofService.getReadyProofs(mint)
+
+      const newProofs = await wallet.receive({mint, proofs}, {
+        outputData,
+        proofsWeHave: allProofs,
+      })
       await this.proofService.saveProofs(
         mint,
         mapProofToCoreProof(mint, "ready", newProofs)

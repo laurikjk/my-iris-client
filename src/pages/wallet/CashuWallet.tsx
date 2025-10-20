@@ -63,6 +63,7 @@ export default function CashuWallet() {
   const [receiveDialogInitialToken, setReceiveDialogInitialToken] = useState<string>("")
   const [refreshing, setRefreshing] = useState(false)
   const [qrError, setQrError] = useState<string>("")
+  const [isOffline, setIsOffline] = useState(!navigator.onLine)
 
   const enrichHistoryWithMetadata = async (
     entries: HistoryEntry[]
@@ -328,6 +329,20 @@ export default function CashuWallet() {
     }
   }, [location.search, manager])
 
+  // Track online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false)
+    const handleOffline = () => setIsOffline(true)
+
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
+  }, [])
+
   // Redirect to settings if default Cashu wallet is not selected
   useEffect(() => {
     if (activeProviderType !== undefined && activeProviderType !== "cashu") {
@@ -455,7 +470,12 @@ export default function CashuWallet() {
     <>
       <Header>
         <div className="flex items-center justify-between w-full min-w-0">
-          <span className="truncate">Wallet</span>
+          <div className="flex items-center gap-2">
+            <span className="truncate">Wallet</span>
+            {isOffline && (
+              <span className="badge badge-sm badge-error text-xs">Offline</span>
+            )}
+          </div>
           <div className="flex gap-2 md:gap-3 mr-6 md:mr-0">
             <button
               onClick={handleRefresh}
