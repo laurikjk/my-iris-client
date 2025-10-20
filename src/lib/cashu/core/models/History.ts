@@ -32,6 +32,7 @@ export type SendHistoryEntry = BaseHistoryEntry & {
 export type ReceiveHistoryEntry = BaseHistoryEntry & {
   type: "receive"
   amount: number
+  token?: Token
 }
 
 export type HistoryEntry =

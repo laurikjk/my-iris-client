@@ -49,6 +49,8 @@ export default function SendDialog({
   const [error, setError] = useState<string>("")
   const [sendingDm, setSendingDm] = useState(false)
   const [selectedUserPubkey, setSelectedUserPubkey] = useState<string | null>(null)
+  const [dmMessage, setDmMessage] = useState<string>("")
+  const [sendNote, setSendNote] = useState<string>("")
 
   // Handle initial token (from history)
   useEffect(() => {
@@ -59,6 +61,13 @@ export default function SendDialog({
         const encoded = getEncodedToken(initialToken)
         setGeneratedToken(encoded)
         setSendMode("ecash")
+
+        // Load existing metadata and suggest as default DM message
+        const {getPaymentMetadata} = await import("@/stores/paymentMetadata")
+        const metadata = await getPaymentMetadata(encoded)
+        if (metadata?.message) {
+          setDmMessage(metadata.message)
+        }
       } catch (error) {
         console.error("Failed to encode initial token:", error)
       }
@@ -172,6 +181,8 @@ export default function SendDialog({
     setError("")
     setSendingDm(false)
     setSelectedUserPubkey(null)
+    setDmMessage("")
+    setSendNote("")
   }
 
   const handleSendTokenDm = async (user: DoubleRatchetUser) => {
@@ -190,15 +201,24 @@ export default function SendDialog({
         throw new Error("User not logged in")
       }
 
-      // Send the message
-      const sentMessage = await sessionManager.sendMessage(user.pubkey, generatedToken)
+      // Send the message with optional note
+      const messageContent = dmMessage.trim()
+        ? `${generatedToken} ${dmMessage.trim()}`
+        : generatedToken
+      const sentMessage = await sessionManager.sendMessage(user.pubkey, messageContent)
 
       // Update local store
       await usePrivateMessagesStore.getState().upsert(user.pubkey, myPubKey, sentMessage)
 
-      // Save payment metadata
+      // Save payment metadata (will overwrite recipient if token was previously created)
       try {
-        await savePaymentMetadata(generatedToken, "other", user.pubkey)
+        await savePaymentMetadata(
+          generatedToken,
+          "dm",
+          user.pubkey,
+          undefined,
+          dmMessage.trim() || undefined
+        )
       } catch (err) {
         console.warn("Failed to save payment metadata:", err)
       }
@@ -244,6 +264,24 @@ export default function SendDialog({
       const {getEncodedToken} = await import("@cashu/cashu-ts")
       const encoded = getEncodedToken(token)
       setGeneratedToken(encoded)
+
+      // Save note to self if provided and set as DM message suggestion
+      if (sendNote.trim()) {
+        const {savePaymentMetadata} = await import("@/stores/paymentMetadata")
+        try {
+          await savePaymentMetadata(
+            encoded,
+            "other",
+            undefined,
+            undefined,
+            sendNote.trim()
+          )
+          setDmMessage(sendNote.trim())
+        } catch (err) {
+          console.warn("Failed to save send note:", err)
+        }
+      }
+
       onSuccess()
     } catch (error) {
       console.error("Failed to create ecash token:", error)
@@ -398,7 +436,12 @@ export default function SendDialog({
               </div>
             )}
             {!generatedToken ? (
-              <>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  sendEcash()
+                }}
+              >
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text">Amount (bits)</span>
@@ -423,9 +466,22 @@ export default function SendDialog({
                     </label>
                   )}
                 </div>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Note to self (optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input input-bordered"
+                    placeholder="What's this for?"
+                    value={sendNote}
+                    onChange={(e) => setSendNote(e.target.value)}
+                    maxLength={200}
+                  />
+                </div>
                 <button
+                  type="submit"
                   className="btn btn-primary w-full"
-                  onClick={sendEcash}
                   disabled={
                     !sendAmount ||
                     sending ||
@@ -434,7 +490,7 @@ export default function SendDialog({
                 >
                   {sending ? "Creating..." : "Create Token"}
                 </button>
-              </>
+              </form>
             ) : (
               <div className="space-y-4">
                 {qrCodeUrl && (
@@ -498,6 +554,17 @@ export default function SendDialog({
                     maxResults={5}
                     showCount={false}
                   />
+                  <label className="label mt-2">
+                    <span className="label-text">Message (optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input input-bordered"
+                    placeholder="Add a note..."
+                    value={dmMessage}
+                    onChange={(e) => setDmMessage(e.target.value)}
+                    maxLength={200}
+                  />
                   {sendingDm && (
                     <div className="alert alert-info mt-2">
                       <span>Sending DM...</span>
@@ -513,7 +580,13 @@ export default function SendDialog({
         )}
 
         {sendMode === "lightning" && (
-          <div className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              sendLightning()
+            }}
+            className="space-y-4"
+          >
             {error && (
               <div className="alert alert-error">
                 <span>{error}</span>
@@ -617,8 +690,8 @@ export default function SendDialog({
             )}
 
             <button
+              type="submit"
               className="btn btn-primary w-full"
-              onClick={sendLightning}
               disabled={
                 !sendInvoice.trim() ||
                 sending ||
@@ -629,7 +702,7 @@ export default function SendDialog({
             >
               {sending ? "Paying..." : "Pay"}
             </button>
-          </div>
+          </form>
         )}
       </div>
     </Modal>

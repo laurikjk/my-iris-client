@@ -31,6 +31,7 @@ export default function ReceiveDialog({
   )
   const [tokenInput, setTokenInput] = useState<string>("")
   const [error, setError] = useState<string>("")
+  const [receiveNote, setReceiveNote] = useState<string>("")
   const [lightningAmount, setLightningAmount] = useState<number>(100)
   const [invoice, setInvoice] = useState<string>("")
   const [lightningAddressQR, setLightningAddressQR] = useState<string>("")
@@ -88,6 +89,7 @@ export default function ReceiveDialog({
     setTokenInput("")
     setInvoice("")
     setError("")
+    setReceiveNote("")
   }
 
   const receiveEcash = async () => {
@@ -106,7 +108,37 @@ export default function ReceiveDialog({
         }
       }
 
-      await manager.wallet.receive(tokenInput.trim())
+      // Check if we have send metadata for this token (means we sent it originally)
+      const {getPaymentMetadata, savePaymentMetadata} = await import(
+        "@/stores/paymentMetadata"
+      )
+      const trimmedToken = tokenInput.trim()
+      const existingMetadata = await getPaymentMetadata(trimmedToken)
+
+      // If we sent this token and are now redeeming it ourselves,
+      // save metadata marking ourselves as the sender
+      if (existingMetadata?.recipient && myPubKey) {
+        await savePaymentMetadata(
+          trimmedToken,
+          "other",
+          undefined,
+          undefined,
+          receiveNote.trim() || undefined,
+          undefined,
+          myPubKey
+        )
+      } else if (receiveNote.trim()) {
+        // Save note even if no existing metadata
+        await savePaymentMetadata(
+          trimmedToken,
+          "other",
+          undefined,
+          undefined,
+          receiveNote.trim()
+        )
+      }
+
+      await manager.wallet.receive(trimmedToken)
       setTokenInput("")
       handleClose()
       onSuccess()
@@ -196,7 +228,13 @@ export default function ReceiveDialog({
         )}
 
         {receiveMode === "ecash" && (
-          <div className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              receiveEcash()
+            }}
+            className="space-y-4"
+          >
             {error && (
               <div className="alert alert-error">
                 <span>{error}</span>
@@ -213,14 +251,27 @@ export default function ReceiveDialog({
                 onChange={(e) => setTokenInput(e.target.value)}
               />
             </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Note to self (optional)</span>
+              </label>
+              <input
+                type="text"
+                className="input input-bordered"
+                placeholder="Add a description..."
+                value={receiveNote}
+                onChange={(e) => setReceiveNote(e.target.value)}
+                maxLength={200}
+              />
+            </div>
             <button
+              type="submit"
               className="btn btn-primary w-full"
-              onClick={receiveEcash}
               disabled={!tokenInput.trim() || receiving}
             >
               {receiving ? "Receiving..." : "Receive"}
             </button>
-          </div>
+          </form>
         )}
 
         {receiveMode === "lightning" && (

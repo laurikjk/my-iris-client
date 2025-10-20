@@ -21,6 +21,7 @@ import MediaEmbed from "./media/MediaEmbed.tsx"
 import {Rumor} from "nostr-double-ratchet/src"
 import NostrNpub from "./nostr/NostrNpub.tsx"
 import LightningUri from "./LightningUri.tsx"
+import CashuToken from "./CashuToken.tsx"
 import YouTube from "./youtube/YouTube.tsx"
 import WavLake from "./wavlake/WavLake.tsx"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -40,6 +41,8 @@ export type EmbedProps = {
   key: string
   truncated?: boolean
 }
+
+export type EmbedComponentProps = EmbedProps
 
 type Embed = {
   regex: RegExp
@@ -68,6 +71,7 @@ export const allEmbeds = [
   Twitch,
   TwitchChannel,
   WavLake,
+  CashuToken,
   LightningUri,
   NostrNpub,
   Nip19,
@@ -110,6 +114,7 @@ export const hasMedia = (e: {content: string}) => {
 
 export const smallEmbeds = [
   EncryptedUrl,
+  CashuToken,
   NostrNpub,
   Hashtag,
   SmallImage,

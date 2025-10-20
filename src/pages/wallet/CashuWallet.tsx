@@ -17,7 +17,7 @@ import QRScannerModal from "./cashu/QRScannerModal"
 import HistoryList from "./cashu/HistoryList"
 import MintsList from "./cashu/MintsList"
 import {formatUsd} from "./cashu/utils"
-import {Link, useNavigate} from "@/navigation"
+import {Link, useNavigate, useLocation} from "@/navigation"
 import Header from "@/shared/components/header/Header"
 import Icon from "@/shared/components/Icons/Icon"
 import {usePublicKey} from "@/stores/user"
@@ -45,6 +45,7 @@ export default function CashuWallet() {
     useCashuWalletStore()
   const {activeProviderType} = useWalletProviderStore()
   const navigate = useNavigate()
+  const location = useLocation()
   const myPubKey = usePublicKey()
 
   const [manager, setManager] = useState<Manager | null>(null)
@@ -79,14 +80,28 @@ export default function CashuWallet() {
             entry.quoteId
           )
           invoice = quote?.request
-          if (invoice) {
-            console.log("🔗 Melt entry invoice:", invoice.slice(0, 30) + "...")
-          }
         } else if (entry.type === "send") {
           // For send entries, encode the token to use as lookup key
-          const {getEncodedToken} = await import("@cashu/cashu-ts")
-          invoice = getEncodedToken(entry.token)
-          console.log("🔗 Send entry token:", invoice.slice(0, 30) + "...")
+          if (entry.token) {
+            const {getEncodedToken} = await import("@cashu/cashu-ts")
+            invoice = getEncodedToken(entry.token)
+          }
+        } else if (entry.type === "receive") {
+          // Receive entries don't have tokens, so match with a send entry
+          // by amount, mint, and timestamp proximity (within 5 minutes)
+          const matchingSend = entries.find(
+            (e) =>
+              e.type === "send" &&
+              e.amount === entry.amount &&
+              e.mintUrl === entry.mintUrl &&
+              Math.abs(e.createdAt - entry.createdAt) < 5 * 60 * 1000 &&
+              e.token
+          )
+
+          if (matchingSend && matchingSend.type === "send" && matchingSend.token) {
+            const {getEncodedToken} = await import("@cashu/cashu-ts")
+            invoice = getEncodedToken(matchingSend.token)
+          }
         }
 
         if (!invoice) {
@@ -94,13 +109,6 @@ export default function CashuWallet() {
         }
 
         const metadata = await getPaymentMetadata(invoice)
-        if (metadata) {
-          console.log("✨ Enriched entry with metadata:", {
-            type: entry.type,
-            metadataType: metadata.type,
-            peerPubkey: metadata.peerPubkey?.slice(0, 8),
-          })
-        }
         return {
           ...entry,
           paymentMetadata: metadata,
@@ -262,6 +270,15 @@ export default function CashuWallet() {
 
     setQrError("Unrecognized QR code format")
   }
+
+  // Handle receiveToken from navigation state
+  useEffect(() => {
+    const state = location.state as {receiveToken?: string} | undefined
+    if (state?.receiveToken && manager) {
+      setReceiveDialogInitialToken(state.receiveToken)
+      setShowReceiveDialog(true)
+    }
+  }, [location.state, manager])
 
   // Redirect to settings if default Cashu wallet is not selected
   useEffect(() => {

@@ -1,6 +1,6 @@
 import type {SendHistoryEntry} from "@/lib/cashu/core/models/History"
 import type {EnrichedHistoryEntry} from "../CashuWallet"
-import {RiFlashlightFill, RiCoinsFill} from "@remixicon/react"
+import {RiFlashlightFill, RiBitCoinFill} from "@remixicon/react"
 import {useState} from "react"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import {getTransactionAmount, getTransactionStatus, formatDate, formatUsd} from "./utils"
@@ -46,9 +46,10 @@ export default function HistoryList({
         const isSend = entry.type === "send"
         const isZapWithEvent =
           entry.paymentMetadata?.type === "zap" && entry.paymentMetadata?.eventId
-        const hasPeerPubkey = !!entry.paymentMetadata?.peerPubkey
+        const hasRecipient = !!entry.paymentMetadata?.recipient
+        const hasSender = !!entry.paymentMetadata?.sender
         const isClickable =
-          (isSend && onSendEntryClick) || isZapWithEvent || hasPeerPubkey
+          (isSend && onSendEntryClick) || isZapWithEvent || hasRecipient || hasSender
 
         // Determine if it's Lightning (mint/melt) or Ecash (send/receive)
         const label =
@@ -57,10 +58,15 @@ export default function HistoryList({
         const handleClick = () => {
           if (isZapWithEvent && entry.paymentMetadata?.eventId) {
             navigate(`/${nip19.noteEncode(entry.paymentMetadata.eventId)}`)
-          } else if (hasPeerPubkey && entry.paymentMetadata?.peerPubkey) {
-            // Navigate to DM with user
+          } else if (hasRecipient && entry.paymentMetadata?.recipient) {
+            // Navigate to DM with recipient
             navigate("/chats/chat", {
-              state: {id: entry.paymentMetadata.peerPubkey},
+              state: {id: entry.paymentMetadata.recipient},
+            })
+          } else if (hasSender && entry.paymentMetadata?.sender) {
+            // Navigate to DM with sender
+            navigate("/chats/chat", {
+              state: {id: entry.paymentMetadata.sender},
             })
           } else if (isSend && onSendEntryClick) {
             onSendEntryClick(entry as SendHistoryEntry)
@@ -77,24 +83,43 @@ export default function HistoryList({
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="flex-shrink-0">
-                {entry.paymentMetadata?.peerPubkey && (
-                  <Avatar pubKey={entry.paymentMetadata.peerPubkey} width={32} />
+                {(entry.paymentMetadata?.recipient || entry.paymentMetadata?.sender) && (
+                  <Avatar
+                    pubKey={
+                      amount < 0
+                        ? entry.paymentMetadata.recipient!
+                        : entry.paymentMetadata.sender!
+                    }
+                    width={32}
+                  />
                 )}
-                {!entry.paymentMetadata?.peerPubkey && label === "Lightning" && (
-                  <RiFlashlightFill className="w-5 h-5" />
-                )}
-                {!entry.paymentMetadata?.peerPubkey && label !== "Lightning" && (
-                  <RiCoinsFill className="w-5 h-5" />
-                )}
+                {!entry.paymentMetadata?.recipient &&
+                  !entry.paymentMetadata?.sender &&
+                  label === "Lightning" && (
+                    <RiFlashlightFill className="w-5 h-5 text-accent" />
+                  )}
+                {!entry.paymentMetadata?.recipient &&
+                  !entry.paymentMetadata?.sender &&
+                  label !== "Lightning" && (
+                    <RiBitCoinFill className="w-5 h-5 text-warning" />
+                  )}
               </div>
               <div className="min-w-0 flex-1">
-                {entry.paymentMetadata?.peerPubkey ? (
+                {entry.paymentMetadata?.recipient || entry.paymentMetadata?.sender ? (
                   <div className="font-medium truncate">
                     {entry.paymentMetadata.type === "zap" && amount < 0 && "Zapped "}
                     {entry.paymentMetadata.type === "zap" && amount > 0 && "Zapped by "}
                     {entry.paymentMetadata.type !== "zap" && amount < 0 && "Sent to "}
-                    {entry.paymentMetadata.type !== "zap" && amount > 0 && "Received from "}
-                    <Name pubKey={entry.paymentMetadata.peerPubkey} />
+                    {entry.paymentMetadata.type !== "zap" &&
+                      amount > 0 &&
+                      "Received from "}
+                    <Name
+                      pubKey={
+                        amount < 0
+                          ? entry.paymentMetadata.recipient!
+                          : entry.paymentMetadata.sender!
+                      }
+                    />
                   </div>
                 ) : (
                   <div className="font-medium truncate">{label}</div>
