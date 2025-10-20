@@ -180,8 +180,9 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
     })()
   }
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!isLongPress) {
+      e.currentTarget.blur()
       handleZapClick()
     }
   }
