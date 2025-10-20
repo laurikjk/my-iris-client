@@ -71,6 +71,7 @@ export default function CashuWallet() {
     const enriched = await Promise.all(
       entries.map(async (entry) => {
         let invoice: string | undefined
+        let memoFromToken: string | undefined
 
         if (entry.type === "mint") {
           invoice = entry.paymentRequest
@@ -81,10 +82,11 @@ export default function CashuWallet() {
           )
           invoice = quote?.request
         } else if (entry.type === "send") {
-          // For send entries, encode the token to use as lookup key
+          // For send entries, encode the token and extract memo
           if (entry.token) {
             const {getEncodedToken} = await import("@cashu/cashu-ts")
             invoice = getEncodedToken(entry.token)
+            memoFromToken = entry.token.memo
           }
         } else if (entry.type === "receive") {
           // Receive entries don't have tokens, so match with a send entry
@@ -101,6 +103,7 @@ export default function CashuWallet() {
           if (matchingSend && matchingSend.type === "send" && matchingSend.token) {
             const {getEncodedToken} = await import("@cashu/cashu-ts")
             invoice = getEncodedToken(matchingSend.token)
+            memoFromToken = matchingSend.token.memo
           }
         }
 
@@ -108,7 +111,23 @@ export default function CashuWallet() {
           return entry
         }
 
-        const metadata = await getPaymentMetadata(invoice)
+        let metadata = await getPaymentMetadata(invoice)
+
+        // Always use memo from token if available (it's the source of truth)
+        if (memoFromToken) {
+          metadata = metadata
+            ? {
+                ...metadata,
+                message: memoFromToken,
+              }
+            : {
+                type: "other" as const,
+                invoice,
+                message: memoFromToken,
+                timestamp: Date.now(),
+              }
+        }
+
         return {
           ...entry,
           paymentMetadata: metadata,
@@ -241,7 +260,7 @@ export default function CashuWallet() {
     }
   }
 
-  const handleQRScanSuccess = (result: string) => {
+  const handleQRScanSuccess = async (result: string) => {
     setShowQRScanner(false)
     setQrError("")
 
@@ -250,6 +269,23 @@ export default function CashuWallet() {
       setReceiveDialogInitialToken(result)
       setShowReceiveDialog(true)
       return
+    }
+
+    // Check if it's a Cashu payment request
+    if (result.startsWith("creq")) {
+      try {
+        const {decodePaymentRequest} = await import("@cashu/cashu-ts")
+        decodePaymentRequest(result) // Validate format
+
+        // Handle payment request - open send dialog with request data
+        setSendDialogInitialInvoice(result)
+        setShowSendDialog(true)
+        return
+      } catch (error) {
+        console.error("Failed to decode payment request:", error)
+        setQrError("Invalid payment request")
+        return
+      }
     }
 
     // Check if it's a Lightning invoice
@@ -279,6 +315,18 @@ export default function CashuWallet() {
       setShowReceiveDialog(true)
     }
   }, [location.state, manager])
+
+  // Handle paymentRequest from URL params
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const paymentRequest = params.get("paymentRequest")
+    if (paymentRequest && manager) {
+      setSendDialogInitialInvoice(paymentRequest)
+      setShowSendDialog(true)
+      // Clear the URL param
+      window.history.replaceState({}, "", "/wallet")
+    }
+  }, [location.search, manager])
 
   // Redirect to settings if default Cashu wallet is not selected
   useEffect(() => {
@@ -578,6 +626,7 @@ export default function CashuWallet() {
               onSuccess={refreshData}
               initialToken={receiveDialogInitialToken}
               balance={totalBalance}
+              onScanRequest={() => setShowQRScanner(true)}
             />
 
             <QRScannerModal

@@ -1,6 +1,6 @@
 import {useState, useEffect} from "react"
 import type {Manager} from "@/lib/cashu/core/index"
-import type {Token} from "@cashu/cashu-ts"
+import type {Token, PaymentRequest} from "@cashu/cashu-ts"
 import Modal from "@/shared/components/ui/Modal"
 import {decode} from "light-bolt11-decoder"
 import {savePaymentMetadata} from "@/stores/paymentMetadata"
@@ -51,6 +51,7 @@ export default function SendDialog({
   const [selectedUserPubkey, setSelectedUserPubkey] = useState<string | null>(null)
   const [dmMessage, setDmMessage] = useState<string>("")
   const [sendNote, setSendNote] = useState<string>("")
+  const [, setPaymentRequest] = useState<PaymentRequest | null>(null)
 
   // Handle initial token (from history)
   useEffect(() => {
@@ -77,10 +78,50 @@ export default function SendDialog({
 
   // Handle initial invoice (from QR scan)
   useEffect(() => {
-    if (initialInvoice && isOpen) {
+    const handleInitialInvoice = async () => {
+      if (!initialInvoice || !isOpen) return
+
+      // Check if it's a payment request
+      if (initialInvoice.startsWith("creq")) {
+        try {
+          const {decodePaymentRequest} = await import("@cashu/cashu-ts")
+          const decodedRequest = decodePaymentRequest(initialInvoice)
+
+          // Store the payment request
+          setPaymentRequest(decodedRequest)
+
+          // Set amount and description from payment request
+          if (decodedRequest.amount) {
+            setSendAmount(decodedRequest.amount)
+          }
+          if (decodedRequest.description) {
+            setInvoiceDescription(decodedRequest.description)
+          }
+
+          // Check if it's a NIP-117 (double ratchet DM) transport
+          const hasNip117Transport = decodedRequest.transport?.some(
+            (t) =>
+              t.type === "nostr" &&
+              t.tags?.some((tag: string[]) => tag[0] === "n" && tag[1] === "117")
+          )
+
+          if (hasNip117Transport && decodedRequest.transport?.[0]?.target) {
+            // Auto-select the recipient for double ratchet DM
+            setSelectedUserPubkey(decodedRequest.transport[0].target)
+          }
+
+          setSendMode("ecash")
+          return
+        } catch (error) {
+          console.error("Failed to decode payment request:", error)
+        }
+      }
+
+      // Otherwise treat as lightning invoice
       setSendInvoice(initialInvoice)
       setSendMode("lightning")
     }
+    handleInitialInvoice()
   }, [initialInvoice, isOpen])
 
   // Detect lightning address and decode invoice amount and description
@@ -260,12 +301,19 @@ export default function SendDialog({
     setSending(true)
     setError("")
     try {
-      const token = await manager.wallet.send(mintUrl, sendAmount)
+      // Pass memo to wallet.send() so it's included in history
+      const token = await manager.wallet.send(
+        mintUrl,
+        sendAmount,
+        sendNote.trim() || undefined
+      )
+
       const {getEncodedToken} = await import("@cashu/cashu-ts")
       const encoded = getEncodedToken(token)
+
       setGeneratedToken(encoded)
 
-      // Save note to self if provided and set as DM message suggestion
+      // Save note to paymentMetadata (for enrichment lookups by encoded token)
       if (sendNote.trim()) {
         const {savePaymentMetadata} = await import("@/stores/paymentMetadata")
         try {
@@ -276,7 +324,6 @@ export default function SendDialog({
             undefined,
             sendNote.trim()
           )
-          setDmMessage(sendNote.trim())
         } catch (err) {
           console.warn("Failed to save send note:", err)
         }
@@ -468,7 +515,7 @@ export default function SendDialog({
                 </div>
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">Note to self (optional)</span>
+                    <span className="label-text">Note (optional)</span>
                   </label>
                   <input
                     type="text"
@@ -553,17 +600,6 @@ export default function SendDialog({
                     onUserSelect={handleSendTokenDm}
                     maxResults={5}
                     showCount={false}
-                  />
-                  <label className="label mt-2">
-                    <span className="label-text">Message (optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered"
-                    placeholder="Add a note..."
-                    value={dmMessage}
-                    onChange={(e) => setDmMessage(e.target.value)}
-                    maxLength={200}
                   />
                   {sendingDm && (
                     <div className="alert alert-info mt-2">

@@ -4,7 +4,12 @@ import Modal from "@/shared/components/ui/Modal"
 import {usePublicKey} from "@/stores/user"
 import {getLightningAddress} from "@/lib/npubcash"
 import {truncateMiddle} from "@/utils/utils"
-import {RiFileCopyLine, RiCheckLine} from "@remixicon/react"
+import {RiFileCopyLine, RiCheckLine, RiQrCodeLine} from "@remixicon/react"
+import {
+  PaymentRequest,
+  PaymentRequestTransport,
+  PaymentRequestTransportType,
+} from "@cashu/cashu-ts"
 
 interface ReceiveDialogProps {
   isOpen: boolean
@@ -14,6 +19,7 @@ interface ReceiveDialogProps {
   onSuccess: () => void
   initialToken?: string
   balance?: number
+  onScanRequest?: () => void
 }
 
 export default function ReceiveDialog({
@@ -24,11 +30,12 @@ export default function ReceiveDialog({
   onSuccess,
   initialToken,
   balance,
+  onScanRequest,
 }: ReceiveDialogProps) {
   const myPubKey = usePublicKey()
-  const [receiveMode, setReceiveMode] = useState<"select" | "ecash" | "lightning">(
-    "select"
-  )
+  const [receiveMode, setReceiveMode] = useState<
+    "select" | "ecash-menu" | "ecash-paste" | "lightning" | "request"
+  >("select")
   const [tokenInput, setTokenInput] = useState<string>("")
   const [error, setError] = useState<string>("")
   const [receiveNote, setReceiveNote] = useState<string>("")
@@ -37,14 +44,87 @@ export default function ReceiveDialog({
   const [lightningAddressQR, setLightningAddressQR] = useState<string>("")
   const [receiving, setReceiving] = useState(false)
   const [addressCopied, setAddressCopied] = useState(false)
+  const [requestAmount, setRequestAmount] = useState<number | undefined>(undefined)
+  const [requestDescription, setRequestDescription] = useState<string>("")
+  const [paymentRequestString, setPaymentRequestString] = useState<string>("")
+  const [requestQR, setRequestQR] = useState<string>("")
+  const [requestCopied, setRequestCopied] = useState(false)
+  const [previewAmount, setPreviewAmount] = useState<number | null>(null)
+  const [previewMemo, setPreviewMemo] = useState<string>("")
+  const [previewMint, setPreviewMint] = useState<string>("")
 
-  // Handle initial token (from QR scan)
+  // Handle initial token (from QR scan) and extract memo
   useEffect(() => {
-    if (initialToken && isOpen) {
+    const handleInitialToken = async () => {
+      if (!initialToken || !isOpen) return
+
       setTokenInput(initialToken)
-      setReceiveMode("ecash")
+      setReceiveMode("ecash-paste")
+
+      // Try to extract memo from token
+      try {
+        const {getDecodedToken} = await import("@cashu/cashu-ts")
+        const decoded = getDecodedToken(initialToken.trim())
+        if (decoded.memo) {
+          setReceiveNote(decoded.memo)
+        }
+      } catch (err) {
+        console.warn("Failed to decode token for memo:", err)
+      }
     }
+
+    handleInitialToken()
   }, [initialToken, isOpen])
+
+  // Live preview of pasted token
+  useEffect(() => {
+    const decodeTokenPreview = async () => {
+      const trimmed = tokenInput.trim()
+      if (!trimmed || !trimmed.startsWith("cashu")) {
+        setPreviewAmount(null)
+        setPreviewMemo("")
+        setPreviewMint("")
+        return
+      }
+
+      try {
+        const {getDecodedToken} = await import("@cashu/cashu-ts")
+        const decoded = getDecodedToken(trimmed)
+
+        // Calculate amount
+        let total = 0
+        if (decoded.proofs && Array.isArray(decoded.proofs)) {
+          for (const proof of decoded.proofs) {
+            total += proof.amount || 0
+          }
+        } else if (decoded.token && Array.isArray(decoded.token)) {
+          for (const tokenEntry of decoded.token) {
+            if (tokenEntry.proofs && Array.isArray(tokenEntry.proofs)) {
+              for (const proof of tokenEntry.proofs) {
+                total += proof.amount || 0
+              }
+            }
+          }
+        }
+
+        setPreviewAmount(total)
+        setPreviewMemo(decoded.memo || "")
+        setPreviewMint(decoded.mint || "")
+
+        // Auto-fill note from memo if not already set
+        if (decoded.memo && !receiveNote) {
+          setReceiveNote(decoded.memo)
+        }
+      } catch (err) {
+        // Invalid token, clear preview
+        setPreviewAmount(null)
+        setPreviewMemo("")
+        setPreviewMint("")
+      }
+    }
+
+    decodeTokenPreview()
+  }, [tokenInput, receiveNote])
 
   // Generate QR code for Lightning address
   useEffect(() => {
@@ -90,6 +170,10 @@ export default function ReceiveDialog({
     setInvoice("")
     setError("")
     setReceiveNote("")
+    setPaymentRequestString("")
+    setRequestQR("")
+    setRequestAmount(undefined)
+    setRequestDescription("")
   }
 
   const receiveEcash = async () => {
@@ -115,6 +199,9 @@ export default function ReceiveDialog({
       const trimmedToken = tokenInput.trim()
       const existingMetadata = await getPaymentMetadata(trimmedToken)
 
+      // Use receiveNote or fall back to token memo
+      const noteToSave = receiveNote.trim() || decoded.memo || undefined
+
       // If we sent this token and are now redeeming it ourselves,
       // save metadata marking ourselves as the sender
       if (existingMetadata?.recipient && myPubKey) {
@@ -123,19 +210,13 @@ export default function ReceiveDialog({
           "other",
           undefined,
           undefined,
-          receiveNote.trim() || undefined,
+          noteToSave,
           undefined,
           myPubKey
         )
-      } else if (receiveNote.trim()) {
+      } else if (noteToSave) {
         // Save note even if no existing metadata
-        await savePaymentMetadata(
-          trimmedToken,
-          "other",
-          undefined,
-          undefined,
-          receiveNote.trim()
-        )
+        await savePaymentMetadata(trimmedToken, "other", undefined, undefined, noteToSave)
       }
 
       await manager.wallet.receive(trimmedToken)
@@ -171,13 +252,104 @@ export default function ReceiveDialog({
     }
   }
 
+  const createPaymentRequest = async () => {
+    if (!manager || !mintUrl || !myPubKey) return
+    setReceiving(true)
+    setError("")
+    try {
+      // Create transport using nostr pubkey with NIP-117 (double ratchet DM)
+      const transport: PaymentRequestTransport[] = [
+        {
+          type: PaymentRequestTransportType.NOSTR,
+          target: myPubKey,
+          tags: [["n", "117"]],
+        },
+      ]
+
+      // Generate random ID
+      const requestId = Math.random().toString(36).substring(2, 10)
+
+      // Create payment request with description
+      const paymentRequest = new PaymentRequest(
+        transport,
+        requestId,
+        requestAmount,
+        "sat", // unit
+        [mintUrl], // mints array
+        requestDescription.trim() || undefined // description/memo
+      )
+
+      const encoded = paymentRequest.toEncodedRequest()
+      setPaymentRequestString(encoded)
+
+      // Generate QR code
+      const QRCode = await import("qrcode")
+      const url = await new Promise<string>((resolve, reject) => {
+        QRCode.toDataURL(
+          encoded,
+          {
+            errorCorrectionLevel: "H",
+            margin: 1,
+            width: 256,
+            color: {
+              dark: "#000000",
+              light: "#FFFFFF",
+            },
+          },
+          (error, url) => {
+            if (error) reject(error)
+            else resolve(url)
+          }
+        )
+      })
+      setRequestQR(url)
+    } catch (error) {
+      console.error("Failed to create payment request:", error)
+      setError(
+        "Failed to create payment request: " +
+          (error instanceof Error ? error.message : "Unknown error")
+      )
+    } finally {
+      setReceiving(false)
+    }
+  }
+
   if (!isOpen) return null
+
+  const getTitle = () => {
+    if (receiveMode === "ecash-menu") return "Receive Ecash"
+    if (receiveMode === "ecash-paste") return "Receive Ecash"
+    if (receiveMode === "request") return "Create Payment Request"
+    if (receiveMode === "lightning") return "Receive Lightning"
+    return "Receive"
+  }
+
+  const handleBack = () => {
+    if (receiveMode === "ecash-menu") {
+      setReceiveMode("select")
+    } else if (receiveMode === "ecash-paste" || receiveMode === "request") {
+      setReceiveMode("ecash-menu")
+    } else if (receiveMode === "lightning") {
+      setReceiveMode("select")
+    } else {
+      handleClose()
+    }
+  }
+
+  const showBackButton = receiveMode !== "select"
 
   return (
     <Modal onClose={handleClose}>
       <div className="p-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="font-bold text-lg">Receive</h3>
+          <div className="flex items-center gap-2">
+            {showBackButton && (
+              <button onClick={handleBack} className="btn btn-ghost btn-sm btn-circle">
+                ←
+              </button>
+            )}
+            <h3 className="font-bold text-lg">{getTitle()}</h3>
+          </div>
           {balance !== undefined && (
             <div className="text-sm opacity-70">Balance: {balance} bit</div>
           )}
@@ -187,7 +359,7 @@ export default function ReceiveDialog({
           <div className="space-y-4">
             <button
               className="btn btn-outline w-full justify-start"
-              onClick={() => setReceiveMode("ecash")}
+              onClick={() => setReceiveMode("ecash-menu")}
             >
               <svg
                 className="w-5 h-5 mr-2"
@@ -227,7 +399,50 @@ export default function ReceiveDialog({
           </div>
         )}
 
-        {receiveMode === "ecash" && (
+        {receiveMode === "ecash-menu" && (
+          <div className="space-y-4">
+            <button
+              className="btn btn-outline w-full justify-start"
+              onClick={() => setReceiveMode("ecash-paste")}
+            >
+              <RiFileCopyLine className="w-5 h-5 mr-2" />
+              PASTE
+            </button>
+
+            <button
+              className="btn btn-outline w-full justify-start"
+              onClick={() => {
+                onClose()
+                onScanRequest?.()
+              }}
+            >
+              <RiQrCodeLine className="w-5 h-5 mr-2" />
+              SCAN
+            </button>
+
+            <button
+              className="btn btn-outline w-full justify-start"
+              onClick={() => setReceiveMode("request")}
+            >
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              REQUEST
+            </button>
+          </div>
+        )}
+
+        {receiveMode === "ecash-paste" && (
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -250,19 +465,37 @@ export default function ReceiveDialog({
                 value={tokenInput}
                 onChange={(e) => setTokenInput(e.target.value)}
               />
+              {previewAmount !== null && (
+                <div className="mt-2 p-3 bg-base-300 rounded-lg space-y-1">
+                  <div className="font-semibold text-success">{previewAmount} bits</div>
+                  {previewMemo && (
+                    <div className="text-sm text-base-content/70">{previewMemo}</div>
+                  )}
+                  {previewMint && (
+                    <div className="text-xs text-base-content/60">
+                      {previewMint.replace(/^https?:\/\//, "")}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Note to self (optional)</span>
+                <span className="label-text">Note (optional)</span>
               </label>
               <input
                 type="text"
                 className="input input-bordered"
-                placeholder="Add a description..."
+                placeholder="Add a note..."
                 value={receiveNote}
                 onChange={(e) => setReceiveNote(e.target.value)}
                 maxLength={200}
               />
+              <label className="label">
+                <span className="label-text-alt text-base-content/60">
+                  Pre-filled from token memo, can be edited
+                </span>
+              </label>
             </div>
             <button
               type="submit"
@@ -272,6 +505,112 @@ export default function ReceiveDialog({
               {receiving ? "Receiving..." : "Receive"}
             </button>
           </form>
+        )}
+
+        {receiveMode === "request" && (
+          <div className="space-y-4">
+            {error && (
+              <div className="alert alert-error">
+                <span>{error}</span>
+              </div>
+            )}
+            {!paymentRequestString ? (
+              <>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Amount (bits) - optional</span>
+                  </label>
+                  <input
+                    type="number"
+                    className="input input-bordered"
+                    placeholder="Leave empty for any amount"
+                    value={requestAmount || ""}
+                    onChange={(e) =>
+                      setRequestAmount(
+                        e.target.value ? Number(e.target.value) : undefined
+                      )
+                    }
+                  />
+                </div>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Description (optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input input-bordered"
+                    placeholder="What is this payment for?"
+                    value={requestDescription}
+                    onChange={(e) => setRequestDescription(e.target.value)}
+                    maxLength={200}
+                  />
+                </div>
+                <button
+                  className="btn btn-primary w-full"
+                  onClick={createPaymentRequest}
+                  disabled={receiving}
+                >
+                  {receiving ? "Creating..." : "Create Payment Request"}
+                </button>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div className="alert alert-info">
+                  <span className="font-bold">Payment request created!</span>
+                </div>
+                {(requestAmount || requestDescription) && (
+                  <div className="bg-base-200 rounded-lg p-4 space-y-2">
+                    {requestAmount && (
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{requestAmount} bit</div>
+                      </div>
+                    )}
+                    {requestDescription && (
+                      <div className="text-sm text-base-content/70 text-center">
+                        {requestDescription}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="flex justify-center">
+                  <div className="bg-white rounded-lg p-4">
+                    <img
+                      src={requestQR}
+                      alt="Payment Request QR Code"
+                      className="w-64 h-64"
+                    />
+                  </div>
+                </div>
+                <div
+                  className="flex items-center justify-center gap-2 bg-base-200 rounded-lg p-3 cursor-pointer hover:bg-base-300 transition-colors"
+                  onClick={() => {
+                    navigator.clipboard.writeText(paymentRequestString)
+                    setRequestCopied(true)
+                    setTimeout(() => setRequestCopied(false), 2000)
+                  }}
+                >
+                  <span className="text-xs font-mono break-all">
+                    {truncateMiddle(paymentRequestString, 20)}
+                  </span>
+                  {requestCopied ? (
+                    <RiCheckLine className="w-5 h-5 text-success" />
+                  ) : (
+                    <RiFileCopyLine className="w-5 h-5 opacity-60" />
+                  )}
+                </div>
+                <button
+                  className="btn btn-ghost w-full"
+                  onClick={() => {
+                    setPaymentRequestString("")
+                    setRequestQR("")
+                    setReceiveMode("select")
+                  }}
+                >
+                  Done
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {receiveMode === "lightning" && (

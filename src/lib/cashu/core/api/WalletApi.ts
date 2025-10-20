@@ -101,22 +101,42 @@ export class WalletApi {
     }
   }
 
-  async send(mintUrl: string, amount: number): Promise<Token> {
-    const {wallet} = await this.walletService.getWalletWithActiveKeysetId(mintUrl)
+  async send(mintUrl: string, amount: number, memo?: string): Promise<Token> {
     const selectedProofs = await this.proofService.selectProofsToSend(mintUrl, amount)
     const selectedAmount = selectedProofs.reduce((acc, proof) => acc + proof.amount, 0)
-    const outputData = await this.proofService.createOutputsAndIncrementCounters(
-      mintUrl,
-      {
-        keep: selectedAmount - amount,
-        send: amount,
+
+    // For offline operation: just select proofs without swapping
+    // If exact amount match, use proofs directly
+    let sendProofs = selectedProofs
+    const keepProofs = []
+
+    if (selectedAmount > amount) {
+      // Need change - must swap with mint (requires online)
+      try {
+        const {wallet} = await this.walletService.getWalletWithActiveKeysetId(mintUrl)
+        const outputData = await this.proofService.createOutputsAndIncrementCounters(
+          mintUrl,
+          {
+            keep: selectedAmount - amount,
+            send: amount,
+          }
+        )
+        const {send, keep} = await wallet.send(amount, selectedProofs, {outputData})
+        sendProofs = send
+        keepProofs.push(...keep)
+
+        await this.proofService.saveProofs(
+          mintUrl,
+          mapProofToCoreProof(mintUrl, "ready", [...keepProofs, ...sendProofs])
+        )
+      } catch (err) {
+        this.logger?.error("Swap failed - offline send not possible", {err})
+        throw new Error(
+          `Cannot send ${amount} bits offline. Need exact denominations or online connection to make change (have ${selectedAmount} bits in selected proofs).`
+        )
       }
-    )
-    const {send, keep} = await wallet.send(amount, selectedProofs, {outputData})
-    await this.proofService.saveProofs(
-      mintUrl,
-      mapProofToCoreProof(mintUrl, "ready", [...keep, ...send])
-    )
+    }
+
     await this.proofService.setProofState(
       mintUrl,
       selectedProofs.map((proof) => proof.secret),
@@ -124,12 +144,15 @@ export class WalletApi {
     )
     await this.proofService.setProofState(
       mintUrl,
-      send.map((proof) => proof.secret),
+      sendProofs.map((proof) => proof.secret),
       "inflight"
     )
-    const token = {
+    const token: Token = {
       mint: mintUrl,
-      proofs: send,
+      proofs: sendProofs,
+    }
+    if (memo) {
+      token.memo = memo
     }
     await this.eventBus.emit("send:created", {mintUrl, token})
     return token

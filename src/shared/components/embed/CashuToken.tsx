@@ -1,5 +1,5 @@
 import {useState, useEffect} from "react"
-import {RiBitCoinFill} from "@remixicon/react"
+import {RiBitCoinFill, RiLockLine} from "@remixicon/react"
 import Embed, {type EmbedComponentProps} from "./index.ts"
 
 function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
@@ -9,6 +9,9 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
   const [copied, setCopied] = useState(false)
   const [redeeming, setRedeeming] = useState(false)
   const [redeemed, setRedeemed] = useState(false)
+  const [p2pkLock, setP2pkLock] = useState<string | null>(null)
+  const [canRedeem, setCanRedeem] = useState(true)
+  const [memo, setMemo] = useState<string>("")
 
   // Decode on mount and check if already redeemed
   useEffect(() => {
@@ -27,24 +30,54 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
         const {getDecodedToken} = await import("@cashu/cashu-ts")
         const decoded = getDecodedToken(trimmedToken)
 
-        // Calculate total amount from proofs
+        // Calculate total amount and check for P2PK locks
         let totalAmount = 0
+        let lockedPubkey: string | null = null
 
-        if (decoded.proofs && Array.isArray(decoded.proofs)) {
-          for (const proof of decoded.proofs) {
+        const checkProofsForP2PK = (
+          proofs: Array<{amount?: number; secret?: string}>
+        ) => {
+          for (const proof of proofs) {
             totalAmount += proof.amount || 0
-          }
-        } else if (decoded.token && Array.isArray(decoded.token)) {
-          for (const tokenEntry of decoded.token) {
-            if (tokenEntry.proofs && Array.isArray(tokenEntry.proofs)) {
-              for (const proof of tokenEntry.proofs) {
-                totalAmount += proof.amount || 0
+
+            // Check if proof has P2PK lock
+            if (proof.secret && typeof proof.secret === "string") {
+              try {
+                // P2PK secrets are JSON with format: ["P2PK", {"nonce":"...","data":"<pubkey>","tags":[...]}]
+                const secretData = JSON.parse(proof.secret)
+                if (Array.isArray(secretData) && secretData[0] === "P2PK") {
+                  const p2pkData = secretData[1]
+                  if (p2pkData?.data) {
+                    lockedPubkey = p2pkData.data
+                  }
+                }
+              } catch {
+                // Not a P2PK secret, continue
               }
             }
           }
         }
 
+        if (decoded.proofs && Array.isArray(decoded.proofs)) {
+          checkProofsForP2PK(decoded.proofs)
+        } else if (decoded.token && Array.isArray(decoded.token)) {
+          for (const tokenEntry of decoded.token) {
+            if (tokenEntry.proofs && Array.isArray(tokenEntry.proofs)) {
+              checkProofsForP2PK(tokenEntry.proofs)
+            }
+          }
+        }
+
         setAmount(totalAmount)
+        setP2pkLock(lockedPubkey)
+        setMemo(decoded.memo || "")
+
+        // Check if we can redeem (only if locked to our pubkey)
+        if (lockedPubkey) {
+          const {useUserStore} = await import("@/stores/user")
+          const myPubKey = useUserStore.getState().publicKey
+          setCanRedeem(lockedPubkey === myPubKey)
+        }
       } catch (err) {
         console.error("❌ Failed to decode cashu token:", err)
         setError(err instanceof Error ? err.message : "Invalid token")
@@ -96,16 +129,18 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
         senderPubkey = undefined
       }
 
-      // Extract message from event content (text after the token)
-      let messageFromEvent: string | undefined
-      if (event?.content) {
+      // Extract message from token memo field or event content (fallback)
+      let message: string | undefined = memo // Use memo from token
+
+      // Fallback: extract from event content if memo is empty
+      if (!message && event?.content) {
         const tokenMatch = event.content.match(/cashu[A-Za-z0-9_-]+/)
         if (tokenMatch) {
           const afterToken = event.content
             .slice(tokenMatch.index! + tokenMatch[0].length)
             .trim()
           if (afterToken) {
-            messageFromEvent = afterToken.slice(0, 200) // Limit to 200 chars
+            message = afterToken.slice(0, 200) // Limit to 200 chars
           }
         }
       }
@@ -115,7 +150,7 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
         "dm",
         undefined,
         undefined,
-        messageFromEvent,
+        message,
         undefined,
         senderPubkey
       )
@@ -147,13 +182,36 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
           <RiBitCoinFill className="w-10 h-10 text-warning" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-base">Cashu Ecash Token</div>
+          <div className="font-semibold text-base flex items-center gap-2">
+            Cashu Ecash Token
+            {p2pkLock && (
+              <span className="inline-flex items-center gap-1 text-xs font-normal bg-base-300 px-2 py-0.5 rounded">
+                <RiLockLine className="w-3 h-3" />
+                P2PK
+              </span>
+            )}
+          </div>
           <div className="text-sm text-base-content/70">
             {loading && "Decoding token..."}
             {error && <span className="text-error">{error}</span>}
-            {redeemed && <span className="text-success">Redeemed</span>}
-            {!redeemed && amount !== null && !error && (
-              <span className="font-medium text-success">{amount} bits</span>
+            {redeemed ? (
+              <>
+                <span className="text-success">Redeemed</span>
+                {memo && <span className="block text-xs mt-1">{memo}</span>}
+              </>
+            ) : (
+              amount !== null &&
+              !error && (
+                <>
+                  <span className="font-medium text-success">{amount} bits</span>
+                  {memo && <span className="block text-xs mt-1">{memo}</span>}
+                </>
+              )
+            )}
+            {p2pkLock && !canRedeem && !redeemed && (
+              <span className="block text-xs text-warning mt-1">
+                Locked to another key
+              </span>
             )}
           </div>
         </div>
@@ -166,13 +224,23 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
         >
           {copied ? "Copied!" : "Copy"}
         </button>
-        <button
-          onClick={handleRedeem}
-          className="btn btn-primary btn-sm flex-1 disabled:opacity-50"
-          disabled={loading || !!error || redeeming || redeemed}
-        >
-          {redeeming ? "Redeeming..." : "Redeem"}
-        </button>
+        {canRedeem ? (
+          <button
+            onClick={handleRedeem}
+            className="btn btn-primary btn-sm flex-1 disabled:opacity-50"
+            disabled={loading || !!error || redeeming || redeemed}
+          >
+            {redeeming ? "Redeeming..." : "Redeem"}
+          </button>
+        ) : (
+          <button
+            className="btn btn-disabled btn-sm flex-1"
+            disabled
+            title="Token is locked to a different public key"
+          >
+            Locked
+          </button>
+        )}
       </div>
     </div>
   )

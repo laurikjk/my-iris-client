@@ -22,6 +22,7 @@ import {Rumor} from "nostr-double-ratchet/src"
 import NostrNpub from "./nostr/NostrNpub.tsx"
 import LightningUri from "./LightningUri.tsx"
 import CashuToken from "./CashuToken.tsx"
+import CashuPaymentRequest from "./CashuPaymentRequest.tsx"
 import YouTube from "./youtube/YouTube.tsx"
 import WavLake from "./wavlake/WavLake.tsx"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
@@ -71,6 +72,7 @@ export const allEmbeds = [
   Twitch,
   TwitchChannel,
   WavLake,
+  CashuPaymentRequest,
   CashuToken,
   LightningUri,
   NostrNpub,
@@ -114,6 +116,7 @@ export const hasMedia = (e: {content: string}) => {
 
 export const smallEmbeds = [
   EncryptedUrl,
+  CashuPaymentRequest,
   CashuToken,
   NostrNpub,
   Hashtag,
