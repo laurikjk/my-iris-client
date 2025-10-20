@@ -6,6 +6,13 @@ import {decode} from "light-bolt11-decoder"
 import {savePaymentMetadata} from "@/stores/paymentMetadata"
 import {getLNURLInvoice} from "@/utils/zapUtils"
 import {RiFileCopyLine, RiShare2Line} from "@remixicon/react"
+import {DoubleRatchetUserSearch} from "@/pages/chats/components/DoubleRatchetUserSearch"
+import {LightningUserSearch} from "./LightningUserSearch"
+import {getSessionManager} from "@/shared/services/PrivateChats"
+import type {DoubleRatchetUser} from "@/pages/chats/utils/doubleRatchetUsers"
+import {useNavigate} from "@/navigation"
+import {usePrivateMessagesStore} from "@/stores/privateMessages"
+import {useUserStore} from "@/stores/user"
 
 interface SendDialogProps {
   isOpen: boolean
@@ -28,6 +35,7 @@ export default function SendDialog({
   initialInvoice,
   balance,
 }: SendDialogProps) {
+  const navigate = useNavigate()
   const [sendMode, setSendMode] = useState<"select" | "ecash" | "lightning">("select")
   const [sendAmount, setSendAmount] = useState<number>(0)
   const [sendInvoice, setSendInvoice] = useState<string>("")
@@ -39,6 +47,8 @@ export default function SendDialog({
   const [isLightningAddress, setIsLightningAddress] = useState(false)
   const [lnurlComment, setLnurlComment] = useState<string>("")
   const [error, setError] = useState<string>("")
+  const [sendingDm, setSendingDm] = useState(false)
+  const [selectedUserPubkey, setSelectedUserPubkey] = useState<string | null>(null)
 
   // Handle initial token (from history)
   useEffect(() => {
@@ -160,6 +170,57 @@ export default function SendDialog({
     setIsLightningAddress(false)
     setLnurlComment("")
     setError("")
+    setSendingDm(false)
+    setSelectedUserPubkey(null)
+  }
+
+  const handleSendTokenDm = async (user: DoubleRatchetUser) => {
+    if (!generatedToken) return
+
+    setSendingDm(true)
+    setError("")
+    try {
+      const sessionManager = getSessionManager()
+      if (!sessionManager) {
+        throw new Error("Session manager not available")
+      }
+
+      const myPubKey = useUserStore.getState().publicKey
+      if (!myPubKey) {
+        throw new Error("User not logged in")
+      }
+
+      // Send the message
+      const sentMessage = await sessionManager.sendMessage(user.pubkey, generatedToken)
+
+      // Update local store
+      await usePrivateMessagesStore.getState().upsert(user.pubkey, myPubKey, sentMessage)
+
+      // Save payment metadata
+      try {
+        await savePaymentMetadata(generatedToken, "other", user.pubkey)
+      } catch (err) {
+        console.warn("Failed to save payment metadata:", err)
+      }
+
+      // Navigate to chat
+      handleClose()
+      navigate("/chats/chat", {
+        state: {id: user.pubkey},
+      })
+    } catch (error) {
+      console.error("Failed to send token via DM:", error)
+      setError(
+        "Failed to send DM: " + (error instanceof Error ? error.message : "Unknown error")
+      )
+    } finally {
+      setSendingDm(false)
+    }
+  }
+
+  const handleSelectLightningUser = (pubkey: string, lud16: string) => {
+    setSendInvoice(lud16)
+    setSelectedUserPubkey(pubkey)
   }
 
   const sendEcash = async () => {
@@ -235,7 +296,7 @@ export default function SendDialog({
           await savePaymentMetadata(
             invoice,
             "other",
-            undefined,
+            selectedUserPubkey || undefined,
             undefined,
             lnurlComment || undefined,
             originalDestination
@@ -246,7 +307,7 @@ export default function SendDialog({
       } else {
         // Save payment metadata (description auto-extracted from invoice)
         try {
-          await savePaymentMetadata(invoice, "other")
+          await savePaymentMetadata(invoice, "other", selectedUserPubkey || undefined)
         } catch (err) {
           console.warn("Failed to save payment metadata:", err)
         }
@@ -426,6 +487,23 @@ export default function SendDialog({
                     </button>
                   )}
                 </div>
+                <div className="divider">OR</div>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">DM to user</span>
+                  </label>
+                  <DoubleRatchetUserSearch
+                    placeholder="Search secure messaging users..."
+                    onUserSelect={handleSendTokenDm}
+                    maxResults={5}
+                    showCount={false}
+                  />
+                  {sendingDm && (
+                    <div className="alert alert-info mt-2">
+                      <span>Sending DM...</span>
+                    </div>
+                  )}
+                </div>
                 <button className="btn btn-ghost w-full" onClick={handleClose}>
                   Done
                 </button>
@@ -441,6 +519,17 @@ export default function SendDialog({
                 <span>{error}</span>
               </div>
             )}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Search users</span>
+              </label>
+              <LightningUserSearch
+                placeholder="Search users with lightning..."
+                onUserSelect={handleSelectLightningUser}
+                maxResults={5}
+              />
+            </div>
+            <div className="divider">OR</div>
             <div className="form-control">
               <label className="label">
                 <span className="label-text">

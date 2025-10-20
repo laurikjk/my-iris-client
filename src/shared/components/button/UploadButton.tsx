@@ -170,8 +170,8 @@ const UploadButton = ({
           <span
             style={{
               position: "absolute",
-              top: 2,
-              right: 2,
+              bottom: 0,
+              right: 0,
               pointerEvents: "none",
               padding: 1,
               display: "flex",
@@ -179,7 +179,7 @@ const UploadButton = ({
               justifyContent: "center",
             }}
           >
-            <RiLock2Line size={14} />
+            <RiLock2Line size={12} />
           </span>
         )}
       </button>

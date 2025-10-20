@@ -82,6 +82,11 @@ export default function CashuWallet() {
           if (invoice) {
             console.log("🔗 Melt entry invoice:", invoice.slice(0, 30) + "...")
           }
+        } else if (entry.type === "send") {
+          // For send entries, encode the token to use as lookup key
+          const {getEncodedToken} = await import("@cashu/cashu-ts")
+          invoice = getEncodedToken(entry.token)
+          console.log("🔗 Send entry token:", invoice.slice(0, 30) + "...")
         }
 
         if (!invoice) {
@@ -93,6 +98,7 @@ export default function CashuWallet() {
           console.log("✨ Enriched entry with metadata:", {
             type: entry.type,
             metadataType: metadata.type,
+            peerPubkey: metadata.peerPubkey?.slice(0, 8),
           })
         }
         return {

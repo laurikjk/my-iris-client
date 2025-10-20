@@ -46,7 +46,9 @@ export default function HistoryList({
         const isSend = entry.type === "send"
         const isZapWithEvent =
           entry.paymentMetadata?.type === "zap" && entry.paymentMetadata?.eventId
-        const isClickable = (isSend && onSendEntryClick) || isZapWithEvent
+        const hasPeerPubkey = !!entry.paymentMetadata?.peerPubkey
+        const isClickable =
+          (isSend && onSendEntryClick) || isZapWithEvent || hasPeerPubkey
 
         // Determine if it's Lightning (mint/melt) or Ecash (send/receive)
         const label =
@@ -55,6 +57,11 @@ export default function HistoryList({
         const handleClick = () => {
           if (isZapWithEvent && entry.paymentMetadata?.eventId) {
             navigate(`/${nip19.noteEncode(entry.paymentMetadata.eventId)}`)
+          } else if (hasPeerPubkey && entry.paymentMetadata?.peerPubkey) {
+            // Navigate to DM with user
+            navigate("/chats/chat", {
+              state: {id: entry.paymentMetadata.peerPubkey},
+            })
           } else if (isSend && onSendEntryClick) {
             onSendEntryClick(entry as SendHistoryEntry)
           }
@@ -68,32 +75,39 @@ export default function HistoryList({
             }`}
             onClick={handleClick}
           >
-            <div className="flex items-center gap-3">
-              {entry.paymentMetadata?.peerPubkey && (
-                <Avatar pubKey={entry.paymentMetadata.peerPubkey} width={32} />
-              )}
-              {!entry.paymentMetadata?.peerPubkey && label === "Lightning" && (
-                <RiFlashlightFill className="w-5 h-5" />
-              )}
-              {!entry.paymentMetadata?.peerPubkey && label !== "Lightning" && (
-                <RiCoinsFill className="w-5 h-5" />
-              )}
-              <div>
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="flex-shrink-0">
+                {entry.paymentMetadata?.peerPubkey && (
+                  <Avatar pubKey={entry.paymentMetadata.peerPubkey} width={32} />
+                )}
+                {!entry.paymentMetadata?.peerPubkey && label === "Lightning" && (
+                  <RiFlashlightFill className="w-5 h-5" />
+                )}
+                {!entry.paymentMetadata?.peerPubkey && label !== "Lightning" && (
+                  <RiCoinsFill className="w-5 h-5" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
                 {entry.paymentMetadata?.peerPubkey ? (
-                  <div className="font-medium">
+                  <div className="font-medium truncate">
                     {entry.paymentMetadata.type === "zap" && amount < 0 && "Zapped "}
                     {entry.paymentMetadata.type === "zap" && amount > 0 && "Zapped by "}
+                    {entry.paymentMetadata.type !== "zap" && amount < 0 && "Sent to "}
+                    {entry.paymentMetadata.type !== "zap" && amount > 0 && "Received from "}
                     <Name pubKey={entry.paymentMetadata.peerPubkey} />
                   </div>
                 ) : (
-                  <div className="font-medium">{label}</div>
+                  <div className="font-medium truncate">{label}</div>
                 )}
-                <div className="text-sm text-base-content/60">
+                <div className="text-sm text-base-content/60 truncate">
                   {formatDate(entry.createdAt)}
                   {status && <span className="ml-2 text-warning">• Pending</span>}
                 </div>
                 {entry.paymentMetadata?.destination && (
-                  <div className="text-sm text-base-content/60 mt-1">
+                  <div
+                    className="text-sm text-base-content/60 mt-1 break-words"
+                    style={{overflowWrap: "anywhere"}}
+                  >
                     →{" "}
                     {entry.paymentMetadata.destination.toLowerCase().startsWith("lnurl")
                       ? entry.paymentMetadata.destination.slice(0, 20) + "..."
@@ -101,18 +115,23 @@ export default function HistoryList({
                   </div>
                 )}
                 {entry.paymentMetadata?.message && (
-                  <div className="text-sm text-base-content/70 mt-1 italic">
+                  <div
+                    className="text-sm text-base-content/70 mt-1 italic break-words"
+                    style={{overflowWrap: "anywhere"}}
+                  >
                     &ldquo;{entry.paymentMetadata.message}&rdquo;
                   </div>
                 )}
               </div>
             </div>
-            <div className="text-right">
-              <div className={`font-bold ${amount >= 0 ? "text-success" : ""}`}>
+            <div className="text-right flex-shrink-0 ml-2">
+              <div
+                className={`font-bold whitespace-nowrap ${amount >= 0 ? "text-success" : ""}`}
+              >
                 {amount >= 0 ? "+" : ""}
                 {amount} bit
               </div>
-              <div className="text-xs text-base-content/60">
+              <div className="text-xs text-base-content/60 whitespace-nowrap">
                 {formatUsd(Math.abs(amount), usdRate)}
               </div>
             </div>

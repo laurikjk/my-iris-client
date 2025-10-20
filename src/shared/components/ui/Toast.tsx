@@ -37,16 +37,16 @@ export default function Toast() {
   }
 
   return (
-    <div className="toast toast-top toast-center z-[9999] top-[calc(4rem+env(safe-area-inset-top)+0.5rem)] md:top-[4.5rem]">
+    <div className="toast toast-top toast-center z-[9999] top-[calc(4rem+env(safe-area-inset-top)+0.5rem)] md:top-[4.5rem] max-w-[calc(100vw-2rem)]">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`alert ${getAlertClass(toast.type)} shadow-lg flex items-center gap-2`}
+          className={`alert ${getAlertClass(toast.type)} shadow-lg flex items-center gap-2 max-w-full`}
         >
           {renderToastContent(toast)}
           <button
             onClick={() => removeToast(toast.id)}
-            className="btn btn-ghost btn-sm btn-circle"
+            className="btn btn-ghost btn-sm btn-circle flex-shrink-0"
           >
             <RiCloseLine className="w-5 h-5" />
           </button>
