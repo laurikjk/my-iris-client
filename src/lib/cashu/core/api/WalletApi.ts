@@ -1,4 +1,4 @@
-import type {Token} from "@cashu/cashu-ts"
+import type {Token, Proof} from "@cashu/cashu-ts"
 import type {
   MintService,
   WalletService,
@@ -108,33 +108,32 @@ export class WalletApi {
     // For offline operation: just select proofs without swapping
     // If exact amount match, use proofs directly
     let sendProofs = selectedProofs
-    const keepProofs = []
+    let keepProofs: Proof[] = []
 
     if (selectedAmount > amount) {
-      // Need change - must swap with mint (requires online)
-      try {
-        const {wallet} = await this.walletService.getWalletWithActiveKeysetId(mintUrl)
-        const outputData = await this.proofService.createOutputsAndIncrementCounters(
-          mintUrl,
-          {
-            keep: selectedAmount - amount,
-            send: amount,
-          }
-        )
-        const {send, keep} = await wallet.send(amount, selectedProofs, {outputData})
-        sendProofs = send
-        keepProofs.push(...keep)
+      // Need change - split using proofsWeHave for deterministic secrets
+      const {wallet} = await this.walletService.getWalletWithActiveKeysetId(mintUrl)
+      const allProofs = await this.proofService.getReadyProofs(mintUrl)
+      const outputData = await this.proofService.createOutputsAndIncrementCounters(
+        mintUrl,
+        {
+          keep: selectedAmount - amount,
+          send: amount,
+        }
+      )
 
-        await this.proofService.saveProofs(
-          mintUrl,
-          mapProofToCoreProof(mintUrl, "ready", [...keepProofs, ...sendProofs])
-        )
-      } catch (err) {
-        this.logger?.error("Swap failed - offline send not possible", {err})
-        throw new Error(
-          `Cannot send ${amount} bits offline. Need exact denominations or online connection to make change (have ${selectedAmount} bits in selected proofs).`
-        )
-      }
+      // proofsWeHave enables offline splitting via deterministic secret generation
+      const {send, keep} = await wallet.send(amount, selectedProofs, {
+        outputData,
+        proofsWeHave: allProofs,
+      })
+      sendProofs = send
+      keepProofs = keep
+
+      await this.proofService.saveProofs(
+        mintUrl,
+        mapProofToCoreProof(mintUrl, "ready", [...keepProofs, ...sendProofs])
+      )
     }
 
     await this.proofService.setProofState(
