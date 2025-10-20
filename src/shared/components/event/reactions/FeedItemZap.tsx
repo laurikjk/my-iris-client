@@ -1,7 +1,7 @@
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
-import {RefObject, useEffect, useState} from "react"
+import {MouseEvent, RefObject, useEffect, useState} from "react"
 import useProfile from "@/shared/hooks/useProfile.ts"
 import {parseZapReceipt, calculateTotalZapAmount, type ZapInfo} from "@/utils/nostr.ts"
 import {LRUCache} from "typescript-lru-cache"
@@ -59,18 +59,51 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
   const [zappedAmount, setZappedAmount] = useState<number>(0)
 
   const flashElement = () => {
-    if (feedItemRef.current) {
-      // Quick flash in
-      feedItemRef.current.style.transition = "background-color 0.05s ease-in"
-      feedItemRef.current.style.backgroundColor = "rgba(234, 88, 12, 0.3)" // slightly more intense orange
-      setTimeout(() => {
-        if (feedItemRef.current) {
-          // Slower fade out
-          feedItemRef.current.style.transition = "background-color 1.5s ease-out"
-          feedItemRef.current.style.backgroundColor = ""
-        }
-      }, 800) // Let it linger a bit longer
-    }
+    if (!feedItemRef.current) return
+
+    const element = feedItemRef.current
+
+    // Reset to baseline (use setProperty with !important to override hover states)
+    element.style.setProperty("transition", "none", "important")
+    element.style.setProperty("background-color", "transparent", "important")
+
+    requestAnimationFrame(() => {
+      // Set transition for fade in
+      element.style.setProperty(
+        "transition",
+        "background-color 0.05s ease-in",
+        "important"
+      )
+
+      requestAnimationFrame(() => {
+        // Apply orange color
+        element.style.setProperty(
+          "background-color",
+          "rgba(234, 88, 12, 0.3)",
+          "important"
+        )
+
+        // After delay, fade out
+        setTimeout(() => {
+          if (feedItemRef.current) {
+            element.style.setProperty(
+              "transition",
+              "background-color 1.5s ease-out",
+              "important"
+            )
+            element.style.setProperty("background-color", "transparent", "important")
+
+            // Restore original styles after fade completes
+            setTimeout(() => {
+              if (feedItemRef.current) {
+                element.style.removeProperty("transition")
+                element.style.removeProperty("background-color")
+              }
+            }, 1500)
+          }
+        }, 800)
+      })
+    })
   }
 
   const handleZapClick = async () => {
@@ -180,7 +213,7 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
     })()
   }
 
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
     if (!isLongPress) {
       e.currentTarget.blur()
       handleZapClick()
