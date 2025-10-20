@@ -4,6 +4,7 @@ import type {
   WalletService,
   ProofService,
   WalletRestoreService,
+  CounterService,
 } from "@core/services"
 import {getDecodedToken} from "@cashu/cashu-ts"
 import {ProofValidationError, UnknownMintError} from "@core/models"
@@ -17,6 +18,7 @@ export class WalletApi {
   private walletService: WalletService
   private proofService: ProofService
   private walletRestoreService: WalletRestoreService
+  private counterService: CounterService
   private eventBus: EventBus<CoreEvents>
   private readonly logger?: Logger
 
@@ -25,6 +27,7 @@ export class WalletApi {
     walletService: WalletService,
     proofService: ProofService,
     walletRestoreService: WalletRestoreService,
+    counterService: CounterService,
     eventBus: EventBus<CoreEvents>,
     logger?: Logger
   ) {
@@ -32,6 +35,7 @@ export class WalletApi {
     this.walletService = walletService
     this.proofService = proofService
     this.walletRestoreService = walletRestoreService
+    this.counterService = counterService
     this.eventBus = eventBus
     this.logger = logger
   }
@@ -70,28 +74,24 @@ export class WalletApi {
     })
 
     try {
-      const {wallet} = await this.walletService.getWalletWithActiveKeysetId(mint)
-      const {keep: outputData} =
-        await this.proofService.createOutputsAndIncrementCounters(mint, {
-          keep: receiveAmount,
-          send: 0,
-        })
+      const {wallet, keysetId} = await this.walletService.getWalletWithActiveKeysetId(mint)
 
-      if (!outputData || outputData.length === 0) {
-        this.logger?.error("Failed to create deterministic outputs for receive", {
-          mint,
-          amount: receiveAmount,
-        })
-        throw new Error("Failed to create outputs for receive")
-      }
+      // Get counter for deterministic secret generation
+      const counterObj = await this.counterService.getCounter(mint, keysetId)
+      const counter = counterObj.counter
 
       // Get all proofs for offline receive via deterministic secrets
       const allProofs = await this.proofService.getReadyProofs(mint)
 
       const newProofs = await wallet.receive({mint, proofs}, {
-        outputData,
+        counter,
+        keysetId,
         proofsWeHave: allProofs,
       })
+
+      // Increment counter by number of new proofs
+      await this.counterService.incrementCounter(mint, keysetId, newProofs.length)
+
       await this.proofService.saveProofs(
         mint,
         mapProofToCoreProof(mint, "ready", newProofs)

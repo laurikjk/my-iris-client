@@ -490,6 +490,7 @@ export class Manager {
       this.walletService,
       this.proofService,
       this.walletRestoreService,
+      this.counterService,
       this.eventBus,
       walletApiLogger
     )
