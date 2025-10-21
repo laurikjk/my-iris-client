@@ -87,7 +87,6 @@ export default class SessionManager {
   }
 
   async init() {
-    console.warn("SessionManager init called")
     if (this.initialized) return
     this.initialized = true
 
@@ -437,9 +436,8 @@ export default class SessionManager {
     }
     for (const event of history) {
       const {activeSession} = device
-      console.warn("attempting to send history message to", recipientPublicKey, deviceId)
+
       if (!activeSession) {
-        console.warn("no active session, cannot send history message")
         return
       }
       const {event: verifiedEvent} = activeSession.sendEvent(event)
@@ -476,7 +474,6 @@ export default class SessionManager {
     )
       .then(() => {
         this.storeUserRecord(recipientIdentityKey)
-        console.warn("stored user record after sending event")
       })
       .catch(console.error)
 
@@ -621,10 +618,7 @@ export default class SessionManager {
           const publicKey = key.slice(prefix.length)
           return this.loadUserRecord(publicKey)
         })
-      ).finally(() => {
-        console.warn("Finished loading all user records")
-        console.warn(this.userRecords)
-      })
+      )
     })
   }
 
@@ -634,7 +628,6 @@ export default class SessionManager {
 
     // First migration
     if (!version) {
-      console.warn("Running storage migration to version 1")
       // Fetch all existing invites
       // Assume no version prefix
       // Deserialize and serialize to start using persistent createdAt
