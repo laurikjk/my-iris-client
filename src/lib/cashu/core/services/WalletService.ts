@@ -72,7 +72,8 @@ export class WalletService {
   }> {
     const wallet = await this.getWallet(mintUrl)
     const keyset = wallet.getActiveKeyset(wallet.keysets)
-    const keys = await wallet.getKeys(keyset.id)
+    // Use cached keys (forceRefresh=false) to avoid mint fetch
+    const keys = await wallet.getKeys(keyset.id, false)
     return {wallet, keysetId: keyset.id, keyset, keys}
   }
 

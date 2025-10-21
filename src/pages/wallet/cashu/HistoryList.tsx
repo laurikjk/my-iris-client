@@ -59,15 +59,25 @@ export default function HistoryList({
           if (isZapWithEvent && entry.paymentMetadata?.eventId) {
             navigate(`/${nip19.noteEncode(entry.paymentMetadata.eventId)}`)
           } else if (hasRecipient && entry.paymentMetadata?.recipient) {
-            // Navigate to DM with recipient
-            navigate("/chats/chat", {
-              state: {id: entry.paymentMetadata.recipient},
-            })
+            // Lightning payments (melt): Navigate to profile
+            // Ecash sends: Navigate to DM
+            if (entry.type === "melt") {
+              navigate(`/${nip19.npubEncode(entry.paymentMetadata.recipient)}`)
+            } else {
+              navigate("/chats/chat", {
+                state: {id: entry.paymentMetadata.recipient},
+              })
+            }
           } else if (hasSender && entry.paymentMetadata?.sender) {
-            // Navigate to DM with sender
-            navigate("/chats/chat", {
-              state: {id: entry.paymentMetadata.sender},
-            })
+            // Lightning receives (mint): Navigate to profile
+            // Ecash receives: Navigate to DM
+            if (entry.type === "mint") {
+              navigate(`/${nip19.npubEncode(entry.paymentMetadata.sender)}`)
+            } else {
+              navigate("/chats/chat", {
+                state: {id: entry.paymentMetadata.sender},
+              })
+            }
           } else if (isSend && onSendEntryClick) {
             onSendEntryClick(entry as SendHistoryEntry)
           }
