@@ -250,7 +250,23 @@ export default class SessionManager {
   }
 
   setupUser(userPubkey: string) {
-    this.getOrCreateUserRecord(userPubkey)
+    const userRecord = this.getOrCreateUserRecord(userPubkey)
+
+    const acceptInvite = async (invite: Invite) => {
+      const {deviceId} = invite
+      if (!deviceId) return
+
+      const {session, event} = await invite.accept(
+        this.nostrSubscribe,
+        this.ourPublicKey,
+        this.ourIdentityKey,
+        this.deviceId
+      )
+      return this.nostrPublish(event)
+        .then(() => this.attachSessionSubscription(userPubkey, deviceId, session))
+        .then(() => this.sendMessageHistory(userPubkey, deviceId))
+        .catch(console.error)
+    }
 
     this.attachInviteSubscription(userPubkey, async (invite) => {
       const {deviceId} = invite
@@ -262,20 +278,18 @@ export default class SessionManager {
         deviceId
       ).activeSession
 
-      if (currentActiveSession) {
-        return
+      if (!currentActiveSession) {
+        await acceptInvite(invite)
       }
+    })
 
-      const {session, event} = await invite.accept(
-        this.nostrSubscribe,
-        this.ourPublicKey,
-        this.ourIdentityKey,
-        this.deviceId
-      )
-      await this.nostrPublish(event)
-        .then(() => this.attachSessionSubscription(userPubkey, deviceId, session))
-        .then(() => this.sendMessageHistory(userPubkey, deviceId))
-        .catch(console.error)
+    userRecord.devices.forEach((device) => {
+      if (!device.activeSession) {
+        const invite = userRecord.foundInvites.get(device.deviceId)
+        if (invite) {
+          acceptInvite(invite).catch(console.error)
+        }
+      }
     })
   }
 
@@ -306,6 +320,18 @@ export default class SessionManager {
 
     this.ourDeviceInviteSubscription?.()
     this.ourOtherDeviceInviteSubscription?.()
+  }
+
+  deactivateCurrentSessions(publicKey: string) {
+    const userRecord = this.userRecords.get(publicKey)
+    if (!userRecord) return
+    for (const device of userRecord.devices.values()) {
+      if (device.activeSession) {
+        device.inactiveSessions.push(device.activeSession)
+        device.activeSession = undefined
+      }
+    }
+    this.storeUserRecord(publicKey).catch(console.error)
   }
 
   async deleteUser(userPubkey: string): Promise<void> {
