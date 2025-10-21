@@ -8,6 +8,7 @@ import CashuWallet from "@/pages/wallet/CashuWallet"
 import OldWallet from "@/pages/wallet/OldWallet"
 import {AboutPage} from "@/pages/AboutPage"
 import TermsPage from "@/pages/TermsPage"
+import PrivacyPage from "@/pages/PrivacyPage"
 import SearchPage from "@/pages/search"
 import HomePage from "@/pages/home"
 import NewNote from "@/pages/new"
@@ -42,6 +43,7 @@ export const routes: RouteDefinition[] = [
   {path: "/map/:query", component: MapPage},
   {path: "/about", component: AboutPage},
   {path: "/terms", component: TermsPage},
+  {path: "/privacy", component: PrivacyPage},
   {path: "/:link/*", component: NostrLinkHandler},
   {path: "/:link", component: NostrLinkHandler},
 ]

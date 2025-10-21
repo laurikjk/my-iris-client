@@ -137,6 +137,11 @@ export const AboutPage = () => {
                   <RiFileTextLine className="inline" /> Terms of Service
                 </Link>
               </p>
+              <p>
+                <Link to="/privacy" className="flex items-center gap-1 w-fit">
+                  <RiFileTextLine className="inline" /> Privacy Policy
+                </Link>
+              </p>
               <div className="mt-4">
                 <p>App build time: {formatBuildTime(buildTime)}</p>
               </div>
