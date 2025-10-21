@@ -201,19 +201,22 @@ export default class SessionManager {
   private attachSessionSubscription(
     userPubkey: string,
     deviceId: string,
-    session: Session
+    session: Session,
+    rotateActive: boolean = true
   ): void {
     const key = this.sessionKey(userPubkey, deviceId, session.name)
     if (this.sessionSubscriptions.has(key)) return
 
     const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
-    if (dr.activeSession) {
-      dr.inactiveSessions.push(dr.activeSession)
-    }
-    dr.activeSession = session
+    if (rotateActive) {
+      if (dr.activeSession) {
+        dr.inactiveSessions.push(dr.activeSession)
+      }
+      dr.activeSession = session
 
-    if (dr.inactiveSessions.length > 10) {
-      dr.inactiveSessions = dr.inactiveSessions.slice(-10)
+      if (dr.inactiveSessions.length > 10) {
+        dr.inactiveSessions = dr.inactiveSessions.slice(-10)
+      }
     }
 
     const unsub = session.onEvent((event) => {
@@ -561,38 +564,11 @@ export default class SessionManager {
           if (!deviceId) continue
 
           if (activeSession) {
-            const sessionSubscriptionId = this.sessionKey(
-              publicKey,
-              deviceId,
-              activeSession.name
-            )
-            if (!this.sessionSubscriptions.has(sessionSubscriptionId)) {
-              const unsubscribe = activeSession.onEvent((event) => {
-                for (const callback of this.internalSubscriptions) {
-                  callback(event, publicKey)
-                }
-                this.storeUserRecord(publicKey).catch(console.error)
-              })
-              this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
-            }
+            this.attachSessionSubscription(publicKey, deviceId, activeSession, false)
           }
 
           for (const session of inactiveSessions) {
-            const sessionSubscriptionId = this.sessionKey(
-              publicKey,
-              deviceId,
-              session.name
-            )
-            if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-              continue
-            }
-            const unsubscribe = session.onEvent((event) => {
-              for (const callback of this.internalSubscriptions) {
-                callback(event, publicKey)
-              }
-              this.storeUserRecord(publicKey).catch(console.error)
-            })
-            this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+            this.attachSessionSubscription(publicKey, deviceId, session, false)
           }
         }
 
