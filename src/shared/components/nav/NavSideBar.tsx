@@ -8,7 +8,7 @@ import {SubscriptionNavItem} from "./SubscriptionNavItem"
 import {MessagesNavItem} from "./MessagesNavItem"
 import PublishButton from "../ui/PublishButton"
 import ErrorBoundary from "../ui/ErrorBoundary"
-import {formatAmount} from "@/utils/utils"
+import {formatAmount, isTauri} from "@/utils/utils"
 import {usePublicKey, useUserStore} from "@/stores/user"
 import {useWalletStore} from "@/stores/wallet"
 import {useSettingsStore} from "@/stores/settings"
@@ -36,6 +36,10 @@ const NavSideBar = () => {
     return Object.values(configItems).filter((item) => {
       // Hide Chats if no signer (view-only mode)
       if (item.label === "Chats" && !hasSigner) {
+        return false
+      }
+      // Hide Subscription in Tauri apps
+      if (item.label === "Subscription" && isTauri()) {
         return false
       }
       return !("requireLogin" in item) || (item.requireLogin && myPubKey)

@@ -6,6 +6,7 @@ import {unmuteUser} from "@/shared/services/Mute"
 import socialGraph from "@/utils/socialGraph.ts"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
+import {getUnmuteLabel} from "@/utils/muteLabels"
 
 export function FollowButton({pubKey, small = true}: {pubKey: string; small?: boolean}) {
   const myPubKey = useUserStore((state) => state.publicKey)
@@ -89,7 +90,7 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
   let text = "Follow"
   let className = "btn-info"
   if (isMuted) {
-    text = "Unmute"
+    text = getUnmuteLabel()
     className = "btn-secondary"
   } else if (localIsFollowing) {
     text = isHovering ? "Unfollow" : "Following"

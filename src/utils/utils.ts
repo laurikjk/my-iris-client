@@ -1,4 +1,4 @@
-export const isTauri = () => typeof window !== "undefined" && window.__TAURI__
+export const isTauri = () => typeof window !== "undefined" && !!(window.__TAURI__ || window.__TAURI_INTERNALS__)
 
 export const openExternalLink = async (url: string) => {
   if (isTauri()) {

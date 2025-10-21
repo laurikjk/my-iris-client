@@ -12,6 +12,7 @@ import IrisAPI, {Invoice} from "@/utils/IrisAPI"
 import {useUserStore} from "@/stores/user"
 import {useEffect, useState} from "react"
 import {Helmet} from "react-helmet"
+import {isTauri} from "@/utils/utils"
 
 type Duration = 3 | 12
 export type PlanId = 1 | 2 | 3
@@ -226,6 +227,30 @@ export default function SubscriptionPage() {
   const getButtonText = () => {
     if (!isSubscriber) return "Subscribe"
     return plan === getPlanNumberFromTier(currentTier ?? "patron") ? "Extend" : "Upgrade"
+  }
+
+  // Show Tauri message if running in Tauri
+  if (isTauri()) {
+    return (
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <Header title="Subscription" slideUp={false} />
+        <div className="flex-1 overflow-y-auto p-4 mx-4 md:p-8 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-4 md:pb-4">
+          <div className="@container flex flex-col gap-6 p-4 rounded-lg bg-base-100 shadow">
+            <div className="text-center py-8">
+              <p className="text-lg">
+                Subscribing is not available in the app.
+              </p>
+              <p className="text-base-content/60 mt-2">
+                Please use the web version to manage your subscription.
+              </p>
+            </div>
+          </div>
+        </div>
+        <Helmet>
+          <title>Subscription</title>
+        </Helmet>
+      </div>
+    )
   }
 
   return (

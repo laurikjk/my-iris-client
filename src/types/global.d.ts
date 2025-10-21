@@ -3,6 +3,7 @@ declare global {
     cf_turnstile_callback?: (token: string) => void
     webln?: WebLNProvider
     __TAURI__?: unknown
+    __TAURI_INTERNALS__?: unknown
     webkit?: {
       messageHandlers?: {
         push?: {

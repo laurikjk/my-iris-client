@@ -2,7 +2,7 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 import socialGraph from "@/utils/socialGraph"
 import {NostrEvent} from "nostr-social-graph"
 import {ndk} from "@/utils/ndk"
-import {KIND_MUTE_LIST} from "@/utils/constants"
+import {KIND_MUTE_LIST, KIND_FLAG_LIST} from "@/utils/constants"
 import {clearVisibilityCache} from "@/utils/visibility"
 
 export const muteUser = async (pubkey: string): Promise<string[]> => {
@@ -73,3 +73,36 @@ const updateMuteList = async (
 
   return validEntries
 }
+
+// Flagged users list (for reporting)
+let flaggedUsers = new Set<string>()
+
+export const flagUser = async (
+  pubkey: string,
+  reason: string,
+  details?: string,
+  eventId?: string
+): Promise<void> => {
+  if (!pubkey || typeof pubkey !== "string" || pubkey.trim() === "") {
+    throw new Error("Invalid pubkey")
+  }
+
+  flaggedUsers.add(pubkey)
+
+  const flagEvent = new NDKEvent(ndk())
+  flagEvent.kind = KIND_FLAG_LIST
+  flagEvent.content = JSON.stringify({
+    reason,
+    details,
+    eventId,
+  })
+  flagEvent.tags = Array.from(flaggedUsers).map((entry: string) => ["p", entry.trim()])
+
+  await flagEvent.sign()
+  await flagEvent.publish()
+}
+
+export const getFlaggedUsers = (): Set<string> => {
+  return flaggedUsers
+}
+

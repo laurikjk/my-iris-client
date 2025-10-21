@@ -2,17 +2,18 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {useEffect, useState} from "react"
 import {nip19} from "nostr-tools"
 
-import {unmuteUser} from "@/shared/services/Mute.tsx"
-
 import Reactions from "@/shared/components/event/reactions/Reactions.tsx"
 import Dropdown from "@/shared/components/ui/Dropdown.tsx"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {usePublicKey} from "@/stores/user"
 import MuteUser from "../MuteUser.tsx"
+import ReportContent from "../ReportContent.tsx"
 import RawJSON from "../RawJSON.tsx"
 import RelayList from "./RelayList.tsx"
 import {useNavigate} from "@/navigation"
 import {useRebroadcast} from "@/shared/hooks/useRebroadcast"
+import {getMuteLabel, getUnmuteLabel} from "@/utils/muteLabels"
+import {isTauri} from "@/utils/utils"
 
 type FeedItemDropdownProps = {
   event: NDKEvent
@@ -28,6 +29,7 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
   const [showRawJSON, setShowRawJSON] = useState(false)
   const [muted, setMuted] = useState(false)
   const [muting, setMuting] = useState(false)
+  const [reporting, setReporting] = useState(false)
 
   const mutedList: string[] = []
 
@@ -45,11 +47,7 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
     onClose()
   }
   const handleMute = async () => {
-    if (muted) {
-      await unmuteUser(event.pubkey)
-    } else {
-      setMuting(true)
-    }
+    setMuting(true)
   }
 
   const handleShowRawJson = () => {
@@ -93,6 +91,17 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
             </Modal>
           </div>
         )}
+        {reporting && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Modal onClose={() => setReporting(false)}>
+              <ReportContent
+                user={event.pubkey}
+                event={event}
+                onClose={() => setReporting(false)}
+              />
+            </Modal>
+          </div>
+        )}
         {showRawJSON && (
           <div onClick={(e) => e.stopPropagation()}>
             <Modal onClose={() => setShowRawJSON(false)}>
@@ -125,7 +134,14 @@ function FeedItemDropdown({event, onClose}: FeedItemDropdownProps) {
           </li>
           {myPubKey !== event.pubkey && event.kind !== 9735 && (
             <li>
-              <button onClick={handleMute}>{muted ? "Unmute User" : "Mute User"}</button>
+              <button onClick={handleMute}>
+                {muted ? `${getUnmuteLabel()} User` : `${getMuteLabel()} User`}
+              </button>
+            </li>
+          )}
+          {isTauri() && myPubKey !== event.pubkey && event.kind !== 9735 && (
+            <li>
+              <button onClick={() => setReporting(true)}>Report</button>
             </li>
           )}
           {event.pubkey === myPubKey && (

@@ -44,12 +44,18 @@ interface SettingsState {
     enabled: boolean
     privateKey: string | null
   }
+  // Legal settings
+  legal: {
+    tosAccepted: boolean
+    tosAcceptedVersion: number
+  }
   // Update a specific setting group
   updateAppearance: (settings: Partial<SettingsState["appearance"]>) => void
   updateContent: (settings: Partial<SettingsState["content"]>) => void
   updateImgproxy: (settings: Partial<SettingsState["imgproxy"]>) => void
   updateNotifications: (settings: Partial<SettingsState["notifications"]>) => void
   updateDebug: (settings: Partial<SettingsState["debug"]>) => void
+  updateLegal: (settings: Partial<SettingsState["legal"]>) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -90,6 +96,10 @@ export const useSettingsStore = create<SettingsState>()(
         enabled: false,
         privateKey: null,
       },
+      legal: {
+        tosAccepted: false,
+        tosAcceptedVersion: 0,
+      },
       updateAppearance: (settings) =>
         set((state) => ({
           appearance: {...state.appearance, ...settings},
@@ -111,6 +121,10 @@ export const useSettingsStore = create<SettingsState>()(
       updateDebug: (settings) =>
         set((state) => ({
           debug: {...state.debug, ...settings},
+        })),
+      updateLegal: (settings) =>
+        set((state) => ({
+          legal: {...state.legal, ...settings},
         })),
     }),
     {

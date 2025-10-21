@@ -8,6 +8,7 @@ import Dropdown from "@/shared/components/ui/Dropdown.tsx"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import MuteUser from "@/shared/components/event/MuteUser.tsx"
 import Icon from "@/shared/components/Icons/Icon"
+import {getMuteLabel, getUnmuteLabel} from "@/utils/muteLabels"
 
 type ProfileDropdownProps = {
   pubKey: string
@@ -83,7 +84,7 @@ function ProfileDropdown({pubKey, onClose}: ProfileDropdownProps) {
             <li>
               <button onClick={handleMute}>
                 <Icon name={isMuted ? "volume-up" : "volume-off"} className="w-4 h-4" />
-                {isMuted ? "Unmute" : "Mute"}
+                {isMuted ? getUnmuteLabel() : getMuteLabel()}
               </button>
             </li>
           )}
