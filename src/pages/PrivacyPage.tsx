@@ -14,8 +14,13 @@ export default function PrivacyPage() {
 
               <h2>What Data We Collect</h2>
               <p>
-                <strong>We collect no personal data.</strong> Iris runs on your device and connects to decentralized networks.
-                We don't track you, collect analytics, or store your data on our servers.
+                <strong>We collect minimal personal data.</strong> Iris runs on your device and connects to decentralized networks.
+                We don't track your activity, collect analytics, or store your posts on our servers.
+              </p>
+              <p>
+                <strong>Iris usernames (iris.to/username):</strong> If you register a username, we log your public key,
+                username, registration IP address, and country. This data is necessary to prevent abuse and maintain
+                the username service.
               </p>
 
               <h2>Your Data is Local</h2>
