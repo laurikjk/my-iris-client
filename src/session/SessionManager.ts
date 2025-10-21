@@ -618,7 +618,9 @@ export default class SessionManager {
               await this.storage.put(newKey, serializedInvite)
               await this.storage.del(key)
             }
-          } catch (e) {}
+          } catch (e) {
+            console.error("Migration error for invite:", e)
+          }
         })
       )
 
@@ -646,7 +648,9 @@ export default class SessionManager {
               await this.storage.put(newKey, newUserRecordData)
               await this.storage.del(key)
             }
-          } catch (e) {}
+          } catch (e) {
+            console.error("Migration error for user record:", e)
+          }
         })
       )
 
