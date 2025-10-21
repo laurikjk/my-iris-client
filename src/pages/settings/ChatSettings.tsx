@@ -57,6 +57,8 @@ const ChatSettings = () => {
       const deviceList: DeviceInfo[] = []
       let foundCurrentDevice = false
 
+      console.warn("Fetched invite events:", events)
+
       for (const event of events) {
         try {
           const invite = Invite.fromEvent(

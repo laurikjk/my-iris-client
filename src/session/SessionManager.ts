@@ -98,56 +98,45 @@ export default class SessionManager {
       console.error("Failed to load user records:", error)
     })
 
-    return this.storage
+    const ourInviteFromStorage: Invite | null = await this.storage
       .get<string>(this.deviceInviteKey(this.deviceId))
       .then((data) => {
         if (!data) return null
-        const invite = Invite.deserialize(data)
-        return invite
-      })
-      .catch(() => {
-        return null
-      })
-      .then(async (invite) => {
-        if (invite) {
-          // Republish our existing invite to ensure it's live
-          const event = invite.getEvent()
-          await this.nostrPublish(event).catch(console.error)
-          return invite
+        try {
+          return Invite.deserialize(data)
+        } catch {
+          return null
         }
-        const newInvite = Invite.createNew(this.ourPublicKey, this.deviceId)
-        await this.storage.put(this.deviceInviteKey(this.deviceId), newInvite.serialize())
-        const event = newInvite.getEvent()
-        await this.nostrPublish(event).catch(console.error)
-        return newInvite
       })
-      .then((invite) => {
-        // Listen to our invite
-        this.ourDeviceInviteSubscription = invite.listen(
-          this.ourIdentityKey,
-          this.nostrSubscribe,
-          async (session, inviteePubkey, deviceId) => {
-            if (!deviceId || deviceId === this.deviceId) return
-            const nostrEventId = session.name
-            const acceptanceKey = this.inviteAcceptKey(
-              nostrEventId,
-              inviteePubkey,
-              deviceId
-            )
-            const nostrEventIdInStorage = await this.storage.get<string>(acceptanceKey)
 
-            if (nostrEventIdInStorage) {
-              return
-            }
+    const invite =
+      ourInviteFromStorage || Invite.createNew(this.ourPublicKey, this.deviceId)
 
-            await this.storage.put(acceptanceKey, "1")
-            this.attachSessionSubscription(inviteePubkey, deviceId, session)
-          }
-        )
-      })
-      .catch((error) => {
-        console.error("Failed to initialize session manager:", error)
-      })
+    await this.storage.put(this.deviceInviteKey(this.deviceId), invite.serialize())
+
+    this.ourDeviceInviteSubscription = invite.listen(
+      this.ourIdentityKey,
+      this.nostrSubscribe,
+      async (session, inviteePubkey, deviceId) => {
+        if (!deviceId || deviceId === this.deviceId) return
+        const nostrEventId = session.name
+        const acceptanceKey = this.inviteAcceptKey(nostrEventId, inviteePubkey, deviceId)
+        const nostrEventIdInStorage = await this.storage.get<string>(acceptanceKey)
+
+        if (nostrEventIdInStorage) {
+          return
+        }
+
+        await this.storage.put(acceptanceKey, "1")
+
+        this.attachSessionSubscription(inviteePubkey, deviceId, session)
+      }
+    )
+
+    const inviteNostrEvent = invite.getEvent()
+    this.nostrPublish(inviteNostrEvent).catch((error) => {
+      console.error("Failed to publish our device invite:", error)
+    })
   }
 
   // -------------------
@@ -406,6 +395,7 @@ export default class SessionManager {
     event: Partial<Rumor>
   ): Promise<Rumor | undefined> {
     await this.init()
+
     const userRecord = this.getOrCreateUserRecord(recipientIdentityKey)
     const ourUserRecord = this.getOrCreateUserRecord(this.ourPublicKey)
 
@@ -533,11 +523,10 @@ export default class SessionManager {
               inactiveSessions,
             })
           } catch (e) {
-            console.warn(
-              `Failed to deserialize session for ${publicKey}/${deviceId}, skipping:`,
+            console.error(
+              `Failed to deserialize session for user ${publicKey}, device ${deviceId}:`,
               e
             )
-            continue
           }
         }
 
@@ -627,9 +616,7 @@ export default class SessionManager {
               await this.storage.put(newKey, serializedInvite)
               await this.storage.del(key)
             }
-          } catch (e) {
-            console.warn(`Failed to migrate invite ${key}, skipping:`, e)
-          }
+          } catch (e) {}
         })
       )
 
@@ -657,9 +644,7 @@ export default class SessionManager {
               await this.storage.put(newKey, newUserRecordData)
               await this.storage.del(key)
             }
-          } catch (e) {
-            console.warn(`Failed to migrate user record ${key}, skipping:`, e)
-          }
+          } catch (e) {}
         })
       )
 
