@@ -87,6 +87,7 @@ export default class SessionManager {
   }
 
   async init() {
+    console.warn("SessionManager init called")
     if (this.initialized) return
     this.initialized = true
 
@@ -129,7 +130,7 @@ export default class SessionManager {
 
         await this.storage.put(acceptanceKey, "1")
 
-        this.attachSessionSubscription(inviteePubkey, deviceId, session)
+        this.attachSessionSubscription(inviteePubkey, deviceId, session, true)
       }
     )
 
@@ -202,25 +203,51 @@ export default class SessionManager {
     userPubkey: string,
     deviceId: string,
     session: Session,
-    rotateActive: boolean = true
+    // Set to true if only handshake -> not yet sendable -> will be promoted on message
+    inactive: boolean = false
   ): void {
     const key = this.sessionKey(userPubkey, deviceId, session.name)
     if (this.sessionSubscriptions.has(key)) return
 
-    const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
-    if (rotateActive) {
-      if (dr.activeSession) {
-        dr.inactiveSessions.push(dr.activeSession)
-      }
-      dr.activeSession = session
+    const rotateSession = (nextSession: Session) => {
+      const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+      const current = dr.activeSession
 
-      if (dr.inactiveSessions.length > 10) {
-        dr.inactiveSessions = dr.inactiveSessions.slice(-10)
+      if (!current) {
+        dr.activeSession = nextSession
+        return
       }
+
+      if (current === nextSession || current.name === nextSession.name) {
+        dr.activeSession = nextSession
+        return
+      }
+
+      dr.inactiveSessions = dr.inactiveSessions.filter(
+        (session) => session !== current && session.name !== current.name
+      )
+
+      dr.inactiveSessions.push(current)
+      dr.inactiveSessions = dr.inactiveSessions.slice(-1)
+      dr.activeSession = nextSession
+    }
+
+    const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+    if (inactive) {
+      const alreadyTracked = dr.inactiveSessions.some(
+        (tracked) => tracked === session || tracked.name === session.name
+      )
+      if (!alreadyTracked) {
+        dr.inactiveSessions.push(session)
+        dr.inactiveSessions = dr.inactiveSessions.slice(-1)
+      }
+    } else {
+      rotateSession(session)
     }
 
     const unsub = session.onEvent((event) => {
       for (const cb of this.internalSubscriptions) cb(event, userPubkey)
+      rotateSession(session)
       this.storeUserRecord(userPubkey).catch(console.error)
     })
     this.storeUserRecord(userPubkey).catch(console.error)
@@ -410,7 +437,9 @@ export default class SessionManager {
     }
     for (const event of history) {
       const {activeSession} = device
+      console.warn("attempting to send history message to", recipientPublicKey, deviceId)
       if (!activeSession) {
+        console.warn("no active session, cannot send history message")
         return
       }
       const {event: verifiedEvent} = activeSession.sendEvent(event)
@@ -445,7 +474,10 @@ export default class SessionManager {
         await this.nostrPublish(verifiedEvent).catch(console.error)
       })
     )
-      .then(() => this.storeUserRecord(recipientIdentityKey))
+      .then(() => {
+        this.storeUserRecord(recipientIdentityKey)
+        console.warn("stored user record after sending event")
+      })
       .catch(console.error)
 
     // Return the event with computed ID (same as library would compute)
@@ -563,12 +595,11 @@ export default class SessionManager {
           const {deviceId, activeSession, inactiveSessions} = device
           if (!deviceId) continue
 
-          if (activeSession) {
-            this.attachSessionSubscription(publicKey, deviceId, activeSession, false)
+          for (const session of inactiveSessions.reverse()) {
+            this.attachSessionSubscription(publicKey, deviceId, session)
           }
-
-          for (const session of inactiveSessions) {
-            this.attachSessionSubscription(publicKey, deviceId, session, false)
+          if (activeSession) {
+            this.attachSessionSubscription(publicKey, deviceId, activeSession)
           }
         }
 
@@ -590,7 +621,10 @@ export default class SessionManager {
           const publicKey = key.slice(prefix.length)
           return this.loadUserRecord(publicKey)
         })
-      )
+      ).finally(() => {
+        console.warn("Finished loading all user records")
+        console.warn(this.userRecords)
+      })
     })
   }
 
@@ -600,6 +634,7 @@ export default class SessionManager {
 
     // First migration
     if (!version) {
+      console.warn("Running storage migration to version 1")
       // Fetch all existing invites
       // Assume no version prefix
       // Deserialize and serialize to start using persistent createdAt

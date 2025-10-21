@@ -43,7 +43,7 @@ describe("SessionManager", () => {
   })
 
   it("should sync messages across multiple devices", async () => {
-    const sharedRelay = new MockRelay(true)
+    const sharedRelay = new MockRelay()
 
     const {manager: aliceDevice1, secretKey: aliceSecretKey} =
       await createMockSessionManager("alice-device-1", sharedRelay)
@@ -166,7 +166,7 @@ describe("SessionManager", () => {
   })
 
   it("should not accumulate additional sessions after restart", async () => {
-    const sharedRelay = new MockRelay(true)
+    const sharedRelay = new MockRelay()
 
     const {
       manager: aliceManager,
@@ -181,8 +181,6 @@ describe("SessionManager", () => {
       publicKey: bobPubkey,
       mockStorage: bobStorage,
     } = await createMockSessionManager("bob-device-1", sharedRelay)
-
-    console.log("Initialized devices")
 
     const [msg1, msg2] = ["hello bob", "hello alice"]
 
@@ -230,6 +228,7 @@ describe("SessionManager", () => {
 
     const afterRestartMessage = "after restart"
 
+    console.log("Sending message after restart")
     const bobReveivedMessages = new Promise<void>((resolve) => {
       bobManagerRestart.onEvent((event) => {
         if (event.content === afterRestartMessage) {
@@ -239,8 +238,10 @@ describe("SessionManager", () => {
     })
 
     await aliceManagerRestart.sendMessage(bobPubkey, "after restart")
+    console.log("Message sent after restart")
     await bobReveivedMessages
 
+    console.log("Message received after restart")
     const aliceDeviceRecords = extractDeviceRecords(aliceManagerRestart)
     const bobDeviceRecords = extractDeviceRecords(bobManagerRestart)
 
