@@ -6,6 +6,7 @@ import {
   RiUserFollowLine,
   RiHeartLine,
   RiDownload2Line,
+  RiFileTextLine,
 } from "@remixicon/react"
 import RightColumn from "@/shared/components/RightColumn"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
@@ -129,6 +130,11 @@ export const AboutPage = () => {
               <p>
                 <Link to="/subscribe" className="flex items-center gap-1 w-fit">
                   <RiHeartLine className="inline" /> Subscribe to support Iris development
+                </Link>
+              </p>
+              <p>
+                <Link to="/terms" className="flex items-center gap-1 w-fit">
+                  <RiFileTextLine className="inline" /> Terms of Service
                 </Link>
               </p>
               <div className="mt-4">

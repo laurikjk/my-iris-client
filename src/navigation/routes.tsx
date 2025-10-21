@@ -7,6 +7,7 @@ import Notifications from "@/pages/notifications/Notifications"
 import CashuWallet from "@/pages/wallet/CashuWallet"
 import OldWallet from "@/pages/wallet/OldWallet"
 import {AboutPage} from "@/pages/AboutPage"
+import TermsPage from "@/pages/TermsPage"
 import SearchPage from "@/pages/search"
 import HomePage from "@/pages/home"
 import NewNote from "@/pages/new"
@@ -40,6 +41,7 @@ export const routes: RouteDefinition[] = [
   {path: "/map", component: MapPage},
   {path: "/map/:query", component: MapPage},
   {path: "/about", component: AboutPage},
+  {path: "/terms", component: TermsPage},
   {path: "/:link/*", component: NostrLinkHandler},
   {path: "/:link", component: NostrLinkHandler},
 ]
