@@ -1,3 +1,5 @@
+import localforage from "localforage"
+
 /*
  * Simple async key	value storage interface plus an in	memory implementation.
  *
@@ -98,5 +100,64 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
 
     return keys
+  }
+}
+
+export class LocalforageAdapter implements StorageAdapter {
+  private keyPrefix: string
+
+  constructor(keyPrefix = "session_") {
+    this.keyPrefix = keyPrefix
+  }
+
+  private getFullKey(key: string): string {
+    return `${this.keyPrefix}${key}`
+  }
+
+  get<T = unknown>(key: string): Promise<T | undefined> {
+    return localforage
+      .getItem<T>(this.getFullKey(key))
+      .then((item) => item ?? undefined)
+      .catch(() => undefined)
+  }
+
+  async put<T = unknown>(key: string, value: T): Promise<void> {
+    localforage.setItem(this.getFullKey(key), value).catch()
+  }
+
+  async del(key: string): Promise<void> {
+    localforage.removeItem(this.getFullKey(key)).catch()
+  }
+
+  async list(prefix = ""): Promise<string[]> {
+    const keys: string[] = []
+    const searchPrefix = this.getFullKey(prefix)
+    const n = await localforage.length()
+
+    try {
+      for (let i = 0; i < n; i++) {
+        const key = await localforage.key(i)
+        if (key && key.startsWith(searchPrefix)) {
+          keys.push(key.substring(this.keyPrefix.length))
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to list keys from localStorage:", e)
+    }
+
+    return keys
+  }
+}
+
+export const migration = (adapterFrom: StorageAdapter, adapterTo: StorageAdapter) => {
+  return async (prefix = ""): Promise<void> => {
+    const keys = await adapterFrom.list(prefix)
+    for (const key of keys) {
+      const value = await adapterFrom.get(key)
+      if (value !== undefined) {
+        await adapterTo.put(key, value)
+        await adapterFrom.del(key)
+      }
+    }
   }
 }

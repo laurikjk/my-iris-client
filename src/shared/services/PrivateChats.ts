@@ -1,6 +1,10 @@
 import SessionManager from "../../session/SessionManager"
 import {VerifiedEvent} from "nostr-tools"
-import {LocalStorageAdapter} from "../../session/StorageAdapter"
+import {
+  LocalStorageAdapter,
+  LocalforageAdapter,
+  migration,
+} from "../../session/StorageAdapter"
 import {NostrPublish, NostrSubscribe} from "nostr-double-ratchet"
 import NDK, {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
@@ -65,13 +69,20 @@ export const getSessionManager = (): SessionManager | null => {
 
     const ndkInstance = ndk()
 
+    const localStorageAdapter = new LocalStorageAdapter("private")
+    const localforageAdapter = new LocalforageAdapter("private-chats/")
+
+    migration(localStorageAdapter, localforageAdapter)().catch((error) => {
+      console.error("Failed to migrate session storage:", error)
+    })
+
     manager = new SessionManager(
       publicKey,
       encrypt,
       getOrCreateDeviceId(),
       createSubscribe(ndkInstance),
       createPublish(ndkInstance),
-      new LocalStorageAdapter("private")
+      localforageAdapter
     )
 
     return manager
