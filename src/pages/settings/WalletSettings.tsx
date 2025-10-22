@@ -5,6 +5,7 @@ import {useWalletStore} from "@/stores/wallet"
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
+import {CashuSeedBackup} from "@/shared/components/settings/CashuSeedBackup"
 import {ChangeEvent, useState, useEffect} from "react"
 
 const WalletSettings = () => {
@@ -399,6 +400,12 @@ const WalletSettings = () => {
                   onChange={(e) => setShowBalanceInNav(e.target.checked)}
                 />
               </div>
+            </SettingsGroupItem>
+          </SettingsGroup>
+
+          <SettingsGroup title="Backup">
+            <SettingsGroupItem isLast>
+              <CashuSeedBackup />
             </SettingsGroupItem>
           </SettingsGroup>
 

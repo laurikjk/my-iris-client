@@ -1,5 +1,6 @@
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
+import {CashuSeedBackup} from "@/shared/components/settings/CashuSeedBackup"
 import {hexToBytes} from "@noble/hashes/utils"
 import {useUserStore} from "@/stores/user"
 import {nip19} from "nostr-tools"
@@ -41,6 +42,12 @@ function Backup() {
                 </div>
               </SettingsGroupItem>
             )}
+          </SettingsGroup>
+
+          <SettingsGroup title="Cashu wallet">
+            <SettingsGroupItem isLast>
+              <CashuSeedBackup />
+            </SettingsGroupItem>
           </SettingsGroup>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import {useState, useEffect} from "react"
+import {useState, useEffect, useMemo} from "react"
 import type {Manager} from "@/lib/cashu/core/index"
 import type {Token, PaymentRequest} from "@cashu/cashu-ts"
 import Modal from "@/shared/components/ui/Modal"
@@ -13,6 +13,7 @@ import type {DoubleRatchetUser} from "@/pages/chats/utils/doubleRatchetUsers"
 import {useNavigate} from "@/navigation"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useUserStore} from "@/stores/user"
+import {useAnimatedQR} from "@/hooks/useAnimatedQR"
 
 interface SendDialogProps {
   isOpen: boolean
@@ -176,9 +177,76 @@ export default function SendDialog({
     }
   }, [sendInvoice])
 
+  const {currentFragment, isAnimated} = useAnimatedQR(generatedToken)
+
+  // Parse token to extract amount and memo
+  const tokenData = useMemo(() => {
+    // If we have initialToken (Token object from history), use it directly
+    if (initialToken) {
+      let total = 0
+      const token = initialToken as any
+
+      // Handle v3 tokens (token array format)
+      if (token.token && Array.isArray(token.token)) {
+        for (const entry of token.token) {
+          if (entry.proofs && Array.isArray(entry.proofs)) {
+            for (const proof of entry.proofs) {
+              total += proof.amount || 0
+            }
+          }
+        }
+      }
+      // Handle v4 tokens (direct proofs array)
+      else if (token.proofs && Array.isArray(token.proofs)) {
+        for (const proof of token.proofs) {
+          total += proof.amount || 0
+        }
+      }
+
+      return {
+        amount: total,
+        memo: token.memo || ""
+      }
+    }
+
+    // Otherwise decode from generated token string
+    if (!generatedToken) return {amount: 0, memo: ""}
+    try {
+      const {getDecodedToken} = require("@cashu/cashu-ts")
+      const decoded = getDecodedToken(generatedToken)
+      let total = 0
+
+      // Handle v3 tokens (token array format)
+      if (decoded.token && Array.isArray(decoded.token)) {
+        for (const entry of decoded.token) {
+          if (entry.proofs && Array.isArray(entry.proofs)) {
+            for (const proof of entry.proofs) {
+              total += proof.amount || 0
+            }
+          }
+        }
+      }
+      // Handle v4 tokens (direct proofs array)
+      else if (decoded.proofs && Array.isArray(decoded.proofs)) {
+        for (const proof of decoded.proofs) {
+          total += proof.amount || 0
+        }
+      }
+
+      return {
+        amount: total,
+        memo: decoded.memo || sendNote
+      }
+    } catch (error) {
+      console.error("Failed to decode token:", error)
+      return {amount: 0, memo: sendNote}
+    }
+  }, [initialToken, generatedToken, sendNote])
+
   useEffect(() => {
     const generateQR = async () => {
-      if (!generatedToken) {
+      const dataToEncode = isAnimated ? currentFragment : generatedToken
+      if (!dataToEncode) {
         setQrCodeUrl("")
         return
       }
@@ -186,7 +254,7 @@ export default function SendDialog({
         const QRCode = await import("qrcode")
         const url = await new Promise<string>((resolve, reject) => {
           QRCode.toDataURL(
-            generatedToken,
+            dataToEncode,
             {
               errorCorrectionLevel: "H",
               margin: 1,
@@ -208,7 +276,7 @@ export default function SendDialog({
       }
     }
     generateQR()
-  }, [generatedToken])
+  }, [generatedToken, currentFragment, isAnimated])
 
   const handleClose = () => {
     onClose()
@@ -540,17 +608,12 @@ export default function SendDialog({
               </form>
             ) : (
               <div className="space-y-4">
-                {qrCodeUrl && (
-                  <div className="flex justify-center">
-                    <div className="bg-white rounded-lg p-4">
-                      <img
-                        src={qrCodeUrl}
-                        alt="Cashu Token QR Code"
-                        className="w-64 h-64"
-                      />
-                    </div>
+                <div className="alert alert-success">
+                  <div className="flex flex-col gap-1">
+                    <div className="font-bold text-lg">{tokenData.amount} bit</div>
+                    {tokenData.memo && <div className="text-sm opacity-80">{tokenData.memo}</div>}
                   </div>
-                )}
+                </div>
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text">Cashu Token</span>
@@ -590,11 +653,8 @@ export default function SendDialog({
                     </button>
                   )}
                 </div>
-                <div className="divider">OR</div>
+                <div className="divider">DM</div>
                 <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">DM to user</span>
-                  </label>
                   <DoubleRatchetUserSearch
                     placeholder="Search secure messaging users..."
                     onUserSelect={handleSendTokenDm}
@@ -607,6 +667,18 @@ export default function SendDialog({
                     </div>
                   )}
                 </div>
+                <div className="divider">QR</div>
+                {qrCodeUrl && (
+                  <div className="flex justify-center">
+                    <div className="bg-white rounded-lg p-4">
+                      <img
+                        src={qrCodeUrl}
+                        alt="Cashu Token QR Code"
+                        className="w-64 h-64"
+                      />
+                    </div>
+                  </div>
+                )}
                 <button className="btn btn-ghost w-full" onClick={handleClose}>
                   Done
                 </button>

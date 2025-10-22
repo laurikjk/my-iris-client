@@ -10,6 +10,8 @@ import {
   PaymentRequestTransport,
   PaymentRequestTransportType,
 } from "@cashu/cashu-ts"
+import {useAnimatedQR} from "@/hooks/useAnimatedQR"
+import {RequestQRDisplay} from "./RequestQRDisplay"
 
 interface ReceiveDialogProps {
   isOpen: boolean
@@ -47,11 +49,13 @@ export default function ReceiveDialog({
   const [requestAmount, setRequestAmount] = useState<number | undefined>(undefined)
   const [requestDescription, setRequestDescription] = useState<string>("")
   const [paymentRequestString, setPaymentRequestString] = useState<string>("")
-  const [requestQR, setRequestQR] = useState<string>("")
   const [requestCopied, setRequestCopied] = useState(false)
   const [previewAmount, setPreviewAmount] = useState<number | null>(null)
   const [previewMemo, setPreviewMemo] = useState<string>("")
   const [previewMint, setPreviewMint] = useState<string>("")
+
+  const {currentFragment: requestFragment, isAnimated: isRequestAnimated} =
+    useAnimatedQR(paymentRequestString)
 
   // Handle initial token (from QR scan) and extract memo
   useEffect(() => {
@@ -171,7 +175,6 @@ export default function ReceiveDialog({
     setError("")
     setReceiveNote("")
     setPaymentRequestString("")
-    setRequestQR("")
     setRequestAmount(undefined)
     setRequestDescription("")
   }
@@ -281,28 +284,6 @@ export default function ReceiveDialog({
 
       const encoded = paymentRequest.toEncodedRequest()
       setPaymentRequestString(encoded)
-
-      // Generate QR code
-      const QRCode = await import("qrcode")
-      const url = await new Promise<string>((resolve, reject) => {
-        QRCode.toDataURL(
-          encoded,
-          {
-            errorCorrectionLevel: "H",
-            margin: 1,
-            width: 256,
-            color: {
-              dark: "#000000",
-              light: "#FFFFFF",
-            },
-          },
-          (error, url) => {
-            if (error) reject(error)
-            else resolve(url)
-          }
-        )
-      })
-      setRequestQR(url)
     } catch (error) {
       console.error("Failed to create payment request:", error)
       setError(
@@ -572,15 +553,11 @@ export default function ReceiveDialog({
                     )}
                   </div>
                 )}
-                <div className="flex justify-center">
-                  <div className="bg-white rounded-lg p-4">
-                    <img
-                      src={requestQR}
-                      alt="Payment Request QR Code"
-                      className="w-64 h-64"
-                    />
-                  </div>
-                </div>
+                <RequestQRDisplay
+                  data={paymentRequestString}
+                  fragment={requestFragment}
+                  isAnimated={isRequestAnimated}
+                />
                 <div
                   className="flex items-center justify-center gap-2 bg-base-200 rounded-lg p-3 cursor-pointer hover:bg-base-300 transition-colors"
                   onClick={() => {
@@ -602,7 +579,6 @@ export default function ReceiveDialog({
                   className="btn btn-ghost w-full"
                   onClick={() => {
                     setPaymentRequestString("")
-                    setRequestQR("")
                     setReceiveMode("select")
                   }}
                 >
