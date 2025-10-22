@@ -75,7 +75,7 @@ const updateMuteList = async (
 }
 
 // Flagged users list (for reporting)
-let flaggedUsers = new Set<string>()
+const flaggedUsers = new Set<string>()
 
 export const flagUser = async (
   pubkey: string,
@@ -105,4 +105,3 @@ export const flagUser = async (
 export const getFlaggedUsers = (): Set<string> => {
   return flaggedUsers
 }
-

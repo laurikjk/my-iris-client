@@ -10,58 +10,69 @@ export default function PrivacyPage() {
             <div className="prose max-w-prose">
               <h1>Privacy Policy</h1>
 
-              <p><strong>Last Updated: {new Date().toLocaleDateString()}</strong></p>
+              <p>
+                <strong>Last Updated: {new Date().toLocaleDateString()}</strong>
+              </p>
 
               <h2>What Data We Collect</h2>
               <p>
-                <strong>We collect minimal personal data.</strong> Iris runs on your device and connects to decentralized networks.
-                We don't track your activity, collect analytics, or store your posts on our servers.
+                <strong>We collect minimal personal data.</strong> Iris runs on your
+                device and connects to decentralized networks. We don't track your
+                activity, collect analytics, or store your posts on our servers.
               </p>
               <p>
-                <strong>Iris usernames (iris.to/username):</strong> If you register a username, we log your public key,
-                username, registration IP address, and country. This data is necessary to prevent abuse and maintain
-                the username service.
+                <strong>Iris usernames (iris.to/username):</strong> If you register a
+                username, we log your public key, username, registration IP address, and
+                country. This data is necessary to prevent abuse and maintain the username
+                service.
               </p>
 
               <h2>Your Data is Local</h2>
               <p>
-                Everything is stored on your device: your keys, ecash tokens, settings, and cached content.
-                You're responsible for securing your device and backing up your data. If you lose your device
-                or clear storage, your data may be permanently lost.
+                Everything is stored on your device: your keys, ecash tokens, settings,
+                and cached content. You're responsible for securing your device and
+                backing up your data. If you lose your device or clear storage, your data
+                may be permanently lost.
               </p>
 
               <h2>Third-Party Services</h2>
+              <p>Iris connects you to decentralized services we don't control:</p>
               <p>
-                Iris connects you to decentralized services we don't control:
+                <strong>Nostr relays</strong> may log your IP address and store the posts
+                you publish publicly. Content posted to Nostr is public and permanent.
               </p>
               <p>
-                <strong>Nostr relays</strong> may log your IP address and store the posts you publish publicly.
-                Content posted to Nostr is public and permanent.
+                <strong>Cashu mints</strong> may log your IP and track ecash transactions.
+                We don't operate any mints.
               </p>
               <p>
-                <strong>Cashu mints</strong> may log your IP and track ecash transactions. We don't operate any mints.
-              </p>
-              <p>
-                <strong>File hosts</strong> may log uploads. Files you upload may be publicly accessible.
+                <strong>File hosts</strong> may log uploads. Files you upload may be
+                publicly accessible.
               </p>
 
               <h2>Your Control</h2>
               <p>
-                You control your data. Delete it by clearing storage or uninstalling the app.
-                Choose which relays and mints to use in settings. Export your data anytime.
+                You control your data. Delete it by clearing storage or uninstalling the
+                app. Choose which relays and mints to use in settings. Export your data
+                anytime.
               </p>
 
               <h2>Open Source</h2>
               <p>
                 Iris is open source. Verify our privacy claims at{" "}
-                <a href="https://github.com/irislib/iris-client" target="_blank" rel="noopener noreferrer">
+                <a
+                  href="https://github.com/irislib/iris-client"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   github.com/irislib/iris-client
                 </a>
               </p>
 
               <h2>Contact</h2>
               <p>
-                Questions? Reach us at <a href="mailto:irismessenger@pm.me">irismessenger@pm.me</a>
+                Questions? Reach us at{" "}
+                <a href="mailto:irismessenger@pm.me">irismessenger@pm.me</a>
               </p>
             </div>
           </div>

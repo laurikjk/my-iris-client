@@ -24,7 +24,9 @@ function MuteUser({user, setMuting, muteState, setMutedState}: MuteUserProps) {
   const [muted, setMuted] = useState<boolean>(isMuted)
 
   useEffect(() => {
-    const currentlyMuted = myKey ? socialGraph().getMutedByUser(myKey).has(user) : muteState
+    const currentlyMuted = myKey
+      ? socialGraph().getMutedByUser(myKey).has(user)
+      : muteState
     setMuted(currentlyMuted)
   }, [muteState, user, myKey])
 

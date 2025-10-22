@@ -67,8 +67,8 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
 
     watchLocalSettings(ndkInstance)
     ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
-    ndkInstance.connect()
     setupVisibilityReconnection(ndkInstance)
+    ndkInstance.connect()
     console.log("NDK instance initialized", ndkInstance)
   } else if (opts) {
     throw new Error("NDK instance already initialized, cannot pass options")
@@ -77,51 +77,77 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
 }
 
 /**
- * Setup visibility change listener to force immediate reconnection
- * when PWA returns to foreground (mobile only)
+ * Setup listeners for visibility changes and network status to force immediate reconnection
  */
 function setupVisibilityReconnection(instance: NDK) {
-  if (!isTouchDevice) return
-
   let wasHidden = false
+  let wasOffline = false
 
-  const handleVisibilityChange = () => {
-    if (document.hidden) {
-      wasHidden = true
-      return
-    }
+  const reconnectDisconnectedRelays = (reason: string) => {
+    console.log(`${reason}, checking relay connections...`)
 
-    // App returned to foreground
-    if (wasHidden) {
-      wasHidden = false
-      console.log("PWA returned to foreground, checking relay connections...")
-
-      // Force immediate reconnection for disconnected relays
-      for (const relay of instance.pool.relays.values()) {
-        if (relay.status !== 1) {
-          // 1 = connected
-          console.log(`Forcing reconnection to ${relay.url}`)
-          relay.connect()
-        }
+    // Force immediate reconnection for disconnected relays
+    // NDKRelayStatus: DISCONNECTED=1, RECONNECTING=2, FLAPPING=3, CONNECTING=4, CONNECTED=5+
+    for (const relay of instance.pool.relays.values()) {
+      if (relay.status < 5) {
+        // Not connected
+        console.log(`Forcing reconnection to ${relay.url} (status: ${relay.status})`)
+        relay.connect()
       }
     }
   }
 
-  document.addEventListener("visibilitychange", handleVisibilityChange)
+  // Handle visibility changes (PWA/mobile only - desktop keeps WS open)
+  if (isTouchDevice) {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        wasHidden = true
+        return
+      }
 
-  // Also handle page show event for iOS PWAs
-  window.addEventListener("pageshow", (event) => {
-    if (event.persisted) {
-      handleVisibilityChange()
+      // App returned to foreground
+      if (wasHidden) {
+        wasHidden = false
+        reconnectDisconnectedRelays("App returned to foreground")
+      }
     }
-  })
 
-  // Handle focus event as fallback
-  window.addEventListener("focus", () => {
-    if (wasHidden) {
-      handleVisibilityChange()
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    // Handle page show event for iOS PWAs
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        reconnectDisconnectedRelays("Page shown from cache")
+      }
+    })
+
+    // Handle focus event as fallback
+    window.addEventListener("focus", () => {
+      if (wasHidden) {
+        wasHidden = false
+        reconnectDisconnectedRelays("App focused")
+      }
+    })
+  }
+
+  // Handle network status changes
+  const handleOnline = () => {
+    if (wasOffline) {
+      wasOffline = false
+      reconnectDisconnectedRelays("Network connection restored")
     }
-  })
+  }
+
+  const handleOffline = () => {
+    wasOffline = true
+    console.log("Network connection lost")
+  }
+
+  window.addEventListener("online", handleOnline)
+  window.addEventListener("offline", handleOffline)
+
+  // Initialize offline state
+  wasOffline = !navigator.onLine
 }
 
 function recreateNDKInstance() {

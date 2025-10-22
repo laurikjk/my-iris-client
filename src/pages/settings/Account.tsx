@@ -131,15 +131,18 @@ function Account() {
   async function handleLogout(e?: MouseEvent) {
     e?.preventDefault()
     e?.stopPropagation()
+    console.log("[Logout] Starting logout process")
     if (
       !store.privateKey ||
       confirm("Log out? Make sure you have a backup of your secret key.")
     ) {
+      console.log("[Logout] User confirmed")
       setIsLoggingOut(true)
 
       try {
         // Try to unsubscribe from notifications first, while we still have the signer
         try {
+          console.log("[Logout] Unsubscribing from notifications")
           await withTimeout(unsubscribeAll(), 3000)
         } catch (e) {
           console.error("Error unsubscribing from push notifications:", e)
@@ -158,23 +161,29 @@ function Account() {
           console.error("Error publishing invite tombstones:", e)
         }
 
+        console.log("[Logout] Cleaning up NDK")
         await withTimeout(cleanupNDK(), 3000)
+        console.log("[Logout] Resetting user store")
         const {reset} = useUserStore.getState()
         reset()
       } catch (e) {
         console.error("Error during logout cleanup:", e)
       } finally {
         try {
+          console.log("[Logout] Final cleanup")
           await withTimeout(Promise.all([cleanupStorage(), cleanupServiceWorker()]), 5000)
         } catch (e) {
           console.error("Error during final cleanup:", e)
         } finally {
           // Ensure spinner always stops and navigation happens
+          console.log("[Logout] Reloading app")
           setIsLoggingOut(false)
           navigate("/")
           location.reload()
         }
       }
+    } else {
+      console.log("[Logout] User cancelled")
     }
   }
 
