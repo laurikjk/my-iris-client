@@ -1,6 +1,6 @@
 import {useState, useEffect, useMemo} from "react"
 import type {Manager} from "@/lib/cashu/core/index"
-import type {Token, PaymentRequest} from "@cashu/cashu-ts"
+import {getDecodedToken, type Token, type PaymentRequest} from "@cashu/cashu-ts"
 import Modal from "@/shared/components/ui/Modal"
 import {decode} from "light-bolt11-decoder"
 import {savePaymentMetadata} from "@/stores/paymentMetadata"
@@ -184,10 +184,10 @@ export default function SendDialog({
     // If we have initialToken (Token object from history), use it directly
     if (initialToken) {
       let total = 0
-      const token = initialToken as any
+      const token = initialToken
 
       // Handle v3 tokens (token array format)
-      if (token.token && Array.isArray(token.token)) {
+      if ("token" in token && Array.isArray(token.token)) {
         for (const entry of token.token) {
           if (entry.proofs && Array.isArray(entry.proofs)) {
             for (const proof of entry.proofs) {
@@ -197,7 +197,7 @@ export default function SendDialog({
         }
       }
       // Handle v4 tokens (direct proofs array)
-      else if (token.proofs && Array.isArray(token.proofs)) {
+      else if ("proofs" in token && Array.isArray(token.proofs)) {
         for (const proof of token.proofs) {
           total += proof.amount || 0
         }
@@ -205,14 +205,13 @@ export default function SendDialog({
 
       return {
         amount: total,
-        memo: token.memo || ""
+        memo: token.memo || "",
       }
     }
 
     // Otherwise decode from generated token string
     if (!generatedToken) return {amount: 0, memo: ""}
     try {
-      const {getDecodedToken} = require("@cashu/cashu-ts")
       const decoded = getDecodedToken(generatedToken)
       let total = 0
 
@@ -235,7 +234,7 @@ export default function SendDialog({
 
       return {
         amount: total,
-        memo: decoded.memo || sendNote
+        memo: decoded.memo || sendNote,
       }
     } catch (error) {
       console.error("Failed to decode token:", error)
@@ -611,7 +610,9 @@ export default function SendDialog({
                 <div className="alert alert-success">
                   <div className="flex flex-col gap-1">
                     <div className="font-bold text-lg">{tokenData.amount} bit</div>
-                    {tokenData.memo && <div className="text-sm opacity-80">{tokenData.memo}</div>}
+                    {tokenData.memo && (
+                      <div className="text-sm opacity-80">{tokenData.memo}</div>
+                    )}
                   </div>
                 </div>
                 <div className="form-control">

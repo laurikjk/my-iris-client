@@ -67,6 +67,17 @@ export class MintService {
     return await this.mintRepo.isKnownMint(mintUrl)
   }
 
+  async getCachedMint(mintUrl: string): Promise<{mint: Mint; keysets: Keyset[]}> {
+    const isKnownMint = await this.mintRepo.isKnownMint(mintUrl)
+    if (!isKnownMint) {
+      throw new UnknownMintError(`Mint ${mintUrl} is not known`)
+    }
+
+    const mint = await this.mintRepo.getMintByUrl(mintUrl)
+    const keysets = await this.keysetRepo.getKeysetsByMintUrl(mint.mintUrl)
+    return {mint, keysets}
+  }
+
   async ensureUpdatedMint(mintUrl: string): Promise<{mint: Mint; keysets: Keyset[]}> {
     const isKnownMint = await this.mintRepo.isKnownMint(mintUrl)
     if (!isKnownMint) {

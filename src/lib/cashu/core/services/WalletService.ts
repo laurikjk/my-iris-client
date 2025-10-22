@@ -103,7 +103,23 @@ export class WalletService {
     return this.getWallet(mintUrl)
   }
   private async buildWallet(mintUrl: string): Promise<CashuWallet> {
-    const {mint, keysets} = await this.mintService.ensureUpdatedMint(mintUrl)
+    // Try to get fresh mint data, fall back to cache if offline
+    let mint, keysets
+    try {
+      ({mint, keysets} = await this.mintService.ensureUpdatedMint(mintUrl))
+    } catch (err) {
+      // If network error, use cached data for offline operation
+      const isNetworkError =
+        err instanceof Error &&
+        (err.message.includes("Failed to fetch") || err.message.includes("NetworkError"))
+
+      if (isNetworkError) {
+        this.logger?.warn("Mint unreachable, using cached keys", {mintUrl})
+        ;({mint, keysets} = await this.mintService.getCachedMint(mintUrl))
+      } else {
+        throw err
+      }
+    }
 
     const validKeysets = keysets.filter(
       (keyset) => keyset.keypairs && Object.keys(keyset.keypairs).length > 0
