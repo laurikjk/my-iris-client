@@ -16,6 +16,7 @@ import {RiAttachment2, RiMapPinLine, RiTimeLine} from "@remixicon/react"
 import HyperText from "@/shared/components/HyperText"
 import {searchIndex, SearchResult} from "@/utils/profileSearch"
 import {UserRow} from "@/shared/components/user/UserRow"
+import {KIND_TEXT_NOTE, KIND_CLASSIFIED} from "@/utils/constants"
 
 // Extract hashtags from text content per NIP-24
 const extractHashtags = (text: string): string[] => {
@@ -90,6 +91,25 @@ export function BaseNoteCreator({
   })
   const [isFocused, setIsFocused] = useState(false)
   const [previewMode, setPreviewMode] = useState(false)
+  const [eventKind, setEventKind] = useState<number>(() => {
+    if (!hasHydrated) return KIND_TEXT_NOTE
+    const draft = draftStore.getDraft(draftKey)
+    return draft?.eventKind || KIND_TEXT_NOTE
+  })
+  const [price, setPrice] = useState<{
+    amount: string
+    currency: string
+    frequency?: string
+  }>(() => {
+    if (!hasHydrated) return {amount: "", currency: "USD", frequency: ""}
+    const draft = draftStore.getDraft(draftKey)
+    return draft?.price || {amount: "", currency: "USD", frequency: ""}
+  })
+  const [title, setTitle] = useState<string>(() => {
+    if (!hasHydrated) return ""
+    const draft = draftStore.getDraft(draftKey)
+    return draft?.title || ""
+  })
   const [expirationDelta, setExpirationDelta] = useState<number | null>(() => {
     // First check if we have a saved expiration delta in draft
     if (hasHydrated) {
@@ -148,6 +168,15 @@ export function BaseNoteCreator({
       if (draft.expirationDelta !== undefined) {
         setExpirationDelta(draft.expirationDelta)
       }
+      if (draft.eventKind !== undefined) {
+        setEventKind(draft.eventKind)
+      }
+      if (draft.price) {
+        setPrice(draft.price)
+      }
+      if (draft.title !== undefined) {
+        setTitle(draft.title)
+      }
     } else if (quotedEvent && !text) {
       // Only set the quote link if there's no existing draft and no text
       const noteId = nip19.noteEncode(quotedEvent.id)
@@ -170,6 +199,21 @@ export function BaseNoteCreator({
     if (!hasHydrated) return
     draftStore.setDraft(draftKey, {expirationDelta})
   }, [expirationDelta, draftKey, hasHydrated])
+
+  useEffect(() => {
+    if (!hasHydrated) return
+    draftStore.setDraft(draftKey, {eventKind})
+  }, [eventKind, draftKey, hasHydrated])
+
+  useEffect(() => {
+    if (!hasHydrated) return
+    draftStore.setDraft(draftKey, {price})
+  }, [price, draftKey, hasHydrated])
+
+  useEffect(() => {
+    if (!hasHydrated) return
+    draftStore.setDraft(draftKey, {title})
+  }, [title, draftKey, hasHydrated])
 
   useEffect(() => {
     if (autofocus && textareaRef.current) {
@@ -307,7 +351,7 @@ export function BaseNoteCreator({
     setPublishing(true)
     try {
       const event = new NDKEvent(ndkInstance)
-      event.kind = NDKKind.Text
+      event.kind = eventKind as NDKKind
       event.content = text
       event.tags = []
 
@@ -386,11 +430,31 @@ export function BaseNoteCreator({
         event.tags.push(["expiration", expirationTimestamp.toString()])
       }
 
+      // Add market listing specific tags
+      if (eventKind === KIND_CLASSIFIED) {
+        if (title) {
+          event.tags.push(["title", title])
+        }
+        if (price.amount) {
+          const priceTag = ["price", price.amount, price.currency]
+          if (price.frequency) {
+            priceTag.push(price.frequency)
+          }
+          event.tags.push(priceTag)
+        }
+        // Add image tag from first imeta if available
+        if (imeta.length > 0 && imeta[0].url) {
+          event.tags.push(["image", imeta[0].url])
+        }
+      }
+
       await event.publish()
 
       setText("")
       setImeta([])
       setExpirationDelta(null)
+      setPrice({amount: "", currency: "USD", frequency: ""})
+      setTitle("")
       setIsFocused(false)
       draftStore.clearDraft(draftKey)
       onClose?.()
@@ -582,21 +646,32 @@ export function BaseNoteCreator({
         </div>
       )}
 
-      {/* Edit/Preview toggle */}
+      {/* Edit/Preview toggle and Type selector */}
       {showPreview && shouldExpand && (
-        <div className="flex gap-2 px-4 pb-3">
-          <button
-            onClick={() => setPreviewMode(false)}
-            className={!previewMode ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}
+        <div className="flex justify-between items-center px-4 pb-3">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPreviewMode(false)}
+              className={!previewMode ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => setPreviewMode(true)}
+              className={previewMode ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}
+            >
+              Preview
+            </button>
+          </div>
+          <select
+            value={eventKind}
+            onChange={(e) => setEventKind(Number(e.target.value))}
+            className="select select-sm select-bordered"
+            disabled={publishing}
           >
-            Edit
-          </button>
-          <button
-            onClick={() => setPreviewMode(true)}
-            className={previewMode ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}
-          >
-            Preview
-          </button>
+            <option value={KIND_TEXT_NOTE}>Post</option>
+            <option value={KIND_CLASSIFIED}>Market Listing</option>
+          </select>
         </div>
       )}
 
@@ -620,6 +695,50 @@ export function BaseNoteCreator({
         </ProfileLink>
 
         <div className="flex-1">
+          {/* Market listing fields */}
+          {eventKind === KIND_CLASSIFIED && shouldExpand && !previewMode && (
+            <div className="space-y-2 mb-3">
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Listing title"
+                className="input input-sm input-bordered w-full"
+                disabled={publishing}
+              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={price.amount}
+                  onChange={(e) => setPrice({...price, amount: e.target.value})}
+                  placeholder="Price"
+                  className="input input-sm input-bordered flex-1"
+                  disabled={publishing}
+                />
+                <select
+                  value={price.currency}
+                  onChange={(e) => setPrice({...price, currency: e.target.value})}
+                  className="select select-sm select-bordered w-24"
+                  disabled={publishing}
+                >
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                  <option value="BTC">BTC</option>
+                  <option value="SATS">SATS</option>
+                </select>
+                <input
+                  type="text"
+                  value={price.frequency || ""}
+                  onChange={(e) => setPrice({...price, frequency: e.target.value})}
+                  placeholder="per..."
+                  className="input input-sm input-bordered w-24"
+                  disabled={publishing}
+                />
+              </div>
+            </div>
+          )}
+
           <div className={isModal ? "h-[300px] overflow-y-auto" : ""}>
             {!previewMode ? (
               <textarea
@@ -628,7 +747,7 @@ export function BaseNoteCreator({
                 onChange={(e) => handleTextChange(e.target.value)}
                 onFocus={() => setIsFocused(true)}
                 onKeyDown={handleKeyDown}
-                placeholder={placeholder}
+                placeholder={eventKind === KIND_CLASSIFIED ? "Description" : placeholder}
                 className={`w-full bg-transparent resize-none outline-none placeholder-base-content/50 ${
                   isModal
                     ? "textarea border-0 focus:outline-none p-0 text-lg h-full"

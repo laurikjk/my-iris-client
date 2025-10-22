@@ -17,7 +17,7 @@ export default function PrivacyPage() {
               <h2>What Data We Collect</h2>
               <p>
                 <strong>We collect minimal personal data.</strong> Iris runs on your
-                device and connects to decentralized networks. We don't track your
+                device and connects to decentralized networks. We don&apos;t track your
                 activity, collect analytics, or store your posts on our servers.
               </p>
               <p>
@@ -30,20 +30,20 @@ export default function PrivacyPage() {
               <h2>Your Data is Local</h2>
               <p>
                 Everything is stored on your device: your keys, ecash tokens, settings,
-                and cached content. You're responsible for securing your device and
+                and cached content. You&apos;re responsible for securing your device and
                 backing up your data. If you lose your device or clear storage, your data
                 may be permanently lost.
               </p>
 
               <h2>Third-Party Services</h2>
-              <p>Iris connects you to decentralized services we don't control:</p>
+              <p>Iris connects you to decentralized services we don&apos;t control:</p>
               <p>
                 <strong>Nostr relays</strong> may log your IP address and store the posts
                 you publish publicly. Content posted to Nostr is public and permanent.
               </p>
               <p>
                 <strong>Cashu mints</strong> may log your IP and track ecash transactions.
-                We don't operate any mints.
+                We don&apos;t operate any mints.
               </p>
               <p>
                 <strong>File hosts</strong> may log uploads. Files you upload may be

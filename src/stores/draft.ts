@@ -20,6 +20,9 @@ interface Draft {
   imeta: ImetaTag[]
   gTags: string[]
   expirationDelta?: number | null // Time delta in seconds (e.g., 3600 for 1 hour)
+  eventKind?: number // Nostr event kind (1 for post, 30402 for market listing, etc.)
+  price?: {amount: string; currency: string; frequency?: string}
+  title?: string
   timestamp: number
 }
 
@@ -69,6 +72,9 @@ export const useDraftStore = create<DraftState>()(
                 draft.expirationDelta !== undefined
                   ? draft.expirationDelta
                   : existing?.expirationDelta,
+              eventKind: draft.eventKind ?? existing?.eventKind,
+              price: draft.price ?? existing?.price,
+              title: draft.title ?? existing?.title,
               timestamp: Date.now(),
             }
             const drafts = evictOldestDrafts({

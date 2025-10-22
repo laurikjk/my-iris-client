@@ -12,10 +12,12 @@ export default function TermsContent() {
         </strong>
       </p>
 
-      <h3 className="font-bold mb-2 text-white">1. Software Provided "AS IS"</h3>
+      <h3 className="font-bold mb-2 text-white">
+        1. Software Provided &quot;AS IS&quot;
+      </h3>
       <p className="mb-3">
-        This software is provided "AS IS" without warranty of any kind, express or
-        implied. We disclaim all warranties including merchantability, fitness for a
+        This software is provided &quot;AS IS&quot; without warranty of any kind, express
+        or implied. We disclaim all warranties including merchantability, fitness for a
         particular purpose, and non-infringement. Use at your own risk.
       </p>
 
@@ -53,8 +55,8 @@ export default function TermsContent() {
       </p>
       <p className="mb-3">
         You interact directly with third-party Cashu mints who act as custodians. We have
-        no control over, responsibility for, or liability regarding any mint's operation,
-        reliability, or solvency.
+        no control over, responsibility for, or liability regarding any mint&apos;s
+        operation, reliability, or solvency.
       </p>
 
       <h3 className="font-bold mb-2 text-white">5. No Liability for Lost Funds</h3>

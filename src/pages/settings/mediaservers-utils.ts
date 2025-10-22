@@ -3,10 +3,6 @@ export const MEDIASERVERS = {
     url: "https://blossom.iris.to",
     protocol: "blossom" as const,
   },
-  f7z: {
-    url: "https://blossom.f7z.io",
-    protocol: "blossom" as const,
-  },
   nostr_build: {
     url: "https://blossom.nostr.build",
     protocol: "blossom" as const,
@@ -19,13 +15,8 @@ export const MEDIASERVERS = {
 
 export function getDefaultServers(isSubscriber: boolean) {
   return isSubscriber
-    ? [
-        MEDIASERVERS.iris,
-        MEDIASERVERS.f7z,
-        MEDIASERVERS.nostr_build,
-        MEDIASERVERS.nostr_check,
-      ]
-    : [MEDIASERVERS.f7z, MEDIASERVERS.nostr_build, MEDIASERVERS.nostr_check]
+    ? [MEDIASERVERS.iris, MEDIASERVERS.nostr_build, MEDIASERVERS.nostr_check]
+    : [MEDIASERVERS.nostr_build, MEDIASERVERS.nostr_check]
 }
 
 export function stripHttps(url: string) {
