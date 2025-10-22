@@ -76,12 +76,16 @@ const Modal = ({onClose, children, hasBackground = true}: ModalProps) => {
     <dialog ref={modalRef} className="modal outline-none">
       <div
         ref={contentRef}
-        className={hasBackground ? "modal-box w-full max-w-full bg-base-100" : ""}
+        className={
+          hasBackground
+            ? "modal-box w-full max-w-full bg-base-100 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] md:pt-4 md:pb-4"
+            : "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:pt-0 md:pb-0"
+        }
         onClick={(e) => e.stopPropagation()}
       >
         {hasBackground && (
           <button
-            className="btn btn-circle btn-ghost absolute z-50 right-2 top-2 focus:outline-none"
+            className="btn btn-circle btn-ghost absolute z-50 right-2 top-[calc(0.5rem+env(safe-area-inset-top))] md:top-2 focus:outline-none"
             onClick={onClose}
           >
             <Icon name="close" size={12} />
