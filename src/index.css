@@ -136,10 +136,6 @@ iframe {
 }
 
 @media (max-width: 768px) {
-  .modal {
-    align-items: stretch;
-  }
-
   .modal-box {
     max-width: 100% !important;
     width: 100% !important;

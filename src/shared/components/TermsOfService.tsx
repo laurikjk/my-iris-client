@@ -21,7 +21,7 @@ export default function TermsOfService({onAccept}: TermsOfServiceProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 md:p-4">
-      <div className="w-full h-full md:h-auto md:max-w-2xl md:max-h-[90vh] bg-neutral-900 md:rounded-lg shadow-xl flex flex-col">
+      <div className="w-full h-full md:h-auto md:max-w-2xl md:max-h-[90vh] bg-neutral-900 md:rounded-lg shadow-xl flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <div className="p-6 text-center flex-shrink-0">
           <div className="flex items-center justify-center gap-3 mb-4">
             <img src="/img/icon128.png" alt="Iris" className="w-10 h-10" />

@@ -316,7 +316,9 @@ const Layout = ({children}: {children: ReactNode}) => {
         )}
         {showLoginDialog && (
           <Modal onClose={() => setShowLoginDialog(false)}>
-            <LoginDialog />
+            <div className="flex items-center justify-center h-full md:h-auto p-4">
+              <LoginDialog />
+            </div>
           </Modal>
         )}
       </ErrorBoundary>
