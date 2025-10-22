@@ -43,7 +43,7 @@ describe("SessionManager", () => {
   })
 
   it("should sync messages across multiple devices", async () => {
-    const sharedRelay = new MockRelay(true)
+    const sharedRelay = new MockRelay()
 
     const {manager: aliceDevice1, secretKey: aliceSecretKey} =
       await createMockSessionManager("alice-device-1", sharedRelay)
@@ -77,7 +77,7 @@ describe("SessionManager", () => {
 
     expect(bobReceivedMessages)
   })
-  it.skip("should handle back to back messages after initial, answer, and then", async () => {
+  it("should handle back to back messages after initial, answer, and then", async () => {
     await runScenario({
       steps: [
         {type: "send", from: "alice", to: "bob", message: "alice to bob 1"},
@@ -146,7 +146,7 @@ describe("SessionManager", () => {
     })
   })
 
-  it.skip("should deliver alice's message after bob restarts", async () => {
+  it("should deliver alice's message after bob restarts", async () => {
     await runScenario({
       steps: [
         {type: "send", from: "alice", to: "bob", message: "alice to bob 1"},
@@ -165,8 +165,8 @@ describe("SessionManager", () => {
     })
   })
 
-  it.skip("should not accumulate additional sessions after restart", async () => {
-    const sharedRelay = new MockRelay(true)
+  it("should not accumulate additional sessions after restart", async () => {
+    const sharedRelay = new MockRelay()
 
     const {
       manager: aliceManager,
@@ -181,8 +181,6 @@ describe("SessionManager", () => {
       publicKey: bobPubkey,
       mockStorage: bobStorage,
     } = await createMockSessionManager("bob-device-1", sharedRelay)
-
-    console.log("Initialized devices")
 
     const [msg1, msg2] = ["hello bob", "hello alice"]
 
@@ -202,7 +200,6 @@ describe("SessionManager", () => {
       })
     })
 
-    console.log("\n\n\n Sesnigng initial messages")
     await aliceManager.sendMessage(bobPubkey, msg1)
     await bobManager.sendMessage(alicePubkey, msg2)
 
@@ -231,6 +228,7 @@ describe("SessionManager", () => {
 
     const afterRestartMessage = "after restart"
 
+    console.log("Sending message after restart")
     const bobReveivedMessages = new Promise<void>((resolve) => {
       bobManagerRestart.onEvent((event) => {
         if (event.content === afterRestartMessage) {
@@ -240,8 +238,10 @@ describe("SessionManager", () => {
     })
 
     await aliceManagerRestart.sendMessage(bobPubkey, "after restart")
+    console.log("Message sent after restart")
     await bobReveivedMessages
 
+    console.log("Message received after restart")
     const aliceDeviceRecords = extractDeviceRecords(aliceManagerRestart)
     const bobDeviceRecords = extractDeviceRecords(bobManagerRestart)
 
@@ -249,6 +249,35 @@ describe("SessionManager", () => {
     console.log("b", bobDeviceRecords)
     ;[...aliceDeviceRecords, ...bobDeviceRecords].forEach((record) => {
       expect(record.inactiveSessions.length).toBeLessThanOrEqual(1)
+    })
+  })
+
+  it("should deliver when receiver restarts multiple times", async () => {
+    await runScenario({
+      steps: [
+        {type: "send", from: "alice", to: "bob", message: "1"},
+        {type: "send", from: "bob", to: "alice", message: "2"},
+        {type: "send", from: "alice", to: "bob", message: "3"},
+        {type: "restart", actor: "alice"},
+        {type: "send", from: "bob", to: "alice", message: "4"},
+        {type: "restart", actor: "alice"},
+        {type: "send", from: "bob", to: "alice", message: "5"},
+      ],
+    })
+  })
+
+  it("should deliver when receiver restarts multiple times (clearEvents)", async () => {
+    await runScenario({
+      steps: [
+        {type: "send", from: "alice", to: "bob", message: "1"},
+        {type: "send", from: "bob", to: "alice", message: "2"},
+        {type: "send", from: "alice", to: "bob", message: "3"},
+        {type: "restart", actor: "alice"},
+        {type: "send", from: "bob", to: "alice", message: "4"},
+        {type: "clearEvents"},
+        {type: "restart", actor: "alice"},
+        {type: "send", from: "bob", to: "alice", message: "5"},
+      ],
     })
   })
 })

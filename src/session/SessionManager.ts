@@ -12,7 +12,6 @@ import {
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
 import {getEventHash} from "nostr-tools"
-
 export type OnEventCallback = (event: Rumor, from: string) => void
 
 interface DeviceRecord {
@@ -27,12 +26,12 @@ interface UserRecord {
   foundInvites: Map<string, Invite>
 }
 
-type SerializedSessionState = ReturnType<typeof serializeSessionState>
+type StoredSessionEntry = ReturnType<typeof serializeSessionState>
 
 interface StoredDeviceRecord {
   deviceId: string
-  activeSession: SerializedSessionState | null
-  inactiveSessions: SerializedSessionState[]
+  activeSession: StoredSessionEntry | null
+  inactiveSessions: StoredSessionEntry[]
 }
 
 interface StoredUserRecord {
@@ -41,6 +40,10 @@ interface StoredUserRecord {
 }
 
 export default class SessionManager {
+  // Versioning
+  private readonly storageVersion = "1"
+  private readonly versionPrefix: string
+
   // Params
   private deviceId: string
   private storage: StorageAdapter
@@ -80,57 +83,60 @@ export default class SessionManager {
     this.ourIdentityKey = ourIdentityKey
     this.deviceId = deviceId
     this.storage = storage || new InMemoryStorageAdapter()
+    this.versionPrefix = `v${this.storageVersion}`
   }
 
   async init() {
     if (this.initialized) return
     this.initialized = true
 
-    try {
-      await this.loadAllUserRecords()
-    } catch (error) {
-      console.error("Failed to load user records (possibly corrupt data):", error)
-    }
+    await this.runMigrations().catch((error) => {
+      console.error("Failed to run migrations:", error)
+    })
 
-    return this.storage
-      .get<string>(`invite/${this.deviceId}`)
+    await this.loadAllUserRecords().catch((error) => {
+      console.error("Failed to load user records:", error)
+    })
+
+    const ourInviteFromStorage: Invite | null = await this.storage
+      .get<string>(this.deviceInviteKey(this.deviceId))
       .then((data) => {
         if (!data) return null
-        const invite = Invite.deserialize(data)
-        return invite
-      })
-      .catch((error) => {
-        console.error("Failed to load invite:", error)
-        return null
-      })
-      .then(async (invite) => {
-        if (invite) {
-          // Republish existing invite to ensure relay propagation
-          const event = invite.getEvent()
-          await this.nostrPublish(event).catch(console.error)
-          return invite
+        try {
+          return Invite.deserialize(data)
+        } catch {
+          return null
         }
-        const newInvite = Invite.createNew(this.ourPublicKey, this.deviceId)
-        await this.storage.put(`invite/${this.deviceId}`, newInvite.serialize())
-        const event = newInvite.getEvent()
-        await this.nostrPublish(event).catch(console.error)
-        return newInvite
       })
-      .then((invite) => {
-        // Listen to our invite
-        this.ourDeviceInviteSubscription = invite.listen(
-          this.ourIdentityKey,
-          this.nostrSubscribe,
-          (session, inviteePubkey, deviceId) => {
-            if (!deviceId || deviceId === this.deviceId) return
 
-            this.attachSessionSubscription(inviteePubkey, deviceId, session)
-          }
-        )
-      })
-      .catch((error) => {
-        console.error("Failed to initialize session manager:", error)
-      })
+    const invite =
+      ourInviteFromStorage || Invite.createNew(this.ourPublicKey, this.deviceId)
+
+    await this.storage.put(this.deviceInviteKey(this.deviceId), invite.serialize())
+
+    this.ourDeviceInviteSubscription = invite.listen(
+      this.ourIdentityKey,
+      this.nostrSubscribe,
+      async (session, inviteePubkey, deviceId) => {
+        if (!deviceId || deviceId === this.deviceId) return
+        const nostrEventId = session.name
+        const acceptanceKey = this.inviteAcceptKey(nostrEventId, inviteePubkey, deviceId)
+        const nostrEventIdInStorage = await this.storage.get<string>(acceptanceKey)
+
+        if (nostrEventIdInStorage) {
+          return
+        }
+
+        await this.storage.put(acceptanceKey, "1")
+
+        this.attachSessionSubscription(inviteePubkey, deviceId, session, true)
+      }
+    )
+
+    const inviteNostrEvent = invite.getEvent()
+    this.nostrPublish(inviteNostrEvent).catch((error) => {
+      console.error("Failed to publish our device invite:", error)
+    })
   }
 
   // -------------------
@@ -156,33 +162,94 @@ export default class SessionManager {
   }
 
   private sessionKey(userPubkey: string, deviceId: string, sessionName: string) {
-    return `session/${userPubkey}/${deviceId}/${sessionName}`
+    return `${this.sessionKeyPrefix(userPubkey)}${deviceId}/${sessionName}`
   }
   private inviteKey(userPubkey: string) {
-    return `invite/${userPubkey}`
+    return this.userInviteKey(userPubkey)
+  }
+  private inviteAcceptKey(nostrEventId: string, userPubkey: string, deviceId: string) {
+    return `${this.inviteAcceptKeyPrefix(userPubkey)}${deviceId}/${nostrEventId}`
+  }
+
+  private deviceInviteKey(deviceId: string) {
+    return `${this.versionPrefix}/device-invite/${deviceId}`
+  }
+
+  private userInviteKey(userPubkey: string) {
+    return `${this.versionPrefix}/invite/${userPubkey}`
+  }
+
+  private inviteAcceptKeyPrefix(userPublicKey: string) {
+    return `${this.versionPrefix}/invite-accept/${userPublicKey}/`
+  }
+
+  private sessionKeyPrefix(userPublicKey: string) {
+    return `${this.versionPrefix}/session/${userPublicKey}/`
+  }
+
+  private userRecordKey(publicKey: string) {
+    return `${this.userRecordKeyPrefix()}${publicKey}`
+  }
+
+  private userRecordKeyPrefix() {
+    return `${this.versionPrefix}/user/`
+  }
+  private versionKey() {
+    return `storage-version`
   }
 
   private attachSessionSubscription(
     userPubkey: string,
     deviceId: string,
-    session: Session
+    session: Session,
+    // Set to true if only handshake -> not yet sendable -> will be promoted on message
+    inactive: boolean = false
   ): void {
     const key = this.sessionKey(userPubkey, deviceId, session.name)
     if (this.sessionSubscriptions.has(key)) return
 
-    const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
-    if (dr.activeSession) {
-      dr.inactiveSessions.push(dr.activeSession)
-    }
-    dr.activeSession = session
+    const rotateSession = (nextSession: Session) => {
+      const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+      const current = dr.activeSession
 
-    if (dr.inactiveSessions.length > 10) {
-      dr.inactiveSessions = dr.inactiveSessions.slice(-10)
+      if (!current) {
+        dr.activeSession = nextSession
+        return
+      }
+
+      if (current === nextSession || current.name === nextSession.name) {
+        dr.activeSession = nextSession
+        return
+      }
+
+      dr.inactiveSessions = dr.inactiveSessions.filter(
+        (session) => session !== current && session.name !== current.name
+      )
+
+      dr.inactiveSessions.push(current)
+      dr.inactiveSessions = dr.inactiveSessions.slice(-1)
+      dr.activeSession = nextSession
+    }
+
+    const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+    if (inactive) {
+      const alreadyTracked = dr.inactiveSessions.some(
+        (tracked) => tracked === session || tracked.name === session.name
+      )
+      if (!alreadyTracked) {
+        dr.inactiveSessions.push(session)
+        dr.inactiveSessions = dr.inactiveSessions.slice(-1)
+      }
+    } else {
+      rotateSession(session)
     }
 
     const unsub = session.onEvent((event) => {
       for (const cb of this.internalSubscriptions) cb(event, userPubkey)
+      rotateSession(session)
+      this.storeUserRecord(userPubkey).catch(console.error)
     })
+    this.storeUserRecord(userPubkey).catch(console.error)
     this.sessionSubscriptions.set(key, unsub)
   }
 
@@ -212,7 +279,23 @@ export default class SessionManager {
   }
 
   setupUser(userPubkey: string) {
-    this.getOrCreateUserRecord(userPubkey)
+    const userRecord = this.getOrCreateUserRecord(userPubkey)
+
+    const acceptInvite = async (invite: Invite) => {
+      const {deviceId} = invite
+      if (!deviceId) return
+
+      const {session, event} = await invite.accept(
+        this.nostrSubscribe,
+        this.ourPublicKey,
+        this.ourIdentityKey,
+        this.deviceId
+      )
+      return this.nostrPublish(event)
+        .then(() => this.attachSessionSubscription(userPubkey, deviceId, session))
+        .then(() => this.sendMessageHistory(userPubkey, deviceId))
+        .catch(console.error)
+    }
 
     this.attachInviteSubscription(userPubkey, async (invite) => {
       const {deviceId} = invite
@@ -224,24 +307,18 @@ export default class SessionManager {
         deviceId
       ).activeSession
 
-      const currentInactiveSessions = this.getOrCreateDeviceRecord(
-        userPubkey,
-        deviceId
-      ).inactiveSessions
+      if (!currentActiveSession) {
+        await acceptInvite(invite)
+      }
+    })
 
-      console.warn("Current sessions", currentActiveSession, currentInactiveSessions)
-
-      const {session, event} = await invite.accept(
-        this.nostrSubscribe,
-        this.ourPublicKey,
-        this.ourIdentityKey,
-        this.deviceId
-      )
-      await this.nostrPublish(event).catch((e) => {
-        console.error("Failed to publish acceptance to", deviceId, e)
-      })
-      this.attachSessionSubscription(userPubkey, deviceId, session)
-      await this.sendMessageHistory(userPubkey, deviceId)
+    userRecord.devices.forEach((device) => {
+      if (!device.activeSession) {
+        const invite = userRecord.foundInvites.get(device.deviceId)
+        if (invite) {
+          acceptInvite(invite).catch(console.error)
+        }
+      }
     })
   }
 
@@ -272,6 +349,18 @@ export default class SessionManager {
 
     this.ourDeviceInviteSubscription?.()
     this.ourOtherDeviceInviteSubscription?.()
+  }
+
+  deactivateCurrentSessions(publicKey: string) {
+    const userRecord = this.userRecords.get(publicKey)
+    if (!userRecord) return
+    for (const device of userRecord.devices.values()) {
+      if (device.activeSession) {
+        device.inactiveSessions.push(device.activeSession)
+        device.activeSession = undefined
+      }
+    }
+    this.storeUserRecord(publicKey).catch(console.error)
   }
 
   async deleteUser(userPubkey: string): Promise<void> {
@@ -309,7 +398,7 @@ export default class SessionManager {
     await Promise.allSettled([
       this.storage.del(this.inviteKey(userPubkey)),
       this.deleteUserSessionsFromStorage(userPubkey),
-      this.storage.del(`user/${userPubkey}`),
+      this.storage.del(this.userRecordKey(userPubkey)),
     ])
   }
 
@@ -327,7 +416,7 @@ export default class SessionManager {
   }
 
   private async deleteUserSessionsFromStorage(userPubkey: string): Promise<void> {
-    const prefix = `session/${userPubkey}/`
+    const prefix = this.sessionKeyPrefix(userPubkey)
     const keys = await this.storage.list(prefix)
     await Promise.all(keys.map((key) => this.storage.del(key)))
   }
@@ -339,18 +428,16 @@ export default class SessionManager {
     const history = this.messageHistory.get(recipientPublicKey) || []
     const userRecord = this.userRecords.get(recipientPublicKey)
     if (!userRecord) {
-      console.warn("No user record for", recipientPublicKey)
       return
     }
     const device = userRecord.devices.get(deviceId)
     if (!device) {
-      console.warn("No device record for", deviceId)
       return
     }
     for (const event of history) {
       const {activeSession} = device
+
       if (!activeSession) {
-        console.warn("No active session for device", device.deviceId)
         return
       }
       const {event: verifiedEvent} = activeSession.sendEvent(event)
@@ -364,6 +451,7 @@ export default class SessionManager {
     event: Partial<Rumor>
   ): Promise<Rumor | undefined> {
     await this.init()
+
     const userRecord = this.getOrCreateUserRecord(recipientIdentityKey)
     const ourUserRecord = this.getOrCreateUserRecord(this.ourPublicKey)
 
@@ -376,7 +464,7 @@ export default class SessionManager {
     ]
 
     // Send to all devices in background
-    Promise.all(
+    Promise.allSettled(
       devices.map(async (device) => {
         const {activeSession} = device
         if (!activeSession) return
@@ -384,7 +472,9 @@ export default class SessionManager {
         await this.nostrPublish(verifiedEvent).catch(console.error)
       })
     )
-      .then(() => this.storeUserRecord(recipientIdentityKey))
+      .then(() => {
+        this.storeUserRecord(recipientIdentityKey)
+      })
       .catch(console.error)
 
     // Return the event with computed ID (same as library would compute)
@@ -411,12 +501,10 @@ export default class SessionManager {
       id: "", // Will compute next
     }
 
-    // Add ms tag if not present (exactly like library)
     if (!rumor.tags.some(([k]) => k === "ms")) {
       rumor.tags.push(["ms", String(now)])
     }
 
-    // Compute ID exactly as library does
     rumor.id = getEventHash(rumor)
 
     this.messageHistory.set(recipientPublicKey, [
@@ -424,7 +512,6 @@ export default class SessionManager {
       rumor,
     ])
 
-    // Send in background
     this.sendEvent(recipientPublicKey, rumor).catch(console.error)
 
     return rumor
@@ -444,10 +531,10 @@ export default class SessionManager {
   }
 
   private storeUserRecord(publicKey: string) {
-    const data = {
+    const data: StoredUserRecord = {
       publicKey: publicKey,
-      devices: Array.from(this.userRecords.get(publicKey)?.devices.values() || []).map(
-        (device) => ({
+      devices: Array.from(this.userRecords.get(publicKey)?.devices.entries() || []).map(
+        ([, device]) => ({
           deviceId: device.deviceId,
           activeSession: device.activeSession
             ? serializeSessionState(device.activeSession.state)
@@ -458,15 +545,17 @@ export default class SessionManager {
         })
       ),
     }
-    return this.storage.put(`user/${publicKey}`, data)
+    return this.storage.put(this.userRecordKey(publicKey), data)
   }
 
   private loadUserRecord(publicKey: string) {
     return this.storage
-      .get<StoredUserRecord>(`user/${publicKey}`)
+      .get<StoredUserRecord>(this.userRecordKey(publicKey))
       .then((data) => {
         if (!data) return
+
         const devices = new Map<string, DeviceRecord>()
+
         for (const deviceData of data.devices) {
           const {
             deviceId,
@@ -483,60 +572,34 @@ export default class SessionManager {
               : undefined
 
             const inactiveSessions = serializedInactive.map(
-              (state) => new Session(this.nostrSubscribe, deserializeSessionState(state))
+              (entry) => new Session(this.nostrSubscribe, deserializeSessionState(entry))
             )
+
             devices.set(deviceId, {
               deviceId,
               activeSession,
               inactiveSessions,
             })
           } catch (e) {
-            console.warn(
-              `Failed to deserialize session for ${publicKey}/${deviceId}, skipping:`,
+            console.error(
+              `Failed to deserialize session for user ${publicKey}, device ${deviceId}:`,
               e
             )
-            continue
           }
         }
+
         for (const device of devices.values()) {
           const {deviceId, activeSession, inactiveSessions} = device
           if (!deviceId) continue
 
-          if (activeSession) {
-            const sessionSubscriptionId = this.sessionKey(
-              publicKey,
-              deviceId,
-              activeSession.name
-            )
-            if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-              continue
-            }
-            const unsubscribe = activeSession.onEvent((event) => {
-              for (const callback of this.internalSubscriptions) {
-                callback(event, publicKey)
-              }
-            })
-            if (unsubscribe)
-              this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+          for (const session of inactiveSessions.reverse()) {
+            this.attachSessionSubscription(publicKey, deviceId, session)
           }
-          for (const session of inactiveSessions) {
-            const sessionSubscriptionId = this.sessionKey(
-              publicKey,
-              deviceId,
-              session.name
-            )
-            if (this.sessionSubscriptions.has(sessionSubscriptionId)) {
-              continue
-            }
-            const unsubscribe = session.onEvent((event) => {
-              for (const callback of this.internalSubscriptions) {
-                callback(event, publicKey)
-              }
-            })
-            if (unsubscribe)
-              this.sessionSubscriptions.set(sessionSubscriptionId, unsubscribe)
+          if (activeSession) {
+            this.attachSessionSubscription(publicKey, deviceId, activeSession)
           }
         }
+
         this.userRecords.set(publicKey, {
           publicKey: data.publicKey,
           devices,
@@ -548,14 +611,87 @@ export default class SessionManager {
       })
   }
   private loadAllUserRecords() {
-    return this.storage.list().then((keys) => {
-      const userKeys = keys.filter((key) => key.startsWith("user/"))
+    const prefix = this.userRecordKeyPrefix()
+    return this.storage.list(prefix).then((keys) => {
       return Promise.all(
-        userKeys.map((key) => {
-          const publicKey = key.slice(5)
+        keys.map((key) => {
+          const publicKey = key.slice(prefix.length)
           return this.loadUserRecord(publicKey)
         })
       )
     })
+  }
+
+  private async runMigrations() {
+    // Run migrations sequentially
+    let version = await this.storage.get<string>(this.versionKey())
+
+    // First migration
+    if (!version) {
+      // Fetch all existing invites
+      // Assume no version prefix
+      // Deserialize and serialize to start using persistent createdAt
+      // Re-save invites with proper keys
+      const oldInvitePrefix = "invite/"
+      const inviteKeys = await this.storage.list(oldInvitePrefix)
+      await Promise.all(
+        inviteKeys.map(async (key) => {
+          try {
+            const publicKey = key.slice(oldInvitePrefix.length)
+            const inviteData = await this.storage.get<string>(key)
+            if (inviteData) {
+              const newKey = this.userInviteKey(publicKey)
+              const invite = Invite.deserialize(inviteData)
+              const serializedInvite = invite.serialize()
+              await this.storage.put(newKey, serializedInvite)
+              await this.storage.del(key)
+            }
+          } catch (e) {
+            console.error("Migration error for invite:", e)
+          }
+        })
+      )
+
+      // Fetch all existing user records
+      // Assume no version prefix
+      // Remove all old sessions as these may have key issues
+      // Re-save user records without sessions with proper keys
+      const oldUserRecordPrefix = "user/"
+      const sessionKeys = await this.storage.list(oldUserRecordPrefix)
+      await Promise.all(
+        sessionKeys.map(async (key) => {
+          try {
+            const publicKey = key.slice(oldUserRecordPrefix.length)
+            const userRecordData = await this.storage.get<StoredUserRecord>(key)
+            if (userRecordData) {
+              const newKey = this.userRecordKey(publicKey)
+              const newUserRecordData: StoredUserRecord = {
+                publicKey: userRecordData.publicKey,
+                devices: userRecordData.devices.map((device) => ({
+                  deviceId: device.deviceId,
+                  activeSession: null,
+                  inactiveSessions: [],
+                })),
+              }
+              await this.storage.put(newKey, newUserRecordData)
+              await this.storage.del(key)
+            }
+          } catch (e) {
+            console.error("Migration error for user record:", e)
+          }
+        })
+      )
+
+      // Set version to 1 so next migration can run
+      version = "1"
+      await this.storage.put(this.versionKey(), version)
+
+      return
+    }
+
+    // Future migrations
+    if (version === "1") {
+      return
+    }
   }
 }

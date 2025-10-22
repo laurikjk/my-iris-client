@@ -37,6 +37,19 @@ const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
     }
   }
 
+  const handleReinitializeSecureCommunication = () => {
+    if (!id) return
+
+    const sessionManager = getSessionManager()
+    if (!sessionManager) {
+      console.error("Session manager not available")
+      return
+    }
+
+    sessionManager.deactivateCurrentSessions(id)
+    setDropdownOpen(false)
+  }
+
   const handleSendFile = async () => {
     // WebRTC disabled until session metadata is restored
     const peerConnection = await getPeerConnection(id, {
@@ -92,6 +105,11 @@ const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
               <ul className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
                 <li>
                   <button onClick={handleDeleteChat}>Delete Chat</button>
+                </li>
+                <li>
+                  <button onClick={handleReinitializeSecureCommunication}>
+                    Re-initialize Secure Communication
+                  </button>
                 </li>
               </ul>
             </Dropdown>
