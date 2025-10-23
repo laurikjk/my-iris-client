@@ -230,7 +230,15 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
         unreadBadge = <div className="indicator-item badge badge-primary badge-xs" />
       }
     }
-  } else if (!group) {
+  } else if (group) {
+    if (actualLatest?.created_at && actualLatest.pubkey !== myPubKey) {
+      const latestTimestamp = getMillisecondTimestamp(actualLatest as MessageType)
+      const hasUnread = latestTimestamp > lastSeenPrivateTime
+      if (!lastSeenPrivateTime || hasUnread) {
+        unreadBadge = <div className="indicator-item badge badge-primary badge-xs" />
+      }
+    }
+  } else {
     if (actualLatest?.created_at && actualLatest.pubkey !== myPubKey) {
       const latestTimestamp = getMillisecondTimestamp(actualLatest as MessageType)
       const hasUnread = latestTimestamp > lastSeenPrivateTime
@@ -259,7 +267,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
       onClick={() => {
         if (isPublic) {
           updateLastSeenPublic(id)
-        } else if (!group) {
+        } else {
           updateLastSeenPrivate(id)
         }
       }}
