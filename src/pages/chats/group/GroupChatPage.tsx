@@ -19,7 +19,7 @@ const GroupChatPage = () => {
   const groups = useGroupsStore((state) => state.groups)
   const group = id ? groups[id] : undefined
   const {events} = usePrivateMessagesStore()
-  const updateLastSeen = usePrivateMessagesStore((state) => state.updateLastSeen)
+  const markOpened = usePrivateMessagesStore((state) => state.markOpened)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
   if (!id || !group) {
@@ -33,15 +33,8 @@ const GroupChatPage = () => {
 
   const markGroupOpened = useCallback(() => {
     if (!id) return
-    const currentEvents = usePrivateMessagesStore.getState().events
-    const latestMessage = currentEvents.get(id)?.last()?.[1]
-    const latestTimestamp = latestMessage ? getMillisecondTimestamp(latestMessage) : undefined
-    const targetTimestamp = Math.max(Date.now(), latestTimestamp ?? 0)
-    const current = usePrivateMessagesStore.getState().lastSeen.get(id) || 0
-    if (targetTimestamp > current) {
-      updateLastSeen(id, targetTimestamp)
-    }
-  }, [id, updateLastSeen])
+    markOpened(id)
+  }, [id, markOpened])
 
   useEffect(() => {
     if (!id) return
@@ -69,11 +62,8 @@ const GroupChatPage = () => {
 
   useEffect(() => {
     if (!id || lastMessageTimestamp === undefined) return
-    const existing = usePrivateMessagesStore.getState().lastSeen.get(id) || 0
-    if (lastMessageTimestamp > existing) {
-      updateLastSeen(id, lastMessageTimestamp)
-    }
-  }, [id, lastMessageTimestamp, updateLastSeen])
+    markOpened(id)
+  }, [id, lastMessageTimestamp, markOpened])
 
   return (
     <>
