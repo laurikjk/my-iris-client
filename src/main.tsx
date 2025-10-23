@@ -17,6 +17,7 @@ import {getSessionManager} from "./shared/services/PrivateChats"
 import {getTag} from "./utils/tagUtils"
 import {useGroupsStore} from "./stores/groups"
 import {KIND_CHANNEL_CREATE} from "./utils/constants"
+import {isTauri} from "./utils/utils"
 
 let unsubscribeSessionEvents: (() => void) | null = null
 
@@ -94,6 +95,29 @@ const attachSessionEventListener = () => {
   }
 }
 
+// Check if logged-in user has deleted account (Tauri only)
+const checkDeletedAccount = async (publicKey: string) => {
+  if (!isTauri()) {
+    return
+  }
+
+  try {
+    const user = ndk().getUser({pubkey: publicKey})
+    await user.fetchProfile()
+    if (user.profile?.deleted) {
+      console.log("Detected deleted account, logging out")
+      // Clear user state
+      useUserStore.getState().reset()
+      // Clear storage
+      localStorage.clear()
+      // Reload
+      location.reload()
+    }
+  } catch (e) {
+    console.error("Error checking deleted account:", e)
+  }
+}
+
 // Move initialization to a function to avoid side effects
 const initializeApp = () => {
   ndk()
@@ -105,6 +129,10 @@ const initializeApp = () => {
   const state = useUserStore.getState()
   if (state.publicKey) {
     console.log("Initializing chat modules with existing user data")
+
+    // Check for deleted account first
+    checkDeletedAccount(state.publicKey)
+
     subscribeToNotifications()
     subscribeToDMNotifications()
     migratePublicChats()
@@ -152,6 +180,10 @@ const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
   // Only proceed if public key actually changed
   if (state.publicKey && state.publicKey !== prevState.publicKey) {
     console.log("Public key changed, initializing chat modules")
+
+    // Check for deleted account when user logs in
+    checkDeletedAccount(state.publicKey)
+
     subscribeToNotifications()
     subscribeToDMNotifications()
     migratePublicChats()
