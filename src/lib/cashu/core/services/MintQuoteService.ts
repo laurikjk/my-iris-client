@@ -27,11 +27,15 @@ export class MintQuoteService {
     this.logger = logger
   }
 
-  async createMintQuote(mintUrl: string, amount: number): Promise<MintQuoteResponse> {
-    this.logger?.info("Creating mint quote", {mintUrl, amount})
+  async createMintQuote(
+    mintUrl: string,
+    amount: number,
+    description?: string
+  ): Promise<MintQuoteResponse> {
+    this.logger?.info("Creating mint quote", {mintUrl, amount, description})
     try {
       const {wallet} = await this.walletService.getWalletWithActiveKeysetId(mintUrl)
-      const quote = await wallet.createMintQuote(amount)
+      const quote = await wallet.createMintQuote(amount, description)
       await this.mintQuoteRepo.addMintQuote({...quote, mintUrl})
       await this.eventBus.emit("mint-quote:created", {
         mintUrl,

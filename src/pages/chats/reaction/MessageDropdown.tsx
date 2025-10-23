@@ -31,8 +31,8 @@ export const MessageDropdown = ({
     onInfoClick()
   }
 
-  const handleDeleteLocally = () => {
-    const deleted = deleteMessageLocally(messageId, sessionId)
+  const handleDeleteLocally = async () => {
+    const deleted = await deleteMessageLocally(messageId, sessionId)
     if (deleted) {
       // Close the dropdown if deletion was confirmed
       setShowDropdown(false)

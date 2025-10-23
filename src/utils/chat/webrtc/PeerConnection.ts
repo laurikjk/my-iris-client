@@ -33,7 +33,9 @@ export async function getPeerConnection(
     create &&
     (pubKey === socialGraph().getRoot() ||
       !ask ||
-      confirm(`WebRTC connect with ${getCachedName(pubKey)}?`))
+      (await (
+        await import("@/utils/utils")
+      ).confirm(`WebRTC connect with ${getCachedName(pubKey)}?`)))
   ) {
     // TEMP: Skip session data check until SessionManager integration lands
     console.log("TEMP: WebRTC connection creation disabled")
@@ -282,7 +284,7 @@ export default class PeerConnection extends EventEmitter {
     const pubkey = this.peerId.split(":")[0]
     const name = getCachedName(pubkey)
     const confirmString = `Save ${this.incomingFileMetadata.name} from ${name}?`
-    if (!confirm(confirmString)) {
+    if (!(await (await import("@/utils/utils")).confirm(confirmString))) {
       this.log("User did not confirm file save")
       this.incomingFileMetadata = null
       this.receivedFileData = []

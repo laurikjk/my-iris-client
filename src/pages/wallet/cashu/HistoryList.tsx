@@ -161,7 +161,7 @@ export default function HistoryList({
             </div>
             <div className="text-right flex-shrink-0 ml-2">
               <div
-                className={`font-bold whitespace-nowrap ${amount >= 0 ? "text-success" : ""}`}
+                className={`font-bold whitespace-nowrap ${amount >= 0 && !status ? "text-success" : ""}`}
               >
                 {amount >= 0 ? "+" : ""}
                 {amount} bit

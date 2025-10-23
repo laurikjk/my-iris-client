@@ -9,8 +9,12 @@ export class QuotesApi {
     this.meltQuoteService = meltQuoteService
   }
 
-  async createMintQuote(mintUrl: string, amount: number): Promise<MintQuoteResponse> {
-    return this.mintQuoteService.createMintQuote(mintUrl, amount)
+  async createMintQuote(
+    mintUrl: string,
+    amount: number,
+    description?: string
+  ): Promise<MintQuoteResponse> {
+    return this.mintQuoteService.createMintQuote(mintUrl, amount, description)
   }
 
   async redeemMintQuote(mintUrl: string, quoteId: string): Promise<void> {

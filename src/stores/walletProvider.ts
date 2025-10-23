@@ -291,10 +291,12 @@ export const useWalletProviderStore = create<WalletProviderState>()(
           }
         }
 
-        // Start delayed Cashu NWC checking to give Cashu wallet time to initialize
-        console.log("🔍 About to call startCashuNWCChecking...")
-        get().startCashuNWCChecking()
-        console.log("🔍 Returned from startCashuNWCChecking, continuing...")
+        // Only check for Cashu NWC if we don't have an active provider yet
+        if (state.activeProviderType === undefined) {
+          console.log("🔍 About to call startCashuNWCChecking...")
+          get().startCashuNWCChecking()
+          console.log("🔍 Returned from startCashuNWCChecking, continuing...")
+        }
 
         // Only run wallet discovery if activeProviderType is undefined
         if (state.activeProviderType === undefined) {
@@ -637,7 +639,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
 
           // Use first mint
           const mintUrl = mints[0].mintUrl
-          const quote = await manager.quotes.createMintQuote(mintUrl, amount)
+          const quote = await manager.quotes.createMintQuote(mintUrl, amount, description)
 
           return {invoice: quote.request}
         }

@@ -68,14 +68,15 @@ interface NotificationAction {
   icon?: string
 }
 
-export const showNotification = (
+export const showNotification = async (
   title: string,
   options?: NotificationOptions,
   nag = false
 ) => {
   if (!("serviceWorker" in navigator)) {
     if (nag) {
-      alert(
+      const {alert} = await import("@/utils/utils")
+      await alert(
         "Your browser doesn't support service workers, which are required for notifications."
       )
     }
@@ -87,7 +88,8 @@ export const showNotification = (
       await serviceWorker.showNotification(title, options)
     })
   } else if (nag) {
-    alert("Notifications are not allowed. Please enable them first.")
+    const {alert} = await import("@/utils/utils")
+    await alert("Notifications are not allowed. Please enable them first.")
   }
 }
 

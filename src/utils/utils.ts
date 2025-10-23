@@ -18,6 +18,33 @@ export const openExternalLink = async (url: string) => {
   }
 }
 
+export const confirm = async (message: string, title?: string): Promise<boolean> => {
+  if (isTauri()) {
+    try {
+      const {confirm: tauriConfirm} = await import("@tauri-apps/plugin-dialog")
+      return await tauriConfirm(message, {title, kind: "warning"})
+    } catch (error) {
+      console.error("Failed to show Tauri confirm dialog:", error)
+      return window.confirm(title ? `${title}\n\n${message}` : message)
+    }
+  }
+  return window.confirm(title ? `${title}\n\n${message}` : message)
+}
+
+export const alert = async (message: string, title?: string): Promise<void> => {
+  if (isTauri()) {
+    try {
+      const {message: tauriMessage} = await import("@tauri-apps/plugin-dialog")
+      await tauriMessage(message, {title, kind: "info"})
+    } catch (error) {
+      console.error("Failed to show Tauri alert dialog:", error)
+      window.alert(title ? `${title}\n\n${message}` : message)
+    }
+  } else {
+    window.alert(title ? `${title}\n\n${message}` : message)
+  }
+}
+
 export const formatAmount = (n: number, maxSignificantDigits = 4) => {
   if (n < 1000) return n.toString()
 

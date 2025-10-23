@@ -16,6 +16,7 @@ import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiArrowRightSLine, RiArrowDownSLine} from "@remixicon/react"
 import debounce from "lodash/debounce"
+import {confirm, alert} from "@/utils/utils"
 
 interface StatusIndicatorProps {
   status: boolean
@@ -115,17 +116,17 @@ const NotificationSettings = () => {
     getCurrentEndpoint()
   }, [serviceWorkerReady])
 
-  const requestNotificationPermission = () => {
-    Notification.requestPermission().then((permission) => {
+  const requestNotificationPermission = async () => {
+    Notification.requestPermission().then(async (permission) => {
       const allowed = permission === "granted"
       setNotificationsAllowed(allowed)
       if (!allowed) {
-        alert("Please allow notifications in your browser settings and try again.")
+        await alert("Please allow notifications in your browser settings and try again.")
       }
     })
   }
 
-  const fireTestNotification = () => {
+  const fireTestNotification = async () => {
     if (notificationsAllowed) {
       const title = "Test notification"
       const options = {
@@ -137,7 +138,7 @@ const NotificationSettings = () => {
       }
       showNotification(title, options, true)
     } else {
-      alert("Notifications are not allowed. Please enable them first.")
+      await alert("Notifications are not allowed. Please enable them first.")
     }
   }
 
@@ -197,7 +198,9 @@ const NotificationSettings = () => {
   const handleDeleteSelected = async () => {
     if (selectedRows.size === 0) return
 
-    const confirmed = confirm(`Delete ${selectedRows.size} selected subscription(s)?`)
+    const confirmed = await confirm(
+      `Delete ${selectedRows.size} selected subscription(s)?`
+    )
     if (!confirmed) return
 
     for (const id of selectedRows) {

@@ -401,6 +401,7 @@ export default function CashuWallet() {
           mgr.on("melt-quote:paid", () => updateData("melt-quote:paid")),
           mgr.on("send:created", () => updateData("send:created")),
           mgr.on("receive:created", () => updateData("receive:created")),
+          mgr.on("mint-quote:created", () => updateData("mint-quote:created")),
           mgr.on("mint-quote:redeemed", () => updateData("mint-quote:redeemed")),
         ]
 

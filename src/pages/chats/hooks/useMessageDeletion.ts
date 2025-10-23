@@ -1,9 +1,11 @@
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
+import {confirm} from "@/utils/utils"
 
 export const useMessageDeletion = () => {
-  const deleteMessageLocally = (messageId: string, sessionId: string) => {
-    const confirmed = confirm(
-      "Delete this message locally? This will only remove it from your device and cannot be undone."
+  const deleteMessageLocally = async (messageId: string, sessionId: string) => {
+    const confirmed = await confirm(
+      "This will only remove it from your device and cannot be undone.",
+      "Delete this message locally?"
     )
 
     if (confirmed) {

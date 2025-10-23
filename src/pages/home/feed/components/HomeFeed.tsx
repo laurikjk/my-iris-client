@@ -18,6 +18,7 @@ import {
 import FeedTabs from "@/shared/components/feed/FeedTabs"
 import StoredFeedEditor from "@/shared/components/feed/StoredFeedEditor"
 import InlineNoteCreator from "@/shared/components/create/InlineNoteCreator"
+import {confirm} from "@/utils/utils"
 
 const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
   myPubKey ? (
@@ -81,7 +82,7 @@ function HomeFeed() {
     setEditMode(!editMode)
   }
 
-  const handleDeleteFeed = (feedId: string) => {
+  const handleDeleteFeed = async (feedId: string) => {
     if (feeds.length <= 1) {
       return // Don't allow deleting the last feed
     }
@@ -92,7 +93,7 @@ function HomeFeed() {
     }
 
     if (
-      confirm(
+      await confirm(
         `Delete feed "${getDisplayName(feedId, allFeeds.find((f) => f.id === feedId)?.name || "")}"?`
       )
     ) {
@@ -108,8 +109,8 @@ function HomeFeed() {
     }
   }
 
-  const handleResetFeeds = () => {
-    if (confirm("Reset all feeds to defaults?")) {
+  const handleResetFeeds = async () => {
+    if (await confirm("Reset all feeds to defaults?")) {
       setEditMode(false)
       resetAllFeedsToDefaults()
     }

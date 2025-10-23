@@ -6,6 +6,7 @@ import Dropdown from "@/shared/components/ui/Dropdown"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {Link, useNavigate} from "@/navigation"
 import {useEffect, useState} from "react"
+import {confirm} from "@/utils/utils"
 
 interface PublicChatHeaderProps {
   channelId: string
@@ -29,8 +30,8 @@ const PublicChatHeader = ({channelId}: PublicChatHeaderProps) => {
     return () => clearTimeout(timer)
   }, [chat])
 
-  const handleDeleteChat = () => {
-    if (channelId && confirm("Delete this chat?")) {
+  const handleDeleteChat = async () => {
+    if (channelId && (await confirm("Delete this chat?"))) {
       removePublicChat(channelId)
       navigate("/chats")
     }

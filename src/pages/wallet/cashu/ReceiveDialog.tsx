@@ -42,6 +42,7 @@ export default function ReceiveDialog({
   const [error, setError] = useState<string>("")
   const [receiveNote, setReceiveNote] = useState<string>("")
   const [lightningAmount, setLightningAmount] = useState<number>(100)
+  const [lightningDescription, setLightningDescription] = useState<string>("")
   const [invoice, setInvoice] = useState<string>("")
   const [lightningAddressQR, setLightningAddressQR] = useState<string>("")
   const [receiving, setReceiving] = useState(false)
@@ -242,7 +243,11 @@ export default function ReceiveDialog({
     setReceiving(true)
     setError("")
     try {
-      const quote = await manager.quotes.createMintQuote(mintUrl, lightningAmount)
+      const quote = await manager.quotes.createMintQuote(
+        mintUrl,
+        lightningAmount,
+        lightningDescription.trim() || undefined
+      )
       setInvoice(quote.request)
     } catch (error) {
       console.error("Failed to create mint quote:", error)
@@ -643,6 +648,19 @@ export default function ReceiveDialog({
                     placeholder="100"
                     value={lightningAmount}
                     onChange={(e) => setLightningAmount(Number(e.target.value))}
+                  />
+                </div>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Description (optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input input-bordered"
+                    placeholder="What is this payment for?"
+                    value={lightningDescription}
+                    onChange={(e) => setLightningDescription(e.target.value)}
+                    maxLength={200}
                   />
                 </div>
                 <button

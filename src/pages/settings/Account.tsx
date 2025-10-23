@@ -12,6 +12,7 @@ import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {SettingsButton} from "@/shared/components/settings/SettingsButton"
+import {confirm} from "@/utils/utils"
 
 // Helper function to add timeout to any promise
 const withTimeout = (promise: Promise<unknown>, ms: number): Promise<unknown> => {
@@ -132,10 +133,12 @@ function Account() {
     e?.preventDefault()
     e?.stopPropagation()
     console.log("[Logout] Starting logout process")
-    if (
+
+    const confirmed =
       !store.privateKey ||
-      confirm("Log out? Make sure you have a backup of your secret key.")
-    ) {
+      (await confirm("Make sure you have a backup of your secret key.", "Log out?"))
+
+    if (confirmed) {
       console.log("[Logout] User confirmed")
       setIsLoggingOut(true)
 

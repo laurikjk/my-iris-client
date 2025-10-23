@@ -2,6 +2,7 @@ import {useState, useEffect} from "react"
 import Modal from "@/shared/components/ui/Modal"
 import type {Manager} from "@/lib/cashu/core/index"
 import {RiDeleteBinLine, RiFileCopyLine} from "@remixicon/react"
+import {confirm} from "@/utils/utils"
 
 interface MintInfo {
   name?: string
@@ -88,7 +89,7 @@ export default function MintDetailsModal({
 
   const handleDelete = async () => {
     if (!manager) return
-    if (!confirm("Are you sure you want to delete this mint?")) return
+    if (!(await confirm("Are you sure you want to delete this mint?"))) return
 
     setError("")
     try {

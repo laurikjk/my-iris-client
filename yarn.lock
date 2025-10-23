@@ -1807,6 +1807,13 @@
     "@tauri-apps/cli-win32-ia32-msvc" "2.8.1"
     "@tauri-apps/cli-win32-x64-msvc" "2.8.1"
 
+"@tauri-apps/plugin-dialog@^2.4.0":
+  version "2.4.0"
+  resolved "https://registry.yarnpkg.com/@tauri-apps/plugin-dialog/-/plugin-dialog-2.4.0.tgz#e37388bd3197f920a9975e323a105a75cb55d648"
+  integrity sha512-OvXkrEBfWwtd8tzVCEXIvRfNEX87qs2jv6SqmVPiHcJjBhSF/GUvjqUNIDmKByb5N8nvDqVUM7+g1sXwdC/S9w==
+  dependencies:
+    "@tauri-apps/api" "^2.8.0"
+
 "@tauri-apps/plugin-notification@^2.3.1":
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/@tauri-apps/plugin-notification/-/plugin-notification-2.3.1.tgz#c01bead36ff2ce24344077aab860e027ac6f6190"

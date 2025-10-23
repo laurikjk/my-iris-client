@@ -7,11 +7,13 @@ import {
   clearGraph,
   resetGraph,
 } from "@/utils/socialGraph"
+import {confirm} from "@/utils/utils"
 export function FileOperations() {
   const handleClearGraph = async () => {
     if (
-      confirm(
-        "Are you sure you want to clear the entire social graph? This cannot be undone."
+      await confirm(
+        "This cannot be undone.",
+        "Are you sure you want to clear the entire social graph?"
       )
     ) {
       await clearGraph()
@@ -20,8 +22,9 @@ export function FileOperations() {
 
   const handleResetGraph = async () => {
     if (
-      confirm(
-        "Are you sure you want to reset the social graph to default? This will replace your current graph."
+      await confirm(
+        "This will replace your current graph.",
+        "Are you sure you want to reset the social graph to default?"
       )
     ) {
       await resetGraph()

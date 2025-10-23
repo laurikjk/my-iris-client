@@ -7,6 +7,7 @@ import {getSessionManager} from "@/shared/services/PrivateChats"
 import {ndk} from "@/utils/ndk"
 import {Invite} from "nostr-double-ratchet/src"
 import {NDKFilter, NDKSubscriptionCacheUsage} from "@nostr-dev-kit/ndk"
+import {confirm, alert} from "@/utils/utils"
 
 interface DeviceInfo {
   id: string
@@ -102,7 +103,7 @@ const ChatSettings = () => {
   }, [publicKey])
 
   const handleDeleteDevice = async (deviceId: string) => {
-    if (!window.confirm(`Delete invite for device ${deviceId.slice(0, 8)}?`)) {
+    if (!(await confirm(`Delete invite for device ${deviceId.slice(0, 8)}?`))) {
       return
     }
 
@@ -191,7 +192,7 @@ const ChatSettings = () => {
       setLoading(false)
     } catch (error) {
       console.error("Failed to delete invite:", error)
-      window.alert(`Failed to delete invite: ${error}`)
+      await alert(`Failed to delete invite: ${error}`)
       setLoading(false)
     }
   }

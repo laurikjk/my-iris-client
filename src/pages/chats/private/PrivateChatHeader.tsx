@@ -10,6 +10,7 @@ import {useNavigate} from "@/navigation"
 import {useState} from "react"
 import {getSessionManager} from "@/shared/services/PrivateChats"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
+import {confirm} from "@/utils/utils"
 interface PrivateChatHeaderProps {
   id: string
   messages: SortedMap<string, MessageType>
@@ -21,7 +22,7 @@ const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
   const handleDeleteChat = async () => {
     if (!id) return
 
-    if (!confirm("Delete this chat?")) return
+    if (!(await confirm("Delete this chat?"))) return
 
     try {
       const sessionManager = getSessionManager()

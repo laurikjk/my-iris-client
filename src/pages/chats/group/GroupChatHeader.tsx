@@ -5,6 +5,7 @@ import {useNavigate} from "@/navigation"
 import {useState} from "react"
 import {RiMoreLine} from "@remixicon/react"
 import Dropdown from "@/shared/components/ui/Dropdown"
+import {confirm} from "@/utils/utils"
 
 const GroupChatHeader = ({groupId}: {groupId: string}) => {
   const {groups, removeGroup} = useGroupsStore()
@@ -14,8 +15,8 @@ const GroupChatHeader = ({groupId}: {groupId: string}) => {
 
   if (!group) return null
 
-  const handleDeleteGroup = () => {
-    if (groupId && confirm("Delete this group?")) {
+  const handleDeleteGroup = async () => {
+    if (groupId && (await confirm("Delete this group?"))) {
       removeGroup(groupId)
       navigate("/chats")
     }
