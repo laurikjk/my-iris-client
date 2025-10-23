@@ -9,10 +9,11 @@ import IrisSettings from "./IrisAccount/IrisSettings"
 import {Network} from "@/pages/settings/Network.tsx"
 import {RiArrowRightSLine} from "@remixicon/react"
 import Icon from "@/shared/components/Icons/Icon"
-import Account from "@/pages/settings/Account"
+import Keys from "@/pages/settings/Keys"
+import Logout from "@/pages/settings/Logout"
+import DeleteAccount from "@/pages/settings/DeleteAccount"
 import WalletSettings from "./WalletSettings"
 import SystemSettings from "./SystemSettings"
-import Backup from "@/pages/settings/Backup"
 import ChatSettings from "./ChatSettings"
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
@@ -20,6 +21,7 @@ import {Helmet} from "react-helmet"
 import classNames from "classnames"
 import {ReactElement} from "react"
 import Content from "./Content"
+import {isTauri} from "@/utils/utils"
 
 interface SettingsItem {
   icon: string | ReactElement
@@ -112,30 +114,52 @@ function Settings() {
           path: "/settings/mediaservers",
         },
         {
-          icon: "key",
-          iconBg: "bg-gray-500",
-          message: "Backup",
-          path: "/settings/backup",
-        },
-        {
           icon: "link",
           iconBg: "bg-teal-500",
           message: "Social Graph",
           path: "/settings/social-graph",
         },
-      ],
-    },
-    {
-      title: "Log out",
-      items: [
         {
           icon: "key",
-          iconBg: "bg-red-500",
-          message: "Log out",
-          path: "/settings/account",
+          iconBg: "bg-gray-500",
+          message: "Keys",
+          path: "/settings/keys",
         },
       ],
     },
+    ...(isTauri()
+      ? [
+          {
+            title: "Account",
+            items: [
+              {
+                icon: "trash" as const,
+                iconBg: "bg-red-600",
+                message: "Delete account",
+                path: "/settings/delete-account",
+              },
+              {
+                icon: "key" as const,
+                iconBg: "bg-red-500",
+                message: "Log out",
+                path: "/settings/logout",
+              },
+            ],
+          },
+        ]
+      : [
+          {
+            title: "Log out",
+            items: [
+              {
+                icon: "key" as const,
+                iconBg: "bg-red-500",
+                message: "Log out",
+                path: "/settings/logout",
+              },
+            ],
+          },
+        ]),
   ]
 
   const getSettingsTitle = () => {
@@ -144,13 +168,14 @@ function Settings() {
 
     const titleMap: Record<string, string> = {
       "": "Settings",
-      account: "Log out",
+      keys: "Keys",
+      logout: "Log out",
+      "delete-account": "Delete account",
       network: "Network",
       profile: "Profile",
       iris: "iris.to username",
       content: "Content",
       wallet: "Wallet",
-      backup: "Backup",
       appearance: "Appearance",
       mediaservers: "Media Servers",
       "social-graph": "Social Graph",
@@ -233,8 +258,12 @@ function Settings() {
                   const settingsPath = pathSegments[1] || "" // After filtering, settings is at index 0, subpage at index 1
 
                   switch (settingsPath) {
-                    case "account":
-                      return <Account />
+                    case "keys":
+                      return <Keys />
+                    case "logout":
+                      return <Logout />
+                    case "delete-account":
+                      return <DeleteAccount />
                     case "network":
                       return <Network />
                     case "profile":
@@ -245,8 +274,6 @@ function Settings() {
                       return <Content />
                     case "wallet":
                       return <WalletSettings />
-                    case "backup":
-                      return <Backup />
                     case "appearance":
                       return <Appearance />
                     case "mediaservers":

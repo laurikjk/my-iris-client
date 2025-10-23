@@ -6,7 +6,7 @@ import {useUserStore} from "@/stores/user"
 import {nip19} from "nostr-tools"
 import {useState} from "react"
 
-function Backup() {
+function Keys() {
   const privateKey = useUserStore((state) => state.privateKey)
   const [isCopied, setIsCopied] = useState(false)
   const [isHexCopied, setIsHexCopied] = useState(false)
@@ -76,4 +76,4 @@ function Backup() {
   )
 }
 
-export default Backup
+export default Keys

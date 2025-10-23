@@ -12,8 +12,7 @@ import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {SettingsButton} from "@/shared/components/settings/SettingsButton"
-import {confirm, isTauri} from "@/utils/utils"
-import {KIND_CONTACTS} from "@/utils/constants"
+import {confirm} from "@/utils/utils"
 
 // Helper function to add timeout to any promise
 const withTimeout = (promise: Promise<unknown>, ms: number): Promise<unknown> => {
@@ -25,10 +24,9 @@ const withTimeout = (promise: Promise<unknown>, ms: number): Promise<unknown> =>
   ])
 }
 
-function Account() {
+function Logout() {
   const store = useUserStore()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [cashuBalance, setCashuBalance] = useState<number | null>(null)
   const navigate = useNavigate()
   const {activeProviderType, nwcConnections, activeNWCId, getBalance} =
@@ -131,57 +129,6 @@ function Account() {
     }
   }
 
-  async function handleDeleteAccount(e?: MouseEvent) {
-    e?.preventDefault()
-    e?.stopPropagation()
-    console.log("[DeleteAccount] Starting delete account process")
-
-    const confirmed = await confirm(
-      "This will mark your account as deleted on Nostr and log you out. This action cannot be undone.",
-      "Delete account?"
-    )
-
-    if (confirmed) {
-      console.log("[DeleteAccount] User confirmed")
-      setIsDeletingAccount(true)
-
-      try {
-        // Publish deleted profile
-        const user = ndk().getUser({pubkey: store.publicKey})
-        if (user) {
-          user.profile = {name: "Account deleted", deleted: "true" as any}
-          await user.publish()
-          console.log("[DeleteAccount] Published deleted profile")
-        }
-
-        // Publish empty follow list
-        const emptyFollowList = new NDKEvent(ndk(), {
-          kind: KIND_CONTACTS,
-          pubkey: store.publicKey,
-          content: "",
-          created_at: Math.floor(Date.now() / 1000),
-          tags: [],
-        })
-        await emptyFollowList.publish()
-        console.log("[DeleteAccount] Published empty follow list")
-
-        // Wait a moment for events to propagate
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // Now perform normal logout
-        await performLogout()
-      } catch (e) {
-        console.error("Error during account deletion:", e)
-        // Still perform logout even if profile update fails
-        await performLogout()
-      } finally {
-        setIsDeletingAccount(false)
-      }
-    } else {
-      console.log("[DeleteAccount] User cancelled")
-    }
-  }
-
   async function performLogout() {
     try {
       // Try to unsubscribe from notifications first, while we still have the signer
@@ -250,6 +197,29 @@ function Account() {
     <div className="bg-base-200 min-h-full">
       <div className="p-4">
         <div className="space-y-6">
+          {store.privateKey && (
+            <SettingsGroup title="Backup">
+              <SettingsGroupItem onClick={() => navigate("/settings/keys")}>
+                <div className="flex items-center justify-between">
+                  <span>Backup secret key</span>
+                  <svg
+                    className="w-5 h-5 text-base-content/40"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </div>
+              </SettingsGroupItem>
+            </SettingsGroup>
+          )}
+
           <SettingsGroup title="Log out">
             <SettingsGroupItem>
               <div className="flex flex-col gap-3">
@@ -269,27 +239,6 @@ function Account() {
               </div>
             </SettingsGroupItem>
 
-            {store.privateKey && (
-              <SettingsGroupItem onClick={() => navigate("/settings/backup")}>
-                <div className="flex items-center justify-between">
-                  <span>Backup secret key</span>
-                  <svg
-                    className="w-5 h-5 text-base-content/40"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </div>
-              </SettingsGroupItem>
-            )}
-
             <SettingsButton
               label={isLoggingOut ? "Logging out..." : "Log out"}
               onClick={handleLogout}
@@ -298,33 +247,10 @@ function Account() {
               disabled={isLoggingOut}
             />
           </SettingsGroup>
-
-          {isTauri() && (
-            <SettingsGroup title="Delete account">
-              <SettingsGroupItem>
-                <div className="flex flex-col gap-3">
-                  <div className="text-sm text-base-content/70">
-                    This will publish a deleted profile marker on Nostr and log you out.
-                  </div>
-                  <div className="text-sm text-error font-medium">
-                    This action cannot be undone.
-                  </div>
-                </div>
-              </SettingsGroupItem>
-
-              <SettingsButton
-                label={isDeletingAccount ? "Deleting..." : "Delete account"}
-                onClick={handleDeleteAccount}
-                variant="destructive"
-                isLast
-                disabled={isDeletingAccount || isLoggingOut}
-              />
-            </SettingsGroup>
-          )}
         </div>
       </div>
     </div>
   )
 }
 
-export default Account
+export default Logout
