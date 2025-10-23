@@ -23,6 +23,9 @@ import Icon from "@/shared/components/Icons/Icon"
 import {usePublicKey} from "@/stores/user"
 import {getNPubCashBalance, claimNPubCashTokens} from "@/lib/npubcash"
 import {ndk} from "@/utils/ndk"
+import TermsOfService from "@/shared/components/TermsOfService"
+import {useSettingsStore} from "@/stores/settings"
+import {isTauri} from "@/utils/utils"
 
 export type EnrichedHistoryEntry = HistoryEntry & {
   paymentMetadata?: PaymentMetadata
@@ -47,6 +50,7 @@ export default function CashuWallet() {
   const navigate = useNavigate()
   const location = useLocation()
   const myPubKey = usePublicKey()
+  const {legal, updateLegal} = useSettingsStore()
 
   const [manager, setManager] = useState<Manager | null>(null)
   const [balance, setBalance] = useState<{[mintUrl: string]: number} | null>(null)
@@ -64,6 +68,7 @@ export default function CashuWallet() {
   const [refreshing, setRefreshing] = useState(false)
   const [qrError, setQrError] = useState<string>("")
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
+  const [showToS, setShowToS] = useState(false)
 
   const enrichHistoryWithMetadata = async (
     entries: HistoryEntry[]
@@ -343,6 +348,18 @@ export default function CashuWallet() {
     }
   }, [])
 
+  // Check if we need to show ToS for non-Tauri wallet access
+  useEffect(() => {
+    if (!isTauri() && !legal.tosAccepted) {
+      setShowToS(true)
+    }
+  }, [legal.tosAccepted])
+
+  const handleToSAccept = () => {
+    updateLegal({tosAccepted: true, tosAcceptedVersion: 1})
+    setShowToS(false)
+  }
+
   // Redirect to settings if default Cashu wallet is not selected
   useEffect(() => {
     if (activeProviderType !== undefined && activeProviderType !== "cashu") {
@@ -468,6 +485,7 @@ export default function CashuWallet() {
 
   return (
     <>
+      {showToS && <TermsOfService onAccept={handleToSAccept} />}
       <Header>
         <div className="flex items-center justify-between w-full min-w-0">
           <div className="flex items-center gap-2">

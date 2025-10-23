@@ -1,5 +1,4 @@
 import {useState} from "react"
-import {isTauri} from "@/utils/utils"
 import TermsContent from "@/shared/components/TermsContent"
 
 interface TermsOfServiceProps {
@@ -8,10 +7,6 @@ interface TermsOfServiceProps {
 
 export default function TermsOfService({onAccept}: TermsOfServiceProps) {
   const [accepted, setAccepted] = useState(false)
-
-  if (!isTauri()) {
-    return null
-  }
 
   const handleAccept = () => {
     if (accepted) {
