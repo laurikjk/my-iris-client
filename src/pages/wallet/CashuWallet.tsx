@@ -21,7 +21,11 @@ import {Link, useNavigate, useLocation} from "@/navigation"
 import Header from "@/shared/components/header/Header"
 import Icon from "@/shared/components/Icons/Icon"
 import {usePublicKey} from "@/stores/user"
-import {getNPubCashBalance, claimNPubCashTokens} from "@/lib/npubcash"
+import {
+  getNPubCashBalance,
+  claimNPubCashTokens,
+  extractMintFromToken,
+} from "@/lib/npubcash"
 import {ndk} from "@/utils/ndk"
 import TermsOfService from "@/shared/components/TermsOfService"
 import {useSettingsStore} from "@/stores/settings"
@@ -253,6 +257,17 @@ export default function CashuWallet() {
           if (balance > 0) {
             const token = await claimNPubCashTokens(signer)
             if (token && manager) {
+              // Extract mint URL from token and ensure it's added
+              const mintUrl = await extractMintFromToken(token)
+              if (mintUrl) {
+                try {
+                  await manager.mint.addMint(mintUrl)
+                  console.log(`✅ Auto-added mint from npub.cash token: ${mintUrl}`)
+                } catch (error) {
+                  console.log(`Mint already exists or failed to add: ${mintUrl}`)
+                }
+              }
+
               await manager.wallet.receive(token)
               await refreshData(true)
             }
@@ -455,6 +470,17 @@ export default function CashuWallet() {
         if (balance > 0) {
           const token = await claimNPubCashTokens(signer)
           if (token) {
+            // Extract mint URL from token and ensure it's added
+            const mintUrl = await extractMintFromToken(token)
+            if (mintUrl) {
+              try {
+                await manager.mint.addMint(mintUrl)
+                console.log(`✅ Auto-added mint from npub.cash token: ${mintUrl}`)
+              } catch (error) {
+                console.log(`Mint already exists or failed to add: ${mintUrl}`)
+              }
+            }
+
             await manager.wallet.receive(token)
             await refreshData()
           }

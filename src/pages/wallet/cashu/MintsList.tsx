@@ -1,6 +1,7 @@
-import {useState} from "react"
+import {useState, useEffect} from "react"
 import type {Manager} from "@/lib/cashu/core/index"
 import MintDetailsModal from "./MintDetailsModal"
+import {openExternalLink} from "@/utils/utils"
 
 interface MintsListProps {
   balance: {[mintUrl: string]: number} | null
@@ -12,6 +13,20 @@ export default function MintsList({balance, manager, onBalanceUpdate}: MintsList
   const [mintUrl, setMintUrl] = useState("")
   const [selectedMintUrl, setSelectedMintUrl] = useState<string | null>(null)
   const [error, setError] = useState<string>("")
+  const [allMints, setAllMints] = useState<string[]>([])
+
+  useEffect(() => {
+    const loadMints = async () => {
+      if (!manager) return
+      try {
+        const mints = await manager.mint.getAllMints()
+        setAllMints(mints.map((m) => m.mintUrl))
+      } catch (error) {
+        console.error("Failed to load mints:", error)
+      }
+    }
+    loadMints()
+  }, [manager, balance])
 
   const addMint = async () => {
     if (!manager || !mintUrl) return
@@ -19,6 +34,11 @@ export default function MintsList({balance, manager, onBalanceUpdate}: MintsList
     try {
       await manager.mint.addMint(mintUrl)
       setMintUrl("")
+
+      // Reload mints list
+      const mints = await manager.mint.getAllMints()
+      setAllMints(mints.map((m) => m.mintUrl))
+
       onBalanceUpdate()
     } catch (error) {
       console.error("Failed to add mint:", error)
@@ -31,8 +51,22 @@ export default function MintsList({balance, manager, onBalanceUpdate}: MintsList
 
   return (
     <div className="space-y-4">
-      {balance &&
-        Object.entries(balance).map(([mint, bal]) => (
+      <div className="alert alert-info">
+        <div className="text-sm">
+          Iris Cashu wallet is not affiliated with any mint and does not custody user
+          funds. You can find a list of mints on{" "}
+          <button
+            className="link link-primary"
+            onClick={() => openExternalLink("https://bitcoinmints.com")}
+          >
+            bitcoinmints.com
+          </button>
+        </div>
+      </div>
+
+      {allMints.map((mint) => {
+        const bal = balance?.[mint] || 0
+        return (
           <div
             key={mint}
             className="p-4 bg-base-200 rounded-lg cursor-pointer hover:bg-base-300 transition-colors"
@@ -43,7 +77,8 @@ export default function MintsList({balance, manager, onBalanceUpdate}: MintsList
               <div className="font-bold ml-4">{bal} bit</div>
             </div>
           </div>
-        ))}
+        )
+      })}
 
       <div className="card bg-base-100 shadow-xl mt-4">
         <div className="card-body">

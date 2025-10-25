@@ -2,7 +2,7 @@ import {useState, useEffect} from "react"
 import type {Manager} from "@/lib/cashu/core/index"
 import Modal from "@/shared/components/ui/Modal"
 import {usePublicKey} from "@/stores/user"
-import {getLightningAddress} from "@/lib/npubcash"
+import {getLightningAddress, getNPubCashInfo} from "@/lib/npubcash"
 import {truncateMiddle} from "@/utils/utils"
 import {RiFileCopyLine, RiCheckLine, RiQrCodeLine} from "@remixicon/react"
 import {
@@ -12,6 +12,7 @@ import {
 } from "@cashu/cashu-ts"
 import {useAnimatedQR} from "@/hooks/useAnimatedQR"
 import {RequestQRDisplay} from "./RequestQRDisplay"
+import {ndk} from "@/utils/ndk"
 
 interface ReceiveDialogProps {
   isOpen: boolean
@@ -51,6 +52,8 @@ export default function ReceiveDialog({
   const [requestDescription, setRequestDescription] = useState<string>("")
   const [paymentRequestString, setPaymentRequestString] = useState<string>("")
   const [requestCopied, setRequestCopied] = useState(false)
+  const [hasMintConfigured, setHasMintConfigured] = useState<boolean>(false)
+  const [checkingMint, setCheckingMint] = useState<boolean>(false)
   const [previewAmount, setPreviewAmount] = useState<number | null>(null)
   const [previewMemo, setPreviewMemo] = useState<string>("")
   const [previewMint, setPreviewMint] = useState<string>("")
@@ -131,10 +134,58 @@ export default function ReceiveDialog({
     decodeTokenPreview()
   }, [tokenInput, receiveNote])
 
+  // Check if mint is configured and ensure npub.cash default mint exists
+  useEffect(() => {
+    const checkMint = async () => {
+      if (!manager || !myPubKey || receiveMode !== "lightning") {
+        setHasMintConfigured(false)
+        return
+      }
+
+      setCheckingMint(true)
+      try {
+        // Check if any mint exists
+        const balances = await manager.wallet.getBalances()
+        const hasMint = Object.keys(balances).length > 0
+
+        if (!hasMint) {
+          // Try to get default mint from npub.cash
+          const signer = ndk().signer
+          if (signer) {
+            const info = await getNPubCashInfo(signer)
+            if (info?.mintUrl) {
+              console.log(`Adding default npub.cash mint: ${info.mintUrl}`)
+              try {
+                await manager.mint.addMint(info.mintUrl)
+                setHasMintConfigured(true)
+              } catch (error) {
+                console.error("Failed to add default mint:", error)
+                setHasMintConfigured(false)
+              }
+            } else {
+              setHasMintConfigured(false)
+            }
+          } else {
+            setHasMintConfigured(false)
+          }
+        } else {
+          setHasMintConfigured(true)
+        }
+      } catch (error) {
+        console.error("Error checking mint:", error)
+        setHasMintConfigured(false)
+      } finally {
+        setCheckingMint(false)
+      }
+    }
+
+    checkMint()
+  }, [manager, myPubKey, receiveMode])
+
   // Generate QR code for Lightning address
   useEffect(() => {
     const generateQR = async () => {
-      if (!myPubKey || receiveMode !== "lightning" || invoice) {
+      if (!myPubKey || receiveMode !== "lightning" || invoice || !hasMintConfigured) {
         setLightningAddressQR("")
         return
       }
@@ -166,7 +217,7 @@ export default function ReceiveDialog({
       }
     }
     generateQR()
-  }, [myPubKey, receiveMode, invoice])
+  }, [myPubKey, receiveMode, invoice, hasMintConfigured])
 
   const handleClose = () => {
     onClose()
@@ -601,77 +652,108 @@ export default function ReceiveDialog({
                 <span>{error}</span>
               </div>
             )}
-            {!invoice ? (
+            {!invoice && (
               <>
-                {/* Lightning Address */}
-                {myPubKey && lightningAddressQR && (
-                  <div className="space-y-4">
-                    <div className="flex justify-center">
-                      <div className="bg-white rounded-lg p-4">
-                        <img
-                          src={lightningAddressQR}
-                          alt="Lightning Address QR Code"
-                          className="w-64 h-64"
-                        />
-                      </div>
-                    </div>
-                    <div
-                      className="flex items-center justify-center gap-2 bg-base-200 rounded-lg p-3 cursor-pointer hover:bg-base-300 transition-colors"
-                      onClick={() => {
-                        const address = getLightningAddress(myPubKey)
-                        navigator.clipboard.writeText(address)
-                        setAddressCopied(true)
-                        setTimeout(() => setAddressCopied(false), 2000)
-                      }}
-                    >
-                      <span className="text-sm font-mono">
-                        {truncateMiddle(getLightningAddress(myPubKey))}
-                      </span>
-                      {addressCopied ? (
-                        <RiCheckLine className="w-5 h-5 text-success" />
-                      ) : (
-                        <RiFileCopyLine className="w-5 h-5 opacity-60" />
-                      )}
-                    </div>
-                    <div className="divider">OR</div>
+                {checkingMint && (
+                  <div className="flex justify-center p-8">
+                    <div className="text-base-content/60">Setting up mint...</div>
                   </div>
                 )}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">
-                      Create invoice for specific amount (bits)
-                    </span>
-                  </label>
-                  <input
-                    type="number"
-                    className="input input-bordered"
-                    placeholder="100"
-                    value={lightningAmount}
-                    onChange={(e) => setLightningAmount(Number(e.target.value))}
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Description (optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered"
-                    placeholder="What is this payment for?"
-                    value={lightningDescription}
-                    onChange={(e) => setLightningDescription(e.target.value)}
-                    maxLength={200}
-                  />
-                </div>
-                <button
-                  className="btn btn-primary w-full"
-                  onClick={createLightningInvoice}
-                  disabled={!lightningAmount || receiving}
-                >
-                  {receiving ? "Creating..." : "Create Invoice"}
-                </button>
+                {!checkingMint && !hasMintConfigured && (
+                  <div className="alert alert-warning">
+                    <div className="flex flex-col gap-2">
+                      <div className="font-semibold">No mint configured</div>
+                      <div className="text-sm">
+                        Please add a mint in the Mints tab before using Lightning
+                        payments. Payments to your npub.cash address will be automatically
+                        received once a mint is configured.
+                      </div>
+                      <button
+                        className="btn btn-sm btn-primary mt-2"
+                        onClick={() => {
+                          handleClose()
+                          // The user can navigate to mints tab manually
+                        }}
+                      >
+                        Go to Wallet
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {!checkingMint && hasMintConfigured && (
+                  <>
+                    {/* Lightning Address */}
+                    {myPubKey && lightningAddressQR && (
+                      <div className="space-y-4">
+                        <div className="flex justify-center">
+                          <div className="bg-white rounded-lg p-4">
+                            <img
+                              src={lightningAddressQR}
+                              alt="Lightning Address QR Code"
+                              className="w-64 h-64"
+                            />
+                          </div>
+                        </div>
+                        <div
+                          className="flex items-center justify-center gap-2 bg-base-200 rounded-lg p-3 cursor-pointer hover:bg-base-300 transition-colors"
+                          onClick={() => {
+                            const address = getLightningAddress(myPubKey)
+                            navigator.clipboard.writeText(address)
+                            setAddressCopied(true)
+                            setTimeout(() => setAddressCopied(false), 2000)
+                          }}
+                        >
+                          <span className="text-sm font-mono">
+                            {truncateMiddle(getLightningAddress(myPubKey))}
+                          </span>
+                          {addressCopied ? (
+                            <RiCheckLine className="w-5 h-5 text-success" />
+                          ) : (
+                            <RiFileCopyLine className="w-5 h-5 opacity-60" />
+                          )}
+                        </div>
+                        <div className="divider">OR</div>
+                      </div>
+                    )}
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text">
+                          Create invoice for specific amount (bits)
+                        </span>
+                      </label>
+                      <input
+                        type="number"
+                        className="input input-bordered"
+                        placeholder="100"
+                        value={lightningAmount}
+                        onChange={(e) => setLightningAmount(Number(e.target.value))}
+                      />
+                    </div>
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text">Description (optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="input input-bordered"
+                        placeholder="What is this payment for?"
+                        value={lightningDescription}
+                        onChange={(e) => setLightningDescription(e.target.value)}
+                        maxLength={200}
+                      />
+                    </div>
+                    <button
+                      className="btn btn-primary w-full"
+                      onClick={createLightningInvoice}
+                      disabled={!lightningAmount || receiving}
+                    >
+                      {receiving ? "Creating..." : "Create Invoice"}
+                    </button>
+                  </>
+                )}
               </>
-            ) : (
+            )}
+            {invoice && (
               <div className="space-y-4">
                 <div className="alert alert-info">
                   <span className="font-bold">Invoice created!</span>
