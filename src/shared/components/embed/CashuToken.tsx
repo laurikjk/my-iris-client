@@ -1,5 +1,6 @@
 import {useState, useEffect} from "react"
 import {RiBitCoinFill, RiLockLine} from "@remixicon/react"
+import type {Proof} from "@cashu/cashu-ts"
 import Embed, {type EmbedComponentProps} from "./index.ts"
 
 function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
@@ -12,6 +13,10 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
   const [p2pkLock, setP2pkLock] = useState<string | null>(null)
   const [canRedeem, setCanRedeem] = useState(true)
   const [memo, setMemo] = useState<string>("")
+  const [isOwnEvent, setIsOwnEvent] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [tokenSpent, setTokenSpent] = useState(false)
+  const [lastCheckStatus, setLastCheckStatus] = useState<"UNSPENT" | "SPENT" | null>(null)
 
   // Decode on mount and check if already redeemed
   useEffect(() => {
@@ -19,6 +24,11 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
       setLoading(true)
       try {
         const trimmedToken = match.trim()
+
+        // Check if event author is us
+        const {useUserStore} = await import("@/stores/user")
+        const myPubKey = useUserStore.getState().publicKey
+        setIsOwnEvent(event?.pubkey === myPubKey)
 
         // Check if already redeemed (has sender metadata = was received)
         const {getPaymentMetadata} = await import("@/stores/paymentMetadata")
@@ -167,6 +177,7 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
       useWalletStore.getState().setBalance(newTotalBalance)
 
       setRedeemed(true)
+      setLastCheckStatus(null) // Clear status display after redeeming
     } catch (err) {
       console.error("Failed to redeem token:", err)
       setError(err instanceof Error ? err.message : "Failed to redeem")
@@ -181,42 +192,122 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handleCheckStatus = async () => {
+    setChecking(true)
+    setError("")
+    try {
+      const {getCashuManager} = await import("@/lib/cashu/manager")
+      const manager = getCashuManager()
+
+      if (!manager) {
+        setError("Wallet not initialized")
+        return
+      }
+
+      const trimmedToken = match.trim()
+      const {getDecodedToken} = await import("@cashu/cashu-ts")
+      const decoded = getDecodedToken(trimmedToken)
+
+      // Extract all proofs from token
+      const proofs: Proof[] = []
+      if (decoded.proofs && Array.isArray(decoded.proofs)) {
+        proofs.push(...decoded.proofs)
+      } else if (decoded.token && Array.isArray(decoded.token)) {
+        for (const tokenEntry of decoded.token) {
+          if (tokenEntry.proofs && Array.isArray(tokenEntry.proofs)) {
+            proofs.push(...tokenEntry.proofs)
+          }
+        }
+      }
+
+      if (proofs.length === 0) {
+        setError("No proofs found in token")
+        return
+      }
+
+      // Get cashu-ts wallet instance directly to check states
+      const mintUrl = decoded.mint
+      const {CashuMint} = await import("@cashu/cashu-ts")
+      const mint = new CashuMint(mintUrl)
+
+      // Import wallet keys from manager
+      const mintKeys = await mint.getKeys()
+      const {CashuWallet} = await import("@cashu/cashu-ts")
+      const tempWallet = new CashuWallet(mint, {keys: mintKeys.keysets})
+
+      const states = await tempWallet.checkProofsStates(proofs)
+
+      // Check if any proof is spent
+      const anySpent = states.some((state) => state.state === "SPENT")
+      setTokenSpent(anySpent)
+      setLastCheckStatus(anySpent ? "SPENT" : "UNSPENT")
+
+      if (anySpent) {
+        // Update metadata if we haven't already recorded redemption
+        const {getPaymentMetadata, savePaymentMetadata} = await import(
+          "@/stores/paymentMetadata"
+        )
+        const metadata = await getPaymentMetadata(trimmedToken)
+        if (!metadata?.sender) {
+          // Token was spent but we don't have receive metadata
+          // This means someone else redeemed it
+          await savePaymentMetadata(
+            trimmedToken,
+            "dm",
+            undefined,
+            undefined,
+            memo,
+            undefined,
+            undefined // no sender = redeemed by someone else
+          )
+        }
+        setRedeemed(true)
+      }
+    } catch (err) {
+      console.error("Failed to check token status:", err)
+      setError(err instanceof Error ? err.message : "Failed to check status")
+    } finally {
+      setChecking(false)
+    }
+  }
+
   return (
     <div
       key={key}
-      className="cashu-token-embed flex flex-col gap-3 p-4 bg-base-200 rounded-lg border border-base-300 my-2"
+      className="cashu-token-embed flex flex-col gap-3 p-4 bg-base-200 rounded-lg border border-base-300 my-2 min-w-80"
     >
       <div className="flex items-center gap-3">
         <div className="flex-shrink-0">
           <RiBitCoinFill className="w-10 h-10 text-warning" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-base flex items-center gap-2">
-            Cashu Ecash Token
-            {p2pkLock && (
-              <span className="inline-flex items-center gap-1 text-xs font-normal bg-base-300 px-2 py-0.5 rounded">
-                <RiLockLine className="w-3 h-3" />
-                P2PK
-              </span>
-            )}
-          </div>
           <div className="text-sm text-base-content/70">
             {loading && "Decoding token..."}
             {error && <span className="text-error">{error}</span>}
-            {redeemed ? (
+            {amount !== null && !error ? (
               <>
-                <span className="text-success">Redeemed</span>
-                {memo && <span className="block text-xs mt-1">{memo}</span>}
+                <div className="font-semibold text-base flex items-center gap-2">
+                  {amount} bits
+                  {p2pkLock && (
+                    <span className="inline-flex items-center gap-1 text-xs font-normal bg-base-300 px-2 py-0.5 rounded">
+                      <RiLockLine className="w-3 h-3" />
+                      P2PK
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-base-content/60">
+                  Ecash token
+                  {redeemed ? (
+                    <span className="text-success"> • Redeemed</span>
+                  ) : tokenSpent || lastCheckStatus === "SPENT" ? (
+                    <span className="text-success"> • Redeemed</span>
+                  ) : lastCheckStatus === "UNSPENT" ? (
+                    <span> • Not redeemed</span>
+                  ) : null}
+                </div>
+                {memo && <span className="block text-xs mt-1 italic">{memo}</span>}
               </>
-            ) : (
-              amount !== null &&
-              !error && (
-                <>
-                  <span className="font-medium text-success">{amount} bits</span>
-                  {memo && <span className="block text-xs mt-1">{memo}</span>}
-                </>
-              )
-            )}
+            ) : null}
             {p2pkLock && !canRedeem && !redeemed && (
               <span className="block text-xs text-warning mt-1">
                 Locked to another key
@@ -225,32 +316,63 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
           </div>
         </div>
       </div>
-      <div className="flex gap-2">
-        <button
-          onClick={handleCopy}
-          className="btn btn-ghost btn-sm flex-1"
-          disabled={loading || redeemed}
-        >
-          {copied ? "Copied!" : "Copy"}
-        </button>
-        {canRedeem ? (
+      {isOwnEvent ? (
+        <div className="flex flex-col gap-2">
+          {!redeemed && !tokenSpent && (
+            <button
+              onClick={handleCheckStatus}
+              className="btn btn-primary btn-sm w-full"
+              disabled={checking}
+            >
+              {checking ? "Checking..." : "Check Status"}
+            </button>
+          )}
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={handleCopy}
+              className="text-xs text-base-content/50 hover:text-base-content/70 underline"
+            >
+              {copied ? "Copied" : "Copy"}
+            </button>
+            {canRedeem && (
+              <button
+                onClick={handleRedeem}
+                className="text-xs text-base-content/50 hover:text-base-content/70 underline disabled:opacity-50"
+                disabled={loading || !!error || redeeming || redeemed || tokenSpent}
+              >
+                {redeeming ? "Redeeming..." : redeemed ? "Redeemed" : "Redeem"}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-2">
           <button
-            onClick={handleRedeem}
-            className="btn btn-primary btn-sm flex-1 disabled:opacity-50"
-            disabled={loading || !!error || redeeming || redeemed}
+            onClick={handleCopy}
+            className="btn btn-ghost btn-sm flex-1"
+            disabled={loading || redeemed}
           >
-            {redeeming ? "Redeeming..." : "Redeem"}
+            {copied ? "Copied!" : "Copy"}
           </button>
-        ) : (
-          <button
-            className="btn btn-disabled btn-sm flex-1"
-            disabled
-            title="Token is locked to a different public key"
-          >
-            Locked
-          </button>
-        )}
-      </div>
+          {canRedeem ? (
+            <button
+              onClick={handleRedeem}
+              className="btn btn-primary btn-sm flex-1 disabled:opacity-50"
+              disabled={loading || !!error || redeeming || redeemed}
+            >
+              {redeeming ? "Redeeming..." : "Redeem"}
+            </button>
+          ) : (
+            <button
+              className="btn btn-disabled btn-sm flex-1"
+              disabled
+              title="Token is locked to a different public key"
+            >
+              Locked
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
