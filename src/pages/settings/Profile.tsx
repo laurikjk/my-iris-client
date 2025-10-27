@@ -44,12 +44,20 @@ export function ProfileSettings() {
   }, [myPubKey])
 
   const [newProfile, setNewProfile] = useState<NDKUserProfile>(user?.profile || {})
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle")
 
   useEffect(() => {
     if (existingProfile) {
       setNewProfile(existingProfile)
     }
   }, [existingProfile])
+
+  useEffect(() => {
+    if (saveState === "saved") {
+      const timer = setTimeout(() => setSaveState("idle"), 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [saveState])
 
   function setProfileField(field: keyof NDKUserProfile, value: string) {
     setNewProfile((prev) => {
@@ -60,12 +68,19 @@ export function ProfileSettings() {
     })
   }
 
-  function onSaveProfile() {
-    if (!user || !newProfile) {
+  async function onSaveProfile() {
+    if (!user || !newProfile || !myPubKey) {
       return
     }
+    setSaveState("saving")
     user.profile = newProfile
-    user.publish()
+    await user.publish()
+
+    // Immediately update the cache so UI reflects changes
+    const {addCachedProfile} = await import("@/utils/profileCache")
+    addCachedProfile(myPubKey, newProfile)
+
+    setSaveState("saved")
   }
 
   const isEdited = useMemo(() => {
@@ -116,9 +131,13 @@ export function ProfileSettings() {
         <div className="space-y-6">
           <SettingsGroup>
             <SettingsButton
-              label="Save Changes"
+              label={(() => {
+                if (saveState === "saving") return "Saving..."
+                if (saveState === "saved") return "Saved"
+                return "Save Changes"
+              })()}
               onClick={onSaveProfile}
-              disabled={!isEdited}
+              disabled={!isEdited || saveState === "saving"}
               isLast
             />
           </SettingsGroup>

@@ -58,7 +58,7 @@ async function uploadToNip96(
 
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && onProgress) {
-        const percentComplete = (event.loaded / event.total) * 100
+        const percentComplete = Math.round((event.loaded / event.total) * 100)
         onProgress(percentComplete)
       }
     }
@@ -321,7 +321,9 @@ async function uploadChunkedFile(
     const progressCb = onProgress
       ? (progress: number) => {
           const chunkProgress = (progress / 100) * (end - start)
-          const overallProgress = ((totalUploaded + chunkProgress) / file.size) * 100
+          const overallProgress = Math.round(
+            ((totalUploaded + chunkProgress) / file.size) * 100
+          )
           onProgress(overallProgress)
         }
       : undefined

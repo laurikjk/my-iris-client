@@ -15,6 +15,21 @@ export const profileCache = new LRUCache<string, NDKUserProfile>({maxSize: MAX_S
 // Track if we've loaded profiles from storage (localforage or JSON)
 let profilesLoaded = false
 
+// Profile update listeners
+type ProfileUpdateListener = (pubkey: string, profile: NDKUserProfile) => void
+const profileUpdateListeners = new Set<ProfileUpdateListener>()
+
+export const subscribeToProfileUpdates = (listener: ProfileUpdateListener) => {
+  profileUpdateListeners.add(listener)
+  return () => {
+    profileUpdateListeners.delete(listener)
+  }
+}
+
+const notifyProfileUpdate = (pubkey: string, profile: NDKUserProfile) => {
+  profileUpdateListeners.forEach((listener) => listener(pubkey, profile))
+}
+
 // Helper functions for profile data sanitization
 const shouldRejectNip05 = (nip05: string, name: string): boolean => {
   return (
@@ -192,6 +207,8 @@ export const addCachedProfile = (pubkey: string, profile: NDKUserProfile) => {
     if (profilesLoaded) {
       throttledSaveProfiles()
     }
+    // Notify listeners of the update
+    notifyProfileUpdate(pubkey, profile)
   }
 }
 

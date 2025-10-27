@@ -2,7 +2,11 @@ import {NDKEvent, NDKUserProfile, NDKSubscription} from "@nostr-dev-kit/ndk"
 import {handleProfile} from "@/utils/profileSearch"
 import {PublicKey} from "@/shared/utils/PublicKey"
 import {useEffect, useMemo, useState, useRef} from "react"
-import {profileCache, addCachedProfile} from "@/utils/profileCache"
+import {
+  profileCache,
+  addCachedProfile,
+  subscribeToProfileUpdates,
+} from "@/utils/profileCache"
 import {addUsernameToCache} from "@/utils/usernameCache"
 import {ndk} from "@/utils/ndk"
 import {KIND_METADATA} from "@/utils/constants"
@@ -76,6 +80,21 @@ export default function useProfile(pubKey?: string, subscribe = true) {
       }
     }
   }, [pubKeyHex, subscribe])
+
+  // Subscribe to cache updates
+  useEffect(() => {
+    if (!pubKeyHex) {
+      return undefined
+    }
+
+    const unsubscribe = subscribeToProfileUpdates((updatedPubkey, updatedProfile) => {
+      if (updatedPubkey === pubKeyHex) {
+        setProfile(updatedProfile)
+      }
+    })
+
+    return unsubscribe
+  }, [pubKeyHex])
 
   return profile
 }
