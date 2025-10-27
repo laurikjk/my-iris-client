@@ -157,6 +157,15 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
 
       await manager.wallet.receive(trimmedToken)
 
+      // Force balance refresh to update UI immediately
+      const {useWalletStore} = await import("@/stores/wallet")
+      const updatedBalances = await manager.wallet.getBalances()
+      const newTotalBalance = Object.values(updatedBalances).reduce(
+        (sum, val) => sum + val,
+        0
+      )
+      useWalletStore.getState().setBalance(newTotalBalance)
+
       setRedeemed(true)
     } catch (err) {
       console.error("Failed to redeem token:", err)

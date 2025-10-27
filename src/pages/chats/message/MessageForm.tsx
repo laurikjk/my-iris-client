@@ -7,12 +7,12 @@ import {
 } from "react"
 import type {EncryptionMeta as BaseEncryptionMeta} from "@/types/global"
 import {useAutosizeTextarea} from "@/shared/hooks/useAutosizeTextarea"
-import UploadButton from "@/shared/components/button/UploadButton"
 import EmojiButton from "@/shared/components/emoji/EmojiButton"
 import MessageFormReplyPreview from "./MessageFormReplyPreview"
+import MessageFormActionsMenu from "./MessageFormActionsMenu"
+import CashuSendDialog from "./CashuSendDialog"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import Icon from "@/shared/components/Icons/Icon"
-import {RiAttachment2} from "@remixicon/react"
 import EmojiType from "@/types/emoji"
 import {MessageType} from "./Message"
 import {getSessionManager} from "@/shared/services/PrivateChats"
@@ -47,6 +47,8 @@ const MessageForm = ({
   const [encryptionMetadata, setEncryptionMetadata] = useState<
     Map<string, EncryptionMetaWithImeta>
   >(new Map())
+  const [showActionsMenu, setShowActionsMenu] = useState(false)
+  const [showCashuSend, setShowCashuSend] = useState(false)
   const textareaRef = useAutosizeTextarea(newMessage)
 
   useEffect(() => {
@@ -179,6 +181,53 @@ const MessageForm = ({
     textareaRef.current?.focus()
   }
 
+  const handleCashuSendMessage = async (token: string) => {
+    try {
+      const sessionManager = getSessionManager()
+      if (!sessionManager) {
+        console.error("Session manager not available")
+        return
+      }
+
+      const myPubKey = useUserStore.getState().publicKey
+      if (!myPubKey) return
+
+      // Handle group messages
+      if (groupId && groupMembers) {
+        const {getEventHash} = await import("nostr-tools")
+        const now = Date.now()
+        const messageEvent = {
+          content: token,
+          kind: 0,
+          created_at: Math.floor(now / 1000),
+          tags: [
+            ["l", groupId],
+            ["ms", String(now)],
+          ],
+          pubkey: myPubKey,
+          id: "",
+        }
+        messageEvent.id = getEventHash(messageEvent)
+
+        await usePrivateMessagesStore.getState().upsert(groupId, myPubKey, messageEvent)
+
+        await Promise.all(
+          groupMembers.map((memberPubKey) =>
+            sessionManager.sendEvent(memberPubKey, messageEvent)
+          )
+        )
+        return
+      }
+
+      // DM messages
+      const sentMessage = await sessionManager.sendMessage(id, token)
+      await usePrivateMessagesStore.getState().upsert(id, myPubKey, sentMessage)
+    } catch (error) {
+      console.error("Failed to send cashu token:", error)
+      throw error
+    }
+  }
+
   return (
     <footer className="border-t border-custom fixed md:sticky bottom-0 w-full pb-[env(safe-area-inset-bottom)] bg-base-200">
       {replyingTo && (
@@ -186,13 +235,22 @@ const MessageForm = ({
       )}
 
       <div className="flex gap-2 p-4 relative">
-        <UploadButton
-          multiple={true}
+        <MessageFormActionsMenu
+          isOpen={showActionsMenu}
+          onClose={() => setShowActionsMenu(false)}
+          onToggle={() => setShowActionsMenu(!showActionsMenu)}
           onUpload={handleUpload}
-          className="btn btn-ghost btn-circle btn-sm md:btn-md"
-          text={<RiAttachment2 size={20} />}
+          onCashuSend={() => setShowCashuSend(true)}
           encrypt={!isPublicChat}
         />
+
+        <CashuSendDialog
+          isOpen={showCashuSend}
+          onClose={() => setShowCashuSend(false)}
+          onSendMessage={handleCashuSendMessage}
+          recipientPubKey={groupId ? undefined : id}
+        />
+
         <form onSubmit={handleSubmit} className="flex-1 flex gap-2 items-center">
           <div className="relative flex-1 flex gap-2 items-center">
             {!isTouchDevice && <EmojiButton onEmojiSelect={handleEmojiClick} />}
