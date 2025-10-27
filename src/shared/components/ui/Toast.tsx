@@ -26,22 +26,22 @@ export default function Toast() {
       return (
         <Link
           to={toast.linkTo}
-          className="flex-1 hover:underline cursor-pointer"
+          className="flex-1 hover:underline cursor-pointer min-w-0 break-words"
           onClick={() => removeToast(toast.id)}
         >
           {toast.message}
         </Link>
       )
     }
-    return <span className="flex-1">{toast.message}</span>
+    return <span className="flex-1 min-w-0 break-words">{toast.message}</span>
   }
 
   return (
-    <div className="toast toast-top toast-center z-[9999] top-[calc(4rem+env(safe-area-inset-top)+0.5rem)] md:top-[4.5rem] max-w-[calc(100vw-2rem)]">
+    <div className="fixed top-[calc(4rem+env(safe-area-inset-top)+0.5rem)] md:top-[4.5rem] left-0 right-0 z-[9999] flex flex-col items-center gap-2 px-4 pointer-events-none">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`alert ${getAlertClass(toast.type)} shadow-lg flex items-center gap-2 max-w-full`}
+          className={`alert ${getAlertClass(toast.type)} shadow-lg flex items-center gap-2 w-full max-w-md overflow-hidden pointer-events-auto`}
         >
           {renderToastContent(toast)}
           <button

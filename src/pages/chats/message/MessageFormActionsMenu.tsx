@@ -1,5 +1,6 @@
-import {RiAddLine, RiAttachment2} from "@remixicon/react"
-import UploadButton from "@/shared/components/button/UploadButton"
+import {RiAddLine, RiAttachment2, RiLock2Line} from "@remixicon/react"
+import {useFileUpload} from "@/shared/hooks/useFileUpload"
+import {useToastStore} from "@/stores/toast"
 import type {EncryptionMeta} from "@/types/global"
 
 interface MessageFormActionsMenuProps {
@@ -24,6 +25,22 @@ export default function MessageFormActionsMenu({
   onCashuSend,
   encrypt,
 }: MessageFormActionsMenuProps) {
+  const {addToast} = useToastStore()
+
+  const fileUpload = useFileUpload({
+    onUpload: (url, metadata, encryptionMeta, imetaTag) => {
+      onUpload(url, metadata, encryptionMeta, imetaTag)
+      onClose()
+    },
+    onError: (error) => {
+      const errorMsg =
+        error.message.length > 100 ? `${error.message.slice(0, 100)}...` : error.message
+      addToast(`Upload failed: ${errorMsg}`, "error")
+    },
+    accept: "image/*,video/*",
+    encrypt,
+  })
+
   return (
     <div className="relative">
       <button
@@ -38,21 +55,21 @@ export default function MessageFormActionsMenu({
         <>
           <div className="fixed inset-0 z-40" onClick={onClose} />
           <div className="absolute bottom-full left-0 mb-2 w-48 bg-base-200 rounded-lg shadow-lg border border-base-300 z-50 overflow-hidden">
-            <UploadButton
-              multiple={true}
-              onUpload={(url, metadata, encryptionMeta, imetaTag) => {
-                onUpload(url, metadata, encryptionMeta, imetaTag)
-                onClose()
-              }}
+            <button
+              type="button"
+              onClick={fileUpload.triggerUpload}
               className="w-full btn btn-ghost justify-start rounded-none hover:bg-base-300"
-              text={
-                <div className="flex items-center gap-2">
+            >
+              <div className="flex items-center gap-2">
+                <div className="relative">
                   <RiAttachment2 size={18} />
-                  <span>Attachment</span>
+                  {encrypt && (
+                    <RiLock2Line size={10} className="absolute -bottom-1 -right-1" />
+                  )}
                 </div>
-              }
-              encrypt={encrypt}
-            />
+                <span>Attachment</span>
+              </div>
+            </button>
             <button
               type="button"
               onClick={() => {
