@@ -3,6 +3,7 @@ import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import Debug from "@/utils/DebugManager"
 import {useSettingsStore} from "@/stores/settings"
+import {isTauri} from "@/utils/utils"
 
 export default function SystemSettings() {
   const [memoryUsage, setMemoryUsage] = useState<{
@@ -154,6 +155,25 @@ export default function SystemSettings() {
           </SettingsGroup>
 
           <SettingsGroup title="Application Info">
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <span>Version</span>
+                <span className="text-base-content/70">
+                  {isTauri() ? (
+                    <>
+                      <span className="line-through opacity-50">Web</span> /{" "}
+                      <strong>Native</strong>
+                    </>
+                  ) : (
+                    <>
+                      <strong>Web</strong> /{" "}
+                      <span className="line-through opacity-50">Native</span>
+                    </>
+                  )}
+                </span>
+              </div>
+            </SettingsGroupItem>
+
             <SettingsGroupItem>
               <div className="flex justify-between items-center">
                 <span>App Version</span>
