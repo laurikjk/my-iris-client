@@ -18,6 +18,7 @@ import {getTag} from "./utils/tagUtils"
 import {useGroupsStore} from "./stores/groups"
 import {KIND_CHANNEL_CREATE} from "./utils/constants"
 import {isTauri} from "./utils/utils"
+import {onOpenUrl} from "@tauri-apps/plugin-deep-link"
 
 let unsubscribeSessionEvents: (() => void) | null = null
 
@@ -174,6 +175,21 @@ root.render(
     </Layout>
   </NavigationProvider>
 )
+
+// Setup deep link handler after navigation is initialized
+if (isTauri()) {
+  onOpenUrl((urls) => {
+    if (urls && urls.length > 0) {
+      const url = urls[0]
+      console.log("Deep link opened:", url)
+
+      // Strip protocol and navigate
+      const path = url.replace(/^(nostr:|web\+nostr:)/, "")
+      window.history.pushState({}, "", `/${path}`)
+      window.dispatchEvent(new PopStateEvent("popstate"))
+    }
+  })
+}
 
 // Store subscriptions
 const unsubscribeUser = useUserStore.subscribe((state, prevState) => {

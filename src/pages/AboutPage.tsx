@@ -12,6 +12,7 @@ import RightColumn from "@/shared/components/RightColumn"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import Header from "@/shared/components/header/Header"
 import Widget from "@/shared/components/ui/Widget"
+import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePageContainer"
 import {useState, useEffect} from "react"
 import {Link} from "@/navigation"
 import {openExternalLink, isTauri} from "@/utils/utils"
@@ -62,12 +63,11 @@ export const AboutPage = () => {
   }, [])
 
   return (
-    <div className="flex justify-center">
-      <div className="flex-1">
-        <section className="flex flex-col">
-          <Header title="About" />
-          <div className="flex flex-1 mx-4 my-4 lg:mx-8 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
-            <div className="prose max-w-prose">
+    <div className="flex flex-col flex-1 overflow-hidden">
+      <Header title="About" />
+      <ScrollablePageContainer>
+        <div className="mx-4 md:mx-8 my-4">
+          <div className="prose max-w-prose">
               <h1>About</h1>
               <p>{CONFIG.aboutText}</p>
 
@@ -217,10 +217,9 @@ export const AboutPage = () => {
                   Reload the application to apply any pending updates or fix issues.
                 </p>
               </div>
-            </div>
           </div>
-        </section>
-      </div>
+        </div>
+      </ScrollablePageContainer>
       <RightColumn>
         {() => (
           <>

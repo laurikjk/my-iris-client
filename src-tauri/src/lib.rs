@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use tauri::Listener;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PushTokenPayload {
@@ -37,6 +36,9 @@ pub fn run() {
 
       // Add dialog plugin
       app.handle().plugin(tauri_plugin_dialog::init())?;
+
+      // Add deep link handler
+      app.handle().plugin(tauri_plugin_deep_link::init())?;
 
       // Add iOS swipe navigation
       #[cfg(target_os = "ios")]
