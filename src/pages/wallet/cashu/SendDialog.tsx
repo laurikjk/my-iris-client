@@ -493,7 +493,12 @@ export default function SendDialog({
     <Modal onClose={handleClose}>
       <div className="p-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="font-bold text-lg">Send</h3>
+          <div>
+            <h3 className="font-bold text-lg">Send</h3>
+            <div className="text-xs opacity-60 mt-1">
+              {mintUrl.replace(/^https?:\/\//, "")}
+            </div>
+          </div>
           {balance !== undefined && (
             <div className="text-sm opacity-70">Balance: {balance} bit</div>
           )}

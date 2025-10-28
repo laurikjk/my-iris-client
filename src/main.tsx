@@ -183,7 +183,16 @@ if (isTauri()) {
       const url = urls[0]
       console.log("Deep link opened:", url)
 
-      // Strip protocol and navigate
+      // Handle lightning: protocol
+      if (url.startsWith("lightning:")) {
+        const invoice = url.replace(/^lightning:/, "")
+        // Navigate to wallet with invoice in state
+        window.history.pushState({lightningInvoice: invoice}, "", "/wallet")
+        window.dispatchEvent(new PopStateEvent("popstate"))
+        return
+      }
+
+      // Strip protocol and navigate for nostr: links
       const path = url.replace(/^(nostr:|web\+nostr:)/, "")
       window.history.pushState({}, "", `/${path}`)
       window.dispatchEvent(new PopStateEvent("popstate"))

@@ -1,4 +1,4 @@
-import type {SendHistoryEntry} from "@/lib/cashu/core/models/History"
+import type {SendHistoryEntry, HistoryEntry} from "@/lib/cashu/core/models/History"
 import type {EnrichedHistoryEntry} from "../CashuWallet"
 import {RiFlashlightFill, RiBitCoinFill} from "@remixicon/react"
 import {useState} from "react"
@@ -16,12 +16,14 @@ interface HistoryListProps {
   history: EnrichedHistoryEntry[]
   usdRate: number | null
   onSendEntryClick?: (entry: SendHistoryEntry) => void
+  onMintEntryClick?: (entry: HistoryEntry) => void
 }
 
 export default function HistoryList({
   history,
   usdRate,
   onSendEntryClick,
+  onMintEntryClick,
 }: HistoryListProps) {
   const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY)
   const navigate = useNavigate()
@@ -44,19 +46,26 @@ export default function HistoryList({
         const amount = getTransactionAmount(entry)
         const status = getTransactionStatus(entry)
         const isSend = entry.type === "send"
+        const isPendingMint = entry.type === "mint" && status === "pending"
         const isZapWithEvent =
           entry.paymentMetadata?.type === "zap" && entry.paymentMetadata?.eventId
         const hasRecipient = !!entry.paymentMetadata?.recipient
         const hasSender = !!entry.paymentMetadata?.sender
         const isClickable =
-          (isSend && onSendEntryClick) || isZapWithEvent || hasRecipient || hasSender
+          (isSend && onSendEntryClick) ||
+          (isPendingMint && onMintEntryClick) ||
+          isZapWithEvent ||
+          hasRecipient ||
+          hasSender
 
         // Determine if it's Lightning (mint/melt) or Ecash (send/receive)
         const label =
           entry.type === "mint" || entry.type === "melt" ? "Lightning" : "Ecash"
 
         const handleClick = () => {
-          if (isZapWithEvent && entry.paymentMetadata?.eventId) {
+          if (isPendingMint && onMintEntryClick) {
+            onMintEntryClick(entry)
+          } else if (isZapWithEvent && entry.paymentMetadata?.eventId) {
             navigate(`/${nip19.noteEncode(entry.paymentMetadata.eventId)}`)
           } else if (hasRecipient && entry.paymentMetadata?.recipient) {
             // Lightning payments (melt): Navigate to profile

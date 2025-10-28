@@ -1,8 +1,9 @@
 import {useState, useEffect} from "react"
 import Modal from "@/shared/components/ui/Modal"
 import type {Manager} from "@/lib/cashu/core/index"
-import {RiDeleteBinLine, RiFileCopyLine} from "@remixicon/react"
+import {RiDeleteBinLine, RiFileCopyLine, RiRefreshLine} from "@remixicon/react"
 import {confirm} from "@/utils/utils"
+import {useCashuWalletStore} from "@/stores/cashuWallet"
 
 interface MintInfo {
   name?: string
@@ -21,6 +22,8 @@ interface MintDetailsModalProps {
   mintUrl: string
   manager: Manager | null
   onMintDeleted: () => void
+  activeMint: string | null
+  onSetActive: (mintUrl: string) => void
 }
 
 export default function MintDetailsModal({
@@ -29,11 +32,15 @@ export default function MintDetailsModal({
   mintUrl,
   manager,
   onMintDeleted,
+  activeMint,
+  onSetActive,
 }: MintDetailsModalProps) {
+  const {getCachedMintInfo, setCachedMintInfo, clearMintInfoCache} = useCashuWalletStore()
   const [mintInfo, setMintInfo] = useState<MintInfo | null>(null)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>("")
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     if (!isOpen || !mintUrl) return
@@ -41,9 +48,19 @@ export default function MintDetailsModal({
     const fetchMintInfo = async () => {
       setLoading(true)
       try {
+        // Check cache first
+        const cached = getCachedMintInfo(mintUrl)
+        if (cached) {
+          setMintInfo(cached as unknown as MintInfo)
+          setLoading(false)
+          return
+        }
+
+        // Fetch from network
         const response = await fetch(`${mintUrl}/v1/info`)
         const data = await response.json()
         setMintInfo(data)
+        setCachedMintInfo(mintUrl, data)
       } catch (error) {
         console.error("Failed to fetch mint info:", error)
       } finally {
@@ -81,7 +98,24 @@ export default function MintDetailsModal({
       }
     }
     generateQR()
-  }, [isOpen, mintUrl])
+  }, [isOpen, mintUrl, getCachedMintInfo, setCachedMintInfo])
+
+  const handleRefreshMetadata = async () => {
+    setRefreshing(true)
+    try {
+      // Clear cache and fetch fresh data
+      clearMintInfoCache(mintUrl)
+      const response = await fetch(`${mintUrl}/v1/info`)
+      const data = await response.json()
+      setMintInfo(data)
+      setCachedMintInfo(mintUrl, data)
+    } catch (error) {
+      console.error("Failed to refresh mint info:", error)
+      setError("Failed to refresh metadata")
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   const handleCopyUrl = () => {
     navigator.clipboard.writeText(mintUrl)
@@ -242,6 +276,22 @@ export default function MintDetailsModal({
             <div>
               <h3 className="font-bold mb-2">ACTIONS</h3>
               <div className="space-y-2">
+                {activeMint !== mintUrl && (
+                  <button
+                    onClick={() => onSetActive(mintUrl)}
+                    className="btn btn-primary w-full justify-start"
+                  >
+                    Set as Active Mint
+                  </button>
+                )}
+                <button
+                  onClick={handleRefreshMetadata}
+                  className="btn btn-ghost w-full justify-start"
+                  disabled={refreshing}
+                >
+                  <RiRefreshLine className={`w-5 h-5 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+                  {refreshing ? "Refreshing..." : "Refresh metadata"}
+                </button>
                 <button
                   onClick={handleCopyUrl}
                   className="btn btn-ghost w-full justify-start"

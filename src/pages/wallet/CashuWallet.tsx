@@ -1,4 +1,4 @@
-import {useState, useEffect} from "react"
+import {useState, useEffect, useCallback} from "react"
 import {initCashuManager, getCashuManager} from "@/lib/cashu/manager"
 import type {Manager} from "@/lib/cashu/core/index"
 import type {HistoryEntry, SendHistoryEntry} from "@/lib/cashu/core/models/History"
@@ -48,8 +48,16 @@ const ensureMeltQuoteReposInit = async () => {
 const DEFAULT_MINT = "https://mint.coinos.io"
 
 export default function CashuWallet() {
-  const {expandHistory, activeTab, toggleExpandHistory, setActiveTab} =
-    useCashuWalletStore()
+  const {
+    expandHistory,
+    activeTab,
+    activeMint,
+    toggleExpandHistory,
+    setActiveTab,
+    setActiveMint,
+    setCachedMintInfo,
+    getCachedMintInfo,
+  } = useCashuWalletStore()
   const {activeProviderType} = useWalletProviderStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -69,6 +77,7 @@ export default function CashuWallet() {
   )
   const [sendDialogInitialInvoice, setSendDialogInitialInvoice] = useState<string>("")
   const [receiveDialogInitialToken, setReceiveDialogInitialToken] = useState<string>("")
+  const [receiveDialogInitialInvoice, setReceiveDialogInitialInvoice] = useState<string>("")
   const [refreshing, setRefreshing] = useState(false)
   const [qrError, setQrError] = useState<string>("")
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
@@ -186,10 +195,18 @@ export default function CashuWallet() {
     }
   }
 
-  const handleSendEntryClick = (entry: SendHistoryEntry) => {
+  const handleSendEntryClick = useCallback((entry: SendHistoryEntry) => {
     setSendDialogInitialToken(entry.token)
     setShowSendDialog(true)
-  }
+  }, [])
+
+  const handleMintEntryClick = useCallback((entry: HistoryEntry) => {
+    if (entry.type === "mint" && entry.state === "UNPAID") {
+      // Show receive dialog with the pending invoice
+      setReceiveDialogInitialInvoice(entry.paymentRequest)
+      setShowReceiveDialog(true)
+    }
+  }, [])
 
   const handleCloseSendDialog = () => {
     setShowSendDialog(false)
@@ -200,6 +217,7 @@ export default function CashuWallet() {
   const handleCloseReceiveDialog = () => {
     setShowReceiveDialog(false)
     setReceiveDialogInitialToken("")
+    setReceiveDialogInitialInvoice("")
   }
 
   const handleRefresh = async () => {
@@ -330,10 +348,16 @@ export default function CashuWallet() {
 
   // Handle receiveToken from navigation state
   useEffect(() => {
-    const state = location.state as {receiveToken?: string} | undefined
+    const state = location.state as {receiveToken?: string; lightningInvoice?: string} | undefined
     if (state?.receiveToken && manager) {
       setReceiveDialogInitialToken(state.receiveToken)
       setShowReceiveDialog(true)
+    }
+    if (state?.lightningInvoice && manager) {
+      setSendDialogInitialInvoice(state.lightningInvoice)
+      setShowSendDialog(true)
+      // Clear state after handling
+      window.history.replaceState({}, "", "/wallet")
     }
   }, [location.state, manager])
 
@@ -391,6 +415,28 @@ export default function CashuWallet() {
         // Load balance
         const bal = await mgr.wallet.getBalances()
         setBalance(bal)
+
+        // Load all mints and cache their info
+        const mints = await mgr.mint.getAllMints()
+        for (const {mintUrl} of mints) {
+          // Skip if already cached
+          if (getCachedMintInfo(mintUrl)) continue
+
+          // Fetch and cache mint info
+          try {
+            const {CashuMint} = await import("@cashu/cashu-ts")
+            const mint = new CashuMint(mintUrl)
+            const info = await mint.getInfo()
+            setCachedMintInfo(mintUrl, info)
+          } catch (err) {
+            console.warn(`Failed to fetch info for ${mintUrl}:`, err)
+          }
+        }
+
+        // Set active mint if not already set
+        if (!activeMint && bal && Object.keys(bal).length > 0) {
+          setActiveMint(Object.keys(bal)[0])
+        }
 
         // Load history
         const hist = await mgr.history.getPaginatedHistory(0, 1000)
@@ -552,12 +598,15 @@ export default function CashuWallet() {
               </div>
 
               {/* Mint Info */}
-              {balance && Object.keys(balance).length > 0 && (
+              {activeMint && (
                 <div className="text-sm text-base-content/60 mt-4">
                   Mint:{" "}
-                  <span className="font-medium">
-                    {Object.keys(balance)[0].replace(/^https?:\/\//, "")}
-                  </span>
+                  <button
+                    onClick={() => setActiveTab("mints")}
+                    className="font-medium hover:underline cursor-pointer"
+                  >
+                    {activeMint.replace(/^https?:\/\//, "")}
+                  </button>
                 </div>
               )}
             </div>
@@ -654,6 +703,7 @@ export default function CashuWallet() {
                         history={history}
                         usdRate={usdRate}
                         onSendEntryClick={handleSendEntryClick}
+                        onMintEntryClick={handleMintEntryClick}
                       />
                     </div>
                   )}
@@ -665,6 +715,8 @@ export default function CashuWallet() {
                         balance={balance}
                         manager={manager}
                         onBalanceUpdate={refreshData}
+                        activeMint={activeMint}
+                        onMintClick={setActiveMint}
                       />
                     </div>
                   )}
@@ -676,7 +728,7 @@ export default function CashuWallet() {
               isOpen={showSendDialog}
               onClose={handleCloseSendDialog}
               manager={manager}
-              mintUrl={balance ? Object.keys(balance)[0] : DEFAULT_MINT}
+              mintUrl={activeMint || DEFAULT_MINT}
               onSuccess={refreshData}
               initialToken={sendDialogInitialToken}
               initialInvoice={sendDialogInitialInvoice}
@@ -687,9 +739,10 @@ export default function CashuWallet() {
               isOpen={showReceiveDialog}
               onClose={handleCloseReceiveDialog}
               manager={manager}
-              mintUrl={balance ? Object.keys(balance)[0] : DEFAULT_MINT}
+              mintUrl={activeMint || DEFAULT_MINT}
               onSuccess={refreshData}
               initialToken={receiveDialogInitialToken}
+              initialInvoice={receiveDialogInitialInvoice}
               balance={totalBalance}
               onScanRequest={() => setShowQRScanner(true)}
             />

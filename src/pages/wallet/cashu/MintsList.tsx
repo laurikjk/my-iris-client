@@ -1,43 +1,52 @@
-import {useState, useEffect} from "react"
+import {useState} from "react"
 import type {Manager} from "@/lib/cashu/core/index"
+import type {GetInfoResponse} from "@cashu/cashu-ts"
 import MintDetailsModal from "./MintDetailsModal"
+import {useCashuWalletStore} from "@/stores/cashuWallet"
 import {openExternalLink} from "@/utils/utils"
 
 interface MintsListProps {
   balance: {[mintUrl: string]: number} | null
   manager: Manager | null
   onBalanceUpdate: () => void
+  activeMint: string | null
+  onMintClick: (mintUrl: string) => void
 }
 
-export default function MintsList({balance, manager, onBalanceUpdate}: MintsListProps) {
+export default function MintsList({
+  balance,
+  manager,
+  onBalanceUpdate,
+  activeMint,
+  onMintClick,
+}: MintsListProps) {
+  const {mintInfoCache} = useCashuWalletStore()
   const [mintUrl, setMintUrl] = useState("")
   const [selectedMintUrl, setSelectedMintUrl] = useState<string | null>(null)
   const [error, setError] = useState<string>("")
-  const [allMints, setAllMints] = useState<string[]>([])
 
-  useEffect(() => {
-    const loadMints = async () => {
-      if (!manager) return
-      try {
-        const mints = await manager.mint.getAllMints()
-        setAllMints(mints.map((m) => m.mintUrl))
-      } catch (error) {
-        console.error("Failed to load mints:", error)
-      }
-    }
-    loadMints()
-  }, [manager, balance])
+  // Get mints directly from cache - already populated by CashuWallet
+  const allMints = Object.keys(mintInfoCache)
+  const mintInfos = Object.entries(mintInfoCache).reduce(
+    (acc, [url, {info}]) => {
+      acc[url] = info
+      return acc
+    },
+    {} as {[url: string]: GetInfoResponse}
+  )
 
   const addMint = async () => {
     if (!manager || !mintUrl) return
     setError("")
     try {
       await manager.mint.addMint(mintUrl)
+      const addedMintUrl = mintUrl
       setMintUrl("")
 
-      // Reload mints list
-      const mints = await manager.mint.getAllMints()
-      setAllMints(mints.map((m) => m.mintUrl))
+      // Set as active mint
+      onMintClick(addedMintUrl)
+
+      // Balance will update automatically, triggering re-render
 
       onBalanceUpdate()
     } catch (error) {
@@ -51,30 +60,51 @@ export default function MintsList({balance, manager, onBalanceUpdate}: MintsList
 
   return (
     <div className="space-y-4">
-      <div className="alert alert-info">
-        <div className="text-sm">
-          Iris Cashu wallet is not affiliated with any mint and does not custody user
-          funds. You can find a list of mints on{" "}
-          <button
-            className="link link-primary"
-            onClick={() => openExternalLink("https://bitcoinmints.com")}
-          >
-            bitcoinmints.com
-          </button>
-        </div>
-      </div>
-
       {allMints.map((mint) => {
         const bal = balance?.[mint] || 0
+        const isActive = activeMint === mint
+        const info = mintInfos[mint]
         return (
           <div
             key={mint}
-            className="p-4 bg-base-200 rounded-lg cursor-pointer hover:bg-base-300 transition-colors"
+            className={`p-4 rounded-lg cursor-pointer transition-colors ${
+              isActive
+                ? "bg-primary/20 border-2 border-primary hover:bg-primary/30"
+                : "bg-base-200 hover:bg-base-300"
+            }`}
             onClick={() => setSelectedMintUrl(mint)}
           >
-            <div className="flex justify-between items-center">
-              <div className="text-sm truncate flex-1">{mint}</div>
-              <div className="font-bold ml-4">{bal} bit</div>
+            <div className="flex justify-between items-center gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {info?.icon_url ? (
+                  <img
+                    src={info.icon_url}
+                    alt={info.name || mint}
+                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none"
+                    }}
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-base-300 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs">🏦</span>
+                  </div>
+                )}
+                <div className="flex flex-col min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium truncate">
+                      {info?.name || mint.replace(/^https?:\/\//, "")}
+                    </span>
+                    {isActive && <span className="badge badge-primary badge-sm">Active</span>}
+                  </div>
+                  {info?.name && (
+                    <span className="text-xs opacity-60 truncate">
+                      {mint.replace(/^https?:\/\//, "")}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="font-bold ml-2 flex-shrink-0">{bal} bit</div>
             </div>
           </div>
         )
@@ -101,6 +131,25 @@ export default function MintsList({balance, manager, onBalanceUpdate}: MintsList
         </div>
       </div>
 
+      <div className="alert alert-info mt-4">
+        <div className="text-sm">
+          Iris Cashu wallet is not affiliated with any mint and does not custody user
+          funds. You can find a list of mints on{" "}
+          <a
+            href="https://bitcoinmints.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link link-primary"
+            onClick={(e) => {
+              e.preventDefault()
+              openExternalLink("https://bitcoinmints.com")
+            }}
+          >
+            bitcoinmints.com
+          </a>
+        </div>
+      </div>
+
       <MintDetailsModal
         isOpen={selectedMintUrl !== null}
         onClose={() => setSelectedMintUrl(null)}
@@ -110,6 +159,8 @@ export default function MintsList({balance, manager, onBalanceUpdate}: MintsList
           setSelectedMintUrl(null)
           onBalanceUpdate()
         }}
+        activeMint={activeMint}
+        onSetActive={onMintClick}
       />
     </div>
   )

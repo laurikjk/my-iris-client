@@ -5,6 +5,8 @@ import {usePublicKey} from "@/stores/user"
 import {getLightningAddress, getNPubCashInfo} from "@/lib/npubcash"
 import {truncateMiddle} from "@/utils/utils"
 import {RiFileCopyLine, RiCheckLine, RiQrCodeLine} from "@remixicon/react"
+import CopyButton from "@/shared/components/button/CopyButton"
+import {decode} from "light-bolt11-decoder"
 import {
   PaymentRequest,
   PaymentRequestTransport,
@@ -21,6 +23,7 @@ interface ReceiveDialogProps {
   mintUrl: string
   onSuccess: () => void
   initialToken?: string
+  initialInvoice?: string
   balance?: number
   onScanRequest?: () => void
 }
@@ -32,7 +35,7 @@ export default function ReceiveDialog({
   mintUrl,
   onSuccess,
   initialToken,
-  balance,
+  initialInvoice,
   onScanRequest,
 }: ReceiveDialogProps) {
   const myPubKey = usePublicKey()
@@ -83,6 +86,35 @@ export default function ReceiveDialog({
 
     handleInitialToken()
   }, [initialToken, isOpen])
+
+  // Handle initial invoice (from pending mint entry)
+  useEffect(() => {
+    const loadInitialInvoice = async () => {
+      if (!initialInvoice || !isOpen) return
+
+      setInvoice(initialInvoice)
+      setReceiveMode("lightning")
+
+      // Decode invoice to extract amount and description
+      try {
+        const decoded = decode(initialInvoice)
+        const amountSection = decoded.sections.find((s) => s.name === "amount")
+        const descSection = decoded.sections.find((s) => s.name === "description")
+
+        if (amountSection && "value" in amountSection && amountSection.value) {
+          // Amount is in millisats, convert to sats
+          setLightningAmount(Math.floor(Number(amountSection.value) / 1000))
+        }
+        if (descSection && "value" in descSection && descSection.value) {
+          setLightningDescription(String(descSection.value))
+        }
+      } catch (err) {
+        console.warn("Failed to decode invoice:", err)
+      }
+    }
+
+    loadInitialInvoice()
+  }, [initialInvoice, isOpen])
 
   // Live preview of pasted token
   useEffect(() => {
@@ -385,11 +417,13 @@ export default function ReceiveDialog({
                 ←
               </button>
             )}
-            <h3 className="font-bold text-lg">{getTitle()}</h3>
+            <div>
+              <h3 className="font-bold text-lg">{getTitle()}</h3>
+              <div className="text-xs opacity-60 mt-1">
+                {mintUrl.replace(/^https?:\/\//, "")}
+              </div>
+            </div>
           </div>
-          {balance !== undefined && (
-            <div className="text-sm opacity-70">Balance: {balance} bit</div>
-          )}
         </div>
 
         {receiveMode === "select" && (
@@ -755,31 +789,36 @@ export default function ReceiveDialog({
             )}
             {invoice && (
               <div className="space-y-4">
-                <div className="alert alert-info">
-                  <span className="font-bold">Invoice created!</span>
-                </div>
+                {lightningAmount > 0 && (
+                  <div className="text-center">
+                    <div className="text-3xl font-bold">{lightningAmount} bit</div>
+                    {lightningDescription && (
+                      <div className="text-sm text-base-content/70 mt-1">{lightningDescription}</div>
+                    )}
+                  </div>
+                )}
+
+                <RequestQRDisplay data={`lightning:${invoice}`} fragment={`lightning:${invoice}`} isAnimated={false} />
+
+                <CopyButton copyStr={invoice} text="Copy Invoice" className="btn btn-primary w-full" />
+
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text">Lightning Invoice</span>
                   </label>
                   <textarea
-                    className="textarea textarea-bordered h-32 font-mono text-xs resize-none"
+                    className="textarea textarea-bordered h-24 font-mono text-xs resize-none"
                     value={invoice}
                     readOnly
                   />
                 </div>
-                <button
-                  className="btn btn-primary w-full"
-                  onClick={() => {
-                    navigator.clipboard.writeText(invoice)
-                  }}
-                >
-                  Copy Invoice
-                </button>
+
                 <button
                   className="btn btn-ghost w-full"
                   onClick={() => {
                     setInvoice("")
+                    setLightningAmount(100)
+                    setLightningDescription("")
                     setReceiveMode("select")
                   }}
                 >
