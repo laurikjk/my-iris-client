@@ -1,6 +1,7 @@
 import {useState, useEffect, ChangeEvent} from "react"
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
+import CopyButton from "@/shared/components/button/CopyButton"
 import Debug from "@/utils/DebugManager"
 import {useSettingsStore} from "@/stores/settings"
 import {isTauri} from "@/utils/utils"
@@ -247,6 +248,11 @@ export default function SystemSettings() {
                     >
                       {debugSessionLink}
                     </a>
+                    <CopyButton
+                      copyStr={debugSessionLink}
+                      text="Copy Link"
+                      className="btn btn-sm btn-primary mt-2"
+                    />
                   </div>
                 </SettingsGroupItem>
 

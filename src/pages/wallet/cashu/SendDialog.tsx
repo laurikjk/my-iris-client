@@ -5,7 +5,7 @@ import Modal from "@/shared/components/ui/Modal"
 import {decode} from "light-bolt11-decoder"
 import {savePaymentMetadata} from "@/stores/paymentMetadata"
 import {getLNURLInvoice} from "@/utils/zapUtils"
-import {RiFileCopyLine, RiShare2Line} from "@remixicon/react"
+import {RiShare2Line} from "@remixicon/react"
 import {DoubleRatchetUserSearch} from "@/pages/chats/components/DoubleRatchetUserSearch"
 import {LightningUserSearch} from "./LightningUserSearch"
 import {getSessionManager} from "@/shared/services/PrivateChats"
@@ -14,6 +14,7 @@ import {useNavigate} from "@/navigation"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useUserStore} from "@/stores/user"
 import {useAnimatedQR} from "@/hooks/useAnimatedQR"
+import CopyButton from "@/shared/components/button/CopyButton"
 
 interface SendDialogProps {
   isOpen: boolean
@@ -626,15 +627,11 @@ export default function SendDialog({
                   />
                 </div>
                 <div className="flex gap-2">
-                  <button
+                  <CopyButton
+                    copyStr={generatedToken}
+                    text="Copy"
                     className="btn btn-primary flex-1 gap-2"
-                    onClick={() => {
-                      navigator.clipboard.writeText(generatedToken)
-                    }}
-                  >
-                    <RiFileCopyLine className="w-5 h-5" />
-                    Copy
-                  </button>
+                  />
                   {navigator.share && (
                     <button
                       className="btn btn-primary flex-1 gap-2"

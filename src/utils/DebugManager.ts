@@ -185,7 +185,10 @@ class DebugManager {
     if (!this.debugSession) {
       return ""
     }
-    return `${window.location.origin}/debug.html#${this.debugSession.getPrivateKey()}`
+    const origin = window.location.origin.startsWith('tauri://')
+      ? 'https://iris.to'
+      : window.location.origin
+    return `${origin}/debug.html#${this.debugSession.getPrivateKey()}`
   }
 }
 

@@ -1,5 +1,6 @@
 import {useEffect, useState, useRef, ChangeEvent} from "react"
 import {DebugSession} from "./DebugSession"
+import CopyButton from "@/shared/components/button/CopyButton"
 
 interface SystemInfo {
   appVersion: string
@@ -604,12 +605,11 @@ const DebugApp = () => {
                       >
                         {sessionLink}
                       </a>
-                      <button
+                      <CopyButton
+                        copyStr={sessionLink}
+                        text="Copy Link"
                         className="btn btn-sm btn-primary mt-2"
-                        onClick={() => navigator.clipboard.writeText(sessionLink)}
-                      >
-                        Copy Link
-                      </button>
+                      />
                     </div>
                   </div>
                 )}
