@@ -24,6 +24,7 @@ interface MintDetailsModalProps {
   onMintDeleted: () => void
   activeMint: string | null
   onSetActive: (mintUrl: string) => void
+  balance?: number
 }
 
 export default function MintDetailsModal({
@@ -34,6 +35,7 @@ export default function MintDetailsModal({
   onMintDeleted,
   activeMint,
   onSetActive,
+  balance,
 }: MintDetailsModalProps) {
   const {getCachedMintInfo, setCachedMintInfo, clearMintInfoCache} = useCashuWalletStore()
   const [mintInfo, setMintInfo] = useState<MintInfo | null>(null)
@@ -180,6 +182,9 @@ export default function MintDetailsModal({
               <h2 className="text-2xl font-bold mb-2">
                 {mintInfo?.name || "Unknown Mint"}
               </h2>
+              {balance !== undefined && (
+                <div className="text-xl text-base-content/70 mb-4">{balance} bit</div>
+              )}
               {qrCodeUrl && (
                 <div className="flex justify-center my-4">
                   <div className="bg-white rounded-lg p-4">

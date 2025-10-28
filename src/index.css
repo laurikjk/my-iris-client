@@ -25,6 +25,15 @@ html {
   @apply rounded-full;
 }
 
+.btn:disabled {
+  opacity: 0.3;
+}
+
+/* Exception for buttons with animate-spin - keep more visible */
+.btn:disabled:has(.animate-spin) {
+  opacity: 0.7;
+}
+
 /* Default theme */
 .btn-primary {
   @apply text-base-content;

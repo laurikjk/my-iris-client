@@ -94,28 +94,38 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
       // Check if it's a single character query
       const isSingleChar = v.length === 1
 
-      if (v.match(NOSTR_REGEX)) {
+      // Handle lightning: protocol
+      if (v.toLowerCase().startsWith("lightning:")) {
+        setValue("")
+        navigate("/wallet", {state: {lightningInvoice: v.slice(10)}})
+        return
+      }
+
+      // Strip nostr: prefix if present
+      const withoutPrefix = v.replace(/^(nostr:|web\+nostr:)/i, "")
+
+      if (withoutPrefix.match(NOSTR_REGEX)) {
         let result
         try {
-          result = nip19.decode(v)
+          result = nip19.decode(withoutPrefix)
           setValue("")
           if (result.type === "npub") {
             onSelect(result.data)
           } else {
-            navigate(`/${v}`)
+            navigate(`/${withoutPrefix}`)
           }
         } catch (e) {
           setValue("")
-          navigate(`/${v}`)
+          navigate(`/${withoutPrefix}`)
         }
         return
-      } else if (v.match(HEX_REGEX)) {
+      } else if (withoutPrefix.match(HEX_REGEX)) {
         setValue("")
-        onSelect(v)
+        onSelect(withoutPrefix)
         return
-      } else if (v.match(NIP05_REGEX)) {
+      } else if (withoutPrefix.match(NIP05_REGEX)) {
         ndk()
-          .getUserFromNip05(v)
+          .getUserFromNip05(withoutPrefix)
           .then((user) => {
             if (user) {
               setValue("")

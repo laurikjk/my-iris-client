@@ -17,6 +17,7 @@ interface HistoryListProps {
   usdRate: number | null
   onSendEntryClick?: (entry: SendHistoryEntry) => void
   onMintEntryClick?: (entry: HistoryEntry) => void
+  onReceiveEntryClick?: (entry: HistoryEntry) => void
 }
 
 export default function HistoryList({
@@ -24,6 +25,7 @@ export default function HistoryList({
   usdRate,
   onSendEntryClick,
   onMintEntryClick,
+  onReceiveEntryClick,
 }: HistoryListProps) {
   const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY)
   const navigate = useNavigate()
@@ -46,6 +48,7 @@ export default function HistoryList({
         const amount = getTransactionAmount(entry)
         const status = getTransactionStatus(entry)
         const isSend = entry.type === "send"
+        const isReceive = entry.type === "receive" || (entry.type === "mint" && !status)
         const isPendingMint = entry.type === "mint" && status === "pending"
         const isZapWithEvent =
           entry.paymentMetadata?.type === "zap" && entry.paymentMetadata?.eventId
@@ -53,6 +56,7 @@ export default function HistoryList({
         const hasSender = !!entry.paymentMetadata?.sender
         const isClickable =
           (isSend && onSendEntryClick) ||
+          (isReceive && onReceiveEntryClick) ||
           (isPendingMint && onMintEntryClick) ||
           isZapWithEvent ||
           hasRecipient ||
@@ -65,6 +69,9 @@ export default function HistoryList({
         const handleClick = () => {
           if (isPendingMint && onMintEntryClick) {
             onMintEntryClick(entry)
+          } else if (isReceive && onReceiveEntryClick && !hasRecipient && !hasSender && !isZapWithEvent) {
+            // Settled receives without recipient/sender metadata - show details
+            onReceiveEntryClick(entry)
           } else if (isZapWithEvent && entry.paymentMetadata?.eventId) {
             navigate(`/${nip19.noteEncode(entry.paymentMetadata.eventId)}`)
           } else if (hasRecipient && entry.paymentMetadata?.recipient) {

@@ -3,7 +3,7 @@ import {parseNostrIdentifier} from "./nostrIdentifier"
 
 interface HandleIdentifierOptions {
   input: string
-  navigate: (path: string) => void
+  navigate: (path: string, options?: {state?: Record<string, unknown>}) => void
   onTextSearch?: (query: string) => void
   clearInput?: () => void
 }
@@ -17,7 +17,17 @@ export async function handleNostrIdentifier({
   const trimmed = input.trim()
   if (!trimmed) return
 
-  const result = await parseNostrIdentifier(trimmed)
+  // Handle lightning: protocol
+  if (trimmed.toLowerCase().startsWith("lightning:")) {
+    if (clearInput) clearInput()
+    navigate("/wallet", {state: {lightningInvoice: trimmed.slice(10)}})
+    return
+  }
+
+  // Handle nostr: protocol prefix
+  const withoutNostrPrefix = trimmed.replace(/^(nostr:|web\+nostr:)/i, "")
+
+  const result = await parseNostrIdentifier(withoutNostrPrefix)
 
   // Clear input FIRST for all Nostr identifier types, before navigation
   // This ensures the input is cleared even if navigation happens quickly
@@ -50,10 +60,10 @@ export async function handleNostrIdentifier({
       navigate(`/${nip19.npubEncode(result.data)}`)
       break
     case "note":
-      navigate(`/note/${result.data}`)
+      navigate(`/${nip19.noteEncode(result.data)}`)
       break
     case "nevent":
-      navigate(`/note/${result.data.id}`)
+      navigate(`/${nip19.noteEncode(result.data.id)}`)
       break
     case "naddr":
       navigate(`/${nip19.naddrEncode(result.data)}`)

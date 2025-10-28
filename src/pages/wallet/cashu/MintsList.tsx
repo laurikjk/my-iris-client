@@ -161,6 +161,7 @@ export default function MintsList({
         }}
         activeMint={activeMint}
         onSetActive={onMintClick}
+        balance={selectedMintUrl ? balance?.[selectedMintUrl] : undefined}
       />
     </div>
   )

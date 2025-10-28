@@ -16,6 +16,7 @@ import ReceiveDialog from "./cashu/ReceiveDialog"
 import QRScannerModal from "./cashu/QRScannerModal"
 import HistoryList from "./cashu/HistoryList"
 import MintsList from "./cashu/MintsList"
+import TransactionDetailsModal from "./cashu/TransactionDetailsModal"
 import {formatUsd} from "./cashu/utils"
 import {Link, useNavigate, useLocation} from "@/navigation"
 import Header from "@/shared/components/header/Header"
@@ -79,6 +80,10 @@ export default function CashuWallet() {
   const [receiveDialogInitialToken, setReceiveDialogInitialToken] = useState<string>("")
   const [receiveDialogInitialInvoice, setReceiveDialogInitialInvoice] = useState<string>("")
   const [refreshing, setRefreshing] = useState(false)
+  const [showTransactionDetails, setShowTransactionDetails] = useState(false)
+  const [selectedTransaction, setSelectedTransaction] = useState<EnrichedHistoryEntry | null>(
+    null
+  )
   const [qrError, setQrError] = useState<string>("")
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const [showToS, setShowToS] = useState(false)
@@ -208,6 +213,11 @@ export default function CashuWallet() {
     }
   }, [])
 
+  const handleReceiveEntryClick = useCallback((entry: HistoryEntry) => {
+    setSelectedTransaction(entry as EnrichedHistoryEntry)
+    setShowTransactionDetails(true)
+  }, [])
+
   const handleCloseSendDialog = () => {
     setShowSendDialog(false)
     setSendDialogInitialToken(undefined)
@@ -224,7 +234,34 @@ export default function CashuWallet() {
     console.log("🔄 Manual refresh button clicked")
     setRefreshing(true)
     try {
-      // Check pending melt quotes (for stuck Lightning payments)
+      // Check and redeem pending mint quotes (for stuck incoming Lightning payments)
+      if (manager) {
+        console.log("🔍 Checking and requeueing paid mint quotes")
+        try {
+          const result = await manager.quotes.requeuePaidMintQuotes()
+          console.log(`✅ Requeued ${result.requeued.length} paid mint quotes for redemption`)
+          if (result.requeued.length > 0) {
+            console.log("⏳ Waiting for quotes to be processed...")
+            // Give processor time to redeem quotes
+            await new Promise((resolve) => setTimeout(resolve, 3000))
+          }
+        } catch (err) {
+          console.error("Failed to requeue mint quotes:", err)
+        }
+
+        // Force recalculate balance from all proofs in database
+        // This catches any old redeemed quotes that weren't reflected in balance
+        console.log("🔍 Recalculating balance from all proofs")
+        try {
+          const freshBalance = await manager.wallet.getBalances()
+          console.log("💰 Fresh balance:", freshBalance)
+          setBalance(freshBalance)
+        } catch (err) {
+          console.error("Failed to recalculate balance:", err)
+        }
+      }
+
+      // Check pending melt quotes (for stuck outgoing Lightning payments)
       if (manager && balance) {
         const mints = Object.keys(balance)
         console.log("🔍 Checking pending melt quotes on mints:", mints)
@@ -464,6 +501,7 @@ export default function CashuWallet() {
           mgr.on("receive:created", () => updateData("receive:created")),
           mgr.on("mint-quote:created", () => updateData("mint-quote:created")),
           mgr.on("mint-quote:redeemed", () => updateData("mint-quote:redeemed")),
+          mgr.on("proofs:saved", () => updateData("proofs:saved")),
         ]
 
         return () => {
@@ -571,7 +609,7 @@ export default function CashuWallet() {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="btn btn-circle btn-ghost btn-sm flex-shrink-0"
+              className="btn btn-circle btn-ghost btn-sm flex-shrink-0 disabled:opacity-70"
               title="Refresh"
             >
               <RiRefreshLine className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`} />
@@ -704,6 +742,7 @@ export default function CashuWallet() {
                         usdRate={usdRate}
                         onSendEntryClick={handleSendEntryClick}
                         onMintEntryClick={handleMintEntryClick}
+                        onReceiveEntryClick={handleReceiveEntryClick}
                       />
                     </div>
                   )}
@@ -754,6 +793,16 @@ export default function CashuWallet() {
                 setQrError("")
               }}
               onScanSuccess={handleQRScanSuccess}
+            />
+
+            <TransactionDetailsModal
+              isOpen={showTransactionDetails}
+              onClose={() => {
+                setShowTransactionDetails(false)
+                setSelectedTransaction(null)
+              }}
+              entry={selectedTransaction}
+              usdRate={usdRate}
             />
 
             {qrError && (

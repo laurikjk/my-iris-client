@@ -337,7 +337,7 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
             {canRedeem && (
               <button
                 onClick={handleRedeem}
-                className="text-xs text-base-content/50 hover:text-base-content/70 underline disabled:opacity-50"
+                className="text-xs text-base-content/50 hover:text-base-content/70 underline"
                 disabled={loading || !!error || redeeming || redeemed || tokenSpent}
               >
                 {redeeming ? "Redeeming..." : redeemed ? "Redeemed" : "Redeem"}
@@ -357,7 +357,7 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
           {canRedeem ? (
             <button
               onClick={handleRedeem}
-              className="btn btn-primary btn-sm flex-1 disabled:opacity-50"
+              className="btn btn-primary btn-sm flex-1"
               disabled={loading || !!error || redeeming || redeemed}
             >
               {redeeming ? "Redeeming..." : "Redeem"}
