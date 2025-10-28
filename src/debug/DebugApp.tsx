@@ -250,7 +250,7 @@ const DebugApp = () => {
   }
 
   return (
-    <div className="container mx-auto p-8">
+    <div className="container mx-auto p-8 pb-20">
       <div className="card bg-base-100 shadow-xl">
         <div className="card-body">
           <h1 className="card-title text-3xl mb-4">Iris Debug Tool</h1>
