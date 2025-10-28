@@ -119,7 +119,10 @@ const DebugApp = () => {
     }
 
     // Always create a session link with the current private key
-    const linkWithKey = `${window.location.origin}${window.location.pathname}#${debugSession.getPrivateKey()}`
+    const origin = window.location.origin.startsWith('tauri://')
+      ? 'https://iris.to'
+      : window.location.origin
+    const linkWithKey = `${origin}${window.location.pathname}#${debugSession.getPrivateKey()}`
     setSessionLink(linkWithKey)
 
     // Subscribe to test value changes
