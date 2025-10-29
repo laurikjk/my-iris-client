@@ -452,6 +452,13 @@ export default class SessionManager {
   ): Promise<Rumor | undefined> {
     await this.init()
 
+    // Add to message history queue (will be sent when session is established)
+    const completeEvent = event as Rumor
+    this.messageHistory.set(recipientIdentityKey, [
+      ...(this.messageHistory.get(recipientIdentityKey) || []),
+      completeEvent,
+    ])
+
     const userRecord = this.getOrCreateUserRecord(recipientIdentityKey)
     const ourUserRecord = this.getOrCreateUserRecord(this.ourPublicKey)
 
@@ -463,7 +470,7 @@ export default class SessionManager {
       ...Array.from(ourUserRecord.devices.values()),
     ]
 
-    // Send to all devices in background
+    // Send to all devices in background (if sessions exist)
     Promise.allSettled(
       devices.map(async (device) => {
         const {activeSession} = device
@@ -478,7 +485,7 @@ export default class SessionManager {
       .catch(console.error)
 
     // Return the event with computed ID (same as library would compute)
-    return event as Rumor
+    return completeEvent
   }
 
   async sendMessage(
@@ -507,11 +514,7 @@ export default class SessionManager {
 
     rumor.id = getEventHash(rumor)
 
-    this.messageHistory.set(recipientPublicKey, [
-      ...(this.messageHistory.get(recipientPublicKey) || []),
-      rumor,
-    ])
-
+    // Use sendEvent for actual sending (includes queueing)
     this.sendEvent(recipientPublicKey, rumor).catch(console.error)
 
     return rumor

@@ -7,6 +7,7 @@ import {useUserStore} from "@/stores/user"
 import {useNavigate} from "@/navigation"
 import {GroupDetails} from "./types"
 import {KIND_CHANNEL_CREATE} from "@/utils/constants"
+import {sendGroupEvent} from "../utils/groupMessaging"
 
 const GroupChatCreation = () => {
   const navigate = useNavigate()
@@ -93,35 +94,14 @@ const GroupChatCreation = () => {
       }
       addGroup(group)
 
-      const now = Date.now()
-      const groupCreationEvent = {
+      // Send group metadata as first message to the group
+      await sendGroupEvent({
+        groupId,
+        groupMembers: group.members,
+        senderPubKey: myPubKey,
         content: JSON.stringify(group),
         kind: KIND_CHANNEL_CREATE,
-        created_at: Math.floor(now / 1000),
-        tags: [
-          ["l", groupId],
-          ["ms", String(now)],
-        ],
-        pubkey: myPubKey,
-        id: "",
-      }
-
-      // Compute ID
-      const {getEventHash} = await import("nostr-tools")
-      groupCreationEvent.id = getEventHash(groupCreationEvent)
-
-      // Send to all members including self (for multi-device support)
-      const {getSessionManager} = await import("@/shared/services/PrivateChats")
-      const sessionManager = getSessionManager()
-      if (sessionManager) {
-        await Promise.all(
-          group.members.map((memberPubKey) =>
-            sessionManager
-              .sendEvent(memberPubKey, groupCreationEvent)
-              .catch(console.error)
-          )
-        )
-      }
+      })
 
       navigate(`/chats/group/${groupId}`)
     } catch (err) {

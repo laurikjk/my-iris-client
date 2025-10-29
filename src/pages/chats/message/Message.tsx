@@ -148,7 +148,6 @@ const Message = ({
   )
 
   if (message.kind === KIND_CHANNEL_CREATE) {
-    console.log("invite", message)
     let content = null
     if (message.pubkey === myPubKey) {
       content = "You created the group"

@@ -18,6 +18,8 @@ import {MessageType} from "./Message"
 import {getSessionManager} from "@/shared/services/PrivateChats"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useUserStore} from "@/stores/user"
+import {sendGroupEvent} from "../utils/groupMessaging"
+import {KIND_CHAT_MESSAGE} from "@/utils/constants"
 
 interface MessageFormProps {
   id: string
@@ -111,25 +113,14 @@ const MessageForm = ({
 
       // Handle group messages
       if (groupId && groupMembers) {
-        const {getEventHash} = await import("nostr-tools")
-        const now = Date.now()
-        const messageEvent = {
+        await sendGroupEvent({
+          groupId,
+          groupMembers,
+          senderPubKey: myPubKey,
           content: text,
-          kind: 0,
-          created_at: Math.floor(now / 1000),
-          tags: [["l", groupId], ["ms", String(now)], ...extraTags],
-          pubkey: myPubKey,
-          id: "",
-        }
-        messageEvent.id = getEventHash(messageEvent)
-
-        await usePrivateMessagesStore.getState().upsert(groupId, myPubKey, messageEvent)
-
-        Promise.all(
-          groupMembers.map((memberPubKey) =>
-            sessionManager.sendEvent(memberPubKey, messageEvent)
-          )
-        ).catch(console.error)
+          kind: KIND_CHAT_MESSAGE,
+          extraTags,
+        })
 
         setEncryptionMetadata(new Map())
         return
