@@ -73,6 +73,7 @@ export const useWalletBalance = () => {
           manager.on("send:created", () => updateBalance()),
           manager.on("receive:created", () => updateBalance()),
           manager.on("mint-quote:redeemed", () => updateBalance()),
+          manager.on("proofs:saved", () => updateBalance()),
         ]
 
         // Still poll every 30 seconds as backup
