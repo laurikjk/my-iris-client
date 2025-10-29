@@ -39,6 +39,10 @@ export const initCashuManager = async (): Promise<Manager> => {
   await managerInstance.enableMintQuoteWatcher({watchExistingPendingOnStart: true})
   await managerInstance.enableProofStateWatcher()
 
+  // Enable processor to automatically redeem paid quotes
+  await managerInstance.enableMintQuoteProcessor()
+  await managerInstance.quotes.requeuePaidMintQuotes()
+
   return managerInstance
 }
 
