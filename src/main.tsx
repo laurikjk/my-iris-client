@@ -190,23 +190,15 @@ const initializeApp = () => {
 // Initialize app
 initializeApp()
 
-// Function to render React app
-const renderApp = () => {
-  const root = ReactDOM.createRoot(document.getElementById("root")!)
-  root.render(
-    <NavigationProvider>
-      <Layout>
-        <Router />
-      </Layout>
-    </NavigationProvider>
-  )
-}
+const root = ReactDOM.createRoot(document.getElementById("root")!)
 
-// Export for Tauri to call after deep link setup
-export {renderApp}
-
-// Start app immediately now that deep link handler is registered
-renderApp()
+root.render(
+  <NavigationProvider>
+    <Layout>
+      <Router />
+    </Layout>
+  </NavigationProvider>
+)
 
 // Store subscriptions
 const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
