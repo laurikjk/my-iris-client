@@ -95,7 +95,9 @@ export default function MintsList({
                     <span className="font-medium truncate">
                       {info?.name || mint.replace(/^https?:\/\//, "")}
                     </span>
-                    {isActive && <span className="badge badge-primary badge-sm">Active</span>}
+                    {isActive && (
+                      <span className="badge badge-primary badge-sm">Active</span>
+                    )}
                   </div>
                   {info?.name && (
                     <span className="text-xs opacity-60 truncate">

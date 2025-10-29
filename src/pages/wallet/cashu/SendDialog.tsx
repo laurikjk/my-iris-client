@@ -555,11 +555,14 @@ export default function SendDialog({
                 <span>{error}</span>
               </div>
             )}
-            {sendAmount > 0 && balance !== undefined && sendAmount > balance && !generatedToken && (
-              <div className="alert alert-error">
-                <span>Amount exceeds balance ({balance} bit available)</span>
-              </div>
-            )}
+            {sendAmount > 0 &&
+              balance !== undefined &&
+              sendAmount > balance &&
+              !generatedToken && (
+                <div className="alert alert-error">
+                  <span>Amount exceeds balance ({balance} bit available)</span>
+                </div>
+              )}
             {!generatedToken ? (
               <form
                 onSubmit={(e) => {
@@ -710,7 +713,9 @@ export default function SendDialog({
             )}
             {balance !== undefined &&
               ((isLightningAddress && sendAmount > 0 && sendAmount > balance) ||
-                (!isLightningAddress && invoiceAmount !== null && invoiceAmount > balance)) && (
+                (!isLightningAddress &&
+                  invoiceAmount !== null &&
+                  invoiceAmount > balance)) && (
                 <div className="alert alert-error">
                   <span>Amount exceeds balance ({balance} bit available)</span>
                 </div>

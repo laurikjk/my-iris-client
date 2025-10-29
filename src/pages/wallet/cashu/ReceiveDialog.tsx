@@ -793,14 +793,24 @@ export default function ReceiveDialog({
                   <div className="text-center">
                     <div className="text-3xl font-bold">{lightningAmount} bit</div>
                     {lightningDescription && (
-                      <div className="text-sm text-base-content/70 mt-1">{lightningDescription}</div>
+                      <div className="text-sm text-base-content/70 mt-1">
+                        {lightningDescription}
+                      </div>
                     )}
                   </div>
                 )}
 
-                <RequestQRDisplay data={`lightning:${invoice}`} fragment={`lightning:${invoice}`} isAnimated={false} />
+                <RequestQRDisplay
+                  data={`lightning:${invoice}`}
+                  fragment={`lightning:${invoice}`}
+                  isAnimated={false}
+                />
 
-                <CopyButton copyStr={invoice} text="Copy Invoice" className="btn btn-primary w-full" />
+                <CopyButton
+                  copyStr={invoice}
+                  text="Copy Invoice"
+                  className="btn btn-primary w-full"
+                />
 
                 <div className="form-control">
                   <label className="label">

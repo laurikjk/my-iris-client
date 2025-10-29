@@ -22,14 +22,12 @@ const GroupChatPage = () => {
   const markOpened = usePrivateMessagesStore((state) => state.markOpened)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
 
-  if (!id || !group) {
-    return <div className="p-4">Group not found</div>
-  }
-
   const messages = events.get(id) ?? new SortedMap<string, MessageType>([], comparator)
   const lastMessageEntry = messages.last()
   const lastMessage = lastMessageEntry ? lastMessageEntry[1] : undefined
-  const lastMessageTimestamp = lastMessage ? getMillisecondTimestamp(lastMessage) : undefined
+  const lastMessageTimestamp = lastMessage
+    ? getMillisecondTimestamp(lastMessage)
+    : undefined
 
   const markGroupOpened = useCallback(() => {
     if (!id) return
@@ -64,6 +62,10 @@ const GroupChatPage = () => {
     if (!id || lastMessageTimestamp === undefined) return
     markOpened(id)
   }, [id, lastMessageTimestamp, markOpened])
+
+  if (!id || !group) {
+    return <div className="p-4">Group not found</div>
+  }
 
   return (
     <>

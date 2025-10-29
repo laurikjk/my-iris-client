@@ -294,7 +294,9 @@ export default function MintDetailsModal({
                   className="btn btn-ghost w-full justify-start"
                   disabled={refreshing}
                 >
-                  <RiRefreshLine className={`w-5 h-5 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+                  <RiRefreshLine
+                    className={`w-5 h-5 mr-2 ${refreshing ? "animate-spin" : ""}`}
+                  />
                   {refreshing ? "Refreshing..." : "Refresh metadata"}
                 </button>
                 <button

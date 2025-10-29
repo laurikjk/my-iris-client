@@ -185,8 +185,8 @@ class DebugManager {
     if (!this.debugSession) {
       return ""
     }
-    const origin = window.location.origin.startsWith('tauri://')
-      ? 'https://iris.to'
+    const origin = window.location.origin.startsWith("tauri://")
+      ? "https://iris.to"
       : window.location.origin
     return `${origin}/debug.html#${this.debugSession.getPrivateKey()}`
   }

@@ -69,7 +69,13 @@ export default function HistoryList({
         const handleClick = () => {
           if (isPendingMint && onMintEntryClick) {
             onMintEntryClick(entry)
-          } else if (isReceive && onReceiveEntryClick && !hasRecipient && !hasSender && !isZapWithEvent) {
+          } else if (
+            isReceive &&
+            onReceiveEntryClick &&
+            !hasRecipient &&
+            !hasSender &&
+            !isZapWithEvent
+          ) {
             // Settled receives without recipient/sender metadata - show details
             onReceiveEntryClick(entry)
           } else if (isZapWithEvent && entry.paymentMetadata?.eventId) {

@@ -297,13 +297,13 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
                 </div>
                 <div className="text-xs text-base-content/60">
                   Ecash token
-                  {redeemed ? (
+                  {redeemed && <span className="text-success"> • Redeemed</span>}
+                  {!redeemed && (tokenSpent || lastCheckStatus === "SPENT") && (
                     <span className="text-success"> • Redeemed</span>
-                  ) : tokenSpent || lastCheckStatus === "SPENT" ? (
-                    <span className="text-success"> • Redeemed</span>
-                  ) : lastCheckStatus === "UNSPENT" ? (
+                  )}
+                  {!redeemed && !tokenSpent && lastCheckStatus === "UNSPENT" && (
                     <span> • Not redeemed</span>
-                  ) : null}
+                  )}
                 </div>
                 {memo && <span className="block text-xs mt-1 italic">{memo}</span>}
               </>
@@ -340,7 +340,9 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
                 className="text-xs text-base-content/50 hover:text-base-content/70 underline"
                 disabled={loading || !!error || redeeming || redeemed || tokenSpent}
               >
-                {redeeming ? "Redeeming..." : redeemed ? "Redeemed" : "Redeem"}
+                {redeeming && "Redeeming..."}
+                {!redeeming && redeemed && "Redeemed"}
+                {!redeeming && !redeemed && "Redeem"}
               </button>
             )}
           </div>

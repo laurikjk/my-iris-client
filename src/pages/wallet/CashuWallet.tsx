@@ -78,12 +78,12 @@ export default function CashuWallet() {
   )
   const [sendDialogInitialInvoice, setSendDialogInitialInvoice] = useState<string>("")
   const [receiveDialogInitialToken, setReceiveDialogInitialToken] = useState<string>("")
-  const [receiveDialogInitialInvoice, setReceiveDialogInitialInvoice] = useState<string>("")
+  const [receiveDialogInitialInvoice, setReceiveDialogInitialInvoice] =
+    useState<string>("")
   const [refreshing, setRefreshing] = useState(false)
   const [showTransactionDetails, setShowTransactionDetails] = useState(false)
-  const [selectedTransaction, setSelectedTransaction] = useState<EnrichedHistoryEntry | null>(
-    null
-  )
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<EnrichedHistoryEntry | null>(null)
   const [qrError, setQrError] = useState<string>("")
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const [showToS, setShowToS] = useState(false)
@@ -239,7 +239,9 @@ export default function CashuWallet() {
         console.log("🔍 Checking and requeueing paid mint quotes")
         try {
           const result = await manager.quotes.requeuePaidMintQuotes()
-          console.log(`✅ Requeued ${result.requeued.length} paid mint quotes for redemption`)
+          console.log(
+            `✅ Requeued ${result.requeued.length} paid mint quotes for redemption`
+          )
           if (result.requeued.length > 0) {
             console.log("⏳ Waiting for quotes to be processed...")
             // Give processor time to redeem quotes
@@ -385,7 +387,9 @@ export default function CashuWallet() {
 
   // Handle receiveToken from navigation state
   useEffect(() => {
-    const state = location.state as {receiveToken?: string; lightningInvoice?: string} | undefined
+    const state = location.state as
+      | {receiveToken?: string; lightningInvoice?: string}
+      | undefined
     if (state?.receiveToken && manager) {
       setReceiveDialogInitialToken(state.receiveToken)
       setShowReceiveDialog(true)

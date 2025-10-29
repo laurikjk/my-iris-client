@@ -58,7 +58,8 @@ export const useCashuWalletStore = create<CashuWalletState>()(
         clearMintInfoCache: (url?: string) =>
           set((state) => {
             if (url) {
-              const {[url]: _, ...rest} = state.mintInfoCache
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const {[url]: _removed, ...rest} = state.mintInfoCache
               return {mintInfoCache: rest}
             }
             return {mintInfoCache: {}}

@@ -35,21 +35,21 @@ export default function TransactionDetailsModal({
           {/* Header */}
           <div className="text-center">
             <div className="flex justify-center mb-4">
-              {entry.paymentMetadata?.sender ? (
+              {entry.paymentMetadata?.sender && (
                 <Avatar pubKey={entry.paymentMetadata.sender} width={64} />
-              ) : isLightning ? (
+              )}
+              {!entry.paymentMetadata?.sender && isLightning && (
                 <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center">
                   <RiFlashlightFill className="w-8 h-8 text-accent" />
                 </div>
-              ) : (
+              )}
+              {!entry.paymentMetadata?.sender && !isLightning && (
                 <div className="w-16 h-16 rounded-full bg-warning/20 flex items-center justify-center">
                   <RiBitCoinFill className="w-8 h-8 text-warning" />
                 </div>
               )}
             </div>
-            <h3 className="text-2xl font-bold mb-2">
-              {isReceive ? "Received" : "Sent"}
-            </h3>
+            <h3 className="text-2xl font-bold mb-2">{isReceive ? "Received" : "Sent"}</h3>
             <div className="text-3xl font-bold">
               {amount >= 0 ? "+" : ""}
               {amount} bit
