@@ -40,10 +40,10 @@ const Footer = () => {
       loggedInOnly: true,
       badge:
         showBalanceInNav && balance !== null ? (
-          <>
+          <span className="select-none">
             {formatAmount(balance)}
             <span className="text-[0.85em]">₿</span>
-          </>
+          </span>
         ) : undefined,
     },
     {
