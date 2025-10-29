@@ -349,6 +349,21 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
   // Parse current params from path
   const currentParams = getRouteParams(currentPath)
 
+  // Handle deep link events from Tauri
+  useEffect(() => {
+    const handleDeepLink = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        path: string
+        state?: Record<string, unknown>
+      }>
+      const {path, state} = customEvent.detail
+      navigate(path, {state})
+    }
+
+    window.addEventListener("iris-deep-link", handleDeepLink)
+    return () => window.removeEventListener("iris-deep-link", handleDeepLink)
+  }, [navigate])
+
   const value: NavigationContextType = {
     currentPath,
     currentParams,

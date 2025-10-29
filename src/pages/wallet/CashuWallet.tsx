@@ -1,4 +1,4 @@
-import {useState, useEffect, useCallback} from "react"
+import {useState, useEffect, useCallback, useRef} from "react"
 import {initCashuManager, getCashuManager} from "@/lib/cashu/manager"
 import type {Manager} from "@/lib/cashu/core/index"
 import type {HistoryEntry, SendHistoryEntry} from "@/lib/cashu/core/models/History"
@@ -87,6 +87,7 @@ export default function CashuWallet() {
   const [qrError, setQrError] = useState<string>("")
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const [showToS, setShowToS] = useState(false)
+  const handledDeepLink = useRef(false)
 
   const enrichHistoryWithMetadata = async (
     entries: HistoryEntry[]
@@ -387,18 +388,22 @@ export default function CashuWallet() {
 
   // Handle receiveToken from navigation state
   useEffect(() => {
+    if (!manager || handledDeepLink.current) return
+
     const state = location.state as
       | {receiveToken?: string; lightningInvoice?: string}
       | undefined
-    if (state?.receiveToken && manager) {
+
+    if (!state?.receiveToken && !state?.lightningInvoice) return
+
+    handledDeepLink.current = true
+
+    if (state.receiveToken) {
       setReceiveDialogInitialToken(state.receiveToken)
       setShowReceiveDialog(true)
-    }
-    if (state?.lightningInvoice && manager) {
+    } else if (state.lightningInvoice) {
       setSendDialogInitialInvoice(state.lightningInvoice)
       setShowSendDialog(true)
-      // Clear state after handling
-      window.history.replaceState({}, "", "/wallet")
     }
   }, [location.state, manager])
 

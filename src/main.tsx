@@ -22,6 +22,30 @@ import {onOpenUrl} from "@tauri-apps/plugin-deep-link"
 
 let unsubscribeSessionEvents: (() => void) | null = null
 
+// Register deep link handler for hot starts (when app already open)
+// Note: Cold start (app closed) doesn't work due to Tauri bug #13580
+if (isTauri()) {
+  onOpenUrl((urls) => {
+    if (!urls?.length) return
+
+    const url = urls[0]
+    let path: string
+    let state: Record<string, unknown> | undefined
+
+    if (url.startsWith("lightning:")) {
+      const invoice = url.replace(/^lightning:/, "")
+      path = "/wallet"
+      state = {lightningInvoice: invoice}
+    } else {
+      path = `/${url.replace(/^(nostr:|web\+nostr:)/, "")}`
+      state = undefined
+    }
+
+    // Dispatch custom event for NavigationProvider to handle
+    window.dispatchEvent(new CustomEvent("iris-deep-link", {detail: {path, state}}))
+  })
+}
+
 const attachSessionEventListener = () => {
   try {
     const sessionManager = getSessionManager()
@@ -166,39 +190,23 @@ const initializeApp = () => {
 // Initialize app
 initializeApp()
 
-const root = ReactDOM.createRoot(document.getElementById("root")!)
-
-root.render(
-  <NavigationProvider>
-    <Layout>
-      <Router />
-    </Layout>
-  </NavigationProvider>
-)
-
-// Setup deep link handler after navigation is initialized
-if (isTauri()) {
-  onOpenUrl((urls) => {
-    if (urls && urls.length > 0) {
-      const url = urls[0]
-      console.log("Deep link opened:", url)
-
-      // Handle lightning: protocol
-      if (url.startsWith("lightning:")) {
-        const invoice = url.replace(/^lightning:/, "")
-        // Navigate to wallet with invoice in state
-        window.history.pushState({lightningInvoice: invoice}, "", "/wallet")
-        window.dispatchEvent(new PopStateEvent("popstate"))
-        return
-      }
-
-      // Strip protocol and navigate for nostr: links
-      const path = url.replace(/^(nostr:|web\+nostr:)/, "")
-      window.history.pushState({}, "", `/${path}`)
-      window.dispatchEvent(new PopStateEvent("popstate"))
-    }
-  })
+// Function to render React app
+const renderApp = () => {
+  const root = ReactDOM.createRoot(document.getElementById("root")!)
+  root.render(
+    <NavigationProvider>
+      <Layout>
+        <Router />
+      </Layout>
+    </NavigationProvider>
+  )
 }
+
+// Export for Tauri to call after deep link setup
+export {renderApp}
+
+// Start app immediately now that deep link handler is registered
+renderApp()
 
 // Store subscriptions
 const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
