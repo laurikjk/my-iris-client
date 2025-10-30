@@ -396,7 +396,7 @@ export default function CashuWallet() {
       </Header>
       <div className="flex justify-center h-screen overflow-y-auto">
         <div className="flex-1 overflow-y-auto" data-main-scroll-container="true">
-          <div className="max-w-2xl mx-auto pb-24 md:pb-0 pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0">
+          <div className="max-w-2xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0 pt-[calc(4rem+env(safe-area-inset-top))] md:pt-0">
             {/* Balance Section */}
             <div className="pt-16 md:pt-8 pb-8 text-center">
               {/* Balance Display */}

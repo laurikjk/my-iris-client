@@ -27,6 +27,7 @@ export default function SendEcashMode({
   const [selectedUserPubkey, setSelectedUserPubkey] = useState<string | null>(null)
   const [initialAmount, setInitialAmount] = useState<number>(0)
   const [initialNote, setInitialNote] = useState<string>("")
+  const [requestedMint, setRequestedMint] = useState<string | null>(null)
 
   // Handle initial invoice (payment request - creq)
   useEffect(() => {
@@ -57,6 +58,11 @@ export default function SendEcashMode({
         if (hasNip117Transport && decodedRequest.transport?.[0]?.target) {
           setSelectedUserPubkey(decodedRequest.transport[0].target)
         }
+
+        // Extract requested mint (first in mints array)
+        if (decodedRequest.mints && decodedRequest.mints.length > 0) {
+          setRequestedMint(decodedRequest.mints[0])
+        }
       } catch (error) {
         console.error("Failed to decode payment request:", error)
       }
@@ -86,9 +92,18 @@ export default function SendEcashMode({
     loadInitialToken()
   }, [initialToken])
 
-  const handleTokenCreated = (token: string) => {
+  const handleTokenCreated = async (token: string) => {
     setGeneratedToken(token)
     onSuccess()
+
+    // If payment request with NIP-117 recipient, auto-send via DM
+    if (selectedUserPubkey) {
+      console.log(
+        "🚀 Auto-sending token to payment request recipient:",
+        selectedUserPubkey
+      )
+      // SendEcashShare will handle the auto-send on mount
+    }
   }
 
   if (generatedToken) {
@@ -97,6 +112,7 @@ export default function SendEcashMode({
         manager={manager}
         generatedToken={generatedToken}
         initialToken={initialToken}
+        selectedUserPubkey={selectedUserPubkey}
         onClose={onClose}
       />
     )
@@ -108,6 +124,7 @@ export default function SendEcashMode({
       mintUrl={mintUrl}
       balance={balance}
       selectedUserPubkey={selectedUserPubkey}
+      requestedMint={requestedMint}
       onTokenCreated={handleTokenCreated}
       initialAmount={initialAmount}
       initialNote={initialNote}

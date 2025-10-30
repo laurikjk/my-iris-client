@@ -69,6 +69,9 @@ export default function HistoryList({
         const handleClick = () => {
           if (isPendingMint && onMintEntryClick) {
             onMintEntryClick(entry)
+          } else if (isSend && onSendEntryClick) {
+            // Ecash sends: Show send dialog (displays token with "Sent to" if metadata exists)
+            onSendEntryClick(entry as SendHistoryEntry)
           } else if (
             isReceive &&
             onReceiveEntryClick &&
@@ -82,13 +85,8 @@ export default function HistoryList({
             navigate(`/${nip19.noteEncode(entry.paymentMetadata.eventId)}`)
           } else if (hasRecipient && entry.paymentMetadata?.recipient) {
             // Lightning payments (melt): Navigate to profile
-            // Ecash sends: Navigate to DM
             if (entry.type === "melt") {
               navigate(`/${nip19.npubEncode(entry.paymentMetadata.recipient)}`)
-            } else {
-              navigate("/chats/chat", {
-                state: {id: entry.paymentMetadata.recipient},
-              })
             }
           } else if (hasSender && entry.paymentMetadata?.sender) {
             // Lightning receives (mint): Navigate to profile
@@ -100,8 +98,6 @@ export default function HistoryList({
                 state: {id: entry.paymentMetadata.sender},
               })
             }
-          } else if (isSend && onSendEntryClick) {
-            onSendEntryClick(entry as SendHistoryEntry)
           }
         }
 

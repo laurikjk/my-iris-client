@@ -77,17 +77,17 @@ export default function ReceiveRequestMode({
   if (paymentRequestString) {
     return (
       <div className="space-y-4">
-        <div className="alert alert-info">
-          <div className="flex flex-col gap-2 w-full">
-            <div className="font-bold">Payment request created!</div>
-            {myPubKey && (
-              <>
-                <div className="text-sm opacity-80">Requesting payment to:</div>
-                <UserRow pubKey={myPubKey} />
-              </>
-            )}
+        {myPubKey && (
+          <div className="alert alert-info">
+            <div className="flex flex-col gap-2 w-full">
+              <div className="text-sm font-semibold">Requesting payment to:</div>
+              <UserRow pubKey={myPubKey} />
+              <div className="text-xs opacity-60 mt-1">
+                Mint: {mintUrl.replace(/^https?:\/\//, "")}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
         {(requestAmount || requestDescription) && (
           <div className="bg-base-200 rounded-lg p-4 space-y-2">
             {requestAmount && (

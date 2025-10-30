@@ -9,6 +9,7 @@ interface SendEcashFormProps {
   mintUrl: string
   balance?: number
   selectedUserPubkey: string | null
+  requestedMint: string | null
   onTokenCreated: (token: string) => void
   initialAmount?: number
   initialNote?: string
@@ -19,6 +20,7 @@ export default function SendEcashForm({
   mintUrl,
   balance,
   selectedUserPubkey,
+  requestedMint,
   onTokenCreated,
   initialAmount = 0,
   initialNote = "",
@@ -49,20 +51,34 @@ export default function SendEcashForm({
       return
     }
 
-    if (balance !== undefined && sendAmount > balance) {
-      setError(`Insufficient balance. You have ${balance} bit`)
-      return
-    }
-
     setSending(true)
     setError("")
     try {
+      // Determine which mint to use
+      let useMint = mintUrl
+
+      // If payment request specifies a mint, check if we have enough balance there
+      if (requestedMint) {
+        const balances = await manager.wallet.getBalances()
+        const requestedBalance = balances[requestedMint] || 0
+
+        if (requestedBalance >= sendAmount) {
+          useMint = requestedMint
+          console.log("✓ Using requested mint with sufficient balance:", requestedMint)
+        } else {
+          console.warn("⚠️ Insufficient balance on requested mint, using active mint:", {
+            requested: requestedMint,
+            requestedBalance,
+            using: mintUrl,
+          })
+        }
+      }
+
       const token = await manager.wallet.send(
-        mintUrl,
+        useMint,
         sendAmount,
         sendNote.trim() || undefined
       )
-
       const encoded = getEncodedToken(token)
 
       // Save note and recipient to paymentMetadata
@@ -99,16 +115,23 @@ export default function SendEcashForm({
           <span>{error}</span>
         </div>
       )}
-      {sendAmount > 0 && balance !== undefined && sendAmount > balance && (
-        <div className="alert alert-error">
-          <span>Amount exceeds balance ({balance} bit available)</span>
-        </div>
-      )}
       {selectedUserPubkey && (
         <div className="alert alert-info">
           <div className="flex flex-col gap-2 w-full">
             <div className="text-sm font-semibold">Payment Request From:</div>
             <UserRow pubKey={selectedUserPubkey} />
+            {requestedMint && requestedMint !== mintUrl && (
+              <div className="text-xs opacity-80 mt-1 bg-warning/20 p-2 rounded">
+                ⚠️ Requested mint: {requestedMint.replace(/^https?:\/\//, "")}
+                <br />
+                Using: {mintUrl.replace(/^https?:\/\//, "")}
+              </div>
+            )}
+            {requestedMint && requestedMint === mintUrl && (
+              <div className="text-xs opacity-60 mt-1">
+                ✓ Using requested mint: {mintUrl.replace(/^https?:\/\//, "")}
+              </div>
+            )}
           </div>
         </div>
       )}

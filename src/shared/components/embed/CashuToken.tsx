@@ -3,7 +3,7 @@ import {RiBitCoinFill, RiLockLine} from "@remixicon/react"
 import type {Proof} from "@cashu/cashu-ts"
 import Embed, {type EmbedComponentProps} from "./index.ts"
 
-function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
+function CashuTokenComponent({match, event}: EmbedComponentProps) {
   const [amount, setAmount] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>("")
@@ -272,10 +272,7 @@ function CashuTokenComponent({match, key, event}: EmbedComponentProps) {
   }
 
   return (
-    <div
-      key={key}
-      className="cashu-token-embed flex flex-col gap-3 p-4 bg-base-200 rounded-lg border border-base-300 my-2 min-w-80"
-    >
+    <div className="cashu-token-embed flex flex-col gap-3 p-4 bg-base-200 rounded-lg border border-base-300 my-2 min-w-80">
       <div className="flex items-center gap-3">
         <div className="flex-shrink-0">
           <RiBitCoinFill className="w-10 h-10 text-warning" />

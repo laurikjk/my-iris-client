@@ -17,11 +17,13 @@ import {useAnimatedQR} from "@/hooks/useAnimatedQR"
 import CopyButton from "@/shared/components/button/CopyButton"
 import {getSessionManager} from "@/shared/services/PrivateChats"
 import {savePaymentMetadata} from "@/stores/paymentMetadata"
+import {UserRow} from "@/shared/components/user/UserRow"
 
 interface SendEcashShareProps {
   manager: Manager | null
   generatedToken: string
   initialToken?: Token
+  selectedUserPubkey: string | null
   onClose: () => void
 }
 
@@ -29,6 +31,7 @@ export default function SendEcashShare({
   manager,
   generatedToken,
   initialToken,
+  selectedUserPubkey,
   onClose,
 }: SendEcashShareProps) {
   const navigate = useNavigate()
@@ -37,8 +40,94 @@ export default function SendEcashShare({
   const [error, setError] = useState<string>("")
   const [checkingStatus, setCheckingStatus] = useState(false)
   const [tokenStatus, setTokenStatus] = useState<"spent" | "unspent" | null>(null)
+  const [recipientPubkey, setRecipientPubkey] = useState<string | null>(null)
 
   const {currentFragment, isAnimated} = useAnimatedQR(generatedToken)
+
+  // Load recipient from metadata if viewing a sent token from history
+  useEffect(() => {
+    const loadMetadata = async () => {
+      if (!generatedToken || selectedUserPubkey) return // Skip if payment request recipient
+
+      const {getPaymentMetadata} = await import("@/stores/paymentMetadata")
+      const metadata = await getPaymentMetadata(generatedToken)
+      if (metadata?.recipient) {
+        setRecipientPubkey(metadata.recipient)
+      }
+    }
+    loadMetadata()
+  }, [generatedToken, selectedUserPubkey])
+
+  // Auto-send to payment request recipient if specified
+  useEffect(() => {
+    const autoSendDm = async () => {
+      if (!selectedUserPubkey || !generatedToken) return
+
+      console.log(
+        "🚀 Auto-sending token to payment request recipient:",
+        selectedUserPubkey
+      )
+      setSendingDm(true)
+      setError("")
+
+      try {
+        const sessionManager = getSessionManager()
+        if (!sessionManager) {
+          throw new Error("Session manager not available")
+        }
+        console.log("✓ Session manager available")
+
+        const myPubKey = useUserStore.getState().publicKey
+        if (!myPubKey) {
+          throw new Error("User not logged in")
+        }
+        console.log("✓ User logged in:", myPubKey)
+
+        console.log("📨 Sending message...")
+        const sentMessage = await sessionManager.sendMessage(
+          selectedUserPubkey,
+          generatedToken
+        )
+        console.log("✓ Message sent:", sentMessage.id)
+
+        // Update local store
+        await usePrivateMessagesStore
+          .getState()
+          .upsert(selectedUserPubkey, myPubKey, sentMessage)
+        console.log("✓ Local store updated")
+
+        // Save payment metadata
+        try {
+          await savePaymentMetadata(
+            generatedToken,
+            "dm",
+            selectedUserPubkey,
+            undefined,
+            undefined
+          )
+          console.log("✓ Payment metadata saved")
+        } catch (err) {
+          console.warn("Failed to save payment metadata:", err)
+        }
+
+        // Navigate to chat
+        console.log("✓ Navigating to chat...")
+        onClose()
+        navigate("/chats/chat", {
+          state: {id: selectedUserPubkey},
+        })
+      } catch (error) {
+        console.error("❌ Failed to auto-send token via DM:", error)
+        setError(
+          "Failed to send DM: " +
+            (error instanceof Error ? error.message : "Unknown error")
+        )
+        setSendingDm(false)
+      }
+    }
+
+    autoSendDm()
+  }, [selectedUserPubkey, generatedToken, onClose, navigate])
 
   // Parse token to extract amount and memo
   const tokenData = useMemo(() => {
@@ -248,6 +337,14 @@ export default function SendEcashShare({
       {error && (
         <div className="alert alert-error">
           <span>{error}</span>
+        </div>
+      )}
+      {recipientPubkey && (
+        <div className="alert alert-info">
+          <div className="flex flex-col gap-2 w-full">
+            <div className="text-sm font-semibold">Sent to:</div>
+            <UserRow pubKey={recipientPubkey} />
+          </div>
         </div>
       )}
       <div className="alert alert-success">

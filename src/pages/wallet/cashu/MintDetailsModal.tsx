@@ -146,10 +146,26 @@ export default function MintDetailsModal({
     if (!mintInfo?.contact) return null
 
     try {
-      // Handle both array and object formats
+      // Handle array format
       if (Array.isArray(mintInfo.contact)) {
-        const contact = mintInfo.contact.find(([t]) => t === type)
-        return contact ? contact[1] : null
+        const contacts = mintInfo.contact as unknown
+        // Check if it's array of objects {method, info} or array of tuples [method, info]
+        const firstElement = (contacts as Array<unknown>)[0]
+        if (
+          firstElement &&
+          typeof firstElement === "object" &&
+          "method" in firstElement
+        ) {
+          // Array of objects format: [{method: 'email', info: 'value'}, ...]
+          const contact = (contacts as Array<{method: string; info: string}>).find(
+            (c) => c.method === type
+          )
+          return contact ? contact.info : null
+        } else if (Array.isArray(firstElement)) {
+          // Array of tuples format: [['email', 'value'], ...]
+          const contact = (contacts as string[][]).find(([t]) => t === type)
+          return contact ? contact[1] : null
+        }
       }
 
       // If it's an object, access directly
