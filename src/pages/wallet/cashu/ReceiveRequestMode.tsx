@@ -10,6 +10,7 @@ import {
 } from "@cashu/cashu-ts"
 import {useAnimatedQR} from "@/hooks/useAnimatedQR"
 import {RequestQRDisplay} from "./RequestQRDisplay"
+import {UserRow} from "@/shared/components/user/UserRow"
 
 interface ReceiveRequestModeProps {
   manager: Manager | null
@@ -77,7 +78,15 @@ export default function ReceiveRequestMode({
     return (
       <div className="space-y-4">
         <div className="alert alert-info">
-          <span className="font-bold">Payment request created!</span>
+          <div className="flex flex-col gap-2 w-full">
+            <div className="font-bold">Payment request created!</div>
+            {myPubKey && (
+              <>
+                <div className="text-sm opacity-80">Requesting payment to:</div>
+                <UserRow pubKey={myPubKey} />
+              </>
+            )}
+          </div>
         </div>
         {(requestAmount || requestDescription) && (
           <div className="bg-base-200 rounded-lg p-4 space-y-2">
