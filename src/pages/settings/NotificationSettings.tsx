@@ -163,9 +163,7 @@ const NotificationSettings = () => {
       const granted = permission === "granted"
       setDesktopPermissionGranted(granted)
       if (!granted) {
-        await alert(
-          "Notification permission denied. For development builds, you may need to run the app as a proper macOS application bundle. Try building with 'yarn tauri build' or check System Settings > Notifications."
-        )
+        await alert("Notification permission denied. Please enable notifications in your system settings.")
       }
     } catch (error) {
       console.error("[Desktop Permission] Failed to request permission:", error)
@@ -195,7 +193,7 @@ const NotificationSettings = () => {
         }
 
         if (!permissionGranted) {
-          await alert("Notification permission not granted. Please allow notifications.")
+          await alert("Notification permission denied. Please enable notifications in your system settings.")
           return
         }
 
@@ -442,7 +440,6 @@ const NotificationSettings = () => {
                     <button
                       className="btn btn-neutral btn-sm"
                       onClick={fireTestNotification}
-                      disabled={!desktopPermissionGranted}
                     >
                       Test
                     </button>

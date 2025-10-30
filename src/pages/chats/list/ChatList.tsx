@@ -50,6 +50,12 @@ const ChatList = ({className}: ChatListProps) => {
 
   useEffect(() => {
     Object.keys(publicChats).forEach((chatId) => {
+      // Validate chatId is a 64-char hex string before fetching
+      if (!/^[0-9a-f]{64}$/i.test(chatId)) {
+        console.warn("Invalid channel ID in publicChats:", chatId)
+        return
+      }
+
       const chat = publicChats[chatId]
       if (!chat.metadata) {
         addOrRefreshChatById(chatId)

@@ -50,6 +50,11 @@ const PublicChat = () => {
 
   useEffect(() => {
     if (!id) return
+    // Validate id is a 64-char hex string before fetching
+    if (!/^[0-9a-f]{64}$/i.test(id)) {
+      console.warn("Invalid channel ID, skipping metadata fetch:", id)
+      return
+    }
     addOrRefreshChatById(id)
   }, [id, addOrRefreshChatById])
 
@@ -85,6 +90,8 @@ const PublicChat = () => {
   // Set up continuous subscription for messages
   useEffect(() => {
     if (!id) return
+    // Validate id is a 64-char hex string before subscribing
+    if (!/^[0-9a-f]{64}$/i.test(id)) return
 
     // Set up subscription for channel messages
     const sub = ndk().subscribe({
