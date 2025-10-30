@@ -16,17 +16,18 @@ export default function CsaePage() {
 
               <h2>Our Commitment</h2>
               <p>
-                Iris is committed to protecting children from sexual abuse and exploitation
-                (CSAE). We have zero tolerance for child sexual abuse material (CSAM) and
-                actively work to prevent its distribution on our platform.
+                Iris is committed to protecting children from sexual abuse and
+                exploitation (CSAE). We have zero tolerance for child sexual abuse
+                material (CSAM) and actively work to prevent its distribution on our
+                platform.
               </p>
 
               <h2>Content Moderation Tools</h2>
               <p>Users have access to the following safety features:</p>
               <ul>
                 <li>
-                  <strong>Report Function:</strong> Every post includes a report button to flag
-                  inappropriate content
+                  <strong>Report Function:</strong> Every post includes a report button to
+                  flag inappropriate content
                 </li>
                 <li>
                   <strong>User Blocking:</strong> Users can block accounts to prevent
@@ -40,20 +41,18 @@ export default function CsaePage() {
 
               <h2>Decentralized Architecture</h2>
               <p>
-                <strong>Important:</strong> Iris is a client application for the decentralized
-                Nostr protocol. We do not host or store user-generated content. Content is
-                stored on independent third-party relay servers that we do not operate or
-                control.
+                <strong>Important:</strong> Iris is a client application for the
+                decentralized Nostr protocol. We do not host or store user-generated
+                content. Content is stored on independent third-party relay servers that
+                we do not operate or control.
               </p>
-              <p>
-                When users encounter illegal content, they should:
-              </p>
+              <p>When users encounter illegal content, they should:</p>
               <ul>
                 <li>Use the report function within the app</li>
                 <li>Contact the relay operator hosting the content directly</li>
                 <li>
-                  Report CSAM to the National Center for Missing & Exploited Children (NCMEC)
-                  at{" "}
+                  Report CSAM to the National Center for Missing & Exploited Children
+                  (NCMEC) at{" "}
                   <a
                     href="https://report.cybertip.org"
                     target="_blank"
@@ -63,15 +62,16 @@ export default function CsaePage() {
                   </a>
                 </li>
                 <li>
-                  Contact local law enforcement or the Internet Watch Foundation in your region
+                  Contact local law enforcement or the Internet Watch Foundation in your
+                  region
                 </li>
               </ul>
 
               <h2>Linked Content</h2>
               <p>
-                Posts may contain links to external websites and media hosted by third parties.
-                Iris does not host this content. Users should report illegal external content to
-                the hosting provider or appropriate authorities.
+                Posts may contain links to external websites and media hosted by third
+                parties. Iris does not host this content. Users should report illegal
+                external content to the hosting provider or appropriate authorities.
               </p>
 
               <h2>Reporting to Authorities</h2>
@@ -107,8 +107,8 @@ export default function CsaePage() {
 
               <h2>Contact Us</h2>
               <p>
-                For questions about our child safety standards or to report concerns, contact
-                us at <a href="mailto:irismessenger@pm.me">irismessenger@pm.me</a>
+                For questions about our child safety standards or to report concerns,
+                contact us at <a href="mailto:irismessenger@pm.me">irismessenger@pm.me</a>
               </p>
 
               <h2>Transparency</h2>

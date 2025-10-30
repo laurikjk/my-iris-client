@@ -19,6 +19,10 @@ import {useGroupsStore} from "./stores/groups"
 import {KIND_CHANNEL_CREATE} from "./utils/constants"
 import {isTauri} from "./utils/utils"
 import {onOpenUrl} from "@tauri-apps/plugin-deep-link"
+import {
+  enable as enableAutostart,
+  isEnabled as isAutostartEnabled,
+} from "@tauri-apps/plugin-autostart"
 
 let unsubscribeSessionEvents: (() => void) | null = null
 
@@ -144,11 +148,26 @@ const checkDeletedAccount = async (publicKey: string) => {
 }
 
 // Move initialization to a function to avoid side effects
-const initializeApp = () => {
+const initializeApp = async () => {
   ndk()
 
   // Initialize debug system
   DebugManager
+
+  // Enable autostart on first launch if not already set (desktop only)
+  if (isTauri()) {
+    try {
+      const {desktop} = useSettingsStore.getState()
+      const autostartCurrentlyEnabled = await isAutostartEnabled()
+
+      // If setting is true but autostart is disabled, enable it
+      if (desktop.startOnBoot && !autostartCurrentlyEnabled) {
+        await enableAutostart()
+      }
+    } catch (error) {
+      console.error("Failed to initialize autostart:", error)
+    }
+  }
 
   // Initialize chat modules if we have a public key
   const state = useUserStore.getState()
@@ -156,7 +175,7 @@ const initializeApp = () => {
     console.log("Initializing chat modules with existing user data")
 
     // Check for deleted account first
-    checkDeletedAccount(state.publicKey)
+    void checkDeletedAccount(state.publicKey)
 
     subscribeToNotifications()
     subscribeToDMNotifications()
@@ -188,7 +207,7 @@ const initializeApp = () => {
 }
 
 // Initialize app
-initializeApp()
+void initializeApp()
 
 const root = ReactDOM.createRoot(document.getElementById("root")!)
 

@@ -39,6 +39,10 @@ interface SettingsState {
   notifications: {
     server: string
   }
+  // Desktop settings
+  desktop: {
+    startOnBoot: boolean
+  }
   // Debug settings
   debug: {
     enabled: boolean
@@ -54,6 +58,7 @@ interface SettingsState {
   updateContent: (settings: Partial<SettingsState["content"]>) => void
   updateImgproxy: (settings: Partial<SettingsState["imgproxy"]>) => void
   updateNotifications: (settings: Partial<SettingsState["notifications"]>) => void
+  updateDesktop: (settings: Partial<SettingsState["desktop"]>) => void
   updateDebug: (settings: Partial<SettingsState["debug"]>) => void
   updateLegal: (settings: Partial<SettingsState["legal"]>) => void
 }
@@ -92,6 +97,9 @@ export const useSettingsStore = create<SettingsState>()(
       notifications: {
         server: CONFIG.defaultSettings.notificationServer,
       },
+      desktop: {
+        startOnBoot: true,
+      },
       debug: {
         enabled: false,
         privateKey: null,
@@ -117,6 +125,10 @@ export const useSettingsStore = create<SettingsState>()(
       updateNotifications: (settings) =>
         set((state) => ({
           notifications: {...state.notifications, ...settings},
+        })),
+      updateDesktop: (settings) =>
+        set((state) => ({
+          desktop: {...state.desktop, ...settings},
         })),
       updateDebug: (settings) =>
         set((state) => ({

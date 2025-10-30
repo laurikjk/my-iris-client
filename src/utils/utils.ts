@@ -1,6 +1,17 @@
 export const isTauri = () =>
   typeof window !== "undefined" && !!(window.__TAURI__ || window.__TAURI_INTERNALS__)
 
+export const isMobileTauri = async (): Promise<boolean> => {
+  if (!isTauri()) return false
+  try {
+    const {platform} = await import("@tauri-apps/plugin-os")
+    const platformType = await platform()
+    return platformType === "android" || platformType === "ios"
+  } catch {
+    return false
+  }
+}
+
 export const openExternalLink = async (url: string) => {
   if (isTauri()) {
     try {

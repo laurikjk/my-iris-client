@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use tauri::Manager;
+#[cfg(mobile)]
 use tauri::Listener;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,6 +31,14 @@ pub fn run() {
         )?;
       }
 
+      // Check if launched with --minimized flag (from autostart)
+      let args: Vec<String> = std::env::args().collect();
+      if args.contains(&"--minimized".to_string()) {
+        if let Some(window) = app.get_webview_window("main") {
+          let _ = window.minimize();
+        }
+      }
+
       // Add notification plugin
       app.handle().plugin(tauri_plugin_notification::init())?;
 
@@ -40,6 +50,13 @@ pub fn run() {
 
       // Add deep link handler
       app.handle().plugin(tauri_plugin_deep_link::init())?;
+
+      // Add autostart plugin for desktop platforms
+      #[cfg(any(target_os = "macos", windows, target_os = "linux"))]
+      app.handle().plugin(tauri_plugin_autostart::init(
+        tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+        Some(vec!["--minimized"]),
+      ))?;
 
       // Add iOS swipe navigation
       #[cfg(target_os = "ios")]
