@@ -46,6 +46,7 @@ const NotificationSettings = () => {
   const {notifications, updateNotifications} = useSettingsStore()
   const [serviceWorkerReady, setServiceWorkerReady] = useState(false)
   const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
+  const [desktopPermissionGranted, setDesktopPermissionGranted] = useState(false)
   const hasNotificationsApi = "Notification" in window
   const [notificationsAllowed, setNotificationsAllowed] = useState(
     hasNotificationsApi && Notification.permission === "granted"
@@ -92,9 +93,23 @@ const NotificationSettings = () => {
     // Check if running on desktop
     const checkPlatform = async () => {
       if (isTauri()) {
-        const {platform} = await import("@tauri-apps/plugin-os")
-        const platformType = await platform()
-        setIsDesktop(platformType !== "android" && platformType !== "ios")
+        try {
+          const {platform} = await import("@tauri-apps/plugin-os")
+          const platformType = await platform()
+          const desktop = platformType !== "android" && platformType !== "ios"
+          setIsDesktop(desktop)
+
+          // Check desktop notification permission
+          if (desktop) {
+            const {isPermissionGranted} = await import("@tauri-apps/plugin-notification")
+            const granted = await isPermissionGranted()
+            console.log("[NotificationSettings] Desktop permission check:", granted)
+            setDesktopPermissionGranted(granted)
+          }
+        } catch (e) {
+          console.error("Failed to check platform, assuming desktop:", e)
+          setIsDesktop(true) // If platform check fails in Tauri, assume desktop
+        }
       } else {
         setIsDesktop(false)
       }
@@ -139,8 +154,61 @@ const NotificationSettings = () => {
     })
   }
 
+  const requestDesktopPermission = async () => {
+    try {
+      const {requestPermission} = await import("@tauri-apps/plugin-notification")
+      console.log("[Desktop Permission] Requesting permission...")
+      const permission = await requestPermission()
+      console.log("[Desktop Permission] Result:", permission)
+      const granted = permission === "granted"
+      setDesktopPermissionGranted(granted)
+      if (!granted) {
+        await alert(
+          "Notification permission denied. For development builds, you may need to run the app as a proper macOS application bundle. Try building with 'yarn tauri build' or check System Settings > Notifications."
+        )
+      }
+    } catch (error) {
+      console.error("[Desktop Permission] Failed to request permission:", error)
+      await alert(`Failed to request permission: ${error}`)
+    }
+  }
+
   const fireTestNotification = async () => {
-    if (notificationsAllowed) {
+    console.log("[Test Notification] isDesktop:", isDesktop)
+    if (isDesktop) {
+      // Desktop Tauri notifications
+      console.log("[Test Notification] Sending desktop notification")
+      try {
+        const {sendNotification, isPermissionGranted, requestPermission} = await import(
+          "@tauri-apps/plugin-notification"
+        )
+
+        // Check and request permission if needed
+        let permissionGranted = await isPermissionGranted()
+        console.log("[Test Notification] Permission granted:", permissionGranted)
+
+        if (!permissionGranted) {
+          const permission = await requestPermission()
+          permissionGranted = permission === "granted"
+          setDesktopPermissionGranted(permissionGranted)
+          console.log("[Test Notification] Requested permission, granted:", permissionGranted)
+        }
+
+        if (!permissionGranted) {
+          await alert("Notification permission not granted. Please allow notifications.")
+          return
+        }
+
+        await sendNotification({
+          title: "Test notification",
+          body: "Seems like it's working!",
+        })
+        console.log("[Test Notification] Desktop notification sent")
+      } catch (error) {
+        console.error("[Test Notification] Failed to send test notification:", error)
+        await alert(`Failed to send notification: ${error}`)
+      }
+    } else if (notificationsAllowed) {
       const title = "Test notification"
       const options = {
         body: "Seems like it's working!",
@@ -352,6 +420,37 @@ const NotificationSettings = () => {
               </div>
             </SettingsGroupItem>
           </SettingsGroup>
+
+          {isDesktop && (
+            <SettingsGroup title="Status">
+              <SettingsGroupItem isLast>
+                <div className="flex items-center justify-between">
+                  <StatusIndicator
+                    status={desktopPermissionGranted}
+                    enabledMessage="Notifications are allowed"
+                    disabledMessage="Notifications are not allowed"
+                  />
+                  <div className="flex items-center gap-2">
+                    {!desktopPermissionGranted && (
+                      <button
+                        className="btn btn-neutral btn-sm"
+                        onClick={requestDesktopPermission}
+                      >
+                        Allow
+                      </button>
+                    )}
+                    <button
+                      className="btn btn-neutral btn-sm"
+                      onClick={fireTestNotification}
+                      disabled={!desktopPermissionGranted}
+                    >
+                      Test
+                    </button>
+                  </div>
+                </div>
+              </SettingsGroupItem>
+            </SettingsGroup>
+          )}
 
           {isDesktop === false && (
             <SettingsGroup title="Status">

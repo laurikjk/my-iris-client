@@ -267,7 +267,14 @@ export const subscribeToNotifications = debounce(async () => {
     const api = new IrisAPI(store.notifications.server)
 
     // Build notification filter based on user preferences
-    const prefs = store.notifications.preferences
+    const prefs = store.notifications.preferences || {
+      mentions: true,
+      replies: true,
+      reposts: true,
+      reactions: true,
+      zaps: true,
+      dms: true,
+    }
     const kinds: number[] = []
 
     if (prefs.mentions || prefs.replies) {

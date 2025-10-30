@@ -28,6 +28,7 @@ tauri-plugin-swipe-back-ios = "1.0.0"
 tauri-plugin-opener = "2.5"
 tauri-plugin-dialog = "2.4"
 tauri-plugin-deep-link = "2.4"
+tauri-plugin-os = "2"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-autostart = "2"

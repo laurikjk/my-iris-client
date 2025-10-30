@@ -12,19 +12,13 @@ import {ndk} from "./utils/ndk"
 import socialGraph from "./utils/socialGraph"
 import DebugManager from "./utils/DebugManager"
 import Layout from "@/shared/components/Layout"
-import {usePrivateMessagesStore} from "./stores/privateMessages"
-import {getSessionManager} from "./shared/services/PrivateChats"
-import {getTag} from "./utils/tagUtils"
-import {useGroupsStore} from "./stores/groups"
-import {KIND_CHANNEL_CREATE} from "./utils/constants"
 import {isTauri, isMobileTauri} from "./utils/utils"
 import {onOpenUrl} from "@tauri-apps/plugin-deep-link"
 import {
   enable as enableAutostart,
   isEnabled as isAutostartEnabled,
 } from "@tauri-apps/plugin-autostart"
-
-let unsubscribeSessionEvents: (() => void) | null = null
+import {attachSessionEventListener, cleanupSessionEventListener} from "./utils/dmEventHandler"
 
 // Register deep link handler for hot starts (when app already open)
 // Note: Cold start (app closed) doesn't work due to Tauri bug #13580
@@ -50,79 +44,6 @@ if (isTauri()) {
   })
 }
 
-const attachSessionEventListener = () => {
-  try {
-    const sessionManager = getSessionManager()
-    if (!sessionManager) {
-      console.error("Session manager not available")
-      return
-    }
-    void sessionManager
-      .init()
-      .then(() => {
-        unsubscribeSessionEvents?.()
-        unsubscribeSessionEvents = sessionManager.onEvent((event, pubKey) => {
-          const {publicKey} = useUserStore.getState()
-          if (!publicKey) return
-
-          // Check if it's a group creation event
-          const lTag = getTag("l", event.tags)
-          if (event.kind === KIND_CHANNEL_CREATE && lTag) {
-            try {
-              const group = JSON.parse(event.content)
-              const {addGroup} = useGroupsStore.getState()
-              addGroup(group)
-              console.log("Received group creation:", group.name, group.id)
-            } catch (e) {
-              console.error("Failed to parse group creation event:", e)
-            }
-            return
-          }
-
-          // Check if it's a group message (has l tag but not group creation)
-          if (lTag) {
-            // Create placeholder group if we don't have metadata yet
-            const {groups, addGroup} = useGroupsStore.getState()
-            if (!groups[lTag]) {
-              const placeholderGroup = {
-                id: lTag,
-                name: `Group ${lTag.slice(0, 8)}`,
-                description: "",
-                picture: "",
-                members: [publicKey],
-                createdAt: Date.now(),
-              }
-              addGroup(placeholderGroup)
-              console.log("Created placeholder group:", lTag)
-            }
-
-            // Group message or reaction - store under group ID
-            console.log("Received group message for group:", lTag)
-            void usePrivateMessagesStore.getState().upsert(lTag, publicKey, event)
-            return
-          }
-
-          const pTag = getTag("p", event.tags)
-          if (!pTag) return
-
-          const from = pubKey === publicKey ? pTag : pubKey
-          const to = pubKey === publicKey ? publicKey : pTag
-
-          if (!from || !to) return
-
-          void usePrivateMessagesStore.getState().upsert(from, to, event)
-        })
-      })
-      .catch((error) => {
-        console.error(
-          "Failed to initialize session manager (possibly corrupt data):",
-          error
-        )
-      })
-  } catch (error) {
-    console.error("Failed to attach session event listener", error)
-  }
-}
 
 // Check if logged-in user has deleted account (Tauri only)
 const checkDeletedAccount = async (publicKey: string) => {
@@ -183,12 +104,16 @@ const initializeApp = async () => {
     socialGraph().recalculateFollowDistances()
 
     // Initialize platform-specific notifications (non-blocking, parallel to web push)
+    console.log("[Init] isTauri():", isTauri())
     if (isTauri()) {
       ;(async () => {
         const isMobile = await isMobileTauri()
+        console.log("[Init] isMobileTauri:", isMobile)
         if (isMobile) {
+          console.log("[Init] Initializing mobile push notifications")
           pushNotifications.init().catch(console.error)
         } else {
+          console.log("[Init] Initializing desktop notifications")
           const {initDesktopNotifications} = await import("./utils/desktopNotifications")
           initDesktopNotifications().catch(console.error)
         }
@@ -261,6 +186,6 @@ if (import.meta.hot) {
     // Clean up subscriptions on hot reload
     unsubscribeUser()
     unsubscribeTheme()
-    unsubscribeSessionEvents?.()
+    cleanupSessionEventListener()
   })
 }
