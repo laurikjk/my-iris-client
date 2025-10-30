@@ -38,6 +38,14 @@ interface SettingsState {
   // Notification settings
   notifications: {
     server: string
+    preferences: {
+      mentions: boolean
+      replies: boolean
+      reposts: boolean
+      reactions: boolean
+      zaps: boolean
+      dms: boolean
+    }
   }
   // Desktop settings
   desktop: {
@@ -96,6 +104,14 @@ export const useSettingsStore = create<SettingsState>()(
       },
       notifications: {
         server: CONFIG.defaultSettings.notificationServer,
+        preferences: {
+          mentions: true,
+          replies: true,
+          reposts: true,
+          reactions: true,
+          zaps: true,
+          dms: true,
+        },
       },
       desktop: {
         startOnBoot: true,
@@ -144,6 +160,17 @@ export const useSettingsStore = create<SettingsState>()(
       onRehydrateStorage: () => (state) => {
         if (state?.imgproxy) {
           localforage.setItem("imgproxy-settings", state.imgproxy)
+        }
+        // Migrate old settings without preferences
+        if (state?.notifications && !state.notifications.preferences) {
+          state.notifications.preferences = {
+            mentions: true,
+            replies: true,
+            reposts: true,
+            reactions: true,
+            zaps: true,
+            dms: true,
+          }
         }
       },
     }

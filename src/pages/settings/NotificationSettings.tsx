@@ -16,7 +16,7 @@ import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiArrowRightSLine, RiArrowDownSLine} from "@remixicon/react"
 import debounce from "lodash/debounce"
-import {confirm, alert} from "@/utils/utils"
+import {confirm, alert, isTauri} from "@/utils/utils"
 
 interface StatusIndicatorProps {
   status: boolean
@@ -45,6 +45,7 @@ const StatusIndicator = ({
 const NotificationSettings = () => {
   const {notifications, updateNotifications} = useSettingsStore()
   const [serviceWorkerReady, setServiceWorkerReady] = useState(false)
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
   const hasNotificationsApi = "Notification" in window
   const [notificationsAllowed, setNotificationsAllowed] = useState(
     hasNotificationsApi && Notification.permission === "granted"
@@ -88,6 +89,18 @@ const NotificationSettings = () => {
   }, [allGood])
 
   useEffect(() => {
+    // Check if running on desktop
+    const checkPlatform = async () => {
+      if (isTauri()) {
+        const {platform} = await import("@tauri-apps/plugin-os")
+        const platformType = await platform()
+        setIsDesktop(platformType !== "android" && platformType !== "ios")
+      } else {
+        setIsDesktop(false)
+      }
+    }
+    checkPlatform()
+
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.ready.then((registration) => {
         if (registration.active) {
@@ -235,66 +248,173 @@ const NotificationSettings = () => {
     <div className="bg-base-200 min-h-full">
       <div className="p-4">
         <div className="space-y-6">
-          <SettingsGroup title="Status">
-            <SettingsGroupItem>
-              <StatusIndicator
-                status={hasNotificationsApi}
-                enabledMessage="Notifications API is enabled"
-                disabledMessage="Notifications API is disabled"
-              />
-            </SettingsGroupItem>
+          <SettingsGroup title="Preferences">
             <SettingsGroupItem>
               <div className="flex items-center justify-between">
-                <StatusIndicator
-                  status={notificationsAllowed}
-                  enabledMessage="Notifications are allowed"
-                  disabledMessage="Notifications are not allowed"
+                <span>Mentions</span>
+                <input
+                  type="checkbox"
+                  className="toggle toggle-primary"
+                  checked={notifications.preferences.mentions}
+                  onChange={(e) =>
+                    updateNotifications({
+                      preferences: {
+                        ...notifications.preferences,
+                        mentions: e.target.checked,
+                      },
+                    })
+                  }
                 />
-                <div className="flex items-center gap-2">
-                  {hasNotificationsApi && !notificationsAllowed && (
-                    <button
-                      className="btn btn-neutral btn-sm"
-                      onClick={requestNotificationPermission}
-                    >
-                      Allow
-                    </button>
-                  )}
-                  {notificationsAllowed && (
-                    <button
-                      className="btn btn-neutral btn-sm"
-                      onClick={fireTestNotification}
-                    >
-                      Test
-                    </button>
-                  )}
-                </div>
               </div>
             </SettingsGroupItem>
             <SettingsGroupItem>
-              <StatusIndicator
-                status={serviceWorkerReady}
-                enabledMessage="Service Worker is running"
-                disabledMessage="Service Worker is not running"
-              />
+              <div className="flex items-center justify-between">
+                <span>Replies</span>
+                <input
+                  type="checkbox"
+                  className="toggle toggle-primary"
+                  checked={notifications.preferences.replies}
+                  onChange={(e) =>
+                    updateNotifications({
+                      preferences: {
+                        ...notifications.preferences,
+                        replies: e.target.checked,
+                      },
+                    })
+                  }
+                />
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
+              <div className="flex items-center justify-between">
+                <span>Reposts</span>
+                <input
+                  type="checkbox"
+                  className="toggle toggle-primary"
+                  checked={notifications.preferences.reposts}
+                  onChange={(e) =>
+                    updateNotifications({
+                      preferences: {
+                        ...notifications.preferences,
+                        reposts: e.target.checked,
+                      },
+                    })
+                  }
+                />
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
+              <div className="flex items-center justify-between">
+                <span>Reactions</span>
+                <input
+                  type="checkbox"
+                  className="toggle toggle-primary"
+                  checked={notifications.preferences.reactions}
+                  onChange={(e) =>
+                    updateNotifications({
+                      preferences: {
+                        ...notifications.preferences,
+                        reactions: e.target.checked,
+                      },
+                    })
+                  }
+                />
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
+              <div className="flex items-center justify-between">
+                <span>Zaps</span>
+                <input
+                  type="checkbox"
+                  className="toggle toggle-primary"
+                  checked={notifications.preferences.zaps}
+                  onChange={(e) =>
+                    updateNotifications({
+                      preferences: {...notifications.preferences, zaps: e.target.checked},
+                    })
+                  }
+                />
+              </div>
             </SettingsGroupItem>
             <SettingsGroupItem isLast>
               <div className="flex items-center justify-between">
-                <StatusIndicator
-                  status={subscribedToPush}
-                  enabledMessage="Subscribed to push notifications"
-                  disabledMessage="Not subscribed to push notifications"
+                <span>Direct Messages</span>
+                <input
+                  type="checkbox"
+                  className="toggle toggle-primary"
+                  checked={notifications.preferences.dms}
+                  onChange={(e) =>
+                    updateNotifications({
+                      preferences: {...notifications.preferences, dms: e.target.checked},
+                    })
+                  }
                 />
-                {allGood && !subscribedToPush && (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={subscribeToNotifications}
-                  >
-                    Subscribe
-                  </button>
-                )}
               </div>
             </SettingsGroupItem>
           </SettingsGroup>
+
+          {isDesktop === false && (
+            <SettingsGroup title="Status">
+              <SettingsGroupItem>
+                <StatusIndicator
+                  status={hasNotificationsApi}
+                  enabledMessage="Notifications API is enabled"
+                  disabledMessage="Notifications API is disabled"
+                />
+              </SettingsGroupItem>
+              <SettingsGroupItem>
+                <div className="flex items-center justify-between">
+                  <StatusIndicator
+                    status={notificationsAllowed}
+                    enabledMessage="Notifications are allowed"
+                    disabledMessage="Notifications are not allowed"
+                  />
+                  <div className="flex items-center gap-2">
+                    {hasNotificationsApi && !notificationsAllowed && (
+                      <button
+                        className="btn btn-neutral btn-sm"
+                        onClick={requestNotificationPermission}
+                      >
+                        Allow
+                      </button>
+                    )}
+                    {notificationsAllowed && (
+                      <button
+                        className="btn btn-neutral btn-sm"
+                        onClick={fireTestNotification}
+                      >
+                        Test
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </SettingsGroupItem>
+              <SettingsGroupItem>
+                <StatusIndicator
+                  status={serviceWorkerReady}
+                  enabledMessage="Service Worker is running"
+                  disabledMessage="Service Worker is not running"
+                />
+              </SettingsGroupItem>
+              <SettingsGroupItem isLast>
+                <div className="flex items-center justify-between">
+                  <StatusIndicator
+                    status={subscribedToPush}
+                    enabledMessage="Subscribed to push notifications"
+                    disabledMessage="Not subscribed to push notifications"
+                  />
+                  {allGood && !subscribedToPush && (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={subscribeToNotifications}
+                    >
+                      Subscribe
+                    </button>
+                  )}
+                </div>
+              </SettingsGroupItem>
+            </SettingsGroup>
+          )}
 
           <SettingsGroup title="Server">
             <SettingsInputItem

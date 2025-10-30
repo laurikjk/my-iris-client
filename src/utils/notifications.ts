@@ -265,9 +265,32 @@ export const subscribeToNotifications = debounce(async () => {
 
     const store = useSettingsStore.getState()
     const api = new IrisAPI(store.notifications.server)
+
+    // Build notification filter based on user preferences
+    const prefs = store.notifications.preferences
+    const kinds: number[] = []
+
+    if (prefs.mentions || prefs.replies) {
+      kinds.push(KIND_TEXT_NOTE)
+    }
+    if (prefs.reposts) {
+      kinds.push(KIND_REPOST)
+    }
+    if (prefs.reactions) {
+      kinds.push(KIND_REACTION)
+    }
+    if (prefs.zaps) {
+      kinds.push(KIND_ZAP_RECEIPT)
+    }
+
+    if (kinds.length === 0) {
+      console.log("No notification types enabled, skipping subscription")
+      return
+    }
+
     const notificationFilter = {
       "#p": [myPubKey],
-      kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_REACTION, KIND_ZAP_RECEIPT],
+      kinds,
     }
 
     // Check for existing subscription on notification server

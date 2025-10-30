@@ -80,3 +80,48 @@ export const getSessionManager = (): SessionManager | null => {
     return null
   }
 }
+
+/**
+ * Publishes a tombstone event to nullify a device's chat invite
+ * Makes the invite invisible to other devices
+ */
+export const deleteDeviceInvite = async (deviceId: string) => {
+  const {publicKey} = useUserStore.getState()
+
+  // Publish tombstone event - same kind and d tag, empty content
+  const dTag = `double-ratchet/invites/${deviceId}`
+
+  const {NDKEvent} = await import("@nostr-dev-kit/ndk")
+  const deletionEvent = new NDKEvent(ndk(), {
+    kind: 30078, // INVITE_EVENT_KIND
+    pubkey: publicKey,
+    content: "",
+    created_at: Math.floor(Date.now() / 1000),
+    tags: [["d", dTag]],
+  })
+
+  await deletionEvent.sign()
+  await deletionEvent.publish()
+
+  console.log("Published invite tombstone for device:", deviceId)
+
+  // Delete invite from localStorage to prevent republishing
+  const {LocalStorageAdapter} = await import("../../session/StorageAdapter")
+  const storage = new LocalStorageAdapter("private")
+  await storage.del(`invite/${deviceId}`)
+}
+
+/**
+ * Deletes the current device's invite (convenience wrapper)
+ */
+export const deleteCurrentDeviceInvite = async () => {
+  const manager = getSessionManager()
+  if (!manager) {
+    console.log("No session manager, skipping invite tombstone")
+    return
+  }
+
+  await manager.init()
+  const deviceId = manager.getDeviceId()
+  await deleteDeviceInvite(deviceId)
+}

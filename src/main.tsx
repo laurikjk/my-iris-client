@@ -17,7 +17,7 @@ import {getSessionManager} from "./shared/services/PrivateChats"
 import {getTag} from "./utils/tagUtils"
 import {useGroupsStore} from "./stores/groups"
 import {KIND_CHANNEL_CREATE} from "./utils/constants"
-import {isTauri} from "./utils/utils"
+import {isTauri, isMobileTauri} from "./utils/utils"
 import {onOpenUrl} from "@tauri-apps/plugin-deep-link"
 import {
   enable as enableAutostart,
@@ -182,9 +182,17 @@ const initializeApp = async () => {
     migratePublicChats()
     socialGraph().recalculateFollowDistances()
 
-    // Initialize mobile push notifications for Tauri
-    if (window.__TAURI__) {
-      pushNotifications.init().catch(console.error)
+    // Initialize platform-specific notifications (non-blocking, parallel to web push)
+    if (isTauri()) {
+      ;(async () => {
+        const isMobile = await isMobileTauri()
+        if (isMobile) {
+          pushNotifications.init().catch(console.error)
+        } else {
+          const {initDesktopNotifications} = await import("./utils/desktopNotifications")
+          initDesktopNotifications().catch(console.error)
+        }
+      })().catch(console.error)
     }
 
     // Only initialize DM sessions if not in readonly mode

@@ -13,6 +13,7 @@ interface DeviceInfo {
   id: string
   isCurrent: boolean
   notYetPropagated?: boolean
+  timestamp?: number
 }
 
 const INVITE_EVENT_KIND = 30078
@@ -73,6 +74,7 @@ const ChatSettings = () => {
           deviceList.push({
             id: invite.deviceId,
             isCurrent,
+            timestamp: event.created_at,
           })
         } catch (error) {
           console.error("Failed to parse invite event:", error)
@@ -88,11 +90,12 @@ const ChatSettings = () => {
         })
       }
 
-      // Sort: current device first, then alphabetically
+      // Sort: current device first, then by timestamp descending
       deviceList.sort((a, b) => {
         if (a.isCurrent) return -1
         if (b.isCurrent) return 1
-        return a.id.localeCompare(b.id)
+        // Sort by timestamp descending (newest first)
+        return (b.timestamp || 0) - (a.timestamp || 0)
       })
 
       setDevices(deviceList)
@@ -108,27 +111,8 @@ const ChatSettings = () => {
     }
 
     try {
-      const ndkInstance = ndk()
-      const {NDKEvent} = await import("@nostr-dev-kit/ndk")
-
-      // Publish tombstone event - same kind and d tag, empty content
-      const dTag = `double-ratchet/invites/${deviceId}`
-
-      const deletionEvent = new NDKEvent(ndkInstance, {
-        kind: INVITE_EVENT_KIND,
-        pubkey: publicKey,
-        content: "",
-        created_at: Math.floor(Date.now() / 1000),
-        tags: [["d", dTag]],
-      })
-
-      await deletionEvent.sign()
-      await deletionEvent.publish()
-
-      // Delete invite from localStorage to prevent republishing
-      const {LocalStorageAdapter} = await import("@/session/StorageAdapter")
-      const storage = new LocalStorageAdapter("private")
-      await storage.del(`invite/${deviceId}`)
+      const {deleteDeviceInvite} = await import("@/shared/services/PrivateChats")
+      await deleteDeviceInvite(deviceId)
 
       // Wait for relay propagation
       await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -147,6 +131,7 @@ const ChatSettings = () => {
       }
 
       // Force fresh fetch from relays, bypass cache
+      const ndkInstance = ndk()
       const events = await ndkInstance.fetchEvents(filter, {
         closeOnEose: true,
         cacheUsage: NDKSubscriptionCacheUsage.ONLY_RELAY,
@@ -168,6 +153,7 @@ const ChatSettings = () => {
           deviceList.push({
             id: invite.deviceId,
             isCurrent,
+            timestamp: event.created_at,
           })
         } catch (error) {
           console.error("Failed to parse invite event:", error)
@@ -185,7 +171,7 @@ const ChatSettings = () => {
       deviceList.sort((a, b) => {
         if (a.isCurrent) return -1
         if (b.isCurrent) return 1
-        return a.id.localeCompare(b.id)
+        return (b.timestamp || 0) - (a.timestamp || 0)
       })
 
       setDevices(deviceList)
@@ -244,7 +230,7 @@ const ChatSettings = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium font-mono text-sm">
                             {device.id}
                           </span>
@@ -257,6 +243,11 @@ const ChatSettings = () => {
                             </span>
                           )}
                         </div>
+                        {device.timestamp && (
+                          <div className="text-xs text-base-content/50">
+                            {new Date(device.timestamp * 1000).toLocaleString()}
+                          </div>
+                        )}
                       </div>
                       {!device.isCurrent && (
                         <button

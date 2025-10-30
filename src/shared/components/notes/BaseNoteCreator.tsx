@@ -448,7 +448,11 @@ export function BaseNoteCreator({
         }
       }
 
-      await event.publish()
+      // Sign first (can take time with extensions), then publish in background
+      await event.sign()
+      event.publish().catch((error) => {
+        console.error("Failed to publish note:", error)
+      })
 
       setText("")
       setImeta([])
@@ -457,6 +461,7 @@ export function BaseNoteCreator({
       setTitle("")
       setIsFocused(false)
       draftStore.clearDraft(draftKey)
+      setPublishing(false)
       onClose?.()
       onPublishCallback?.()
 
@@ -465,8 +470,7 @@ export function BaseNoteCreator({
         navigate(`/${nip19.noteEncode(event.id)}`)
       }
     } catch (error) {
-      console.error("Failed to publish note:", error)
-    } finally {
+      console.error("Failed to create note:", error)
       setPublishing(false)
     }
   }

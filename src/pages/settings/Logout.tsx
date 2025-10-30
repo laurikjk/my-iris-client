@@ -7,7 +7,6 @@ import {MouseEvent, useEffect, useState} from "react"
 import {useNavigate} from "@/navigation"
 import localforage from "localforage"
 import {ndk} from "@/utils/ndk"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {useWalletProviderStore} from "@/stores/walletProvider"
@@ -93,22 +92,8 @@ function Logout() {
 
   async function publishInviteTombstones() {
     try {
-      // TEMP: Skip publishing invite tombstones
-      const invites = new Map() // useUserRecordsStore.getState().getOwnDeviceInvites()
-      for (const invite of invites.values()) {
-        const deletionEvent = new NDKEvent(ndk(), {
-          kind: 30078,
-          pubkey: invite.inviter,
-          content: "",
-          created_at: Math.floor(Date.now() / 1000),
-          tags: [["d", "double-ratchet/invites/" + invite.deviceId]],
-        })
-        try {
-          await deletionEvent.publish()
-        } catch (e) {
-          console.warn("Error publishing invite tombstone", e)
-        }
-      }
+      const {deleteCurrentDeviceInvite} = await import("@/shared/services/PrivateChats")
+      await deleteCurrentDeviceInvite()
     } catch (e) {
       console.error("Failed to publish invite tombstones", e)
     }
