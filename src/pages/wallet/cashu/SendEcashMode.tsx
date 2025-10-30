@@ -1,6 +1,14 @@
-import {useState, useMemo} from "react"
+import {useState, useEffect, useMemo} from "react"
 import type {Manager} from "@/lib/cashu/core/index"
-import {getDecodedToken, type Token} from "@cashu/cashu-ts"
+import {
+  getDecodedToken,
+  getEncodedToken,
+  decodePaymentRequest,
+  CashuMint,
+  CashuWallet,
+  type Token,
+  type Proof,
+} from "@cashu/cashu-ts"
 import {RiShare2Line} from "@remixicon/react"
 import {DoubleRatchetUserSearch} from "@/pages/chats/components/DoubleRatchetUserSearch"
 import type {DoubleRatchetUser} from "@/pages/chats/utils/doubleRatchetUsers"
@@ -18,6 +26,7 @@ interface SendEcashModeProps {
   onSuccess: () => void
   onClose: () => void
   initialToken?: Token
+  initialInvoice?: string
   balance?: number
 }
 
@@ -27,6 +36,7 @@ export default function SendEcashMode({
   onSuccess,
   onClose,
   initialToken,
+  initialInvoice,
   balance,
 }: SendEcashModeProps) {
   const navigate = useNavigate()
@@ -37,9 +47,72 @@ export default function SendEcashMode({
   const [sending, setSending] = useState(false)
   const [sendingDm, setSendingDm] = useState(false)
   const [error, setError] = useState<string>("")
+  const [selectedUserPubkey, setSelectedUserPubkey] = useState<string | null>(null)
+  const [checkingStatus, setCheckingStatus] = useState(false)
+  const [tokenStatus, setTokenStatus] = useState<"spent" | "unspent" | null>(null)
   const dmMessage = "" // Note: dmMessage input not implemented yet
 
   const {currentFragment, isAnimated} = useAnimatedQR(generatedToken)
+
+  // Handle initial invoice (payment request - creq)
+  useEffect(() => {
+    const handlePaymentRequest = async () => {
+      if (!initialInvoice || !initialInvoice.startsWith("creq")) return
+
+      try {
+        const decodedRequest = decodePaymentRequest(initialInvoice)
+
+        // Pre-populate amount
+        if (decodedRequest.amount) {
+          setSendAmount(decodedRequest.amount)
+        }
+
+        // Pre-populate note/description
+        if (decodedRequest.description) {
+          setSendNote(decodedRequest.description)
+        }
+
+        // Check if it's a NIP-117 (double ratchet DM) transport
+        const hasNip117Transport = decodedRequest.transport?.some(
+          (t) =>
+            t.type === "nostr" &&
+            t.tags?.some((tag: string[]) => tag[0] === "n" && tag[1] === "117")
+        )
+
+        // Auto-select recipient for DM if NIP-117
+        if (hasNip117Transport && decodedRequest.transport?.[0]?.target) {
+          setSelectedUserPubkey(decodedRequest.transport[0].target)
+        }
+      } catch (error) {
+        console.error("Failed to decode payment request:", error)
+        setError("Invalid payment request")
+      }
+    }
+
+    handlePaymentRequest()
+  }, [initialInvoice])
+
+  // Handle initial token (from history) - encode and display
+  useEffect(() => {
+    const loadInitialToken = async () => {
+      if (!initialToken) return
+      try {
+        const encoded = getEncodedToken(initialToken)
+        setGeneratedToken(encoded)
+
+        // Load existing metadata for DM message suggestion (not implemented yet)
+        const {getPaymentMetadata} = await import("@/stores/paymentMetadata")
+        const metadata = await getPaymentMetadata(encoded)
+        // TODO: If we add dmMessage input field, pre-fill with metadata?.message
+        if (metadata?.message) {
+          console.log("Token has metadata message:", metadata.message)
+        }
+      } catch (error) {
+        console.error("Failed to encode initial token:", error)
+      }
+    }
+    loadInitialToken()
+  }, [initialToken])
 
   // Parse token to extract amount and memo
   const tokenData = useMemo(() => {
@@ -105,7 +178,7 @@ export default function SendEcashMode({
   }, [initialToken, generatedToken, sendNote])
 
   // Generate QR code
-  useState(() => {
+  useEffect(() => {
     const generateQR = async () => {
       const dataToEncode = isAnimated ? currentFragment : generatedToken
       if (!dataToEncode) {
@@ -138,7 +211,7 @@ export default function SendEcashMode({
       }
     }
     generateQR()
-  })
+  }, [generatedToken, currentFragment, isAnimated])
 
   const handleSendTokenDm = async (user: DoubleRatchetUser) => {
     if (!generatedToken) return
@@ -193,6 +266,57 @@ export default function SendEcashMode({
     }
   }
 
+  const checkTokenStatus = async () => {
+    if (!generatedToken || !manager) return
+
+    setCheckingStatus(true)
+    setError("")
+    setTokenStatus(null)
+    try {
+      const decoded = getDecodedToken(generatedToken)
+
+      // Get proofs
+      const proofs: Proof[] = []
+
+      if (decoded.token && Array.isArray(decoded.token) && decoded.token[0]) {
+        proofs.push(...(decoded.token[0].proofs || []))
+      } else if (decoded.proofs) {
+        proofs.push(...decoded.proofs)
+      }
+
+      if (proofs.length === 0) {
+        setError("Invalid token format")
+        return
+      }
+
+      // Get mint URL
+      const mintUrl = decoded.mint
+      if (!mintUrl) {
+        setError("No mint URL in token")
+        return
+      }
+
+      // Create temporary wallet instance to check proof states
+      const mint = new CashuMint(mintUrl)
+      const mintKeys = await mint.getKeys()
+      const tempWallet = new CashuWallet(mint, {keys: mintKeys.keysets})
+
+      const states = await tempWallet.checkProofsStates(proofs)
+
+      // If any proof is spent, token is spent
+      const isSpent = states.some((state) => state.state === "SPENT")
+      setTokenStatus(isSpent ? "spent" : "unspent")
+    } catch (error) {
+      console.error("Failed to check token status:", error)
+      setError(
+        "Failed to check status: " +
+          (error instanceof Error ? error.message : "Unknown error")
+      )
+    } finally {
+      setCheckingStatus(false)
+    }
+  }
+
   const sendEcash = async () => {
     if (!manager) return
 
@@ -209,6 +333,7 @@ export default function SendEcashMode({
 
     setSending(true)
     setError("")
+    setTokenStatus(null) // Reset status when creating new token
     try {
       // Pass memo to wallet.send() so it's included in history
       const token = await manager.wallet.send(
@@ -217,20 +342,19 @@ export default function SendEcashMode({
         sendNote.trim() || undefined
       )
 
-      const {getEncodedToken} = await import("@cashu/cashu-ts")
       const encoded = getEncodedToken(token)
 
       setGeneratedToken(encoded)
 
-      // Save note to paymentMetadata (for enrichment lookups by encoded token)
-      if (sendNote.trim()) {
+      // Save note and recipient to paymentMetadata (for enrichment lookups by encoded token)
+      if (sendNote.trim() || selectedUserPubkey) {
         try {
           await savePaymentMetadata(
             encoded,
             "other",
+            selectedUserPubkey || undefined,
             undefined,
-            undefined,
-            sendNote.trim()
+            sendNote.trim() || undefined
           )
         } catch (err) {
           console.warn("Failed to save send note:", err)
@@ -363,6 +487,24 @@ export default function SendEcashMode({
               </button>
             )}
           </div>
+          <button
+            className="btn btn-outline w-full"
+            onClick={checkTokenStatus}
+            disabled={checkingStatus}
+          >
+            {checkingStatus ? "Checking..." : "Check Status"}
+          </button>
+          {tokenStatus && (
+            <div
+              className={`alert ${tokenStatus === "spent" ? "alert-warning" : "alert-success"}`}
+            >
+              <span>
+                {tokenStatus === "spent"
+                  ? "✓ Token has been claimed"
+                  : "Token not yet claimed"}
+              </span>
+            </div>
+          )}
           <div className="divider">DM</div>
           <div className="form-control">
             <DoubleRatchetUserSearch

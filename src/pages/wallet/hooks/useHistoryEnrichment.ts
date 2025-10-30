@@ -42,7 +42,16 @@ export function useHistoryEnrichment() {
               memoFromToken = entry.token.memo
             }
           } else if (entry.type === "receive") {
-            // Receive entries don't have tokens, so match with a send entry
+            // First try to get metadata saved by entry ID (from ReceiveEcashMode)
+            const entryMetadata = await getPaymentMetadata(`receive_entry_${entry.id}`)
+            if (entryMetadata) {
+              return {
+                ...entry,
+                paymentMetadata: entryMetadata,
+              }
+            }
+
+            // Fallback: try to match with a send entry
             // by amount, mint, and timestamp proximity (within 5 minutes)
             const matchingSend = entries.find(
               (e) =>

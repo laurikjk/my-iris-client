@@ -134,21 +134,30 @@ export default function CashuWallet() {
     setShowQRScanner(false)
     setQrError("")
 
+    console.log("🔍 QR scanned:", result.substring(0, 50) + "...")
+
+    // Strip cashu: URI prefix if present
+    let cleanResult = result
+    if (result.toLowerCase().startsWith("cashu:")) {
+      cleanResult = result.slice(6)
+      console.log("✂️ Stripped cashu: prefix, now:", cleanResult.substring(0, 50) + "...")
+    }
+
     // Check if it's a Cashu token
-    if (result.startsWith("cashu")) {
-      setReceiveDialogInitialToken(result)
+    if (cleanResult.startsWith("cashu")) {
+      setReceiveDialogInitialToken(cleanResult)
       setShowReceiveDialog(true)
       return
     }
 
     // Check if it's a Cashu payment request
-    if (result.startsWith("creq")) {
+    if (cleanResult.startsWith("creq")) {
       try {
         const {decodePaymentRequest} = await import("@cashu/cashu-ts")
-        decodePaymentRequest(result) // Validate format
+        decodePaymentRequest(cleanResult) // Validate format
 
         // Handle payment request - open send dialog with request data
-        setSendDialogInitialInvoice(result)
+        setSendDialogInitialInvoice(cleanResult)
         setShowSendDialog(true)
         return
       } catch (error) {
@@ -174,6 +183,7 @@ export default function CashuWallet() {
       return
     }
 
+    console.error("❌ Unrecognized QR format. First 100 chars:", result.substring(0, 100))
     setQrError("Unrecognized QR code format")
   }
 

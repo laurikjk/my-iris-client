@@ -1,4 +1,4 @@
-import {useState} from "react"
+import {useState, useEffect} from "react"
 import type {Manager} from "@/lib/cashu/core/index"
 import Modal from "@/shared/components/ui/Modal"
 import ReceiveEcashMode from "./ReceiveEcashMode"
@@ -31,6 +31,19 @@ export default function ReceiveDialog({
     "select" | "ecash" | "lightning" | "request"
   >("select")
 
+  // Auto-navigate to appropriate mode when dialog opens with initial data
+  useEffect(() => {
+    if (!isOpen) return
+
+    if (initialToken) {
+      setReceiveMode("ecash")
+    } else if (initialInvoice) {
+      setReceiveMode("lightning")
+    } else {
+      setReceiveMode("select")
+    }
+  }, [isOpen, initialToken, initialInvoice])
+
   const handleClose = () => {
     onClose()
     setReceiveMode("select")
@@ -46,8 +59,10 @@ export default function ReceiveDialog({
   const handleBack = () => {
     if (receiveMode === "request") {
       setReceiveMode("ecash")
-    } else {
+    } else if (receiveMode === "ecash" || receiveMode === "lightning") {
       setReceiveMode("select")
+    } else {
+      handleClose()
     }
   }
 
@@ -124,6 +139,7 @@ export default function ReceiveDialog({
             onSuccess={onSuccess}
             onClose={handleClose}
             onScanRequest={onScanRequest}
+            onRequestClick={() => setReceiveMode("request")}
             initialToken={initialToken}
           />
         )}

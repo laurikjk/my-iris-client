@@ -8,6 +8,7 @@ interface ReceiveEcashModeProps {
   onSuccess: () => void
   onClose: () => void
   onScanRequest?: () => void
+  onRequestClick?: () => void
   initialToken?: string
 }
 
@@ -16,6 +17,7 @@ export default function ReceiveEcashMode({
   onSuccess,
   onClose,
   onScanRequest,
+  onRequestClick,
   initialToken,
 }: ReceiveEcashModeProps) {
   const myPubKey = usePublicKey()
@@ -145,6 +147,32 @@ export default function ReceiveEcashMode({
       }
 
       await manager.wallet.receive(trimmedToken)
+
+      // Get the most recent receive entry (just created) and save metadata by entry ID
+      // This allows enrichment to find metadata for received tokens
+      try {
+        const recentHistory = await manager.history.getPaginatedHistory(0, 10)
+        const receiveEntry = recentHistory.find(
+          (e) =>
+            e.type === "receive" &&
+            e.mintUrl === mintUrl &&
+            Math.abs(e.createdAt - Date.now()) < 5000 // Within last 5 seconds
+        )
+
+        if (receiveEntry && noteToSave) {
+          // Save metadata using entry ID as key so enrichment can find it
+          await savePaymentMetadata(
+            `receive_entry_${receiveEntry.id}`,
+            "other",
+            undefined,
+            undefined,
+            noteToSave
+          )
+        }
+      } catch (err) {
+        console.warn("Failed to save metadata by entry ID:", err)
+      }
+
       setTokenInput("")
       onClose()
       onSuccess()
@@ -179,6 +207,26 @@ export default function ReceiveEcashMode({
         >
           <RiQrCodeLine className="w-5 h-5 mr-2" />
           SCAN
+        </button>
+
+        <button
+          className="btn btn-outline w-full justify-start"
+          onClick={() => onRequestClick?.()}
+        >
+          <svg
+            className="w-5 h-5 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          REQUEST
         </button>
       </div>
     )

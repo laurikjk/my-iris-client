@@ -133,6 +133,7 @@ export default function SendDialog({
             onSuccess={onSuccess}
             onClose={handleClose}
             initialToken={initialToken}
+            initialInvoice={initialInvoice}
             balance={balance}
           />
         )}
