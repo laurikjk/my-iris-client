@@ -70,7 +70,9 @@ export async function initDesktopNotifications() {
     kinds.push(KIND_ZAP_RECEIPT)
   }
 
-  console.log("[Desktop Notifications] Setting up callback to reuse existing notifications subscription")
+  console.log(
+    "[Desktop Notifications] Setting up callback to reuse existing notifications subscription"
+  )
 
   // Register callback to be called by the existing notifications subscription
   setDesktopNotificationCallback((event: NDKEvent) => {
@@ -79,7 +81,6 @@ export async function initDesktopNotifications() {
 
   console.log("[Desktop Notifications] Callback registered")
 }
-
 
 /**
  * Handle incoming notification event from NDK

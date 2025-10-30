@@ -13,7 +13,7 @@ import IrisAPI, {Invoice} from "@/utils/IrisAPI"
 import {useUserStore} from "@/stores/user"
 import {useEffect, useState} from "react"
 import {Helmet} from "react-helmet"
-import {isTauri} from "@/utils/utils"
+import {isMobileTauri} from "@/utils/utils"
 
 type Duration = 3 | 12
 export type PlanId = 1 | 2 | 3
@@ -112,12 +112,18 @@ export default function SubscriptionPage() {
   const [plan, setPlan] = useHistoryState<PlanId>(1, "subscriptionPlan")
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
 
   const totalPrice = (p: PlanId) =>
     plans.find((x) => x.id === p)!.price[duration as Duration].amount
   const monthly = (p: PlanId) => (totalPrice(p) / duration).toFixed(2)
 
   const [invoices, setInvoices] = useState<Invoice[]>([])
+
+  // Check if running on mobile Tauri
+  useEffect(() => {
+    isMobileTauri().then(setIsMobile)
+  }, [])
 
   // Set initial plan based on current subscription
   useEffect(() => {
@@ -230,15 +236,15 @@ export default function SubscriptionPage() {
     return plan === getPlanNumberFromTier(currentTier ?? "patron") ? "Extend" : "Upgrade"
   }
 
-  // Show Tauri message if running in Tauri
-  if (isTauri()) {
+  // Show message if running on mobile Tauri
+  if (isMobile) {
     return (
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header title="Subscription" slideUp={false} />
         <div className="flex-1 overflow-y-auto p-4 mx-4 md:p-8 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-4 md:pb-4">
           <div className="@container flex flex-col gap-6 p-4 rounded-lg bg-base-100 shadow">
             <div className="text-center py-8">
-              <p className="text-lg">Subscribing is not available in the app.</p>
+              <p className="text-lg">Subscribing is not available in the mobile app.</p>
               <p className="text-base-content/60 mt-2">
                 Please use the web version to manage your subscription.
               </p>

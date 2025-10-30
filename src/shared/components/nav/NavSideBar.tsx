@@ -1,5 +1,5 @@
 import {RiLoginBoxLine, RiLockLine, RiBugLine} from "@remixicon/react"
-import {useRef, useMemo} from "react"
+import {useRef, useMemo, useEffect, useState} from "react"
 import NavLink from "./NavLink"
 
 import {useWalletBalance} from "../../hooks/useWalletBalance"
@@ -8,7 +8,7 @@ import {SubscriptionNavItem} from "./SubscriptionNavItem"
 import {MessagesNavItem} from "./MessagesNavItem"
 import PublishButton from "../ui/PublishButton"
 import ErrorBoundary from "../ui/ErrorBoundary"
-import {formatAmount, isTauri} from "@/utils/utils"
+import {formatAmount, isMobileTauri} from "@/utils/utils"
 import {usePublicKey, useUserStore} from "@/stores/user"
 import {useWalletStore} from "@/stores/wallet"
 import {useSettingsStore} from "@/stores/settings"
@@ -28,8 +28,13 @@ const NavSideBar = () => {
   const myPrivKey = useUserStore((state) => state.privateKey)
   const nip07Login = useUserStore((state) => state.nip07Login)
   const {debug} = useSettingsStore()
+  const [isMobile, setIsMobile] = useState(false)
 
   const hasSigner = !!(myPrivKey || nip07Login)
+
+  useEffect(() => {
+    isMobileTauri().then(setIsMobile)
+  }, [])
 
   const navItems = useMemo(() => {
     const configItems = navItemsConfig()
@@ -38,13 +43,13 @@ const NavSideBar = () => {
       if (item.label === "Chats" && !hasSigner) {
         return false
       }
-      // Hide Subscription in Tauri apps
-      if (item.label === "Subscription" && isTauri()) {
+      // Hide Subscription in mobile Tauri apps
+      if (item.label === "Subscription" && isMobile) {
         return false
       }
       return !("requireLogin" in item) || (item.requireLogin && myPubKey)
     })
-  }, [myPubKey, hasSigner])
+  }, [myPubKey, hasSigner, isMobile])
 
   const logoUrl = CONFIG.navLogo
 

@@ -18,7 +18,10 @@ import {
   enable as enableAutostart,
   isEnabled as isAutostartEnabled,
 } from "@tauri-apps/plugin-autostart"
-import {attachSessionEventListener, cleanupSessionEventListener} from "./utils/dmEventHandler"
+import {
+  attachSessionEventListener,
+  cleanupSessionEventListener,
+} from "./utils/dmEventHandler"
 
 // Register deep link handler for hot starts (when app already open)
 // Note: Cold start (app closed) doesn't work due to Tauri bug #13580
@@ -43,7 +46,6 @@ if (isTauri()) {
     window.dispatchEvent(new CustomEvent("iris-deep-link", {detail: {path, state}}))
   })
 }
-
 
 // Check if logged-in user has deleted account (Tauri only)
 const checkDeletedAccount = async (publicKey: string) => {

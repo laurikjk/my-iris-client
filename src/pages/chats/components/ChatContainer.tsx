@@ -1,4 +1,4 @@
-import {useLayoutEffect, useRef, useState, useEffect} from "react"
+import {useLayoutEffect, useRef, useState, useEffect, useMemo} from "react"
 import ErrorBoundary from "@/shared/components/ui/ErrorBoundary"
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import Message, {MessageType} from "../message/Message"
@@ -9,6 +9,7 @@ import {getSessionManager} from "@/shared/services/PrivateChats"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {KIND_REACTION} from "@/utils/constants"
 import {getEventHash} from "nostr-tools"
+import ReverseVirtualScroll from "@/shared/components/ui/ReverseVirtualScroll"
 
 interface ChatContainerProps {
   messages: SortedMap<string, MessageType>
@@ -23,6 +24,9 @@ interface ChatContainerProps {
   groupMembers?: string[]
 }
 
+const INITIAL_RENDER_COUNT = 25
+const LOAD_MORE_COUNT = 30
+
 const ChatContainer = ({
   messages,
   sessionId,
@@ -36,6 +40,7 @@ const ChatContainer = ({
   groupMembers,
 }: ChatContainerProps) => {
   const [showScrollDown, setShowScrollDown] = useState(false)
+  const [renderCount, setRenderCount] = useState(INITIAL_RENDER_COUNT)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const wasAtBottomRef = useRef(true)
@@ -45,7 +50,37 @@ const ChatContainer = ({
   const lastHeightRef = useRef(0)
   const hasInitiallyScrolledRef = useRef(false)
 
-  const messageGroups = groupMessages(messages, undefined, isPublicChat)
+  // Create windowed messages - show last N messages
+  const visibleMessages = useMemo(() => {
+    const totalMessages = messages.size
+    if (totalMessages <= renderCount) {
+      return messages
+    }
+
+    const startIndex = Math.max(0, totalMessages - renderCount)
+    const windowed = new SortedMap<string, MessageType>(
+      undefined,
+      "created_at" // Messages sorted by created_at timestamp
+    )
+
+    let i = 0
+    for (const [key, value] of messages) {
+      if (i >= startIndex) {
+        windowed.set(key, value)
+      }
+      i++
+    }
+
+    return windowed
+  }, [messages, renderCount])
+
+  const messageGroups = groupMessages(visibleMessages, undefined, isPublicChat)
+
+  const handleLoadMore = () => {
+    setRenderCount((prev) => Math.min(prev + LOAD_MORE_COUNT, messages.size))
+  }
+
+  const canLoadMore = renderCount < messages.size
 
   // Create reaction handler for groups
   const handleReaction = async (messageId: string, emoji: string) => {
@@ -110,6 +145,14 @@ const ChatContainer = ({
   useLayoutEffect(() => {
     if (wasAtBottomRef.current) scrollToBottom()
   }, [messages.size])
+
+  // Reset render count when total messages decrease (e.g., chat switched)
+  useEffect(() => {
+    const totalMessages = messages.size
+    if (totalMessages < renderCount) {
+      setRenderCount(Math.max(INITIAL_RENDER_COUNT, totalMessages))
+    }
+  }, [messages.size, renderCount])
 
   useEffect(() => {
     const container = chatContainerRef.current
@@ -187,47 +230,60 @@ const ChatContainer = ({
         data-header-scroll-target
       >
         {messages.size === 0 ? (
-          <div className="text-center text-base-content/70 my-8">
-            {initialLoadDone && showNoMessages
-              ? "No messages yet. Be the first to send a message!"
-              : ""}
-          </div>
+          <>
+            <div className="flex-grow" />
+            <div className="text-center text-base-content/70 my-8">
+              {initialLoadDone && showNoMessages
+                ? "No messages yet. Be the first to send a message!"
+                : ""}
+            </div>
+          </>
         ) : (
-          messageGroups.map((group, index) => {
-            const groupDate = new Date(getMillisecondTimestamp(group[0])).toDateString()
-            const prevGroupDate =
-              index > 0
-                ? new Date(
-                    getMillisecondTimestamp(messageGroups[index - 1][0])
-                  ).toDateString()
-                : null
-
-            return (
-              <div key={index} className="mb-6">
-                {(!prevGroupDate || groupDate !== prevGroupDate) && (
-                  <div className="text-xs text-base-content/50 text-center mb-4">
-                    {groupDate}
-                  </div>
-                )}
-                <div className="flex flex-col gap-[2px]">
-                  <ErrorBoundary>
-                    {group.map((message, messageIndex) => (
-                      <Message
-                        key={message.id}
-                        message={message}
-                        isFirst={messageIndex === 0}
-                        isLast={messageIndex === group.length - 1}
-                        sessionId={sessionId}
-                        onReply={() => onReply(message)}
-                        showAuthor={showAuthor}
-                        onSendReaction={handleReaction}
-                      />
-                    ))}
-                  </ErrorBoundary>
+          <>
+            <div className="flex-grow min-h-0" />
+            <ReverseVirtualScroll onLoadMore={handleLoadMore} enabled={canLoadMore}>
+              {canLoadMore && (
+                <div className="text-center text-xs text-base-content/50 py-2">
+                  Scroll up to load older messages
                 </div>
-              </div>
-            )
-          })
+              )}
+              {messageGroups.map((group, index) => {
+              const groupDate = new Date(getMillisecondTimestamp(group[0])).toDateString()
+              const prevGroupDate =
+                index > 0
+                  ? new Date(
+                      getMillisecondTimestamp(messageGroups[index - 1][0])
+                    ).toDateString()
+                  : null
+
+              return (
+                <div key={index} className="mb-6">
+                  {(!prevGroupDate || groupDate !== prevGroupDate) && (
+                    <div className="text-xs text-base-content/50 text-center mb-4">
+                      {groupDate}
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-[2px]">
+                    <ErrorBoundary>
+                      {group.map((message, messageIndex) => (
+                        <Message
+                          key={message.id}
+                          message={message}
+                          isFirst={messageIndex === 0}
+                          isLast={messageIndex === group.length - 1}
+                          sessionId={sessionId}
+                          onReply={() => onReply(message)}
+                          showAuthor={showAuthor}
+                          onSendReaction={handleReaction}
+                        />
+                      ))}
+                    </ErrorBoundary>
+                  </div>
+                </div>
+              )
+            })}
+            </ReverseVirtualScroll>
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>

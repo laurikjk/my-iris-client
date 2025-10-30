@@ -14,7 +14,10 @@ const addToMap = (
 ) => {
   const existingEventMap = chatEventMap.get(chatId)
   const eventMap = existingEventMap
-    ? new SortedMap<string, MessageType>(Array.from(existingEventMap.entries()), comparator)
+    ? new SortedMap<string, MessageType>(
+        Array.from(existingEventMap.entries()),
+        comparator
+      )
     : new SortedMap<string, MessageType>([], comparator)
 
   eventMap.set(message.id, message)

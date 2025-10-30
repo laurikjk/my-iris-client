@@ -163,7 +163,9 @@ const NotificationSettings = () => {
       const granted = permission === "granted"
       setDesktopPermissionGranted(granted)
       if (!granted) {
-        await alert("Notification permission denied. Please enable notifications in your system settings.")
+        await alert(
+          "Notification permission denied. Please enable notifications in your system settings."
+        )
       }
     } catch (error) {
       console.error("[Desktop Permission] Failed to request permission:", error)
@@ -189,11 +191,16 @@ const NotificationSettings = () => {
           const permission = await requestPermission()
           permissionGranted = permission === "granted"
           setDesktopPermissionGranted(permissionGranted)
-          console.log("[Test Notification] Requested permission, granted:", permissionGranted)
+          console.log(
+            "[Test Notification] Requested permission, granted:",
+            permissionGranted
+          )
         }
 
         if (!permissionGranted) {
-          await alert("Notification permission denied. Please enable notifications in your system settings.")
+          await alert(
+            "Notification permission denied. Please enable notifications in your system settings."
+          )
           return
         }
 
