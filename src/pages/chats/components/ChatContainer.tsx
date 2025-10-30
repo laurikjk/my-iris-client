@@ -226,7 +226,7 @@ const ChatContainer = ({
     <>
       <div
         ref={chatContainerRef}
-        className="flex flex-col flex-1 space-y-4 p-4 relative overflow-y-auto overflow-x-hidden pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(8rem+env(safe-area-inset-bottom))] md:pt-4 md:pb-4"
+        className="flex flex-col flex-1 space-y-4 p-4 relative overflow-y-auto overflow-x-hidden pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] md:pt-4 md:pb-4"
         data-header-scroll-target
       >
         {messages.size === 0 ? (
