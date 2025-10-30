@@ -1,5 +1,5 @@
 import Modal from "@/shared/components/ui/Modal"
-import type {EnrichedHistoryEntry} from "../CashuWallet"
+import type {EnrichedHistoryEntry} from "../hooks/useHistoryEnrichment"
 import {getTransactionAmount, formatDate, formatUsd} from "./utils"
 import {Avatar} from "@/shared/components/user/Avatar"
 import {Name} from "@/shared/components/user/Name"

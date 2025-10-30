@@ -1,15 +1,13 @@
 import {useState, useEffect, useCallback, useRef} from "react"
 import {initCashuManager, getCashuManager} from "@/lib/cashu/manager"
 import type {Manager} from "@/lib/cashu/core/index"
-import type {HistoryEntry, SendHistoryEntry} from "@/lib/cashu/core/models/History"
+import type {SendHistoryEntry, HistoryEntry} from "@/lib/cashu/core/models/History"
 import type {Token} from "@cashu/cashu-ts"
-import {IndexedDbRepositories} from "@/lib/cashu/indexeddb/index"
 import RightColumn from "@/shared/components/RightColumn"
 import Widget from "@/shared/components/ui/Widget"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import {useCashuWalletStore} from "@/stores/cashuWallet"
 import {useWalletProviderStore} from "@/stores/walletProvider"
-import {getPaymentMetadata, type PaymentMetadata} from "@/stores/paymentMetadata"
 import {RiArrowRightUpLine, RiArrowLeftDownLine, RiRefreshLine} from "@remixicon/react"
 import SendDialog from "./cashu/SendDialog"
 import ReceiveDialog from "./cashu/ReceiveDialog"
@@ -22,29 +20,15 @@ import {Link, useNavigate, useLocation} from "@/navigation"
 import Header from "@/shared/components/header/Header"
 import Icon from "@/shared/components/Icons/Icon"
 import {usePublicKey} from "@/stores/user"
-import {
-  getNPubCashBalance,
-  claimNPubCashTokens,
-  extractMintFromToken,
-} from "@/lib/npubcash"
-import {ndk} from "@/utils/ndk"
 import TermsOfService from "@/shared/components/TermsOfService"
 import {useSettingsStore} from "@/stores/settings"
 import {isTauri} from "@/utils/utils"
-
-export type EnrichedHistoryEntry = HistoryEntry & {
-  paymentMetadata?: PaymentMetadata
-}
-
-const meltQuoteRepos = new IndexedDbRepositories({name: "iris-cashu-db"})
-let meltQuoteReposInitialized = false
-
-const ensureMeltQuoteReposInit = async () => {
-  if (!meltQuoteReposInitialized) {
-    await meltQuoteRepos.init()
-    meltQuoteReposInitialized = true
-  }
-}
+import {
+  useHistoryEnrichment,
+  type EnrichedHistoryEntry,
+} from "./hooks/useHistoryEnrichment"
+import {useNPubCashClaim} from "./hooks/useNPubCashClaim"
+import {useWalletRefresh} from "./hooks/useWalletRefresh"
 
 const DEFAULT_MINT = "https://mint.coinos.io"
 
@@ -80,7 +64,6 @@ export default function CashuWallet() {
   const [receiveDialogInitialToken, setReceiveDialogInitialToken] = useState<string>("")
   const [receiveDialogInitialInvoice, setReceiveDialogInitialInvoice] =
     useState<string>("")
-  const [refreshing, setRefreshing] = useState(false)
   const [showTransactionDetails, setShowTransactionDetails] = useState(false)
   const [selectedTransaction, setSelectedTransaction] =
     useState<EnrichedHistoryEntry | null>(null)
@@ -89,117 +72,25 @@ export default function CashuWallet() {
   const [showToS, setShowToS] = useState(false)
   const handledDeepLink = useRef(false)
 
-  const enrichHistoryWithMetadata = async (
-    entries: HistoryEntry[]
-  ): Promise<EnrichedHistoryEntry[]> => {
-    await ensureMeltQuoteReposInit()
-    const enriched = await Promise.all(
-      entries.map(async (entry) => {
-        let invoice: string | undefined
-        let memoFromToken: string | undefined
+  // Use extracted hooks
+  const {enrichHistoryWithMetadata} = useHistoryEnrichment()
+  const {refreshing, refreshData, handleRefresh} = useWalletRefresh(
+    manager,
+    myPubKey,
+    enrichHistoryWithMetadata
+  )
 
-        if (entry.type === "mint") {
-          invoice = entry.paymentRequest
-        } else if (entry.type === "melt") {
-          const quote = await meltQuoteRepos.meltQuoteRepository.getMeltQuote(
-            entry.mintUrl,
-            entry.quoteId
-          )
-          invoice = quote?.request
-        } else if (entry.type === "send") {
-          // For send entries, encode the token and extract memo
-          if (entry.token) {
-            const {getEncodedToken} = await import("@cashu/cashu-ts")
-            invoice = getEncodedToken(entry.token)
-            memoFromToken = entry.token.memo
-          }
-        } else if (entry.type === "receive") {
-          // Receive entries don't have tokens, so match with a send entry
-          // by amount, mint, and timestamp proximity (within 5 minutes)
-          const matchingSend = entries.find(
-            (e) =>
-              e.type === "send" &&
-              e.amount === entry.amount &&
-              e.mintUrl === entry.mintUrl &&
-              Math.abs(e.createdAt - entry.createdAt) < 5 * 60 * 1000 &&
-              e.token
-          )
-
-          if (matchingSend && matchingSend.type === "send" && matchingSend.token) {
-            const {getEncodedToken} = await import("@cashu/cashu-ts")
-            invoice = getEncodedToken(matchingSend.token)
-            memoFromToken = matchingSend.token.memo
-          }
-        }
-
-        if (!invoice) {
-          return entry
-        }
-
-        let metadata = await getPaymentMetadata(invoice)
-
-        // Always use memo from token if available (it's the source of truth)
-        if (memoFromToken) {
-          metadata = metadata
-            ? {
-                ...metadata,
-                message: memoFromToken,
-              }
-            : {
-                type: "other" as const,
-                invoice,
-                message: memoFromToken,
-                timestamp: Date.now(),
-              }
-        }
-
-        return {
-          ...entry,
-          paymentMetadata: metadata,
-        }
-      })
-    )
-    return enriched
-  }
-
-  const refreshData = async (immediate = false) => {
-    if (!manager) {
-      console.warn("⚠️ No manager available for refresh")
-      return
+  // Auto-refresh balance and history after data changes
+  const handleDataRefresh = useCallback(async () => {
+    const data = await refreshData()
+    if (data) {
+      setBalance(data.balance)
+      setHistory(data.history)
     }
-    console.log(
-      "🔄 Refreshing Cashu wallet data...",
-      immediate ? "(immediate)" : "(delayed)"
-    )
-    try {
-      // Add small delay to let cashu persist changes (unless immediate refresh)
-      if (!immediate) {
-        await new Promise((resolve) => setTimeout(resolve, 200))
-      }
+  }, [refreshData])
 
-      const bal = await manager.wallet.getBalances()
-      console.log("💰 Balance fetched:", bal)
-      setBalance({...bal}) // Force new object reference
-
-      const hist = await manager.history.getPaginatedHistory(0, 1000)
-      console.log(
-        "📜 Raw history entries from manager:",
-        hist.length,
-        hist.map((h) => ({
-          type: h.type,
-          amount: h.amount,
-          timestamp: h.createdAt,
-        }))
-      )
-
-      const enrichedHist = await enrichHistoryWithMetadata(hist)
-      console.log("✨ Enriched history:", enrichedHist.length)
-      setHistory([...enrichedHist]) // Force new array reference
-      console.log("✅ Wallet data refreshed, history count:", enrichedHist.length)
-    } catch (error) {
-      console.error("❌ Failed to refresh data:", error)
-    }
-  }
+  // Auto-claim npub.cash tokens
+  useNPubCashClaim(myPubKey, manager, handleDataRefresh)
 
   const handleSendEntryClick = useCallback((entry: SendHistoryEntry) => {
     setSendDialogInitialToken(entry.token)
@@ -231,113 +122,13 @@ export default function CashuWallet() {
     setReceiveDialogInitialInvoice("")
   }
 
-  const handleRefresh = async () => {
-    console.log("🔄 Manual refresh button clicked")
-    setRefreshing(true)
-    try {
-      // Check and redeem pending mint quotes (for stuck incoming Lightning payments)
-      if (manager) {
-        console.log("🔍 Checking and requeueing paid mint quotes")
-        try {
-          const result = await manager.quotes.requeuePaidMintQuotes()
-          console.log(
-            `✅ Requeued ${result.requeued.length} paid mint quotes for redemption`
-          )
-          if (result.requeued.length > 0) {
-            console.log("⏳ Waiting for quotes to be processed...")
-            // Give processor time to redeem quotes
-            await new Promise((resolve) => setTimeout(resolve, 3000))
-          }
-        } catch (err) {
-          console.error("Failed to requeue mint quotes:", err)
-        }
-
-        // Force recalculate balance from all proofs in database
-        // This catches any old redeemed quotes that weren't reflected in balance
-        console.log("🔍 Recalculating balance from all proofs")
-        try {
-          const freshBalance = await manager.wallet.getBalances()
-          console.log("💰 Fresh balance:", freshBalance)
-          setBalance(freshBalance)
-        } catch (err) {
-          console.error("Failed to recalculate balance:", err)
-        }
-      }
-
-      // Check pending melt quotes (for stuck outgoing Lightning payments)
-      if (manager && balance) {
-        const mints = Object.keys(balance)
-        console.log("🔍 Checking pending melt quotes on mints:", mints)
-        for (const mintUrl of mints) {
-          try {
-            // Force check by calling mint API directly
-            const {CashuMint} = await import("@cashu/cashu-ts")
-            const mint = new CashuMint(mintUrl)
-
-            // Get pending quotes from our DB
-            await ensureMeltQuoteReposInit()
-            const pendingQuotes =
-              await meltQuoteRepos.meltQuoteRepository.getPendingMeltQuotes()
-
-            console.log(`📋 Found ${pendingQuotes.length} pending melt quotes`)
-
-            // Check each one
-            for (const quote of pendingQuotes) {
-              try {
-                const status = await mint.checkMeltQuote(quote.quote)
-                console.log(`🔎 Quote ${quote.quote}: ${status.state}`)
-
-                if (status.state === "PAID" && quote.state !== "PAID") {
-                  console.log(`✅ Quote ${quote.quote} is now PAID, updating...`)
-                  await meltQuoteRepos.meltQuoteRepository.setMeltQuoteState(
-                    quote.mintUrl,
-                    quote.quote,
-                    "PAID"
-                  )
-                }
-              } catch (err) {
-                console.error(`Failed to check quote ${quote.quote}:`, err)
-              }
-            }
-          } catch (err) {
-            console.error(`Failed to check mint ${mintUrl}:`, err)
-          }
-        }
-      }
-
-      await refreshData(true) // immediate = true for manual refresh
-
-      // Also check npub.cash
-      if (myPubKey && ndk().signer) {
-        const signer = ndk().signer
-        if (signer) {
-          const balance = await getNPubCashBalance(signer)
-          if (balance > 0) {
-            const token = await claimNPubCashTokens(signer)
-            if (token && manager) {
-              // Extract mint URL from token and ensure it's added
-              const mintUrl = await extractMintFromToken(token)
-              if (mintUrl) {
-                try {
-                  await manager.mint.addMint(mintUrl)
-                  console.log(`✅ Auto-added mint from npub.cash token: ${mintUrl}`)
-                } catch (error) {
-                  console.log(`Mint already exists or failed to add: ${mintUrl}`)
-                }
-              }
-
-              await manager.wallet.receive(token)
-              await refreshData(true)
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Failed to refresh:", error)
-    } finally {
-      setRefreshing(false)
+  const handleManualRefresh = useCallback(async () => {
+    const data = await handleRefresh(balance)
+    if (data) {
+      setBalance(data.balance)
+      setHistory(data.history)
     }
-  }
+  }, [handleRefresh, balance])
 
   const handleQRScanSuccess = async (result: string) => {
     setShowQRScanner(false)
@@ -493,11 +284,7 @@ export default function CashuWallet() {
         const updateData = async (eventName: string) => {
           console.log(`🎯 Event received: ${eventName}, updating wallet data...`)
           try {
-            const bal = await mgr.wallet.getBalances()
-            setBalance(bal)
-            const hist = await mgr.history.getPaginatedHistory(0, 1000)
-            const enrichedHist = await enrichHistoryWithMetadata(hist)
-            setHistory(enrichedHist)
+            await handleDataRefresh()
             console.log(`✅ Updated from ${eventName}`)
           } catch (error) {
             console.error("Failed to refresh data:", error)
@@ -546,50 +333,14 @@ export default function CashuWallet() {
       cleanup.then((cleanupFn) => cleanupFn?.())
       clearInterval(rateInterval)
     }
-  }, [])
-
-  // Check npub.cash balance periodically and auto-claim
-  useEffect(() => {
-    if (!myPubKey || !ndk().signer || !manager) return
-
-    const checkAndClaim = async () => {
-      const signer = ndk().signer
-      if (!signer) return
-
-      try {
-        const balance = await getNPubCashBalance(signer)
-
-        // Auto-claim if balance > 0
-        if (balance > 0) {
-          const token = await claimNPubCashTokens(signer)
-          if (token) {
-            // Extract mint URL from token and ensure it's added
-            const mintUrl = await extractMintFromToken(token)
-            if (mintUrl) {
-              try {
-                await manager.mint.addMint(mintUrl)
-                console.log(`✅ Auto-added mint from npub.cash token: ${mintUrl}`)
-              } catch (error) {
-                console.log(`Mint already exists or failed to add: ${mintUrl}`)
-              }
-            }
-
-            await manager.wallet.receive(token)
-            await refreshData()
-          }
-        }
-      } catch (error) {
-        console.error("Failed to check/claim npub.cash:", error)
-      }
-    }
-
-    checkAndClaim()
-
-    // Check every 60 seconds
-    const balanceInterval = setInterval(checkAndClaim, 60000)
-
-    return () => clearInterval(balanceInterval)
-  }, [myPubKey, manager])
+  }, [
+    enrichHistoryWithMetadata,
+    handleDataRefresh,
+    activeMint,
+    setActiveMint,
+    setCachedMintInfo,
+    getCachedMintInfo,
+  ])
 
   if (loading) {
     return (
@@ -616,7 +367,7 @@ export default function CashuWallet() {
           </div>
           <div className="flex gap-2 md:gap-3 mr-6 md:mr-0">
             <button
-              onClick={handleRefresh}
+              onClick={handleManualRefresh}
               disabled={refreshing}
               className="btn btn-circle btn-ghost btn-sm flex-shrink-0 disabled:opacity-70"
               title="Refresh"
@@ -762,7 +513,7 @@ export default function CashuWallet() {
                       <MintsList
                         balance={balance}
                         manager={manager}
-                        onBalanceUpdate={refreshData}
+                        onBalanceUpdate={handleDataRefresh}
                         activeMint={activeMint}
                         onMintClick={setActiveMint}
                       />
@@ -777,7 +528,7 @@ export default function CashuWallet() {
               onClose={handleCloseSendDialog}
               manager={manager}
               mintUrl={activeMint || DEFAULT_MINT}
-              onSuccess={refreshData}
+              onSuccess={handleDataRefresh}
               initialToken={sendDialogInitialToken}
               initialInvoice={sendDialogInitialInvoice}
               balance={totalBalance}
@@ -788,7 +539,7 @@ export default function CashuWallet() {
               onClose={handleCloseReceiveDialog}
               manager={manager}
               mintUrl={activeMint || DEFAULT_MINT}
-              onSuccess={refreshData}
+              onSuccess={handleDataRefresh}
               initialToken={receiveDialogInitialToken}
               initialInvoice={receiveDialogInitialInvoice}
               balance={totalBalance}

@@ -248,40 +248,42 @@ const ChatContainer = ({
                 </div>
               )}
               {messageGroups.map((group, index) => {
-              const groupDate = new Date(getMillisecondTimestamp(group[0])).toDateString()
-              const prevGroupDate =
-                index > 0
-                  ? new Date(
-                      getMillisecondTimestamp(messageGroups[index - 1][0])
-                    ).toDateString()
-                  : null
+                const groupDate = new Date(
+                  getMillisecondTimestamp(group[0])
+                ).toDateString()
+                const prevGroupDate =
+                  index > 0
+                    ? new Date(
+                        getMillisecondTimestamp(messageGroups[index - 1][0])
+                      ).toDateString()
+                    : null
 
-              return (
-                <div key={index} className="mb-6">
-                  {(!prevGroupDate || groupDate !== prevGroupDate) && (
-                    <div className="text-xs text-base-content/50 text-center mb-4">
-                      {groupDate}
+                return (
+                  <div key={index} className="mb-6">
+                    {(!prevGroupDate || groupDate !== prevGroupDate) && (
+                      <div className="text-xs text-base-content/50 text-center mb-4">
+                        {groupDate}
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-[2px]">
+                      <ErrorBoundary>
+                        {group.map((message, messageIndex) => (
+                          <Message
+                            key={message.id}
+                            message={message}
+                            isFirst={messageIndex === 0}
+                            isLast={messageIndex === group.length - 1}
+                            sessionId={sessionId}
+                            onReply={() => onReply(message)}
+                            showAuthor={showAuthor}
+                            onSendReaction={handleReaction}
+                          />
+                        ))}
+                      </ErrorBoundary>
                     </div>
-                  )}
-                  <div className="flex flex-col gap-[2px]">
-                    <ErrorBoundary>
-                      {group.map((message, messageIndex) => (
-                        <Message
-                          key={message.id}
-                          message={message}
-                          isFirst={messageIndex === 0}
-                          isLast={messageIndex === group.length - 1}
-                          sessionId={sessionId}
-                          onReply={() => onReply(message)}
-                          showAuthor={showAuthor}
-                          onSendReaction={handleReaction}
-                        />
-                      ))}
-                    </ErrorBoundary>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
             </ReverseVirtualScroll>
           </>
         )}

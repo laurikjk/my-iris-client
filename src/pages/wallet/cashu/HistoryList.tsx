@@ -1,5 +1,5 @@
 import type {SendHistoryEntry, HistoryEntry} from "@/lib/cashu/core/models/History"
-import type {EnrichedHistoryEntry} from "../CashuWallet"
+import type {EnrichedHistoryEntry} from "../hooks/useHistoryEnrichment"
 import {RiFlashlightFill, RiBitCoinFill} from "@remixicon/react"
 import {useState} from "react"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
