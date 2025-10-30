@@ -43,7 +43,11 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
       enableOutboxModel: import.meta.env.VITE_USE_LOCAL_RELAY
         ? false
         : store.ndkOutboxModel,
-      cacheAdapter: new NDKCacheAdapterDexie({dbName: "treelike-nostr", saveSig: true}),
+
+      cacheAdapter: new NDKCacheAdapterDexie({
+        dbName: "treelike-nostr",
+        saveSig: true,
+      }) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     }
     ndkInstance = new NDK(options)
 

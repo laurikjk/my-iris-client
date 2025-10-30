@@ -108,6 +108,33 @@ const store = create<PublicChatStore>()(
     {
       name: "publicChats",
       storage: createJSONStorage(() => localforage),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return
+        // Clean up invalid entries (non-hex IDs like "notifications")
+        const validPublicChats = Object.fromEntries(
+          Object.entries(state.publicChats).filter(([id]) => /^[0-9a-f]{64}$/i.test(id))
+        )
+        const validLastSeen = Object.fromEntries(
+          Object.entries(state.lastSeen).filter(([id]) => /^[0-9a-f]{64}$/i.test(id))
+        )
+        const validTimestamps = Object.fromEntries(
+          Object.entries(state.timestamps).filter(([id]) => /^[0-9a-f]{64}$/i.test(id))
+        )
+        const validLatestMessages = Object.fromEntries(
+          Object.entries(state.latestMessages).filter(([id]) =>
+            /^[0-9a-f]{64}$/i.test(id)
+          )
+        )
+
+        if (
+          Object.keys(state.publicChats).length !== Object.keys(validPublicChats).length
+        ) {
+          state.publicChats = validPublicChats
+          state.lastSeen = validLastSeen
+          state.timestamps = validTimestamps
+          state.latestMessages = validLatestMessages
+        }
+      },
     }
   )
 )

@@ -75,6 +75,8 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
 
   useEffect(() => {
     if (!isPublic) return
+    // Validate id is a valid hex string before subscribing
+    if (!/^[0-9a-f]{64}$/i.test(id)) return
 
     const sub = ndk().subscribe({
       kinds: [KIND_CHANNEL_MESSAGE],

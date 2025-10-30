@@ -121,14 +121,8 @@ const Layout = ({children}: {children: ReactNode}) => {
 
   // Check if we need to show ToS on first launch for Tauri apps
   useEffect(() => {
-    console.log("[ToS Debug] isTauri():", isTauri())
-    console.log("[ToS Debug] legal.tosAccepted:", legal.tosAccepted)
-    console.log("[ToS Debug] legal:", legal)
     if (isTauri() && !legal.tosAccepted) {
-      console.log("[ToS Debug] Showing ToS")
       setShowToS(true)
-    } else {
-      console.log("[ToS Debug] NOT showing ToS")
     }
   }, [legal.tosAccepted])
 
