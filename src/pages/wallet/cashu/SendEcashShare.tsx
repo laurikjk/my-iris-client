@@ -340,7 +340,13 @@ export default function SendEcashShare({
         </div>
       )}
       {recipientPubkey && (
-        <div className="alert alert-info">
+        <div
+          className="alert alert-info cursor-pointer hover:bg-info/30 transition-colors"
+          onClick={() => {
+            onClose()
+            navigate("/chats/chat", {state: {id: recipientPubkey}})
+          }}
+        >
           <div className="flex flex-col gap-2 w-full">
             <div className="text-sm font-semibold">Sent to:</div>
             <UserRow pubKey={recipientPubkey} />

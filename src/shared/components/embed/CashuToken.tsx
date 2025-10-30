@@ -13,6 +13,7 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
   const [p2pkLock, setP2pkLock] = useState<string | null>(null)
   const [canRedeem, setCanRedeem] = useState(true)
   const [memo, setMemo] = useState<string>("")
+  const [mintUrl, setMintUrl] = useState<string>("")
   const [isOwnEvent, setIsOwnEvent] = useState(false)
   const [checking, setChecking] = useState(false)
   const [tokenSpent, setTokenSpent] = useState(false)
@@ -81,6 +82,7 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
         setAmount(totalAmount)
         setP2pkLock(lockedPubkey)
         setMemo(decoded.memo || "")
+        setMintUrl(decoded.mint || "")
 
         // Check if we can redeem (only if locked to our pubkey)
         if (lockedPubkey) {
@@ -164,6 +166,15 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
         undefined,
         senderPubkey
       )
+
+      // Add mint if not already known (allow redeeming from unknown mints)
+      if (mintUrl) {
+        const isKnown = await manager.mint.isKnownMint(mintUrl)
+        if (!isKnown) {
+          console.log("➕ Adding unknown mint before redeeming:", mintUrl)
+          await manager.mint.addMint(mintUrl)
+        }
+      }
 
       await manager.wallet.receive(trimmedToken)
 
@@ -302,6 +313,11 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
                     <span> • Not redeemed</span>
                   )}
                 </div>
+                {mintUrl && (
+                  <div className="text-xs text-base-content/60 mt-1">
+                    {mintUrl.replace(/^https?:\/\//, "")}
+                  </div>
+                )}
                 {memo && <span className="block text-xs mt-1 italic">{memo}</span>}
               </>
             ) : null}

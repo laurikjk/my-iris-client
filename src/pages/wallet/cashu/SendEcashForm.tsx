@@ -60,15 +60,28 @@ export default function SendEcashForm({
       // If payment request specifies a mint, check if we have enough balance there
       if (requestedMint) {
         const balances = await manager.wallet.getBalances()
-        const requestedBalance = balances[requestedMint] || 0
 
-        if (requestedBalance >= sendAmount) {
-          useMint = requestedMint
-          console.log("✓ Using requested mint with sufficient balance:", requestedMint)
+        // Normalize mint URLs for comparison (handle trailing slashes, http/https)
+        const normalizeMintUrl = (url: string) =>
+          url.replace(/\/$/, "").replace(/^https?:\/\//, "").toLowerCase()
+        const normalizedRequested = normalizeMintUrl(requestedMint)
+
+        // Find matching mint in balances
+        const matchingMint = Object.keys(balances).find(
+          (mint) => normalizeMintUrl(mint) === normalizedRequested
+        )
+
+        const requestedBalance = matchingMint ? balances[matchingMint] : 0
+
+        if (requestedBalance >= sendAmount && matchingMint) {
+          useMint = matchingMint
+          console.log("✓ Using requested mint with sufficient balance:", matchingMint)
         } else {
           console.warn("⚠️ Insufficient balance on requested mint, using active mint:", {
             requested: requestedMint,
+            matchingMint,
             requestedBalance,
+            needed: sendAmount,
             using: mintUrl,
           })
         }
@@ -120,16 +133,9 @@ export default function SendEcashForm({
           <div className="flex flex-col gap-2 w-full">
             <div className="text-sm font-semibold">Payment Request From:</div>
             <UserRow pubKey={selectedUserPubkey} />
-            {requestedMint && requestedMint !== mintUrl && (
-              <div className="text-xs opacity-80 mt-1 bg-warning/20 p-2 rounded">
-                ⚠️ Requested mint: {requestedMint.replace(/^https?:\/\//, "")}
-                <br />
-                Using: {mintUrl.replace(/^https?:\/\//, "")}
-              </div>
-            )}
-            {requestedMint && requestedMint === mintUrl && (
+            {requestedMint && (
               <div className="text-xs opacity-60 mt-1">
-                ✓ Using requested mint: {mintUrl.replace(/^https?:\/\//, "")}
+                Requested mint: {requestedMint.replace(/^https?:\/\//, "")}
               </div>
             )}
           </div>
