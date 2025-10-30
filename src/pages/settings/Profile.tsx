@@ -100,6 +100,19 @@ export function ProfileSettings() {
     return defaultLabel
   }
 
+  const SaveButton = () => (
+    <SettingsButton
+      label={(() => {
+        if (saveState === "saving") return "Saving..."
+        if (saveState === "saved") return "Saved"
+        return "Save Changes"
+      })()}
+      onClick={onSaveProfile}
+      disabled={!isEdited || saveState === "saving"}
+      isLast
+    />
+  )
+
   if (!myPubKey) {
     return null
   }
@@ -130,16 +143,7 @@ export function ProfileSettings() {
 
         <div className="space-y-6">
           <SettingsGroup>
-            <SettingsButton
-              label={(() => {
-                if (saveState === "saving") return "Saving..."
-                if (saveState === "saved") return "Saved"
-                return "Save Changes"
-              })()}
-              onClick={onSaveProfile}
-              disabled={!isEdited || saveState === "saving"}
-              isLast
-            />
+            <SaveButton />
           </SettingsGroup>
 
           <SettingsGroup title="Personal Information">
@@ -257,6 +261,10 @@ export function ProfileSettings() {
               onClick={() => navigate("/settings/iris")}
               isLast
             />
+          </SettingsGroup>
+
+          <SettingsGroup>
+            <SaveButton />
           </SettingsGroup>
         </div>
       </div>
