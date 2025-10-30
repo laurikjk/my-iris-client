@@ -1,5 +1,5 @@
 import {LOCATION_COORDINATES} from "./locationCoordinates"
-import {encodeGeohash, decodeGeohash} from "./geohash"
+import {encodeGeohash} from "./geohash"
 
 /**
  * Convert a human-readable location string to coordinates
@@ -54,33 +54,6 @@ export function locationToCoordinates(location: string): [number, number] | null
 }
 
 /**
- * Get all coordinates from event tags (from both geohash and location tags)
- * Returns coordinates for direct map display
- */
-export function getEventCoordinates(
-  tags: string[][]
-): Array<{coords: [number, number]; source: string}> {
-  const results: Array<{coords: [number, number]; source: string}> = []
-  const seen = new Set<string>()
-
-  // Get coordinates from location tags
-  tags.forEach((tag) => {
-    if (tag[0] === "location" && tag[1]) {
-      const coords = locationToCoordinates(tag[1])
-      if (coords) {
-        const key = `${coords[0]},${coords[1]}`
-        if (!seen.has(key)) {
-          seen.add(key)
-          results.push({coords, source: tag[1]})
-        }
-      }
-    }
-  })
-
-  return results
-}
-
-/**
  * Get geohashes from event tags, including converted location tags
  * For compatibility with existing geohash-based code
  */
@@ -107,28 +80,4 @@ export function getGeohashesFromEvent(tags: string[][]): string[] {
 
   // Return unique geohashes
   return [...new Set(geohashes)]
-}
-
-/**
- * Find location names that map to a given geohash
- * @param geohash The geohash to find locations for
- * @returns Array of location names that map to this geohash
- */
-export function getLocationsForGeohash(geohash: string): string[] {
-  const locations: string[] = []
-  const [minLat, maxLat, minLng, maxLng] = decodeGeohash(geohash)
-
-  // Check each location to see if it falls within the geohash bounds
-  Object.entries(LOCATION_COORDINATES).forEach(([name, coords]) => {
-    const [lat, lng] = coords
-    if (lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng) {
-      // Also check if this location would generate the same geohash at the same precision
-      const locationGeohash = encodeGeohash(lat, lng, geohash.length)
-      if (locationGeohash === geohash) {
-        locations.push(name)
-      }
-    }
-  })
-
-  return locations
 }

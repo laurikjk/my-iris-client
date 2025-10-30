@@ -124,8 +124,3 @@ export async function getPaymentMetadata(
   const normalized = normalizeInvoice(invoice)
   return await db.paymentMetadata.get(normalized)
 }
-
-export async function clearOldPaymentMetadata() {
-  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
-  await db.paymentMetadata.where("timestamp").below(thirtyDaysAgo).delete()
-}

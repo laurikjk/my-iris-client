@@ -10,7 +10,8 @@
     "tests/**/*.spec.ts",
     "**/*.test.{ts,tsx}",
     "**/*.spec.{ts,tsx}",
-    "src/debug/**"
+    "src/debug/**",
+    "src/lib/**"
   ],
   "ignoreDependencies": [
     "workbox-strategies",

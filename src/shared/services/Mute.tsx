@@ -101,7 +101,3 @@ export const flagUser = async (
   await flagEvent.sign()
   await flagEvent.publish()
 }
-
-export const getFlaggedUsers = (): Set<string> => {
-  return flaggedUsers
-}
