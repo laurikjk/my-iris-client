@@ -6,6 +6,7 @@ import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import socialGraph from "@/utils/socialGraph.ts"
 import {ndk} from "@/utils/ndk"
 import {getMuteLabel, getMutedLabel, getUnmuteLabel} from "@/utils/muteLabels"
+import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 interface MuteUserProps {
   setMuting: Dispatch<SetStateAction<boolean>>
@@ -44,7 +45,9 @@ function MuteUser({user, setMuting, muteState, setMutedState}: MuteUserProps) {
         const followedUsers = socialGraph().getFollowedByUser(socialGraph().getRoot())
         followedUsers.delete(user)
         event.tags = Array.from(followedUsers).map((pubKey) => ["p", pubKey]) as NDKTag[]
-        event.publish().catch((e) => console.warn("Error publishing unfollow event:", e))
+        publishEvent(event).catch((e) =>
+          console.warn("Error publishing unfollow event:", e)
+        )
       }
 
       await muteUser(user)

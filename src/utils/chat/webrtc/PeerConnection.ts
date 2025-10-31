@@ -6,6 +6,7 @@ import socialGraph from "@/utils/socialGraph"
 import {webrtcLogger} from "./Logger"
 import {sendSignalingMessage} from "./signaling"
 import type {SignalingMessage} from "./types"
+import {handleIncomingEvent} from "./p2pNostr"
 
 const connections = new Map<string, PeerConnection>()
 
@@ -110,15 +111,15 @@ export default class PeerConnection extends EventEmitter {
     try {
       switch (message.type) {
         case "offer":
-          this.log("Received offer")
+          this.log("↓ Offer")
           this.handleOffer(message.offer as unknown as RTCSessionDescriptionInit)
           break
         case "answer":
-          this.log("Received answer")
+          this.log("↓ Answer")
           this.handleAnswer(message.answer as unknown as RTCSessionDescriptionInit)
           break
         case "candidate":
-          this.log("Received ICE candidate")
+          this.log("↓ ICE candidate")
           this.handleCandidate(message.candidate as unknown as RTCIceCandidateInit)
           break
         default:
@@ -207,14 +208,19 @@ export default class PeerConnection extends EventEmitter {
       },
       this.recipientPubkey
     )
-    this.log("Sent offer")
+    this.log("↑ Offer")
   }
 
   setDataChannel(dataChannel: RTCDataChannel) {
     this.dataChannel = dataChannel
     this.dataChannel.onopen = () => this.log("Data channel open")
     this.dataChannel.onmessage = (event) => {
-      this.log("Received message", event.data)
+      try {
+        const data = JSON.parse(event.data)
+        handleIncomingEvent(this.peerId, data)
+      } catch (error) {
+        webrtcLogger.error(this.peerId, "Failed to parse data channel message", error)
+      }
     }
     this.dataChannel.onclose = () => {
       this.log("Data channel closed")
@@ -233,7 +239,7 @@ export default class PeerConnection extends EventEmitter {
           this.incomingFileMetadata = metadata.metadata
           this.receivedFileData = []
           this.receivedFileSize = 0
-          this.log(`Receiving file: ${metadata.metadata.name}`)
+          this.log(`↓ File: ${metadata.metadata.name}`)
         }
       } else if (event.data instanceof ArrayBuffer) {
         this.receivedFileData.push(event.data)
@@ -314,7 +320,7 @@ export default class PeerConnection extends EventEmitter {
         },
       }
       fileChannel.onopen = () => {
-        this.log(`Sending file: ${file.name}`)
+        this.log(`↑ File: ${file.name}`)
         fileChannel.send(JSON.stringify(metadata))
 
         // Read and send the file as binary data

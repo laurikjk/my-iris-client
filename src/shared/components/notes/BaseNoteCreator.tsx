@@ -17,6 +17,7 @@ import HyperText from "@/shared/components/HyperText"
 import {searchIndex, SearchResult} from "@/utils/profileSearch"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {KIND_TEXT_NOTE, KIND_CLASSIFIED} from "@/utils/constants"
+import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 // Extract hashtags from text content per NIP-24
 const extractHashtags = (text: string): string[] => {
@@ -450,7 +451,7 @@ export function BaseNoteCreator({
 
       // Sign first (can take time with extensions), then publish in background
       await event.sign()
-      event.publish().catch((error) => {
+      publishEvent(event).catch((error) => {
         console.error("Failed to publish note:", error)
       })
 

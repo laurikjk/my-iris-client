@@ -142,7 +142,7 @@ class PeerConnectionManager extends EventEmitter {
       return
     }
 
-    webrtcLogger.info(undefined, `Sending hello ${this.myPeerId.short()}`)
+    webrtcLogger.info(undefined, `↑ Hello ${this.myPeerId.short()}`)
     await sendSignalingMessage({
       type: "hello",
       peerId: this.myPeerId.uuid,
@@ -234,7 +234,7 @@ class PeerConnectionManager extends EventEmitter {
         return
       }
 
-      webrtcLogger.info(undefined, `Received hello from ${senderPubkey.slice(0, 8)}...`)
+      webrtcLogger.info(undefined, `↓ Hello from ${senderPubkey.slice(0, 8)}...`)
 
       // Track online users (including our other sessions)
       this.onlineUsers.set(senderPubkey, {

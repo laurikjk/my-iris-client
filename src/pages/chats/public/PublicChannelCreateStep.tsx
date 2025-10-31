@@ -3,6 +3,7 @@ import {useUserStore} from "@/stores/user"
 import {useNavigate} from "@/navigation"
 import {useState, FormEvent} from "react"
 import {ndk} from "@/utils/ndk"
+import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 const PublicChannelCreateStep = () => {
   const navigate = useNavigate()
@@ -35,7 +36,7 @@ const PublicChannelCreateStep = () => {
       const event = new NDKEvent(ndk())
       event.kind = 40
       event.content = JSON.stringify(metadata)
-      await event.publish()
+      await publishEvent(event)
       navigate(`/chats/${event.id}`)
     } catch (err) {
       setError("Failed to create channel")

@@ -5,6 +5,7 @@ import {makeZapRequest} from "nostr-tools/nip57"
 import {ndk, DEFAULT_RELAYS} from "@/utils/ndk"
 import {KIND_ZAP_RECEIPT} from "@/utils/constants"
 import {bech32} from "@scure/base"
+import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 export function getZappingUser(event: NDKEvent, npub = true) {
   const description = event.tags?.find((t) => t[0] === "description")?.[1]
@@ -191,7 +192,7 @@ export async function createAndPublishZapInvoice(
   // Sign and PUBLISH the zap request
   const zapRequestEvent = new NDKEvent(ndk(), zapRequest)
   await zapRequestEvent.sign(signer)
-  await zapRequestEvent.publish() // This is the key difference - we publish it
+  await publishEvent(zapRequestEvent) // This is the key difference - we publish it
 
   // Get the invoice from the LNURL endpoint
   const invoiceUrl = new URL(lnurlData.callback)

@@ -7,6 +7,7 @@ import socialGraph from "@/utils/socialGraph.ts"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
 import {getUnmuteLabel} from "@/utils/muteLabels"
+import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 export function FollowButton({pubKey, small = true}: {pubKey: string; small?: boolean}) {
   const myPubKey = useUserStore((state) => state.publicKey)
@@ -79,7 +80,7 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
     }
 
     event.tags = Array.from(followedUsers).map((pubKey) => ["p", pubKey]) as NDKTag[]
-    event.publish().catch((e) => console.warn("Error publishing follow event:", e))
+    publishEvent(event).catch((e) => console.warn("Error publishing follow event:", e))
 
     setTimeout(() => {
       setUpdated((updated) => updated + 1)

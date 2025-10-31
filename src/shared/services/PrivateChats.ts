@@ -6,6 +6,7 @@ import NDK, {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 import {useUserStore} from "../../stores/user"
 import {hexToBytes} from "nostr-tools/utils"
+import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 const createSubscribe = (ndk: NDK): NostrSubscribe => {
   return (filter: NDKFilter, onEvent: (event: VerifiedEvent) => void) => {
@@ -29,7 +30,7 @@ const createPublish = (ndk: NDK): NostrPublish => {
   return (async (event) => {
     const e = new NDKEvent(ndk, event)
     console.warn("PrivateChats publishing event:", e)
-    await e.publish()
+    await publishEvent(e)
     console.warn("PrivateChats published event:", e.kind, e.id, e.sig)
     return event
   }) as NostrPublish
@@ -101,7 +102,7 @@ export const deleteDeviceInvite = async (deviceId: string) => {
   })
 
   await deletionEvent.sign()
-  await deletionEvent.publish()
+  await publishEvent(deletionEvent)
 
   console.log("Published invite tombstone for device:", deviceId)
 

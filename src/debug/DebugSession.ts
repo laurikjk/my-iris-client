@@ -2,6 +2,7 @@ import NDK, {NDKEvent, NDKFilter, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
 import {generateSecretKey, getPublicKey, nip44} from "nostr-tools"
 import {bytesToHex, hexToBytes} from "@noble/hashes/utils"
 import {KIND_DEBUG_DATA} from "@/utils/constants"
+import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 export class DebugSession {
   private ndk: NDK
@@ -51,7 +52,7 @@ export class DebugSession {
     event.kind = KIND_DEBUG_DATA
     event.content = content
     event.tags = [["d", k]]
-    await event.publish()
+    await publishEvent(event)
   }
 
   /**
