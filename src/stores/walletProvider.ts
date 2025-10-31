@@ -573,33 +573,10 @@ export const useWalletProviderStore = create<WalletProviderState>()(
 
           // Get available mints with balance
           const balances = await manager.wallet.getBalances()
-          const mints = Object.keys(balances).filter((mint) => balances[mint] > 0)
 
-          if (mints.length === 0) {
-            throw new Error("No mints with balance available")
-          }
-
-          // Try active mint first if it has enough balance
-          const {useCashuWalletStore} = await import("@/stores/cashuWallet")
-          const activeMint = useCashuWalletStore.getState().activeMint
-          let mintUrl: string | undefined
-
-          if (activeMint && balances[activeMint] >= invoiceAmountSat) {
-            mintUrl = activeMint
-          } else {
-            // Find first mint with enough balance
-            mintUrl = mints.find((mint) => balances[mint] >= invoiceAmountSat)
-          }
-
-          if (!mintUrl) {
-            const totalBalance = Object.values(balances).reduce(
-              (sum, bal) => sum + bal,
-              0
-            )
-            throw new Error(
-              `Not enough balance. Invoice requires ${invoiceAmountSat} sats, but total balance is ${totalBalance} sats.`
-            )
-          }
+          // Select best mint for this payment
+          const {selectMintForPayment} = await import("@/lib/cashu/mintSelection")
+          const mintUrl = selectMintForPayment(balances, invoiceAmountSat)
 
           try {
             console.log(

@@ -54,13 +54,11 @@ export default function SendEcashForm({
     setSending(true)
     setError("")
     try {
-      // Determine which mint to use
+      const balances = await manager.wallet.getBalances()
       let useMint = mintUrl
 
       // If payment request specifies a mint, check if we have enough balance there
       if (requestedMint) {
-        const balances = await manager.wallet.getBalances()
-
         // Normalize mint URLs for comparison (handle trailing slashes, http/https)
         const normalizeMintUrl = (url: string) =>
           url
@@ -80,14 +78,23 @@ export default function SendEcashForm({
           useMint = matchingMint
           console.log("✓ Using requested mint with sufficient balance:", matchingMint)
         } else {
-          console.warn("⚠️ Insufficient balance on requested mint, using active mint:", {
-            requested: requestedMint,
-            matchingMint,
-            requestedBalance,
-            needed: sendAmount,
-            using: mintUrl,
-          })
+          console.warn(
+            "⚠️ Insufficient balance on requested mint, using mint selection:",
+            {
+              requested: requestedMint,
+              matchingMint,
+              requestedBalance,
+              needed: sendAmount,
+            }
+          )
+          // Fall back to smart mint selection
+          const {selectMintForPayment} = await import("@/lib/cashu/mintSelection")
+          useMint = selectMintForPayment(balances, sendAmount)
         }
+      } else {
+        // No requested mint, use smart selection
+        const {selectMintForPayment} = await import("@/lib/cashu/mintSelection")
+        useMint = selectMintForPayment(balances, sendAmount)
       }
 
       const token = await manager.wallet.send(

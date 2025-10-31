@@ -64,10 +64,13 @@ export default function CashuSendDialog({
     setError("")
 
     try {
-      const mintUrl = balance ? Object.keys(balance)[0] : undefined
-      if (!mintUrl) {
+      if (!balance) {
         throw new Error("No mint available")
       }
+
+      // Select best mint for this payment
+      const {selectMintForPayment} = await import("@/lib/cashu/mintSelection")
+      const mintUrl = selectMintForPayment(balance, amountNum)
 
       const token = await manager.wallet.send(
         mintUrl,
