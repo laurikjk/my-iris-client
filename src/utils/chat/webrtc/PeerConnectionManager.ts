@@ -1,5 +1,5 @@
 import {getPeerConnection} from "./PeerConnection"
-import socialGraph from "@/utils/socialGraph"
+import socialGraph, {socialGraphEvents, socialGraphLoaded} from "@/utils/socialGraph"
 import {EventEmitter} from "tseep"
 import {webrtcLogger} from "./Logger"
 import {sendSignalingMessage, subscribeToSignaling} from "./signaling"
@@ -42,6 +42,8 @@ class PeerConnectionManager extends EventEmitter {
   private isRunning = false
   private myPeerId: PeerId | null = null
   private unsubscribe?: () => void
+  private socialGraphUnsubscribe?: () => void
+  private currentMutualFollows = new Set<string>()
   private readonly TIMEOUT = 15000 // 15 seconds
 
   start() {
@@ -64,8 +66,23 @@ class PeerConnectionManager extends EventEmitter {
     this.myPeerId = new PeerId(myPubkey, uuidv4())
     webrtcLogger.info(undefined, `Starting with peer ID: ${this.myPeerId.short()}`)
 
-    // Subscribe to signaling messages
-    this.unsubscribe = subscribeToSignaling(this.handleSignalingMessage.bind(this))
+    // Wait for social graph to load before subscribing
+    socialGraphLoaded.then(() => {
+      webrtcLogger.info(undefined, "Social graph loaded, setting up WebRTC")
+
+      // Get initial mutual follows and subscribe
+      this.updateMutualFollowsAndResubscribe(myPubkey)
+
+      // Watch for social graph changes
+      const handleGraphUpdate = () => {
+        webrtcLogger.info(undefined, "Social graph updated, rechecking mutual follows")
+        this.updateMutualFollowsAndResubscribe(myPubkey)
+      }
+      socialGraphEvents.on("updated", handleGraphUpdate)
+      this.socialGraphUnsubscribe = () => {
+        socialGraphEvents.off("updated", handleGraphUpdate)
+      }
+    })
 
     // Send presence pings every 7.5 seconds
     this.presencePingInterval = setInterval(() => void this.sendPresencePing(), 7500)
@@ -99,6 +116,10 @@ class PeerConnectionManager extends EventEmitter {
       this.unsubscribe()
       this.unsubscribe = undefined
     }
+    if (this.socialGraphUnsubscribe) {
+      this.socialGraphUnsubscribe()
+      this.socialGraphUnsubscribe = undefined
+    }
     this.isRunning = false
 
     // Close all connections
@@ -109,12 +130,19 @@ class PeerConnectionManager extends EventEmitter {
     }
     this.peers.clear()
     this.onlineUsers.clear()
+    this.currentMutualFollows.clear()
     this.emit("update")
   }
 
   private async sendPresencePing() {
     if (!this.myPeerId) return
 
+    // Only send hello if we have mutual follows (or potentially other sessions)
+    if (this.currentMutualFollows.size === 0) {
+      return
+    }
+
+    webrtcLogger.info(undefined, `Sending hello ${this.myPeerId.short()}`)
     await sendSignalingMessage({
       type: "hello",
       peerId: this.myPeerId.uuid,
@@ -137,6 +165,59 @@ class PeerConnectionManager extends EventEmitter {
     }
   }
 
+  private getMutualFollows(myPubkey: string): Set<string> {
+    const mutualFollows = new Set<string>()
+    const myFollows = socialGraph().getFollowedByUser(myPubkey)
+
+    for (const pubkey of myFollows) {
+      if (isMutualFollow(pubkey, myPubkey)) {
+        mutualFollows.add(pubkey)
+      }
+    }
+
+    return mutualFollows
+  }
+
+  private updateMutualFollowsAndResubscribe(myPubkey: string) {
+    const newMutualFollows = this.getMutualFollows(myPubkey)
+
+    // Check if mutual follows actually changed (bidirectional comparison)
+    if (newMutualFollows.size === this.currentMutualFollows.size) {
+      const same = Array.from(newMutualFollows).every((pubkey) =>
+        this.currentMutualFollows.has(pubkey)
+      )
+      if (same) return // No changes, skip resubscription
+    }
+
+    this.currentMutualFollows = newMutualFollows
+
+    if (newMutualFollows.size === 0) {
+      webrtcLogger.info(undefined, "No mutual follows found, not subscribing")
+      if (this.unsubscribe) {
+        this.unsubscribe()
+        this.unsubscribe = undefined
+      }
+      return
+    }
+
+    webrtcLogger.info(
+      undefined,
+      `Found ${newMutualFollows.size} mutual follows, subscribing`
+    )
+
+    // Unsubscribe from old subscription
+    if (this.unsubscribe) {
+      this.unsubscribe()
+    }
+
+    // Subscribe with new filter
+    this.unsubscribe = subscribeToSignaling(
+      this.handleSignalingMessage.bind(this),
+      newMutualFollows,
+      myPubkey
+    )
+  }
+
   private async handleSignalingMessage(message: SignalingMessage, senderPubkey: string) {
     if (!this.myPeerId) return
 
@@ -148,9 +229,14 @@ class PeerConnectionManager extends EventEmitter {
       const peerId = new PeerId(senderPubkey, message.peerId)
       const peerIdStr = peerId.toString()
 
-      // Don't track ourselves
-      if (senderPubkey === myPubkey) return
+      // Skip same session (ourselves on this device)
+      if (peerIdStr === this.myPeerId.toString()) {
+        return
+      }
 
+      webrtcLogger.info(undefined, `Received hello from ${senderPubkey.slice(0, 8)}...`)
+
+      // Track online users (including our other sessions)
       this.onlineUsers.set(senderPubkey, {
         pubkey: senderPubkey,
         lastSeen: Date.now(),
@@ -158,14 +244,27 @@ class PeerConnectionManager extends EventEmitter {
       this.emit("update")
 
       // Check if we should connect
-      if (
-        isMutualFollow(senderPubkey, myPubkey) &&
-        this.peers.size < this.maxOutbound &&
+      const isOwnSession = senderPubkey === myPubkey
+      const isMutual = isMutualFollow(senderPubkey, myPubkey)
+
+      if (isOwnSession) {
+        webrtcLogger.info(undefined, `Hello from own session ${peerId.short()}`)
+      }
+
+      // Always connect to own sessions, respect quota for mutual follows
+      const shouldConnect =
+        (isOwnSession || (isMutual && this.peers.size < this.maxOutbound)) &&
         !this.peers.has(peerIdStr) &&
         !this.isPeerConnectionOpen(peerId)
-      ) {
+
+      if (shouldConnect) {
         // Use tie-breaking: only initiate if our UUID is smaller
-        if (this.myPeerId.uuid < message.peerId) {
+        const shouldInitiate = this.myPeerId.uuid < message.peerId
+        webrtcLogger.info(
+          undefined,
+          `${shouldInitiate ? "Initiating" : "Waiting for"} connection to ${peerId.short()}`
+        )
+        if (shouldInitiate) {
           await this.connectToPeer(peerId)
         }
       }
@@ -183,17 +282,24 @@ class PeerConnectionManager extends EventEmitter {
 
     switch (message.type) {
       case "offer": {
-        if (!isMutualFollow(senderPubkey, myPubkey)) {
+        const isOwnSession = senderPubkey === myPubkey
+        const isMutual = isMutualFollow(senderPubkey, myPubkey)
+
+        // Accept offers from own sessions or mutual follows
+        if (!isOwnSession && !isMutual) {
           webrtcLogger.warn(undefined, "Rejected offer from non-mutual follow")
           return
         }
 
-        const inboundCount = Array.from(this.peers.values()).filter(
-          (p) => p.direction === "inbound"
-        ).length
-        if (inboundCount >= this.maxInbound) {
-          webrtcLogger.warn(undefined, "Inbound connection quota full")
-          return
+        // Check inbound quota (but allow own sessions)
+        if (!isOwnSession) {
+          const inboundCount = Array.from(this.peers.values()).filter(
+            (p) => p.direction === "inbound"
+          ).length
+          if (inboundCount >= this.maxInbound) {
+            webrtcLogger.warn(undefined, "Inbound connection quota full")
+            return
+          }
         }
 
         const peerConn = await getPeerConnection(peerIdStr, {

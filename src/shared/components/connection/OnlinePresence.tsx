@@ -68,17 +68,25 @@ export function OnlinePresence() {
   return (
     <div className="flex flex-col gap-2 max-h-96 overflow-y-auto" data-scrollable>
       <InfiniteScroll onLoadMore={loadMore}>
-        {sortedMutualFollows.slice(0, displayCount).map((pubkey) => (
-          <div key={pubkey} className="relative">
-            <UserRow pubKey={pubkey} />
-            {onlineSet.has(pubkey) && (
-              <span
-                className="absolute top-1 left-1 w-4 h-4 bg-success rounded-full border-2 border-base-100"
-                title="Online"
-              />
-            )}
-          </div>
-        ))}
+        {sortedMutualFollows.slice(0, displayCount).map((pubkey) => {
+          const isOnline = onlineSet.has(pubkey)
+          return (
+            <div key={pubkey} className="relative">
+              <UserRow pubKey={pubkey} />
+              {isOnline ? (
+                <span
+                  className="absolute top-0 left-0 w-4 h-4 bg-success rounded-full border-2 border-base-100"
+                  title="Online"
+                />
+              ) : (
+                <span
+                  className="absolute top-0 left-0 w-4 h-4 bg-gray-500 rounded-full border-2 border-base-100"
+                  title="Offline"
+                />
+              )}
+            </div>
+          )
+        })}
       </InfiniteScroll>
     </div>
   )

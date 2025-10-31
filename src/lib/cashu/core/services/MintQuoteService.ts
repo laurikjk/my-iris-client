@@ -57,11 +57,22 @@ export class MintQuoteService {
         this.logger?.warn("Mint quote not found", {mintUrl, quoteId})
         throw new Error("Quote not found")
       }
-      const {wallet} = await this.walletService.getWalletWithActiveKeysetId(mintUrl)
-      const {keep} = await this.proofService.createOutputsAndIncrementCounters(mintUrl, {
-        keep: quote.amount,
-        send: 0,
-      })
+      const wallet = await this.walletService.getWallet(mintUrl)
+      // Get keyset that matches the quote's unit
+      const matchingKeyset = wallet.keysets.find((k) => k.unit === quote.unit && k.active)
+      if (!matchingKeyset) {
+        throw new Error(
+          `No active keyset found for unit ${quote.unit} at mint ${mintUrl}`
+        )
+      }
+      const {keep} = await this.proofService.createOutputsAndIncrementCounters(
+        mintUrl,
+        {
+          keep: quote.amount,
+          send: 0,
+        },
+        matchingKeyset.id
+      )
       const proofs = await wallet.mintProofs(quote.amount, quote.quote, {
         outputData: keep,
       })

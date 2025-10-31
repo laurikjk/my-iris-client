@@ -4,6 +4,7 @@ import {ndk as getNdk} from "@/utils/ndk"
 import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
 import {Link} from "@/navigation"
+import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
 
 interface RelayConnectivityIndicatorProps {
   className?: string
@@ -17,6 +18,7 @@ export const RelayConnectivityIndicator = ({
   const {relayConfigs} = useUserStore()
   const {showRelayIndicator} = useUIStore()
   const [ndkRelays, setNdkRelays] = useState(new Map())
+  const [peerCount, setPeerCount] = useState(0)
 
   useEffect(() => {
     const updateStats = () => {
@@ -29,7 +31,20 @@ export const RelayConnectivityIndicator = ({
     return () => clearInterval(interval)
   }, [])
 
-  const connectedCount =
+  useEffect(() => {
+    const updatePeerCount = () => {
+      setPeerCount(peerConnectionManager.getConnectionCount())
+    }
+
+    updatePeerCount()
+    peerConnectionManager.on("update", updatePeerCount)
+
+    return () => {
+      peerConnectionManager.off("update", updatePeerCount)
+    }
+  }, [])
+
+  const relayCount =
     relayConfigs?.filter((config) => {
       const relay =
         ndkRelays.get(config.url) ||
@@ -38,9 +53,12 @@ export const RelayConnectivityIndicator = ({
       return !config.disabled && relay?.connected
     }).length || 0
 
+  const totalCount = relayCount + peerCount
+
   const getColorClass = () => {
-    if (connectedCount === 0) return "text-error"
-    if (connectedCount === 1) return "text-warning"
+    if (totalCount === 0) return "text-error"
+    if (peerCount > 0) return "text-info"
+    if (relayCount === 1) return "text-warning"
     return "text-neutral-500"
   }
 
@@ -50,10 +68,10 @@ export const RelayConnectivityIndicator = ({
     <Link
       to="/settings/network"
       className={`flex items-center justify-center gap-1 ${getColorClass()} ${className} hover:opacity-75 transition-opacity`}
-      title={`${connectedCount} relays connected`}
+      title={`${relayCount} relays, ${peerCount} peers connected`}
     >
       <RiWebhookLine className="w-5 h-5" />
-      {showCount && <span className="text-sm font-bold">{connectedCount}</span>}
+      {showCount && <span className="text-sm font-bold">{totalCount}</span>}
     </Link>
   )
 }

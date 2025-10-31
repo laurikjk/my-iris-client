@@ -10,6 +10,7 @@ import NDKCacheAdapterDexie from "@nostr-dev-kit/ndk-cache-dexie"
 import {useUserStore} from "@/stores/user"
 import {DEFAULT_RELAYS} from "@/shared/constants/relays"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
+import {relayLogger} from "@/utils/relay/RelayLogger"
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
@@ -72,6 +73,7 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
     watchLocalSettings(ndkInstance)
     ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
     setupVisibilityReconnection(ndkInstance)
+    attachRelayLogger(ndkInstance)
     ndkInstance.connect()
     console.log("NDK instance initialized", ndkInstance)
   } else if (opts) {
@@ -152,6 +154,20 @@ function setupVisibilityReconnection(instance: NDK) {
 
   // Initialize offline state
   wasOffline = !navigator.onLine
+}
+
+function attachRelayLogger(instance: NDK) {
+  // Attach to existing relays
+  for (const relay of instance.pool.relays.values()) {
+    relayLogger.attachToRelay(relay)
+  }
+
+  // Attach to new relays as they're added
+  const originalAddRelay = instance.pool.addRelay.bind(instance.pool)
+  instance.pool.addRelay = (relay: NDKRelay) => {
+    relayLogger.attachToRelay(relay)
+    return originalAddRelay(relay)
+  }
 }
 
 function recreateNDKInstance() {

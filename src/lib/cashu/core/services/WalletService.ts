@@ -131,13 +131,13 @@ export class WalletService {
 
     const keys = validKeysets.map((keyset) => ({
       id: keyset.id,
-      unit: "sat" as const,
+      unit: keyset.unit,
       keys: keyset.keypairs,
     }))
 
     const compatibleKeysets: MintKeyset[] = validKeysets.map((k) => ({
       id: k.id,
-      unit: "sat" as const,
+      unit: k.unit,
       active: k.active,
       input_fee_ppk: k.feePpk,
     }))

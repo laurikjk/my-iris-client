@@ -15,6 +15,7 @@ import {Helmet} from "react-helmet"
 import {useEffect, ReactNode, useRef, useMemo, useState} from "react"
 import {useIsLargeScreen} from "@/shared/hooks/useIsLargeScreen"
 import {useIsTwoColumnLayout} from "@/shared/hooks/useIsTwoColumnLayout"
+import {useUniversalPaste} from "@/shared/hooks/useUniversalPaste"
 import HomeFeed from "@/pages/home/feed/components/HomeFeed"
 import UnifiedSearchContent from "@/shared/components/search/UnifiedSearchContent"
 import {ScrollProvider} from "@/contexts/ScrollContext"
@@ -53,6 +54,9 @@ const Layout = ({children}: {children: ReactNode}) => {
   const location = useLocation()
   const isLargeScreen = useIsLargeScreen()
   const isTwoColumnLayout = useIsTwoColumnLayout()
+
+  // Universal paste handler for nostr identifiers
+  useUniversalPaste()
 
   // Track middle column content - default to HomeFeed, and remember last search route
   const [middleColumnContent, setMiddleColumnContent] = useState<"home" | "search">(

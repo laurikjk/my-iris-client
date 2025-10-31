@@ -8,6 +8,7 @@ import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {PeerConnectionList} from "@/shared/components/connection/PeerConnectionList"
 import {WebRTCLogViewer} from "@/shared/components/connection/WebRTCLogViewer"
+import {RelayLogViewer} from "@/shared/components/connection/RelayLogViewer"
 import {OnlinePresence} from "@/shared/components/connection/OnlinePresence"
 import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
 
@@ -91,7 +92,7 @@ export function Network() {
           </SettingsGroup>
 
           <SettingsGroup title="Relays">
-            <SettingsGroupItem isLast>
+            <SettingsGroupItem>
               <div className="flex flex-col space-y-4">
                 <RelayList
                   compact={false}
@@ -106,6 +107,9 @@ export function Network() {
                   </button>
                 )}
               </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem isLast>
+              <RelayLogViewer />
             </SettingsGroupItem>
           </SettingsGroup>
 

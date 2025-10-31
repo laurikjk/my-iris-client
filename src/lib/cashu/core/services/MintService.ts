@@ -141,6 +141,7 @@ export class MintService {
           const keysetModel: Omit<Keyset, "keypairs" | "updatedAt"> = {
             mintUrl: mint.mintUrl,
             id: ks.id,
+            unit: ks.unit,
             active: ks.active,
             feePpk: ks.input_fee_ppk || 0,
           }
@@ -154,6 +155,7 @@ export class MintService {
             return this.keysetRepo.addKeyset({
               mintUrl: mint.mintUrl,
               id: ks.id,
+              unit: ks.unit,
               keypairs,
               active: ks.active,
               feePpk: ks.input_fee_ppk || 0,

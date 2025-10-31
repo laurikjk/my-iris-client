@@ -52,10 +52,6 @@ export async function sendSignalingMessage(
 
   try {
     await event.publish()
-    webrtcLogger.info(
-      undefined,
-      `Sent ${message.type} message${recipientPubkey ? " (encrypted)" : " (public)"}`
-    )
   } catch (error) {
     webrtcLogger.error(undefined, "Failed to publish message", error)
   }
@@ -66,7 +62,9 @@ export async function sendSignalingMessage(
  * Attempts to decrypt encrypted messages, ignores if decryption fails
  */
 export function subscribeToSignaling(
-  onMessage: (message: SignalingMessage, senderPubkey: string) => void
+  onMessage: (message: SignalingMessage, senderPubkey: string) => void,
+  mutualFollows: Set<string>,
+  myPubkey: string
 ): () => void {
   const ndkInstance = ndk()
   const signer = ndkInstance.signer
@@ -76,12 +74,17 @@ export function subscribeToSignaling(
     return () => {}
   }
 
-  // Subscribe to kind 30078 events with webrtc tag
+  const authors = Array.from(mutualFollows)
+  authors.push(myPubkey) // Include self to track other devices
+
+  // Subscribe to kind 30078 events with webrtc tag from mutual follows + self
+  // Only get new messages (since = now) to avoid processing expired hellos
   const sub = ndkInstance.subscribe(
     {
       kinds: [KIND_APP_DATA],
       "#l": [WEBRTC_TAG],
-      since: Math.floor(Date.now() / 1000) - 60, // Last minute
+      authors,
+      since: Math.floor(Date.now() / 1000),
     },
     {closeOnEose: false}
   )

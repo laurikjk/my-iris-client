@@ -13,5 +13,20 @@ export async function ensureSchema(db: IdbDb): Promise<void> {
     coco_cashu_history: "++id, mintUrl, type, createdAt, [mintUrl+quoteId+type]",
   })
 
-  // No migration tracking needed prior to first release
+  // Version 2: Add unit field to keysets
+  db.version(2)
+    .stores({
+      coco_cashu_keysets: "&[mintUrl+id], mintUrl, id, unit, updatedAt",
+    })
+    .upgrade(async (tx) => {
+      // Set default unit to "sat" for existing keysets
+      await tx
+        .table("coco_cashu_keysets")
+        .toCollection()
+        .modify((keyset: any) => {
+          if (!keyset.unit) {
+            keyset.unit = "sat"
+          }
+        })
+    })
 }
