@@ -3,6 +3,8 @@ import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
 import {Name} from "@/shared/components/user/Name"
 import {Avatar} from "@/shared/components/user/Avatar"
 import RelativeTime from "@/shared/components/event/RelativeTime"
+import {RiFileTransferLine} from "@remixicon/react"
+import {getPeerConnection} from "@/utils/chat/webrtc/PeerConnection"
 
 type PeerStatus = {
   pubkey: string
@@ -14,6 +16,8 @@ type PeerStatus = {
 
 export function PeerConnectionList() {
   const [peers, setPeers] = useState<PeerStatus[]>([])
+  const [sendFileModalOpen, setSendFileModalOpen] = useState(false)
+  const [selectedPeer, setSelectedPeer] = useState<PeerStatus | null>(null)
 
   useEffect(() => {
     const updatePeers = () => {
@@ -27,6 +31,23 @@ export function PeerConnectionList() {
       peerConnectionManager.off("update", updatePeers)
     }
   }, [])
+
+  const handleSendFile = (peer: PeerStatus) => {
+    setSelectedPeer(peer)
+    setSendFileModalOpen(true)
+  }
+
+  const handleFileSelect = async (file: File) => {
+    if (!selectedPeer) return
+
+    const conn = await getPeerConnection(selectedPeer.sessionId)
+    if (conn) {
+      conn.sendFile(file)
+    }
+
+    setSendFileModalOpen(false)
+    setSelectedPeer(null)
+  }
 
   const getStatusColor = (state: RTCPeerConnection["connectionState"]) => {
     switch (state) {
@@ -86,6 +107,15 @@ export function PeerConnectionList() {
                   )}
                 </div>
               </div>
+              {peer.state === "connected" && (
+                <button
+                  onClick={() => handleSendFile(peer)}
+                  className="btn btn-sm btn-ghost"
+                  title="Send file"
+                >
+                  <RiFileTransferLine className="w-5 h-5" />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -94,6 +124,38 @@ export function PeerConnectionList() {
       {peers.length === 0 && (
         <div className="text-sm text-base-content/60 text-center py-4">
           No active peer connections
+        </div>
+      )}
+
+      {/* File send modal */}
+      {sendFileModalOpen && selectedPeer && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg mb-4">
+              Send File to <Name pubKey={selectedPeer.pubkey} />
+            </h3>
+            <input
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  handleFileSelect(file)
+                }
+              }}
+              className="file-input file-input-bordered w-full"
+            />
+            <div className="modal-action">
+              <button
+                onClick={() => {
+                  setSendFileModalOpen(false)
+                  setSelectedPeer(null)
+                }}
+                className="btn"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

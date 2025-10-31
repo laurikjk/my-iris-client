@@ -71,7 +71,16 @@ export async function getPeerConnection(
   return undefined
 }
 
-export default class PeerConnection extends EventEmitter {
+type PeerConnectionEvents = {
+  "file-incoming": (metadata: {name: string; size: number; type: string}) => void
+  "file-received": (
+    blob: Blob,
+    metadata: {name: string; size: number; type: string}
+  ) => void
+  close: () => void
+}
+
+export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   peerId: string
   recipientPubkey: string
   mySessionId: string | null
@@ -82,6 +91,7 @@ export default class PeerConnection extends EventEmitter {
   receivedFileData: ArrayBuffer[] = []
   receivedFileSize: number = 0
   seenEvents: LRUCache<string, boolean>
+  private fileTransferAccepted: boolean = false
 
   constructor(peerId: string, mySessionId?: string) {
     super()
@@ -232,6 +242,12 @@ export default class PeerConnection extends EventEmitter {
   }
 
   setFileChannel(fileChannel: RTCDataChannel) {
+    // Reset state for new file transfer
+    this.incomingFileMetadata = null
+    this.receivedFileData = []
+    this.receivedFileSize = 0
+    this.fileTransferAccepted = false
+
     this.fileChannel = fileChannel
     this.fileChannel.binaryType = "arraybuffer"
     this.fileChannel.onopen = () => this.log("File channel open")
@@ -240,11 +256,12 @@ export default class PeerConnection extends EventEmitter {
         const metadata = JSON.parse(event.data)
         if (metadata.type === "file-metadata" && metadata.metadata) {
           this.incomingFileMetadata = metadata.metadata
-          this.receivedFileData = []
-          this.receivedFileSize = 0
-          this.log(`↓ File: ${metadata.metadata.name}`)
+          this.log(`↓ File incoming: ${metadata.metadata.name}`)
+          // Emit event for UI to show modal
+          this.emit("file-incoming", metadata.metadata)
         }
       } else if (event.data instanceof ArrayBuffer) {
+        // Buffer all data chunks
         this.receivedFileData.push(event.data)
         this.receivedFileSize += event.data.byteLength
 
@@ -252,8 +269,16 @@ export default class PeerConnection extends EventEmitter {
           this.incomingFileMetadata &&
           this.receivedFileSize === this.incomingFileMetadata.size
         ) {
-          this.log("File fully received")
-          this.saveReceivedFile()
+          this.log("File fully received, waiting for user action")
+          // File fully buffered - wait for user to accept or reject
+          // If already accepted, save immediately
+          if (this.fileTransferAccepted) {
+            const blob = new Blob(this.receivedFileData, {
+              type: this.incomingFileMetadata.type,
+            })
+            this.emit("file-received", blob, this.incomingFileMetadata)
+            this.saveReceivedFile(blob)
+          }
         }
       }
     }
@@ -262,26 +287,44 @@ export default class PeerConnection extends EventEmitter {
     }
   }
 
-  async saveReceivedFile() {
+  acceptFileTransfer() {
+    this.fileTransferAccepted = true
+    this.log(
+      `File transfer accepted. Metadata: ${this.incomingFileMetadata ? "yes" : "no"}, Size: ${this.receivedFileSize}/${this.incomingFileMetadata?.size || 0}`
+    )
+
+    // If file already fully received, save it now
+    if (
+      this.incomingFileMetadata &&
+      this.receivedFileSize === this.incomingFileMetadata.size
+    ) {
+      this.log("File was already received, saving now")
+      const blob = new Blob(this.receivedFileData, {
+        type: this.incomingFileMetadata.type,
+      })
+      this.emit("file-received", blob, this.incomingFileMetadata)
+      this.saveReceivedFile(blob)
+    } else {
+      this.log("File not yet fully received, will save when complete")
+    }
+  }
+
+  rejectFileTransfer() {
+    this.log("File transfer rejected")
+    this.incomingFileMetadata = null
+    this.receivedFileData = []
+    this.receivedFileSize = 0
+    this.fileTransferAccepted = false
+  }
+
+  private saveReceivedFile(blob: Blob) {
     if (!this.incomingFileMetadata) {
       webrtcLogger.error(this.peerId, "No file metadata available")
       return
     }
 
-    const pubkey = this.peerId.split(":")[0]
-    const name = getCachedName(pubkey)
-    const confirmString = `Save ${this.incomingFileMetadata.name} from ${name}?`
-    if (!(await (await import("@/utils/utils")).confirm(confirmString))) {
-      this.log("User cancelled file save")
-      this.incomingFileMetadata = null
-      this.receivedFileData = []
-      this.receivedFileSize = 0
-      return
-    }
-
     this.log(`Saving file: ${this.incomingFileMetadata.name}`)
 
-    const blob = new Blob(this.receivedFileData, {type: this.incomingFileMetadata.type})
     const url = URL.createObjectURL(blob)
 
     const a = document.createElement("a")
@@ -296,6 +339,7 @@ export default class PeerConnection extends EventEmitter {
     this.incomingFileMetadata = null
     this.receivedFileData = []
     this.receivedFileSize = 0
+    this.fileTransferAccepted = false
     this.log("File saved")
   }
 
@@ -332,6 +376,11 @@ export default class PeerConnection extends EventEmitter {
           if (reader.result && reader.result instanceof ArrayBuffer) {
             fileChannel.send(reader.result)
             this.log("File sent")
+            // Close channel after sending
+            setTimeout(() => {
+              fileChannel.close()
+              this.fileChannel = null
+            }, 100)
           }
         }
         reader.readAsArrayBuffer(file)

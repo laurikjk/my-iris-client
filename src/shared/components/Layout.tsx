@@ -32,6 +32,7 @@ import {
 import Toast from "@/shared/components/ui/Toast"
 import TermsOfService from "@/shared/components/TermsOfService"
 import {isTauri} from "@/utils/utils"
+import {FileTransferManager} from "@/shared/components/connection/FileTransferManager"
 
 const openedAt = Math.floor(Date.now() / 1000)
 
@@ -322,6 +323,7 @@ const Layout = ({children}: {children: ReactNode}) => {
       </ErrorBoundary>
       <Footer />
       <Toast />
+      <FileTransferManager />
       {showToS && <TermsOfService onAccept={handleToSAccept} />}
       <Helmet titleTemplate={`%s / ${CONFIG.appName}`} defaultTitle={CONFIG.appName}>
         <title>{CONFIG.appName}</title>
