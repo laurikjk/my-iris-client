@@ -561,6 +561,16 @@ export const useWalletProviderStore = create<WalletProviderState>()(
             throw new Error("Cashu manager not initialized")
           }
 
+          // Decode invoice to get amount
+          const {decode} = await import("light-bolt11-decoder")
+          const decodedInvoice = decode(invoice)
+          const amountSection = decodedInvoice.sections.find(
+            (section) => section.name === "amount"
+          )
+          const invoiceAmountMsat =
+            amountSection && "value" in amountSection ? parseInt(amountSection.value) : 0
+          const invoiceAmountSat = Math.ceil(invoiceAmountMsat / 1000)
+
           // Get available mints with balance
           const balances = await manager.wallet.getBalances()
           const mints = Object.keys(balances).filter((mint) => balances[mint] > 0)
@@ -569,8 +579,27 @@ export const useWalletProviderStore = create<WalletProviderState>()(
             throw new Error("No mints with balance available")
           }
 
-          // Use first mint with balance
-          const mintUrl = mints[0]
+          // Try active mint first if it has enough balance
+          const {useCashuWalletStore} = await import("@/stores/cashuWallet")
+          const activeMint = useCashuWalletStore.getState().activeMint
+          let mintUrl: string | undefined
+
+          if (activeMint && balances[activeMint] >= invoiceAmountSat) {
+            mintUrl = activeMint
+          } else {
+            // Find first mint with enough balance
+            mintUrl = mints.find((mint) => balances[mint] >= invoiceAmountSat)
+          }
+
+          if (!mintUrl) {
+            const totalBalance = Object.values(balances).reduce(
+              (sum, bal) => sum + bal,
+              0
+            )
+            throw new Error(
+              `Not enough balance. Invoice requires ${invoiceAmountSat} sats, but total balance is ${totalBalance} sats.`
+            )
+          }
 
           try {
             console.log(
@@ -637,8 +666,13 @@ export const useWalletProviderStore = create<WalletProviderState>()(
             throw new Error("No mints configured. Add a mint first.")
           }
 
-          // Use first mint
-          const mintUrl = mints[0].mintUrl
+          // Use active mint if set, otherwise first mint
+          const {useCashuWalletStore} = await import("@/stores/cashuWallet")
+          const activeMint = useCashuWalletStore.getState().activeMint
+          const mintUrl =
+            activeMint && mints.some((m) => m.mintUrl === activeMint)
+              ? activeMint
+              : mints[0].mintUrl
           const quote = await manager.quotes.createMintQuote(mintUrl, amount, description)
 
           return {invoice: quote.request}
