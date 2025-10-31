@@ -74,6 +74,9 @@ const checkDeletedAccount = async (publicKey: string) => {
 
 // Move initialization to a function to avoid side effects
 const initializeApp = async () => {
+  // Wait for settings to hydrate from localStorage before initializing NDK
+  await useUserStore.getState().awaitHydration()
+
   ndk()
 
   // Initialize debug system

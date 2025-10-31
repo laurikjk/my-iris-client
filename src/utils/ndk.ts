@@ -32,18 +32,77 @@ export {DEFAULT_RELAYS}
 export const ndk = (opts?: NDKConstructorParams): NDK => {
   if (!ndkInstance) {
     const store = useUserStore.getState()
-    const relays = opts?.explicitRelayUrls || store.relays
+
+    // Only include enabled relays
+    const enabledRelays =
+      store.relayConfigs?.filter((c) => !c.disabled).map((c) => c.url) || []
+    const relays = opts?.explicitRelayUrls || enabledRelays
+
+    console.log("Initializing NDK with enabled relays:", relays)
 
     // Log when using test relay
     if (import.meta.env.VITE_USE_TEST_RELAY) {
       console.log("🧪 Using test relay only: wss://temp.iris.to/")
     }
 
+    const enableOutbox = import.meta.env.VITE_USE_LOCAL_RELAY
+      ? false
+      : store.ndkOutboxModel
+
+    const autoConnectUserRelays = import.meta.env.VITE_USE_LOCAL_RELAY
+      ? false
+      : store.autoConnectUserRelays
+
+    console.log(
+      "Initializing NDK with outbox model:",
+      enableOutbox,
+      "autoConnectUserRelays:",
+      autoConnectUserRelays
+    )
+
+    // Check relay connection filter - always check current state from store
+    const relayConnectionFilter = (relayUrl: string) => {
+      const currentStore = useUserStore.getState()
+      const normalizedUrl = normalizeRelayUrl(relayUrl)
+
+      // Check if relay is in current config
+      const relayConfig = currentStore.relayConfigs?.find(
+        (c) => normalizeRelayUrl(c.url) === normalizedUrl
+      )
+
+      // If relay is in config and disabled, block it
+      if (relayConfig?.disabled) {
+        console.log("Blocking disabled relay:", relayUrl)
+        return false
+      }
+
+      // If relay is in config and enabled, allow it
+      if (relayConfig && !relayConfig.disabled) {
+        return true
+      }
+
+      // If relay not in config, check outbox/autoConnect settings
+      const currentEnableOutbox = import.meta.env.VITE_USE_LOCAL_RELAY
+        ? false
+        : currentStore.ndkOutboxModel
+      const currentAutoConnect = import.meta.env.VITE_USE_LOCAL_RELAY
+        ? false
+        : currentStore.autoConnectUserRelays
+
+      if (!currentEnableOutbox && !currentAutoConnect) {
+        console.log("Blocking discovered relay:", relayUrl)
+        return false
+      }
+
+      // Otherwise allow (outbox/autoConnect will handle discovery)
+      return true
+    }
+
     const options = opts || {
       explicitRelayUrls: relays,
-      enableOutboxModel: import.meta.env.VITE_USE_LOCAL_RELAY
-        ? false
-        : store.ndkOutboxModel,
+      enableOutboxModel: enableOutbox,
+      autoConnectUserRelays,
+      relayConnectionFilter,
 
       cacheAdapter: new NDKCacheAdapterDexie({
         dbName: "treelike-nostr",
@@ -96,6 +155,16 @@ function setupVisibilityReconnection(instance: NDK) {
     // NDKRelayStatus: DISCONNECTED=1, RECONNECTING=2, FLAPPING=3, CONNECTING=4, CONNECTED=5+
     for (const relay of instance.pool.relays.values()) {
       if (relay.status < 5) {
+        // Check if this relay is explicitly disabled in config before reconnecting
+        const store = useUserStore.getState()
+        const relayConfig = store.relayConfigs?.find(
+          (c) => normalizeRelayUrl(c.url) === normalizeRelayUrl(relay.url)
+        )
+        if (relayConfig?.disabled) {
+          console.log(`Skipping reconnection to disabled relay: ${relay.url}`)
+          continue
+        }
+
         // Not connected
         console.log(`Forcing reconnection to ${relay.url} (status: ${relay.status})`)
         relay.connect()
@@ -170,26 +239,10 @@ function attachRelayLogger(instance: NDK) {
   }
 }
 
-function recreateNDKInstance() {
-  if (ndkInstance) {
-    // Disconnect all relays individually
-    for (const relay of ndkInstance.pool.relays.values()) {
-      relay.disconnect()
-    }
-    ndkInstance = null
-    privateKeySigner = undefined
-    nip07Signer = undefined
-  }
-  ndk()
-}
-
 function watchLocalSettings(instance: NDK) {
   useUserStore.subscribe((state, prevState) => {
-    if (state.ndkOutboxModel !== prevState.ndkOutboxModel) {
-      console.log("NDK outbox model setting changed, recreating NDK instance")
-      recreateNDKInstance()
-      return
-    }
+    // Outbox model changes are handled by page reload in Network.tsx
+    // No need to recreate NDK instance here
     if (state.privateKey !== prevState.privateKey) {
       const havePrivateKey = state.privateKey && typeof state.privateKey === "string"
       if (havePrivateKey) {
@@ -258,12 +311,13 @@ function watchLocalSettings(instance: NDK) {
             instance.pool.addRelay(relay)
             relay.connect()
           } else if (!isEnabled && existsInPool) {
-            // Disconnect from relay but keep it in the pool
-            const relay =
-              instance.pool.relays.get(relayConfig.url) ||
-              instance.pool.relays.get(normalizedUrl)
-            if (relay) {
-              relay.disconnect()
+            // Remove disabled relay from pool entirely
+            // removeRelay handles disconnect internally
+            const removed =
+              instance.pool.removeRelay(relayConfig.url) ||
+              instance.pool.removeRelay(normalizedUrl)
+            if (removed) {
+              console.log("Removed disabled relay from pool:", relayConfig.url)
             }
           } else if (isEnabled && existsInPool) {
             // Ensure enabled relay is connected
@@ -276,9 +330,6 @@ function watchLocalSettings(instance: NDK) {
             }
           }
         })
-
-        // Don't remove relays from the pool - they might be discovered relays
-        // We only disconnect them if they're explicitly disabled in config
       }
     }
 

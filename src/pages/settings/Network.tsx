@@ -13,8 +13,14 @@ import {OnlinePresence} from "@/shared/components/connection/OnlinePresence"
 import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
 
 export function Network() {
-  const {relayConfigs, setRelayConfigs, ndkOutboxModel, setNdkOutboxModel} =
-    useUserStore()
+  const {
+    relayConfigs,
+    setRelayConfigs,
+    ndkOutboxModel,
+    setNdkOutboxModel,
+    autoConnectUserRelays,
+    setAutoConnectUserRelays,
+  } = useUserStore()
   const {showRelayIndicator, setShowRelayIndicator} = useUIStore()
   const {network, updateNetwork} = useSettingsStore()
 
@@ -48,6 +54,28 @@ export function Network() {
     }
   }
 
+  const handleOutboxModelToggle = async (enabled: boolean) => {
+    try {
+      setNdkOutboxModel(enabled)
+      // Reload app to reinitialize NDK with new setting
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      window.location.reload()
+    } catch (error) {
+      console.error("Error toggling outbox model:", error)
+    }
+  }
+
+  const handleAutoConnectUserRelaysToggle = async (enabled: boolean) => {
+    try {
+      setAutoConnectUserRelays(enabled)
+      // Reload app to reinitialize NDK with new setting
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      window.location.reload()
+    } catch (error) {
+      console.error("Error toggling auto-connect user relays:", error)
+    }
+  }
+
   const hasDefaultRelays = useMemo(() => {
     const enabledUrls = relayConfigs?.filter((c) => !c.disabled).map((c) => c.url) || []
     return (
@@ -73,7 +101,7 @@ export function Network() {
               </div>
             </SettingsGroupItem>
 
-            <SettingsGroupItem isLast>
+            <SettingsGroupItem>
               <div className="flex justify-between items-center">
                 <div className="flex flex-col">
                   <span>Enable Outbox Model</span>
@@ -84,7 +112,24 @@ export function Network() {
                 <input
                   type="checkbox"
                   checked={ndkOutboxModel}
-                  onChange={(e) => setNdkOutboxModel(e.target.checked)}
+                  onChange={(e) => handleOutboxModelToggle(e.target.checked)}
+                  className="toggle toggle-primary"
+                />
+              </div>
+            </SettingsGroupItem>
+
+            <SettingsGroupItem isLast>
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span>Auto-connect to Your Relays</span>
+                  <span className="text-sm text-base-content/60">
+                    Automatically fetch and connect to your own relay list
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={autoConnectUserRelays}
+                  onChange={(e) => handleAutoConnectUserRelaysToggle(e.target.checked)}
                   className="toggle toggle-primary"
                 />
               </div>

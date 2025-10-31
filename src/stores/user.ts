@@ -34,6 +34,7 @@ interface UserState {
   defaultZapAmount: number
   defaultZapComment: string
   ndkOutboxModel: boolean
+  autoConnectUserRelays: boolean
 
   hasHydrated: boolean
 
@@ -55,6 +56,7 @@ interface UserState {
   setDefaultZapAmount: (defaultZapAmount: number) => void
   setDefaultZapComment: (defaultZapComment: string) => void
   setNdkOutboxModel: (ndkOutboxModel: boolean) => void
+  setAutoConnectUserRelays: (autoConnectUserRelays: boolean) => void
   reset: () => void
   ensureDefaultMediaserver: (isSubscriber: boolean) => void
   awaitHydration: () => Promise<void>
@@ -80,6 +82,7 @@ export const useUserStore = create<UserState>()(
         defaultZapAmount: 0,
         defaultZapComment: "",
         ndkOutboxModel: !import.meta.env.VITE_USE_LOCAL_RELAY,
+        autoConnectUserRelays: !import.meta.env.VITE_USE_LOCAL_RELAY,
         hasHydrated: false,
       }
 
@@ -147,6 +150,8 @@ export const useUserStore = create<UserState>()(
         setDefaultZapAmount: (defaultZapAmount: number) => set({defaultZapAmount}),
         setDefaultZapComment: (defaultZapComment: string) => set({defaultZapComment}),
         setNdkOutboxModel: (ndkOutboxModel: boolean) => set({ndkOutboxModel}),
+        setAutoConnectUserRelays: (autoConnectUserRelays: boolean) =>
+          set({autoConnectUserRelays}),
         reset: () => set(initialState),
         ensureDefaultMediaserver: (isSubscriber: boolean) =>
           set((state) => {
