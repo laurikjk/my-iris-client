@@ -36,8 +36,6 @@ class PeerConnectionManager extends EventEmitter<{
 }> {
   private peers = new Map<string, PeerStatus>()
   private onlineUsers = new Map<string, OnlineUser>()
-  private maxOutbound = 3
-  private maxInbound = 3
   private connectionCheckInterval?: NodeJS.Timeout
   private presencePingInterval?: NodeJS.Timeout
   private cleanupInterval?: NodeJS.Timeout
@@ -246,9 +244,13 @@ class PeerConnectionManager extends EventEmitter<{
       const isOwnSession = senderPubkey === myPubkey
       const isMutual = isMutualFollow(senderPubkey, myPubkey)
 
-      // Always connect to own sessions, respect quota for mutual follows
+      const {webrtcMaxOutbound, webrtcConnectToOwnDevices} =
+        useSettingsStore.getState().network
+
+      // Conditionally connect to own sessions, respect quota for mutual follows
       const shouldConnect =
-        (isOwnSession || (isMutual && this.peers.size < this.maxOutbound)) &&
+        ((webrtcConnectToOwnDevices && isOwnSession) ||
+          (isMutual && this.peers.size < webrtcMaxOutbound)) &&
         !this.peers.has(peerIdStr) &&
         !this.isPeerConnectionOpen(peerId)
 
@@ -286,12 +288,16 @@ class PeerConnectionManager extends EventEmitter<{
           return
         }
 
-        // Check inbound quota (but allow own sessions)
-        if (!isOwnSession) {
+        // Check inbound quota (but allow own sessions if enabled)
+        const {webrtcMaxInbound, webrtcConnectToOwnDevices} =
+          useSettingsStore.getState().network
+        const bypassQuota = webrtcConnectToOwnDevices && isOwnSession
+
+        if (!bypassQuota) {
           const inboundCount = Array.from(this.peers.values()).filter(
             (p) => p.direction === "inbound"
           ).length
-          if (inboundCount >= this.maxInbound) {
+          if (inboundCount >= webrtcMaxInbound) {
             webrtcLogger.warn(undefined, "Inbound connection quota full")
             return
           }

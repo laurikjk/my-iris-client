@@ -179,7 +179,7 @@ const PublicChat = () => {
         tags: event.tags,
         kind: KIND_CHANNEL_MESSAGE,
         reactions: {},
-        sentToRelays: publishedRelays.size > 0, // Only true if actually published to relays
+        sentToRelays: publishedRelays ? publishedRelays.size > 0 : false, // Only true if actually published to relays
         nostrEventId: event.id, // Add nostrEventId for public messages
       }
 

@@ -3,6 +3,7 @@ import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {webrtcLogger} from "./Logger"
 import type {SignalingMessage} from "./types"
 import {KIND_APP_DATA} from "@/utils/constants"
+import {publishEvent} from "./p2pNostr"
 
 function uuidv4() {
   return crypto.randomUUID()
@@ -51,7 +52,7 @@ export async function sendSignalingMessage(
   ]
 
   try {
-    await event.publish()
+    await publishEvent(event)
   } catch (error) {
     webrtcLogger.error(undefined, "Failed to publish message", error)
   }

@@ -1,4 +1,4 @@
-import {useMemo} from "react"
+import {useMemo, useState, useEffect} from "react"
 import {DEFAULT_RELAYS} from "@/utils/ndk"
 import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
@@ -11,6 +11,7 @@ import {WebRTCLogViewer} from "@/shared/components/connection/WebRTCLogViewer"
 import {RelayLogViewer} from "@/shared/components/connection/RelayLogViewer"
 import {OnlinePresence} from "@/shared/components/connection/OnlinePresence"
 import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
+import {getP2PStats, resetP2PStats} from "@/utils/chat/webrtc/p2pNostr"
 
 export function Network() {
   const {
@@ -23,6 +24,25 @@ export function Network() {
   } = useUserStore()
   const {showRelayIndicator, setShowRelayIndicator} = useUIStore()
   const {network, updateNetwork} = useSettingsStore()
+
+  const [p2pStats, setP2pStats] = useState({eventsSent: 0, eventsReceived: 0})
+
+  useEffect(() => {
+    const loadStats = async () => {
+      const stats = await getP2PStats()
+      setP2pStats(stats)
+    }
+    loadStats()
+
+    // Update stats periodically
+    const interval = setInterval(loadStats, 2000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleResetP2PStats = async () => {
+    await resetP2PStats()
+    setP2pStats({eventsSent: 0, eventsReceived: 0})
+  }
 
   const appVersion = import.meta.env.VITE_APP_VERSION || "dev"
   const buildTime = import.meta.env.VITE_BUILD_TIME || "development"
@@ -176,6 +196,64 @@ export function Network() {
               </div>
             </SettingsGroupItem>
             <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span>Connect to Own Devices</span>
+                  <span className="text-sm text-base-content/60">
+                    Always connect to your other devices (bypasses connection limits)
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={network.webrtcConnectToOwnDevices}
+                  onChange={(e) =>
+                    updateNetwork({webrtcConnectToOwnDevices: e.target.checked})
+                  }
+                  className="toggle toggle-primary"
+                />
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <span>Max Outbound Connections</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={network.webrtcMaxOutbound}
+                    onChange={(e) =>
+                      updateNetwork({webrtcMaxOutbound: parseInt(e.target.value) || 0})
+                    }
+                    className="input input-sm w-20"
+                  />
+                </div>
+                <span className="text-sm text-base-content/60">
+                  Maximum outgoing peer connections to mutual follows
+                </span>
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <span>Max Inbound Connections</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={network.webrtcMaxInbound}
+                    onChange={(e) =>
+                      updateNetwork({webrtcMaxInbound: parseInt(e.target.value) || 0})
+                    }
+                    className="input input-sm w-20"
+                  />
+                </div>
+                <span className="text-sm text-base-content/60">
+                  Maximum incoming peer connections from mutual follows
+                </span>
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
               <PeerConnectionList />
             </SettingsGroupItem>
             <SettingsGroupItem>
@@ -185,6 +263,24 @@ export function Network() {
                   Online users shown with green indicator
                 </span>
                 <OnlinePresence />
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold">P2P Statistics</span>
+                  <button onClick={handleResetP2PStats} className="btn btn-xs btn-ghost">
+                    Reset
+                  </button>
+                </div>
+                <div className="flex gap-4 text-sm">
+                  <span>
+                    Sent: <span className="font-mono">{p2pStats.eventsSent}</span>
+                  </span>
+                  <span>
+                    Received: <span className="font-mono">{p2pStats.eventsReceived}</span>
+                  </span>
+                </div>
               </div>
             </SettingsGroupItem>
             <SettingsGroupItem isLast>

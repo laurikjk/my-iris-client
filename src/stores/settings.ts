@@ -50,6 +50,9 @@ interface SettingsState {
   // Network settings
   network: {
     webrtcEnabled: boolean
+    webrtcMaxOutbound: number
+    webrtcMaxInbound: number
+    webrtcConnectToOwnDevices: boolean
   }
   // Desktop settings
   desktop: {
@@ -120,6 +123,9 @@ export const useSettingsStore = create<SettingsState>()(
       },
       network: {
         webrtcEnabled: true,
+        webrtcMaxOutbound: 3,
+        webrtcMaxInbound: 3,
+        webrtcConnectToOwnDevices: true,
       },
       desktop: {
         startOnBoot: true,
@@ -188,6 +194,21 @@ export const useSettingsStore = create<SettingsState>()(
         if (state && !state.network) {
           state.network = {
             webrtcEnabled: true,
+            webrtcMaxOutbound: 3,
+            webrtcMaxInbound: 3,
+            webrtcConnectToOwnDevices: true,
+          }
+        }
+        // Migrate network settings without new fields
+        if (state?.network) {
+          if (state.network.webrtcMaxOutbound === undefined) {
+            state.network.webrtcMaxOutbound = 3
+          }
+          if (state.network.webrtcMaxInbound === undefined) {
+            state.network.webrtcMaxInbound = 3
+          }
+          if (state.network.webrtcConnectToOwnDevices === undefined) {
+            state.network.webrtcConnectToOwnDevices = true
           }
         }
       },

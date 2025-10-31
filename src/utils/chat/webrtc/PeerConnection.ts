@@ -1,5 +1,6 @@
 import type {RTCSessionDescriptionInit, RTCIceCandidateInit} from "@/types/dom-types"
 import {EventEmitter} from "tseep"
+import {LRUCache} from "typescript-lru-cache"
 
 import {getCachedName} from "@/utils/nostr"
 import socialGraph from "@/utils/socialGraph"
@@ -80,6 +81,7 @@ export default class PeerConnection extends EventEmitter {
   incomingFileMetadata: {name: string; size: number; type: string} | null = null
   receivedFileData: ArrayBuffer[] = []
   receivedFileSize: number = 0
+  seenEvents: LRUCache<string, boolean>
 
   constructor(peerId: string, mySessionId?: string) {
     super()
@@ -91,6 +93,7 @@ export default class PeerConnection extends EventEmitter {
     })
     this.dataChannel = null
     this.fileChannel = null
+    this.seenEvents = new LRUCache<string, boolean>({maxSize: 20})
     this.setupPeerConnectionEvents()
   }
 
