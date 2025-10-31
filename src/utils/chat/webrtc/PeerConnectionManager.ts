@@ -45,6 +45,7 @@ class PeerConnectionManager extends EventEmitter<{
   private socialGraphUnsubscribe?: () => void
   private currentMutualFollows = new Set<string>()
   private readonly TIMEOUT = 15000 // 15 seconds
+  private readonly PRESENCE_PING_INTERVAL = 15000 // 15 seconds
 
   start() {
     if (this.isRunning) return
@@ -84,8 +85,11 @@ class PeerConnectionManager extends EventEmitter<{
       }
     })
 
-    // Send presence pings every 7.5 seconds
-    this.presencePingInterval = setInterval(() => void this.sendPresencePing(), 7500)
+    // Send presence pings
+    this.presencePingInterval = setInterval(
+      () => void this.sendPresencePing(),
+      this.PRESENCE_PING_INTERVAL
+    )
     void this.sendPresencePing()
 
     // Check and maintain connections every 30 seconds

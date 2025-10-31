@@ -10,7 +10,7 @@ function uuidv4() {
 }
 
 const WEBRTC_TAG = "webrtc"
-const MESSAGE_TIMEOUT = 10 * 1000 // 10 seconds
+const MESSAGE_TIMEOUT = 15 * 1000 // 15 seconds
 
 /**
  * Send a WebRTC signaling message publicly
