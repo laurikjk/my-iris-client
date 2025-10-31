@@ -9,7 +9,7 @@ import {MessagesNavItem} from "./MessagesNavItem"
 import PublishButton from "../ui/PublishButton"
 import ErrorBoundary from "../ui/ErrorBoundary"
 import {formatAmount, isMobileTauri} from "@/utils/utils"
-import {usePublicKey, useUserStore} from "@/stores/user"
+import {usePublicKey} from "@/stores/user"
 import {useWalletStore} from "@/stores/wallet"
 import {useSettingsStore} from "@/stores/settings"
 import {navItemsConfig} from "./navConfig"
@@ -18,6 +18,7 @@ import {useUIStore} from "@/stores/ui"
 import {NavItem} from "./NavItem"
 import {ndk} from "@/utils/ndk"
 import {RelayConnectivityIndicator} from "../RelayConnectivityIndicator"
+import {hasWriteAccess} from "@/utils/auth"
 
 const NavSideBar = () => {
   const ref = useRef<HTMLDivElement>(null)
@@ -25,12 +26,10 @@ const NavSideBar = () => {
   const {balance} = useWalletBalance()
   const {showBalanceInNav} = useWalletStore()
   const myPubKey = usePublicKey()
-  const myPrivKey = useUserStore((state) => state.privateKey)
-  const nip07Login = useUserStore((state) => state.nip07Login)
   const {debug} = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
 
-  const hasSigner = !!(myPrivKey || nip07Login)
+  const hasSigner = hasWriteAccess()
 
   useEffect(() => {
     isMobileTauri().then(setIsMobile)

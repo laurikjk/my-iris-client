@@ -12,6 +12,7 @@ import {useUserStore} from "@/stores/user"
 import {useWalletStore} from "@/stores/wallet"
 import {useLocation} from "@/navigation"
 import {ndk} from "@/utils/ndk"
+import {isReadOnlyMode} from "@/utils/auth"
 
 type MenuItem = {
   label?: string
@@ -26,7 +27,6 @@ type MenuItem = {
 }
 
 const Footer = () => {
-  const readonly = false
   const location = useLocation()
   const {balance} = useWalletBalance()
   const {showBalanceInNav} = useWalletStore()
@@ -63,7 +63,7 @@ const Footer = () => {
     // -mb-[1px] because weird 1px gap under footer?
     <ErrorBoundary>
       <footer className="-mb-[1px] md:hidden fixed bottom-0 z-10 w-full bg-base-200 bg-bg-color pb-[env(safe-area-inset-bottom)]">
-        {myPubKey && !ndk().signer && (
+        {isReadOnlyMode() && (
           <div className="flex items-center justify-center gap-1 text-error text-xs py-1 border-b border-error/20">
             <RiLockLine className="w-3 h-3" />
             <span>Read-only mode</span>
@@ -74,10 +74,10 @@ const Footer = () => {
             (item, index) =>
               (myPubKey || !item.loggedInOnly) &&
               (!item.requireSigner || (item.requireSigner && ndk().signer)) && (
-                <FooterNavItem key={index} item={item} readonly={readonly} />
+                <FooterNavItem key={index} item={item} />
               )
           )}
-          <FooterNavItem item={{link: "/u", icon: "search"}} readonly={readonly} />
+          <FooterNavItem item={{link: "/u", icon: "search"}} />
           {myPubKey && (
             <ProfileLink
               pubKey={myPubKey}
@@ -106,7 +106,7 @@ const Footer = () => {
   )
 }
 
-const FooterNavItem = ({item}: {item: MenuItem; readonly: boolean}) => {
+const FooterNavItem = ({item}: {item: MenuItem}) => {
   if (item.el) {
     return item.el
   }

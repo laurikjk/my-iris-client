@@ -11,6 +11,7 @@ import {useHeaderScroll} from "./useHeaderScroll"
 import {HeaderNavigation} from "./HeaderNavigation"
 import {useHeaderClick} from "./useHeaderClick"
 import {RelayConnectivityIndicator} from "../RelayConnectivityIndicator"
+import {PeerConnectionIndicator} from "../connection/PeerConnectionIndicator"
 
 interface HeaderProps {
   title?: string
@@ -85,7 +86,8 @@ const Header = ({
           </div>
         </div>
         <div className="flex items-center gap-2 mr-2 flex-shrink-0">
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-2">
+            <PeerConnectionIndicator />
             <RelayConnectivityIndicator />
           </div>
           {rightContent}

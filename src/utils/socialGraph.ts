@@ -394,4 +394,14 @@ export const stopRecrawl = () => {
   }
 }
 
+export function getMutualFollows(pubkey?: string): string[] {
+  const myPubkey = pubkey || instance.getRoot()
+  if (!myPubkey) return []
+
+  const following = Array.from(instance.getFollowedByUser(myPubkey))
+  return following.filter((followedPubkey) =>
+    instance.getFollowedByUser(followedPubkey).has(myPubkey)
+  )
+}
+
 export default () => instance

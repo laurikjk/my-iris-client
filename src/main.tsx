@@ -22,6 +22,8 @@ import {
   attachSessionEventListener,
   cleanupSessionEventListener,
 } from "./utils/dmEventHandler"
+import {peerConnectionManager} from "./utils/chat/webrtc/PeerConnectionManager"
+import {hasWriteAccess} from "./utils/auth"
 
 // Register deep link handler for hot starts (when app already open)
 // Note: Cold start (app closed) doesn't work due to Tauri bug #13580
@@ -123,8 +125,9 @@ const initializeApp = async () => {
     }
 
     // Only initialize DM sessions if not in readonly mode
-    if (state.privateKey || state.nip07Login) {
+    if (hasWriteAccess()) {
       attachSessionEventListener()
+      peerConnectionManager.start()
     }
   }
 
@@ -168,8 +171,9 @@ const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
     migratePublicChats()
 
     // Only initialize DM sessions if not in readonly mode
-    if (state.privateKey || state.nip07Login) {
+    if (hasWriteAccess()) {
       attachSessionEventListener()
+      peerConnectionManager.start()
     }
   }
 })
@@ -189,5 +193,6 @@ if (import.meta.hot) {
     unsubscribeUser()
     unsubscribeTheme()
     cleanupSessionEventListener()
+    peerConnectionManager.stop()
   })
 }

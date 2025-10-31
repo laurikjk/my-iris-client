@@ -63,7 +63,10 @@ export default function SendEcashForm({
 
         // Normalize mint URLs for comparison (handle trailing slashes, http/https)
         const normalizeMintUrl = (url: string) =>
-          url.replace(/\/$/, "").replace(/^https?:\/\//, "").toLowerCase()
+          url
+            .replace(/\/$/, "")
+            .replace(/^https?:\/\//, "")
+            .toLowerCase()
         const normalizedRequested = normalizeMintUrl(requestedMint)
 
         // Find matching mint in balances

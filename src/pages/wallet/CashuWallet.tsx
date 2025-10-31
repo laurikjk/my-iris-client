@@ -541,7 +541,7 @@ export default function CashuWallet() {
               onSuccess={handleDataRefresh}
               initialToken={sendDialogInitialToken}
               initialInvoice={sendDialogInitialInvoice}
-              balance={totalBalance}
+              balance={balance?.[activeMint || DEFAULT_MINT] || 0}
             />
 
             <ReceiveDialog

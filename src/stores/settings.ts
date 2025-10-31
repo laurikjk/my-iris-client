@@ -47,6 +47,10 @@ interface SettingsState {
       dms: boolean
     }
   }
+  // Network settings
+  network: {
+    webrtcEnabled: boolean
+  }
   // Desktop settings
   desktop: {
     startOnBoot: boolean
@@ -66,6 +70,7 @@ interface SettingsState {
   updateContent: (settings: Partial<SettingsState["content"]>) => void
   updateImgproxy: (settings: Partial<SettingsState["imgproxy"]>) => void
   updateNotifications: (settings: Partial<SettingsState["notifications"]>) => void
+  updateNetwork: (settings: Partial<SettingsState["network"]>) => void
   updateDesktop: (settings: Partial<SettingsState["desktop"]>) => void
   updateDebug: (settings: Partial<SettingsState["debug"]>) => void
   updateLegal: (settings: Partial<SettingsState["legal"]>) => void
@@ -113,6 +118,9 @@ export const useSettingsStore = create<SettingsState>()(
           dms: true,
         },
       },
+      network: {
+        webrtcEnabled: true,
+      },
       desktop: {
         startOnBoot: true,
       },
@@ -142,6 +150,10 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           notifications: {...state.notifications, ...settings},
         })),
+      updateNetwork: (settings) =>
+        set((state) => ({
+          network: {...state.network, ...settings},
+        })),
       updateDesktop: (settings) =>
         set((state) => ({
           desktop: {...state.desktop, ...settings},
@@ -170,6 +182,12 @@ export const useSettingsStore = create<SettingsState>()(
             reactions: true,
             zaps: true,
             dms: true,
+          }
+        }
+        // Migrate old settings without network config
+        if (state && !state.network) {
+          state.network = {
+            webrtcEnabled: true,
           }
         }
       },

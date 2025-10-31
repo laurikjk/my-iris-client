@@ -2,14 +2,20 @@ import {useMemo} from "react"
 import {DEFAULT_RELAYS} from "@/utils/ndk"
 import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
+import {useSettingsStore} from "@/stores/settings"
 import {RelayList} from "@/shared/components/RelayList"
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
+import {PeerConnectionList} from "@/shared/components/connection/PeerConnectionList"
+import {WebRTCLogViewer} from "@/shared/components/connection/WebRTCLogViewer"
+import {OnlinePresence} from "@/shared/components/connection/OnlinePresence"
+import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
 
 export function Network() {
   const {relayConfigs, setRelayConfigs, ndkOutboxModel, setNdkOutboxModel} =
     useUserStore()
   const {showRelayIndicator, setShowRelayIndicator} = useUIStore()
+  const {network, updateNetwork} = useSettingsStore()
 
   const appVersion = import.meta.env.VITE_APP_VERSION || "dev"
   const buildTime = import.meta.env.VITE_BUILD_TIME || "development"
@@ -30,6 +36,15 @@ export function Network() {
   const resetDefaults = () => {
     const defaultConfigs = DEFAULT_RELAYS.map((url) => ({url})) // No disabled flag means enabled
     setRelayConfigs(defaultConfigs)
+  }
+
+  const handleWebRTCToggle = (enabled: boolean) => {
+    updateNetwork({webrtcEnabled: enabled})
+    if (enabled) {
+      peerConnectionManager.start()
+    } else {
+      peerConnectionManager.stop()
+    }
   }
 
   const hasDefaultRelays = useMemo(() => {
@@ -91,6 +106,40 @@ export function Network() {
                   </button>
                 )}
               </div>
+            </SettingsGroupItem>
+          </SettingsGroup>
+
+          <SettingsGroup title="WebRTC Peer Connections">
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span>Enable WebRTC P2P</span>
+                  <span className="text-sm text-base-content/60">
+                    Direct peer-to-peer connections with mutual follows
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={network.webrtcEnabled}
+                  onChange={(e) => handleWebRTCToggle(e.target.checked)}
+                  className="toggle toggle-primary"
+                />
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
+              <PeerConnectionList />
+            </SettingsGroupItem>
+            <SettingsGroupItem>
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-semibold">Mutual Follows</span>
+                <span className="text-xs text-base-content/60">
+                  Online users shown with green indicator
+                </span>
+                <OnlinePresence />
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem isLast>
+              <WebRTCLogViewer />
             </SettingsGroupItem>
           </SettingsGroup>
 
