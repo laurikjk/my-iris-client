@@ -1,4 +1,4 @@
-import {NDKEvent, NDKRelaySet} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 import {getAllConnections} from "./PeerConnection"
 import {webrtcLogger} from "./Logger"
@@ -91,11 +91,9 @@ export function handleIncomingEvent(peerId: string, eventData: unknown): NDKEven
         `↓ kind ${event.kind} ${event.id?.slice(0, 8)} ${contentPreview}`
       )
 
-      // Publish to empty relay set to trigger NDK subscriptions without sending to relays
-      const emptyRelaySet = new NDKRelaySet(new Set(), ndkInstance)
-      event.publish(emptyRelaySet).catch((error: unknown) => {
-        webrtcLogger.error(peerId, "Failed to inject event into NDK", error)
-      })
+      // Publish to our relays for backup and cross-device sync
+      // Silently fail if no relays connected
+      event.publish().catch(() => {})
 
       return event
     }

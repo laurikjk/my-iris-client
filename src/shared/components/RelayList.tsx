@@ -58,36 +58,8 @@ export function RelayList({
     return !isInConfigs
   })
 
-  // Sort relays by enabled status, then connection status, then alphabetically
+  // Sort relays alphabetically
   const sortedRelayConfigs = [...(relayConfigs || [])].sort((a, b) => {
-    const relayA =
-      ndkRelays.get(a.url) ||
-      ndkRelays.get(a.url.replace(/\/$/, "")) ||
-      ndkRelays.get(a.url + "/")
-    const relayB =
-      ndkRelays.get(b.url) ||
-      ndkRelays.get(b.url.replace(/\/$/, "")) ||
-      ndkRelays.get(b.url + "/")
-
-    // Sort by enabled+connected, enabled, disabled
-    let statusA = 0
-    if (!a.disabled && relayA?.connected) {
-      statusA = 2
-    } else if (!a.disabled) {
-      statusA = 1
-    }
-
-    let statusB = 0
-    if (!b.disabled && relayB?.connected) {
-      statusB = 2
-    } else if (!b.disabled) {
-      statusB = 1
-    }
-    const statusDiff = statusB - statusA
-
-    if (statusDiff !== 0) return statusDiff
-
-    // Secondary sort by URL alphabetically
     return a.url.localeCompare(b.url)
   })
 
@@ -267,11 +239,8 @@ export function RelayList({
               <>
                 {discoveredRelays.length > 0 ? (
                   discoveredRelays
-                    .sort(([urlA, relayA], [urlB, relayB]) => {
-                      // Sort by connection status, then alphabetically
-                      if (relayA.connected !== relayB.connected) {
-                        return relayA.connected ? -1 : 1
-                      }
+                    .sort(([urlA], [urlB]) => {
+                      // Sort alphabetically
                       return urlA.localeCompare(urlB)
                     })
                     .map(([url, relay]) => {

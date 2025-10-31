@@ -8,17 +8,17 @@ export interface LogViewerEntry {
   message: string
 }
 
-interface LogViewerProps {
+interface LogViewerProps<T extends LogViewerEntry> {
   title: string
-  logs: LogViewerEntry[]
+  logs: T[]
   isExpanded: boolean
   onToggleExpanded: () => void
   onClear: () => void
   onCopyAll: () => void
-  renderLogItem: (log: LogViewerEntry, index: number) => ReactNode
+  renderLogItem: (log: T, index: number) => ReactNode
 }
 
-export function LogViewer({
+export function LogViewer<T extends LogViewerEntry>({
   title,
   logs,
   isExpanded,
@@ -26,7 +26,7 @@ export function LogViewer({
   onClear,
   onCopyAll,
   renderLogItem,
-}: LogViewerProps) {
+}: LogViewerProps<T>) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center">

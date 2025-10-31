@@ -1,7 +1,6 @@
 import {useState, useEffect} from "react"
 import {RiWebhookLine} from "@remixicon/react"
 import {ndk as getNdk} from "@/utils/ndk"
-import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
 import {Link} from "@/navigation"
 import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
@@ -15,7 +14,6 @@ export const RelayConnectivityIndicator = ({
   className = "",
   showCount = true,
 }: RelayConnectivityIndicatorProps) => {
-  const {relayConfigs} = useUserStore()
   const {showRelayIndicator} = useUIStore()
   const [ndkRelays, setNdkRelays] = useState(new Map())
   const [peerCount, setPeerCount] = useState(0)
@@ -44,14 +42,10 @@ export const RelayConnectivityIndicator = ({
     }
   }, [])
 
-  const relayCount =
-    relayConfigs?.filter((config) => {
-      const relay =
-        ndkRelays.get(config.url) ||
-        ndkRelays.get(config.url.replace(/\/$/, "")) ||
-        ndkRelays.get(config.url + "/")
-      return !config.disabled && relay?.connected
-    }).length || 0
+  // Count all connected relays (both configured and discovered)
+  const relayCount = Array.from(ndkRelays.values()).filter(
+    (relay) => relay.connected
+  ).length
 
   const totalCount = relayCount + peerCount
 

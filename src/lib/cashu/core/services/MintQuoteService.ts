@@ -70,8 +70,7 @@ export class MintQuoteService {
         {
           keep: quote.amount,
           send: 0,
-        },
-        matchingKeyset.id
+        }
       )
       const proofs = await wallet.mintProofs(quote.amount, quote.quote, {
         outputData: keep,

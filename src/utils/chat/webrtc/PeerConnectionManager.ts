@@ -31,7 +31,9 @@ type OnlineUser = {
   lastSeen: number
 }
 
-class PeerConnectionManager extends EventEmitter {
+class PeerConnectionManager extends EventEmitter<{
+  update: () => void
+}> {
   private peers = new Map<string, PeerStatus>()
   private onlineUsers = new Map<string, OnlineUser>()
   private maxOutbound = 3
@@ -142,7 +144,6 @@ class PeerConnectionManager extends EventEmitter {
       return
     }
 
-    webrtcLogger.info(undefined, `↑ Hello ${this.myPeerId.short()}`)
     await sendSignalingMessage({
       type: "hello",
       peerId: this.myPeerId.uuid,
@@ -234,8 +235,6 @@ class PeerConnectionManager extends EventEmitter {
         return
       }
 
-      webrtcLogger.info(undefined, `↓ Hello from ${senderPubkey.slice(0, 8)}...`)
-
       // Track online users (including our other sessions)
       this.onlineUsers.set(senderPubkey, {
         pubkey: senderPubkey,
@@ -246,10 +245,6 @@ class PeerConnectionManager extends EventEmitter {
       // Check if we should connect
       const isOwnSession = senderPubkey === myPubkey
       const isMutual = isMutualFollow(senderPubkey, myPubkey)
-
-      if (isOwnSession) {
-        webrtcLogger.info(undefined, `Hello from own session ${peerId.short()}`)
-      }
 
       // Always connect to own sessions, respect quota for mutual follows
       const shouldConnect =
