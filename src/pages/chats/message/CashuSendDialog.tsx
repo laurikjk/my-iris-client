@@ -23,7 +23,7 @@ export default function CashuSendDialog({
   const [memo, setMemo] = useState<string>("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string>("")
-  const {setBalance: setGlobalBalance} = useWalletStore()
+  const {balance: globalBalance, setBalance: setGlobalBalance} = useWalletStore()
 
   useEffect(() => {
     if (isOpen) {
@@ -42,9 +42,10 @@ export default function CashuSendDialog({
     }
   }, [isOpen])
 
-  const totalBalance = balance
-    ? Object.values(balance).reduce((sum, val) => sum + val, 0)
-    : 0
+  const totalBalance =
+    balance !== null
+      ? Object.values(balance).reduce((sum, val) => sum + val, 0)
+      : (globalBalance ?? 0)
 
   const handleSend = async () => {
     if (!manager || !amount) return
@@ -64,13 +65,16 @@ export default function CashuSendDialog({
     setError("")
 
     try {
-      if (!balance) {
-        throw new Error("No mint available")
+      // Wait for balance to load if not yet available
+      let balances = balance
+      if (!balances) {
+        balances = await manager.wallet.getBalances()
+        setBalance(balances)
       }
 
       // Select best mint for this payment
       const {selectMintForPayment} = await import("@/lib/cashu/mintSelection")
-      const mintUrl = selectMintForPayment(balance, amountNum)
+      const mintUrl = selectMintForPayment(balances, amountNum)
 
       const token = await manager.wallet.send(
         mintUrl,
