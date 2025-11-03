@@ -112,7 +112,7 @@ export default function SubscriptionPage() {
   const [plan, setPlan] = useHistoryState<PlanId>(1, "subscriptionPlan")
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null)
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState<boolean | null>(null)
 
   const totalPrice = (p: PlanId) =>
     plans.find((x) => x.id === p)!.price[duration as Duration].amount
@@ -237,6 +237,19 @@ export default function SubscriptionPage() {
   }
 
   // Show message if running on mobile Tauri
+  if (isMobile === null) {
+    // Loading state while checking platform
+    return (
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <Header title="Subscription" slideUp={false} />
+        <div className="flex-1 overflow-y-auto p-4 mx-4 md:p-8 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-4 md:pb-4" />
+        <Helmet>
+          <title>Subscription</title>
+        </Helmet>
+      </div>
+    )
+  }
+
   if (isMobile) {
     return (
       <div className="flex flex-col flex-1 overflow-hidden">

@@ -36,11 +36,14 @@ pub fn run() {
                 )?;
             }
 
-            // Check if launched with --minimized flag (from autostart)
-            let args: Vec<String> = std::env::args().collect();
-            if args.contains(&"--minimized".to_string()) {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.minimize();
+            // Check if launched with --minimized flag (from autostart) - desktop only
+            #[cfg(any(target_os = "macos", windows, target_os = "linux"))]
+            {
+                let args: Vec<String> = std::env::args().collect();
+                if args.contains(&"--minimized".to_string()) {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.minimize();
+                    }
                 }
             }
 
