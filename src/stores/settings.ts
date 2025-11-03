@@ -127,8 +127,8 @@ export const useSettingsStore = create<SettingsState>()(
       },
       network: {
         webrtcEnabled: true,
-        webrtcMaxOutbound: 3,
-        webrtcMaxInbound: 3,
+        webrtcMaxOutbound: 5,
+        webrtcMaxInbound: 5,
         webrtcConnectToOwnDevices: true,
         webrtcLogLevel: "info",
         p2pOnlyMode: false,
@@ -202,8 +202,8 @@ export const useSettingsStore = create<SettingsState>()(
         if (state && !state.network) {
           state.network = {
             webrtcEnabled: true,
-            webrtcMaxOutbound: 3,
-            webrtcMaxInbound: 3,
+            webrtcMaxOutbound: 5,
+            webrtcMaxInbound: 5,
             webrtcConnectToOwnDevices: true,
             webrtcLogLevel: "info",
             p2pOnlyMode: false,
@@ -214,10 +214,10 @@ export const useSettingsStore = create<SettingsState>()(
         // Migrate network settings without new fields
         if (state?.network) {
           if (state.network.webrtcMaxOutbound === undefined) {
-            state.network.webrtcMaxOutbound = 3
+            state.network.webrtcMaxOutbound = 5
           }
           if (state.network.webrtcMaxInbound === undefined) {
-            state.network.webrtcMaxInbound = 3
+            state.network.webrtcMaxInbound = 5
           }
           if (state.network.webrtcConnectToOwnDevices === undefined) {
             state.network.webrtcConnectToOwnDevices = true
