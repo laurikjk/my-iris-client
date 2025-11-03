@@ -102,6 +102,24 @@ class PeerConnectionManager extends EventEmitter<{
 
     // Clean up stale online users every 5 seconds
     this.cleanupInterval = setInterval(() => void this.cleanupStaleUsers(), 5000)
+
+    // Close connections gracefully on page unload
+    this.setupUnloadHandler()
+  }
+
+  private setupUnloadHandler() {
+    const cleanup = () => {
+      webrtcLogger.info(undefined, "Page unloading, closing all connections")
+      // Close all connections synchronously
+      for (const peer of this.peers.values()) {
+        getPeerConnection(peer.sessionId, {create: false})
+          .then((conn) => conn?.close())
+          .catch(() => {})
+      }
+    }
+
+    // Only beforeunload - pagehide fires on mobile when backgrounding
+    window.addEventListener("beforeunload", cleanup)
   }
 
   stop() {

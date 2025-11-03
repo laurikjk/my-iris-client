@@ -3,9 +3,10 @@ import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
 import {Name} from "@/shared/components/user/Name"
 import {Avatar} from "@/shared/components/user/Avatar"
 import RelativeTime from "@/shared/components/event/RelativeTime"
-import {RiFileTransferLine} from "@remixicon/react"
+import {RiFileTransferLine, RiPhoneLine, RiVideoChatLine} from "@remixicon/react"
 import {getPeerConnection} from "@/utils/chat/webrtc/PeerConnection"
 import {ProfileLink} from "@/shared/components/user/ProfileLink"
+import {useSettingsStore} from "@/stores/settings"
 
 type PeerStatus = {
   pubkey: string
@@ -19,6 +20,7 @@ export function PeerConnectionList() {
   const [peers, setPeers] = useState<PeerStatus[]>([])
   const [sendFileModalOpen, setSendFileModalOpen] = useState(false)
   const [selectedPeer, setSelectedPeer] = useState<PeerStatus | null>(null)
+  const {network} = useSettingsStore()
 
   useEffect(() => {
     const updatePeers = () => {
@@ -48,6 +50,13 @@ export function PeerConnectionList() {
 
     setSendFileModalOpen(false)
     setSelectedPeer(null)
+  }
+
+  const handleStartCall = async (peer: PeerStatus, type: "audio" | "video") => {
+    const conn = await getPeerConnection(peer.sessionId)
+    if (conn) {
+      await conn.startCall(type === "video")
+    }
   }
 
   const getStatusColor = (state: RTCPeerConnection["connectionState"]) => {
@@ -111,13 +120,33 @@ export function PeerConnectionList() {
                 </div>
               </ProfileLink>
               {peer.state === "connected" && (
-                <button
-                  onClick={() => handleSendFile(peer)}
-                  className="btn btn-sm btn-ghost"
-                  title="Send file"
-                >
-                  <RiFileTransferLine className="w-5 h-5" />
-                </button>
+                <div className="flex gap-1">
+                  {network.webrtcCallsEnabled && (
+                    <>
+                      <button
+                        onClick={() => handleStartCall(peer, "audio")}
+                        className="btn btn-sm btn-ghost"
+                        title="Audio call"
+                      >
+                        <RiPhoneLine className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleStartCall(peer, "video")}
+                        className="btn btn-sm btn-ghost"
+                        title="Video call"
+                      >
+                        <RiVideoChatLine className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => handleSendFile(peer)}
+                    className="btn btn-sm btn-ghost"
+                    title="Send file"
+                  >
+                    <RiFileTransferLine className="w-5 h-5" />
+                  </button>
+                </div>
               )}
             </div>
           ))}

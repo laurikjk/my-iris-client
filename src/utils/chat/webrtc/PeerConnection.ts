@@ -8,6 +8,7 @@ import {webrtcLogger} from "./Logger"
 import {sendSignalingMessage} from "./signaling"
 import type {SignalingMessage} from "./types"
 import {handleIncomingEvent} from "./p2pNostr"
+import {useSettingsStore} from "@/stores/settings"
 
 const connections = new Map<string, PeerConnection>()
 
@@ -77,6 +78,9 @@ type PeerConnectionEvents = {
     blob: Blob,
     metadata: {name: string; size: number; type: string}
   ) => void
+  "call-incoming": (hasVideo: boolean) => void
+  "call-started": (hasVideo: boolean, localStream: MediaStream) => void
+  "remote-stream": (stream: MediaStream) => void
   close: () => void
 }
 
@@ -87,10 +91,13 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   peerConnection: RTCPeerConnection
   dataChannel: RTCDataChannel | null
   fileChannel: RTCDataChannel | null
+  callSignalingChannel: RTCDataChannel | null = null
   incomingFileMetadata: {name: string; size: number; type: string} | null = null
   receivedFileData: ArrayBuffer[] = []
   receivedFileSize: number = 0
   seenEvents: LRUCache<string, boolean>
+  localStream: MediaStream | null = null
+  remoteStream: MediaStream | null = null
   private fileTransferAccepted: boolean = false
 
   constructor(peerId: string, mySessionId?: string) {
@@ -194,8 +201,34 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       const channel = event.channel
       if (channel.label.startsWith("fileChannel")) {
         this.setFileChannel(channel)
+      } else if (channel.label === "callSignaling") {
+        this.setupCallSignalingChannel(channel)
       } else {
         this.setDataChannel(channel)
+      }
+    }
+
+    this.peerConnection.ontrack = (event) => {
+      this.log("Remote track received")
+      if (event.streams && event.streams[0]) {
+        this.remoteStream = event.streams[0]
+        this.emit("remote-stream", event.streams[0])
+
+        // Monitor when all tracks end (call ended by remote)
+        event.track.onended = () => {
+          this.log(`Remote ${event.track.kind} track ended`)
+          // Check if all tracks have ended
+          if (this.remoteStream) {
+            const allEnded = this.remoteStream
+              .getTracks()
+              .every((track) => track.readyState === "ended")
+            if (allEnded) {
+              this.log("All remote tracks ended, call ended by remote")
+              this.stopCall()
+              this.emit("close")
+            }
+          }
+        }
       }
     }
 
@@ -206,6 +239,104 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
         this.close()
       }
     }
+  }
+
+  private setupCallSignalingChannel(channel: RTCDataChannel) {
+    this.callSignalingChannel = channel
+    channel.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === "call-request") {
+          const {webrtcCallsEnabled} = useSettingsStore.getState().network
+          if (!webrtcCallsEnabled) {
+            this.log("Calls disabled, ignoring call request")
+            return
+          }
+          this.log(`↓ Call request (video: ${data.hasVideo})`)
+          this.emit("call-incoming", data.hasVideo)
+        } else if (data.type === "call-ended") {
+          this.log("↓ Call ended by remote peer")
+          this.stopCall()
+          this.emit("close")
+        }
+      } catch (error) {
+        webrtcLogger.error(this.peerId, "Failed to parse call signaling", error)
+      }
+    }
+  }
+
+  async startCall(hasVideo = false) {
+    if (this.peerConnection.connectionState !== "connected") {
+      webrtcLogger.error(this.peerId, "Cannot start call: not connected")
+      return
+    }
+
+    try {
+      // Get user media
+      this.localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: hasVideo,
+      })
+
+      // Add tracks to peer connection
+      for (const track of this.localStream.getTracks()) {
+        this.peerConnection.addTrack(track, this.localStream)
+      }
+
+      // Renegotiate connection to send new tracks
+      const offer = await this.peerConnection.createOffer()
+      await this.peerConnection.setLocalDescription(offer)
+      await sendSignalingMessage(
+        {
+          type: "offer",
+          offer,
+          recipient: this.peerId,
+          peerId: this.mySessionId || socialGraph().getRoot(),
+        },
+        this.recipientPubkey
+      )
+
+      // Create call signaling channel if it doesn't exist
+      if (!this.peerConnection.createDataChannel) return
+      const signalingChannel = this.peerConnection.createDataChannel("callSignaling")
+      this.setupCallSignalingChannel(signalingChannel)
+      signalingChannel.onopen = () => {
+        signalingChannel.send(JSON.stringify({type: "call-request", hasVideo}))
+        this.log(`↑ Call request (video: ${hasVideo})`)
+      }
+
+      this.log(`Call started (video: ${hasVideo})`)
+
+      // Emit event so UI can show active call view for caller
+      this.emit("call-started", hasVideo, this.localStream)
+    } catch (error) {
+      webrtcLogger.error(this.peerId, "Failed to start call", error)
+      this.stopCall()
+    }
+  }
+
+  stopCall(notifyRemote = false) {
+    // Notify remote peer before stopping
+    if (notifyRemote && this.callSignalingChannel?.readyState === "open") {
+      try {
+        this.callSignalingChannel.send(JSON.stringify({type: "call-ended"}))
+        this.log("↑ Call ended notification sent")
+      } catch (error) {
+        webrtcLogger.error(this.peerId, "Failed to send call-ended", error)
+      }
+    }
+
+    // Stop and clean up local media tracks (camera/mic)
+    if (this.localStream) {
+      this.localStream.getTracks().forEach((track) => {
+        track.stop()
+        this.log(`Stopped ${track.kind} track`)
+      })
+      this.localStream = null
+    }
+    // Remote stream cleanup happens automatically when connection closes
+    this.remoteStream = null
+    this.log("Call stopped")
   }
 
   async sendOffer() {
@@ -258,6 +389,11 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       if (typeof event.data === "string") {
         const metadata = JSON.parse(event.data)
         if (metadata.type === "file-metadata" && metadata.metadata) {
+          const {webrtcFileReceivingEnabled} = useSettingsStore.getState().network
+          if (!webrtcFileReceivingEnabled) {
+            this.log("File receiving disabled, rejecting transfer")
+            return
+          }
           this.incomingFileMetadata = metadata.metadata
           this.log(`↓ File incoming: ${metadata.metadata.name}`)
           // Emit event for UI to show modal
@@ -394,6 +530,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   }
 
   close() {
+    this.stopCall()
     if (this.dataChannel) {
       this.dataChannel.close()
     }

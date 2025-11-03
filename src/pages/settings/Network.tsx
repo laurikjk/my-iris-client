@@ -276,6 +276,42 @@ export function Network() {
               </div>
             </SettingsGroupItem>
             <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span>Enable Calls</span>
+                  <span className="text-sm text-base-content/60">
+                    Allow audio and video calls with connected peers
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={network.webrtcCallsEnabled}
+                  onChange={(e) => updateNetwork({webrtcCallsEnabled: e.target.checked})}
+                  className="toggle toggle-primary"
+                  disabled={!network.webrtcEnabled}
+                />
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span>Enable File Receiving</span>
+                  <span className="text-sm text-base-content/60">
+                    Allow receiving files from connected peers
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={network.webrtcFileReceivingEnabled}
+                  onChange={(e) =>
+                    updateNetwork({webrtcFileReceivingEnabled: e.target.checked})
+                  }
+                  className="toggle toggle-primary"
+                  disabled={!network.webrtcEnabled}
+                />
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center">
                   <span>Log Level</span>

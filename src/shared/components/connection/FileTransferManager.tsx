@@ -2,6 +2,7 @@ import {useEffect, useState} from "react"
 import {getAllConnections, getPeerConnection} from "@/utils/chat/webrtc/PeerConnection"
 import {Name} from "@/shared/components/user/Name"
 import {Avatar} from "@/shared/components/user/Avatar"
+import {useSettingsStore} from "@/stores/settings"
 
 type FileTransferRequest = {
   sessionId: string
@@ -15,13 +16,54 @@ type FileTransferRequest = {
 
 export function FileTransferManager() {
   const [requests, setRequests] = useState<FileTransferRequest[]>([])
+  const {network, updateNetwork} = useSettingsStore()
+  const [isCallActive, setIsCallActive] = useState(false)
   const [attachedListeners] = useState(
     new Map<string, (metadata: {name: string; size: number; type: string}) => void>()
   )
 
+  // Listen for active calls from all connections
+  useEffect(() => {
+    const connections = getAllConnections()
+    let hasActiveCall = false
+
+    for (const [, conn] of connections) {
+      if (conn.localStream || conn.remoteStream) {
+        hasActiveCall = true
+        break
+      }
+    }
+
+    setIsCallActive(hasActiveCall)
+
+    const interval = setInterval(() => {
+      const connections = getAllConnections()
+      let hasActiveCall = false
+
+      for (const [, conn] of connections) {
+        if (conn.localStream || conn.remoteStream) {
+          hasActiveCall = true
+          break
+        }
+      }
+
+      setIsCallActive(hasActiveCall)
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [])
+
   useEffect(() => {
     const handleFileIncoming = (sessionId: string, pubkey: string) => {
       return (metadata: {name: string; size: number; type: string}) => {
+        // Auto-reject if call is active
+        if (isCallActive) {
+          getPeerConnection(sessionId).then((conn) => {
+            conn?.rejectFileTransfer()
+          })
+          return
+        }
+
         setRequests((prev) => {
           // Avoid duplicates
           if (prev.some((r) => r.sessionId === sessionId)) return prev
@@ -129,13 +171,29 @@ export function FileTransferManager() {
               </div>
             </div>
 
-            <div className="modal-action">
-              <button onClick={() => handleReject(request)} className="btn btn-error">
-                Reject
-              </button>
-              <button onClick={() => handleAccept(request)} className="btn btn-primary">
-                Accept
-              </button>
+            <div className="flex flex-col gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!network.webrtcFileReceivingEnabled}
+                  onChange={(e) =>
+                    updateNetwork({webrtcFileReceivingEnabled: !e.target.checked})
+                  }
+                  className="checkbox checkbox-sm"
+                />
+                <span className="text-sm">
+                  {"Don't ask again (disable file receiving)"}
+                </span>
+              </label>
+
+              <div className="modal-action">
+                <button onClick={() => handleReject(request)} className="btn btn-error">
+                  Reject
+                </button>
+                <button onClick={() => handleAccept(request)} className="btn btn-primary">
+                  Accept
+                </button>
+              </div>
             </div>
           </div>
         </div>

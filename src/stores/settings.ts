@@ -55,6 +55,8 @@ interface SettingsState {
     webrtcConnectToOwnDevices: boolean
     webrtcLogLevel: "debug" | "info" | "warn" | "error"
     p2pOnlyMode: boolean
+    webrtcCallsEnabled: boolean
+    webrtcFileReceivingEnabled: boolean
   }
   // Desktop settings
   desktop: {
@@ -130,6 +132,8 @@ export const useSettingsStore = create<SettingsState>()(
         webrtcConnectToOwnDevices: true,
         webrtcLogLevel: "info",
         p2pOnlyMode: false,
+        webrtcCallsEnabled: true,
+        webrtcFileReceivingEnabled: true,
       },
       desktop: {
         startOnBoot: true,
@@ -203,6 +207,8 @@ export const useSettingsStore = create<SettingsState>()(
             webrtcConnectToOwnDevices: true,
             webrtcLogLevel: "info",
             p2pOnlyMode: false,
+            webrtcCallsEnabled: true,
+            webrtcFileReceivingEnabled: true,
           }
         }
         // Migrate network settings without new fields
@@ -221,6 +227,12 @@ export const useSettingsStore = create<SettingsState>()(
           }
           if (state.network.p2pOnlyMode === undefined) {
             state.network.p2pOnlyMode = false
+          }
+          if (state.network.webrtcCallsEnabled === undefined) {
+            state.network.webrtcCallsEnabled = true
+          }
+          if (state.network.webrtcFileReceivingEnabled === undefined) {
+            state.network.webrtcFileReceivingEnabled = true
           }
         }
       },
