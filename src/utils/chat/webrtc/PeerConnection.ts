@@ -235,8 +235,11 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
     this.peerConnection.onconnectionstatechange = () => {
       this.log(`Connection state: ${this.peerConnection.connectionState}`)
-      if (this.peerConnection.connectionState === "closed") {
-        this.log("Connection closed")
+      if (
+        this.peerConnection.connectionState === "closed" ||
+        this.peerConnection.connectionState === "failed"
+      ) {
+        this.log(`Connection ${this.peerConnection.connectionState}`)
         this.close()
       }
     }
@@ -604,6 +607,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       this.fileChannel.close()
     }
     this.peerConnection.close()
+    connections.delete(this.peerId)
     this.emit("close")
   }
 }
