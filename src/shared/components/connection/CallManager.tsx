@@ -416,7 +416,7 @@ export function CallManager() {
                 ref={remoteVideoRef}
                 autoPlay
                 playsInline
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain bg-black"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-base-300">
