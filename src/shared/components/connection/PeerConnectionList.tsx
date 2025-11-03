@@ -5,6 +5,7 @@ import {Avatar} from "@/shared/components/user/Avatar"
 import RelativeTime from "@/shared/components/event/RelativeTime"
 import {RiFileTransferLine} from "@remixicon/react"
 import {getPeerConnection} from "@/utils/chat/webrtc/PeerConnection"
+import {ProfileLink} from "@/shared/components/user/ProfileLink"
 
 type PeerStatus = {
   pubkey: string
@@ -81,32 +82,34 @@ export function PeerConnectionList() {
       {peers.length > 0 && (
         <div className="flex flex-col gap-2">
           {peers.map((peer) => (
-            <div
-              key={peer.sessionId}
-              className="flex items-center gap-3 p-3 bg-base-100 rounded-lg"
-            >
-              <Avatar pubKey={peer.pubkey} width={32} />
-              <div className="flex-1 flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <Name pubKey={peer.pubkey} />
-                  <span className="text-xs opacity-60" title={peer.direction}>
-                    {getDirectionIcon(peer.direction)}
-                  </span>
-                  <span className="text-xs font-mono opacity-40" title={peer.sessionId}>
-                    {peer.sessionId.split(":")[1]?.slice(0, 6)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`badge badge-xs ${getStatusColor(peer.state)}`}>
-                    {peer.state}
-                  </span>
-                  {peer.connectedAt && (
-                    <span className="text-xs text-base-content/60">
-                      Connected <RelativeTime from={peer.connectedAt} />
+            <div key={peer.sessionId} className="flex items-center gap-3 group">
+              <ProfileLink
+                pubKey={peer.pubkey}
+                className="flex-1 flex items-center gap-3 p-3 bg-base-100 rounded-lg hover:bg-base-200 transition-colors cursor-pointer"
+              >
+                <Avatar pubKey={peer.pubkey} width={32} />
+                <div className="flex-1 flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <Name pubKey={peer.pubkey} />
+                    <span className="text-xs opacity-60" title={peer.direction}>
+                      {getDirectionIcon(peer.direction)}
                     </span>
-                  )}
+                    <span className="text-xs font-mono opacity-40" title={peer.sessionId}>
+                      {peer.sessionId.split(":")[1]?.slice(0, 6)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`badge badge-xs ${getStatusColor(peer.state)}`}>
+                      {peer.state}
+                    </span>
+                    {peer.connectedAt && (
+                      <span className="text-xs text-base-content/60">
+                        Connected <RelativeTime from={peer.connectedAt} />
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </ProfileLink>
               {peer.state === "connected" && (
                 <button
                   onClick={() => handleSendFile(peer)}
