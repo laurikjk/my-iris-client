@@ -13,12 +13,14 @@ import {
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
 import {getEventHash, VerifiedEvent} from "nostr-tools"
+
 export type OnEventCallback = (event: Rumor, from: string) => void
 
 interface DeviceRecord {
   deviceId: string
   activeSession?: Session
   inactiveSessions: Session[]
+  createdAt: number
 }
 
 interface UserRecord {
@@ -33,6 +35,7 @@ interface StoredDeviceRecord {
   deviceId: string
   activeSession: StoredSessionEntry | null
   inactiveSessions: StoredSessionEntry[]
+  createdAt: number
 }
 
 interface StoredUserRecord {
@@ -175,14 +178,34 @@ export default class SessionManager {
     return rec
   }
 
-  private getOrCreateDeviceRecord(userPubkey: string, deviceId: string): DeviceRecord {
+  private getDeviceRecord(userPubkey: string, deviceId: string): DeviceRecord | undefined {
     const ur = this.getOrCreateUserRecord(userPubkey)
-    let dr = ur.devices.get(deviceId)
-    if (!dr) {
-      dr = {deviceId, inactiveSessions: []}
-      ur.devices.set(deviceId, dr)
+    return ur.devices.get(deviceId)
+  }
+
+  private createDeviceRecord(
+    userPubkey: string,
+    deviceId: string,
+    invite?: Invite
+  ): DeviceRecord {
+    const ur = this.getOrCreateUserRecord(userPubkey)
+    const deviceRecord: DeviceRecord = {
+      deviceId,
+      inactiveSessions: [],
+      createdAt: invite?.createdAt ?? this.currentTimestampSeconds(),
     }
-    return dr
+    ur.devices.set(deviceId, deviceRecord)
+    return deviceRecord
+  }
+
+  private ensureDeviceRecord(
+    userPubkey: string,
+    deviceId: string,
+    invite?: Invite
+  ): DeviceRecord {
+    const existing = this.getDeviceRecord(userPubkey, deviceId)
+    if (existing) return existing
+    return this.createDeviceRecord(userPubkey, deviceId, invite)
   }
 
   private sessionKey(userPubkey: string, deviceId: string, sessionName: string) {
@@ -233,7 +256,7 @@ export default class SessionManager {
     if (this.sessionSubscriptions.has(key)) return
 
     const rotateSession = (nextSession: Session) => {
-      const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+      const dr = this.ensureDeviceRecord(userPubkey, deviceId)
       const current = dr.activeSession
 
       if (!current) {
@@ -255,7 +278,7 @@ export default class SessionManager {
       dr.activeSession = nextSession
     }
 
-    const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
+    const dr = this.ensureDeviceRecord(userPubkey, deviceId)
     if (inactive) {
       const alreadyTracked = dr.inactiveSessions.some(
         (tracked) => tracked === session || tracked.name === session.name
@@ -323,15 +346,14 @@ export default class SessionManager {
 
     this.attachInviteSubscription(userPubkey, async (invite) => {
       const {deviceId} = invite
-
       if (!deviceId) return
 
-      const currentActiveSession = this.getOrCreateDeviceRecord(
-        userPubkey,
-        deviceId
-      ).activeSession
+      let deviceRecord = this.getDeviceRecord(userPubkey, deviceId)
+      if (!deviceRecord) {
+        deviceRecord = this.createDeviceRecord(userPubkey, deviceId, invite)
+      }
 
-      if (!currentActiveSession) {
+      if (!deviceRecord.activeSession) {
         await acceptInvite(invite)
       }
     })
@@ -666,6 +688,7 @@ export default class SessionManager {
           inactiveSessions: device.inactiveSessions.map((session) =>
             serializeSessionState(session.state)
           ),
+          createdAt: device.createdAt,
         })
       ),
     }
@@ -685,6 +708,7 @@ export default class SessionManager {
             deviceId,
             activeSession: serializedActive,
             inactiveSessions: serializedInactive,
+            createdAt,
           } = deviceData
 
           try {
@@ -703,6 +727,7 @@ export default class SessionManager {
               deviceId,
               activeSession,
               inactiveSessions,
+              createdAt: createdAt ?? this.currentTimestampSeconds(),
             })
           } catch (e) {
             console.error(
@@ -733,6 +758,10 @@ export default class SessionManager {
       .catch((error) => {
         console.error(`Failed to load user record for ${publicKey}:`, error)
       })
+  }
+
+  private currentTimestampSeconds(): number {
+    return Math.floor(Date.now() / 1000)
   }
   private loadAllUserRecords() {
     const prefix = this.userRecordKeyPrefix()
