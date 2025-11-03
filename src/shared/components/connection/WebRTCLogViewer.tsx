@@ -4,6 +4,7 @@ import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
 import {LogViewer, LogItem} from "./LogViewer"
 import {Name} from "@/shared/components/user/Name"
 import {getCachedName} from "@/utils/nostr"
+import {ProfileLink} from "@/shared/components/user/ProfileLink"
 
 function stringToHue(str: string): number {
   let hash = 0
@@ -106,32 +107,47 @@ export function WebRTCLogViewer() {
           )
         }
 
-        const getPeerLabel = () => {
-          if (isBroadcast) return <>broadcast</>
-          if (pubkey) {
-            return (
-              <>
-                <Name pubKey={pubkey} /> ({pubkey.slice(0, 8)})
-              </>
-            )
-          }
-          return "unknown"
-        }
-
         const badges = log.peerId
           ? [
               getArrow(),
-              <span
-                key="peer"
-                className="badge badge-xs shrink-0 gap-1"
-                style={{
-                  backgroundColor: getPeerColor(log.peerId),
-                  color: "white",
-                  borderColor: getPeerColor(log.peerId),
-                }}
-              >
-                {getPeerLabel()}
-              </span>,
+              isBroadcast ? (
+                <span
+                  key="peer"
+                  className="badge badge-xs shrink-0 gap-1"
+                  style={{
+                    backgroundColor: getPeerColor(log.peerId),
+                    color: "white",
+                    borderColor: getPeerColor(log.peerId),
+                  }}
+                >
+                  broadcast
+                </span>
+              ) : pubkey ? (
+                <ProfileLink key="peer" pubKey={pubkey}>
+                  <span
+                    className="badge badge-xs shrink-0 gap-1 cursor-pointer hover:opacity-80"
+                    style={{
+                      backgroundColor: getPeerColor(log.peerId),
+                      color: "white",
+                      borderColor: getPeerColor(log.peerId),
+                    }}
+                  >
+                    <Name pubKey={pubkey} /> ({pubkey.slice(0, 8)})
+                  </span>
+                </ProfileLink>
+              ) : (
+                <span
+                  key="peer"
+                  className="badge badge-xs shrink-0 gap-1"
+                  style={{
+                    backgroundColor: getPeerColor(log.peerId),
+                    color: "white",
+                    borderColor: getPeerColor(log.peerId),
+                  }}
+                >
+                  unknown
+                </span>
+              ),
             ]
           : []
 

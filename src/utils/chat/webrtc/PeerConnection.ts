@@ -139,20 +139,20 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   }
 
   handleSignalingMessage(message: SignalingMessage) {
-    this.log(`Processing ${message.type} message`)
+    webrtcLogger.debug(this.peerId, `Processing ${message.type} message`)
 
     try {
       switch (message.type) {
         case "offer":
-          this.log("Offer", "down")
+          webrtcLogger.debug(this.peerId, "Offer", "down")
           this.handleOffer(message.offer as unknown as RTCSessionDescriptionInit)
           break
         case "answer":
-          this.log("Answer", "down")
+          webrtcLogger.debug(this.peerId, "Answer", "down")
           this.handleAnswer(message.answer as unknown as RTCSessionDescriptionInit)
           break
         case "candidate":
-          this.log("ICE candidate", "down")
+          webrtcLogger.debug(this.peerId, "ICE candidate", "down")
           this.handleCandidate(message.candidate as unknown as RTCIceCandidateInit)
           break
         default:
@@ -185,7 +185,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   async handleCandidate(candidate: RTCIceCandidateInit | null) {
     if (!candidate) return
     if (this.peerConnection.remoteDescription === null) {
-      this.log("Remote description not set, queuing candidate")
+      webrtcLogger.debug(this.peerId, "Remote description not set, queuing candidate")
       setTimeout(() => this.handleCandidate(candidate), 500)
       return
     }
@@ -375,12 +375,12 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       },
       this.recipientPubkey
     )
-    this.log("Offer", "up")
+    webrtcLogger.debug(this.peerId, "Offer", "up")
   }
 
   setDataChannel(dataChannel: RTCDataChannel) {
     this.dataChannel = dataChannel
-    this.dataChannel.onopen = () => this.log("Data channel open")
+    this.dataChannel.onopen = () => webrtcLogger.debug(this.peerId, "Data channel open")
     this.dataChannel.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
@@ -390,7 +390,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       }
     }
     this.dataChannel.onclose = () => {
-      this.log("Data channel closed")
+      webrtcLogger.debug(this.peerId, "Data channel closed")
       this.close()
     }
   }
@@ -404,7 +404,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
     this.fileChannel = fileChannel
     this.fileChannel.binaryType = "arraybuffer"
-    this.fileChannel.onopen = () => this.log("File channel open")
+    this.fileChannel.onopen = () => webrtcLogger.debug(this.peerId, "File channel open")
     this.fileChannel.onmessage = (event) => {
       if (typeof event.data === "string") {
         const metadata = JSON.parse(event.data)
@@ -459,7 +459,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       }
     }
     this.fileChannel.onclose = () => {
-      this.log("File channel closed")
+      webrtcLogger.debug(this.peerId, "File channel closed")
     }
   }
 
