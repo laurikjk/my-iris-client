@@ -97,7 +97,10 @@ export const deleteDeviceInvite = async (deviceId: string) => {
     pubkey: publicKey,
     content: "",
     created_at: Math.floor(Date.now() / 1000),
-    tags: [["d", dTag]],
+    tags: [
+      ["l", "double-ratchet/invites"],
+      ["d", dTag],
+    ],
   })
 
   await deletionEvent.sign()
