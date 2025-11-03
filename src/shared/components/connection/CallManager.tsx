@@ -37,6 +37,7 @@ export function CallManager() {
   const [isVideoOff, setIsVideoOff] = useState(false)
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  const remoteAudioRef = useRef<HTMLAudioElement>(null)
   const [attachedListeners] = useState(
     new Map<
       string,
@@ -70,6 +71,8 @@ export function CallManager() {
 
     const handleCallStarted = (sessionId: string, pubkey: string) => {
       return (hasVideo: boolean, localStream: MediaStream) => {
+        setIsMuted(false)
+        setIsVideoOff(false)
         setActiveCall({
           sessionId,
           pubkey,
@@ -145,21 +148,43 @@ export function CallManager() {
     }
   }, [attachedListeners])
 
-  // Update video elements when streams change
+  // Update video/audio elements when streams change
   useEffect(() => {
     if (localVideoRef.current && activeCall?.localStream) {
       localVideoRef.current.srcObject = activeCall.localStream
+      localVideoRef.current.play().catch((e) => console.warn("Local video play failed:", e))
     }
-    if (remoteVideoRef.current && activeCall?.remoteStream) {
+  }, [activeCall?.localStream])
+
+  useEffect(() => {
+    if (!activeCall?.remoteStream) return
+
+    if (activeCall.hasVideo && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = activeCall.remoteStream
+      remoteVideoRef.current.play().catch((e) => console.warn("Remote video play failed:", e))
+      console.log(
+        "Remote stream set (video):",
+        activeCall.remoteStream.getTracks().map((t) => `${t.kind}:${t.enabled}`)
+      )
+    } else if (!activeCall.hasVideo && remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = activeCall.remoteStream
+      remoteAudioRef.current.play().catch((e) => console.warn("Remote audio play failed:", e))
+      console.log(
+        "Remote stream set (audio):",
+        activeCall.remoteStream.getTracks().map((t) => `${t.kind}:${t.enabled}`)
+      )
     }
-  }, [activeCall])
+  }, [activeCall?.remoteStream, activeCall?.hasVideo])
 
   const handleAccept = async (request: CallRequest) => {
     setRequests((prev) => prev.filter((r) => r.sessionId !== request.sessionId))
 
     const conn = await getPeerConnection(request.sessionId)
     if (!conn) return
+
+    // Reset state
+    setIsMuted(false)
+    setIsVideoOff(false)
 
     // Show call UI immediately
     setActiveCall({
@@ -400,12 +425,14 @@ export function CallManager() {
                   <Name pubKey={activeCall.pubkey} className="text-2xl" />
                   <div className="text-base-content/60">Audio call in progress</div>
                 </div>
+                {/* Hidden audio element for remote audio stream */}
+                <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
               </div>
             )}
 
             {/* Local video (picture-in-picture) */}
             {activeCall.hasVideo && activeCall.localStream && (
-              <div className="absolute top-4 right-4 w-32 h-24 bg-black rounded-lg overflow-hidden shadow-lg">
+              <div className="absolute top-20 right-4 w-32 h-24 bg-black rounded-lg overflow-hidden shadow-lg">
                 <video
                   ref={localVideoRef}
                   autoPlay

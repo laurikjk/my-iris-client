@@ -210,7 +210,9 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     }
 
     this.peerConnection.ontrack = (event) => {
-      this.log("Remote track received")
+      this.log(
+        `Remote ${event.track.kind} track received (enabled: ${event.track.enabled}, muted: ${event.track.muted})`
+      )
       if (event.streams && event.streams[0]) {
         this.remoteStream = event.streams[0]
         this.emit("remote-stream", event.streams[0])
