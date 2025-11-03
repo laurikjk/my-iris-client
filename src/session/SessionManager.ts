@@ -8,10 +8,11 @@ import {
   Session,
   serializeSessionState,
   deserializeSessionState,
+  INVITE_EVENT_KIND,
 } from "nostr-double-ratchet/src"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
-import {getEventHash} from "nostr-tools"
+import {getEventHash, VerifiedEvent} from "nostr-tools"
 export type OnEventCallback = (event: Rumor, from: string) => void
 
 interface DeviceRecord {
@@ -132,6 +133,29 @@ export default class SessionManager {
         this.attachSessionSubscription(inviteePubkey, deviceId, session, true)
       }
     )
+
+    if (!this.ourOtherDeviceInviteSubscription) {
+      this.ourOtherDeviceInviteSubscription = this.nostrSubscribe(
+        {
+          kinds: [INVITE_EVENT_KIND],
+          authors: [this.ourPublicKey],
+        },
+        (event) => {
+          try {
+            const deviceId = this.extractDeviceIdFromEvent(event)
+            if (!deviceId) return
+
+            if (this.isInviteListEvent(event)) {
+              return
+            }
+
+            void this.cleanupDevice(deviceId)
+          } catch (error) {
+            console.error("Failed to handle device tombstone:", error)
+          }
+        }
+      )
+    }
 
     const inviteNostrEvent = invite.getEvent()
     this.nostrPublish(inviteNostrEvent).catch((error) => {
@@ -518,6 +542,103 @@ export default class SessionManager {
     this.sendEvent(recipientPublicKey, rumor).catch(console.error)
 
     return rumor
+  }
+
+  async revokeDevice(deviceId: string): Promise<void> {
+    await this.init()
+
+    await this.publishDeviceTombstone(deviceId).catch((error) => {
+      console.error("Failed to publish device tombstone:", error)
+    })
+
+    await this.cleanupDevice(deviceId)
+  }
+
+  private extractDeviceIdFromEvent(event: VerifiedEvent): string | null {
+    const dTag = event.tags.find(([key]) => key === "d")
+    if (!dTag) return null
+
+    const [, value] = dTag
+    if (!value?.startsWith("double-ratchet/invites/")) {
+      return null
+    }
+
+    const parts = value.split("/")
+    return parts[2] || null
+  }
+
+  private isInviteListEvent(event: VerifiedEvent): boolean {
+    return event.tags.some(
+      ([key, value]) => key === "l" && value === "double-ratchet/invites"
+    )
+  }
+
+  private async publishDeviceTombstone(deviceId: string): Promise<void> {
+    const tags: string[][] = [["d", `double-ratchet/invites/${deviceId}`]]
+
+    const inviteData = await this.storage.get<string>(this.deviceInviteKey(deviceId))
+    if (inviteData) {
+      try {
+        const invite = Invite.deserialize(inviteData)
+        if (invite.inviterEphemeralPublicKey) {
+          tags.push(["ephemeralKey", invite.inviterEphemeralPublicKey])
+        }
+        if (invite.sharedSecret) {
+          tags.push(["sharedSecret", invite.sharedSecret])
+        }
+      } catch (error) {
+        console.error("Failed to deserialize invite while publishing tombstone:", error)
+      }
+    }
+
+    const deletionEvent = {
+      content: "",
+      kind: INVITE_EVENT_KIND,
+      created_at: Math.floor(Date.now() / 1000),
+      tags,
+      pubkey: this.ourPublicKey,
+    }
+
+    await this.nostrPublish(deletionEvent)
+  }
+
+  private async cleanupDevice(deviceId: string): Promise<void> {
+    const inviteKey = this.deviceInviteKey(deviceId)
+    await Promise.allSettled([
+      this.storage.del(inviteKey),
+      this.storage.del(`invite/${deviceId}`),
+    ])
+
+    const ourRecord = this.userRecords.get(this.ourPublicKey)
+    if (!ourRecord) return
+
+    let recordChanged = false
+    const deviceRecord = ourRecord.devices.get(deviceId)
+
+    if (deviceRecord) {
+      if (deviceRecord.activeSession) {
+        this.removeSessionSubscription(
+          this.ourPublicKey,
+          deviceId,
+          deviceRecord.activeSession.name
+        )
+      }
+
+      for (const session of deviceRecord.inactiveSessions) {
+        this.removeSessionSubscription(this.ourPublicKey, deviceId, session.name)
+      }
+
+      ourRecord.devices.delete(deviceId)
+      recordChanged = true
+    }
+
+    if (ourRecord.foundInvites.delete(deviceId)) {
+      recordChanged = true
+    }
+
+    if (recordChanged) {
+      await this.storeUserRecord(this.ourPublicKey).catch(console.error)
+    }
   }
 
   private buildMessageTags(

@@ -12,6 +12,7 @@ import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {SettingsButton} from "@/shared/components/settings/SettingsButton"
 import {confirm} from "@/utils/utils"
+import {getSessionManager} from "@/shared/services/PrivateChats"
 
 // Helper function to add timeout to any promise
 const withTimeout = (promise: Promise<unknown>, ms: number): Promise<unknown> => {
@@ -92,8 +93,10 @@ function Logout() {
 
   async function publishInviteTombstones() {
     try {
-      const {deleteCurrentDeviceInvite} = await import("@/shared/services/PrivateChats")
-      await deleteCurrentDeviceInvite()
+      const manager = getSessionManager()
+      if (!manager) return
+
+      await manager.revokeDevice(manager.getDeviceId())
     } catch (e) {
       console.error("Failed to publish invite tombstones", e)
     }
