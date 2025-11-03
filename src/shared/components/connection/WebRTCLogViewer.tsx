@@ -2,10 +2,12 @@ import {useEffect, useState} from "react"
 import {webrtcLogger, type LogEntry} from "@/utils/chat/webrtc/Logger"
 import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
 import {LogViewer, LogItem} from "./LogViewer"
+import {getCachedName} from "@/utils/nostr"
 
 export function WebRTCLogViewer() {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [isExpanded, setIsExpanded] = useState(false)
+  const [filterText, setFilterText] = useState("")
 
   useEffect(() => {
     const updateLogs = () => {
@@ -22,6 +24,20 @@ export function WebRTCLogViewer() {
     }
   }, [])
 
+  const filteredLogs = filterText
+    ? logs.filter((log) => {
+        const searchText = filterText.toLowerCase()
+        const peerPubkey = log.peerId?.split(":")[0] || ""
+        const peerName = peerPubkey ? getCachedName(peerPubkey).toLowerCase() : ""
+        return (
+          log.message.toLowerCase().includes(searchText) ||
+          log.level.toLowerCase().includes(searchText) ||
+          peerPubkey.toLowerCase().includes(searchText) ||
+          peerName.includes(searchText)
+        )
+      })
+    : logs
+
   const handleClear = () => {
     webrtcLogger.clear()
   }
@@ -29,7 +45,7 @@ export function WebRTCLogViewer() {
   const handleCopyAll = () => {
     const myPeerId = peerConnectionManager.getMyPeerId()
     const header = myPeerId ? `My Peer ID: ${myPeerId}\n\n` : ""
-    const text = logs
+    const text = filteredLogs
       .map((log) => {
         const timestamp = new Date(log.timestamp).toISOString()
         const peerId = log.peerId ? `[${log.peerId}] ` : ""
@@ -39,46 +55,46 @@ export function WebRTCLogViewer() {
     navigator.clipboard.writeText(header + text)
   }
 
-  const getLevelBadge = (level: string) => {
-    switch (level) {
-      case "error":
-        return "badge-error"
-      case "warn":
-        return "badge-warning"
-      default:
-        return "badge-info"
-    }
-  }
-
   return (
     <LogViewer
       title="WebRTC Logs"
-      logs={logs}
+      logs={filteredLogs}
       isExpanded={isExpanded}
       onToggleExpanded={() => setIsExpanded(!isExpanded)}
       onClear={handleClear}
       onCopyAll={handleCopyAll}
-      renderLogItem={(log, i) => (
-        <LogItem
-          key={i}
-          timestamp={log.timestamp}
-          level={log.level}
-          badges={[
-            <span
-              key="level"
-              className={`badge badge-xs ${getLevelBadge(log.level)} shrink-0`}
-            >
-              {log.level.toUpperCase()}
-            </span>,
-            log.peerId && (
-              <span key="peer" className="text-base-content/70 shrink-0 font-semibold">
-                [{log.peerId.slice(0, 8)}]
-              </span>
-            ),
-          ].filter(Boolean)}
-          message={log.message}
-        />
-      )}
+      filterText={filterText}
+      onFilterChange={setFilterText}
+      renderLogItem={(log, i) => {
+        const badges = log.peerId
+          ? [
+              <span
+                key="peer"
+                className={`badge badge-xs ${
+                  log.direction === "up"
+                    ? "badge-success"
+                    : log.direction === "down"
+                      ? "badge-info"
+                      : "badge-neutral"
+                } shrink-0 gap-1`}
+              >
+                {getCachedName(log.peerId.split(":")[0])} (
+                {log.peerId.split(":")[0].slice(0, 8)})
+                {log.direction === "up" ? " ↑" : log.direction === "down" ? " ↓" : ""}
+              </span>,
+            ]
+          : []
+
+        return (
+          <LogItem
+            key={i}
+            timestamp={log.timestamp}
+            level={log.level}
+            badges={badges}
+            message={log.message}
+          />
+        )
+      }}
     />
   )
 }

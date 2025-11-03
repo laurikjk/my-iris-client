@@ -118,8 +118,8 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     this.setupPeerConnectionEvents()
   }
 
-  log(message: string, ...args: unknown[]) {
-    webrtcLogger.info(this.peerId, message, ...args)
+  log(message: string, direction?: "up" | "down") {
+    webrtcLogger.info(this.peerId, message, direction)
   }
 
   connect() {
@@ -135,22 +135,22 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     try {
       switch (message.type) {
         case "offer":
-          this.log("↓ Offer")
+          this.log("Offer", "down")
           this.handleOffer(message.offer as unknown as RTCSessionDescriptionInit)
           break
         case "answer":
-          this.log("↓ Answer")
+          this.log("Answer", "down")
           this.handleAnswer(message.answer as unknown as RTCSessionDescriptionInit)
           break
         case "candidate":
-          this.log("↓ ICE candidate")
+          this.log("ICE candidate", "down")
           this.handleCandidate(message.candidate as unknown as RTCIceCandidateInit)
           break
         default:
           webrtcLogger.error(this.peerId, `Unknown message type`)
       }
     } catch (e) {
-      webrtcLogger.error(this.peerId, "Error processing WebRTC message", e)
+      webrtcLogger.error(this.peerId, "Error processing WebRTC message")
     }
   }
 
@@ -258,15 +258,15 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
             this.log("Calls disabled, ignoring call request")
             return
           }
-          this.log(`↓ Call request (video: ${data.hasVideo})`)
+          this.log(`Call request (video: ${data.hasVideo})`, "down")
           this.emit("call-incoming", data.hasVideo)
         } else if (data.type === "call-ended") {
-          this.log("↓ Call ended by remote peer")
+          this.log("Call ended by remote peer", "down")
           this.stopCall()
           this.emit("close")
         }
       } catch (error) {
-        webrtcLogger.error(this.peerId, "Failed to parse call signaling", error)
+        webrtcLogger.error(this.peerId, "Failed to parse call signaling")
       }
     }
   }
@@ -308,7 +308,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       this.setupCallSignalingChannel(signalingChannel)
       signalingChannel.onopen = () => {
         signalingChannel.send(JSON.stringify({type: "call-request", hasVideo}))
-        this.log(`↑ Call request (video: ${hasVideo})`)
+        this.log(`Call request (video: ${hasVideo})`, "up")
       }
 
       this.log(`Call started (video: ${hasVideo})`)
@@ -316,7 +316,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       // Emit event so UI can show active call view for caller
       this.emit("call-started", hasVideo, this.localStream)
     } catch (error) {
-      webrtcLogger.error(this.peerId, "Failed to start call", error)
+      webrtcLogger.error(this.peerId, "Failed to start call")
       this.stopCall()
     }
   }
@@ -326,9 +326,9 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     if (notifyRemote && this.callSignalingChannel?.readyState === "open") {
       try {
         this.callSignalingChannel.send(JSON.stringify({type: "call-ended"}))
-        this.log("↑ Call ended notification sent")
+        this.log("Call ended notification sent", "up")
       } catch (error) {
-        webrtcLogger.error(this.peerId, "Failed to send call-ended", error)
+        webrtcLogger.error(this.peerId, "Failed to send call-ended")
       }
     }
 
@@ -361,7 +361,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       },
       this.recipientPubkey
     )
-    this.log("↑ Offer")
+    this.log("Offer", "up")
   }
 
   setDataChannel(dataChannel: RTCDataChannel) {
@@ -372,7 +372,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
         const data = JSON.parse(event.data)
         handleIncomingEvent(this.peerId, data)
       } catch (error) {
-        webrtcLogger.error(this.peerId, "Failed to parse data channel message", error)
+        webrtcLogger.error(this.peerId, "Failed to parse data channel message")
       }
     }
     this.dataChannel.onclose = () => {
@@ -402,13 +402,13 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
             return
           }
           this.incomingFileMetadata = metadata.metadata
-          this.log(`↓ File incoming: ${metadata.metadata.name}`)
+          this.log(`File incoming: ${metadata.metadata.name}`, "down")
           // Emit event for UI to show modal
           this.emit("file-incoming", metadata.metadata)
         } else if (metadata.type === "file-accepted") {
-          this.log("↓ File acceptance confirmed, ready to receive")
+          this.log("File acceptance confirmed, ready to receive", "down")
         } else if (metadata.type === "file-rejected") {
-          this.log("↓ File rejected by remote peer")
+          this.log("File rejected by remote peer", "down")
           this.incomingFileMetadata = null
           this.receivedFileData = []
           this.receivedFileSize = 0
@@ -534,10 +534,10 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       if (typeof event.data === "string") {
         const data = JSON.parse(event.data)
         if (data.type === "file-accepted") {
-          this.log("↓ File accepted by receiver, starting transfer")
+          this.log("File accepted by receiver, starting transfer", "down")
           startSending()
         } else if (data.type === "file-rejected") {
-          this.log("↓ File rejected by receiver")
+          this.log("File rejected by receiver", "down")
           fileChannel.close()
           this.fileChannel = null
         }
@@ -548,7 +548,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     }
 
     fileChannel.onopen = () => {
-      this.log(`↑ File: ${file.name} (${file.size} bytes)`)
+      this.log(`File: ${file.name} (${file.size} bytes)`, "up")
       fileChannel.send(JSON.stringify(metadata))
       this.log("Waiting for receiver acceptance...")
     }

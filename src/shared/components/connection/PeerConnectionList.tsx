@@ -18,6 +18,7 @@ type PeerStatus = {
 
 export function PeerConnectionList() {
   const [peers, setPeers] = useState<PeerStatus[]>([])
+  const [myPeerId, setMyPeerId] = useState<string | null>(null)
   const [sendFileModalOpen, setSendFileModalOpen] = useState(false)
   const [selectedPeer, setSelectedPeer] = useState<PeerStatus | null>(null)
   const {network} = useSettingsStore()
@@ -25,13 +26,18 @@ export function PeerConnectionList() {
   useEffect(() => {
     const updatePeers = () => {
       setPeers(peerConnectionManager.getPeers())
+      setMyPeerId(peerConnectionManager.getMyPeerId())
     }
 
     updatePeers()
     peerConnectionManager.on("update", updatePeers)
 
+    // Also update periodically to catch discrepancies
+    const interval = setInterval(updatePeers, 5000)
+
     return () => {
       peerConnectionManager.off("update", updatePeers)
+      clearInterval(interval)
     }
   }, [])
 
@@ -82,6 +88,13 @@ export function PeerConnectionList() {
 
   return (
     <div className="flex flex-col gap-4">
+      {myPeerId && (
+        <div className="p-3 bg-base-200 rounded-lg">
+          <div className="text-xs text-base-content/60 mb-1">My Session ID</div>
+          <div className="font-mono text-sm break-all select-all">{myPeerId}</div>
+        </div>
+      )}
+
       {peers.length > 0 && (
         <div className="text-sm text-base-content/60">
           {connectedCount} of {peers.length} connected

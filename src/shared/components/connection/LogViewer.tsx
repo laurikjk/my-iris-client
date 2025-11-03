@@ -15,6 +15,8 @@ interface LogViewerProps<T extends LogViewerEntry> {
   onToggleExpanded: () => void
   onClear: () => void
   onCopyAll: () => void
+  filterText?: string
+  onFilterChange?: (text: string) => void
   renderLogItem: (log: T, index: number) => ReactNode
 }
 
@@ -25,6 +27,8 @@ export function LogViewer<T extends LogViewerEntry>({
   onToggleExpanded,
   onClear,
   onCopyAll,
+  filterText,
+  onFilterChange,
   renderLogItem,
 }: LogViewerProps<T>) {
   return (
@@ -54,6 +58,16 @@ export function LogViewer<T extends LogViewerEntry>({
           </div>
         )}
       </div>
+
+      {isExpanded && onFilterChange && (
+        <input
+          type="text"
+          placeholder="Filter logs..."
+          value={filterText || ""}
+          onChange={(e) => onFilterChange(e.target.value)}
+          className="input input-sm input-bordered w-full"
+        />
+      )}
 
       {isExpanded && (
         <div className="bg-base-300 rounded-lg p-3 max-h-96 overflow-y-auto font-mono text-xs space-y-1 select-text">

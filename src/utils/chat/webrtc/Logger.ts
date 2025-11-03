@@ -7,6 +7,7 @@ type LogEntry = {
   timestamp: number
   level: LogLevel
   peerId?: string
+  direction?: "up" | "down"
   message: string
   data?: unknown
 }
@@ -27,15 +28,20 @@ class WebRTCLogger extends EventEmitter {
     return LOG_LEVEL_PRIORITY[level] >= LOG_LEVEL_PRIORITY[configuredLevel]
   }
 
-  log(level: LogLevel, peerId: string | undefined, message: string, ...data: unknown[]) {
+  log(
+    level: LogLevel,
+    peerId: string | undefined,
+    message: string,
+    direction?: "up" | "down"
+  ) {
     if (!this.shouldLog(level)) return
 
     const entry: LogEntry = {
       timestamp: Date.now(),
       level,
       peerId,
+      direction,
       message,
-      data: data.length > 0 ? data : undefined,
     }
 
     this.logs.push(entry)
@@ -46,37 +52,22 @@ class WebRTCLogger extends EventEmitter {
     }
 
     this.emit("log", entry)
-
-    // Also log to console
-    const prefix = peerId ? `[WebRTC ${peerId}]` : "[WebRTC]"
-    const consoleArgs = [prefix, message, ...(data || [])]
-
-    switch (level) {
-      case "error":
-        console.error(...consoleArgs)
-        break
-      case "warn":
-        console.warn(...consoleArgs)
-        break
-      default:
-        console.log(...consoleArgs)
-    }
   }
 
-  debug(peerId: string | undefined, message: string, ...data: unknown[]) {
-    this.log("debug", peerId, message, ...data)
+  debug(peerId: string | undefined, message: string, direction?: "up" | "down") {
+    this.log("debug", peerId, message, direction)
   }
 
-  info(peerId: string | undefined, message: string, ...data: unknown[]) {
-    this.log("info", peerId, message, ...data)
+  info(peerId: string | undefined, message: string, direction?: "up" | "down") {
+    this.log("info", peerId, message, direction)
   }
 
-  warn(peerId: string | undefined, message: string, ...data: unknown[]) {
-    this.log("warn", peerId, message, ...data)
+  warn(peerId: string | undefined, message: string, direction?: "up" | "down") {
+    this.log("warn", peerId, message, direction)
   }
 
-  error(peerId: string | undefined, message: string, ...data: unknown[]) {
-    this.log("error", peerId, message, ...data)
+  error(peerId: string | undefined, message: string, direction?: "up" | "down") {
+    this.log("error", peerId, message, direction)
   }
 
   getLogs(): LogEntry[] {

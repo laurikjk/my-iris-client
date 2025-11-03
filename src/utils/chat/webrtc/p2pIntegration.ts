@@ -1,6 +1,5 @@
 import {NDKEvent, type NDKFilter, NDKRelaySet} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
-import {webrtcLogger} from "./Logger"
 import {useSettingsStore} from "@/stores/settings"
 import {KIND_APP_DATA} from "@/utils/constants"
 import {sendEventToWebRTC, relayEventToWebRTC} from "./p2pEvents"
@@ -52,7 +51,6 @@ export function wrapNDKSubscribe() {
 
     // In P2P-only mode, only subscribe to signaling events on relays
     if (p2pOnlyMode && !isSignalingSubscription(filters)) {
-      webrtcLogger.debug(undefined, "P2P-only mode: skipping relay subscription")
       // Create subscription with empty relay set (no relay traffic)
       const emptyRelaySet = new NDKRelaySet(new Set(), ndkInstance)
       const subscription = originalSubscribe(filters, {

@@ -39,6 +39,7 @@ export function sendEventToWebRTC(event: NDKEvent) {
   const message = ["EVENT", eventJson]
 
   let sentCount = 0
+  const sentToPeers: string[] = []
   for (const [peerId, conn] of connections.entries()) {
     if (conn.dataChannel?.readyState !== "open") continue
 
@@ -65,25 +66,22 @@ export function sendEventToWebRTC(event: NDKEvent) {
       // Mark as seen by this peer
       conn.seenEvents.set(eventJson.id, true)
 
+      const peerPubkey = peerId.split(":")[0]
+      const peerName = getCachedName(peerPubkey)
+      sentToPeers.push(`${peerName} (${peerPubkey.slice(0, 8)})`)
+
       const contentPreview =
         eventJson.content && eventJson.content.length > 50
           ? eventJson.content.slice(0, 50) + "..."
           : eventJson.content || ""
-      const authorName = getCachedName(eventJson.pubkey)
       webrtcLogger.debug(
         peerId,
-        `↑ kind ${eventJson.kind} from ${authorName} (${eventJson.pubkey.slice(0, 8)}) ${eventJson.id?.slice(0, 8)} ${contentPreview}`
+        `kind ${eventJson.kind} ${eventJson.id?.slice(0, 8)} ${contentPreview}`,
+        "up"
       )
     } catch (error) {
-      webrtcLogger.error(peerId, "Failed to send event", error)
+      webrtcLogger.error(peerId, "Failed to send event")
     }
-  }
-
-  if (sentCount > 0) {
-    webrtcLogger.debug(
-      undefined,
-      `↑ Published event ${eventJson.id?.slice(0, 8)} to ${sentCount} peer(s)`
-    )
   }
 }
 
@@ -103,6 +101,7 @@ export function relayEventToWebRTC(event: NDKEvent) {
   const connections = getAllConnections()
   const message = ["EVENT", eventJson]
   let sentCount = 0
+  const sentToPeers: string[] = []
 
   for (const [peerId, conn] of connections.entries()) {
     // Skip if channel not open
@@ -130,25 +129,22 @@ export function relayEventToWebRTC(event: NDKEvent) {
       sentCount++
       incrementSent()
 
+      const peerPubkey = peerId.split(":")[0]
+      const peerName = getCachedName(peerPubkey)
+      sentToPeers.push(`${peerName} (${peerPubkey.slice(0, 8)})`)
+
       const contentPreview =
         eventJson.content && eventJson.content.length > 50
           ? eventJson.content.slice(0, 50) + "..."
           : eventJson.content || ""
-      const authorName = getCachedName(eventJson.pubkey)
       webrtcLogger.debug(
         peerId,
-        `↑ relayed kind ${eventJson.kind} from ${authorName} (${eventJson.pubkey.slice(0, 8)}) ${eventJson.id.slice(0, 8)} ${contentPreview}`
+        `relayed kind ${eventJson.kind} ${eventJson.id.slice(0, 8)} ${contentPreview}`,
+        "up"
       )
     } catch (error) {
-      webrtcLogger.error(peerId, "Failed to relay event", error)
+      webrtcLogger.error(peerId, "Failed to relay event")
     }
-  }
-
-  if (sentCount > 0) {
-    webrtcLogger.debug(
-      undefined,
-      `↑ Relayed event ${eventJson.id.slice(0, 8)} to ${sentCount} peer(s)`
-    )
   }
 }
 
@@ -159,19 +155,25 @@ export function handleIncomingEventMessage(
   peerId: string,
   eventJson: unknown
 ): NDKEvent | null {
-  // Rate limit incoming events from this peer
-  if (!incomingRateLimiter.check(peerId)) {
-    webrtcLogger.warn(peerId, `Rate limit exceeded for incoming event`)
-    return null
-  }
-
   const ndkInstance = ndk()
   const event = new NDKEvent(ndkInstance, eventJson as Partial<NDKRawEvent>)
+
+  // Rate limit only private messages from unknown senders
+  const isPrivateMessage = PRIVATE_MESSAGE_KINDS.includes(event.kind || 0)
+  if (isPrivateMessage) {
+    const followDistance = socialGraph().getFollowDistance(event.pubkey)
+    if (followDistance > 2) {
+      if (!incomingRateLimiter.check(peerId)) {
+        webrtcLogger.warn(peerId, `Rate limit exceeded for kind ${event.kind} from unknown sender`)
+        return null
+      }
+    }
+  }
 
   // Verify signature (also validates event structure)
   const isValid = event.verifySignature(false)
   if (!isValid) {
-    webrtcLogger.warn(peerId, `↓ Invalid signature ${event.id?.slice(0, 8)}`)
+    webrtcLogger.warn(peerId, `Invalid signature ${event.id?.slice(0, 8)}`, "down")
     return null
   }
 
@@ -196,10 +198,14 @@ export function handleIncomingEventMessage(
     event.content && event.content.length > 50
       ? event.content.slice(0, 50) + "..."
       : event.content || ""
+  const peerPubkey = peerId.split(":")[0]
   const authorName = getCachedName(event.pubkey)
+  const authorInfo =
+    peerPubkey === event.pubkey ? "" : ` author: ${authorName} (${event.pubkey.slice(0, 8)})`
   webrtcLogger.debug(
     peerId,
-    `↓ kind ${event.kind} from ${authorName} (${event.pubkey.slice(0, 8)}) ${event.id?.slice(0, 8)} ${contentPreview}`
+    `kind ${event.kind}${authorInfo} ${event.id?.slice(0, 8)} ${contentPreview}`,
+    "down"
   )
 
   // Mark event as seen by sender
@@ -227,7 +233,7 @@ export function handleIncomingEventMessage(
           conn.seenEvents.set(event.id, true)
           forwardCount++
         } catch (error) {
-          webrtcLogger.error(otherPeerId, "Failed to forward event", error)
+          webrtcLogger.error(otherPeerId, "Failed to forward event")
         }
       }
     }

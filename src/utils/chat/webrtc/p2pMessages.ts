@@ -55,7 +55,7 @@ export function handleIncomingMessage(
     webrtcLogger.warn(peerId, `Unsupported message type: ${type}`)
     return null
   } catch (error) {
-    webrtcLogger.error(peerId, "Error handling incoming message", error)
+    webrtcLogger.error(peerId, "Error handling incoming message")
     return null
   }
 }

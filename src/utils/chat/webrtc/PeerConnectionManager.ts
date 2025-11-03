@@ -6,7 +6,6 @@ import {sendSignalingMessage, subscribeToSignaling} from "./signaling"
 import {PeerId, type SignalingMessage} from "./types"
 import {useUserStore} from "@/stores/user"
 import {useSettingsStore} from "@/stores/settings"
-import {getCachedName} from "@/utils/nostr"
 
 function uuidv4() {
   return crypto.randomUUID()
@@ -256,10 +255,7 @@ class PeerConnectionManager extends EventEmitter<{
         return
       }
 
-      webrtcLogger.debug(
-        undefined,
-        `Hello from ${getCachedName(senderPubkey)} (${senderPubkey.slice(0, 8)})`
-      )
+      webrtcLogger.debug(`${senderPubkey}:hello`, `hello`, "down")
 
       // Track online users (including our other sessions)
       this.onlineUsers.set(senderPubkey, {
@@ -285,12 +281,10 @@ class PeerConnectionManager extends EventEmitter<{
       if (shouldConnect) {
         // Use tie-breaking: only initiate if our UUID is smaller
         const shouldInitiate = this.myPeerId.uuid < message.peerId
-        webrtcLogger.debug(
-          undefined,
-          `${shouldInitiate ? "Initiating" : "Waiting for"} connection to ${getCachedName(senderPubkey)} (${senderPubkey.slice(0, 8)})`
-        )
         if (shouldInitiate) {
           await this.connectToPeer(peerId)
+        } else {
+          webrtcLogger.debug(peerIdStr, `Waiting for connection`, "down")
         }
       }
       return
@@ -411,8 +405,9 @@ class PeerConnectionManager extends EventEmitter<{
     const peerIdStr = peerId.toString()
 
     webrtcLogger.debug(
-      undefined,
-      `Initiating connection to ${getCachedName(peerId.pubkey)} (${peerId.pubkey.slice(0, 8)})`
+      peerIdStr,
+      `Initiating connection`,
+      "up"
     )
 
     const peerConn = await getPeerConnection(peerIdStr, {
@@ -454,20 +449,14 @@ class PeerConnectionManager extends EventEmitter<{
 
     if (newState === "connected" && !peer.connectedAt) {
       peer.connectedAt = Date.now()
-      webrtcLogger.info(
-        undefined,
-        `Connected to ${getCachedName(peer.pubkey)} (${peer.pubkey.slice(0, 8)})`
-      )
+      webrtcLogger.info(sessionId, `Connected`)
     }
 
     peer.state = newState
 
     if (["failed", "closed"].includes(newState)) {
       if (oldState === "connected") {
-        webrtcLogger.info(
-          undefined,
-          `Disconnected from ${getCachedName(peer.pubkey)} (${peer.pubkey.slice(0, 8)})`
-        )
+        webrtcLogger.info(sessionId, `Disconnected`)
       }
       this.peers.delete(sessionId)
     }

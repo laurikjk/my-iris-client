@@ -35,7 +35,7 @@ export async function sendSignalingMessage(
       const recipientUser = ndkInstance.getUser({pubkey: recipientPubkey})
       content = await signer.encrypt(recipientUser, content)
     } catch (error) {
-      webrtcLogger.error(undefined, "Failed to encrypt message", error)
+      webrtcLogger.error(undefined, "Failed to encrypt message")
       return
     }
   }
@@ -50,10 +50,13 @@ export async function sendSignalingMessage(
     ["expiration", Math.floor((Date.now() + MESSAGE_TIMEOUT) / 1000).toString()],
   ]
 
+  const peerId = recipientPubkey ? `${recipientPubkey}:broadcast` : "broadcast:broadcast"
+  webrtcLogger.debug(peerId, message.type, "up")
+
   try {
     await event.publish()
   } catch (error) {
-    webrtcLogger.error(undefined, "Failed to publish message", error)
+    webrtcLogger.error(undefined, "Failed to publish message")
   }
 }
 
@@ -79,15 +82,19 @@ export function subscribeToSignaling(
 
   // Subscribe to kind 30078 events with webrtc tag from mutual follows + self
   // Get messages from last MESSAGE_TIMEOUT seconds to catch recent hellos
-  const sub = ndkInstance.subscribe(
-    {
-      kinds: [KIND_APP_DATA],
-      "#l": [WEBRTC_TAG],
-      authors,
-      since: Math.floor((Date.now() - MESSAGE_TIMEOUT) / 1000),
-    },
-    {closeOnEose: false}
+  const filter = {
+    kinds: [KIND_APP_DATA],
+    "#l": [WEBRTC_TAG],
+    authors,
+    since: Math.floor((Date.now() - MESSAGE_TIMEOUT) / 1000),
+  }
+
+  webrtcLogger.debug(
+    undefined,
+    `Subscribing with filter: ${authors.length} authors, since=${filter.since}`
   )
+
+  const sub = ndkInstance.subscribe(filter, {closeOnEose: false})
 
   sub.on("event", async (event: NDKEvent) => {
     // Skip expired events
@@ -113,9 +120,10 @@ export function subscribeToSignaling(
     // Parse and handle message
     try {
       const message = JSON.parse(content) as SignalingMessage
+      webrtcLogger.debug(`${senderPubkey}:signaling`, message.type, "down")
       onMessage(message, senderPubkey)
     } catch (error) {
-      webrtcLogger.error(undefined, "Failed to parse signaling message", error)
+      webrtcLogger.error(undefined, "Failed to parse signaling message")
     }
   })
 

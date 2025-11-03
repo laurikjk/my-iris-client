@@ -162,17 +162,9 @@ export function CallManager() {
     if (activeCall.hasVideo && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = activeCall.remoteStream
       remoteVideoRef.current.play().catch((e) => console.warn("Remote video play failed:", e))
-      console.log(
-        "Remote stream set (video):",
-        activeCall.remoteStream.getTracks().map((t) => `${t.kind}:${t.enabled}`)
-      )
     } else if (!activeCall.hasVideo && remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = activeCall.remoteStream
       remoteAudioRef.current.play().catch((e) => console.warn("Remote audio play failed:", e))
-      console.log(
-        "Remote stream set (audio):",
-        activeCall.remoteStream.getTracks().map((t) => `${t.kind}:${t.enabled}`)
-      )
     }
   }, [activeCall?.remoteStream, activeCall?.hasVideo])
 
