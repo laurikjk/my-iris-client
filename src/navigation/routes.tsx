@@ -4,8 +4,6 @@ import {RouteDefinition} from "./types"
 // Import pages
 import NostrLinkHandler from "@/pages/NostrLinkHandler"
 import Notifications from "@/pages/notifications/Notifications"
-import CashuWallet from "@/pages/wallet/CashuWallet"
-import OldWallet from "@/pages/wallet/OldWallet"
 import {AboutPage} from "@/pages/AboutPage"
 import TermsPage from "@/pages/TermsPage"
 import PrivacyPage from "@/pages/PrivacyPage"
@@ -22,6 +20,8 @@ const RelayPage = lazy(() => import("@/pages/relay"))
 const MapPage = lazy(() => import("@/pages/map"))
 const MarketPage = lazy(() => import("@/pages/market"))
 const UserSearchPage = lazy(() => import("@/pages/user-search"))
+const CashuWallet = lazy(() => import("@/pages/wallet/CashuWallet"))
+const OldWallet = lazy(() => import("@/pages/wallet/OldWallet"))
 
 export const routes: RouteDefinition[] = [
   {path: "/", component: HomePage, alwaysKeep: true},

@@ -12,6 +12,7 @@ import {
   RiCameraOffLine,
 } from "@remixicon/react"
 import {useSettingsStore} from "@/stores/settings"
+import {playRingtone, stopRingtone} from "@/utils/ringtone"
 
 type CallRequest = {
   sessionId: string
@@ -173,6 +174,20 @@ export function CallManager() {
         .catch((e) => console.warn("Remote audio play failed:", e))
     }
   }, [activeCall?.remoteStream, activeCall?.hasVideo])
+
+  // Play ringtone when there are incoming call requests
+  useEffect(() => {
+    if (requests.length > 0) {
+      playRingtone()
+    } else {
+      stopRingtone()
+    }
+
+    // Cleanup on unmount
+    return () => {
+      stopRingtone()
+    }
+  }, [requests.length])
 
   const handleAccept = async (request: CallRequest) => {
     setRequests((prev) => prev.filter((r) => r.sessionId !== request.sessionId))
