@@ -152,7 +152,9 @@ export function CallManager() {
   useEffect(() => {
     if (localVideoRef.current && activeCall?.localStream) {
       localVideoRef.current.srcObject = activeCall.localStream
-      localVideoRef.current.play().catch((e) => console.warn("Local video play failed:", e))
+      localVideoRef.current
+        .play()
+        .catch((e) => console.warn("Local video play failed:", e))
     }
   }, [activeCall?.localStream])
 
@@ -161,10 +163,14 @@ export function CallManager() {
 
     if (activeCall.hasVideo && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = activeCall.remoteStream
-      remoteVideoRef.current.play().catch((e) => console.warn("Remote video play failed:", e))
+      remoteVideoRef.current
+        .play()
+        .catch((e) => console.warn("Remote video play failed:", e))
     } else if (!activeCall.hasVideo && remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = activeCall.remoteStream
-      remoteAudioRef.current.play().catch((e) => console.warn("Remote audio play failed:", e))
+      remoteAudioRef.current
+        .play()
+        .catch((e) => console.warn("Remote audio play failed:", e))
     }
   }, [activeCall?.remoteStream, activeCall?.hasVideo])
 

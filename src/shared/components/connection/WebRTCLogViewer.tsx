@@ -2,7 +2,22 @@ import {useEffect, useState} from "react"
 import {webrtcLogger, type LogEntry} from "@/utils/chat/webrtc/Logger"
 import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
 import {LogViewer, LogItem} from "./LogViewer"
+import {Name} from "@/shared/components/user/Name"
 import {getCachedName} from "@/utils/nostr"
+
+function stringToHue(str: string): number {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return Math.abs(hash % 360)
+}
+
+function getPeerColor(peerId: string): string {
+  const pubkey = peerId.split(":")[0]
+  const hue = stringToHue(pubkey)
+  return `hsl(${hue}, 70%, 50%)`
+}
 
 export function WebRTCLogViewer() {
   const [logs, setLogs] = useState<LogEntry[]>([])
@@ -66,21 +81,56 @@ export function WebRTCLogViewer() {
       filterText={filterText}
       onFilterChange={setFilterText}
       renderLogItem={(log, i) => {
+        const pubkey = log.peerId?.split(":")[0]
+        const isBroadcast = pubkey === "broadcast"
+
+        const getArrow = () => {
+          if (log.direction === "up") {
+            return (
+              <span key="arrow" style={{color: "#22c55e", fontSize: "1.2em"}}>
+                ↗
+              </span>
+            )
+          }
+          if (log.direction === "down") {
+            return (
+              <span key="arrow" style={{color: "#ef4444", fontSize: "1.2em"}}>
+                ↙
+              </span>
+            )
+          }
+          return (
+            <span key="arrow" style={{fontSize: "1.2em", visibility: "hidden"}}>
+              ↗
+            </span>
+          )
+        }
+
+        const getPeerLabel = () => {
+          if (isBroadcast) return <>broadcast</>
+          if (pubkey) {
+            return (
+              <>
+                <Name pubKey={pubkey} /> ({pubkey.slice(0, 8)})
+              </>
+            )
+          }
+          return "unknown"
+        }
+
         const badges = log.peerId
           ? [
+              getArrow(),
               <span
                 key="peer"
-                className={`badge badge-xs ${
-                  log.direction === "up"
-                    ? "badge-success"
-                    : log.direction === "down"
-                      ? "badge-info"
-                      : "badge-neutral"
-                } shrink-0 gap-1`}
+                className="badge badge-xs shrink-0 gap-1"
+                style={{
+                  backgroundColor: getPeerColor(log.peerId),
+                  color: "white",
+                  borderColor: getPeerColor(log.peerId),
+                }}
               >
-                {getCachedName(log.peerId.split(":")[0])} (
-                {log.peerId.split(":")[0].slice(0, 8)})
-                {log.direction === "up" ? " ↑" : log.direction === "down" ? " ↓" : ""}
+                {getPeerLabel()}
               </span>,
             ]
           : []

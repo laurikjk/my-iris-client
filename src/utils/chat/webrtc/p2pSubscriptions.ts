@@ -218,7 +218,11 @@ export function handleIncomingREQ(peerId: string, subId: string, filters: unknow
         }
 
         if (sentCount > 0) {
-          webrtcLogger.debug(peerId, `Sent ${sentCount} cached event(s) for ${subId}`, "up")
+          webrtcLogger.debug(
+            peerId,
+            `Sent ${sentCount} cached event(s) for ${subId}`,
+            "up"
+          )
         }
 
         // Send EOSE

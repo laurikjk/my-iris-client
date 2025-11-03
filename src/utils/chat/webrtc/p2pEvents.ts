@@ -164,7 +164,10 @@ export function handleIncomingEventMessage(
     const followDistance = socialGraph().getFollowDistance(event.pubkey)
     if (followDistance > 2) {
       if (!incomingRateLimiter.check(peerId)) {
-        webrtcLogger.warn(peerId, `Rate limit exceeded for kind ${event.kind} from unknown sender`)
+        webrtcLogger.warn(
+          peerId,
+          `Rate limit exceeded for kind ${event.kind} from unknown sender`
+        )
         return null
       }
     }
@@ -201,7 +204,9 @@ export function handleIncomingEventMessage(
   const peerPubkey = peerId.split(":")[0]
   const authorName = getCachedName(event.pubkey)
   const authorInfo =
-    peerPubkey === event.pubkey ? "" : ` author: ${authorName} (${event.pubkey.slice(0, 8)})`
+    peerPubkey === event.pubkey
+      ? ""
+      : ` author: ${authorName} (${event.pubkey.slice(0, 8)})`
   webrtcLogger.debug(
     peerId,
     `kind ${event.kind}${authorInfo} ${event.id?.slice(0, 8)} ${contentPreview}`,

@@ -325,6 +325,20 @@ class PeerConnectionManager extends EventEmitter<{
           }
         }
 
+        // Clean up any existing failed/closed connection before creating new one
+        const existingConn = await getPeerConnection(peerIdStr, {create: false})
+        if (existingConn) {
+          const state = existingConn.peerConnection.connectionState
+          if (state === "failed" || state === "closed") {
+            webrtcLogger.info(
+              peerIdStr,
+              `Cleaning up ${state} connection before accepting offer`
+            )
+            existingConn.close()
+            this.peers.delete(peerIdStr)
+          }
+        }
+
         const peerConn = await getPeerConnection(peerIdStr, {
           ask: false,
           create: true,
@@ -380,13 +394,19 @@ class PeerConnectionManager extends EventEmitter<{
 
       // Remove failed, closed, or long-stuck "new" connections
       if (!conn || ["failed", "closed"].includes(state || "")) {
+        webrtcLogger.debug(sessionId, `Cleaning up ${state || "missing"} connection`)
+        // Ensure connection is fully closed
+        if (conn) {
+          conn.close()
+        }
         this.peers.delete(sessionId)
         changed = true
       } else if (state === "new") {
         // If stuck in "new" for more than 10 seconds, clean up
         const peer = this.peers.get(sessionId)
         if (peer && !peer.connectedAt) {
-          // Check if we've been tracking this peer for a while
+          webrtcLogger.debug(sessionId, "Cleaning up stuck 'new' connection")
+          conn.close()
           this.peers.delete(sessionId)
           changed = true
         }
@@ -404,11 +424,7 @@ class PeerConnectionManager extends EventEmitter<{
   private async connectToPeer(peerId: PeerId) {
     const peerIdStr = peerId.toString()
 
-    webrtcLogger.debug(
-      peerIdStr,
-      `Initiating connection`,
-      "up"
-    )
+    webrtcLogger.debug(peerIdStr, `Initiating connection`, "up")
 
     const peerConn = await getPeerConnection(peerIdStr, {
       ask: false,
@@ -458,6 +474,8 @@ class PeerConnectionManager extends EventEmitter<{
       if (oldState === "connected") {
         webrtcLogger.info(sessionId, `Disconnected`)
       }
+      // Ensure connection is properly closed and cleaned up
+      peerConn.close()
       this.peers.delete(sessionId)
     }
 

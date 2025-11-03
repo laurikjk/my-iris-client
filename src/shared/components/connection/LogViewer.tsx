@@ -102,12 +102,12 @@ export function LogItem({timestamp, level, badges, message}: LogItemProps) {
   }
 
   return (
-    <div className={`flex gap-2 ${getLevelColor()}`}>
+    <div className={`flex flex-wrap gap-2 items-baseline ${getLevelColor()}`}>
       <span className="text-base-content/50 shrink-0 w-16 text-right">
         <RelativeTime from={timestamp} />
       </span>
       {badges}
-      <span className="break-all">{message}</span>
+      <span className="break-all flex-1 min-w-0">{message}</span>
     </div>
   )
 }

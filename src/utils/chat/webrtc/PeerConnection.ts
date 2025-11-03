@@ -37,17 +37,26 @@ export async function getPeerConnection(
     return
   }
 
-  // Return existing connection if available
+  // Check for existing connection
   const existing = connections.get(sessionId)
   if (existing) {
-    // Update mySessionId if provided
-    if (mySessionId && !existing.mySessionId) {
-      existing.mySessionId = mySessionId
+    const state = existing.peerConnection.connectionState
+
+    // If connection is failed or closed, clean it up first
+    if (state === "failed" || state === "closed") {
+      webrtcLogger.info(sessionId, `Cleaning up ${state} connection before recreating`)
+      existing.close()
+      // Connection is now removed from map by close()
+    } else {
+      // Connection is usable, update and return
+      if (mySessionId && !existing.mySessionId) {
+        existing.mySessionId = mySessionId
+      }
+      if (connect && (state === "new" || state === "connecting")) {
+        existing.connect()
+      }
+      return existing
     }
-    if (connect) {
-      existing.connect()
-    }
-    return existing
   }
 
   // Create new connection if needed
@@ -322,6 +331,8 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   }
 
   stopCall(notifyRemote = false) {
+    const hadCall = this.localStream !== null || this.remoteStream !== null
+
     // Notify remote peer before stopping
     if (notifyRemote && this.callSignalingChannel?.readyState === "open") {
       try {
@@ -342,7 +353,10 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     }
     // Remote stream cleanup happens automatically when connection closes
     this.remoteStream = null
-    this.log("Call stopped")
+
+    if (hadCall) {
+      this.log("Call stopped")
+    }
   }
 
   async sendOffer() {
@@ -601,15 +615,54 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   }
 
   close() {
+    this.log("Closing connection")
+
+    // Stop any active call
     this.stopCall()
+
+    // Close data channels
     if (this.dataChannel) {
+      this.dataChannel.onopen = null
+      this.dataChannel.onmessage = null
+      this.dataChannel.onclose = null
       this.dataChannel.close()
+      this.dataChannel = null
     }
     if (this.fileChannel) {
+      this.fileChannel.onopen = null
+      this.fileChannel.onmessage = null
+      this.fileChannel.onclose = null
       this.fileChannel.close()
+      this.fileChannel = null
     }
+    if (this.callSignalingChannel) {
+      this.callSignalingChannel.onopen = null
+      this.callSignalingChannel.onmessage = null
+      this.callSignalingChannel.onclose = null
+      this.callSignalingChannel.close()
+      this.callSignalingChannel = null
+    }
+
+    // Remove RTCPeerConnection event handlers
+    this.peerConnection.onicecandidate = null
+    this.peerConnection.ondatachannel = null
+    this.peerConnection.ontrack = null
+    this.peerConnection.onconnectionstatechange = null
+
+    // Close peer connection
     this.peerConnection.close()
+
+    // Remove from global connections map
     connections.delete(this.peerId)
+
+    // Clear streams
+    this.localStream = null
+    this.remoteStream = null
+
+    // Emit close event
     this.emit("close")
+
+    // Remove all event listeners
+    this.removeAllListeners()
   }
 }
