@@ -9,7 +9,7 @@ function uuidv4() {
 }
 
 const WEBRTC_TAG = "webrtc"
-const MESSAGE_TIMEOUT = 15 * 1000 // 15 seconds
+const MESSAGE_TIMEOUT = 15000 // 15 seconds
 
 /**
  * Send a WebRTC signaling message publicly
@@ -78,13 +78,13 @@ export function subscribeToSignaling(
   authors.push(myPubkey) // Include self to track other devices
 
   // Subscribe to kind 30078 events with webrtc tag from mutual follows + self
-  // Only get new messages (since = now) to avoid processing expired hellos
+  // Get messages from last MESSAGE_TIMEOUT seconds to catch recent hellos
   const sub = ndkInstance.subscribe(
     {
       kinds: [KIND_APP_DATA],
       "#l": [WEBRTC_TAG],
       authors,
-      since: Math.floor(Date.now() / 1000),
+      since: Math.floor((Date.now() - MESSAGE_TIMEOUT) / 1000),
     },
     {closeOnEose: false}
   )
