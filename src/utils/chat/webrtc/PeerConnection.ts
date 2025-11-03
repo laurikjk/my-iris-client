@@ -287,11 +287,15 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     }
 
     try {
+      this.log(`Requesting ${hasVideo ? "video" : "audio"} call permissions`)
+
       // Get user media
       this.localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: hasVideo,
       })
+
+      this.log(`Media stream acquired (${this.localStream.getTracks().length} tracks)`)
 
       // Add tracks to peer connection
       for (const track of this.localStream.getTracks()) {
@@ -325,7 +329,8 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       // Emit event so UI can show active call view for caller
       this.emit("call-started", hasVideo, this.localStream)
     } catch (error) {
-      webrtcLogger.error(this.peerId, "Failed to start call")
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      webrtcLogger.error(this.peerId, `Failed to start call: ${errorMsg}`)
       this.stopCall()
     }
   }
