@@ -53,6 +53,8 @@ interface SettingsState {
     webrtcMaxOutbound: number
     webrtcMaxInbound: number
     webrtcConnectToOwnDevices: boolean
+    webrtcLogLevel: "debug" | "info" | "warn" | "error"
+    p2pOnlyMode: boolean
   }
   // Desktop settings
   desktop: {
@@ -126,6 +128,8 @@ export const useSettingsStore = create<SettingsState>()(
         webrtcMaxOutbound: 3,
         webrtcMaxInbound: 3,
         webrtcConnectToOwnDevices: true,
+        webrtcLogLevel: "info",
+        p2pOnlyMode: false,
       },
       desktop: {
         startOnBoot: true,
@@ -197,6 +201,8 @@ export const useSettingsStore = create<SettingsState>()(
             webrtcMaxOutbound: 3,
             webrtcMaxInbound: 3,
             webrtcConnectToOwnDevices: true,
+            webrtcLogLevel: "info",
+            p2pOnlyMode: false,
           }
         }
         // Migrate network settings without new fields
@@ -209,6 +215,12 @@ export const useSettingsStore = create<SettingsState>()(
           }
           if (state.network.webrtcConnectToOwnDevices === undefined) {
             state.network.webrtcConnectToOwnDevices = true
+          }
+          if (state.network.webrtcLogLevel === undefined) {
+            state.network.webrtcLogLevel = "info"
+          }
+          if (state.network.p2pOnlyMode === undefined) {
+            state.network.p2pOnlyMode = false
           }
         }
       },

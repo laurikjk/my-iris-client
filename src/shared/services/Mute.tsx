@@ -4,7 +4,6 @@ import {NostrEvent} from "nostr-social-graph"
 import {ndk} from "@/utils/ndk"
 import {KIND_MUTE_LIST, KIND_FLAG_LIST} from "@/utils/constants"
 import {clearVisibilityCache} from "@/utils/visibility"
-import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 export const muteUser = async (pubkey: string): Promise<string[]> => {
   const {mutedList} = validateInputAndGetMutedList(pubkey)
@@ -67,7 +66,7 @@ const updateMuteList = async (
   // Clear visibility cache so muted/unmuted users are immediately updated
   clearVisibilityCache()
 
-  publishEvent(muteEvent).catch((error) => {
+  muteEvent.publish().catch((error) => {
     console.warn("Unable to update mute list", error)
     return Array.from(originalMutedList)
   })
@@ -100,5 +99,5 @@ export const flagUser = async (
   flagEvent.tags = Array.from(flaggedUsers).map((entry: string) => ["p", entry.trim()])
 
   await flagEvent.sign()
-  await publishEvent(flagEvent)
+  await flagEvent.publish()
 }

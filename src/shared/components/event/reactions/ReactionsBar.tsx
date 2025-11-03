@@ -5,7 +5,6 @@ import {Name} from "@/shared/components/user/Name"
 import {useUserStore} from "@/stores/user"
 import {useReactions, ReactionInfo} from "@/shared/hooks/useReactions"
 import {reactWithExpiration} from "@/utils/reaction"
-import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 interface ReactionsBarProps {
   event: NDKEvent
@@ -119,7 +118,7 @@ function ReactionItem({reaction, renderEmoji, event}: ReactionItemProps) {
             if (reactionEvent && emojiTag[2]) {
               // Add emoji tag to the reaction event
               reactionEvent.tags.push(["emoji", shortcode, emojiTag[2]])
-              await publishEvent(reactionEvent)
+              await reactionEvent.publish()
               return
             }
           }

@@ -134,6 +134,12 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
     setupVisibilityReconnection(ndkInstance)
     attachRelayLogger(ndkInstance)
     ndkInstance.connect()
+
+    // Initialize WebRTC integration (wraps publish/subscribe for peer forwarding)
+    import("@/utils/chat/webrtc/p2pNostr")
+      .then((module) => module.initializeWebRTCIntegration())
+      .catch(console.error)
+
     console.log("NDK instance initialized", ndkInstance)
   } else if (opts) {
     throw new Error("NDK instance already initialized, cannot pass options")

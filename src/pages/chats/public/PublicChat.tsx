@@ -14,7 +14,6 @@ import {useUserStore} from "@/stores/user"
 import {Helmet} from "react-helmet"
 import {ndk} from "@/utils/ndk"
 import debounce from "lodash/debounce"
-import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 let publicKey = useUserStore.getState().publicKey
 useUserStore.subscribe((state) => (publicKey = state.publicKey))
@@ -168,7 +167,7 @@ const PublicChat = () => {
 
       // Sign and publish the event
       await event.sign()
-      const publishedRelays = await publishEvent(event)
+      const publishedRelays = await event.publish()
 
       // Add message to local state
       const newMessage: MessageType = {
@@ -214,7 +213,7 @@ const PublicChat = () => {
 
       // Sign and publish the event
       await event.sign()
-      await publishEvent(event)
+      await event.publish()
     } catch (err) {
       console.error("Error sending reaction:", err)
       setError("Failed to send reaction")

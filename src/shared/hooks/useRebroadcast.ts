@@ -1,6 +1,5 @@
 import {useState} from "react"
 import {ndk} from "@/utils/ndk"
-import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 export const useRebroadcast = () => {
   const [isRebroadcasting, setIsRebroadcasting] = useState(false)
@@ -16,7 +15,7 @@ export const useRebroadcast = () => {
 
       if (event) {
         // Republish to all connected relays
-        await publishEvent(event)
+        await event.publish()
         setRebroadcastSuccess(true)
         setTimeout(() => setRebroadcastSuccess(false), 3000)
         return true

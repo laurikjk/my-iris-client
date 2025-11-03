@@ -214,6 +214,24 @@ export function Network() {
               </div>
             </SettingsGroupItem>
             <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span>P2P Only Mode</span>
+                  <span className="text-sm text-base-content/60">
+                    Experimental: receive events only from peers, not relays (still
+                    publish to relays)
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={network.p2pOnlyMode}
+                  onChange={(e) => updateNetwork({p2pOnlyMode: e.target.checked})}
+                  className="toggle toggle-primary"
+                  disabled={!network.webrtcEnabled}
+                />
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center">
                   <span>Max Outbound Connections</span>
@@ -250,6 +268,34 @@ export function Network() {
                 </div>
                 <span className="text-sm text-base-content/60">
                   Maximum incoming peer connections from mutual follows
+                </span>
+              </div>
+            </SettingsGroupItem>
+            <SettingsGroupItem>
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <span>Log Level</span>
+                  <select
+                    value={network.webrtcLogLevel}
+                    onChange={(e) =>
+                      updateNetwork({
+                        webrtcLogLevel: e.target.value as
+                          | "debug"
+                          | "info"
+                          | "warn"
+                          | "error",
+                      })
+                    }
+                    className="select select-sm select-bordered"
+                  >
+                    <option value="debug">Debug</option>
+                    <option value="info">Info</option>
+                    <option value="warn">Warn</option>
+                    <option value="error">Error</option>
+                  </select>
+                </div>
+                <span className="text-sm text-base-content/60">
+                  Info: connection events, Warn/Error: problems only, Debug: all activity
                 </span>
               </div>
             </SettingsGroupItem>

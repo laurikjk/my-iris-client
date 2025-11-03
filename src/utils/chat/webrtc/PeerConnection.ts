@@ -103,7 +103,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     })
     this.dataChannel = null
     this.fileChannel = null
-    this.seenEvents = new LRUCache<string, boolean>({maxSize: 20})
+    this.seenEvents = new LRUCache<string, boolean>({maxSize: 200})
     this.setupPeerConnectionEvents()
   }
 

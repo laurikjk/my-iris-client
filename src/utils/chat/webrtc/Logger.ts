@@ -1,6 +1,7 @@
 import {EventEmitter} from "tseep"
+import {useSettingsStore} from "@/stores/settings"
 
-type LogLevel = "info" | "warn" | "error"
+type LogLevel = "debug" | "info" | "warn" | "error"
 
 type LogEntry = {
   timestamp: number
@@ -10,11 +11,25 @@ type LogEntry = {
   data?: unknown
 }
 
+const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
+}
+
 class WebRTCLogger extends EventEmitter {
   private logs: LogEntry[] = []
   private maxLogs = 100
 
+  private shouldLog(level: LogLevel): boolean {
+    const configuredLevel = useSettingsStore.getState().network.webrtcLogLevel || "info"
+    return LOG_LEVEL_PRIORITY[level] >= LOG_LEVEL_PRIORITY[configuredLevel]
+  }
+
   log(level: LogLevel, peerId: string | undefined, message: string, ...data: unknown[]) {
+    if (!this.shouldLog(level)) return
+
     const entry: LogEntry = {
       timestamp: Date.now(),
       level,
@@ -46,6 +61,10 @@ class WebRTCLogger extends EventEmitter {
       default:
         console.log(...consoleArgs)
     }
+  }
+
+  debug(peerId: string | undefined, message: string, ...data: unknown[]) {
+    this.log("debug", peerId, message, ...data)
   }
 
   info(peerId: string | undefined, message: string, ...data: unknown[]) {

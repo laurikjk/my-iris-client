@@ -7,7 +7,6 @@ import {useUIStore} from "@/stores/ui"
 import {useSettingsStore} from "@/stores/settings"
 import {ndk} from "@/utils/ndk"
 import {NSEC_NPUB_REGEX} from "@/utils/validation"
-import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 interface SignUpProps {
   onClose: () => void
@@ -113,7 +112,7 @@ export default function SignUp({onClose}: SignUpProps) {
         display_name: newUserName.trim(),
         lud16: `${npub}@npub.cash`,
       })
-      publishEvent(profileEvent)
+      profileEvent.publish()
     }
 
     updateAppearance({singleColumnLayout: false})

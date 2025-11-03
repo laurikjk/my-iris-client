@@ -1,6 +1,5 @@
 import {NDKEvent, NostrEvent} from "@nostr-dev-kit/ndk"
 import {KIND_REACTION, KIND_TEXT_NOTE} from "./constants"
-import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 /**
  * React to an event with expiration inheritance
@@ -34,7 +33,7 @@ export async function reactWithExpiration(
   }
 
   // Sign and publish
-  await publishEvent(reactionEvent)
+  await reactionEvent.publish()
 
   return reactionEvent
 }
