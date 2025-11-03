@@ -80,7 +80,7 @@ export function sendEventToWebRTC(event: NDKEvent) {
   }
 
   if (sentCount > 0) {
-    webrtcLogger.info(
+    webrtcLogger.debug(
       undefined,
       `↑ Published event ${eventJson.id?.slice(0, 8)} to ${sentCount} peer(s)`
     )
@@ -145,7 +145,7 @@ export function relayEventToWebRTC(event: NDKEvent) {
   }
 
   if (sentCount > 0) {
-    webrtcLogger.info(
+    webrtcLogger.debug(
       undefined,
       `↑ Relayed event ${eventJson.id.slice(0, 8)} to ${sentCount} peer(s)`
     )
@@ -233,7 +233,7 @@ export function handleIncomingEventMessage(
     }
 
     if (forwardCount > 0) {
-      webrtcLogger.info(undefined, `↻ Forwarded event to ${forwardCount} peer(s)`)
+      webrtcLogger.debug(undefined, `↻ Forwarded event to ${forwardCount} peer(s)`)
     }
   }
 
