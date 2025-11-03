@@ -99,7 +99,10 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     this.recipientPubkey = peerId.split(":")[0]
     this.mySessionId = mySessionId || null
     this.peerConnection = new RTCPeerConnection({
-      iceServers: [{urls: "stun:stun.l.google.com:19302"}],
+      iceServers: [
+        {urls: "stun:stun.l.google.com:19302"},
+        {urls: "stun:stun.cloudflare.com:3478"},
+      ],
     })
     this.dataChannel = null
     this.fileChannel = null
