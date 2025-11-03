@@ -78,6 +78,7 @@ type PeerConnectionEvents = {
     blob: Blob,
     metadata: {name: string; size: number; type: string}
   ) => void
+  "file-progress": (progress: number, direction: "send" | "receive") => void
   "call-incoming": (hasVideo: boolean) => void
   "call-started": (hasVideo: boolean, localStream: MediaStream) => void
   "remote-stream": (stream: MediaStream) => void
@@ -392,32 +393,49 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
           const {webrtcFileReceivingEnabled} = useSettingsStore.getState().network
           if (!webrtcFileReceivingEnabled) {
             this.log("File receiving disabled, rejecting transfer")
+            fileChannel.send(JSON.stringify({type: "file-rejected"}))
             return
           }
           this.incomingFileMetadata = metadata.metadata
           this.log(`↓ File incoming: ${metadata.metadata.name}`)
           // Emit event for UI to show modal
           this.emit("file-incoming", metadata.metadata)
+        } else if (metadata.type === "file-accepted") {
+          this.log("↓ File acceptance confirmed, ready to receive")
+        } else if (metadata.type === "file-rejected") {
+          this.log("↓ File rejected by remote peer")
+          this.incomingFileMetadata = null
+          this.receivedFileData = []
+          this.receivedFileSize = 0
         }
       } else if (event.data instanceof ArrayBuffer) {
-        // Buffer all data chunks
+        // Only buffer if we have metadata and user accepted
+        if (!this.incomingFileMetadata) {
+          this.log("Received file data without metadata, ignoring")
+          return
+        }
+
+        if (!this.fileTransferAccepted) {
+          this.log("Received file data before acceptance, ignoring")
+          return
+        }
+
         this.receivedFileData.push(event.data)
         this.receivedFileSize += event.data.byteLength
 
-        if (
-          this.incomingFileMetadata &&
-          this.receivedFileSize === this.incomingFileMetadata.size
-        ) {
-          this.log("File fully received, waiting for user action")
-          // File fully buffered - wait for user to accept or reject
-          // If already accepted, save immediately
-          if (this.fileTransferAccepted) {
-            const blob = new Blob(this.receivedFileData, {
-              type: this.incomingFileMetadata.type,
-            })
-            this.emit("file-received", blob, this.incomingFileMetadata)
-            this.saveReceivedFile(blob)
-          }
+        // Emit progress
+        const progress = Math.round(
+          (this.receivedFileSize / this.incomingFileMetadata.size) * 100
+        )
+        this.emit("file-progress", progress, "receive")
+
+        if (this.receivedFileSize === this.incomingFileMetadata.size) {
+          this.log("File fully received")
+          const blob = new Blob(this.receivedFileData, {
+            type: this.incomingFileMetadata.type,
+          })
+          this.emit("file-received", blob, this.incomingFileMetadata)
+          this.saveReceivedFile(blob)
         }
       }
     }
@@ -428,28 +446,24 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
   acceptFileTransfer() {
     this.fileTransferAccepted = true
-    this.log(
-      `File transfer accepted. Metadata: ${this.incomingFileMetadata ? "yes" : "no"}, Size: ${this.receivedFileSize}/${this.incomingFileMetadata?.size || 0}`
-    )
+    this.log("File transfer accepted, sending confirmation")
 
-    // If file already fully received, save it now
-    if (
-      this.incomingFileMetadata &&
-      this.receivedFileSize === this.incomingFileMetadata.size
-    ) {
-      this.log("File was already received, saving now")
-      const blob = new Blob(this.receivedFileData, {
-        type: this.incomingFileMetadata.type,
-      })
-      this.emit("file-received", blob, this.incomingFileMetadata)
-      this.saveReceivedFile(blob)
-    } else {
-      this.log("File not yet fully received, will save when complete")
+    // Send acceptance confirmation to sender (sender will start streaming)
+    if (this.fileChannel?.readyState === "open") {
+      this.fileChannel.send(JSON.stringify({type: "file-accepted"}))
     }
+
+    this.log("Waiting for file data...")
   }
 
   rejectFileTransfer() {
     this.log("File transfer rejected")
+
+    // Send rejection to sender
+    if (this.fileChannel?.readyState === "open") {
+      this.fileChannel.send(JSON.stringify({type: "file-rejected"}))
+    }
+
     this.incomingFileMetadata = null
     this.receivedFileData = []
     this.receivedFileSize = 0
@@ -490,42 +504,94 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   }
 
   sendFile(file: File) {
-    if (this.peerConnection.connectionState === "connected") {
-      // Create a unique file channel name
-      const fileChannelName = `fileChannel-${Date.now()}`
-      const fileChannel = this.peerConnection.createDataChannel(fileChannelName)
-      this.setFileChannel(fileChannel)
+    if (this.peerConnection.connectionState !== "connected") {
+      webrtcLogger.error(this.peerId, "Peer connection not connected")
+      return
+    }
 
-      // Send file metadata over the file channel
-      const metadata = {
-        type: "file-metadata",
-        metadata: {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        },
+    // Create a unique file channel name
+    const fileChannelName = `fileChannel-${Date.now()}`
+    const fileChannel = this.peerConnection.createDataChannel(fileChannelName)
+    this.setFileChannel(fileChannel)
+
+    // Send file metadata over the file channel
+    const metadata = {
+      type: "file-metadata",
+      metadata: {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      },
+    }
+
+    const originalOnMessage = fileChannel.onmessage
+    fileChannel.onmessage = (event) => {
+      if (typeof event.data === "string") {
+        const data = JSON.parse(event.data)
+        if (data.type === "file-accepted") {
+          this.log("↓ File accepted by receiver, starting transfer")
+          startSending()
+        } else if (data.type === "file-rejected") {
+          this.log("↓ File rejected by receiver")
+          fileChannel.close()
+          this.fileChannel = null
+        }
       }
-      fileChannel.onopen = () => {
-        this.log(`↑ File: ${file.name}`)
-        fileChannel.send(JSON.stringify(metadata))
+      if (originalOnMessage) {
+        originalOnMessage.call(fileChannel, event)
+      }
+    }
 
-        // Read and send the file as binary data
+    fileChannel.onopen = () => {
+      this.log(`↑ File: ${file.name} (${file.size} bytes)`)
+      fileChannel.send(JSON.stringify(metadata))
+      this.log("Waiting for receiver acceptance...")
+    }
+
+    const startSending = () => {
+      // Send file in chunks to avoid buffer overflow
+      const CHUNK_SIZE = 16384 // 16KB chunks
+      let offset = 0
+
+      const sendChunk = () => {
+        // Check buffer before sending
+        if (fileChannel.bufferedAmount > CHUNK_SIZE * 4) {
+          // Buffer too full, wait and retry
+          setTimeout(sendChunk, 100)
+          return
+        }
+
+        const chunk = file.slice(offset, offset + CHUNK_SIZE)
         const reader = new FileReader()
+
         reader.onload = () => {
           if (reader.result && reader.result instanceof ArrayBuffer) {
             fileChannel.send(reader.result)
-            this.log("File sent")
-            // Close channel after sending
-            setTimeout(() => {
-              fileChannel.close()
-              this.fileChannel = null
-            }, 100)
+            offset += reader.result.byteLength
+
+            const progress = Math.round((offset / file.size) * 100)
+            this.emit("file-progress", progress, "send")
+
+            if (offset % (CHUNK_SIZE * 10) === 0 || offset >= file.size) {
+              this.log(`File send progress: ${progress}%`)
+            }
+
+            if (offset < file.size) {
+              sendChunk()
+            } else {
+              this.log("File sent")
+              setTimeout(() => {
+                fileChannel.close()
+                this.fileChannel = null
+              }, 100)
+            }
           }
         }
-        reader.readAsArrayBuffer(file)
+
+        reader.readAsArrayBuffer(chunk)
       }
-    } else {
-      webrtcLogger.error(this.peerId, "Peer connection not connected")
+
+      sendChunk()
     }
   }
 

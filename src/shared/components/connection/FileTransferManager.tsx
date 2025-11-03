@@ -12,6 +12,7 @@ type FileTransferRequest = {
     size: number
     type: string
   }
+  progress?: number
 }
 
 export function FileTransferManager() {
@@ -67,8 +68,16 @@ export function FileTransferManager() {
         setRequests((prev) => {
           // Avoid duplicates
           if (prev.some((r) => r.sessionId === sessionId)) return prev
-          return [...prev, {sessionId, pubkey, metadata}]
+          return [...prev, {sessionId, pubkey, metadata, progress: 0}]
         })
+      }
+    }
+
+    const handleFileProgress = (sessionId: string) => {
+      return (progress: number) => {
+        setRequests((prev) =>
+          prev.map((r) => (r.sessionId === sessionId ? {...r, progress} : r))
+        )
       }
     }
 
@@ -88,6 +97,7 @@ export function FileTransferManager() {
           const listener = handleFileIncoming(sessionId, pubkey)
           attachedListeners.set(sessionId, listener)
           conn.on("file-incoming", listener)
+          conn.on("file-progress", handleFileProgress(sessionId))
           conn.on("close", handleFileClose(sessionId))
         }
       }
@@ -169,6 +179,21 @@ export function FileTransferManager() {
                   {formatFileSize(request.metadata.size)}
                 </div>
               </div>
+
+              {/* Progress bar */}
+              {request.progress !== undefined && request.progress > 0 && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span>Receiving...</span>
+                    <span>{request.progress}%</span>
+                  </div>
+                  <progress
+                    className="progress progress-primary w-full"
+                    value={request.progress}
+                    max="100"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-3">
