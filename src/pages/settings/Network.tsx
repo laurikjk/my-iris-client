@@ -25,7 +25,11 @@ export function Network() {
   const {showRelayIndicator, setShowRelayIndicator} = useUIStore()
   const {network, updateNetwork} = useSettingsStore()
 
-  const [p2pStats, setP2pStats] = useState({eventsSent: 0, eventsReceived: 0})
+  const [p2pStats, setP2pStats] = useState({
+    eventsSent: 0,
+    eventsReceived: 0,
+    subscriptionsServed: 0,
+  })
 
   useEffect(() => {
     const loadStats = async () => {
@@ -41,7 +45,7 @@ export function Network() {
 
   const handleResetP2PStats = async () => {
     await resetP2PStats()
-    setP2pStats({eventsSent: 0, eventsReceived: 0})
+    setP2pStats({eventsSent: 0, eventsReceived: 0, subscriptionsServed: 0})
   }
 
   const appVersion = import.meta.env.VITE_APP_VERSION || "dev"
@@ -319,12 +323,16 @@ export function Network() {
                     Reset
                   </button>
                 </div>
-                <div className="flex gap-4 text-sm">
+                <div className="flex gap-4 text-sm flex-wrap">
                   <span>
                     Sent: <span className="font-mono">{p2pStats.eventsSent}</span>
                   </span>
                   <span>
                     Received: <span className="font-mono">{p2pStats.eventsReceived}</span>
+                  </span>
+                  <span>
+                    Subs served:{" "}
+                    <span className="font-mono">{p2pStats.subscriptionsServed}</span>
                   </span>
                 </div>
               </div>
