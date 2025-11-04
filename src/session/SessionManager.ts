@@ -616,12 +616,11 @@ export default class SessionManager {
       }
 
       for (const session of deviceRecord.inactiveSessions) {
-        this.removeSessionSubscription(this.ourPublicKey, deviceId, session.name)
+        this.removeSessionSubscription(publicKey, deviceId, session.name)
       }
 
       userRecord.devices.delete(deviceId)
-      await this.storeUserRecord(this.ourPublicKey).catch(console.error)
-      console.warn("cleaned up device", deviceId, "for user", publicKey, userRecord)
+      await this.storeUserRecord(publicKey).catch(console.error)
     }
   }
 
