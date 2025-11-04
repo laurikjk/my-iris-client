@@ -191,20 +191,18 @@ export default class SessionManager {
       },
       (event: VerifiedEvent) => {
         try {
-          const hasInviteMetadata = event.tags?.some(
+          const isTombstone = !event.tags?.some(
             ([key]) => key === "ephemeralKey" || key === "sharedSecret"
           )
-          if (hasInviteMetadata) {
-            return
+          if (isTombstone) {
+            const deviceIdTag = event.tags.find(
+              ([key, value]) => key === "d" && value.startsWith("double-ratchet/invites/")
+            )
+            const [, deviceId] = deviceIdTag || []
+            if (!deviceId) return
+
+            this.cleanupDevice(deviceId)
           }
-
-          const deviceIdTag = event.tags.find(
-            ([key, value]) => key === "d" && value.startsWith("double-ratchet/invites/")
-          )
-          const [, deviceId] = deviceIdTag || []
-          if (!deviceId) return
-
-          this.cleanupDevice(deviceId)
         } catch (error) {
           console.error("Failed to handle device tombstone:", error)
         }
