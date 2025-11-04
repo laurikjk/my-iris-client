@@ -804,6 +804,7 @@ export default class SessionManager {
                 devices: userRecordData.devices.map((device) => ({
                   deviceId: device.deviceId,
                   activeSession: null,
+                  createdAt: device.createdAt,
                   inactiveSessions: [],
                 })),
               }
