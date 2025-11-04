@@ -159,7 +159,6 @@ class PeerConnectionManager extends EventEmitter<{
   private async sendPresencePing() {
     if (!this.myPeerId) return
 
-    webrtcLogger.info(undefined, "Sending presence ping (hello)")
     // Always send hello to enable connecting to own devices/sessions
     // (subscription includes own pubkey even with no mutual follows)
     await sendSignalingMessage({

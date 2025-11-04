@@ -99,11 +99,6 @@ export function subscribeToSignaling(
   webrtcLogger.info(undefined, `Signaling subscription started: ${sub.internalId}`)
 
   sub.on("event", async (event: NDKEvent) => {
-    webrtcLogger.debug(
-      undefined,
-      `Received signaling event from ${event.pubkey.slice(0, 8)}, kind=${event.kind}, tags=${event.tags.length}`
-    )
-
     // Skip expired events
     const expiration = event.tags.find((tag) => tag[0] === "expiration")?.[1]
     if (expiration && parseInt(expiration) < Date.now() / 1000) {

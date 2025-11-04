@@ -1,6 +1,6 @@
 import NDK, {NDKEvent, type NDKFilter, type NDKSubscription, type NDKSubscriptionOptions} from "@/lib/ndk"
 import type {NDKTransportPlugin} from "@/lib/ndk-transport-plugin"
-import {mergeFilters} from "@/lib/ndk/subscription/grouping"
+import {mergeFilters, filterFingerprint, type NDKFilterFingerprint} from "@/lib/ndk/subscription/grouping"
 import {getAllConnections} from "./PeerConnection"
 import {webrtcLogger} from "./Logger"
 import socialGraph from "@/utils/socialGraph"
@@ -30,8 +30,8 @@ type FilterGroup = {
   timeout: NodeJS.Timeout
 }
 
-const filterGroups = new Map<string, FilterGroup>()
-const recentSubs = new Map<string, number>()
+const filterGroups = new Map<NDKFilterFingerprint, FilterGroup>()
+const recentSubs = new Map<NDKFilterFingerprint, number>()
 const SUB_DEDUPE_WINDOW = 5000
 
 // Cleanup intervals
@@ -51,43 +51,7 @@ setInterval(() => {
 }, 10000)
 
 
-/**
- * Generate grouping key from filter
- */
-function getGroupingKey(filter: NDKFilter): string {
-  const parts: string[] = []
-
-  if (filter.authors?.length) {
-    parts.push(`authors:${filter.authors.sort().join(",")}`)
-  }
-  if (filter["#p"]?.length) {
-    parts.push(`#p:${filter["#p"].sort().join(",")}`)
-  }
-  if (filter["#e"]?.length) {
-    parts.push(`#e:${filter["#e"].sort().join(",")}`)
-  }
-
-  return parts.length > 0 ? parts.join("|") : crypto.randomUUID()
-}
-
-/**
- * Generate stable hash for filter deduplication
- */
-function getFilterHash(filter: NDKFilter): string {
-  const normalized: Record<string, unknown> = {}
-  const keys = Object.keys(filter).sort()
-  for (const key of keys) {
-    const value = filter[key as keyof NDKFilter]
-    if (Array.isArray(value)) {
-      normalized[key] = [...value].sort()
-    } else {
-      normalized[key] = value
-    }
-  }
-  return JSON.stringify(normalized)
-}
-
-function sendGroupedFilters(groupKey: string) {
+function sendGroupedFilters(groupKey: NDKFilterFingerprint) {
   const group = filterGroups.get(groupKey)
   if (!group) return
 
@@ -105,20 +69,8 @@ function sendGroupedFilters(groupKey: string) {
 
     try {
       conn.sendJsonData(message)
-      const filterSummary = merged
-        .map((f) => {
-          const parts = []
-          if (f.kinds) parts.push(`kinds:${f.kinds.join(",")}`)
-          if (f.authors) parts.push(`authors:${f.authors.length}`)
-          if (f["#p"]) parts.push(`#p:${f["#p"].length}`)
-          if (f["#e"]) parts.push(`#e:${f["#e"].length}`)
-          if (f.since) parts.push(`since:${f.since}`)
-          if (f.until) parts.push(`until:${f.until}`)
-          if (f.limit) parts.push(`limit:${f.limit}`)
-          return `{${parts.join(", ")}}`
-        })
-        .join(", ")
-      webrtcLogger.debug(peerId, `REQ ${subId} [${filterSummary}]`, "up")
+      const filterStr = JSON.stringify(merged).slice(0, 200)
+      webrtcLogger.debug(peerId, `REQ ${subId} ${filterStr}`, "up")
     } catch (error) {
       webrtcLogger.error(peerId, "Failed to send subscription")
     }
@@ -185,7 +137,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
             : eventJson.content || ""
         webrtcLogger.debug(
           peerId,
-          `kind ${eventJson.kind} ${eventJson.id?.slice(0, 8)} ${contentPreview}`,
+          `EVENT kind ${eventJson.kind} ${eventJson.id?.slice(0, 8)} ${contentPreview}`,
           "up"
         )
       } catch (error) {
@@ -215,27 +167,42 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
    * Send filters to WebRTC peers with batching
    */
   private sendToWebRTC(filters: NDKFilter[]): void {
-    // Use subscription grouping/batching
-    for (const filter of filters) {
-      // Check if we sent this filter recently (avoid loops)
-      const filterHash = getFilterHash(filter)
-      const lastSent = recentSubs.get(filterHash)
-      if (lastSent && Date.now() - lastSent < SUB_DEDUPE_WINDOW) {
-        continue
-      }
-      recentSubs.set(filterHash, Date.now())
+    // Use NDK's fingerprint for grouping
+    const fingerprint = filterFingerprint(filters, false)
+    if (!fingerprint) {
+      // Non-groupable filters, send immediately
+      const subId = crypto.randomUUID()
+      const connections = getAllConnections()
+      const message = ["REQ", subId, ...filters]
 
-      const groupKey = getGroupingKey(filter)
-      const existing = filterGroups.get(groupKey)
-
-      if (existing) {
-        existing.filters.push(filter)
-        clearTimeout(existing.timeout)
-        existing.timeout = setTimeout(() => sendGroupedFilters(groupKey), GROUPING_DELAY)
-      } else {
-        const timeout = setTimeout(() => sendGroupedFilters(groupKey), GROUPING_DELAY)
-        filterGroups.set(groupKey, {filters: [filter], timeout})
+      for (const [peerId, conn] of connections.entries()) {
+        if (conn.dataChannel?.readyState !== "open") continue
+        try {
+          conn.sendJsonData(message)
+          const filterStr = JSON.stringify(filters).slice(0, 200)
+          webrtcLogger.debug(peerId, `REQ ${subId} ${filterStr}`, "up")
+        } catch (error) {
+          webrtcLogger.error(peerId, "Failed to send subscription")
+        }
       }
+      return
+    }
+
+    // Check if we sent this fingerprint recently (avoid loops)
+    const lastSent = recentSubs.get(fingerprint)
+    if (lastSent && Date.now() - lastSent < SUB_DEDUPE_WINDOW) {
+      return
+    }
+    recentSubs.set(fingerprint, Date.now())
+
+    const existing = filterGroups.get(fingerprint)
+    if (existing) {
+      existing.filters.push(...filters)
+      clearTimeout(existing.timeout)
+      existing.timeout = setTimeout(() => sendGroupedFilters(fingerprint), GROUPING_DELAY)
+    } else {
+      const timeout = setTimeout(() => sendGroupedFilters(fingerprint), GROUPING_DELAY)
+      filterGroups.set(fingerprint, {filters: [...filters], timeout})
     }
   }
 
@@ -302,7 +269,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
             : eventJson.content || ""
         webrtcLogger.debug(
           peerId,
-          `relayed kind ${eventJson.kind} ${eventJson.id.slice(0, 8)} ${contentPreview}`,
+          `EVENT relayed kind ${eventJson.kind} ${eventJson.id.slice(0, 8)} ${contentPreview}`,
           "up"
         )
       } catch (error) {
@@ -368,7 +335,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       peerPubkey === event.pubkey ? "" : ` author: ${authorName} (${event.pubkey.slice(0, 8)})`
     webrtcLogger.debug(
       peerId,
-      `kind ${event.kind}${authorInfo} ${event.id?.slice(0, 8)} ${contentPreview}`,
+      `EVENT kind ${event.kind}${authorInfo} ${event.id?.slice(0, 8)} ${contentPreview}`,
       "down"
     )
 
@@ -419,20 +386,8 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
   handleIncomingREQ(peerId: string, subId: string, filters: unknown[]): void {
     if (!this.ndk) return
 
-    const filterSummary = (filters as NDKFilter[])
-      .map((f) => {
-        const parts = []
-        if (f.kinds) parts.push(`kinds:${f.kinds.join(",")}`)
-        if (f.authors) parts.push(`authors:${f.authors.length}`)
-        if (f["#p"]) parts.push(`#p:${f["#p"].length}`)
-        if (f["#e"]) parts.push(`#e:${f["#e"].length}`)
-        if (f.since) parts.push(`since:${f.since}`)
-        if (f.until) parts.push(`until:${f.until}`)
-        if (f.limit) parts.push(`limit:${f.limit}`)
-        return `{${parts.join(", ")}}`
-      })
-      .join(", ")
-    webrtcLogger.debug(peerId, `REQ ${subId} [${filterSummary}]`, "down")
+    const filterStr = JSON.stringify(filters).slice(0, 200)
+    webrtcLogger.debug(peerId, `REQ ${subId} ${filterStr}`, "down")
 
     // Rate limit incoming subscriptions
     if (!incomingSubRateLimiter.check(peerId)) {
