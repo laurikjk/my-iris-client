@@ -9,8 +9,7 @@ import {confirm, alert} from "@/utils/utils"
 interface DeviceInfo {
   id: string
   isCurrent: boolean
-  notYetPropagated?: boolean
-  timestamp?: number
+  createdAt: number
 }
 
 const ChatSettings = () => {
@@ -26,7 +25,6 @@ const ChatSettings = () => {
     const currentDeviceId = manager.getDeviceId()
     const userRecord = manager.getUserRecords().get(publicKey)
 
-    console.warn("User Record:", userRecord)
     if (!userRecord) return []
 
     const currentDevice = userRecord.devices.get(currentDeviceId)
@@ -39,7 +37,7 @@ const ChatSettings = () => {
       .map((device) => ({
         id: device.deviceId,
         isCurrent: device.deviceId === currentDeviceId,
-        notYetPropagated: false, // TODO change
+        createdAt: device.createdAt,
       }))
 
     return deviceList
@@ -154,15 +152,10 @@ const ChatSettings = () => {
                           {device.isCurrent && (
                             <span className="badge badge-primary badge-sm">Current</span>
                           )}
-                          {device.notYetPropagated && (
-                            <span className="badge badge-warning badge-sm">
-                              Not yet on relays
-                            </span>
-                          )}
                         </div>
-                        {device.timestamp && (
+                        {device.createdAt && (
                           <div className="text-xs text-base-content/50">
-                            {new Date(device.timestamp * 1000).toLocaleString()}
+                            {new Date(device.createdAt * 1000).toLocaleString()}
                           </div>
                         )}
                       </div>
