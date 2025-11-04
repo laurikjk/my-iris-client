@@ -6,13 +6,13 @@ import NDK, {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 import {useUserStore} from "../../stores/user"
 import {hexToBytes} from "nostr-tools/utils"
+import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 const createSubscribe = (ndk: NDK): NostrSubscribe => {
   return (filter: NDKFilter, onEvent: (event: VerifiedEvent) => void) => {
     const subscription = ndk.subscribe(filter)
 
     subscription.on("event", (event: NDKEvent) => {
-      console.warn("PrivateChats received event:", event.kind, event.id)
       onEvent(event as unknown as VerifiedEvent)
     })
 
@@ -28,9 +28,7 @@ const createSubscribe = (ndk: NDK): NostrSubscribe => {
 const createPublish = (ndk: NDK): NostrPublish => {
   return (async (event) => {
     const e = new NDKEvent(ndk, event)
-    console.warn("PrivateChats publishing event:", e)
-    await e.publish()
-    console.warn("PrivateChats published event:", e.kind, e.id, e.sig)
+    await publishEvent(e)
     return event
   }) as NostrPublish
 }
