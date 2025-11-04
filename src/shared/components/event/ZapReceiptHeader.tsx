@@ -22,7 +22,7 @@ function ZapReceiptHeader({event}: ZapReceiptHeaderProps) {
     if (invoice) {
       const decodedInvoice = decode(invoice)
       const amountSection = decodedInvoice.sections.find(
-        (section: any) => section.name === "amount"
+        (section: {name: string}) => section.name === "amount"
       )
       if (amountSection && "value" in amountSection) {
         setZappedAmount(Math.floor(parseInt(amountSection.value) / 1000))

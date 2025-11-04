@@ -1,9 +1,4 @@
-import NDK, {
-  NDKEvent,
-  type NDKFilter,
-  type NDKSubscription,
-  type NDKSubscriptionOptions,
-} from "@/lib/ndk"
+import NDK, {NDKEvent, type NDKFilter, type NDKSubscription} from "@/lib/ndk"
 import type {NDKTransportPlugin} from "@/lib/ndk-transport-plugin"
 import {
   mergeFilters,
@@ -17,7 +12,6 @@ import {RateLimiter} from "./RateLimiter"
 import {getCachedName} from "@/utils/nostr"
 import {shouldHideUser} from "@/utils/visibility"
 import {incrementSent, incrementReceived, incrementSubscriptionsServed} from "./p2pStats"
-import {KIND_APP_DATA} from "@/utils/constants"
 
 // Event kinds that bypass follow check but are rate limited
 const PRIVATE_MESSAGE_KINDS = [1059, 1060] // INVITE_RESPONSE, MESSAGE_EVENT
@@ -133,8 +127,6 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
         incrementSent()
         conn.seenEvents.set(eventJson.id, true)
 
-        const peerPubkey = peerId.split(":")[0]
-        const peerName = getCachedName(peerPubkey)
         const contentPreview =
           eventJson.content && eventJson.content.length > 50
             ? eventJson.content.slice(0, 50) + "..."
@@ -154,11 +146,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
    * Send subscription requests to WebRTC peers
    * NDK has already decided this subscription should use WebRTC
    */
-  onSubscribe(
-    subscription: NDKSubscription,
-    filters: NDKFilter[],
-    opts?: NDKSubscriptionOptions
-  ): void {
+  onSubscribe(subscription: NDKSubscription, filters: NDKFilter[]): void {
     this.sendToWebRTC(filters)
 
     // Attach event listener to forward relay events to peers
@@ -265,8 +253,6 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
         conn.seenEvents.set(eventJson.id, true)
         incrementSent()
 
-        const peerPubkey = peerId.split(":")[0]
-        const peerName = getCachedName(peerPubkey)
         const contentPreview =
           eventJson.content && eventJson.content.length > 50
             ? eventJson.content.slice(0, 50) + "..."
@@ -289,7 +275,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
   handleIncomingEvent(peerId: string, eventJson: unknown): NDKEvent | null {
     if (!this.ndk) return null
 
-    const event = new NDKEvent(this.ndk, eventJson as any)
+    const event = new NDKEvent(this.ndk, eventJson as Record<string, unknown>)
 
     // Rate limit only private messages from unknown senders
     const isPrivateMessage = PRIVATE_MESSAGE_KINDS.includes(event.kind || 0)

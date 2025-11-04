@@ -28,7 +28,7 @@ export async function getZapAmount(event: NDKEvent) {
   if (invoice) {
     const decodedInvoice = decode(invoice)
     const amountSection = decodedInvoice.sections.find(
-      (section: any) => section.name === "amount"
+      (section: {name: string}) => section.name === "amount"
     )
     if (amountSection && "value" in amountSection) {
       // Convert millisatoshis to bits
@@ -53,7 +53,7 @@ export const fetchZappedAmount = async (event: NDKEvent): Promise<number> => {
         if (invoice) {
           const decodedInvoice = decode(invoice)
           const amountSection = decodedInvoice.sections.find(
-            (section: any) => section.name === "amount"
+            (section: {name: string}) => section.name === "amount"
           )
           if (amountSection && "value" in amountSection) {
             // Convert millisatoshis to bits
@@ -232,7 +232,7 @@ export function parseZapReceipt(zapEvent: NDKEvent): ZapInfo | null {
   try {
     const decodedInvoice = decode(invoice)
     const amountSection = decodedInvoice.sections.find(
-      (section: any) => section.name === "amount"
+      (section: {name: string}) => section.name === "amount"
     )
 
     if (!amountSection || !("value" in amountSection)) return null

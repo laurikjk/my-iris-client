@@ -5,8 +5,6 @@ import NDK, {
   NDKRelay,
   NDKRelayAuthPolicies,
   NDKUser,
-  NDKEvent,
-  NDKSubscription,
 } from "@/lib/ndk"
 import NDKCacheAdapterDexie from "@/lib/ndk-cache"
 import {useUserStore} from "@/stores/user"
@@ -15,7 +13,6 @@ import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {relayLogger} from "@/utils/relay/RelayLogger"
 import {WebRTCTransportPlugin} from "@/utils/chat/webrtc/WebRTCTransportPlugin"
 import {setWebRTCPlugin} from "@/utils/chat/webrtc/p2pMessages"
-import {useSettingsStore} from "@/stores/settings"
 import {shouldHideEvent} from "@/utils/visibility"
 
 let ndkInstance: NDK | null = null
