@@ -2,6 +2,7 @@ import {useEffect, useState, ChangeEvent, KeyboardEvent} from "react"
 import {RiDeleteBinLine, RiFileCopyLine} from "@remixicon/react"
 import {type FeedConfig} from "@/stores/feed"
 import MultiRelaySelector from "@/shared/components/ui/MultiRelaySelector"
+import MultiUserSelector from "@/shared/components/ui/MultiUserSelector"
 import EventKindsSelector from "@/shared/components/ui/EventKindsSelector"
 import {GeohashField} from "./FeedEditor/GeohashField"
 import {FollowDistanceField} from "./FeedEditor/FollowDistanceField"
@@ -324,6 +325,68 @@ function FeedEditor({
         }}
         showLabel={true}
       />
+
+      {/* Authors Filter */}
+      <div className="flex items-start gap-2">
+        <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">Authors</span>
+        <div className="flex-1">
+          <MultiUserSelector
+            selectedPubkeys={localConfig.filter?.authors || []}
+            onPubkeysChange={(pubkeys) => {
+              const currentFilter = localConfig.filter || {}
+              if (pubkeys.length === 0) {
+                // Remove authors property if no pubkeys selected
+                const filterWithoutAuthors = Object.fromEntries(
+                  Object.entries(currentFilter).filter(([key]) => key !== "authors")
+                )
+                updateConfig(
+                  "filter",
+                  Object.keys(filterWithoutAuthors).length > 0
+                    ? filterWithoutAuthors
+                    : undefined
+                )
+              } else {
+                updateConfig("filter", {...currentFilter, authors: pubkeys})
+              }
+            }}
+            placeholder="All users"
+          />
+          <span className="text-xs text-base-content/50 mt-1 block">
+            Filter by specific authors
+          </span>
+        </div>
+      </div>
+
+      {/* Mentioned Users Filter */}
+      <div className="flex items-start gap-2">
+        <span className="text-sm text-base-content/70 min-w-[7rem] pt-2">
+          Mentioned Users
+        </span>
+        <div className="flex-1">
+          <MultiUserSelector
+            selectedPubkeys={localConfig.filter?.["#p"] || []}
+            onPubkeysChange={(pubkeys) => {
+              const currentFilter = localConfig.filter || {}
+              if (pubkeys.length === 0) {
+                // Remove #p property if no pubkeys selected
+                const filterWithoutP = Object.fromEntries(
+                  Object.entries(currentFilter).filter(([key]) => key !== "#p")
+                )
+                updateConfig(
+                  "filter",
+                  Object.keys(filterWithoutP).length > 0 ? filterWithoutP : undefined
+                )
+              } else {
+                updateConfig("filter", {...currentFilter, "#p": pubkeys})
+              }
+            }}
+            placeholder="All users"
+          />
+          <span className="text-xs text-base-content/50 mt-1 block">
+            Filter by users mentioned/tagged in posts
+          </span>
+        </div>
+      </div>
 
       {/* Checkboxes */}
       <div className="flex flex-col gap-2">{renderCommonCheckboxes(updateConfig)}</div>

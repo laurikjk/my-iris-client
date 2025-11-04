@@ -5,8 +5,10 @@ export interface FeedFilter {
   since?: number
   limit?: number
   search?: string
+  authors?: string[]
   "#e"?: string[]
   "#g"?: string[]
+  "#p"?: string[]
   "#t"?: string[]
 }
 

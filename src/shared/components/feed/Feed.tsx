@@ -63,8 +63,14 @@ const Feed = memo(function Feed({
   // Enhance filters with authors list for follow-distance-based feeds
   const filters = useMemo(() => {
     const baseFilters = feedConfig.filter as unknown as NDKFilter
+    const customAuthors = baseFilters.authors || []
 
-    // Set authors based on followDistance for better relay-level filtering
+    // If custom authors defined, ignore followDistance and use authors as-is
+    if (customAuthors.length > 0) {
+      return baseFilters
+    }
+
+    // No custom authors: apply followDistance-based author filtering
     if (feedConfig.followDistance === 0 && myPubKey) {
       // followDistance 0: only our own posts
       return {
