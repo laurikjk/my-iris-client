@@ -32,13 +32,12 @@ export interface NDKTransportPlugin {
    * @param subscription - The subscription being created
    * @param filters - The filters for this subscription
    * @param opts - Subscription options
-   * @returns false to prevent relay subscription, true/undefined to allow
    */
   onSubscribe?(
     subscription: NDKSubscription,
     filters: NDKFilter[],
     opts?: NDKSubscriptionOptions
-  ): boolean | void
+  ): void
 
   /**
    * Called when a subscription is stopped

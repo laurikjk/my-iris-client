@@ -151,6 +151,15 @@ export interface NDKSubscriptionOptions {
   relayUrls?: string[]
 
   /**
+   * Transport hints for routing this subscription.
+   * When specified, overrides global transport routing settings.
+   * @example ["relays"] - only use relays
+   * @example ["webrtc"] - only use WebRTC peers
+   * @example ["relays", "webrtc"] - use both (default)
+   */
+  transports?: ("relays" | "webrtc" | "bluetooth")[]
+
+  /**
    * When set, the cache will be queried first, and, when hitting relays,
    * a `since` filter will be added to the subscription that is one second
    * after the last event received from the cache.

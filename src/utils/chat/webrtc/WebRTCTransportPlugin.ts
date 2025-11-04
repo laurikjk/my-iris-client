@@ -60,28 +60,20 @@ function isSignalingSubscription(filters: NDKFilter[]): boolean {
 }
 
 /**
- * Determine routing for a subscription based on filters and mode
- * Returns { toRelays: boolean, toWebRTC: boolean }
+ * Check if WebRTC transport should handle this subscription
+ * Based on subscription options or defaults
  */
-function routeSubscription(
+function shouldUseWebRTC(
   filters: NDKFilter[],
-  p2pOnlyMode: boolean
-): {toRelays: boolean; toWebRTC: boolean} {
-  const isSignaling = isSignalingSubscription(filters)
-
-  if (p2pOnlyMode) {
-    // P2P-only mode: signaling → relays, everything else → WebRTC
-    return {
-      toRelays: isSignaling,
-      toWebRTC: !isSignaling,
-    }
+  opts?: NDKSubscriptionOptions
+): boolean {
+  // Check explicit transport hints
+  if (opts?.transports) {
+    return opts.transports.includes("webrtc")
   }
 
-  // Normal mode: signaling → relays only, everything else → both
-  return {
-    toRelays: true, // NDK already sent to relays
-    toWebRTC: !isSignaling,
-  }
+  // Don't send signaling subscriptions to peers
+  return !isSignalingSubscription(filters)
 }
 
 /**
@@ -165,19 +157,10 @@ function sendGroupedFilters(groupKey: string) {
 export class WebRTCTransportPlugin implements NDKTransportPlugin {
   readonly name = "webrtc"
   private ndk?: NDK
-  private p2pOnlyMode = false
 
   initialize(ndk: NDK): void {
     this.ndk = ndk
     webrtcLogger.info(undefined, "WebRTC transport plugin initialized")
-  }
-
-  /**
-   * Set P2P-only mode (skip relays for non-signaling events)
-   */
-  setP2POnlyMode(enabled: boolean): void {
-    this.p2pOnlyMode = enabled
-    webrtcLogger.info(undefined, `P2P-only mode: ${enabled}`)
   }
 
   /**
@@ -238,29 +221,15 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
 
   /**
    * Send subscription requests to WebRTC peers
-   * Returns false to block relay subscription in P2P-only mode
    */
   onSubscribe(
     subscription: NDKSubscription,
     filters: NDKFilter[],
     opts?: NDKSubscriptionOptions
-  ): boolean | void {
-    // Route subscription based on filters and mode
-    const routing = routeSubscription(filters, this.p2pOnlyMode)
-
-    // Block relay subscription if routing says no
-    if (!routing.toRelays) {
-      webrtcLogger.info(undefined, "Blocking relay subscription (P2P-only mode)")
-      // Still need to send to WebRTC peers if routed there
-      if (routing.toWebRTC) {
-        this.sendToWebRTC(filters)
-      }
-      return false // Block relay subscription
-    }
-
-    // Skip WebRTC if not routed there
-    if (!routing.toWebRTC) {
-      return // Allow relay subscription
+  ): void {
+    // Check if WebRTC should handle this subscription
+    if (!shouldUseWebRTC(filters, opts)) {
+      return
     }
 
     this.sendToWebRTC(filters)

@@ -886,6 +886,35 @@ export class NDK extends EventEmitter<{
    *
    * @since 2.13.0 `relaySet` parameter removed; pass `relaySet` or `relayUrls` via `opts`.
    */
+  /**
+   * Determine which transports to use for a subscription
+   * @param filters - Subscription filters
+   * @param opts - Subscription options
+   * @returns Array of transport names to use
+   */
+  private getTransportsForSubscription(
+    filters: NDKFilter[],
+    opts?: NDKSubscriptionOptions
+  ): string[] {
+    // Explicit transport hints in options take precedence
+    if (opts?.transports && opts.transports.length > 0) {
+      return opts.transports
+    }
+
+    // Check if this is a signaling subscription (WebRTC discovery)
+    const isSignaling = filters.some(
+      (filter) => filter.kinds?.includes(30078) && filter["#l"]?.includes("webrtc")
+    )
+
+    // Signaling always goes to relays only
+    if (isSignaling) {
+      return ["relays"]
+    }
+
+    // Default: use all available transports
+    return ["relays", "webrtc"]
+  }
+
   public subscribe(
     filters: NDKFilter | NDKFilter[],
     opts?: NDKSubscriptionOptions,
@@ -930,17 +959,16 @@ export class NDK extends EventEmitter<{
       finalOpts
     )
 
-    // Notify transport plugins about new subscription
-    // If any plugin returns false, skip relay subscription
+    // Determine transport routing
     const filterArray = Array.isArray(filters) ? filters : [filters]
-    let allowRelaySubscription = true
+    const transports = this.getTransportsForSubscription(filterArray, finalOpts)
+    const allowRelaySubscription = transports.includes("relays")
+
+    // Notify transport plugins about new subscription
     for (const plugin of this.transportPlugins) {
       if (plugin.onSubscribe) {
         try {
-          const result = plugin.onSubscribe(subscription, filterArray, finalOpts)
-          if (typeof result === "boolean" && result === false) {
-            allowRelaySubscription = false
-          }
+          plugin.onSubscribe(subscription, filterArray, finalOpts)
         } catch (error) {
           console.error("[NDK] Transport plugin onSubscribe error:", error)
         }
