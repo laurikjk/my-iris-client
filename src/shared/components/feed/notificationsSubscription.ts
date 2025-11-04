@@ -142,8 +142,6 @@ export const startNotificationsSubscription = debounce(async (myPubKey?: string)
         socialGraph().getFollowDistance(event.pubkey) > maxFollowDistanceForReplies
       )
         return
-      // Use shouldHideEvent which checks both author and mentions
-      if (shouldHideEvent(event)) return
     } else {
       // For zap notifications, check the zapping user
       const zappingUser = getZappingUser(event)

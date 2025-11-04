@@ -16,6 +16,7 @@ import {relayLogger} from "@/utils/relay/RelayLogger"
 import {WebRTCTransportPlugin} from "@/utils/chat/webrtc/WebRTCTransportPlugin"
 import {setWebRTCPlugin} from "@/utils/chat/webrtc/p2pMessages"
 import {useSettingsStore} from "@/stores/settings"
+import {shouldHideEvent} from "@/utils/visibility"
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
@@ -108,6 +109,7 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
       enableOutboxModel: enableOutbox,
       autoConnectUserRelays,
       relayConnectionFilter,
+      muteFilter: (event) => shouldHideEvent(event),
 
       cacheAdapter: new NDKCacheAdapterDexie({
         dbName: "treelike-nostr",
@@ -234,7 +236,7 @@ function setupVisibilityReconnection(instance: NDK) {
 
 /**
  * Setup WebRTC transport plugin for P2P event distribution
- */ 
+ */
 function setupWebRTCTransport(instance: NDK) {
   const plugin = new WebRTCTransportPlugin()
   plugin.initialize(instance)

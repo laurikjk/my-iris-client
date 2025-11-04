@@ -1,17 +1,22 @@
-import NDK, {NDKEvent, type NDKFilter, type NDKSubscription, type NDKSubscriptionOptions} from "@/lib/ndk"
+import NDK, {
+  NDKEvent,
+  type NDKFilter,
+  type NDKSubscription,
+  type NDKSubscriptionOptions,
+} from "@/lib/ndk"
 import type {NDKTransportPlugin} from "@/lib/ndk-transport-plugin"
-import {mergeFilters, filterFingerprint, type NDKFilterFingerprint} from "@/lib/ndk/subscription/grouping"
+import {
+  mergeFilters,
+  filterFingerprint,
+  type NDKFilterFingerprint,
+} from "@/lib/ndk/subscription/grouping"
 import {getAllConnections} from "./PeerConnection"
 import {webrtcLogger} from "./Logger"
 import socialGraph from "@/utils/socialGraph"
 import {RateLimiter} from "./RateLimiter"
 import {getCachedName} from "@/utils/nostr"
 import {shouldHideUser} from "@/utils/visibility"
-import {
-  incrementSent,
-  incrementReceived,
-  incrementSubscriptionsServed,
-} from "./p2pStats"
+import {incrementSent, incrementReceived, incrementSubscriptionsServed} from "./p2pStats"
 import {KIND_APP_DATA} from "@/utils/constants"
 
 // Event kinds that bypass follow check but are rate limited
@@ -49,7 +54,6 @@ setInterval(() => {
     }
   }
 }, 10000)
-
 
 function sendGroupedFilters(groupKey: NDKFilterFingerprint) {
   const group = filterGroups.get(groupKey)
@@ -332,7 +336,9 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
     const peerPubkey = peerId.split(":")[0]
     const authorName = getCachedName(event.pubkey)
     const authorInfo =
-      peerPubkey === event.pubkey ? "" : ` author: ${authorName} (${event.pubkey.slice(0, 8)})`
+      peerPubkey === event.pubkey
+        ? ""
+        : ` author: ${authorName} (${event.pubkey.slice(0, 8)})`
     webrtcLogger.debug(
       peerId,
       `EVENT kind ${event.kind}${authorInfo} ${event.id?.slice(0, 8)} ${contentPreview}`,
@@ -343,6 +349,12 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
     const senderConn = getAllConnections().get(peerId)
     if (senderConn) {
       senderConn.seenEvents.set(event.id, true)
+    }
+
+    // Check muteFilter before forwarding or processing
+    if (this.ndk.muteFilter && this.ndk.muteFilter(event)) {
+      webrtcLogger.debug(peerId, `Event muted, dropping ${event.id?.slice(0, 8)}`)
+      return null // Don't process or forward
     }
 
     // Forward to other peers who haven't seen it
@@ -425,7 +437,11 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
           }
 
           if (sentCount > 0) {
-            webrtcLogger.debug(peerId, `Sent ${sentCount} cached event(s) for ${subId}`, "up")
+            webrtcLogger.debug(
+              peerId,
+              `Sent ${sentCount} cached event(s) for ${subId}`,
+              "up"
+            )
           }
 
           // Send EOSE

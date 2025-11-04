@@ -10,7 +10,13 @@ import type {ReactNode} from "react"
 
 type Embed = {
   regex: RegExp
-  component: (props: {match: string; index?: number; event?: any; key: string; truncated?: boolean}) => ReactNode
+  component: (props: {
+    match: string
+    index?: number
+    event?: any
+    key: string
+    truncated?: boolean
+  }) => ReactNode
   settingsKey?: string
   inline?: boolean
 }

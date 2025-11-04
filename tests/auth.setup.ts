@@ -58,7 +58,9 @@ async function signIn(page, privateKey: string) {
   await keyInput.fill(privateKey)
 
   // Wait for sign in to complete (dialog closes automatically)
-  await expect(page.getByRole("heading", {name: "Sign in"})).not.toBeVisible({timeout: 10000})
+  await expect(page.getByRole("heading", {name: "Sign in"})).not.toBeVisible({
+    timeout: 10000,
+  })
   await expect(page.locator("#main-content").getByTestId("new-post-button")).toBeVisible({
     timeout: 10000,
   })
