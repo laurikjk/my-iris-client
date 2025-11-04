@@ -201,7 +201,7 @@ export default class SessionManager {
             const [, deviceId] = deviceIdTag || []
             if (!deviceId) return
 
-            this.cleanupDevice(deviceId)
+            this.cleanupDevice(authorPublicKey, deviceId)
           }
         } catch (error) {
           console.error("Failed to handle device tombstone:", error)
@@ -578,7 +578,7 @@ export default class SessionManager {
       console.error("Failed to publish device tombstone:", error)
     })
 
-    await this.cleanupDevice(deviceId)
+    await this.cleanupDevice(this.ourPublicKey, deviceId)
   }
 
   private async publishDeviceTombstone(deviceId: string): Promise<void> {
@@ -598,18 +598,13 @@ export default class SessionManager {
     await this.nostrPublish(deletionEvent)
   }
 
-  private async cleanupDevice(deviceId: string): Promise<void> {
-    const inviteKey = this.deviceInviteKey(deviceId)
-    await Promise.allSettled([
-      this.storage.del(inviteKey),
-      this.storage.del(`invite/${deviceId}`),
-    ])
+  private async cleanupDevice(publicKey: string, deviceId: string): Promise<void> {
+    const userRecord = this.userRecords.get(publicKey)
+    if (!userRecord) {
+      return
+    }
 
-    const ourRecord = this.userRecords.get(this.ourPublicKey)
-    if (!ourRecord) return
-
-    let recordChanged = false
-    const deviceRecord = ourRecord.devices.get(deviceId)
+    const deviceRecord = userRecord.devices.get(deviceId)
 
     if (deviceRecord) {
       if (deviceRecord.activeSession) {
@@ -624,12 +619,9 @@ export default class SessionManager {
         this.removeSessionSubscription(this.ourPublicKey, deviceId, session.name)
       }
 
-      ourRecord.devices.delete(deviceId)
-      recordChanged = true
-    }
-
-    if (recordChanged) {
+      userRecord.devices.delete(deviceId)
       await this.storeUserRecord(this.ourPublicKey).catch(console.error)
+      console.warn("cleaned up device", deviceId, "for user", publicKey, userRecord)
     }
   }
 
