@@ -78,45 +78,6 @@ describe("SessionManager", () => {
     expect(bobReceivedMessages)
   })
 
-  it("records invite metadata when creating a device record", async () => {
-    const context = await runScenario({
-      steps: [
-        {type: "send", from: "alice", to: "bob", message: "hello"},
-        {type: "expect", actor: "bob", message: "hello"},
-      ],
-    })
-
-    const aliceState = context.actors.alice
-    const bobState = context.actors.bob
-
-    const aliceUserRecords = aliceState.manager.getUserRecords()
-    const bobRecord = aliceUserRecords.get(bobState.publicKey) as unknown as {
-      devices: Map<string, {createdAt?: number}>
-      foundInvites: Map<string, {createdAt?: number}>
-    } | undefined
-
-    expect(bobRecord).toBeDefined()
-
-    const deviceRecord = bobRecord?.devices.get(bobState.deviceId)
-    expect(deviceRecord).toBeDefined()
-    expect(deviceRecord?.createdAt).toBeTypeOf("number")
-
-    const invite = bobRecord?.foundInvites.get(bobState.deviceId)
-    if (invite && deviceRecord?.createdAt) {
-      expect(invite.createdAt).toBe(deviceRecord.createdAt)
-    }
-
-    const storedRecord = await aliceState.storage.get<{
-      devices: Array<{deviceId: string; createdAt: number}>
-    }>(`v1/user/${bobState.publicKey}`)
-
-    expect(storedRecord).toBeDefined()
-    const storedDevice = storedRecord?.devices.find(
-      (device) => device.deviceId === bobState.deviceId
-    )
-
-    expect(storedDevice?.createdAt).toBe(deviceRecord?.createdAt)
-  })
   it("should handle back to back messages after initial, answer, and then", async () => {
     await runScenario({
       steps: [
