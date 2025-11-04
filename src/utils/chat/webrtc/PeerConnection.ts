@@ -334,7 +334,10 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
       // Show user-friendly error message
       const {useToastStore} = await import("@/stores/toast")
-      if (errorMsg.includes("NotAllowedError") || errorMsg.includes("Permission denied")) {
+      if (
+        errorMsg.includes("NotAllowedError") ||
+        errorMsg.includes("Permission denied")
+      ) {
         useToastStore.getState().addToast("Camera/microphone permission denied", "error")
       } else if (errorMsg.includes("NotFoundError")) {
         useToastStore.getState().addToast("Camera/microphone not found", "error")

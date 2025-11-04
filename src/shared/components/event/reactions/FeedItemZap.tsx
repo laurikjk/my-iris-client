@@ -149,6 +149,9 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
       const myZaps = newMap.get(myPubKey || "") || []
       newMap.set(myPubKey || "", [...myZaps, optimisticZap])
       zapsByEventCache.set(event.id, newMap)
+      // Immediately update amount display
+      const newTotal = calculateTotalZapAmount(newMap)
+      setZappedAmount(newTotal)
       return newMap
     })
 
@@ -168,6 +171,18 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
           signer
         )
 
+        // Update optimistic zap with invoice for deduplication
+        setZapsByAuthor((prev) => {
+          const newMap = new Map(prev)
+          const myZaps = newMap.get(myPubKey || "") || []
+          const updatedZaps = myZaps.map((z) =>
+            z.id === optimisticZapId ? {...z, bolt11: invoice} : z
+          )
+          newMap.set(myPubKey || "", updatedZaps)
+          zapsByEventCache.set(event.id, newMap)
+          return newMap
+        })
+
         // Save zap metadata before payment
         if (hasWallet) {
           try {
@@ -184,7 +199,7 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
       } catch (error) {
         console.warn("Quick zap payment failed:", error)
 
-        // Remove optimistic zap
+        // Remove optimistic zap and revert amount
         setZapsByAuthor((prev) => {
           const newMap = new Map(prev)
           const myZaps = newMap.get(myPubKey || "") || []
@@ -197,6 +212,9 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
           }
 
           zapsByEventCache.set(event.id, newMap)
+          // Revert amount display
+          const newTotal = calculateTotalZapAmount(newMap)
+          setZappedAmount(newTotal)
           return newMap
         })
 
@@ -242,12 +260,20 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
           setZapsByAuthor((prev) => {
             const newMap = new Map(prev)
             const authorZaps = newMap.get(zapInfo.pubkey) ?? []
-            if (!authorZaps.some((e) => e.id === zapEvent.id)) {
+
+            // Check for duplicates by event ID OR bolt11 (handles optimistic zaps)
+            const isDuplicate = authorZaps.some(
+              (e) =>
+                e.id === zapEvent.id || (zapInfo.bolt11 && e.bolt11 === zapInfo.bolt11)
+            )
+
+            if (!isDuplicate) {
               authorZaps.push(zapInfo)
+              newMap.set(zapInfo.pubkey, authorZaps)
+              zapsByEventCache.set(event.id, newMap)
+              debouncedUpdateAmount(newMap)
             }
-            newMap.set(zapInfo.pubkey, authorZaps)
-            zapsByEventCache.set(event.id, newMap)
-            debouncedUpdateAmount(newMap)
+
             return newMap
           })
         }

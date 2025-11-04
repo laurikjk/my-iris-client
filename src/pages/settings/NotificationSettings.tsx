@@ -173,7 +173,9 @@ const NotificationSettings = () => {
           console.log("[Test Notification] Sent successfully")
         } else {
           console.log("[Test Notification] Permission denied")
-          await alert("Permission denied. Please enable notifications in system settings.")
+          await alert(
+            "Permission denied. Please enable notifications in system settings."
+          )
         }
 
         setTauriPermissionGranted(granted)

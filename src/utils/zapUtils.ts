@@ -219,6 +219,7 @@ export interface ZapInfo {
   pubkey: string
   comment: string
   event: NDKEvent
+  bolt11?: string // invoice for deduplication
 }
 
 /**
@@ -257,6 +258,7 @@ export function parseZapReceipt(zapEvent: NDKEvent): ZapInfo | null {
       pubkey: zappingUser,
       comment,
       event: zapEvent,
+      bolt11: invoice,
     }
   } catch (error) {
     console.warn("Failed to parse zap receipt:", error)
