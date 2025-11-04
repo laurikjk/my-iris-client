@@ -6,7 +6,6 @@ import NDK, {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
 import {ndk} from "@/utils/ndk"
 import {useUserStore} from "../../stores/user"
 import {hexToBytes} from "nostr-tools/utils"
-import {publishEvent} from "@/utils/chat/webrtc/p2pNostr"
 
 const createSubscribe = (ndk: NDK): NostrSubscribe => {
   return (filter: NDKFilter, onEvent: (event: VerifiedEvent) => void) => {
@@ -28,7 +27,7 @@ const createSubscribe = (ndk: NDK): NostrSubscribe => {
 const createPublish = (ndk: NDK): NostrPublish => {
   return (async (event) => {
     const e = new NDKEvent(ndk, event)
-    await publishEvent(e)
+    await e.publish()
     return event
   }) as NostrPublish
 }
