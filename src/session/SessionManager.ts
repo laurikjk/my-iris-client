@@ -185,6 +185,11 @@ export default class SessionManager {
     if (!deviceId) {
       throw new Error("Invite has no deviceId")
     }
+    const existing = userRecord.devices.get(deviceId)
+    if (existing) {
+      return existing
+    }
+
     const deviceRecord: DeviceRecord = {
       deviceId,
       inactiveSessions: [],
