@@ -147,6 +147,13 @@ export default class SessionManager {
         },
         (event) => {
           try {
+            const hasInviteMetadata = event.tags?.some(
+              ([key]) => key === "ephemeralKey" || key === "sharedSecret"
+            )
+            if (hasInviteMetadata) {
+              return
+            }
+
             const deviceIdTag = event.tags.find(
               ([key, value]) => key === "d" && value.startsWith("double-ratchet/invites/")
             )
