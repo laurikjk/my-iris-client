@@ -1,4 +1,4 @@
-import {NDKUserProfile} from "@nostr-dev-kit/ndk"
+import {NDKUserProfile} from "@/lib/ndk"
 import {loadProfileCache, profileCache} from "./profileCache"
 import Fuse from "fuse.js"
 

@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {memo} from "react"
 import Carousel from "../embed/media/Carousel"
 import HyperText from "../HyperText"

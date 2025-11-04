@@ -2,7 +2,7 @@ import socialGraph, {handleSocialGraphEvent} from "@/utils/socialGraph.ts"
 import {PublicKey} from "@/shared/utils/PublicKey"
 import {useEffect, useState, useMemo, useRef} from "react"
 import {NostrEvent} from "nostr-social-graph"
-import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKSubscription} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
 import {KIND_MUTE_LIST} from "@/utils/constants"
 

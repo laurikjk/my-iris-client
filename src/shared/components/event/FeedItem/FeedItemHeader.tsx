@@ -9,7 +9,7 @@ import FeedItemDropdown from "../reactions/FeedItemDropdown.tsx"
 import Dropdown from "@/shared/components/ui/Dropdown.tsx"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {EVENT_AVATAR_WIDTH} from "../../user/const.ts"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {getZappingUser} from "@/utils/nostr"
 import {KIND_ZAP_RECEIPT} from "@/utils/constants"
 

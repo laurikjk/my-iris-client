@@ -1,4 +1,4 @@
-import {NDKEvent, NDKSigner} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKSigner} from "@/lib/ndk"
 import {decode} from "light-bolt11-decoder"
 import {nip19, type NostrEvent} from "nostr-tools"
 import {makeZapRequest} from "nostr-tools/nip57"
@@ -28,7 +28,7 @@ export async function getZapAmount(event: NDKEvent) {
   if (invoice) {
     const decodedInvoice = decode(invoice)
     const amountSection = decodedInvoice.sections.find(
-      (section) => section.name === "amount"
+      (section: any) => section.name === "amount"
     )
     if (amountSection && "value" in amountSection) {
       // Convert millisatoshis to bits
@@ -53,7 +53,7 @@ export const fetchZappedAmount = async (event: NDKEvent): Promise<number> => {
         if (invoice) {
           const decodedInvoice = decode(invoice)
           const amountSection = decodedInvoice.sections.find(
-            (section) => section.name === "amount"
+            (section: any) => section.name === "amount"
           )
           if (amountSection && "value" in amountSection) {
             // Convert millisatoshis to bits
@@ -232,7 +232,7 @@ export function parseZapReceipt(zapEvent: NDKEvent): ZapInfo | null {
   try {
     const decodedInvoice = decode(invoice)
     const amountSection = decodedInvoice.sections.find(
-      (section) => section.name === "amount"
+      (section: any) => section.name === "amount"
     )
 
     if (!amountSection || !("value" in amountSection)) return null

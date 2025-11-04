@@ -6,7 +6,7 @@ import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {getSessionManager} from "@/shared/services/PrivateChats"
 import {ndk} from "@/utils/ndk"
 import {Invite} from "nostr-double-ratchet/src"
-import {NDKFilter, NDKSubscriptionCacheUsage} from "@nostr-dev-kit/ndk"
+import {NDKFilter, NDKSubscriptionCacheUsage} from "@/lib/ndk"
 import {confirm, alert} from "@/utils/utils"
 
 interface DeviceInfo {

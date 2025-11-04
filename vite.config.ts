@@ -71,13 +71,29 @@ export default defineConfig({
           ) {
             return "animalname"
           }
+          // Cashu core wrapper - separate chunk (only loaded on wallet pages)
+          if (id.includes("/src/lib/cashu/")) {
+            return "cashu-core"
+          }
+
+          // NDK from local sources - keep in main (used everywhere)
+          if (id.includes("/src/lib/ndk/") || id.includes("/src/lib/ndk-cache/")) {
+            return "main"
+          }
+
+          // Bundle small shared components into main (avoid over-splitting)
+          if (
+            id.includes("/src/shared/components/button/") ||
+            id.includes("/src/shared/components/user/Name")
+          ) {
+            return "main"
+          }
+
           const vendorLibs = [
             "react",
             "react-dom/client",
             "react-helmet",
-            "@nostr-dev-kit/ndk",
             "markdown-to-jsx",
-            "@nostr-dev-kit/ndk-cache-dexie",
             "@remixicon/react",
             "minidenticons",
             "nostr-tools",
@@ -99,6 +115,9 @@ export default defineConfig({
             "typescript-lru-cache",
             "zustand",
             "blurhash",
+            "debug",
+            "@cashu/cashu-ts",
+            "nostr-double-ratchet",
           ]
           if (vendorLibs.some((lib) => id.includes(`node_modules/${lib}`))) {
             return "vendor"

@@ -68,7 +68,7 @@ function normalizeInvoice(invoice: string): string {
 function extractDescriptionFromInvoice(invoice: string): string | undefined {
   try {
     const decoded = decode(invoice)
-    const descSection = decoded.sections.find((s) => s.name === "description")
+    const descSection = decoded.sections.find((s: any) => s.name === "description")
     if (descSection && "value" in descSection) {
       return descSection.value as string
     }

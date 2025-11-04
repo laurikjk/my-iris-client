@@ -1,5 +1,5 @@
 import {useState, useEffect, useRef, useCallback} from "react"
-import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKFilter} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
 import {addSeenEventId} from "@/utils/memcache"
 import shuffle from "lodash/shuffle"

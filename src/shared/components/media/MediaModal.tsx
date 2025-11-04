@@ -1,6 +1,6 @@
 import {useState, useEffect, useRef} from "react"
 import FeedItem from "../event/FeedItem/FeedItem"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {EmbedEvent} from "../embed/index"
 import ProxyImg from "../ProxyImg"
 import Icon from "../Icons/Icon"

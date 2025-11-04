@@ -1,7 +1,7 @@
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 import {NOSTR_REGEX, HEX_REGEX, NIP05_REGEX} from "@/utils/validation"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 
 export type IdentifierResult =
   | {type: "npub"; data: string}

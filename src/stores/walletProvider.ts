@@ -565,7 +565,7 @@ export const useWalletProviderStore = create<WalletProviderState>()(
           const {decode} = await import("light-bolt11-decoder")
           const decodedInvoice = decode(invoice)
           const amountSection = decodedInvoice.sections.find(
-            (section) => section.name === "amount"
+            (section: any) => section.name === "amount"
           )
           const invoiceAmountMsat =
             amountSection && "value" in amountSection ? parseInt(amountSection.value) : 0

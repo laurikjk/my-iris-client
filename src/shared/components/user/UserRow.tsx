@@ -14,6 +14,7 @@ export function UserRow({
   linkToProfile = true,
   showBadge = true,
   showHoverCard = false,
+  showOnlineIndicator = true,
 }: {
   pubKey: string
   description?: ReactNode
@@ -22,6 +23,7 @@ export function UserRow({
   linkToProfile?: boolean
   showBadge?: boolean
   showHoverCard?: boolean
+  showOnlineIndicator?: boolean
 }) {
   const {hoverProps, showCard, cardRef} = useHoverCard(showHoverCard)
 
@@ -32,6 +34,7 @@ export function UserRow({
           pubKey={pubKey}
           showTooltip={false}
           showBadge={showBadge}
+          showOnlineIndicator={showOnlineIndicator}
           width={avatarWidth}
         />
         <Name pubKey={pubKey} className={textClassName} />

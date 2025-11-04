@@ -1,6 +1,6 @@
 import {extractMarketData} from "@/shared/utils/marketUtils"
 import ErrorBoundary from "../ui/ErrorBoundary"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import MarketDetails from "./MarketDetails"
 import MarketImage from "./MarketImage"
 import HyperText from "../HyperText"

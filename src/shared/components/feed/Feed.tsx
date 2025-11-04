@@ -1,5 +1,5 @@
 import {useRef, useState, ReactNode, useEffect, useMemo, memo, useCallback} from "react"
-import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKFilter} from "@/lib/ndk"
 
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import useHistoryState from "@/shared/hooks/useHistoryState"

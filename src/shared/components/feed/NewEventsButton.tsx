@@ -1,5 +1,5 @@
 import {AvatarGroup} from "@/shared/components/user/AvatarGroup.tsx"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {RefObject, useEffect, useState} from "react"
 import {createPortal} from "react-dom"
 

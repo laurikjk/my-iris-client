@@ -345,9 +345,6 @@ export function Network() {
             <SettingsGroupItem>
               <div className="flex flex-col gap-2">
                 <span className="text-sm font-semibold">Mutual Follows</span>
-                <span className="text-xs text-base-content/60">
-                  Online users shown with green indicator
-                </span>
                 <OnlinePresence />
               </div>
             </SettingsGroupItem>

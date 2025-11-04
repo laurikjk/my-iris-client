@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {EmbedEvent} from "../components/embed"
 
 export interface ImetaMediaItem {

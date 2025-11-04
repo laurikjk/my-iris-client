@@ -2,7 +2,7 @@ import SessionManager from "../../session/SessionManager"
 import {VerifiedEvent} from "nostr-tools"
 import {LocalStorageAdapter} from "../../session/StorageAdapter"
 import {NostrPublish, NostrSubscribe} from "nostr-double-ratchet"
-import NDK, {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
+import NDK, {NDKEvent, NDKFilter} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
 import {useUserStore} from "../../stores/user"
 import {hexToBytes} from "nostr-tools/utils"
@@ -91,7 +91,7 @@ export const deleteDeviceInvite = async (deviceId: string) => {
   // Publish tombstone event - same kind and d tag, empty content
   const dTag = `double-ratchet/invites/${deviceId}`
 
-  const {NDKEvent} = await import("@nostr-dev-kit/ndk")
+  const {NDKEvent} = await import("@/lib/ndk")
   const deletionEvent = new NDKEvent(ndk(), {
     kind: 30078, // INVITE_EVENT_KIND
     pubkey: publicKey,

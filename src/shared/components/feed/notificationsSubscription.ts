@@ -7,7 +7,7 @@ import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {useNotificationsStore} from "@/stores/notifications"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
-import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKSubscription} from "@/lib/ndk"
 import {
   KIND_REACTION,
   KIND_REPOST,

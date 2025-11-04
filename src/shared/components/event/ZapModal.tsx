@@ -6,7 +6,7 @@ import {
   useEffect,
   useState,
 } from "react"
-import {LnPayCb, NDKEvent, zapInvoiceFromEvent, NDKUserProfile} from "@nostr-dev-kit/ndk"
+import {LnPayCb, NDKEvent, zapInvoiceFromEvent, NDKUserProfile} from "@/lib/ndk"
 import {RiCheckLine, RiFileCopyLine} from "@remixicon/react"
 
 import {Avatar} from "@/shared/components/user/Avatar"

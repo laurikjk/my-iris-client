@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
 import {KIND_BLOSSOM_AUTH} from "@/utils/constants"
 import {calculateSHA256} from "./utils"

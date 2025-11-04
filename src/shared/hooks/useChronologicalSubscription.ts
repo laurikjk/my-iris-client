@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState, useCallback} from "react"
-import {NDKFilter} from "@nostr-dev-kit/ndk"
+import {NDKFilter} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
 import {KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT} from "@/utils/constants"
 import {useSocialGraphLoaded} from "@/utils/socialGraph"

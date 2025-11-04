@@ -1,2 +1,6 @@
 # Coco Cashu library (vendored from external source)
 src/lib/cashu/
+
+# NDK library (vendored from external source)
+src/lib/ndk/
+src/lib/ndk-cache/

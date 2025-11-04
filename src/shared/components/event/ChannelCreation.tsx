@@ -1,5 +1,5 @@
 import MinidenticonImg from "../user/MinidenticonImg"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {useNavigate} from "@/navigation"
 import ProxyImg from "../ProxyImg"
 

@@ -4,9 +4,16 @@ import {Name} from "@/shared/components/user/Name.tsx"
 import {ProfileLink} from "@/shared/components/user/ProfileLink"
 
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem.tsx"
-import Embed from "../index.ts"
 
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
+import type {ReactNode} from "react"
+
+type Embed = {
+  regex: RegExp
+  component: (props: {match: string; index?: number; event?: any; key: string; truncated?: boolean}) => ReactNode
+  settingsKey?: string
+  inline?: boolean
+}
 import {useState, useEffect} from "react"
 import {ndk} from "@/utils/ndk"
 

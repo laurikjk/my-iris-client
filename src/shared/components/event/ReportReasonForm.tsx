@@ -1,5 +1,5 @@
 import {ChangeEvent, useCallback, useState} from "react"
-import {Hexpubkey, NDKEvent} from "@nostr-dev-kit/ndk"
+import {Hexpubkey, NDKEvent} from "@/lib/ndk"
 
 import {flagUser, muteUser} from "@/shared/services/Mute.tsx"
 import {getMuteLabel} from "@/utils/muteLabels"

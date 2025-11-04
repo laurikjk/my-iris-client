@@ -1,4 +1,4 @@
-import {NDKUserProfile} from "@nostr-dev-kit/ndk"
+import {NDKUserProfile} from "@/lib/ndk"
 import {LRUCache} from "typescript-lru-cache"
 import throttle from "lodash/throttle"
 import localforage from "localforage"

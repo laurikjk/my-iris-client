@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useState, useCallback} from "react"
 import {eventComparator} from "../components/feed/utils"
-import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKFilter} from "@/lib/ndk"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {shouldHideUser, shouldHideEvent} from "@/utils/visibility"
 import socialGraph from "@/utils/socialGraph"

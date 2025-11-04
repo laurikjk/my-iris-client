@@ -4,7 +4,7 @@ import {useSettingsStore} from "@/stores/settings"
 // import {useSessionsStore} from "@/stores/sessions" // TEMP: Removed
 import {SortedMap} from "./SortedMap/SortedMap"
 import {useUserStore} from "@/stores/user"
-import {NDKTag, NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKTag, NDKEvent} from "@/lib/ndk"
 import debounce from "lodash/debounce"
 import {base64} from "@scure/base"
 import IrisAPI from "./IrisAPI"

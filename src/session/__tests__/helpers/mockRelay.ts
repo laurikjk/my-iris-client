@@ -1,5 +1,5 @@
 import {matchFilter, VerifiedEvent, UnsignedEvent, Filter} from "nostr-tools"
-import {NDKEvent, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKPrivateKeySigner} from "@/lib/ndk"
 
 type Subscriber = {
   id: string

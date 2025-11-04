@@ -1,6 +1,6 @@
 import {extractMarketData} from "@/shared/utils/marketUtils"
 import {RiImageLine} from "@remixicon/react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import ProxyImg from "../ProxyImg"
 import {Link} from "@/navigation"
 import {nip19} from "nostr-tools"

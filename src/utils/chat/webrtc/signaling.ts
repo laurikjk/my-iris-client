@@ -1,5 +1,5 @@
 import {ndk} from "@/utils/ndk"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {webrtcLogger} from "./Logger"
 import type {SignalingMessage} from "./types"
 import {KIND_APP_DATA} from "@/utils/constants"

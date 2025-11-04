@@ -1,4 +1,4 @@
-import {NDKTag} from "@nostr-dev-kit/ndk"
+import {NDKTag} from "@/lib/ndk"
 
 export const getTag = (key: string, tags: NDKTag[]): string => {
   for (const t of tags) {

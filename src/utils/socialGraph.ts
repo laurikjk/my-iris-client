@@ -1,5 +1,5 @@
 import {SocialGraph, NostrEvent} from "nostr-social-graph/src"
-import {NDKSubscription} from "@nostr-dev-kit/ndk"
+import {NDKSubscription} from "@/lib/ndk"
 import {useUserStore} from "@/stores/user"
 import {useSocialGraphStore} from "@/stores/socialGraph"
 import {VerifiedEvent} from "nostr-tools"
@@ -9,7 +9,7 @@ import localForage from "localforage"
 import {ndk} from "@/utils/ndk"
 import {useEffect, useState} from "react"
 import {KIND_CONTACTS, KIND_MUTE_LIST} from "@/utils/constants"
-import {EventEmitter} from "events"
+import {EventEmitter} from "tseep"
 
 export const DEFAULT_SOCIAL_GRAPH_ROOT =
   "4523be58d395b1b196a9b8c82b038b6895cb02b683d0c253a955068dba1facd0"
@@ -19,7 +19,7 @@ let isInitialized = false
 
 // Event emitter for social graph changes
 export const socialGraphEvents = new EventEmitter()
-socialGraphEvents.setMaxListeners(100) // Increase limit for multiple subscribers
+socialGraphEvents.setMaxListeners?.(100) // Increase limit for multiple subscribers
 
 async function loadPreCrawledGraph(publicKey: string): Promise<SocialGraph> {
   const binaryUrl = (await import("nostr-social-graph/data/socialGraph.bin?url")).default

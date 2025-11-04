@@ -1,5 +1,5 @@
 import {useState, ChangeEvent, useRef, useEffect} from "react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {RiCheckLine, RiCloseLine, RiPlayFill} from "@remixicon/react"
 import Modal from "@/shared/components/ui/Modal"
 import {usePublicKey, useUserStore} from "@/stores/user"

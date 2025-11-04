@@ -1,4 +1,4 @@
-import {NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKTag} from "@/lib/ndk"
 import {PublicKey} from "@/shared/utils/PublicKey"
 import {useMemo, useState, useEffect} from "react"
 

@@ -52,8 +52,8 @@ export default function ReceiveLightningMode({
       // Decode invoice to extract amount and description
       try {
         const decoded = decode(initialInvoice)
-        const amountSection = decoded.sections.find((s) => s.name === "amount")
-        const descSection = decoded.sections.find((s) => s.name === "description")
+        const amountSection = decoded.sections.find((s: any) => s.name === "amount")
+        const descSection = decoded.sections.find((s: any) => s.name === "description")
 
         if (amountSection && "value" in amountSection && amountSection.value) {
           // Amount is in millisats, convert to sats

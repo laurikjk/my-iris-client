@@ -1,4 +1,4 @@
-import {Hexpubkey, NDKEvent} from "@nostr-dev-kit/ndk"
+import {Hexpubkey, NDKEvent} from "@/lib/ndk"
 import {useState} from "react"
 
 import ReportReasonForm from "./ReportReasonForm.tsx"

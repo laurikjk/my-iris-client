@@ -143,6 +143,7 @@ const NavSideBar = () => {
                 <UserRow
                   pubKey={myPubKey}
                   showBadge={false}
+                  showOnlineIndicator={false}
                   textClassName="md:hidden xl:inline font-bold"
                   avatarWidth={45}
                 />

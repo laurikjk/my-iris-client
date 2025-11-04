@@ -16,8 +16,8 @@
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
 
     /* Path aliases */
@@ -28,5 +28,6 @@
     }
   },
   "include": ["custom.d.ts", "src"],
+  "exclude": ["src/lib/ndk/**/*.test.ts", "src/lib/ndk-cache/**/*.test.ts"],
   "references": [{"path": "./tsconfig.node.json"}]
 }

@@ -1,7 +1,7 @@
 import Header from "@/shared/components/header/Header"
 import InlineNoteCreator from "@/shared/components/create/InlineNoteCreator"
 import {useNavigate} from "@/navigation"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {nip19} from "nostr-tools"
 
 function NewNote() {

@@ -2,7 +2,7 @@ import useReactionSubscription from "./useReactionSubscription"
 import useChronologicalSubscription from "./useChronologicalSubscription"
 import useCombinedPostFetcher from "./useCombinedPostFetcher"
 import usePopularityFilters from "./usePopularityFilters"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 
 interface CombinedPostFetcherCache {
   events?: NDKEvent[]

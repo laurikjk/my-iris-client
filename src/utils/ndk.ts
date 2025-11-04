@@ -5,12 +5,17 @@ import NDK, {
   NDKRelay,
   NDKRelayAuthPolicies,
   NDKUser,
-} from "@nostr-dev-kit/ndk"
-import NDKCacheAdapterDexie from "@nostr-dev-kit/ndk-cache-dexie"
+  NDKEvent,
+  NDKSubscription,
+} from "@/lib/ndk"
+import NDKCacheAdapterDexie from "@/lib/ndk-cache"
 import {useUserStore} from "@/stores/user"
 import {DEFAULT_RELAYS} from "@/shared/constants/relays"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {relayLogger} from "@/utils/relay/RelayLogger"
+import {WebRTCTransportPlugin} from "@/utils/chat/webrtc/WebRTCTransportPlugin"
+import {setWebRTCPlugin} from "@/utils/chat/webrtc/p2pMessages"
+import {useSettingsStore} from "@/stores/settings"
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
@@ -133,12 +138,8 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
     ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
     setupVisibilityReconnection(ndkInstance)
     attachRelayLogger(ndkInstance)
+    setupWebRTCTransport(ndkInstance)
     ndkInstance.connect()
-
-    // Initialize WebRTC integration (wraps publish/subscribe for peer forwarding)
-    import("@/utils/chat/webrtc/p2pNostr")
-      .then((module) => module.initializeWebRTCIntegration())
-      .catch(console.error)
 
     console.log("NDK instance initialized", ndkInstance)
   } else if (opts) {
@@ -229,6 +230,49 @@ function setupVisibilityReconnection(instance: NDK) {
 
   // Initialize offline state
   wasOffline = !navigator.onLine
+}
+
+/**
+ * Setup WebRTC transport plugin for P2P event distribution
+ */
+function setupWebRTCTransport(instance: NDK) {
+  const plugin = new WebRTCTransportPlugin()
+  plugin.initialize(instance)
+  setWebRTCPlugin(plugin)
+
+  // Hook into NDK event publishing
+  const originalEventPublish = NDKEvent.prototype.publish
+  NDKEvent.prototype.publish = async function (...args) {
+    // Call original publish
+    const result = await originalEventPublish.apply(this, args)
+
+    // Notify WebRTC plugin after successful relay publish
+    plugin.onPublish?.(this)
+
+    return result
+  }
+
+  // Hook into NDK subscriptions
+  const originalSubscribe = instance.subscribe.bind(instance)
+  instance.subscribe = (...args) => {
+    const subscription = originalSubscribe(...args)
+    const filters = Array.isArray(args[0]) ? args[0] : [args[0]]
+    const opts = args[1]
+
+    // Notify WebRTC plugin about new subscription
+    plugin.onSubscribe?.(subscription, filters, opts)
+
+    return subscription
+  }
+
+  // Watch for P2P-only mode changes
+  useSettingsStore.subscribe((state, prevState) => {
+    if (state.network.p2pOnlyMode !== prevState.network.p2pOnlyMode) {
+      plugin.setP2POnlyMode(state.network.p2pOnlyMode)
+    }
+  })
+
+  console.log("WebRTC transport plugin initialized")
 }
 
 function attachRelayLogger(instance: NDK) {

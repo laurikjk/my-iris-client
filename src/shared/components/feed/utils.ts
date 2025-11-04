@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 
 export const eventComparator = ([, a]: [string, NDKEvent], [, b]: [string, NDKEvent]) => {
   if (b.created_at && a.created_at) return b.created_at - a.created_at

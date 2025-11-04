@@ -1,4 +1,4 @@
-import {NDKEvent, NDKSigner} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKSigner} from "@/lib/ndk"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 
