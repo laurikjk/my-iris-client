@@ -198,16 +198,6 @@ export default class SessionManager {
     return deviceRecord
   }
 
-  private ensureDeviceRecord(
-    userPubkey: string,
-    deviceId: string,
-    invite?: Invite
-  ): DeviceRecord {
-    const existing = this.getDeviceRecord(userPubkey, deviceId)
-    if (existing) return existing
-    return this.createDeviceRecord(userPubkey, deviceId, invite)
-  }
-
   private sessionKey(userPubkey: string, deviceId: string, sessionName: string) {
     return `${this.sessionKeyPrefix(userPubkey)}${deviceId}/${sessionName}`
   }
@@ -255,8 +245,13 @@ export default class SessionManager {
     const key = this.sessionKey(userPubkey, deviceId, session.name)
     if (this.sessionSubscriptions.has(key)) return
 
+    const dr = this.getDeviceRecord(userPubkey, deviceId)
+    if (!dr) {
+      console.error("Device record not found when attaching session subscription")
+      return
+    }
+
     const rotateSession = (nextSession: Session) => {
-      const dr = this.ensureDeviceRecord(userPubkey, deviceId)
       const current = dr.activeSession
 
       if (!current) {
@@ -278,7 +273,6 @@ export default class SessionManager {
       dr.activeSession = nextSession
     }
 
-    const dr = this.ensureDeviceRecord(userPubkey, deviceId)
     if (inactive) {
       const alreadyTracked = dr.inactiveSessions.some(
         (tracked) => tracked === session || tracked.name === session.name
