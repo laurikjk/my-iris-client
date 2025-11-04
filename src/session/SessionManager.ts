@@ -669,7 +669,7 @@ export default class SessionManager {
               deviceId,
               activeSession,
               inactiveSessions,
-              createdAt: createdAt,
+              createdAt,
             })
           } catch (e) {
             console.error(
@@ -678,6 +678,11 @@ export default class SessionManager {
             )
           }
         }
+
+        this.userRecords.set(publicKey, {
+          publicKey: data.publicKey,
+          devices,
+        })
 
         for (const device of devices.values()) {
           const {deviceId, activeSession, inactiveSessions} = device
@@ -690,11 +695,6 @@ export default class SessionManager {
             this.attachSessionSubscription(publicKey, device, activeSession)
           }
         }
-
-        this.userRecords.set(publicKey, {
-          publicKey: data.publicKey,
-          devices,
-        })
       })
       .catch((error) => {
         console.error(`Failed to load user record for ${publicKey}:`, error)
