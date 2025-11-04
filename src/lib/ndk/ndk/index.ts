@@ -902,16 +902,6 @@ export class NDK extends EventEmitter<{
       return opts.transports
     }
 
-    // Check if this is a signaling subscription (WebRTC discovery)
-    const isSignaling = filters.some(
-      (filter) => filter.kinds?.includes(30078) && filter["#l"]?.includes("webrtc")
-    )
-
-    // Signaling always goes to relays only
-    if (isSignaling) {
-      return ["relays"]
-    }
-
     // Default: relays + available transport plugins
     const transports: string[] = ["relays"]
 
