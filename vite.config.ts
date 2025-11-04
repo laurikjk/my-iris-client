@@ -24,7 +24,7 @@ export default defineConfig({
       filename: "service-worker.ts",
       registerType: "autoUpdate",
       devOptions: {
-        enabled: true,
+        enabled: false,
         type: "module",
       },
     }),

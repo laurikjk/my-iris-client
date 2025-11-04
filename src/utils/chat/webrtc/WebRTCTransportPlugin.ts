@@ -238,23 +238,43 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
 
   /**
    * Send subscription requests to WebRTC peers
+   * Returns false to block relay subscription in P2P-only mode
    */
   onSubscribe(
     subscription: NDKSubscription,
     filters: NDKFilter[],
     opts?: NDKSubscriptionOptions
-  ): void {
+  ): boolean | void {
     // Route subscription based on filters and mode
     const routing = routeSubscription(filters, this.p2pOnlyMode)
 
-    // Skip if not routed to WebRTC
-    if (!routing.toWebRTC) {
-      return
+    // Block relay subscription if routing says no
+    if (!routing.toRelays) {
+      webrtcLogger.info(undefined, "Blocking relay subscription (P2P-only mode)")
+      // Still need to send to WebRTC peers if routed there
+      if (routing.toWebRTC) {
+        this.sendToWebRTC(filters)
+      }
+      return false // Block relay subscription
     }
 
-    // TODO: if p2pOnlyMode && !routing.toRelays, we should prevent NDK from sending to relays
-    // For now, this just controls WebRTC routing. Full routing control needs NDK integration.
+    // Skip WebRTC if not routed there
+    if (!routing.toWebRTC) {
+      return // Allow relay subscription
+    }
 
+    this.sendToWebRTC(filters)
+
+    // Attach event listener to forward relay events to peers
+    subscription.on("event", (event: NDKEvent) => {
+      this.relayEventToWebRTC(event)
+    })
+  }
+
+  /**
+   * Send filters to WebRTC peers with batching
+   */
+  private sendToWebRTC(filters: NDKFilter[]): void {
     // Use subscription grouping/batching
     for (const filter of filters) {
       // Check if we sent this filter recently (avoid loops)
@@ -277,11 +297,6 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
         filterGroups.set(groupKey, {filters: [filter], timeout})
       }
     }
-
-    // Attach event listener to forward relay events to peers
-    subscription.on("event", (event: NDKEvent) => {
-      this.relayEventToWebRTC(event)
-    })
   }
 
   /**

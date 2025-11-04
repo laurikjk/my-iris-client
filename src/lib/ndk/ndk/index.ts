@@ -931,11 +931,16 @@ export class NDK extends EventEmitter<{
     )
 
     // Notify transport plugins about new subscription
+    // If any plugin returns false, skip relay subscription
     const filterArray = Array.isArray(filters) ? filters : [filters]
+    let allowRelaySubscription = true
     for (const plugin of this.transportPlugins) {
       if (plugin.onSubscribe) {
         try {
-          plugin.onSubscribe(subscription, filterArray, finalOpts)
+          const result = plugin.onSubscribe(subscription, filterArray, finalOpts)
+          if (typeof result === "boolean" && result === false) {
+            allowRelaySubscription = false
+          }
         } catch (error) {
           console.error("[NDK] Transport plugin onSubscribe error:", error)
         }
@@ -961,7 +966,7 @@ export class NDK extends EventEmitter<{
       this.outboxTracker?.trackUsers(authors)
     }
 
-    if (autoStart) {
+    if (autoStart && allowRelaySubscription) {
       setTimeout(async () => {
         // Ensure cache is ready before starting subscription
         if (this.cacheAdapter?.initializeAsync && !this.cacheAdapter.ready) {
