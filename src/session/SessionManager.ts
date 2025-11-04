@@ -713,7 +713,7 @@ export default class SessionManager {
               deviceId,
               activeSession,
               inactiveSessions,
-              createdAt: createdAt ?? this.currentTimestampSeconds(),
+              createdAt: createdAt,
             })
           } catch (e) {
             console.error(
