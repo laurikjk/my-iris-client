@@ -194,7 +194,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
       )
     }
   } else {
-    avatar = <Avatar pubKey={pubKey} />
+    avatar = <Avatar pubKey={pubKey} showOnlineIndicator={true} />
   }
 
   // Name/title rendering
