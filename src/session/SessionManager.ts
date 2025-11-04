@@ -599,9 +599,13 @@ export default class SessionManager {
   }
 
   private async cleanupDevice(publicKey: string, deviceId: string): Promise<void> {
-    const userRecord = this.userRecords.get(publicKey)
+    let userRecord = this.userRecords.get(publicKey)
     if (!userRecord) {
-      return
+      await this.loadUserRecord(publicKey)
+      userRecord = this.userRecords.get(publicKey)
+      if (!userRecord) {
+        return
+      }
     }
 
     const deviceRecord = userRecord.devices.get(deviceId)
@@ -609,7 +613,7 @@ export default class SessionManager {
     if (deviceRecord) {
       if (deviceRecord.activeSession) {
         this.removeSessionSubscription(
-          this.ourPublicKey,
+          publicKey,
           deviceId,
           deviceRecord.activeSession.name
         )
