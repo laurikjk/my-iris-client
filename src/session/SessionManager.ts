@@ -61,7 +61,7 @@ export default class SessionManager {
 
   // Subscriptions
   private ourDeviceInviteSubscription: Unsubscribe | null = null
-  private ourOtherDeviceInviteSubscription: Unsubscribe | null = null
+  private ourDeviceIntiveTombstoneSubscription: Unsubscribe | null = null
   private inviteSubscriptions: Map<string, Unsubscribe> = new Map()
   private sessionSubscriptions: Map<string, Unsubscribe> = new Map()
 
@@ -138,8 +138,8 @@ export default class SessionManager {
       }
     )
 
-    if (!this.ourOtherDeviceInviteSubscription) {
-      this.ourOtherDeviceInviteSubscription = this.nostrSubscribe(
+    if (!this.ourDeviceIntiveTombstoneSubscription) {
+      this.ourDeviceIntiveTombstoneSubscription = this.nostrSubscribe(
         {
           kinds: [INVITE_EVENT_KIND],
           authors: [this.ourPublicKey],
@@ -371,7 +371,7 @@ export default class SessionManager {
     }
 
     this.ourDeviceInviteSubscription?.()
-    this.ourOtherDeviceInviteSubscription?.()
+    this.ourDeviceIntiveTombstoneSubscription?.()
   }
 
   deactivateCurrentSessions(publicKey: string) {
