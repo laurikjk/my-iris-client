@@ -22,6 +22,7 @@ import classNames from "classnames"
 import {ReactElement} from "react"
 import Content from "./Content"
 import {isTauri} from "@/utils/utils"
+import LocalData from "./LocalData"
 
 interface SettingsItem {
   icon: string | ReactElement
@@ -120,6 +121,12 @@ function Settings() {
           path: "/settings/social-graph",
         },
         {
+          icon: "hard-drive",
+          iconBg: "bg-purple-500",
+          message: "Local",
+          path: "/settings/local",
+        },
+        {
           icon: "key",
           iconBg: "bg-gray-500",
           message: "Keys",
@@ -179,6 +186,7 @@ function Settings() {
       appearance: "Appearance",
       mediaservers: "Media Servers",
       "social-graph": "Social Graph",
+      local: "Local",
       notifications: "Notifications",
       system: "System",
       chat: "Chat",
@@ -280,6 +288,8 @@ function Settings() {
                       return <MediaServers />
                     case "social-graph":
                       return <SocialGraphSettings />
+                    case "local":
+                      return <LocalData />
                     case "notifications":
                       return <NotificationSettings />
                     case "system":
