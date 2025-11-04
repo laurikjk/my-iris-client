@@ -93,6 +93,11 @@ export default class NDKCacheAdapterDexie implements NDKCacheAdapter {
   public _onReady?: () => void
   private moduleManager: DexieCacheModuleManager
 
+  // Batched deletion for expired events
+  private pendingDeletes = new Set<NDKEventId>()
+  private deleteTimeout?: NodeJS.Timeout
+  private readonly DELETE_BATCH_DELAY = 5000 // 5 seconds
+
   constructor(opts: NDKCacheAdapterDexieOptions = {}) {
     const dbName = opts.dbName || "ndk"
     createDatabase(dbName)
@@ -396,6 +401,35 @@ export default class NDKCacheAdapterDexie implements NDKCacheAdapter {
   public async deleteEventIds(eventIds: NDKEventId[]): Promise<void> {
     eventIds.forEach((id) => this.events.delete(id))
     await db.events.where({id: eventIds}).delete()
+  }
+
+  /**
+   * Queue an expired event for batched deletion
+   */
+  public queueExpiredEvent(eventId: NDKEventId): void {
+    this.pendingDeletes.add(eventId)
+
+    // Clear existing timeout and set new one
+    if (this.deleteTimeout) {
+      clearTimeout(this.deleteTimeout)
+    }
+
+    this.deleteTimeout = setTimeout(() => {
+      this.flushExpiredEvents()
+    }, this.DELETE_BATCH_DELAY)
+  }
+
+  /**
+   * Flush all pending expired event deletions
+   */
+  private async flushExpiredEvents(): Promise<void> {
+    if (this.pendingDeletes.size === 0) return
+
+    const idsToDelete = Array.from(this.pendingDeletes)
+    this.pendingDeletes.clear()
+
+    this.debug(`Deleting ${idsToDelete.length} expired events from cache`)
+    await this.deleteEventIds(idsToDelete)
   }
 
   public addUnpublishedEvent = addUnpublishedEvent.bind(this)

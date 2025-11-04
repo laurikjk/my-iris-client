@@ -801,6 +801,24 @@ export class NDKSubscription extends EventEmitter<{
       ndkEvent.ndk = this.ndk
       ndkEvent.relay = relay
 
+      // Check expiration (NIP-40)
+      const expirationTag = ndkEvent.getMatchingTags("expiration")[0]
+      if (expirationTag && expirationTag[1]) {
+        const expirationTime = parseInt(expirationTag[1])
+        const now = Math.floor(Date.now() / 1000)
+        if (now >= expirationTime) {
+          // Event has expired, skip it and queue for cache deletion
+          this.debug("Event expired %s (expiration: %d, now: %d)", eventId, expirationTime, now)
+
+          // Queue for batched deletion from cache
+          if (this.ndk?.cacheAdapter && 'queueExpiredEvent' in this.ndk.cacheAdapter) {
+            (this.ndk.cacheAdapter as any).queueExpiredEvent(eventId)
+          }
+
+          return
+        }
+      }
+
       // we don't want to validate/verify events that are either
       // coming from the cache or have been published by us from within
       // the client
