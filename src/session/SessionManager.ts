@@ -143,17 +143,17 @@ export default class SessionManager {
         {
           kinds: [INVITE_EVENT_KIND],
           authors: [this.ourPublicKey],
+          "#l": ["double-ratchet/invites"],
         },
         (event) => {
           try {
-            const deviceId = this.extractDeviceIdFromEvent(event)
+            const deviceIdTag = event.tags.find(
+              ([key, value]) => key === "d" && value.startsWith("double-ratchet/invites/")
+            )
+            const [, deviceId] = deviceIdTag || []
             if (!deviceId) return
 
-            if (this.isInviteListEvent(event)) {
-              return
-            }
-
-            void this.cleanupDevice(deviceId)
+            this.cleanupDevice(deviceId)
           } catch (error) {
             console.error("Failed to handle device tombstone:", error)
           }
@@ -546,29 +546,11 @@ export default class SessionManager {
     await this.cleanupDevice(deviceId)
   }
 
-  private isInviteListEvent(event: VerifiedEvent): boolean {
-    return event.tags.some(
-      ([key, value]) => key === "l" && value === "double-ratchet/invites"
-    )
-  }
-
   private async publishDeviceTombstone(deviceId: string): Promise<void> {
-    const tags: string[][] = [["d", `double-ratchet/invites/${deviceId}`]]
-
-    const inviteData = await this.storage.get<string>(this.deviceInviteKey(deviceId))
-    if (inviteData) {
-      try {
-        const invite = Invite.deserialize(inviteData)
-        if (invite.inviterEphemeralPublicKey) {
-          tags.push(["ephemeralKey", invite.inviterEphemeralPublicKey])
-        }
-        if (invite.sharedSecret) {
-          tags.push(["sharedSecret", invite.sharedSecret])
-        }
-      } catch (error) {
-        console.error("Failed to deserialize invite while publishing tombstone:", error)
-      }
-    }
+    const tags: string[][] = [
+      ["l", "double-ratchet/invites"],
+      ["d", `double-ratchet/invites/${deviceId}`],
+    ]
 
     const deletionEvent = {
       content: "",
