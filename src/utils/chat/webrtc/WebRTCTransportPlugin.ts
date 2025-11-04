@@ -1,5 +1,6 @@
 import NDK, {NDKEvent, type NDKFilter, type NDKSubscription, type NDKSubscriptionOptions} from "@/lib/ndk"
 import type {NDKTransportPlugin} from "@/lib/ndk-transport-plugin"
+import {mergeFilters} from "@/lib/ndk/subscription/grouping"
 import {getAllConnections} from "./PeerConnection"
 import {webrtcLogger} from "./Logger"
 import socialGraph from "@/utils/socialGraph"
@@ -59,6 +60,31 @@ function isSignalingSubscription(filters: NDKFilter[]): boolean {
 }
 
 /**
+ * Determine routing for a subscription based on filters and mode
+ * Returns { toRelays: boolean, toWebRTC: boolean }
+ */
+function routeSubscription(
+  filters: NDKFilter[],
+  p2pOnlyMode: boolean
+): {toRelays: boolean; toWebRTC: boolean} {
+  const isSignaling = isSignalingSubscription(filters)
+
+  if (p2pOnlyMode) {
+    // P2P-only mode: signaling → relays, everything else → WebRTC
+    return {
+      toRelays: isSignaling,
+      toWebRTC: !isSignaling,
+    }
+  }
+
+  // Normal mode: signaling → relays only, everything else → both
+  return {
+    toRelays: true, // NDK already sent to relays
+    toWebRTC: !isSignaling,
+  }
+}
+
+/**
  * Generate grouping key from filter
  */
 function getGroupingKey(filter: NDKFilter): string {
@@ -100,16 +126,19 @@ function sendGroupedFilters(groupKey: string) {
 
   filterGroups.delete(groupKey)
 
+  // Merge filters using NDK's logic
+  const merged = mergeFilters(group.filters)
+
   const subId = crypto.randomUUID()
   const connections = getAllConnections()
-  const message = ["REQ", subId, ...group.filters]
+  const message = ["REQ", subId, ...merged]
 
   for (const [peerId, conn] of connections.entries()) {
     if (conn.dataChannel?.readyState !== "open") continue
 
     try {
       conn.sendJsonData(message)
-      const filterSummary = group.filters
+      const filterSummary = merged
         .map((f) => {
           const parts = []
           if (f.kinds) parts.push(`kinds:${f.kinds.join(",")}`)
@@ -215,10 +244,16 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
     filters: NDKFilter[],
     opts?: NDKSubscriptionOptions
   ): void {
-    // Don't send signaling subscriptions to peers
-    if (isSignalingSubscription(filters)) {
+    // Route subscription based on filters and mode
+    const routing = routeSubscription(filters, this.p2pOnlyMode)
+
+    // Skip if not routed to WebRTC
+    if (!routing.toWebRTC) {
       return
     }
+
+    // TODO: if p2pOnlyMode && !routing.toRelays, we should prevent NDK from sending to relays
+    // For now, this just controls WebRTC routing. Full routing control needs NDK integration.
 
     // Use subscription grouping/batching
     for (const filter of filters) {
