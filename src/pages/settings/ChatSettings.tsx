@@ -87,20 +87,14 @@ const ChatSettings = () => {
     }
 
     try {
-      const manager = getSessionManager()
-      if (!manager) {
-        alert("Session manager unavailable. Please try again later.")
-        return
-      }
-
-      await manager.revokeDevice(deviceId)
-
       setLoading(true)
+      const manager = getSessionManager()
+      await manager.revokeDevice(deviceId)
       await refreshDeviceList(manager)
       setLoading(false)
     } catch (error) {
       console.error("Failed to delete invite:", error)
-      await alert(`Failed to delete invite: ${error}`)
+      await alert("Failed to delete invite")
       setLoading(false)
     }
   }

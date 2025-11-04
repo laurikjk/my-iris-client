@@ -133,7 +133,9 @@ export default class SessionManager {
 
         await this.storage.put(acceptanceKey, "1")
 
-        this.attachSessionSubscription(inviteePubkey, deviceId, session, true)
+        const userRecord = this.getOrCreateUserRecord(inviteePubkey)
+        const deviceRecord = this.addDeviceRecord(userRecord, invite)
+        this.attachSessionSubscription(inviteePubkey, deviceRecord, session, true)
       }
     )
 
@@ -167,7 +169,7 @@ export default class SessionManager {
   }
 
   // -------------------
-  // Idempotency helpers
+  // User and Device Records helpers
   // -------------------
   private getOrCreateUserRecord(userPubkey: string): UserRecord {
     let rec = this.userRecords.get(userPubkey)
@@ -178,23 +180,17 @@ export default class SessionManager {
     return rec
   }
 
-  private getDeviceRecord(userPubkey: string, deviceId: string): DeviceRecord | undefined {
-    const ur = this.getOrCreateUserRecord(userPubkey)
-    return ur.devices.get(deviceId)
-  }
-
-  private createDeviceRecord(
-    userPubkey: string,
-    deviceId: string,
-    invite?: Invite
-  ): DeviceRecord {
-    const ur = this.getOrCreateUserRecord(userPubkey)
+  private addDeviceRecord(userRecord: UserRecord, invite: Invite): DeviceRecord {
+    const {deviceId, createdAt} = invite
+    if (!deviceId) {
+      throw new Error("Invite has no deviceId")
+    }
     const deviceRecord: DeviceRecord = {
       deviceId,
       inactiveSessions: [],
-      createdAt: invite?.createdAt ?? this.currentTimestampSeconds(),
+      createdAt: createdAt,
     }
-    ur.devices.set(deviceId, deviceRecord)
+    userRecord.devices.set(deviceId, deviceRecord)
     return deviceRecord
   }
 
@@ -220,8 +216,8 @@ export default class SessionManager {
     return `${this.versionPrefix}/invite-accept/${userPublicKey}/`
   }
 
-  private sessionKeyPrefix(userPublicKey: string) {
-    return `${this.versionPrefix}/session/${userPublicKey}/`
+  private sessionKeyPrefix(userPubkey: string) {
+    return `${this.versionPrefix}/session/${userPubkey}/`
   }
 
   private userRecordKey(publicKey: string) {
@@ -237,20 +233,15 @@ export default class SessionManager {
 
   private attachSessionSubscription(
     userPubkey: string,
-    deviceId: string,
+    deviceRecord: DeviceRecord,
     session: Session,
     // Set to true if only handshake -> not yet sendable -> will be promoted on message
     inactive: boolean = false
   ): void {
-    const key = this.sessionKey(userPubkey, deviceId, session.name)
+    const key = this.sessionKey(userPubkey, deviceRecord.deviceId, session.name)
     if (this.sessionSubscriptions.has(key)) return
 
-    const dr = this.getDeviceRecord(userPubkey, deviceId)
-    if (!dr) {
-      console.error("Device record not found when attaching session subscription")
-      return
-    }
-
+    const dr = deviceRecord
     const rotateSession = (nextSession: Session) => {
       const current = dr.activeSession
 
@@ -333,7 +324,8 @@ export default class SessionManager {
         this.deviceId
       )
       return this.nostrPublish(event)
-        .then(() => this.attachSessionSubscription(userPubkey, deviceId, session))
+        .then(() => this.addDeviceRecord(userRecord, invite))
+        .then((dr) => this.attachSessionSubscription(userPubkey, dr, session))
         .then(() => this.sendMessageHistory(userPubkey, deviceId))
         .catch(console.error)
     }
@@ -342,12 +334,7 @@ export default class SessionManager {
       const {deviceId} = invite
       if (!deviceId) return
 
-      let deviceRecord = this.getDeviceRecord(userPubkey, deviceId)
-      if (!deviceRecord) {
-        deviceRecord = this.createDeviceRecord(userPubkey, deviceId, invite)
-      }
-
-      if (!deviceRecord.activeSession) {
+      if (!userRecord.devices.has(deviceId)) {
         await acceptInvite(invite)
       }
     })
@@ -736,10 +723,10 @@ export default class SessionManager {
           if (!deviceId) continue
 
           for (const session of inactiveSessions.reverse()) {
-            this.attachSessionSubscription(publicKey, deviceId, session)
+            this.attachSessionSubscription(publicKey, device, session)
           }
           if (activeSession) {
-            this.attachSessionSubscription(publicKey, deviceId, activeSession)
+            this.attachSessionSubscription(publicKey, device, activeSession)
           }
         }
 
