@@ -902,6 +902,28 @@ export class NDK extends EventEmitter<{
       return opts.transports
     }
 
+    // Check if this is a signaling subscription (WebRTC discovery)
+    const isSignaling = filters.some(
+      (filter) => filter.kinds?.includes(30078) && filter["#l"]?.includes("webrtc")
+    )
+
+    // In P2P-only mode: signaling → relays only, everything else → WebRTC only
+    // TODO: Get P2P mode from global settings when implemented
+    const p2pOnlyMode = false
+
+    if (p2pOnlyMode) {
+      if (isSignaling) {
+        return ["relays"]
+      } else {
+        // Non-signaling in P2P mode: use transport plugins only
+        const transports: string[] = []
+        for (const plugin of this.transportPlugins) {
+          transports.push(plugin.name)
+        }
+        return transports
+      }
+    }
+
     // Default: relays + available transport plugins
     const transports: string[] = ["relays"]
 
