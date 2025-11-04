@@ -26,6 +26,7 @@ const ChatSettings = () => {
     const currentDeviceId = manager.getDeviceId()
     const userRecord = manager.getUserRecords().get(publicKey)
 
+    console.warn("User Record:", userRecord)
     if (!userRecord) return []
 
     const currentDevice = userRecord.devices.get(currentDeviceId)

@@ -26,7 +26,6 @@ interface DeviceRecord {
 interface UserRecord {
   publicKey: string
   devices: Map<string, DeviceRecord>
-  foundInvites: Map<string, Invite>
 }
 
 type StoredSessionEntry = ReturnType<typeof serializeSessionState>
@@ -126,7 +125,6 @@ export default class SessionManager {
         const nostrEventId = session.name
         const acceptanceKey = this.inviteAcceptKey(nostrEventId, inviteePubkey, deviceId)
         const nostrEventIdInStorage = await this.storage.get<string>(acceptanceKey)
-
         if (nostrEventIdInStorage) {
           return
         }
@@ -135,6 +133,7 @@ export default class SessionManager {
 
         const userRecord = this.getOrCreateUserRecord(inviteePubkey)
         const deviceRecord = this.addDeviceRecord(userRecord, invite)
+
         this.attachSessionSubscription(inviteePubkey, deviceRecord, session, true)
       }
     )
@@ -174,7 +173,7 @@ export default class SessionManager {
   private getOrCreateUserRecord(userPubkey: string): UserRecord {
     let rec = this.userRecords.get(userPubkey)
     if (!rec) {
-      rec = {publicKey: userPubkey, devices: new Map(), foundInvites: new Map()}
+      rec = {publicKey: userPubkey, devices: new Map()}
       this.userRecords.set(userPubkey, rec)
     }
     return rec
@@ -302,12 +301,6 @@ export default class SessionManager {
       this.nostrSubscribe,
       async (invite) => {
         if (!invite.deviceId) return
-
-        const ur = this.getOrCreateUserRecord(userPubkey)
-        if (!ur.foundInvites.has(invite.deviceId)) {
-          ur.foundInvites.set(invite.deviceId, invite)
-        }
-
         if (onInvite) await onInvite(invite)
       }
     )
@@ -341,15 +334,6 @@ export default class SessionManager {
 
       if (!userRecord.devices.has(deviceId)) {
         await acceptInvite(invite)
-      }
-    })
-
-    userRecord.devices.forEach((device) => {
-      if (!device.activeSession) {
-        const invite = userRecord.foundInvites.get(device.deviceId)
-        if (invite) {
-          acceptInvite(invite).catch(console.error)
-        }
       }
     })
   }
@@ -562,19 +546,6 @@ export default class SessionManager {
     await this.cleanupDevice(deviceId)
   }
 
-  private extractDeviceIdFromEvent(event: VerifiedEvent): string | null {
-    const dTag = event.tags.find(([key]) => key === "d")
-    if (!dTag) return null
-
-    const [, value] = dTag
-    if (!value?.startsWith("double-ratchet/invites/")) {
-      return null
-    }
-
-    const parts = value.split("/")
-    return parts[2] || null
-  }
-
   private isInviteListEvent(event: VerifiedEvent): boolean {
     return event.tags.some(
       ([key, value]) => key === "l" && value === "double-ratchet/invites"
@@ -637,10 +608,6 @@ export default class SessionManager {
       }
 
       ourRecord.devices.delete(deviceId)
-      recordChanged = true
-    }
-
-    if (ourRecord.foundInvites.delete(deviceId)) {
       recordChanged = true
     }
 
@@ -738,7 +705,6 @@ export default class SessionManager {
         this.userRecords.set(publicKey, {
           publicKey: data.publicKey,
           devices,
-          foundInvites: new Map(),
         })
       })
       .catch((error) => {
@@ -746,9 +712,6 @@ export default class SessionManager {
       })
   }
 
-  private currentTimestampSeconds(): number {
-    return Math.floor(Date.now() / 1000)
-  }
   private loadAllUserRecords() {
     const prefix = this.userRecordKeyPrefix()
     return this.storage.list(prefix).then((keys) => {
