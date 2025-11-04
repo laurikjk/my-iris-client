@@ -139,32 +139,8 @@ export default class SessionManager {
     )
 
     if (!this.ourDeviceIntiveTombstoneSubscription) {
-      this.ourDeviceIntiveTombstoneSubscription = this.nostrSubscribe(
-        {
-          kinds: [INVITE_EVENT_KIND],
-          authors: [this.ourPublicKey],
-          "#l": ["double-ratchet/invites"],
-        },
-        (event) => {
-          try {
-            const hasInviteMetadata = event.tags?.some(
-              ([key]) => key === "ephemeralKey" || key === "sharedSecret"
-            )
-            if (hasInviteMetadata) {
-              return
-            }
-
-            const deviceIdTag = event.tags.find(
-              ([key, value]) => key === "d" && value.startsWith("double-ratchet/invites/")
-            )
-            const [, deviceId] = deviceIdTag || []
-            if (!deviceId) return
-
-            this.cleanupDevice(deviceId)
-          } catch (error) {
-            console.error("Failed to handle device tombstone:", error)
-          }
-        }
+      this.ourDeviceIntiveTombstoneSubscription = this.createInviteTombstoneSubscription(
+        this.ourPublicKey
       )
     }
 
@@ -203,6 +179,36 @@ export default class SessionManager {
     }
     userRecord.devices.set(deviceId, deviceRecord)
     return deviceRecord
+  }
+
+  private createInviteTombstoneSubscription(authorPublicKey: string): Unsubscribe {
+    return this.nostrSubscribe(
+      {
+        kinds: [INVITE_EVENT_KIND],
+        authors: [authorPublicKey],
+        "#l": ["double-ratchet/invites"],
+      },
+      (event: VerifiedEvent) => {
+        try {
+          const hasInviteMetadata = event.tags?.some(
+            ([key]) => key === "ephemeralKey" || key === "sharedSecret"
+          )
+          if (hasInviteMetadata) {
+            return
+          }
+
+          const deviceIdTag = event.tags.find(
+            ([key, value]) => key === "d" && value.startsWith("double-ratchet/invites/")
+          )
+          const [, deviceId] = deviceIdTag || []
+          if (!deviceId) return
+
+          this.cleanupDevice(deviceId)
+        } catch (error) {
+          console.error("Failed to handle device tombstone:", error)
+        }
+      }
+    )
   }
 
   private sessionKey(userPubkey: string, deviceId: string, sessionName: string) {
