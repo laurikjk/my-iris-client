@@ -7,6 +7,8 @@ interface NotificationSubscriptionItemProps {
   id: string
   subscription: NotificationSubscription
   pushSubscription: PushNotifications | null
+  fcmToken: string | null
+  apnsToken: string | null
   currentEndpoint: string | null
   onDelete: (id: string) => void
   isSelected: boolean
@@ -15,6 +17,8 @@ interface NotificationSubscriptionItemProps {
 
 const getEndpointDisplay = (
   pushSubscription: PushNotifications | null,
+  fcmToken: string | null,
+  apnsToken: string | null,
   webhooks: unknown[]
 ) => {
   if (pushSubscription) {
@@ -22,6 +26,14 @@ const getEndpointDisplay = (
     const path = url.pathname
     const last4 = path.length > 4 ? path.slice(-4) : path
     return `${url.host}/...${last4}`
+  }
+
+  if (fcmToken) {
+    return `FCM: ${fcmToken.slice(0, 8)}...${fcmToken.slice(-4)}`
+  }
+
+  if (apnsToken) {
+    return `APNS: ${apnsToken.slice(0, 8)}...${apnsToken.slice(-4)}`
   }
 
   if (webhooks && webhooks.length > 0) {
@@ -38,10 +50,29 @@ const getEndpointDisplay = (
   return "Filter only (no endpoints)"
 }
 
+const getSubscriptionTypeBadge = (
+  pushSubscription: PushNotifications | null,
+  fcmToken: string | null,
+  apnsToken: string | null
+) => {
+  if (fcmToken) {
+    return <span className="badge badge-sm badge-primary">Android FCM</span>
+  }
+  if (apnsToken) {
+    return <span className="badge badge-sm badge-primary">iOS APNS</span>
+  }
+  if (pushSubscription) {
+    return <span className="badge badge-sm badge-neutral">Web Push</span>
+  }
+  return null
+}
+
 const NotificationSubscriptionItem = ({
   id,
   subscription,
   pushSubscription,
+  fcmToken,
+  apnsToken,
   currentEndpoint,
   onDelete,
   isSelected,
@@ -75,8 +106,14 @@ const NotificationSubscriptionItem = ({
           <div className="flex-1 min-w-0 flex flex-col gap-1">
             <div className="flex flex-wrap items-center gap-1">
               <span className="break-all">
-                {getEndpointDisplay(pushSubscription, subscription.webhooks)}
+                {getEndpointDisplay(
+                  pushSubscription,
+                  fcmToken,
+                  apnsToken,
+                  subscription.webhooks
+                )}
               </span>
+              {getSubscriptionTypeBadge(pushSubscription, fcmToken, apnsToken)}
               {isCurrentDevice && (
                 <span className="badge badge-primary text-xs shrink-0">This device</span>
               )}

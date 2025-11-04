@@ -1,27 +1,6 @@
-use serde::{Deserialize, Serialize};
 #[cfg(mobile)]
 use tauri::Listener;
 use tauri::Manager;
-
-#[derive(Debug, Serialize, Deserialize)]
-struct PushTokenPayload {
-    token: String,
-    platform: String, // "ios" or "android"
-}
-
-#[tauri::command]
-async fn register_push_token(token: String, platform: String) -> Result<String, String> {
-    // This will be called from the frontend when we get a push token
-    log::info!(
-        "Received push token for {}: {}",
-        platform,
-        &token[..8.min(token.len())]
-    );
-
-    // The frontend should handle sending this to the notification server
-    // Return success for now
-    Ok("Token registered".to_string())
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -83,7 +62,6 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![register_push_token])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -16,7 +16,7 @@ import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
 import Icon from "@/shared/components/Icons/Icon"
 import {RiArrowRightSLine, RiArrowDownSLine} from "@remixicon/react"
 import debounce from "lodash/debounce"
-import {confirm, alert, isTauri} from "@/utils/utils"
+import {confirm, alert, isTauri, isMobileTauri} from "@/utils/utils"
 
 interface StatusIndicatorProps {
   status: boolean
@@ -47,6 +47,7 @@ const NotificationSettings = () => {
   const [serviceWorkerReady, setServiceWorkerReady] = useState(false)
   const [tauriPermissionGranted, setTauriPermissionGranted] = useState(false)
   const isTauriApp = isTauri()
+  const [isMobile, setIsMobile] = useState(false)
   const hasNotificationsApi = "Notification" in window
   const [notificationsAllowed, setNotificationsAllowed] = useState(
     hasNotificationsApi && window.Notification?.permission === "granted"
@@ -73,6 +74,12 @@ const NotificationSettings = () => {
       }
     }, 500)
   )
+
+  useEffect(() => {
+    if (isTauriApp) {
+      isMobileTauri().then(setIsMobile)
+    }
+  }, [isTauriApp])
 
   const trySubscribePush = async () => {
     try {
@@ -483,30 +490,32 @@ const NotificationSettings = () => {
             </SettingsGroup>
           )}
 
-          <SettingsGroup title="Server">
-            <SettingsInputItem
-              label="Notification Server"
-              value={inputValue}
-              onChange={handleServerChange}
-              type="url"
-              rightContent={
-                !isValidUrl ? (
-                  <Icon name="close" size={16} className="text-error" />
-                ) : undefined
-              }
-            />
-            <SettingsGroupItem isLast>
-              <div className="text-sm text-base-content/70">
-                Self-host notification server?{" "}
-                <a
-                  className="link"
-                  href="https://github.com/mmalmi/nostr-notification-server"
-                >
-                  Source code
-                </a>
-              </div>
-            </SettingsGroupItem>
-          </SettingsGroup>
+          {!isMobile && (
+            <SettingsGroup title="Server">
+              <SettingsInputItem
+                label="Notification Server"
+                value={inputValue}
+                onChange={handleServerChange}
+                type="url"
+                rightContent={
+                  !isValidUrl ? (
+                    <Icon name="close" size={16} className="text-error" />
+                  ) : undefined
+                }
+              />
+              <SettingsGroupItem isLast>
+                <div className="text-sm text-base-content/70">
+                  Self-host notification server?{" "}
+                  <a
+                    className="link"
+                    href="https://github.com/mmalmi/nostr-notification-server"
+                  >
+                    Source code
+                  </a>
+                </div>
+              </SettingsGroupItem>
+            </SettingsGroup>
+          )}
 
           <SettingsGroup title="Subscriptions">
             <SettingsGroupItem>
@@ -544,24 +553,19 @@ const NotificationSettings = () => {
                   id: string
                   subscription: typeof subscription
                   pushSubscription: PushNotifications | null
+                  fcmToken: string | null
+                  apnsToken: string | null
                   index: number
                   isCurrentDevice: boolean
                 }
 
                 const items: SubscriptionItem[] = []
 
+                // Add web push subscriptions
                 if (
-                  !subscription?.web_push_subscriptions ||
-                  subscription.web_push_subscriptions.length === 0
+                  subscription?.web_push_subscriptions &&
+                  subscription.web_push_subscriptions.length > 0
                 ) {
-                  items.push({
-                    id,
-                    subscription,
-                    pushSubscription: null,
-                    index: 0,
-                    isCurrentDevice: false,
-                  })
-                } else {
                   subscription.web_push_subscriptions.forEach(
                     (pushSubscription: PushNotifications, index: number) => {
                       const isCurrentDevice =
@@ -570,6 +574,8 @@ const NotificationSettings = () => {
                         id,
                         subscription,
                         pushSubscription,
+                        fcmToken: null,
+                        apnsToken: null,
                         index,
                         isCurrentDevice,
                       })
@@ -577,25 +583,76 @@ const NotificationSettings = () => {
                   )
                 }
 
+                // Add FCM tokens
+                if (subscription?.fcm_tokens && subscription.fcm_tokens.length > 0) {
+                  subscription.fcm_tokens.forEach((token: string, index: number) => {
+                    items.push({
+                      id,
+                      subscription,
+                      pushSubscription: null,
+                      fcmToken: token,
+                      apnsToken: null,
+                      index: items.length + index,
+                      isCurrentDevice: false,
+                    })
+                  })
+                }
+
+                // Add APNS tokens
+                if (subscription?.apns_tokens && subscription.apns_tokens.length > 0) {
+                  subscription.apns_tokens.forEach((token: string, index: number) => {
+                    items.push({
+                      id,
+                      subscription,
+                      pushSubscription: null,
+                      fcmToken: null,
+                      apnsToken: token,
+                      index: items.length + index,
+                      isCurrentDevice: false,
+                    })
+                  })
+                }
+
+                // If no subscriptions at all, show empty state
+                if (items.length === 0) {
+                  items.push({
+                    id,
+                    subscription,
+                    pushSubscription: null,
+                    fcmToken: null,
+                    apnsToken: null,
+                    index: 0,
+                    isCurrentDevice: false,
+                  })
+                }
+
                 return items
               })
               .sort((a, b) => (b.isCurrentDevice ? 1 : 0) - (a.isCurrentDevice ? 1 : 0))
-              .map(({id, subscription, pushSubscription, index}, itemIndex, array) => (
-                <SettingsGroupItem
-                  key={`${id}-${index}`}
-                  isLast={itemIndex === array.length - 1}
-                >
-                  <NotificationSubscriptionItem
-                    id={id}
-                    subscription={subscription}
-                    pushSubscription={pushSubscription}
-                    currentEndpoint={currentEndpoint}
-                    onDelete={handleDeleteSubscription}
-                    isSelected={selectedRows.has(id)}
-                    onToggleSelect={toggleSelection}
-                  />
-                </SettingsGroupItem>
-              ))}
+              .map(
+                (
+                  {id, subscription, pushSubscription, fcmToken, apnsToken, index},
+                  itemIndex,
+                  array
+                ) => (
+                  <SettingsGroupItem
+                    key={`${id}-${index}`}
+                    isLast={itemIndex === array.length - 1}
+                  >
+                    <NotificationSubscriptionItem
+                      id={id}
+                      subscription={subscription}
+                      pushSubscription={pushSubscription}
+                      fcmToken={fcmToken}
+                      apnsToken={apnsToken}
+                      currentEndpoint={currentEndpoint}
+                      onDelete={handleDeleteSubscription}
+                      isSelected={selectedRows.has(id)}
+                      onToggleSelect={toggleSelection}
+                    />
+                  </SettingsGroupItem>
+                )
+              )}
           </SettingsGroup>
 
           <SettingsGroup title="Debug">

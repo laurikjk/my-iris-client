@@ -1,4 +1,3 @@
-import {invoke} from "@tauri-apps/api/core"
 import {isPermissionGranted, requestPermission} from "@tauri-apps/plugin-notification"
 import {platform} from "@tauri-apps/plugin-os"
 import IrisAPI from "./IrisAPI"
@@ -77,10 +76,7 @@ function setupAndroidPushNotifications() {
 
 async function registerTokenWithServer(token: string, platformType: "ios" | "android") {
   try {
-    // First register with Tauri backend
-    await invoke("register_push_token", {token, platform: platformType})
-
-    // Then send to notification server
+    // Send to notification server
     const settings = useSettingsStore.getState()
     const api = new IrisAPI(settings.notifications.server)
 
