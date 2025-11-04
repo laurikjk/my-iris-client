@@ -374,6 +374,7 @@ export class NDK extends EventEmitter<{
    * Transport plugins for alternative event distribution (WebRTC, Bluetooth, etc)
    */
   public transportPlugins: Array<{
+    name: string
     onPublish?: (event: NDKEvent) => void | Promise<void>
     onSubscribe?: (subscription: NDKSubscription, filters: NDKFilter[], opts?: NDKSubscriptionOptions) => void
   }> = []
@@ -911,8 +912,15 @@ export class NDK extends EventEmitter<{
       return ["relays"]
     }
 
-    // Default: use all available transports
-    return ["relays", "webrtc"]
+    // Default: relays + available transport plugins
+    const transports: string[] = ["relays"]
+
+    // Add enabled transport plugins
+    for (const plugin of this.transportPlugins) {
+      transports.push(plugin.name)
+    }
+
+    return transports
   }
 
   public subscribe(
@@ -964,9 +972,9 @@ export class NDK extends EventEmitter<{
     const transports = this.getTransportsForSubscription(filterArray, finalOpts)
     const allowRelaySubscription = transports.includes("relays")
 
-    // Notify transport plugins about new subscription
+    // Notify transport plugins that should handle this subscription
     for (const plugin of this.transportPlugins) {
-      if (plugin.onSubscribe) {
+      if (plugin.onSubscribe && transports.includes(plugin.name)) {
         try {
           plugin.onSubscribe(subscription, filterArray, finalOpts)
         } catch (error) {

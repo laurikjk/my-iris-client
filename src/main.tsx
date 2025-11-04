@@ -190,6 +190,7 @@ const unsubscribeTheme = useSettingsStore.subscribe((state) => {
 
 // HMR support
 if (import.meta.hot) {
+  import.meta.hot.accept()
   import.meta.hot.dispose(() => {
     // Clean up subscriptions on hot reload
     unsubscribeUser()

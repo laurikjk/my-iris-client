@@ -134,12 +134,12 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
       ndkInstance.signer = nip07Signer
     }
 
+    watchLocalSettings(ndkInstance)
     ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
     setupVisibilityReconnection(ndkInstance)
     attachRelayLogger(ndkInstance)
     setupWebRTCTransport(ndkInstance)
     ndkInstance.connect()
-    watchLocalSettings(ndkInstance)
 
     console.log("NDK instance initialized", ndkInstance)
   } else if (opts) {
@@ -234,7 +234,7 @@ function setupVisibilityReconnection(instance: NDK) {
 
 /**
  * Setup WebRTC transport plugin for P2P event distribution
- */
+ */ 
 function setupWebRTCTransport(instance: NDK) {
   const plugin = new WebRTCTransportPlugin()
   plugin.initialize(instance)
@@ -260,11 +260,8 @@ function attachRelayLogger(instance: NDK) {
   }
 }
 
-let settingsUnsubscribe: (() => void) | undefined
-
 function watchLocalSettings(instance: NDK) {
-  settingsUnsubscribe?.()
-  settingsUnsubscribe = useUserStore.subscribe((state, prevState) => {
+  useUserStore.subscribe((state, prevState) => {
     // Outbox model changes are handled by page reload in Network.tsx
     // No need to recreate NDK instance here
     if (state.privateKey !== prevState.privateKey) {

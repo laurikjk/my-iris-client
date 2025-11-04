@@ -50,31 +50,6 @@ setInterval(() => {
   }
 }, 10000)
 
-/**
- * Check if subscription filter is for WebRTC signaling
- */
-function isSignalingSubscription(filters: NDKFilter[]): boolean {
-  return filters.some(
-    (filter) => filter.kinds?.includes(KIND_APP_DATA) && filter["#l"]?.includes("webrtc")
-  )
-}
-
-/**
- * Check if WebRTC transport should handle this subscription
- * Based on subscription options or defaults
- */
-function shouldUseWebRTC(
-  filters: NDKFilter[],
-  opts?: NDKSubscriptionOptions
-): boolean {
-  // Check explicit transport hints
-  if (opts?.transports) {
-    return opts.transports.includes("webrtc")
-  }
-
-  // Don't send signaling subscriptions to peers
-  return !isSignalingSubscription(filters)
-}
 
 /**
  * Generate grouping key from filter
@@ -221,17 +196,13 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
 
   /**
    * Send subscription requests to WebRTC peers
+   * NDK has already decided this subscription should use WebRTC
    */
   onSubscribe(
     subscription: NDKSubscription,
     filters: NDKFilter[],
     opts?: NDKSubscriptionOptions
   ): void {
-    // Check if WebRTC should handle this subscription
-    if (!shouldUseWebRTC(filters, opts)) {
-      return
-    }
-
     this.sendToWebRTC(filters)
 
     // Attach event listener to forward relay events to peers
