@@ -27,7 +27,41 @@ async function signUp(page, username = "Test User") {
   // Check that username appears in the sidebar (most reliable location)
   await expect(page.getByTestId("sidebar-user-row").getByText(username)).toBeVisible()
 
-  return username
+  // Get the generated private key
+  const privateKey = await page.evaluate(() => {
+    const userStore = localStorage.getItem("user-store")
+    if (!userStore) return null
+    const parsed = JSON.parse(userStore)
+    return parsed?.state?.privateKey || null
+  })
+
+  return {username, privateKey}
 }
 
-export {signUp}
+async function signIn(page, privateKey: string) {
+  await page.goto("/")
+
+  // Click "Sign up" button to open dialog
+  await page.getByRole("button", {name: "Sign up"}).click()
+
+  // Wait for signup dialog to appear
+  await expect(page.getByRole("heading", {name: "Sign up"})).toBeVisible()
+
+  // Click "Already have an account?" to switch to sign in
+  await page.getByText("Already have an account?").click()
+
+  // Wait for sign in dialog
+  await expect(page.getByRole("heading", {name: "Sign in"})).toBeVisible({timeout: 10000})
+
+  // Paste the private key - should auto-login
+  const keyInput = page.getByPlaceholder(/paste.*key/i)
+  await keyInput.fill(privateKey)
+
+  // Wait for sign in to complete (dialog closes automatically)
+  await expect(page.getByRole("heading", {name: "Sign in"})).not.toBeVisible({timeout: 10000})
+  await expect(page.locator("#main-content").getByTestId("new-post-button")).toBeVisible({
+    timeout: 10000,
+  })
+}
+
+export {signUp, signIn}

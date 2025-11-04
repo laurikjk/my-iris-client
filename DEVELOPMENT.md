@@ -15,3 +15,4 @@
 - If tests are not passing, adding long timeouts is usually not the solution. Publish & subscribe over nostr is fast.
 - Be careful with react hook dependency arrays — they can easily cause refresh loops
 - Note that we're not using react-router-dom: we have our own custom stack router which keeps N previous views open in the background for fast back & fwd nav
+- Use commit log style similar to previous commits, no verbose descriptions

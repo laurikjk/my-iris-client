@@ -67,7 +67,7 @@ class PeerConnectionManager extends EventEmitter<{
     this.myPeerId = new PeerId(myPubkey, uuidv4())
     webrtcLogger.info(undefined, `Starting with peer ID: ${this.myPeerId.short()}`)
 
-    // Wait for social graph to load before subscribing
+    // Wait for social graph to load before starting
     socialGraphLoaded.then(() => {
       webrtcLogger.info(undefined, "Social graph loaded, setting up WebRTC")
 
@@ -83,21 +83,21 @@ class PeerConnectionManager extends EventEmitter<{
       this.socialGraphUnsubscribe = () => {
         socialGraphEvents.off("updated", handleGraphUpdate)
       }
+
+      // Send presence pings AFTER subscription is set up
+      this.presencePingInterval = setInterval(
+        () => void this.sendPresencePing(),
+        this.PRESENCE_PING_INTERVAL
+      )
+      void this.sendPresencePing()
+
+      // Check and maintain connections every 30 seconds
+      this.connectionCheckInterval = setInterval(
+        () => void this.maintainConnections(),
+        30000
+      )
+      void this.maintainConnections()
     })
-
-    // Send presence pings
-    this.presencePingInterval = setInterval(
-      () => void this.sendPresencePing(),
-      this.PRESENCE_PING_INTERVAL
-    )
-    void this.sendPresencePing()
-
-    // Check and maintain connections every 30 seconds
-    this.connectionCheckInterval = setInterval(
-      () => void this.maintainConnections(),
-      30000
-    )
-    void this.maintainConnections()
 
     // Clean up stale online users every 5 seconds
     this.cleanupInterval = setInterval(() => void this.cleanupStaleUsers(), 5000)
@@ -159,11 +159,9 @@ class PeerConnectionManager extends EventEmitter<{
   private async sendPresencePing() {
     if (!this.myPeerId) return
 
-    // Only send hello if we have mutual follows (or potentially other sessions)
-    if (this.currentMutualFollows.size === 0) {
-      return
-    }
-
+    webrtcLogger.info(undefined, "Sending presence ping (hello)")
+    // Always send hello to enable connecting to own devices/sessions
+    // (subscription includes own pubkey even with no mutual follows)
     await sendSignalingMessage({
       type: "hello",
       peerId: this.myPeerId.uuid,
@@ -203,27 +201,25 @@ class PeerConnectionManager extends EventEmitter<{
     const newMutualFollows = this.getMutualFollows(myPubkey)
 
     // Check if mutual follows actually changed (bidirectional comparison)
-    if (newMutualFollows.size === this.currentMutualFollows.size) {
+    // Skip only if we've already set up subscription AND follows haven't changed
+    if (this.unsubscribe && newMutualFollows.size === this.currentMutualFollows.size) {
       const same = Array.from(newMutualFollows).every((pubkey) =>
         this.currentMutualFollows.has(pubkey)
       )
-      if (same) return // No changes, skip resubscription
+      if (same) {
+        webrtcLogger.info(undefined, "Mutual follows unchanged, skipping resubscription")
+        return // No changes, skip resubscription
+      }
     }
 
     this.currentMutualFollows = newMutualFollows
 
-    if (newMutualFollows.size === 0) {
-      webrtcLogger.info(undefined, "No mutual follows found, not subscribing")
-      if (this.unsubscribe) {
-        this.unsubscribe()
-        this.unsubscribe = undefined
-      }
-      return
-    }
-
+    const followCount = newMutualFollows.size
     webrtcLogger.info(
       undefined,
-      `Found ${newMutualFollows.size} mutual follows, subscribing`
+      followCount > 0
+        ? `Found ${followCount} mutual follows, subscribing`
+        : "No mutual follows, subscribing to own devices only"
     )
 
     // Unsubscribe from old subscription
@@ -231,7 +227,7 @@ class PeerConnectionManager extends EventEmitter<{
       this.unsubscribe()
     }
 
-    // Subscribe with new filter
+    // Subscribe with new filter (always subscribe, even with no mutual follows to connect to own devices)
     this.unsubscribe = subscribeToSignaling(
       this.handleSignalingMessage.bind(this),
       newMutualFollows,

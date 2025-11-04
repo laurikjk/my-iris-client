@@ -240,30 +240,8 @@ function setupWebRTCTransport(instance: NDK) {
   plugin.initialize(instance)
   setWebRTCPlugin(plugin)
 
-  // Hook into NDK event publishing
-  const originalEventPublish = NDKEvent.prototype.publish
-  NDKEvent.prototype.publish = async function (...args) {
-    // Call original publish
-    const result = await originalEventPublish.apply(this, args)
-
-    // Notify WebRTC plugin after successful relay publish
-    plugin.onPublish?.(this)
-
-    return result
-  }
-
-  // Hook into NDK subscriptions
-  const originalSubscribe = instance.subscribe.bind(instance)
-  instance.subscribe = (...args) => {
-    const subscription = originalSubscribe(...args)
-    const filters = Array.isArray(args[0]) ? args[0] : [args[0]]
-    const opts = args[1]
-
-    // Notify WebRTC plugin about new subscription
-    plugin.onSubscribe?.(subscription, filters, opts)
-
-    return subscription
-  }
+  // Register plugin with NDK (native hook support)
+  instance.transportPlugins.push(plugin)
 
   // Watch for P2P-only mode changes
   useSettingsStore.subscribe((state, prevState) => {

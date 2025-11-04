@@ -579,6 +579,17 @@ export class NDKEvent extends EventEmitter {
     const relays = await relaySet.publish(this, timeoutMs, requiredRelayCount)
     relays.forEach((relay) => this.ndk?.subManager.seenEvent(this.id, relay))
 
+    // Notify transport plugins after successful publish
+    for (const plugin of this.ndk.transportPlugins) {
+      if (plugin.onPublish) {
+        try {
+          await plugin.onPublish(this)
+        } catch (error) {
+          console.error("[NDK] Transport plugin onPublish error:", error)
+        }
+      }
+    }
+
     return relays
   }
 

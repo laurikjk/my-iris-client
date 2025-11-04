@@ -51,6 +51,11 @@ class WebRTCLogger extends EventEmitter {
       this.logs.shift()
     }
 
+    // Also log to console
+    const prefix = peerId ? `[${peerId}]` : "[webrtc]"
+    const directionStr = direction ? ` ${direction}` : ""
+    console.log(`${prefix}${directionStr} ${message}`)
+
     this.emit("log", entry)
   }
 

@@ -371,6 +371,14 @@ export class NDK extends EventEmitter<{
   public pools: NDKPool[] = []
 
   /**
+   * Transport plugins for alternative event distribution (WebRTC, Bluetooth, etc)
+   */
+  public transportPlugins: Array<{
+    onPublish?: (event: NDKEvent) => void | Promise<void>
+    onSubscribe?: (subscription: NDKSubscription, filters: NDKFilter[], opts?: NDKSubscriptionOptions) => void
+  }> = []
+
+  /**
    * Default relay-auth policy that will be used when a relay requests authentication,
    * if no other policy is specified for that relay.
    *
@@ -921,6 +929,18 @@ export class NDK extends EventEmitter<{
       Array.isArray(filters) ? filters : [filters],
       finalOpts
     )
+
+    // Notify transport plugins about new subscription
+    const filterArray = Array.isArray(filters) ? filters : [filters]
+    for (const plugin of this.transportPlugins) {
+      if (plugin.onSubscribe) {
+        try {
+          plugin.onSubscribe(subscription, filterArray, finalOpts)
+        } catch (error) {
+          console.error("[NDK] Transport plugin onSubscribe error:", error)
+        }
+      }
+    }
 
     const pool = subscription.pool // Use the pool determined by the subscription options
 
