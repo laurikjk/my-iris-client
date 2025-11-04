@@ -144,12 +144,35 @@ function HomeFeed() {
         />
       )}
       {editMode && follows.length > 1 && myPubKey && activeFeedConfig?.feedStrategy && (
-        <div className="mt-4 p-4 border border-base-300 rounded-lg bg-base-50">
-          <div className="text-sm text-base-content/50 italic">
+        <div className="flex flex-col gap-4 mt-4 p-4 border border-base-300 rounded-lg">
+          <div className="flex justify-between items-center">
+            <div className="text-lg font-semibold">
+              Edit &quot;{activeFeedConfig.customName || activeFeedConfig.name}&quot;
+            </div>
+          </div>
+          <div className="text-sm text-base-content/50 italic mb-2">
             {activeFeedConfig.feedStrategy === "popular"
               ? "Popular feeds use a fixed algorithm to calculate the most popular posts first."
-              : "For You feeds use personalized algorithms to curate content based on your interests."}{" "}
-            Editing functionality is under construction.
+              : "For You feeds use personalized algorithms to curate content based on your interests."}
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={activeFeedConfig.showZapAll ?? false}
+              onChange={(e) => {
+                const {saveFeedConfig} = useFeedStore.getState()
+                saveFeedConfig(activeFeed, {showZapAll: e.target.checked})
+              }}
+              className="checkbox checkbox-sm"
+            />
+            <span className="text-sm text-base-content/70">
+              Always show &quot;zap all&quot;
+            </span>
+          </label>
+          <div className="flex justify-between gap-2 pt-2 border-t border-base-300">
+            <button onClick={toggleEditMode} className="btn btn-sm btn-primary">
+              Done
+            </button>
           </div>
         </div>
       )}
@@ -182,6 +205,8 @@ function HomeFeed() {
               <AlgorithmicFeed
                 key={`${activeFeedConfig.feedStrategy}-${feedRefreshSignal}`}
                 type={activeFeedConfig.feedStrategy}
+                forceShowZapAll={editMode}
+                showZapAll={activeFeedConfig.showZapAll}
               />
             )
 
@@ -192,6 +217,7 @@ function HomeFeed() {
               showDisplayAsSelector={follows.length > 1}
               forceUpdate={0}
               emptyPlaceholder={""}
+              forceShowZapAll={editMode}
             />
           )
         })()}

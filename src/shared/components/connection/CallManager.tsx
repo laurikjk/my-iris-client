@@ -439,7 +439,7 @@ export function CallManager() {
                   <div className="text-base-content/60">Audio call in progress</div>
                 </div>
                 {/* Hidden audio element for remote audio stream */}
-                <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+                <audio ref={remoteAudioRef} autoPlay className="hidden" />
               </div>
             )}
 

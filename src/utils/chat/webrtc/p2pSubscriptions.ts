@@ -85,13 +85,11 @@ function sendGroupedFilters(groupKey: string) {
   const connections = getAllConnections()
   const message = ["REQ", subId, ...group.filters]
 
-  let sentCount = 0
   for (const [peerId, conn] of connections.entries()) {
     if (conn.dataChannel?.readyState !== "open") continue
 
     try {
       conn.sendJsonData(message)
-      sentCount++
       const filterSummary = group.filters
         .map((f) => {
           const parts = []

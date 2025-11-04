@@ -102,6 +102,18 @@ function FeedEditor({
             Show new events automatically
           </span>
         </label>
+
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={localConfig?.showZapAll ?? false}
+            onChange={(e) => updateConfig("showZapAll", e.target.checked)}
+            className="checkbox checkbox-sm"
+          />
+          <span className="text-sm text-base-content/70">
+            Always show &quot;zap all&quot;
+          </span>
+        </label>
       </>
     )
   }

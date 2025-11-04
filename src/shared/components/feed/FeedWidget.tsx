@@ -4,6 +4,7 @@ import FeedItem from "@/shared/components/event/FeedItem/FeedItem"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import MediaFeed from "./MediaFeed"
 import {DisplayAsSelector} from "./DisplayAsSelector"
+import ZapAllButton from "./ZapAllButton"
 import {NDKEvent} from "@nostr-dev-kit/ndk"
 
 interface FeedWidgetProps {
@@ -18,6 +19,8 @@ interface FeedWidgetProps {
   maxItems?: number
   small?: boolean
   scrollContainer?: HTMLDivElement | null
+  forceShowZapAll?: boolean
+  showZapAll?: boolean
 }
 
 const FeedWidget = memo(function FeedWidget({
@@ -32,6 +35,8 @@ const FeedWidget = memo(function FeedWidget({
   maxItems,
   small = true,
   scrollContainer = null,
+  forceShowZapAll = false,
+  showZapAll = false,
 }: FeedWidgetProps) {
   const displayEvents = maxItems ? events.slice(0, maxItems) : events
 
@@ -79,6 +84,10 @@ const FeedWidget = memo(function FeedWidget({
           activeSelection={displayAs as "list" | "grid"}
           onSelect={onDisplayAsChange}
         />
+      )}
+
+      {(showZapAll || forceShowZapAll) && events.length > 0 && (
+        <ZapAllButton events={events} />
       )}
 
       {loadMore ? (

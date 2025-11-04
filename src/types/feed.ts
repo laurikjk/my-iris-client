@@ -33,4 +33,6 @@ export interface FeedConfig {
   displayAs?: "list" | "grid"
   // Feed strategy for popular feeds
   feedStrategy?: FeedType
+  // Show zap all button
+  showZapAll?: boolean
 }

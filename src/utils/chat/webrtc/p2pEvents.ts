@@ -38,7 +38,6 @@ export function sendEventToWebRTC(event: NDKEvent) {
   // NIP-01 format: ["EVENT", <event JSON>]
   const message = ["EVENT", eventJson]
 
-  let sentCount = 0
   const sentToPeers: string[] = []
   for (const [peerId, conn] of connections.entries()) {
     if (conn.dataChannel?.readyState !== "open") continue
@@ -61,7 +60,6 @@ export function sendEventToWebRTC(event: NDKEvent) {
 
     try {
       conn.sendJsonData(message)
-      sentCount++
       incrementSent()
       // Mark as seen by this peer
       conn.seenEvents.set(eventJson.id, true)
@@ -100,7 +98,6 @@ export function relayEventToWebRTC(event: NDKEvent) {
   const isPrivateMessage = PRIVATE_MESSAGE_KINDS.includes(eventJson.kind)
   const connections = getAllConnections()
   const message = ["EVENT", eventJson]
-  let sentCount = 0
   const sentToPeers: string[] = []
 
   for (const [peerId, conn] of connections.entries()) {
@@ -126,7 +123,6 @@ export function relayEventToWebRTC(event: NDKEvent) {
     try {
       conn.sendJsonData(message)
       conn.seenEvents.set(eventJson.id, true)
-      sentCount++
       incrementSent()
 
       const peerPubkey = peerId.split(":")[0]

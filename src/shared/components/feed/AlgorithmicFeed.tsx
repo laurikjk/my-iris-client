@@ -12,6 +12,8 @@ interface FeedDisplayOptions {
 interface AlgorithmicFeedProps {
   type: FeedType
   displayOptions?: FeedDisplayOptions
+  forceShowZapAll?: boolean
+  showZapAll?: boolean
 }
 
 const defaultDisplayOptions: FeedDisplayOptions = {
@@ -39,6 +41,8 @@ const feedConfigs = {
 const AlgorithmicFeed = function AlgorithmicFeed({
   type,
   displayOptions = {},
+  forceShowZapAll = false,
+  showZapAll = false,
 }: AlgorithmicFeedProps) {
   const scrollContainer = useScrollContainer()
 
@@ -71,6 +75,8 @@ const AlgorithmicFeed = function AlgorithmicFeed({
       loadingMessage={config.loadingMessage}
       small={small}
       scrollContainer={scrollContainer}
+      forceShowZapAll={forceShowZapAll}
+      showZapAll={showZapAll}
     />
   )
 }

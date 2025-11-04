@@ -12,6 +12,7 @@ import {useSocialGraphLoaded} from "@/utils/socialGraph.ts"
 import UnknownUserEvents from "./UnknownUserEvents.tsx"
 import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
+import ZapAllButton from "./ZapAllButton"
 import {useFeedStore, type FeedConfig, getFeedCacheKey} from "@/stores/feed"
 import {getTag} from "@/utils/nostr"
 import MediaFeed from "./MediaFeed"
@@ -30,6 +31,7 @@ interface FeedProps {
   displayAs?: "list" | "grid"
   showDisplayAsSelector?: boolean
   onDisplayAsChange?: (display: "list" | "grid") => void
+  forceShowZapAll?: boolean
 }
 
 const DefaultEmptyPlaceholder = (
@@ -49,6 +51,7 @@ const Feed = memo(function Feed({
   displayAs: initialDisplayAs = "list",
   showDisplayAsSelector = true,
   onDisplayAsChange,
+  forceShowZapAll = false,
 }: FeedProps) {
   if (!feedConfig?.filter) {
     throw new Error("Feed component requires feedConfig with filter")
@@ -323,6 +326,10 @@ const Feed = memo(function Feed({
           showNewEvents={showNewEventsWithHighlight}
           firstFeedItemRef={firstFeedItemRef}
         />
+      )}
+
+      {(feedConfig.showZapAll || forceShowZapAll) && filteredEvents.length > 0 && (
+        <ZapAllButton events={filteredEvents} />
       )}
 
       <div>

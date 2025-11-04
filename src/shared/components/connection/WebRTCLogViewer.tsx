@@ -107,49 +107,55 @@ export function WebRTCLogViewer() {
           )
         }
 
-        const badges = log.peerId
-          ? [
-              getArrow(),
-              isBroadcast ? (
+        const getPeerBadge = () => {
+          const peerId = log.peerId || ""
+          if (isBroadcast) {
+            return (
+              <span
+                key="peer"
+                className="badge badge-xs shrink-0 gap-1"
+                style={{
+                  backgroundColor: getPeerColor(peerId),
+                  color: "white",
+                  borderColor: getPeerColor(peerId),
+                }}
+              >
+                broadcast
+              </span>
+            )
+          }
+          if (pubkey) {
+            return (
+              <ProfileLink key="peer" pubKey={pubkey}>
                 <span
-                  key="peer"
-                  className="badge badge-xs shrink-0 gap-1"
+                  className="badge badge-xs shrink-0 gap-1 cursor-pointer hover:opacity-80"
                   style={{
-                    backgroundColor: getPeerColor(log.peerId),
+                    backgroundColor: getPeerColor(peerId),
                     color: "white",
-                    borderColor: getPeerColor(log.peerId),
+                    borderColor: getPeerColor(peerId),
                   }}
                 >
-                  broadcast
+                  <Name pubKey={pubkey} /> ({pubkey.slice(0, 8)})
                 </span>
-              ) : pubkey ? (
-                <ProfileLink key="peer" pubKey={pubkey}>
-                  <span
-                    className="badge badge-xs shrink-0 gap-1 cursor-pointer hover:opacity-80"
-                    style={{
-                      backgroundColor: getPeerColor(log.peerId),
-                      color: "white",
-                      borderColor: getPeerColor(log.peerId),
-                    }}
-                  >
-                    <Name pubKey={pubkey} /> ({pubkey.slice(0, 8)})
-                  </span>
-                </ProfileLink>
-              ) : (
-                <span
-                  key="peer"
-                  className="badge badge-xs shrink-0 gap-1"
-                  style={{
-                    backgroundColor: getPeerColor(log.peerId),
-                    color: "white",
-                    borderColor: getPeerColor(log.peerId),
-                  }}
-                >
-                  unknown
-                </span>
-              ),
-            ]
-          : []
+              </ProfileLink>
+            )
+          }
+          return (
+            <span
+              key="peer"
+              className="badge badge-xs shrink-0 gap-1"
+              style={{
+                backgroundColor: getPeerColor(peerId),
+                color: "white",
+                borderColor: getPeerColor(peerId),
+              }}
+            >
+              unknown
+            </span>
+          )
+        }
+
+        const badges = log.peerId ? [getArrow(), getPeerBadge()] : []
 
         return (
           <LogItem
