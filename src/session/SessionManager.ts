@@ -64,6 +64,7 @@ export default class SessionManager {
   private ourDeviceIntiveTombstoneSubscription: Unsubscribe | null = null
   private inviteSubscriptions: Map<string, Unsubscribe> = new Map()
   private sessionSubscriptions: Map<string, Unsubscribe> = new Map()
+  private inviteTombstoneSubscriptions: Map<string, Unsubscribe> = new Map()
 
   // Callbacks
   private internalSubscriptions: Set<OnEventCallback> = new Set()
@@ -321,8 +322,21 @@ export default class SessionManager {
     this.inviteSubscriptions.set(key, unsubscribe)
   }
 
+  private attachInviteTombstoneSubscription(userPubkey: string): void {
+    if (this.inviteTombstoneSubscriptions.has(userPubkey)) {
+      return
+    }
+
+    const unsubscribe = this.createInviteTombstoneSubscription(userPubkey)
+    this.inviteTombstoneSubscriptions.set(userPubkey, unsubscribe)
+  }
+
   setupUser(userPubkey: string) {
     const userRecord = this.getOrCreateUserRecord(userPubkey)
+
+    if (userPubkey !== this.ourPublicKey) {
+      this.attachInviteTombstoneSubscription(userPubkey)
+    }
 
     const acceptInvite = async (invite: Invite) => {
       const {deviceId} = invite
@@ -376,6 +390,10 @@ export default class SessionManager {
       unsubscribe()
     }
 
+    for (const unsubscribe of this.inviteTombstoneSubscriptions.values()) {
+      unsubscribe()
+    }
+
     this.ourDeviceInviteSubscription?.()
     this.ourDeviceIntiveTombstoneSubscription?.()
   }
@@ -420,6 +438,12 @@ export default class SessionManager {
     if (inviteUnsub) {
       inviteUnsub()
       this.inviteSubscriptions.delete(inviteKey)
+    }
+
+    const tombstoneUnsub = this.inviteTombstoneSubscriptions.get(userPubkey)
+    if (tombstoneUnsub) {
+      tombstoneUnsub()
+      this.inviteTombstoneSubscriptions.delete(userPubkey)
     }
 
     this.messageHistory.delete(userPubkey)
@@ -689,6 +713,10 @@ export default class SessionManager {
           publicKey: data.publicKey,
           devices,
         })
+
+        if (publicKey !== this.ourPublicKey) {
+          this.attachInviteTombstoneSubscription(publicKey)
+        }
 
         for (const device of devices.values()) {
           const {deviceId, activeSession, inactiveSessions} = device
