@@ -70,6 +70,12 @@ export interface DecryptedEvent {
   event: string
 }
 
+export interface CacheData {
+  key: string
+  data: any
+  cachedAt: number
+}
+
 export class Database extends Dexie {
   profiles!: Table<Profile>
   events!: Table<Event>
@@ -80,10 +86,11 @@ export class Database extends Dexie {
   unpublishedEvents!: Table<UnpublishedEvent>
   eventRelays!: Table<EventRelay>
   decryptedEvents!: Table<DecryptedEvent>
+  cacheData!: Table<CacheData>
 
   constructor(name: string) {
     super(name)
-    this.version(18).stores({
+    this.version(19).stores({
       profiles: "&pubkey",
       events: "&id, kind",
       eventTags: "&tagValue",
@@ -93,6 +100,7 @@ export class Database extends Dexie {
       unpublishedEvents: "&id",
       eventRelays: "[eventId+relayUrl], eventId",
       decryptedEvents: "&id",
+      cacheData: "&key, cachedAt",
     })
   }
 }
