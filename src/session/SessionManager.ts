@@ -195,10 +195,12 @@ export default class SessionManager {
             ([key]) => key === "ephemeralKey" || key === "sharedSecret"
           )
           if (isTombstone) {
+            console.warn("Received device invite tombstone:", event.tags)
             const deviceIdTag = event.tags.find(
               ([key, value]) => key === "d" && value.startsWith("double-ratchet/invites/")
             )
-            const [, deviceId] = deviceIdTag || []
+            const [, deviceIdTagValue] = deviceIdTag || []
+            const deviceId = deviceIdTagValue.split("/").pop()
             if (!deviceId) return
 
             this.cleanupDevice(authorPublicKey, deviceId)
@@ -597,15 +599,9 @@ export default class SessionManager {
   }
 
   private async cleanupDevice(publicKey: string, deviceId: string): Promise<void> {
-    let userRecord = this.userRecords.get(publicKey)
-    if (!userRecord) {
-      await this.loadUserRecord(publicKey)
-      userRecord = this.userRecords.get(publicKey)
-      if (!userRecord) {
-        return
-      }
-    }
-
+    const userRecord = this.userRecords.get(publicKey)
+    console.warn(`Cleaning up device ${deviceId}`, userRecord)
+    if (!userRecord) return
     const deviceRecord = userRecord.devices.get(deviceId)
 
     if (deviceRecord) {
@@ -623,6 +619,7 @@ export default class SessionManager {
 
       userRecord.devices.delete(deviceId)
       await this.storeUserRecord(publicKey).catch(console.error)
+      console.warn(`Device ${deviceId} cleaned up`, userRecord)
     }
   }
 
