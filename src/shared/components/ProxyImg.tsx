@@ -16,6 +16,7 @@ type Props = {
   alt?: string
   hideBroken?: boolean
   loadOriginalIfProxyFails?: boolean
+  authorPubkey?: string
 }
 
 const safeOrigins = ["data:image"]
@@ -35,7 +36,7 @@ const ProxyImg = (props: Props) => {
   const imgRef = useRef<HTMLImageElement | null>(null)
 
   // Try blossom p2p fetch first
-  const blossomCachedUrl = useBlossomCache(props.src)
+  const blossomCachedUrl = useBlossomCache(props.src, props.authorPubkey)
 
   useEffect(() => {
     // Check if we have this image cached

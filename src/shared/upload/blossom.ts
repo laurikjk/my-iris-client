@@ -19,8 +19,8 @@ export async function uploadToBlossom(
     await storage.initialize()
 
     const arrayBuffer = await file.arrayBuffer()
-    await storage.save(sha256, arrayBuffer)
-    console.log(`Saved file to local blob storage: ${sha256.slice(0, 8)}`)
+    await storage.save(sha256, arrayBuffer, file.type)
+    console.log(`Saved file to local blob storage: ${sha256.slice(0, 8)} (${file.type})`)
   } catch (storageError) {
     console.warn("Failed to save to local blob storage:", storageError)
     localStorageFailed = true
@@ -82,7 +82,9 @@ export async function uploadToBlossom(
         // Remote upload failed
         if (localStorageFailed) {
           // Both failed
-          reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`))
+          reject(
+            new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`)
+          )
         } else {
           // Use local-only URL with hash (will be served via p2p)
           console.warn(`Remote upload failed (${xhr.status}), using local p2p-only URL`)
