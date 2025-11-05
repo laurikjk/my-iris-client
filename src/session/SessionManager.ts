@@ -21,6 +21,7 @@ interface DeviceRecord {
   activeSession?: Session
   inactiveSessions: Session[]
   createdAt: number
+  isStale?: boolean
 }
 
 interface UserRecord {
@@ -35,6 +36,7 @@ interface StoredDeviceRecord {
   activeSession: StoredSessionEntry | null
   inactiveSessions: StoredSessionEntry[]
   createdAt: number
+  isStale?: boolean
 }
 
 interface StoredUserRecord {
@@ -256,6 +258,8 @@ export default class SessionManager {
     // Set to true if only handshake -> not yet sendable -> will be promoted on message
     inactive: boolean = false
   ): void {
+    if (deviceRecord.isStale) return
+
     const key = this.sessionKey(userPubkey, deviceRecord.deviceId, session.name)
     if (this.sessionSubscriptions.has(key)) return
 
@@ -485,6 +489,9 @@ export default class SessionManager {
     if (!device) {
       return
     }
+    if (device.isStale) {
+      return
+    }
     for (const event of history) {
       const {activeSession} = device
 
@@ -519,7 +526,12 @@ export default class SessionManager {
     const devices = [
       ...Array.from(userRecord.devices.values()),
       ...Array.from(ourUserRecord.devices.values()),
-    ]
+    ].filter((device) => !device.isStale)
+
+    console.warn(
+      "Sending to devices:",
+      devices.map((d) => d.deviceId)
+    )
 
     // Send to all devices in background (if sessions exist)
     Promise.allSettled(
@@ -600,27 +612,24 @@ export default class SessionManager {
 
   private async cleanupDevice(publicKey: string, deviceId: string): Promise<void> {
     const userRecord = this.userRecords.get(publicKey)
-    console.warn(`Cleaning up device ${deviceId}`, userRecord)
     if (!userRecord) return
     const deviceRecord = userRecord.devices.get(deviceId)
 
-    if (deviceRecord) {
-      if (deviceRecord.activeSession) {
-        this.removeSessionSubscription(
-          publicKey,
-          deviceId,
-          deviceRecord.activeSession.name
-        )
-      }
+    if (!deviceRecord || deviceRecord.isStale) return
 
-      for (const session of deviceRecord.inactiveSessions) {
-        this.removeSessionSubscription(publicKey, deviceId, session.name)
-      }
-
-      userRecord.devices.delete(deviceId)
-      await this.storeUserRecord(publicKey).catch(console.error)
-      console.warn(`Device ${deviceId} cleaned up`, userRecord)
+    if (deviceRecord.activeSession) {
+      this.removeSessionSubscription(publicKey, deviceId, deviceRecord.activeSession.name)
     }
+
+    for (const session of deviceRecord.inactiveSessions) {
+      this.removeSessionSubscription(publicKey, deviceId, session.name)
+    }
+
+    deviceRecord.activeSession = undefined
+    deviceRecord.inactiveSessions = []
+    deviceRecord.isStale = true
+
+    await this.storeUserRecord(publicKey).catch(console.error)
   }
 
   private buildMessageTags(
@@ -649,6 +658,7 @@ export default class SessionManager {
             serializeSessionState(session.state)
           ),
           createdAt: device.createdAt,
+          isStale: device.isStale,
         })
       ),
     }
@@ -669,6 +679,7 @@ export default class SessionManager {
             activeSession: serializedActive,
             inactiveSessions: serializedInactive,
             createdAt,
+            isStale,
           } = deviceData
 
           try {
@@ -688,6 +699,7 @@ export default class SessionManager {
               activeSession,
               inactiveSessions,
               createdAt,
+              isStale,
             })
           } catch (e) {
             console.error(
@@ -707,8 +719,8 @@ export default class SessionManager {
         }
 
         for (const device of devices.values()) {
-          const {deviceId, activeSession, inactiveSessions} = device
-          if (!deviceId) continue
+          const {deviceId, activeSession, inactiveSessions, isStale} = device
+          if (!deviceId || isStale) continue
 
           for (const session of inactiveSessions.reverse()) {
             this.attachSessionSubscription(publicKey, device, session)
