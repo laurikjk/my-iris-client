@@ -20,6 +20,12 @@ const ChatSettings = () => {
 
   type SessionManagerInstance = NonNullable<ReturnType<typeof getSessionManager>>
 
+  const formatDeviceFoundDate = (timestamp?: number) => {
+    if (!timestamp) return null
+    const normalized = timestamp > 1e12 ? timestamp : timestamp * 1000
+    return new Date(normalized).toLocaleString()
+  }
+
   const buildDeviceList = (manager: SessionManagerInstance): DeviceInfo[] => {
     if (!publicKey) return []
 
@@ -140,47 +146,50 @@ const ChatSettings = () => {
             )}
             {!loading && devices.length > 0 && (
               <>
-                {devices.map((device, index) => (
-                  <SettingsGroupItem
-                    key={device.id}
-                    isLast={index === devices.length - 1}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium font-mono text-sm">
-                            {device.id}
-                          </span>
-                          {device.isCurrent && (
-                            <span className="badge badge-primary badge-sm">Current</span>
+                {devices.map((device, index) => {
+                  const deviceFoundDate = formatDeviceFoundDate(device.createdAt)
+                  return (
+                    <SettingsGroupItem
+                      key={device.id}
+                      isLast={index === devices.length - 1}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium font-mono text-sm">
+                              {device.id}
+                            </span>
+                            {device.isCurrent && (
+                              <span className="badge badge-primary badge-sm">Current</span>
+                            )}
+                            {device.isStale && (
+                              <span className="badge badge-warning badge-sm">Stale</span>
+                            )}
+                          </div>
+                          {deviceFoundDate && (
+                            <div className="text-xs text-base-content/50">
+                              We first found and messaged this device on {deviceFoundDate}
+                            </div>
                           )}
                           {device.isStale && (
-                            <span className="badge badge-warning badge-sm">Stale</span>
+                            <div className="text-xs text-warning">
+                              This invite was revoked and will no longer receive messages.
+                            </div>
                           )}
                         </div>
-                        {device.createdAt && (
-                          <div className="text-xs text-base-content/50">
-                            {new Date(device.createdAt * 1000).toLocaleString()}
-                          </div>
-                        )}
-                        {device.isStale && (
-                          <div className="text-xs text-warning">
-                            This invite was revoked and will no longer receive messages.
-                          </div>
+                        {!device.isCurrent && !device.isStale && (
+                          <button
+                            onClick={() => handleDeleteDevice(device.id)}
+                            className="btn btn-ghost btn-sm text-error hover:bg-error/20 ml-4"
+                            title="Delete device / app invite"
+                          >
+                            <RiDeleteBin6Line size={16} />
+                          </button>
                         )}
                       </div>
-                      {!device.isCurrent && !device.isStale && (
-                        <button
-                          onClick={() => handleDeleteDevice(device.id)}
-                          className="btn btn-ghost btn-sm text-error hover:bg-error/20 ml-4"
-                          title="Delete device / app invite"
-                        >
-                          <RiDeleteBin6Line size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </SettingsGroupItem>
-                ))}
+                    </SettingsGroupItem>
+                  )
+                })}
               </>
             )}
           </SettingsGroup>
