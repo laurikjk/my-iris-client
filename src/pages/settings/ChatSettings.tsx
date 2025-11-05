@@ -99,10 +99,6 @@ const ChatSettings = () => {
   const nonStaleDevices = devices.filter((device) => device.staleAt === undefined)
   const currentDevice = nonStaleDevices.find((device) => device.isCurrent)
   const otherActiveDevices = nonStaleDevices.filter((device) => !device.isCurrent)
-  const activeDevices = [
-    ...(currentDevice ? [currentDevice] : []),
-    ...otherActiveDevices,
-  ]
 
   const renderDeviceItem = (device: DeviceInfo, isLast: boolean) => {
     const deviceFoundDate = formatDeviceFoundDate(device.createdAt)
@@ -219,6 +215,14 @@ const ChatSettings = () => {
           </p>
         </div>
 
+        {currentDevice && (
+          <div className="mb-6">
+            <SettingsGroup title="This Device">
+              {renderDeviceItem(currentDevice, true)}
+            </SettingsGroup>
+          </div>
+        )}
+
         <div className="space-y-6">
           <SettingsGroup title="Your Devices / Apps">
             {loading && (
@@ -228,18 +232,18 @@ const ChatSettings = () => {
                 </div>
               </SettingsGroupItem>
             )}
-            {!loading && devices.length === 0 && (
+            {!loading && otherActiveDevices.length === 0 && staleDevices.length === 0 && (
               <SettingsGroupItem isLast>
                 <div className="text-center py-4">
                   <p className="text-base-content/70">No device / app invites found.</p>
                 </div>
               </SettingsGroupItem>
             )}
-            {!loading && devices.length > 0 && (
+            {!loading && (otherActiveDevices.length > 0 || staleDevices.length > 0) && (
               <>
-                {activeDevices.map((device, index) => {
+                {otherActiveDevices.map((device, index) => {
                   const isLastActive =
-                    index === activeDevices.length - 1 && staleDevices.length === 0
+                    index === otherActiveDevices.length - 1 && staleDevices.length === 0
                   return renderDeviceItem(device, isLastActive)
                 })}
                 {staleDevices.length > 0 && (
