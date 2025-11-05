@@ -196,14 +196,11 @@ export default class SessionManager {
             ([key]) => key === "ephemeralKey" || key === "sharedSecret"
           )
           if (isTombstone) {
-            console.warn("Received device invite tombstone:", event.tags)
             const deviceIdTag = event.tags.find(
               ([key, value]) => key === "d" && value.startsWith("double-ratchet/invites/")
             )
             const [, deviceIdTagValue] = deviceIdTag || []
-            console.warn("Device ID tag value:", deviceIdTagValue)
             const deviceId = deviceIdTagValue.split("/").pop()
-            console.warn("Parsed device ID:", deviceId)
             if (!deviceId) return
 
             this.cleanupDevice(authorPublicKey, deviceId)
@@ -527,12 +524,6 @@ export default class SessionManager {
       ...Array.from(ourUserRecord.devices.values()),
     ].filter((device) => device.staleAt === undefined)
 
-    console.warn(
-      "Sending to devices:",
-      devices.map((d) => d.deviceId),
-      devices.map((d) => (d.activeSession ? d.activeSession.name : "no-session"))
-    )
-
     // Send to all devices in background (if sessions exist)
     Promise.allSettled(
       devices.map(async (device) => {
@@ -584,7 +575,6 @@ export default class SessionManager {
   }
 
   async revokeDevice(deviceId: string): Promise<void> {
-    console.warn("Revoking device:", deviceId)
     await this.init()
 
     await this.publishDeviceTombstone(deviceId).catch((error) => {
@@ -616,11 +606,6 @@ export default class SessionManager {
     if (!userRecord) return
     const deviceRecord = userRecord.devices.get(deviceId)
 
-    console.warn("Cleaning up device record:", {
-      our: publicKey === this.ourPublicKey,
-      deviceId,
-      staleAt: deviceRecord?.staleAt,
-    })
     if (!deviceRecord) return
 
     if (deviceRecord.activeSession) {
@@ -635,7 +620,6 @@ export default class SessionManager {
     deviceRecord.inactiveSessions = []
     deviceRecord.staleAt = Date.now()
 
-    console.warn("Cleaned up device record:", publicKey === this.ourPublicKey, deviceId)
     await this.storeUserRecord(publicKey).catch(console.error)
   }
 
