@@ -56,12 +56,14 @@ test.describe("WebRTC Blossom via NDK", () => {
     await page1.evaluate(
       async ({dataArray, hash}) => {
         const {getBlobStorage} = await import("./src/utils/chat/webrtc/blobManager")
+        const {ndk} = await import("./src/utils/ndk")
         const storage = getBlobStorage()
         await storage.initialize()
 
         const data = new Uint8Array(dataArray)
-        await storage.save(hash, data.buffer)
-        console.log("Page1: Blob stored, will serve via p2p:", hash.slice(0, 8))
+        const myPubkey = ndk().activeUser?.pubkey
+        await storage.save(hash, data.buffer, "image/jpeg", myPubkey)
+        console.log("Page1: Blob stored with author, will serve via p2p:", hash.slice(0, 8))
       },
       {dataArray: Array.from(testData), hash: testHash}
     )
@@ -88,7 +90,7 @@ test.describe("WebRTC Blossom via NDK", () => {
     // Screenshot for debugging
     await page2.screenshot({path: "/tmp/page2-profile.png"})
 
-    // Page2: Verify that blob was fetched via p2p from Page1
+    // Page2: Verify that blob was fetched via p2p from Page1 and author was saved
     const result = await page2.evaluate(async (hash) => {
       // Wait for useBlossomCache to complete and React to re-render with blob: URL
       await new Promise((resolve) => setTimeout(resolve, 5000))
@@ -98,6 +100,9 @@ test.describe("WebRTC Blossom via NDK", () => {
 
       // Check if blob is in storage (would be saved by useBlossomCache after p2p fetch)
       const blob = await storage.get(hash)
+
+      console.log("Blob in storage:", !!blob)
+      console.log("Blob first_author:", blob?.first_author?.slice(0, 8) || "none")
 
       // Check all images
       const images = Array.from(document.querySelectorAll("img"))

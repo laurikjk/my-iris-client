@@ -70,7 +70,11 @@ async function fetchFromPeers(hash: string): Promise<ArrayBuffer | null> {
 /**
  * Try to fetch blob from local cache first, then WebRTC peers
  */
-async function fetchBlobP2P(hash: string, mimeType?: string): Promise<Blob | null> {
+async function fetchBlobP2P(
+  hash: string,
+  mimeType?: string,
+  authorPubkey?: string
+): Promise<Blob | null> {
   try {
     // Check local cache first
     const storage = getBlobStorage()
@@ -88,9 +92,9 @@ async function fetchBlobP2P(hash: string, mimeType?: string): Promise<Blob | nul
 
     const data = await fetchFromPeers(hash)
     if (data) {
-      console.log(`Blob ${hash.slice(0, 8)} received from peer`)
-      // Store in cache with MIME type
-      await storage.save(hash, data, mimeType)
+      console.log(`Blob ${hash.slice(0, 8)} received from peer, saving with author ${authorPubkey?.slice(0, 8) || "none"}`)
+      // Store in cache with MIME type and author
+      await storage.save(hash, data, mimeType, authorPubkey)
       return new Blob([data], {type: mimeType})
     }
 
@@ -108,7 +112,8 @@ async function fetchBlobP2P(hash: string, mimeType?: string): Promise<Blob | nul
 async function fetchAndVerifyHTTP(
   url: string,
   expectedHash: string,
-  mimeType?: string
+  mimeType?: string,
+  authorPubkey?: string
 ): Promise<Blob | null> {
   try {
     console.log(`Fetching ${expectedHash.slice(0, 8)} via HTTP...`)
@@ -139,7 +144,8 @@ async function fetchAndVerifyHTTP(
     await storage.save(
       expectedHash,
       arrayBuffer,
-      mimeType || response.headers.get("content-type") || undefined
+      mimeType || response.headers.get("content-type") || undefined,
+      authorPubkey // Save author from post context
     )
 
     return new Blob([arrayBuffer], {
@@ -175,7 +181,7 @@ export function useBlossomCache(url: string, authorPubkey?: string): string {
     console.log(`useBlossomCache: attempting p2p fetch for ${extracted.hash.slice(0, 8)}`)
 
     // Try p2p fetch
-    fetchBlobP2P(extracted.hash, extracted.mimeType).then(async (blob) => {
+    fetchBlobP2P(extracted.hash, extracted.mimeType, authorPubkey).then(async (blob) => {
       if (blob) {
         // Create object URL for the blob
         const objectUrl = URL.createObjectURL(blob)
@@ -209,7 +215,8 @@ export function useBlossomCache(url: string, authorPubkey?: string): string {
       const verifiedBlob = await fetchAndVerifyHTTP(
         url,
         extracted.hash,
-        extracted.mimeType
+        extracted.mimeType,
+        authorPubkey
       )
 
       if (verifiedBlob) {

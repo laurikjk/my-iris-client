@@ -22,7 +22,7 @@ import classNames from "classnames"
 import {ReactElement} from "react"
 import Content from "./Content"
 import {isTauri} from "@/utils/utils"
-import LocalData from "./LocalData"
+import LocalData from "./local/LocalData"
 
 interface SettingsItem {
   icon: string | ReactElement

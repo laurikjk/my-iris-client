@@ -4,7 +4,7 @@ import {SettingsButton} from "@/shared/components/settings/SettingsButton"
 import {useState, useEffect, MouseEvent} from "react"
 import {confirm} from "@/utils/utils"
 import Dexie from "dexie"
-import {getBlobStorage} from "@/utils/chat/webrtc/blobManager"
+import {BlobList} from "./BlobList"
 
 interface EventStats {
   totalEvents: number
@@ -29,15 +29,6 @@ export function LocalData() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isClearing, setIsClearing] = useState(false)
-  const [blobs, setBlobs] = useState<
-    {hash: string; size: number; mimeType?: string; stored_at: number}[]
-  >([])
-  const [blobCount, setBlobCount] = useState(0)
-  const [blobTotalSize, setBlobTotalSize] = useState(0)
-  const [blobOffset, setBlobOffset] = useState(0)
-  const [loadingBlobs, setLoadingBlobs] = useState(false)
-  const [expandedBlobs, setExpandedBlobs] = useState<Set<string>>(new Set())
-  const [isClearingBlobs, setIsClearingBlobs] = useState(false)
 
   const loadStats = async () => {
     try {
@@ -110,51 +101,6 @@ export function LocalData() {
     }
   }
 
-  const loadBlobs = async (reset = false) => {
-    try {
-      setLoadingBlobs(true)
-      const storage = getBlobStorage()
-      await storage.initialize()
-
-      const newOffset = reset ? 0 : blobOffset
-      const newBlobs = await storage.list(newOffset, 20)
-
-      if (reset) {
-        setBlobs(newBlobs)
-        setBlobOffset(newBlobs.length)
-      } else {
-        setBlobs([...blobs, ...newBlobs])
-        setBlobOffset(blobOffset + newBlobs.length)
-      }
-
-      const count = await storage.count()
-      setBlobCount(count)
-
-      // Calculate total size
-      if (reset) {
-        const totalSize = newBlobs.reduce((sum, blob) => sum + blob.size, 0)
-        setBlobTotalSize(totalSize)
-      } else {
-        const addedSize = newBlobs.reduce((sum, blob) => sum + blob.size, 0)
-        setBlobTotalSize(blobTotalSize + addedSize)
-      }
-    } catch (error) {
-      console.error("Error loading blobs:", error)
-    } finally {
-      setLoadingBlobs(false)
-    }
-  }
-
-  useEffect(() => {
-    loadStats()
-    loadBlobs(true)
-
-    // Refresh stats every 30 seconds
-    const interval = setInterval(loadStats, 30000)
-
-    return () => clearInterval(interval)
-  }, [])
-
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return "0 Bytes"
     const k = 1024
@@ -216,33 +162,14 @@ export function LocalData() {
     return kindNames[kind] || `Kind ${kind}`
   }
 
-  const handleClearBlobs = async (e?: MouseEvent) => {
-    e?.preventDefault()
-    e?.stopPropagation()
+  useEffect(() => {
+    loadStats()
 
-    const confirmed = await confirm(
-      "This will delete all locally stored blobs. They can be re-downloaded via p2p or HTTP as needed.",
-      "Clear local blobs?"
-    )
+    // Refresh stats every 30 seconds
+    const interval = setInterval(loadStats, 30000)
 
-    if (!confirmed) return
-
-    setIsClearingBlobs(true)
-
-    try {
-      const storage = getBlobStorage()
-      await storage.clear()
-      console.log("Cleared blob storage")
-
-      // Reload blobs
-      await loadBlobs(true)
-    } catch (err) {
-      console.error("Error clearing blobs:", err)
-      setError(err instanceof Error ? err.message : "Failed to clear blobs")
-    } finally {
-      setIsClearingBlobs(false)
-    }
-  }
+    return () => clearInterval(interval)
+  }, [])
 
   const handleClearDatabase = async (e?: MouseEvent) => {
     e?.preventDefault()
@@ -362,91 +289,7 @@ export function LocalData() {
         </div>
       )}
 
-      <SettingsGroup title="Local Blobs (P2P Storage)">
-        <SettingsGroupItem>
-          <div className="flex justify-between items-center">
-            <span>Total blobs</span>
-            <span className="text-base-content/70">{blobCount.toLocaleString()}</span>
-          </div>
-        </SettingsGroupItem>
-
-        <SettingsGroupItem>
-          <div className="flex justify-between items-center">
-            <span>Storage used</span>
-            <span className="text-base-content/70">{formatBytes(blobTotalSize)}</span>
-          </div>
-        </SettingsGroupItem>
-
-        {blobs.length > 0 && (
-          <SettingsGroupItem>
-            <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
-              {blobs.map((blob) => {
-                const isExpanded = expandedBlobs.has(blob.hash)
-                const isImage = blob.mimeType?.startsWith("image/")
-
-                return (
-                  <div
-                    key={blob.hash}
-                    className="flex flex-col gap-2 p-2 bg-base-200 rounded"
-                  >
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-mono text-xs break-all">{blob.hash}</div>
-                        <div className="text-xs text-base-content/50">
-                          {blob.mimeType || "unknown"} · {formatBytes(blob.size)} ·{" "}
-                          {new Date(blob.stored_at).toLocaleString()}
-                        </div>
-                      </div>
-                      {isImage && (
-                        <button
-                          onClick={() => {
-                            const newExpanded = new Set(expandedBlobs)
-                            if (isExpanded) {
-                              newExpanded.delete(blob.hash)
-                            } else {
-                              newExpanded.add(blob.hash)
-                            }
-                            setExpandedBlobs(newExpanded)
-                          }}
-                          className="btn btn-xs"
-                        >
-                          {isExpanded ? "Hide" : "Show"}
-                        </button>
-                      )}
-                    </div>
-
-                    {isExpanded && isImage && (
-                      <BlobImage hash={blob.hash} mimeType={blob.mimeType} />
-                    )}
-                  </div>
-                )
-              })}
-
-              {blobOffset < blobCount && (
-                <button
-                  onClick={() => loadBlobs(false)}
-                  disabled={loadingBlobs}
-                  className="btn btn-sm btn-primary"
-                >
-                  {loadingBlobs
-                    ? "Loading..."
-                    : `Load more (${blobCount - blobOffset} remaining)`}
-                </button>
-              )}
-            </div>
-          </SettingsGroupItem>
-        )}
-
-        {blobCount > 0 && (
-          <SettingsButton
-            label={isClearingBlobs ? "Clearing..." : "Clear all blobs"}
-            onClick={handleClearBlobs}
-            variant="destructive"
-            isLast
-            disabled={isClearingBlobs || loadingBlobs}
-          />
-        )}
-      </SettingsGroup>
+      <BlobList />
 
       <SettingsGroup title="Danger Zone">
         <SettingsGroupItem>
@@ -465,33 +308,6 @@ export function LocalData() {
         />
       </SettingsGroup>
     </div>
-  )
-}
-
-function BlobImage({hash, mimeType}: {hash: string; mimeType?: string}) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    let url: string | null = null
-
-    getBlobStorage()
-      .get(hash)
-      .then((blob) => {
-        if (blob) {
-          url = URL.createObjectURL(new Blob([blob.data], {type: mimeType}))
-          setBlobUrl(url)
-        }
-      })
-
-    return () => {
-      if (url) URL.revokeObjectURL(url)
-    }
-  }, [hash, mimeType])
-
-  if (!blobUrl) return <div className="text-xs">Loading...</div>
-
-  return (
-    <img src={blobUrl} alt={hash.slice(0, 8)} className="max-w-full max-h-64 rounded" />
   )
 }
 
