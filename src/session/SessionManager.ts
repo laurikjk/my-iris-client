@@ -135,7 +135,7 @@ export default class SessionManager {
         await this.storage.put(acceptanceKey, "1")
 
         const userRecord = this.getOrCreateUserRecord(inviteePubkey)
-        const deviceRecord = this.addDeviceRecord(userRecord, invite)
+        const deviceRecord = this.upsertDeviceRecord(userRecord, invite)
 
         this.attachSessionSubscription(inviteePubkey, deviceRecord, session, true)
       }
@@ -165,7 +165,7 @@ export default class SessionManager {
     return rec
   }
 
-  private addDeviceRecord(userRecord: UserRecord, invite: Invite): DeviceRecord {
+  private upsertDeviceRecord(userRecord: UserRecord, invite: Invite): DeviceRecord {
     const {deviceId, createdAt} = invite
     if (!deviceId) {
       throw new Error("Invite has no deviceId")
@@ -202,7 +202,9 @@ export default class SessionManager {
               ([key, value]) => key === "d" && value.startsWith("double-ratchet/invites/")
             )
             const [, deviceIdTagValue] = deviceIdTag || []
+            console.warn("Device ID tag value:", deviceIdTagValue)
             const deviceId = deviceIdTagValue.split("/").pop()
+            console.warn("Parsed device ID:", deviceId)
             if (!deviceId) return
 
             this.cleanupDevice(authorPublicKey, deviceId)
@@ -351,7 +353,7 @@ export default class SessionManager {
         this.deviceId
       )
       return this.nostrPublish(event)
-        .then(() => this.addDeviceRecord(userRecord, invite))
+        .then(() => this.upsertDeviceRecord(userRecord, invite))
         .then((dr) => this.attachSessionSubscription(userPubkey, dr, session))
         .then(() => this.sendMessageHistory(userPubkey, deviceId))
         .catch(console.error)
@@ -530,7 +532,8 @@ export default class SessionManager {
 
     console.warn(
       "Sending to devices:",
-      devices.map((d) => d.deviceId)
+      devices.map((d) => d.deviceId),
+      devices.map((d) => (d.activeSession ? d.activeSession.name : "no-session"))
     )
 
     // Send to all devices in background (if sessions exist)
@@ -584,6 +587,7 @@ export default class SessionManager {
   }
 
   async revokeDevice(deviceId: string): Promise<void> {
+    console.warn("Revoking device:", deviceId)
     await this.init()
 
     await this.publishDeviceTombstone(deviceId).catch((error) => {
@@ -634,6 +638,7 @@ export default class SessionManager {
     deviceRecord.inactiveSessions = []
     deviceRecord.isStale = true
 
+    console.warn("Cleaned up device record:", publicKey === this.ourPublicKey, deviceId)
     await this.storeUserRecord(publicKey).catch(console.error)
   }
 
