@@ -135,7 +135,7 @@ export default class SessionManager {
         await this.storage.put(acceptanceKey, "1")
 
         const userRecord = this.getOrCreateUserRecord(inviteePubkey)
-        const deviceRecord = this.upsertDeviceRecord(userRecord, invite)
+        const deviceRecord = this.upsertDeviceRecord(userRecord, deviceId)
 
         this.attachSessionSubscription(inviteePubkey, deviceRecord, session, true)
       }
@@ -165,10 +165,9 @@ export default class SessionManager {
     return rec
   }
 
-  private upsertDeviceRecord(userRecord: UserRecord, invite: Invite): DeviceRecord {
-    const {deviceId, createdAt} = invite
+  private upsertDeviceRecord(userRecord: UserRecord, deviceId: string): DeviceRecord {
     if (!deviceId) {
-      throw new Error("Invite has no deviceId")
+      throw new Error("Device record must include a deviceId")
     }
     const existing = userRecord.devices.get(deviceId)
     if (existing) {
@@ -178,7 +177,7 @@ export default class SessionManager {
     const deviceRecord: DeviceRecord = {
       deviceId,
       inactiveSessions: [],
-      createdAt: createdAt,
+      createdAt: Date.now(),
     }
     userRecord.devices.set(deviceId, deviceRecord)
     return deviceRecord
@@ -353,7 +352,7 @@ export default class SessionManager {
         this.deviceId
       )
       return this.nostrPublish(event)
-        .then(() => this.upsertDeviceRecord(userRecord, invite))
+        .then(() => this.upsertDeviceRecord(userRecord, deviceId))
         .then((dr) => this.attachSessionSubscription(userPubkey, dr, session))
         .then(() => this.sendMessageHistory(userPubkey, deviceId))
         .catch(console.error)
