@@ -17,6 +17,7 @@ const ChatSettings = () => {
   const {publicKey} = useUserStore()
   const [devices, setDevices] = useState<DeviceInfo[]>([])
   const [loading, setLoading] = useState(true)
+  const [showStale, setShowStale] = useState(false)
 
   type SessionManagerInstance = NonNullable<ReturnType<typeof getSessionManager>>
 
@@ -88,6 +89,96 @@ const ChatSettings = () => {
     loadDeviceInfo()
   }, [publicKey])
 
+  useEffect(() => {
+    if (devices.every((device) => device.staleAt === undefined)) {
+      setShowStale(false)
+    }
+  }, [devices])
+
+  const staleDevices = devices.filter((device) => device.staleAt !== undefined)
+  const nonStaleDevices = devices.filter((device) => device.staleAt === undefined)
+  const currentDevice = nonStaleDevices.find((device) => device.isCurrent)
+  const otherActiveDevices = nonStaleDevices.filter((device) => !device.isCurrent)
+  const activeDevices = [
+    ...(currentDevice ? [currentDevice] : []),
+    ...otherActiveDevices,
+  ]
+
+  const renderDeviceItem = (device: DeviceInfo, isLast: boolean) => {
+    const deviceFoundDate = formatDeviceFoundDate(device.createdAt)
+    const staleSinceDate = formatDeviceFoundDate(device.staleAt)
+    const isStale = device.staleAt !== undefined
+
+    return (
+      <SettingsGroupItem key={device.id} isLast={isLast}>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-medium font-mono text-sm">{device.id}</span>
+              {device.isCurrent && (
+                <span className="badge badge-primary badge-sm">Current</span>
+              )}
+              {isStale && (
+                <span className="badge badge-warning badge-sm">Stale</span>
+              )}
+            </div>
+            {deviceFoundDate && (
+              <div className="text-xs text-base-content/50">
+                We first found and messaged this device on {deviceFoundDate}
+              </div>
+            )}
+            {isStale && staleSinceDate && (
+              <div className="text-xs text-warning">
+                Marked as stale since {staleSinceDate}.
+              </div>
+            )}
+            {isStale && (
+              <div className="text-xs text-warning">
+                This invite was revoked and will no longer receive messages.
+              </div>
+            )}
+          </div>
+          {!device.isCurrent && !isStale && (
+            <button
+              onClick={() => handleDeleteDevice(device.id)}
+              className="btn btn-ghost btn-sm text-error hover:bg-error/20 ml-4"
+              title="Delete device / app invite"
+            >
+              <RiDeleteBin6Line size={16} />
+            </button>
+          )}
+        </div>
+      </SettingsGroupItem>
+    )
+  }
+
+  const renderStaleDeviceRow = (device: DeviceInfo) => {
+    const deviceFoundDate = formatDeviceFoundDate(device.createdAt)
+    const staleSinceDate = formatDeviceFoundDate(device.staleAt)
+
+    return (
+      <div key={device.id} className="px-4 py-3 text-sm">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="font-medium font-mono text-sm">{device.id}</span>
+            <span className="badge badge-warning badge-sm">Stale</span>
+          </div>
+          {staleSinceDate && (
+            <span className="text-xs text-base-content/50">Stale since {staleSinceDate}</span>
+          )}
+        </div>
+        {deviceFoundDate && (
+          <div className="mt-2 text-xs text-base-content/60">
+            We first found and messaged this device on {deviceFoundDate}
+          </div>
+        )}
+        <div className="mt-1 text-xs text-base-content/60">
+          This invite was revoked and will no longer receive messages.
+        </div>
+      </div>
+    )
+  }
+
   const handleDeleteDevice = async (deviceId: string) => {
     if (!(await confirm(`Delete invite for device ${deviceId.slice(0, 8)}?`))) {
       return
@@ -146,57 +237,34 @@ const ChatSettings = () => {
             )}
             {!loading && devices.length > 0 && (
               <>
-                {devices.map((device, index) => {
-                  const deviceFoundDate = formatDeviceFoundDate(device.createdAt)
-                  const staleSinceDate = formatDeviceFoundDate(device.staleAt)
-                  const isStale = device.staleAt !== undefined
-                  return (
-                    <SettingsGroupItem
-                      key={device.id}
-                      isLast={index === devices.length - 1}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium font-mono text-sm">
-                              {device.id}
-                            </span>
-                            {device.isCurrent && (
-                              <span className="badge badge-primary badge-sm">Current</span>
-                            )}
-                            {isStale && (
-                              <span className="badge badge-warning badge-sm">Stale</span>
-                            )}
-                          </div>
-                          {deviceFoundDate && (
-                            <div className="text-xs text-base-content/50">
-                              We first found and messaged this device on {deviceFoundDate}
-                            </div>
-                          )}
-                          {isStale && staleSinceDate && (
-                            <div className="text-xs text-warning">
-                              Marked as stale since {staleSinceDate}.
-                            </div>
-                          )}
-                          {isStale && (
-                            <div className="text-xs text-warning">
-                              This invite was revoked and will no longer receive messages.
-                            </div>
-                          )}
-                        </div>
-                        {!device.isCurrent && !isStale && (
-                          <button
-                            onClick={() => handleDeleteDevice(device.id)}
-                            className="btn btn-ghost btn-sm text-error hover:bg-error/20 ml-4"
-                            title="Delete device / app invite"
-                          >
-                            <RiDeleteBin6Line size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </SettingsGroupItem>
-                  )
+                {activeDevices.map((device, index) => {
+                  const isLastActive =
+                    index === activeDevices.length - 1 && staleDevices.length === 0
+                  return renderDeviceItem(device, isLastActive)
                 })}
+                {staleDevices.length > 0 && (
+                  <SettingsGroupItem key="stale-section" isLast>
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowStale((prev) => !prev)}
+                        className="flex w-full items-center justify-between rounded-lg border border-base-300 bg-base-100 px-4 py-2 text-sm font-medium text-base-content/60 hover:bg-base-200"
+                      >
+                        <span>
+                          {showStale ? "▼" : "▶"} Stale devices ({staleDevices.length})
+                        </span>
+                        <span className="text-xs text-base-content/50">
+                          Revoked invites, kept for reference
+                        </span>
+                      </button>
+                      {showStale && (
+                        <div className="rounded-lg border border-base-300 bg-base-100 divide-y divide-base-300">
+                          {staleDevices.map((device) => renderStaleDeviceRow(device))}
+                        </div>
+                      )}
+                    </div>
+                  </SettingsGroupItem>
+                )}
               </>
             )}
           </SettingsGroup>
