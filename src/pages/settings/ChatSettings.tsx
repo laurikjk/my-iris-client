@@ -90,15 +90,18 @@ const ChatSettings = () => {
   }, [publicKey])
 
   useEffect(() => {
-    if (devices.every((device) => device.staleAt === undefined)) {
+    if (!devices.some((device) => device.staleAt !== undefined && !device.isCurrent)) {
       setShowStale(false)
     }
   }, [devices])
 
-  const staleDevices = devices.filter((device) => device.staleAt !== undefined)
-  const nonStaleDevices = devices.filter((device) => device.staleAt === undefined)
-  const currentDevice = nonStaleDevices.find((device) => device.isCurrent)
-  const otherActiveDevices = nonStaleDevices.filter((device) => !device.isCurrent)
+  const currentDevice = devices.find((device) => device.isCurrent)
+  const otherActiveDevices = devices.filter(
+    (device) => !device.isCurrent && device.staleAt === undefined
+  )
+  const staleDevices = devices.filter(
+    (device) => device.staleAt !== undefined && !device.isCurrent
+  )
 
   const renderDeviceItem = (device: DeviceInfo, isLast: boolean) => {
     const deviceFoundDate = formatDeviceFoundDate(device.createdAt)
