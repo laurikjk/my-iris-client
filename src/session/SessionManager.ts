@@ -615,7 +615,12 @@ export default class SessionManager {
     if (!userRecord) return
     const deviceRecord = userRecord.devices.get(deviceId)
 
-    if (!deviceRecord || deviceRecord.isStale) return
+    console.warn("Cleaning up device record:", {
+      our: publicKey === this.ourPublicKey,
+      deviceId,
+      isStale: deviceRecord?.isStale,
+    })
+    if (!deviceRecord) return
 
     if (deviceRecord.activeSession) {
       this.removeSessionSubscription(publicKey, deviceId, deviceRecord.activeSession.name)
