@@ -10,6 +10,7 @@ interface DeviceInfo {
   id: string
   isCurrent: boolean
   createdAt: number
+  isStale: boolean
 }
 
 const ChatSettings = () => {
@@ -38,6 +39,7 @@ const ChatSettings = () => {
         id: device.deviceId,
         isCurrent: device.deviceId === currentDeviceId,
         createdAt: device.createdAt,
+        isStale: Boolean(device.isStale),
       }))
 
     return deviceList
@@ -152,14 +154,22 @@ const ChatSettings = () => {
                           {device.isCurrent && (
                             <span className="badge badge-primary badge-sm">Current</span>
                           )}
+                          {device.isStale && (
+                            <span className="badge badge-warning badge-sm">Stale</span>
+                          )}
                         </div>
                         {device.createdAt && (
                           <div className="text-xs text-base-content/50">
                             {new Date(device.createdAt * 1000).toLocaleString()}
                           </div>
                         )}
+                        {device.isStale && (
+                          <div className="text-xs text-warning">
+                            This invite was revoked and will no longer receive messages.
+                          </div>
+                        )}
                       </div>
-                      {!device.isCurrent && (
+                      {!device.isCurrent && !device.isStale && (
                         <button
                           onClick={() => handleDeleteDevice(device.id)}
                           className="btn btn-ghost btn-sm text-error hover:bg-error/20 ml-4"
