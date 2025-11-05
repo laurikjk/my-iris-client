@@ -73,6 +73,15 @@ export const getSessionManager = (): SessionManager => {
   return manager
 }
 
+export const revokeCurrentDevice = async (): Promise<void> => {
+  const {publicKey} = useUserStore.getState()
+  if (!publicKey) return
+
+  const sessionManager = getSessionManager()
+  const deviceId = sessionManager.getDeviceId()
+  await sessionManager.revokeDevice(deviceId)
+}
+
 /**
  * Publishes a tombstone event to nullify a device's chat invite
  * Makes the invite invisible to other devices
