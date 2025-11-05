@@ -12,6 +12,7 @@ import {KIND_CONTACTS} from "@/utils/constants"
 import {unsubscribeAll} from "@/utils/notifications"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useDraftStore} from "@/stores/draft"
+import {revokeCurrentDevice} from "@/shared/services/PrivateChats"
 
 // Helper function to add timeout to any promise
 const withTimeout = (promise: Promise<unknown>, ms: number): Promise<unknown> => {
@@ -85,6 +86,12 @@ function DeleteAccount() {
         await withTimeout(cleanupStores(), 3000)
       } catch (e) {
         console.error("Error cleaning up stores:", e)
+      }
+
+      try {
+        await revokeCurrentDevice()
+      } catch (e) {
+        console.error("Error revoking current device:", e)
       }
 
       console.log("[Logout] Cleaning up NDK")

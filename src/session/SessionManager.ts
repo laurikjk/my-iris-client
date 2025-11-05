@@ -8,22 +8,25 @@ import {
   Session,
   serializeSessionState,
   deserializeSessionState,
+  INVITE_EVENT_KIND,
 } from "nostr-double-ratchet/src"
 import {StorageAdapter, InMemoryStorageAdapter} from "./StorageAdapter"
 import {KIND_CHAT_MESSAGE} from "../utils/constants"
-import {getEventHash} from "nostr-tools"
+import {getEventHash, VerifiedEvent} from "nostr-tools"
+
 export type OnEventCallback = (event: Rumor, from: string) => void
 
 interface DeviceRecord {
   deviceId: string
   activeSession?: Session
   inactiveSessions: Session[]
+  createdAt: number
+  staleAt?: number
 }
 
 interface UserRecord {
   publicKey: string
   devices: Map<string, DeviceRecord>
-  foundInvites: Map<string, Invite>
 }
 
 type StoredSessionEntry = ReturnType<typeof serializeSessionState>
@@ -32,6 +35,8 @@ interface StoredDeviceRecord {
   deviceId: string
   activeSession: StoredSessionEntry | null
   inactiveSessions: StoredSessionEntry[]
+  createdAt: number
+  staleAt?: number
 }
 
 interface StoredUserRecord {
@@ -58,9 +63,10 @@ export default class SessionManager {
 
   // Subscriptions
   private ourDeviceInviteSubscription: Unsubscribe | null = null
-  private ourOtherDeviceInviteSubscription: Unsubscribe | null = null
+  private ourDeviceIntiveTombstoneSubscription: Unsubscribe | null = null
   private inviteSubscriptions: Map<string, Unsubscribe> = new Map()
   private sessionSubscriptions: Map<string, Unsubscribe> = new Map()
+  private inviteTombstoneSubscriptions: Map<string, Unsubscribe> = new Map()
 
   // Callbacks
   private internalSubscriptions: Set<OnEventCallback> = new Set()
@@ -122,16 +128,24 @@ export default class SessionManager {
         const nostrEventId = session.name
         const acceptanceKey = this.inviteAcceptKey(nostrEventId, inviteePubkey, deviceId)
         const nostrEventIdInStorage = await this.storage.get<string>(acceptanceKey)
-
         if (nostrEventIdInStorage) {
           return
         }
 
         await this.storage.put(acceptanceKey, "1")
 
-        this.attachSessionSubscription(inviteePubkey, deviceId, session, true)
+        const userRecord = this.getOrCreateUserRecord(inviteePubkey)
+        const deviceRecord = this.upsertDeviceRecord(userRecord, deviceId)
+
+        this.attachSessionSubscription(inviteePubkey, deviceRecord, session, true)
       }
     )
+
+    if (!this.ourDeviceIntiveTombstoneSubscription) {
+      this.ourDeviceIntiveTombstoneSubscription = this.createInviteTombstoneSubscription(
+        this.ourPublicKey
+      )
+    }
 
     const inviteNostrEvent = invite.getEvent()
     this.nostrPublish(inviteNostrEvent).catch((error) => {
@@ -140,25 +154,62 @@ export default class SessionManager {
   }
 
   // -------------------
-  // Idempotency helpers
+  // User and Device Records helpers
   // -------------------
   private getOrCreateUserRecord(userPubkey: string): UserRecord {
     let rec = this.userRecords.get(userPubkey)
     if (!rec) {
-      rec = {publicKey: userPubkey, devices: new Map(), foundInvites: new Map()}
+      rec = {publicKey: userPubkey, devices: new Map()}
       this.userRecords.set(userPubkey, rec)
     }
     return rec
   }
 
-  private getOrCreateDeviceRecord(userPubkey: string, deviceId: string): DeviceRecord {
-    const ur = this.getOrCreateUserRecord(userPubkey)
-    let dr = ur.devices.get(deviceId)
-    if (!dr) {
-      dr = {deviceId, inactiveSessions: []}
-      ur.devices.set(deviceId, dr)
+  private upsertDeviceRecord(userRecord: UserRecord, deviceId: string): DeviceRecord {
+    if (!deviceId) {
+      throw new Error("Device record must include a deviceId")
     }
-    return dr
+    const existing = userRecord.devices.get(deviceId)
+    if (existing) {
+      return existing
+    }
+
+    const deviceRecord: DeviceRecord = {
+      deviceId,
+      inactiveSessions: [],
+      createdAt: Date.now(),
+    }
+    userRecord.devices.set(deviceId, deviceRecord)
+    return deviceRecord
+  }
+
+  private createInviteTombstoneSubscription(authorPublicKey: string): Unsubscribe {
+    return this.nostrSubscribe(
+      {
+        kinds: [INVITE_EVENT_KIND],
+        authors: [authorPublicKey],
+        "#l": ["double-ratchet/invites"],
+      },
+      (event: VerifiedEvent) => {
+        try {
+          const isTombstone = !event.tags?.some(
+            ([key]) => key === "ephemeralKey" || key === "sharedSecret"
+          )
+          if (isTombstone) {
+            const deviceIdTag = event.tags.find(
+              ([key, value]) => key === "d" && value.startsWith("double-ratchet/invites/")
+            )
+            const [, deviceIdTagValue] = deviceIdTag || []
+            const deviceId = deviceIdTagValue.split("/").pop()
+            if (!deviceId) return
+
+            this.cleanupDevice(authorPublicKey, deviceId)
+          }
+        } catch (error) {
+          console.error("Failed to handle device tombstone:", error)
+        }
+      }
+    )
   }
 
   private sessionKey(userPubkey: string, deviceId: string, sessionName: string) {
@@ -183,8 +234,8 @@ export default class SessionManager {
     return `${this.versionPrefix}/invite-accept/${userPublicKey}/`
   }
 
-  private sessionKeyPrefix(userPublicKey: string) {
-    return `${this.versionPrefix}/session/${userPublicKey}/`
+  private sessionKeyPrefix(userPubkey: string) {
+    return `${this.versionPrefix}/session/${userPubkey}/`
   }
 
   private userRecordKey(publicKey: string) {
@@ -200,16 +251,18 @@ export default class SessionManager {
 
   private attachSessionSubscription(
     userPubkey: string,
-    deviceId: string,
+    deviceRecord: DeviceRecord,
     session: Session,
     // Set to true if only handshake -> not yet sendable -> will be promoted on message
     inactive: boolean = false
   ): void {
-    const key = this.sessionKey(userPubkey, deviceId, session.name)
+    if (deviceRecord.staleAt !== undefined) return
+
+    const key = this.sessionKey(userPubkey, deviceRecord.deviceId, session.name)
     if (this.sessionSubscriptions.has(key)) return
 
+    const dr = deviceRecord
     const rotateSession = (nextSession: Session) => {
-      const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
       const current = dr.activeSession
 
       if (!current) {
@@ -231,7 +284,6 @@ export default class SessionManager {
       dr.activeSession = nextSession
     }
 
-    const dr = this.getOrCreateDeviceRecord(userPubkey, deviceId)
     if (inactive) {
       const alreadyTracked = dr.inactiveSessions.some(
         (tracked) => tracked === session || tracked.name === session.name
@@ -265,12 +317,6 @@ export default class SessionManager {
       this.nostrSubscribe,
       async (invite) => {
         if (!invite.deviceId) return
-
-        const ur = this.getOrCreateUserRecord(userPubkey)
-        if (!ur.foundInvites.has(invite.deviceId)) {
-          ur.foundInvites.set(invite.deviceId, invite)
-        }
-
         if (onInvite) await onInvite(invite)
       }
     )
@@ -278,8 +324,19 @@ export default class SessionManager {
     this.inviteSubscriptions.set(key, unsubscribe)
   }
 
+  private attachInviteTombstoneSubscription(userPubkey: string): void {
+    if (this.inviteTombstoneSubscriptions.has(userPubkey)) {
+      return
+    }
+
+    const unsubscribe = this.createInviteTombstoneSubscription(userPubkey)
+    this.inviteTombstoneSubscriptions.set(userPubkey, unsubscribe)
+  }
+
   setupUser(userPubkey: string) {
     const userRecord = this.getOrCreateUserRecord(userPubkey)
+
+    this.attachInviteTombstoneSubscription(userPubkey)
 
     const acceptInvite = async (invite: Invite) => {
       const {deviceId} = invite
@@ -292,32 +349,18 @@ export default class SessionManager {
         this.deviceId
       )
       return this.nostrPublish(event)
-        .then(() => this.attachSessionSubscription(userPubkey, deviceId, session))
+        .then(() => this.upsertDeviceRecord(userRecord, deviceId))
+        .then((dr) => this.attachSessionSubscription(userPubkey, dr, session))
         .then(() => this.sendMessageHistory(userPubkey, deviceId))
         .catch(console.error)
     }
 
     this.attachInviteSubscription(userPubkey, async (invite) => {
       const {deviceId} = invite
-
       if (!deviceId) return
 
-      const currentActiveSession = this.getOrCreateDeviceRecord(
-        userPubkey,
-        deviceId
-      ).activeSession
-
-      if (!currentActiveSession) {
+      if (!userRecord.devices.has(deviceId)) {
         await acceptInvite(invite)
-      }
-    })
-
-    userRecord.devices.forEach((device) => {
-      if (!device.activeSession) {
-        const invite = userRecord.foundInvites.get(device.deviceId)
-        if (invite) {
-          acceptInvite(invite).catch(console.error)
-        }
       }
     })
   }
@@ -347,8 +390,12 @@ export default class SessionManager {
       unsubscribe()
     }
 
+    for (const unsubscribe of this.inviteTombstoneSubscriptions.values()) {
+      unsubscribe()
+    }
+
     this.ourDeviceInviteSubscription?.()
-    this.ourOtherDeviceInviteSubscription?.()
+    this.ourDeviceIntiveTombstoneSubscription?.()
   }
 
   deactivateCurrentSessions(publicKey: string) {
@@ -393,6 +440,12 @@ export default class SessionManager {
       this.inviteSubscriptions.delete(inviteKey)
     }
 
+    const tombstoneUnsub = this.inviteTombstoneSubscriptions.get(userPubkey)
+    if (tombstoneUnsub) {
+      tombstoneUnsub()
+      this.inviteTombstoneSubscriptions.delete(userPubkey)
+    }
+
     this.messageHistory.delete(userPubkey)
 
     await Promise.allSettled([
@@ -434,12 +487,13 @@ export default class SessionManager {
     if (!device) {
       return
     }
+    if (device.staleAt !== undefined) {
+      return
+    }
     for (const event of history) {
       const {activeSession} = device
 
-      if (!activeSession) {
-        return
-      }
+      if (!activeSession) continue
       const {event: verifiedEvent} = activeSession.sendEvent(event)
       await this.nostrPublish(verifiedEvent)
       await this.storeUserRecord(recipientPublicKey)
@@ -468,7 +522,7 @@ export default class SessionManager {
     const devices = [
       ...Array.from(userRecord.devices.values()),
       ...Array.from(ourUserRecord.devices.values()),
-    ]
+    ].filter((device) => device.staleAt === undefined)
 
     // Send to all devices in background (if sessions exist)
     Promise.allSettled(
@@ -520,6 +574,55 @@ export default class SessionManager {
     return rumor
   }
 
+  async revokeDevice(deviceId: string): Promise<void> {
+    await this.init()
+
+    await this.publishDeviceTombstone(deviceId).catch((error) => {
+      console.error("Failed to publish device tombstone:", error)
+    })
+
+    await this.cleanupDevice(this.ourPublicKey, deviceId)
+  }
+
+  private async publishDeviceTombstone(deviceId: string): Promise<void> {
+    const tags: string[][] = [
+      ["l", "double-ratchet/invites"],
+      ["d", `double-ratchet/invites/${deviceId}`],
+    ]
+
+    const deletionEvent = {
+      content: "",
+      kind: INVITE_EVENT_KIND,
+      created_at: Math.floor(Date.now() / 1000),
+      tags,
+      pubkey: this.ourPublicKey,
+    }
+
+    await this.nostrPublish(deletionEvent)
+  }
+
+  private async cleanupDevice(publicKey: string, deviceId: string): Promise<void> {
+    const userRecord = this.userRecords.get(publicKey)
+    if (!userRecord) return
+    const deviceRecord = userRecord.devices.get(deviceId)
+
+    if (!deviceRecord) return
+
+    if (deviceRecord.activeSession) {
+      this.removeSessionSubscription(publicKey, deviceId, deviceRecord.activeSession.name)
+    }
+
+    for (const session of deviceRecord.inactiveSessions) {
+      this.removeSessionSubscription(publicKey, deviceId, session.name)
+    }
+
+    deviceRecord.activeSession = undefined
+    deviceRecord.inactiveSessions = []
+    deviceRecord.staleAt = Date.now()
+
+    await this.storeUserRecord(publicKey).catch(console.error)
+  }
+
   private buildMessageTags(
     recipientPublicKey: string,
     extraTags: string[][]
@@ -545,6 +648,8 @@ export default class SessionManager {
           inactiveSessions: device.inactiveSessions.map((session) =>
             serializeSessionState(session.state)
           ),
+          createdAt: device.createdAt,
+          staleAt: device.staleAt,
         })
       ),
     }
@@ -564,6 +669,8 @@ export default class SessionManager {
             deviceId,
             activeSession: serializedActive,
             inactiveSessions: serializedInactive,
+            createdAt,
+            staleAt,
           } = deviceData
 
           try {
@@ -582,6 +689,8 @@ export default class SessionManager {
               deviceId,
               activeSession,
               inactiveSessions,
+              createdAt,
+              staleAt,
             })
           } catch (e) {
             console.error(
@@ -591,28 +700,32 @@ export default class SessionManager {
           }
         }
 
-        for (const device of devices.values()) {
-          const {deviceId, activeSession, inactiveSessions} = device
-          if (!deviceId) continue
-
-          for (const session of inactiveSessions.reverse()) {
-            this.attachSessionSubscription(publicKey, deviceId, session)
-          }
-          if (activeSession) {
-            this.attachSessionSubscription(publicKey, deviceId, activeSession)
-          }
-        }
-
         this.userRecords.set(publicKey, {
           publicKey: data.publicKey,
           devices,
-          foundInvites: new Map(),
         })
+
+        if (publicKey !== this.ourPublicKey) {
+          this.attachInviteTombstoneSubscription(publicKey)
+        }
+
+        for (const device of devices.values()) {
+          const {deviceId, activeSession, inactiveSessions, staleAt} = device
+          if (!deviceId || staleAt !== undefined) continue
+
+          for (const session of inactiveSessions.reverse()) {
+            this.attachSessionSubscription(publicKey, device, session)
+          }
+          if (activeSession) {
+            this.attachSessionSubscription(publicKey, device, activeSession)
+          }
+        }
       })
       .catch((error) => {
         console.error(`Failed to load user record for ${publicKey}:`, error)
       })
   }
+
   private loadAllUserRecords() {
     const prefix = this.userRecordKeyPrefix()
     return this.storage.list(prefix).then((keys) => {
@@ -673,6 +786,7 @@ export default class SessionManager {
                 devices: userRecordData.devices.map((device) => ({
                   deviceId: device.deviceId,
                   activeSession: null,
+                  createdAt: device.createdAt,
                   inactiveSessions: [],
                 })),
               }

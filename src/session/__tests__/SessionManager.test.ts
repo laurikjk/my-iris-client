@@ -77,6 +77,7 @@ describe("SessionManager", () => {
 
     expect(bobReceivedMessages)
   })
+
   it("should handle back to back messages after initial, answer, and then", async () => {
     await runScenario({
       steps: [

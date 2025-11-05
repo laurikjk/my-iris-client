@@ -12,7 +12,6 @@ const createSubscribe = (ndk: NDK): NostrSubscribe => {
     const subscription = ndk.subscribe(filter)
 
     subscription.on("event", (event: NDKEvent) => {
-      console.warn("PrivateChats received event:", event.kind, event.id)
       onEvent(event as unknown as VerifiedEvent)
     })
 
@@ -28,9 +27,7 @@ const createSubscribe = (ndk: NDK): NostrSubscribe => {
 const createPublish = (ndk: NDK): NostrPublish => {
   return (async (event) => {
     const e = new NDKEvent(ndk, event)
-    console.warn("PrivateChats publishing event:", e)
     await e.publish()
-    console.warn("PrivateChats published event:", e.kind, e.id, e.sig)
     return event
   }) as NostrPublish
 }
@@ -48,37 +45,41 @@ const getOrCreateDeviceId = (): string => {
 
 let manager: SessionManager | null = null
 
-export const getSessionManager = (): SessionManager | null => {
+export const getSessionManager = (): SessionManager => {
   if (manager) return manager
 
-  try {
-    const {publicKey, privateKey} = useUserStore.getState()
+  const {publicKey, privateKey} = useUserStore.getState()
 
-    const encrypt = privateKey
-      ? hexToBytes(privateKey)
-      : async (plaintext: string, pubkey: string) => {
-          if (window.nostr?.nip44) {
-            return window.nostr.nip44.encrypt(pubkey, plaintext)
-          }
-          throw new Error("No nostr extension or private key")
+  const encrypt = privateKey
+    ? hexToBytes(privateKey)
+    : async (plaintext: string, pubkey: string) => {
+        if (window.nostr?.nip44) {
+          return window.nostr.nip44.encrypt(pubkey, plaintext)
         }
+        throw new Error("No nostr extension or private key")
+      }
 
-    const ndkInstance = ndk()
+  const ndkInstance = ndk()
 
-    manager = new SessionManager(
-      publicKey,
-      encrypt,
-      getOrCreateDeviceId(),
-      createSubscribe(ndkInstance),
-      createPublish(ndkInstance),
-      new LocalStorageAdapter("private")
-    )
+  manager = new SessionManager(
+    publicKey,
+    encrypt,
+    getOrCreateDeviceId(),
+    createSubscribe(ndkInstance),
+    createPublish(ndkInstance),
+    new LocalStorageAdapter("private")
+  )
 
-    return manager
-  } catch (error) {
-    console.error("Failed to create session manager:", error)
-    return null
-  }
+  return manager
+}
+
+export const revokeCurrentDevice = async (): Promise<void> => {
+  const {publicKey} = useUserStore.getState()
+  if (!publicKey) return
+
+  const sessionManager = getSessionManager()
+  const deviceId = sessionManager.getDeviceId()
+  await sessionManager.revokeDevice(deviceId)
 }
 
 /**
