@@ -72,10 +72,6 @@ export class SimpleBlobStorage {
         first_author: author,
         stored_at: Date.now(),
       })
-
-      if (author) {
-        console.log(`Saved blob ${hash.slice(0, 8)} with author ${author.slice(0, 8)}`)
-      }
     } catch (error) {
       console.error("Error saving blob to cache:", error)
     }
