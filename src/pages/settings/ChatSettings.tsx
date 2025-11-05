@@ -10,7 +10,7 @@ interface DeviceInfo {
   id: string
   isCurrent: boolean
   createdAt: number
-  isStale: boolean
+  staleAt?: number
 }
 
 const ChatSettings = () => {
@@ -45,7 +45,7 @@ const ChatSettings = () => {
         id: device.deviceId,
         isCurrent: device.deviceId === currentDeviceId,
         createdAt: device.createdAt,
-        isStale: Boolean(device.isStale),
+        staleAt: device.staleAt,
       }))
 
     return deviceList
@@ -148,6 +148,8 @@ const ChatSettings = () => {
               <>
                 {devices.map((device, index) => {
                   const deviceFoundDate = formatDeviceFoundDate(device.createdAt)
+                  const staleSinceDate = formatDeviceFoundDate(device.staleAt)
+                  const isStale = device.staleAt !== undefined
                   return (
                     <SettingsGroupItem
                       key={device.id}
@@ -162,7 +164,7 @@ const ChatSettings = () => {
                             {device.isCurrent && (
                               <span className="badge badge-primary badge-sm">Current</span>
                             )}
-                            {device.isStale && (
+                            {isStale && (
                               <span className="badge badge-warning badge-sm">Stale</span>
                             )}
                           </div>
@@ -171,13 +173,18 @@ const ChatSettings = () => {
                               We first found and messaged this device on {deviceFoundDate}
                             </div>
                           )}
-                          {device.isStale && (
+                          {isStale && staleSinceDate && (
+                            <div className="text-xs text-warning">
+                              Marked as stale since {staleSinceDate}.
+                            </div>
+                          )}
+                          {isStale && (
                             <div className="text-xs text-warning">
                               This invite was revoked and will no longer receive messages.
                             </div>
                           )}
                         </div>
-                        {!device.isCurrent && !device.isStale && (
+                        {!device.isCurrent && !isStale && (
                           <button
                             onClick={() => handleDeleteDevice(device.id)}
                             className="btn btn-ghost btn-sm text-error hover:bg-error/20 ml-4"

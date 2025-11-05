@@ -21,7 +21,7 @@ interface DeviceRecord {
   activeSession?: Session
   inactiveSessions: Session[]
   createdAt: number
-  isStale?: boolean
+  staleAt?: number
 }
 
 interface UserRecord {
@@ -36,7 +36,7 @@ interface StoredDeviceRecord {
   activeSession: StoredSessionEntry | null
   inactiveSessions: StoredSessionEntry[]
   createdAt: number
-  isStale?: boolean
+  staleAt?: number
 }
 
 interface StoredUserRecord {
@@ -259,7 +259,7 @@ export default class SessionManager {
     // Set to true if only handshake -> not yet sendable -> will be promoted on message
     inactive: boolean = false
   ): void {
-    if (deviceRecord.isStale) return
+    if (deviceRecord.staleAt !== undefined) return
 
     const key = this.sessionKey(userPubkey, deviceRecord.deviceId, session.name)
     if (this.sessionSubscriptions.has(key)) return
@@ -490,7 +490,7 @@ export default class SessionManager {
     if (!device) {
       return
     }
-    if (device.isStale) {
+    if (device.staleAt !== undefined) {
       return
     }
     for (const event of history) {
@@ -525,7 +525,7 @@ export default class SessionManager {
     const devices = [
       ...Array.from(userRecord.devices.values()),
       ...Array.from(ourUserRecord.devices.values()),
-    ].filter((device) => !device.isStale)
+    ].filter((device) => device.staleAt === undefined)
 
     console.warn(
       "Sending to devices:",
@@ -619,7 +619,7 @@ export default class SessionManager {
     console.warn("Cleaning up device record:", {
       our: publicKey === this.ourPublicKey,
       deviceId,
-      isStale: deviceRecord?.isStale,
+      staleAt: deviceRecord?.staleAt,
     })
     if (!deviceRecord) return
 
@@ -633,7 +633,7 @@ export default class SessionManager {
 
     deviceRecord.activeSession = undefined
     deviceRecord.inactiveSessions = []
-    deviceRecord.isStale = true
+    deviceRecord.staleAt = Date.now()
 
     console.warn("Cleaned up device record:", publicKey === this.ourPublicKey, deviceId)
     await this.storeUserRecord(publicKey).catch(console.error)
@@ -665,7 +665,7 @@ export default class SessionManager {
             serializeSessionState(session.state)
           ),
           createdAt: device.createdAt,
-          isStale: device.isStale,
+          staleAt: device.staleAt,
         })
       ),
     }
@@ -686,7 +686,7 @@ export default class SessionManager {
             activeSession: serializedActive,
             inactiveSessions: serializedInactive,
             createdAt,
-            isStale,
+            staleAt,
           } = deviceData
 
           try {
@@ -706,7 +706,7 @@ export default class SessionManager {
               activeSession,
               inactiveSessions,
               createdAt,
-              isStale,
+              staleAt,
             })
           } catch (e) {
             console.error(
@@ -726,8 +726,8 @@ export default class SessionManager {
         }
 
         for (const device of devices.values()) {
-          const {deviceId, activeSession, inactiveSessions, isStale} = device
-          if (!deviceId || isStale) continue
+          const {deviceId, activeSession, inactiveSessions, staleAt} = device
+          if (!deviceId || staleAt !== undefined) continue
 
           for (const session of inactiveSessions.reverse()) {
             this.attachSessionSubscription(publicKey, device, session)
