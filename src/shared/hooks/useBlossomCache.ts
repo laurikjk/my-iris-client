@@ -37,28 +37,13 @@ async function fetchFromPeers(hash: string): Promise<ArrayBuffer | null> {
 
   // Try each peer in parallel
   const promises = Array.from(connections.values()).map(async (peer) => {
-    console.log(
-      `Checking peer ${peer.peerId}: blobChannel=${!!peer.blobChannel}, state=${peer.blobChannel?.readyState}`
-    )
-
     if (!peer.blobChannel || peer.blobChannel.readyState !== "open") {
-      console.log(`Peer ${peer.peerId} blob channel not ready`)
       return null
     }
 
     try {
-      console.log(`Requesting blob ${hash.slice(0, 8)} from peer ${peer.peerId}`)
-      const result = await peer.requestBlob(hash)
-      console.log(
-        `Result from peer ${peer.peerId}:`,
-        result ? `${result.byteLength} bytes` : "null"
-      )
-      return result
+      return await peer.requestBlob(hash)
     } catch (error) {
-      console.error(
-        `Failed to fetch blob ${hash.slice(0, 8)} from peer ${peer.peerId}:`,
-        error
-      )
       return null
     }
   })
@@ -80,28 +65,18 @@ async function fetchBlobP2P(
     const storage = getBlobStorage()
     const cached = await storage.get(hash)
     if (cached) {
-      console.log(`Blob ${hash.slice(0, 8)} found in local cache`)
       return new Blob([cached.data], {type: cached.mimeType})
     }
 
     // Try peers
-    const connections = getAllConnections()
-    console.log(
-      `Fetching blob ${hash.slice(0, 8)} from peers... (${connections.size} connections)`
-    )
-
     const data = await fetchFromPeers(hash)
     if (data) {
-      console.log(`Blob ${hash.slice(0, 8)} received from peer, saving with author ${authorPubkey?.slice(0, 8) || "none"}`)
-      // Store in cache with MIME type and author
       await storage.save(hash, data, mimeType, authorPubkey)
       return new Blob([data], {type: mimeType})
     }
 
-    console.log(`Blob ${hash.slice(0, 8)} not found via p2p, falling back to HTTP`)
     return null
   } catch (error) {
-    console.error(`Error fetching blob ${hash.slice(0, 8)} via p2p:`, error)
     return null
   }
 }
@@ -116,10 +91,8 @@ async function fetchAndVerifyHTTP(
   authorPubkey?: string
 ): Promise<Blob | null> {
   try {
-    console.log(`Fetching ${expectedHash.slice(0, 8)} via HTTP...`)
     const response = await fetch(url)
     if (!response.ok) {
-      console.warn(`HTTP fetch failed: ${response.status}`)
       return null
     }
 
@@ -131,13 +104,8 @@ async function fetchAndVerifyHTTP(
     const actualHash = bytesToHex(sha256(new Uint8Array(arrayBuffer)))
 
     if (actualHash !== expectedHash) {
-      console.error(
-        `Hash mismatch! Expected ${expectedHash.slice(0, 8)}, got ${actualHash.slice(0, 8)}`
-      )
       return null
     }
-
-    console.log(`HTTP fetch verified, saving ${expectedHash.slice(0, 8)} locally`)
 
     // Save to local storage for future p2p sharing
     const storage = getBlobStorage()
@@ -145,14 +113,13 @@ async function fetchAndVerifyHTTP(
       expectedHash,
       arrayBuffer,
       mimeType || response.headers.get("content-type") || undefined,
-      authorPubkey // Save author from post context
+      authorPubkey
     )
 
     return new Blob([arrayBuffer], {
       type: mimeType || response.headers.get("content-type") || undefined,
     })
   } catch (error) {
-    console.error(`Error fetching blob via HTTP:`, error)
     return null
   }
 }
@@ -168,50 +135,35 @@ export function useBlossomCache(url: string, authorPubkey?: string): string {
 
   useEffect(() => {
     const extracted = extractBlossomHash(url)
-    console.log(
-      `useBlossomCache: url=${url.slice(0, 60)}, hash=${extracted?.hash.slice(0, 8) || "none"}`
-    )
 
     if (!extracted || attempted) {
       setResolvedUrl(url)
       return
     }
 
+    // Check trust - only fetch blobs from trusted authors (distance <= 2)
+    const followDistance = authorPubkey ? socialGraph().getFollowDistance(authorPubkey) : 999
+    const isTrusted = followDistance <= 2
+
+    if (!isTrusted) {
+      setResolvedUrl(url)
+      return
+    }
+
     setAttempted(true)
-    console.log(`useBlossomCache: attempting p2p fetch for ${extracted.hash.slice(0, 8)}`)
 
     // Try p2p fetch
     fetchBlobP2P(extracted.hash, extracted.mimeType, authorPubkey).then(async (blob) => {
       if (blob) {
         // Create object URL for the blob
         const objectUrl = URL.createObjectURL(blob)
-        console.log(
-          `useBlossomCache: p2p success, using blob: URL for ${extracted.hash.slice(0, 8)}`
-        )
         setResolvedUrl(objectUrl)
 
         // Cleanup on unmount
         return () => URL.revokeObjectURL(objectUrl)
       }
 
-      // P2P failed - check if we should use HTTP fallback with verification
-      const isTrusted = authorPubkey
-        ? socialGraph().getFollowDistance(authorPubkey) <= 1 ||
-          socialGraph().getRoot() === authorPubkey
-        : false
-
-      if (!isTrusted) {
-        console.log(
-          `useBlossomCache: untrusted author, using proxied HTTP for ${extracted.hash.slice(0, 8)}`
-        )
-        setResolvedUrl(url)
-        return
-      }
-
-      // Fetch via HTTP with verification
-      console.log(
-        `useBlossomCache: trusted author, verifying HTTP for ${extracted.hash.slice(0, 8)}`
-      )
+      // P2P failed - try HTTP with verification
       const verifiedBlob = await fetchAndVerifyHTTP(
         url,
         extracted.hash,
@@ -221,16 +173,10 @@ export function useBlossomCache(url: string, authorPubkey?: string): string {
 
       if (verifiedBlob) {
         const objectUrl = URL.createObjectURL(verifiedBlob)
-        console.log(
-          `useBlossomCache: HTTP verified, using blob: URL for ${extracted.hash.slice(0, 8)}`
-        )
         setResolvedUrl(objectUrl)
         return () => URL.revokeObjectURL(objectUrl)
       } else {
         // Verification failed, use original URL (ProxyImg will handle via proxy)
-        console.log(
-          `useBlossomCache: HTTP verification failed for ${extracted.hash.slice(0, 8)}`
-        )
         setResolvedUrl(url)
       }
     })
