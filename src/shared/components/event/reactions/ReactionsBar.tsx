@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {useMemo, ReactNode, useRef, useState} from "react"
 import ProxyImg from "@/shared/components/ProxyImg"
 import {Name} from "@/shared/components/user/Name"

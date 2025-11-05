@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {useState, useEffect} from "react"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"

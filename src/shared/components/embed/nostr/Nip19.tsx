@@ -1,14 +1,29 @@
 import {nip19} from "nostr-tools"
+import {useState, useEffect, type ReactNode} from "react"
 
 import {Name} from "@/shared/components/user/Name.tsx"
 import {ProfileLink} from "@/shared/components/user/ProfileLink"
 
 import FeedItem from "@/shared/components/event/FeedItem/FeedItem.tsx"
-import Embed from "../index.ts"
 
-import {NDKEvent} from "@nostr-dev-kit/ndk"
-import {useState, useEffect} from "react"
+import {NDKEvent} from "@/lib/ndk"
+import type {Rumor} from "nostr-double-ratchet/src"
 import {ndk} from "@/utils/ndk"
+
+type EmbedEvent = NDKEvent | Rumor
+
+type Embed = {
+  regex: RegExp
+  component: (props: {
+    match: string
+    index?: number
+    event?: EmbedEvent
+    key: string
+    truncated?: boolean
+  }) => ReactNode
+  settingsKey?: string
+  inline?: boolean
+}
 
 function Naddr({naddr, data}: {naddr: string; data: nip19.AddressPointer}) {
   const [event, setEvent] = useState<NDKEvent | null>(null)

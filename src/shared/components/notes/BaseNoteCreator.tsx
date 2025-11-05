@@ -1,7 +1,7 @@
 import {useState, useEffect, useRef, KeyboardEvent, DragEvent, useCallback} from "react"
 import {Link, useNavigate} from "@/navigation"
 import {nip19} from "nostr-tools"
-import {NDKEvent, NDKKind} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKKind} from "@/lib/ndk"
 import {useDraftStore, ImetaTag} from "@/stores/draft"
 import EmojiButton from "@/shared/components/emoji/EmojiButton"
 import {Avatar} from "@/shared/components/user/Avatar"

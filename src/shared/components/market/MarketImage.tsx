@@ -1,6 +1,6 @@
 import SmallImageComponent from "../embed/media/SmallImageComponent"
 import {RiImageLine} from "@remixicon/react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 
 type MarketImageProps = {
   event: NDKEvent

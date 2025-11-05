@@ -1,5 +1,5 @@
 import {lazy, Suspense} from "react"
-import type {NDKEvent} from "@nostr-dev-kit/ndk"
+import type {NDKEvent} from "@/lib/ndk"
 import "leaflet/dist/leaflet.css"
 
 interface GeohashMapProps {

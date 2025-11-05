@@ -5,12 +5,16 @@ import NDK, {
   NDKRelay,
   NDKRelayAuthPolicies,
   NDKUser,
-} from "@nostr-dev-kit/ndk"
-import NDKCacheAdapterDexie from "@nostr-dev-kit/ndk-cache-dexie"
+} from "@/lib/ndk"
+import NDKCacheAdapterDexie from "@/lib/ndk-cache"
 import {useUserStore} from "@/stores/user"
 import {DEFAULT_RELAYS} from "@/shared/constants/relays"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {relayLogger} from "@/utils/relay/RelayLogger"
+import {WebRTCTransportPlugin} from "@/utils/chat/webrtc/WebRTCTransportPlugin"
+import {setWebRTCPlugin} from "@/utils/chat/webrtc/p2pMessages"
+import {shouldHideEvent} from "@/utils/visibility"
+import socialGraph from "@/utils/socialGraph"
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
@@ -107,6 +111,28 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
       cacheAdapter: new NDKCacheAdapterDexie({
         dbName: "treelike-nostr",
         saveSig: true,
+        cachePriority: (event) => {
+          // Don't cache muted events
+          if (shouldHideEvent(event)) {
+            return 0
+          }
+
+          const myPubKey = store.publicKey
+          if (!myPubKey) return 0
+
+          // Own events = priority 1.0
+          if (event.pubkey === myPubKey) {
+            return 1.0
+          }
+
+          // Priority based on follow distance: 1 / (distance + 1)
+          const distance = socialGraph().getFollowDistance(event.pubkey)
+          if (distance === Infinity) {
+            return 0 // Unknown author
+          }
+
+          return 1 / (distance + 1)
+        },
       }) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     }
     ndkInstance = new NDK(options)
@@ -133,12 +159,8 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
     ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
     setupVisibilityReconnection(ndkInstance)
     attachRelayLogger(ndkInstance)
+    setupWebRTCTransport(ndkInstance)
     ndkInstance.connect()
-
-    // Initialize WebRTC integration (wraps publish/subscribe for peer forwarding)
-    import("@/utils/chat/webrtc/p2pNostr")
-      .then((module) => module.initializeWebRTCIntegration())
-      .catch(console.error)
 
     console.log("NDK instance initialized", ndkInstance)
   } else if (opts) {
@@ -229,6 +251,20 @@ function setupVisibilityReconnection(instance: NDK) {
 
   // Initialize offline state
   wasOffline = !navigator.onLine
+}
+
+/**
+ * Setup WebRTC transport plugin for P2P event distribution
+ */
+function setupWebRTCTransport(instance: NDK) {
+  const plugin = new WebRTCTransportPlugin()
+  plugin.initialize(instance)
+  setWebRTCPlugin(plugin)
+
+  // Register plugin with NDK (native hook support)
+  instance.transportPlugins.push(plugin)
+
+  console.log("WebRTC transport plugin initialized")
 }
 
 function attachRelayLogger(instance: NDK) {

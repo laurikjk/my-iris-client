@@ -1,5 +1,5 @@
 import {useCallback, useRef} from "react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {IMAGE_REGEX, VIDEO_REGEX} from "@/shared/components/embed/media/MediaEmbed"
 import {KIND_PICTURE_FIRST} from "@/utils/constants"
 import {extractImetaImages} from "@/shared/utils/imetaUtils"

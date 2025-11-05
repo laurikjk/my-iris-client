@@ -1,5 +1,5 @@
 import {ndk} from "@/utils/ndk"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {webrtcLogger} from "./Logger"
 import type {SignalingMessage} from "./types"
 import {KIND_APP_DATA} from "@/utils/constants"
@@ -96,10 +96,13 @@ export function subscribeToSignaling(
 
   const sub = ndkInstance.subscribe(filter, {closeOnEose: false})
 
+  webrtcLogger.info(undefined, `Signaling subscription started: ${sub.internalId}`)
+
   sub.on("event", async (event: NDKEvent) => {
     // Skip expired events
     const expiration = event.tags.find((tag) => tag[0] === "expiration")?.[1]
     if (expiration && parseInt(expiration) < Date.now() / 1000) {
+      webrtcLogger.debug(undefined, "Skipping expired signaling event")
       return
     }
 
@@ -113,6 +116,7 @@ export function subscribeToSignaling(
         content = await signer.decrypt(senderUser, content)
       } catch (error) {
         // Not for us, silently ignore
+        webrtcLogger.debug(undefined, "Failed to decrypt signaling message (not for us)")
         return
       }
     }

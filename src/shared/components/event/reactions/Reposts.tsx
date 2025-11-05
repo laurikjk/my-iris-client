@@ -1,7 +1,7 @@
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {shouldHideUser} from "@/utils/visibility"
 import socialGraph from "@/utils/socialGraph"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {useEffect, useState} from "react"
 import {ndk} from "@/utils/ndk"
 import {KIND_REPOST} from "@/utils/constants"

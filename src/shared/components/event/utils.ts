@@ -1,5 +1,5 @@
 import {getTag, NDKEventFromRawEvent} from "@/utils/nostr.ts"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 import {KIND_REPOST, KIND_REACTION, KIND_ZAP_RECEIPT} from "@/utils/constants"

@@ -66,7 +66,7 @@ export default function SendLightningMode({
     try {
       const decodedInvoice = decode(trimmed)
       const amountSection = decodedInvoice.sections.find(
-        (section) => section.name === "amount"
+        (section: {name: string}) => section.name === "amount"
       )
       if (amountSection && "value" in amountSection) {
         // Convert millisatoshis to bits
@@ -78,7 +78,7 @@ export default function SendLightningMode({
 
       // Extract description
       const descSection = decodedInvoice.sections.find(
-        (section) => section.name === "description"
+        (section: {name: string}) => section.name === "description"
       )
       if (descSection && "value" in descSection) {
         setInvoiceDescription(descSection.value as string)

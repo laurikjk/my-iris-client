@@ -1,5 +1,5 @@
 import {BaseNoteCreator} from "../notes/BaseNoteCreator"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 
 type handleCloseFunction = () => void
 

@@ -5,7 +5,7 @@ import {
   NDKRelay,
   NDKRelaySet,
   NDKSubscription,
-} from "@nostr-dev-kit/ndk"
+} from "@/lib/ndk"
 import {nip04} from "nostr-tools"
 
 // NWC event kinds

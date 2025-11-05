@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {useUserStore} from "@/stores/user"
 import {useNotificationsStore} from "@/stores/notifications"
 import {useSettingsStore} from "@/stores/settings"
@@ -227,7 +227,7 @@ export async function handleDMEvent(
   }
 
   // Get the NDK user for profile info
-  const {NDKUser} = await import("@nostr-dev-kit/ndk")
+  const {NDKUser} = await import("@/lib/ndk")
   const {ndk} = await import("./ndk")
   const author = new NDKUser({pubkey: fromPubKey})
   author.ndk = ndk()

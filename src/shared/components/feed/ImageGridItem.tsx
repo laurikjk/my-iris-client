@@ -1,6 +1,6 @@
 import {useNavigate} from "@/navigation"
 import {useEffect, useState, useMemo, memo, MutableRefObject, useRef} from "react"
-import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKSubscription} from "@/lib/ndk"
 import {decode} from "blurhash"
 import {nip19} from "nostr-tools"
 

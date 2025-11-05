@@ -1,5 +1,5 @@
 import {EventEmitter} from "tseep"
-import type {NDKRelay} from "@nostr-dev-kit/ndk"
+import type {NDKRelay} from "@/lib/ndk"
 
 export type RelayLogLevel = "info" | "warn" | "error"
 

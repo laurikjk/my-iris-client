@@ -1,5 +1,5 @@
 import {useState, useCallback} from "react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {MediaItem} from "./useMediaExtraction"
 
 const MAX_MODAL_MEDIA = 200 // Limit modal media to prevent crashes

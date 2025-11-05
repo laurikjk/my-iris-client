@@ -1,6 +1,6 @@
 import {useState, MouseEvent} from "react"
 import {Link} from "@/navigation"
-import type {NDKRelay} from "@nostr-dev-kit/ndk"
+import type {NDKRelay} from "@/lib/ndk"
 
 export default function RelayList({relays}: {relays: NDKRelay[]}) {
   const [showAll, setShowAll] = useState(false)

@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {useEffect, useState} from "react"
 import {formatAmount} from "@/utils/utils"
 import {parseZapReceipt, type ZapInfo} from "@/utils/nostr"

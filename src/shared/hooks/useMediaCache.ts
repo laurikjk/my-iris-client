@@ -1,5 +1,5 @@
 import {useState, useCallback} from "react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import DebugManager from "@/utils/DebugManager"
 
 const MAX_FETCHED_EVENTS = 50 // Reduced for mobile

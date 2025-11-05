@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {formatAmount} from "@/utils/utils"
 import {KIND_CLASSIFIED} from "@/utils/constants"
 import {marketStore} from "@/stores/marketstore"

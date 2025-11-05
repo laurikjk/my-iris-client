@@ -1,5 +1,5 @@
 import {fetchZappedAmount} from "@/utils/nostr"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {useEffect, useState} from "react"
 import HyperText from "../HyperText"
 

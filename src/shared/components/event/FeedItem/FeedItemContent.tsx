@@ -1,6 +1,6 @@
 import MarketListing from "../../market/MarketListing"
 import ChannelCreation from "../ChannelCreation.tsx"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import ZapReceipt from "../ZapReceipt.tsx"
 import {
   KIND_ZAP_RECEIPT,

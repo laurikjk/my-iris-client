@@ -3,7 +3,7 @@ import {
   calculateVideoMetadata,
 } from "@/shared/components/embed/media/mediaUtils"
 import type {EncryptionMeta} from "@/types/global"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
 import {KIND_HTTP_AUTH} from "@/utils/constants"

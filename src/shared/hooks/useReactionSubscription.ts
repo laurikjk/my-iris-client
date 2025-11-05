@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "react"
-import {NDKFilter} from "@nostr-dev-kit/ndk"
+import {NDKFilter} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
 import {KIND_REACTION, KIND_REPOST} from "@/utils/constants"
 import {getTag} from "@/utils/nostr"

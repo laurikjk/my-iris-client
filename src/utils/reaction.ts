@@ -1,4 +1,4 @@
-import {NDKEvent, NostrEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NostrEvent} from "@/lib/ndk"
 import {KIND_REACTION, KIND_TEXT_NOTE} from "./constants"
 
 /**

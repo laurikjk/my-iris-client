@@ -1,6 +1,6 @@
 import {useState} from "react"
 import ZapAllModal from "./ZapAllModal"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import Icon from "../Icons/Icon"
 
 interface ZapAllButtonProps {

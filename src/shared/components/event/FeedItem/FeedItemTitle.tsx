@@ -1,5 +1,5 @@
 import useProfile from "@/shared/hooks/useProfile.ts"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {Helmet} from "react-helmet"
 import {useMemo} from "react"
 

@@ -1,5 +1,5 @@
 import {CustomEmojiComponent} from "../../embed/nostr/CustomEmojiComponent"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 
 export function ReactionContent({content, event}: {content: string; event: NDKEvent}) {
   if (content === "+") return "❤️"

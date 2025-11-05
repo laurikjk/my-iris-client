@@ -1,4 +1,4 @@
-import {NDKEvent, NDKUserProfile, NDKSubscription} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKUserProfile, NDKSubscription} from "@/lib/ndk"
 import {handleProfile} from "@/utils/profileSearch"
 import {PublicKey} from "@/shared/utils/PublicKey"
 import {useEffect, useMemo, useState, useRef} from "react"

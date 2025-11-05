@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import Markdown from "markdown-to-jsx"
 import ProxyImg from "../ProxyImg"
 import {useNavigate} from "@/navigation"

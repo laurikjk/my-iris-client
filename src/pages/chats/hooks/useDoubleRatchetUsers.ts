@@ -4,7 +4,7 @@ import {useUserStore} from "@/stores/user"
 // import {useSessionsStore} from "@/stores/sessions" // TEMP: Removed
 import socialGraph from "@/utils/socialGraph"
 import {ndk} from "@/utils/ndk"
-import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKSubscription} from "@/lib/ndk"
 import {
   // subscribeToDoubleRatchetUsersChanges, // TEMP: Unused
   searchDoubleRatchetUsers,

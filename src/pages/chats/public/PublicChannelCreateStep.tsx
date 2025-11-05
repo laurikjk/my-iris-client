@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "@/navigation"
 import {useState, FormEvent} from "react"

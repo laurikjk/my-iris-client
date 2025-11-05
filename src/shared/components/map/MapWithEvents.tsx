@@ -3,7 +3,7 @@ import {useNavigate} from "@/navigation"
 import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
 import Feed from "@/shared/components/feed/Feed"
 import {KIND_TEXT_NOTE, KIND_EPHEMERAL} from "@/utils/constants"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {type FeedConfig} from "@/stores/feed"
 
 interface MapWithEventsProps {

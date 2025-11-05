@@ -83,6 +83,7 @@ function SmallImageComponent({match, event, size = 80}: SmallImageComponentProps
                 )}
                 style={{width: size, height: size}}
                 src={url}
+                authorPubkey={event?.pubkey}
               />
             )}
           </div>

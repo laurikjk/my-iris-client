@@ -1,11 +1,22 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {webrtcLogger} from "./Logger"
-import {handleIncomingEventMessage} from "./p2pEvents"
-import {
-  handleIncomingREQ,
-  handleIncomingEOSE,
-  handleIncomingCLOSE,
-} from "./p2pSubscriptions"
+import type {WebRTCTransportPlugin} from "./WebRTCTransportPlugin"
+
+let webrtcPlugin: WebRTCTransportPlugin | null = null
+
+/**
+ * Set the WebRTC plugin instance (called during initialization)
+ */
+export function setWebRTCPlugin(plugin: WebRTCTransportPlugin): void {
+  webrtcPlugin = plugin
+}
+
+/**
+ * Get the WebRTC plugin instance
+ */
+export function getWebRTCPlugin(): WebRTCTransportPlugin | null {
+  return webrtcPlugin
+}
 
 /**
  * Handles incoming Nostr message from WebRTC peer
@@ -15,6 +26,12 @@ export function handleIncomingMessage(
   peerId: string,
   eventData: unknown
 ): NDKEvent | null {
+  const plugin = getWebRTCPlugin()
+  if (!plugin) {
+    webrtcLogger.warn(peerId, "WebRTC plugin not initialized")
+    return null
+  }
+
   try {
     if (!Array.isArray(eventData)) {
       webrtcLogger.warn(peerId, "Invalid Nostr message format")
@@ -26,7 +43,7 @@ export function handleIncomingMessage(
     // Handle ["REQ", subscription_id, ...filters] format
     if (type === "REQ" && rest.length >= 2) {
       const [subId, ...filters] = rest
-      handleIncomingREQ(peerId, subId, filters)
+      plugin.handleIncomingREQ(peerId, subId, filters)
       return null
     }
 
@@ -35,20 +52,20 @@ export function handleIncomingMessage(
       // Client format: ["EVENT", <event>]
       // Relay format: ["EVENT", <subscription_id>, <event>]
       const eventJson = rest.length === 1 ? rest[0] : rest[1]
-      return handleIncomingEventMessage(peerId, eventJson)
+      return plugin.handleIncomingEvent(peerId, eventJson)
     }
 
     // Handle ["EOSE", subscription_id] format
     if (type === "EOSE" && rest.length >= 1) {
       const [subId] = rest
-      handleIncomingEOSE(peerId, subId)
+      webrtcLogger.debug(peerId, `EOSE ${subId}`, "down")
       return null
     }
 
     // Handle ["CLOSE", subscription_id] format
     if (type === "CLOSE" && rest.length >= 1) {
       const [subId] = rest
-      handleIncomingCLOSE(peerId, subId)
+      webrtcLogger.debug(peerId, `CLOSE ${subId}`, "down")
       return null
     }
 

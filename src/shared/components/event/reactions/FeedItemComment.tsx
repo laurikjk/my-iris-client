@@ -1,4 +1,4 @@
-import {NDKEvent, NDKFilter} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKFilter} from "@/lib/ndk"
 import {shouldHideUser} from "@/utils/visibility"
 import {useEffect, useState} from "react"
 import debounce from "lodash/debounce"

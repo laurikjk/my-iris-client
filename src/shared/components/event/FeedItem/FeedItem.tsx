@@ -1,6 +1,6 @@
 import {eventsByIdCache} from "@/utils/memcache.ts"
 import {useEffect, useMemo, useState, useRef, memo} from "react"
-import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk"
+import {NDKEvent, NDKSubscription} from "@/lib/ndk"
 import classNames from "classnames"
 
 import {

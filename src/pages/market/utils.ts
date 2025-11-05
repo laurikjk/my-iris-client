@@ -1,4 +1,4 @@
-import {NDKFilter} from "@nostr-dev-kit/ndk"
+import {NDKFilter} from "@/lib/ndk"
 import {KIND_CLASSIFIED} from "@/utils/constants"
 
 // Helper function to build market feed config

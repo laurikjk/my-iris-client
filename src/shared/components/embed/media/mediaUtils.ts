@@ -1,5 +1,5 @@
 import {decode, encode} from "blurhash"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {EmbedEvent} from "../index"
 import {SwipeItem} from "@/shared/hooks/useSwipable"
 

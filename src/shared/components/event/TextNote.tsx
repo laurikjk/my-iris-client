@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 
 import HyperText from "@/shared/components/HyperText.tsx"
 import ErrorBoundary from "../ui/ErrorBoundary"

@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import socialGraph from "@/utils/socialGraph"
 import {NostrEvent} from "nostr-social-graph"
 import {ndk} from "@/utils/ndk"

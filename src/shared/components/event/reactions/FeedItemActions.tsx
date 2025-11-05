@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {useState, useEffect, RefObject} from "react"
 import {eventsByIdCache} from "@/utils/memcache.ts"
 import {ndk} from "@/utils/ndk"

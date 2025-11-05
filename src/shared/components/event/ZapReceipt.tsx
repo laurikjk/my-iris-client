@@ -1,4 +1,4 @@
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {UserRow} from "../user/UserRow"
 import {useEffect, useState} from "react"
 import {RiFlashlightFill} from "@remixicon/react"

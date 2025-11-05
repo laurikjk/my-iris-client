@@ -1,7 +1,7 @@
 import {memo, useState, useEffect} from "react"
 import EventBorderless from "@/shared/components/event/EventBorderless"
 import {KIND_LONG_FORM_CONTENT} from "@/utils/constants"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
 
 interface AuthorArticlesFeedProps {

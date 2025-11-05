@@ -1,5 +1,5 @@
 import {RiReplyLine} from "@remixicon/react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {useState, useEffect} from "react"
 import {eventsByIdCache} from "@/utils/memcache.ts"
 import {ndk} from "@/utils/ndk"

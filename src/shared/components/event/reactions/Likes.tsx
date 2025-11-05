@@ -1,7 +1,7 @@
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {ReactionContent} from "./ReactionContent"
 import socialGraph from "@/utils/socialGraph"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {useReactionsByAuthor} from "@/shared/hooks/useReactions"
 
 export default function Likes({event}: {event: NDKEvent}) {

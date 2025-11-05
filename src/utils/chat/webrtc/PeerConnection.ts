@@ -102,6 +102,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   dataChannel: RTCDataChannel | null
   fileChannel: RTCDataChannel | null
   callSignalingChannel: RTCDataChannel | null = null
+  blobChannel: RTCDataChannel | null = null
   incomingFileMetadata: {name: string; size: number; type: string} | null = null
   receivedFileData: ArrayBuffer[] = []
   receivedFileSize: number = 0
@@ -109,6 +110,24 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   localStream: MediaStream | null = null
   remoteStream: MediaStream | null = null
   private fileTransferAccepted: boolean = false
+  private blobRequests: Map<
+    number,
+    {
+      hash: string
+      chunks: ArrayBuffer[]
+      totalChunks: number
+      receivedChunks: Set<number>
+      resolve?: (data: ArrayBuffer | null) => void
+    }
+  > = new Map()
+  private pendingBlobSends: Map<
+    number,
+    {
+      hash: string
+      entry: {data: ArrayBuffer; size: number}
+    }
+  > = new Map()
+  private nextBlobRequestId: number = 1
 
   constructor(peerId: string, mySessionId?: string) {
     super()
@@ -213,6 +232,8 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
         this.setFileChannel(channel)
       } else if (channel.label === "callSignaling") {
         this.setupCallSignalingChannel(channel)
+      } else if (channel.label === "blobChannel") {
+        this.setupBlobChannel(channel)
       } else {
         this.setDataChannel(channel)
       }
@@ -383,6 +404,8 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     this.setDataChannel(this.dataChannel)
     this.fileChannel = this.peerConnection.createDataChannel("fileChannel")
     this.setFileChannel(this.fileChannel)
+    this.blobChannel = this.peerConnection.createDataChannel("blobChannel")
+    this.setupBlobChannel(this.blobChannel)
     const offer = await this.peerConnection.createOffer()
     await this.peerConnection.setLocalDescription(offer)
     await sendSignalingMessage(
@@ -633,6 +656,303 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     }
   }
 
+  setupBlobChannel(blobChannel: RTCDataChannel) {
+    this.blobChannel = blobChannel
+    this.blobChannel.binaryType = "arraybuffer"
+    this.blobChannel.onopen = () => webrtcLogger.debug(this.peerId, "Blob channel open")
+
+    this.blobChannel.onmessage = async (event) => {
+      if (typeof event.data === "string") {
+        // JSON control messages
+        try {
+          const msg = JSON.parse(event.data)
+          await this.handleBlobMessage(msg)
+        } catch (error) {
+          webrtcLogger.error(this.peerId, "Failed to parse blob message")
+        }
+      } else if (event.data instanceof ArrayBuffer) {
+        // Binary chunk
+        await this.handleBlobChunk(event.data)
+      }
+    }
+
+    this.blobChannel.onclose = () => {
+      webrtcLogger.debug(this.peerId, "Blob channel closed")
+    }
+  }
+
+  private async handleBlobMessage(msg: [string, number, Record<string, unknown>]) {
+    const [type, requestId, payload] = msg
+
+    if (type === "BLOB_REQ") {
+      await this.handleBlobRequest(requestId, payload)
+    } else if (type === "BLOB_RES") {
+      await this.handleBlobResponse(requestId, payload)
+    } else if (type === "BLOB_ACK") {
+      await this.handleBlobAck(requestId, payload)
+    } else if (type === "BLOB_OK") {
+      await this.handleBlobOk(requestId, payload)
+    }
+  }
+
+  private async handleBlobRequest(requestId: number, req: Record<string, unknown>) {
+    const {hash, size} = req
+    this.log(
+      `BLOB_REQ ${(hash as string).slice(0, 8)}... (${size || "unknown"} bytes)`,
+      "down"
+    )
+
+    // Get blob from storage
+    const {getBlobStorage} = await import("./blobManager")
+    const storage = getBlobStorage()
+    const entry = await storage.get(hash as string)
+
+    if (!entry) {
+      this.log(`Blob not found: ${(hash as string).slice(0, 8)}...`)
+      // Timeout - requester will handle
+      return
+    }
+
+    // Track this send
+    this.pendingBlobSends.set(requestId, {hash: hash as string, entry})
+
+    // Send response (no payment for now)
+    const {BLOB_CHUNK_SIZE} = await import("./blobProtocol")
+    const chunks = Math.ceil(entry.size / BLOB_CHUNK_SIZE)
+
+    const response = {
+      size: entry.size,
+      chunks,
+    }
+
+    this.sendBlobMessage("BLOB_RES", requestId, response)
+    this.log(`BLOB_RES ${chunks} chunks`, "up")
+  }
+
+  private async handleBlobResponse(requestId: number, res: Record<string, unknown>) {
+    const {size, chunks} = res
+    this.log(`BLOB_RES ${chunks} chunks (${size} bytes)`, "down")
+
+    // Get existing request (has the hash)
+    const existing = this.blobRequests.get(requestId)
+    if (!existing) {
+      webrtcLogger.warn(this.peerId, `Received BLOB_RES for unknown request ${requestId}`)
+      return
+    }
+
+    // Update with chunk info (preserve hash and resolver)
+    this.blobRequests.set(requestId, {
+      hash: existing.hash,
+      chunks: new Array(chunks as number),
+      totalChunks: chunks as number,
+      receivedChunks: new Set(),
+      resolve: existing.resolve,
+    })
+
+    // Send ACK to start transfer
+    this.sendBlobMessage("BLOB_ACK", requestId, {accept: true})
+    this.log(`BLOB_ACK accepted`, "up")
+  }
+
+  private async handleBlobAck(requestId: number, ack: Record<string, unknown>) {
+    if (!ack.accept) {
+      this.log(`BLOB_ACK rejected`, "down")
+      return
+    }
+
+    this.log(`BLOB_ACK accepted, starting transfer`, "down")
+    await this.sendBlobChunks(requestId)
+  }
+
+  private async sendBlobChunks(requestId: number) {
+    // This is called on sender side after receiving ACK
+    const pendingSend = this.pendingBlobSends.get(requestId)
+    if (!pendingSend) {
+      webrtcLogger.warn(this.peerId, `No pending send for request ${requestId}`)
+      return
+    }
+
+    const {hash, entry} = pendingSend
+    const {BLOB_CHUNK_SIZE, encodeBlobChunkHeader} = await import("./blobProtocol")
+    const chunks = Math.ceil(entry.size / BLOB_CHUNK_SIZE)
+
+    for (let i = 0; i < chunks; i++) {
+      const start = i * BLOB_CHUNK_SIZE
+      const end = Math.min(start + BLOB_CHUNK_SIZE, entry.size)
+      const chunkData = entry.data.slice(start, end)
+
+      // Encode: [requestId][chunkIndex][data]
+      const header = encodeBlobChunkHeader(requestId, i)
+      const packet = new Uint8Array(header.length + chunkData.byteLength)
+      packet.set(header, 0)
+      packet.set(new Uint8Array(chunkData), header.length)
+
+      // Send with backpressure handling
+      while (this.blobChannel && this.blobChannel.bufferedAmount > BLOB_CHUNK_SIZE * 4) {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+      }
+
+      if (this.blobChannel?.readyState === "open") {
+        this.blobChannel.send(packet.buffer)
+      } else {
+        webrtcLogger.error(this.peerId, "Blob channel closed during send")
+        break
+      }
+
+      if (i % 10 === 0 || i === chunks - 1) {
+        const progress = Math.round(((i + 1) / chunks) * 100)
+        this.log(`Blob send progress: ${progress}%`)
+      }
+    }
+
+    this.log(`Blob transfer complete: ${hash.slice(0, 8)}...`)
+    this.pendingBlobSends.delete(requestId)
+  }
+
+  private async handleBlobOk(requestId: number, ok: Record<string, unknown>) {
+    const {verified, hash} = ok
+    if (verified) {
+      this.log(`BLOB_OK verified ${(hash as string).slice(0, 8)}...`, "down")
+    } else {
+      this.log(`BLOB_OK verification failed ${(hash as string).slice(0, 8)}...`, "down")
+    }
+    this.blobRequests.delete(requestId)
+  }
+
+  private async handleBlobChunk(data: ArrayBuffer) {
+    const {decodeBlobChunkHeader, BLOB_CHUNK_HEADER_SIZE} = await import("./blobProtocol")
+    const header = decodeBlobChunkHeader(data)
+    const chunkData = data.slice(BLOB_CHUNK_HEADER_SIZE)
+
+    const request = this.blobRequests.get(header.requestId)
+    if (!request) {
+      webrtcLogger.warn(
+        this.peerId,
+        `Received chunk for unknown request ${header.requestId}`
+      )
+      return
+    }
+
+    // Store chunk
+    request.chunks[header.chunkIndex] = chunkData
+    request.receivedChunks.add(header.chunkIndex)
+
+    if (
+      request.receivedChunks.size % 10 === 0 ||
+      request.receivedChunks.size === request.totalChunks
+    ) {
+      const progress = Math.round(
+        (request.receivedChunks.size / request.totalChunks) * 100
+      )
+      this.log(`Blob progress: ${progress}%`)
+    }
+
+    // Check if complete
+    if (request.receivedChunks.size === request.totalChunks) {
+      await this.completeBlobTransfer(header.requestId, request)
+    }
+  }
+
+  private async completeBlobTransfer(
+    requestId: number,
+    request: {
+      hash: string
+      chunks: ArrayBuffer[]
+      totalChunks: number
+      receivedChunks: Set<number>
+      resolve?: (data: ArrayBuffer | null) => void
+    }
+  ) {
+    this.log("Blob transfer complete, verifying...")
+
+    // Reassemble blob
+    const blob = new Uint8Array(
+      request.chunks.reduce(
+        (acc: number, chunk: ArrayBuffer) => acc + chunk.byteLength,
+        0
+      )
+    )
+    let offset = 0
+    for (const chunk of request.chunks) {
+      blob.set(new Uint8Array(chunk), offset)
+      offset += chunk.byteLength
+    }
+
+    // Verify hash
+    const {sha256} = await import("@noble/hashes/sha256")
+    const {bytesToHex} = await import("@noble/hashes/utils")
+    const hash = bytesToHex(sha256(blob))
+
+    const verified = hash === request.hash
+    this.log(`Hash verification: ${verified ? "OK" : "FAILED"}`)
+
+    let result: ArrayBuffer | null = null
+
+    if (verified) {
+      // Store in cache
+      const {getBlobStorage} = await import("./blobManager")
+      const storage = getBlobStorage()
+      await storage.save(hash, blob.buffer)
+      this.log(`Blob saved: ${hash.slice(0, 8)}...`)
+      result = blob.buffer
+    }
+
+    // Send completion
+    this.sendBlobMessage("BLOB_OK", requestId, {verified, hash})
+
+    // Resolve the promise from requestBlob
+    if (request.resolve) {
+      request.resolve(result)
+    }
+
+    this.blobRequests.delete(requestId)
+  }
+
+  private sendBlobMessage(
+    type: string,
+    requestId: number,
+    payload: Record<string, unknown>
+  ) {
+    if (this.blobChannel?.readyState === "open") {
+      this.blobChannel.send(JSON.stringify([type, requestId, payload]))
+    }
+  }
+
+  async requestBlob(hash: string, size?: number): Promise<ArrayBuffer | null> {
+    if (!this.blobChannel || this.blobChannel.readyState !== "open") {
+      webrtcLogger.error(this.peerId, "Blob channel not open")
+      return null
+    }
+
+    const requestId = this.nextBlobRequestId++
+
+    // Create promise that will be resolved by completeBlobTransfer
+    return new Promise((resolve) => {
+      // Track this request with resolver
+      this.blobRequests.set(requestId, {
+        hash,
+        chunks: [],
+        totalChunks: 0,
+        receivedChunks: new Set(),
+        resolve,
+      })
+
+      // Send request
+      const req = {hash, size}
+      this.sendBlobMessage("BLOB_REQ", requestId, req)
+      this.log(`BLOB_REQ ${hash.slice(0, 8)}...`, "up")
+
+      // Timeout after 60s
+      setTimeout(() => {
+        const request = this.blobRequests.get(requestId)
+        if (request && request.resolve) {
+          request.resolve(null)
+        }
+        this.blobRequests.delete(requestId)
+      }, 60000)
+    })
+  }
+
   close() {
     this.log("Closing connection")
 
@@ -660,6 +980,13 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       this.callSignalingChannel.onclose = null
       this.callSignalingChannel.close()
       this.callSignalingChannel = null
+    }
+    if (this.blobChannel) {
+      this.blobChannel.onopen = null
+      this.blobChannel.onmessage = null
+      this.blobChannel.onclose = null
+      this.blobChannel.close()
+      this.blobChannel = null
     }
 
     // Remove RTCPeerConnection event handlers

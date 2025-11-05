@@ -1,5 +1,5 @@
 import {Dispatch, SetStateAction, useEffect, useState} from "react"
-import {Hexpubkey, NDKEvent, NDKTag} from "@nostr-dev-kit/ndk"
+import {Hexpubkey, NDKEvent, NDKTag} from "@/lib/ndk"
 
 import {muteUser, unmuteUser} from "@/shared/services/Mute.tsx"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"

@@ -1,6 +1,6 @@
 import {Name} from "@/shared/components/user/Name"
 import {RiFlashlightFill} from "@remixicon/react"
-import {NDKEvent} from "@nostr-dev-kit/ndk"
+import {NDKEvent} from "@/lib/ndk"
 import {Link} from "@/navigation"
 import {nip19} from "nostr-tools"
 import {useEffect, useState} from "react"
@@ -22,7 +22,7 @@ function ZapReceiptHeader({event}: ZapReceiptHeaderProps) {
     if (invoice) {
       const decodedInvoice = decode(invoice)
       const amountSection = decodedInvoice.sections.find(
-        (section) => section.name === "amount"
+        (section: {name: string}) => section.name === "amount"
       )
       if (amountSection && "value" in amountSection) {
         setZappedAmount(Math.floor(parseInt(amountSection.value) / 1000))

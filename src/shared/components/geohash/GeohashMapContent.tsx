@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState, useCallback, useMemo} from "react"
 import L, {type Map as LeafletMap} from "leaflet"
-import type {NDKEvent} from "@nostr-dev-kit/ndk"
+import type {NDKEvent} from "@/lib/ndk"
 import worldGeoJSON from "./world-110m.json"
 import {decodeGeohash} from "@/utils/geohash"
 import {getGeohashesFromEvent} from "@/utils/locationGeocoding"

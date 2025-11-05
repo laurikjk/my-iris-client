@@ -1,4 +1,4 @@
-import NDK, {NDKEvent, NDKFilter, NDKPrivateKeySigner} from "@nostr-dev-kit/ndk"
+import NDK, {NDKEvent, NDKFilter, NDKPrivateKeySigner} from "@/lib/ndk"
 import {generateSecretKey, getPublicKey, nip44} from "nostr-tools"
 import {bytesToHex, hexToBytes} from "@noble/hashes/utils"
 import {KIND_DEBUG_DATA} from "@/utils/constants"

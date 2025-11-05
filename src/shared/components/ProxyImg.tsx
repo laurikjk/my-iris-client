@@ -2,6 +2,7 @@ import {CSSProperties, useEffect, useState, MouseEvent, useRef} from "react"
 import {generateProxyUrl} from "../utils/imgproxy"
 import {imgproxyFailureCache, loadedImageCache} from "@/utils/memcache"
 import {useSettingsStore} from "@/stores/settings"
+import {useBlossomCache} from "@/shared/hooks/useBlossomCache"
 
 type Props = {
   src: string
@@ -15,6 +16,7 @@ type Props = {
   alt?: string
   hideBroken?: boolean
   loadOriginalIfProxyFails?: boolean
+  authorPubkey?: string
 }
 
 const safeOrigins = ["data:image"]
@@ -33,6 +35,9 @@ const ProxyImg = (props: Props) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const imgRef = useRef<HTMLImageElement | null>(null)
 
+  // Try blossom p2p fetch first
+  const blossomCachedUrl = useBlossomCache(props.src, props.authorPubkey)
+
   useEffect(() => {
     // Check if we have this image cached
     const cacheKey = `${props.src}_${props.width}_${props.square}`
@@ -42,12 +47,17 @@ const ProxyImg = (props: Props) => {
       return
     }
 
-    let mySrc = props.src
+    // Use blossom cached URL if available (blob: URL from p2p)
+    let mySrc = blossomCachedUrl
 
     // Check if this URL has previously failed through imgproxy
     const hasProxyFailed = imgproxyFailureCache.has(props.src)
 
+    // Skip imgproxy for blob: URLs (from p2p)
+    const isBlobUrl = mySrc.startsWith("blob:")
+
     const shouldUseProxy =
+      !isBlobUrl &&
       imgproxy.enabled &&
       props.src &&
       !props.src.startsWith("data:image") &&
@@ -56,7 +66,7 @@ const ProxyImg = (props: Props) => {
 
     if (shouldUseProxy) {
       mySrc = generateProxyUrl(
-        props.src,
+        mySrc,
         {width: props.width, square: props.square},
         {
           url: imgproxy.url,
@@ -64,9 +74,6 @@ const ProxyImg = (props: Props) => {
           salt: imgproxy.salt,
         }
       )
-    } else {
-      // Use original URL if proxy is disabled or should be skipped
-      mySrc = props.src
     }
 
     setSrc(mySrc)
@@ -78,7 +85,7 @@ const ProxyImg = (props: Props) => {
         clearTimeout(timeoutRef.current)
       }
     }
-  }, [props.src, props.width, props.square, imgproxy])
+  }, [props.src, props.width, props.square, imgproxy, blossomCachedUrl])
 
   useEffect(() => {
     // If we've already switched to the original, do NOT set the timer again

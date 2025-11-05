@@ -141,6 +141,7 @@ function Carousel({media, event}: CarouselProps) {
           key={item.url}
           limitHeight={limitHeight}
           imeta={item.imeta}
+          authorPubkey={event?.pubkey}
         />
       )
     }
