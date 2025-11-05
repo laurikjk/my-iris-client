@@ -22,7 +22,6 @@ export async function uploadToBlossom(
     const {ndk} = await import("@/utils/ndk")
     const myPubkey = ndk().activeUser?.pubkey
     await storage.save(sha256, arrayBuffer, file.type, myPubkey)
-    console.log(`Saved file to local blob storage: ${sha256.slice(0, 8)} (${file.type})`)
   } catch (storageError) {
     console.warn("Failed to save to local blob storage:", storageError)
     localStorageFailed = true
