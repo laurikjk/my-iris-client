@@ -332,9 +332,7 @@ export default class SessionManager {
   setupUser(userPubkey: string) {
     const userRecord = this.getOrCreateUserRecord(userPubkey)
 
-    if (userPubkey !== this.ourPublicKey) {
-      this.attachInviteTombstoneSubscription(userPubkey)
-    }
+    this.attachInviteTombstoneSubscription(userPubkey)
 
     const acceptInvite = async (invite: Invite) => {
       const {deviceId} = invite
