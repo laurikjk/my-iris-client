@@ -496,9 +496,7 @@ export default class SessionManager {
     for (const event of history) {
       const {activeSession} = device
 
-      if (!activeSession) {
-        return
-      }
+      if (!activeSession) continue
       const {event: verifiedEvent} = activeSession.sendEvent(event)
       await this.nostrPublish(verifiedEvent)
       await this.storeUserRecord(recipientPublicKey)
