@@ -19,6 +19,7 @@ export interface Event {
   relay?: string
   event: string
   sig?: string
+  priority?: number
 }
 
 export interface EventTag {
@@ -86,6 +87,17 @@ export class Database extends Dexie {
     this.version(18).stores({
       profiles: "&pubkey",
       events: "&id, kind",
+      eventTags: "&tagValue",
+      nip05: "&nip05",
+      lnurl: "&pubkey",
+      relayStatus: "&url",
+      unpublishedEvents: "&id",
+      eventRelays: "[eventId+relayUrl], eventId",
+      decryptedEvents: "&id",
+    })
+    this.version(19).stores({
+      profiles: "&pubkey",
+      events: "&id, kind, priority",
       eventTags: "&tagValue",
       nip05: "&nip05",
       lnurl: "&pubkey",

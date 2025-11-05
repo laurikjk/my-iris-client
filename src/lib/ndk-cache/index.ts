@@ -16,6 +16,7 @@ import type {
 import {deserialize, NDKEvent, type NDKRelay, profileFromEvent} from "@/lib/ndk"
 import createDebug from "debug"
 import {matchFilter} from "nostr-tools"
+import {shouldHideEvent} from "@/utils/visibility"
 import {DexieCacheModuleManager} from "./cache-module.js"
 import {
   type EventTagCacheEntry,
@@ -73,6 +74,17 @@ export interface NDKCacheAdapterDexieOptions {
    * @default false
    */
   saveSig?: boolean
+
+  /**
+   * Calculate cache priority for an event.
+   * Return 0 to skip caching, 0-1 range for priority-based eviction.
+   * Used for intelligent cache eviction based on social graph proximity.
+   * @example
+   * // Priority 0 = don't cache (unknown authors, muted users)
+   * // Priority 1 / followDistance = graduated priority
+   * // Priority 1.0 = own events
+   */
+  cachePriority?: (event: NDKEvent) => number
 }
 
 export default class NDKCacheAdapterDexie implements NDKCacheAdapter {
@@ -92,6 +104,7 @@ export default class NDKCacheAdapterDexie implements NDKCacheAdapter {
   private saveSig: boolean
   public _onReady?: () => void
   private moduleManager: DexieCacheModuleManager
+  private cachePriority?: (event: NDKEvent) => number
 
   // Batched deletion for expired events
   private pendingDeletes = new Set<NDKEventId>()
@@ -103,6 +116,7 @@ export default class NDKCacheAdapterDexie implements NDKCacheAdapter {
     createDatabase(dbName)
     this.debug = opts.debug || createDebug("ndk:dexie-adapter")
     this.saveSig = opts.saveSig || false
+    this.cachePriority = opts.cachePriority
     this.moduleManager = new DexieCacheModuleManager(dbName)
     this.profiles = new CacheHandler<Profile>({
       maxSize: opts.profileCacheSize || 100000,
@@ -442,6 +456,14 @@ export default class NDKCacheAdapterDexie implements NDKCacheAdapter {
     _filters: NDKFilter[],
     relay?: NDKRelay
   ): Promise<void> {
+    // Calculate cache priority
+    const priority = this.cachePriority ? this.cachePriority(event) : 1
+
+    // Priority 0 = don't cache
+    if (priority === 0) {
+      return
+    }
+
     if (event.kind === 0) {
       if (!this.profiles) return
 
@@ -473,6 +495,7 @@ export default class NDKCacheAdapterDexie implements NDKCacheAdapter {
         createdAt: event.created_at ?? Date.now(),
         relay: relay?.url,
         event: event.serialize(this.saveSig, true),
+        priority,
       }
 
       if (this.saveSig && event.sig) {

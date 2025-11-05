@@ -868,16 +868,6 @@ export class NDKSubscription extends EventEmitter<{
         }
       }
 
-      // Apply mute filter
-      if (
-        !this.opts.includeMuted &&
-        this.ndk.muteFilter &&
-        this.ndk.muteFilter(ndkEvent)
-      ) {
-        this.debug("Event muted, skipping")
-        return
-      }
-
       // emit it
       if (!optimisticPublish || this.skipOptimisticPublishEvent !== true) {
         this.emitEvent(

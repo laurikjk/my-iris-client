@@ -14,6 +14,7 @@ import {relayLogger} from "@/utils/relay/RelayLogger"
 import {WebRTCTransportPlugin} from "@/utils/chat/webrtc/WebRTCTransportPlugin"
 import {setWebRTCPlugin} from "@/utils/chat/webrtc/p2pMessages"
 import {shouldHideEvent} from "@/utils/visibility"
+import socialGraph from "@/utils/socialGraph"
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
@@ -106,11 +107,32 @@ export const ndk = (opts?: NDKConstructorParams): NDK => {
       enableOutboxModel: enableOutbox,
       autoConnectUserRelays,
       relayConnectionFilter,
-      muteFilter: (event) => shouldHideEvent(event),
 
       cacheAdapter: new NDKCacheAdapterDexie({
         dbName: "treelike-nostr",
         saveSig: true,
+        cachePriority: (event) => {
+          // Don't cache muted events
+          if (shouldHideEvent(event)) {
+            return 0
+          }
+
+          const myPubKey = store.publicKey
+          if (!myPubKey) return 0
+
+          // Own events = priority 1.0
+          if (event.pubkey === myPubKey) {
+            return 1.0
+          }
+
+          // Priority based on follow distance: 1 / (distance + 1)
+          const distance = socialGraph().getFollowDistance(event.pubkey)
+          if (distance === Infinity) {
+            return 0 // Unknown author
+          }
+
+          return 1 / (distance + 1)
+        },
       }) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     }
     ndkInstance = new NDK(options)

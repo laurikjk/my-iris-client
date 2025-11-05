@@ -10,7 +10,7 @@ import {webrtcLogger} from "./Logger"
 import socialGraph from "@/utils/socialGraph"
 import {RateLimiter} from "./RateLimiter"
 import {getCachedName} from "@/utils/nostr"
-import {shouldHideUser} from "@/utils/visibility"
+import {shouldHideUser, shouldHideEvent} from "@/utils/visibility"
 import {incrementSent, incrementReceived, incrementSubscriptionsServed} from "./p2pStats"
 
 // Event kinds that bypass follow check but are rate limited
@@ -337,12 +337,6 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       senderConn.seenEvents.set(event.id, true)
     }
 
-    // Check muteFilter before forwarding or processing
-    if (this.ndk.muteFilter && this.ndk.muteFilter(event)) {
-      webrtcLogger.debug(peerId, `Event muted, dropping ${event.id?.slice(0, 8)}`)
-      return null // Don't process or forward
-    }
-
     // Forward to other peers who haven't seen it
     const connections = getAllConnections()
     const forwardEventJson = event.rawEvent()
@@ -371,8 +365,10 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       }
     }
 
-    // Publish to our relays for backup and cross-device sync
-    event.publish().catch(() => {})
+    // Don't publish muted events to relays
+    if (!shouldHideEvent(event)) {
+      event.publish().catch(() => {})
+    }
 
     return event
   }
