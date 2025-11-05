@@ -10,6 +10,21 @@ export async function uploadToBlossom(
   onProgress?: (progress: number) => void
 ): Promise<string> {
   const sha256 = await calculateSHA256(file)
+
+  // Save to local blob storage first for p2p sharing
+  let localStorageFailed = false
+  try {
+    const {getBlobStorage} = await import("@/utils/chat/webrtc/blobManager")
+    const storage = getBlobStorage()
+    await storage.initialize()
+
+    const arrayBuffer = await file.arrayBuffer()
+    await storage.save(sha256, arrayBuffer)
+    console.log(`Saved file to local blob storage: ${sha256.slice(0, 8)}`)
+  } catch (storageError) {
+    console.warn("Failed to save to local blob storage:", storageError)
+    localStorageFailed = true
+  }
   const url = `${server.url}/upload`
 
   // Create a Nostr event for authentication
@@ -64,11 +79,29 @@ export async function uploadToBlossom(
           reject(new Error(`Failed to parse response from ${url}: ${errorMessage}`))
         }
       } else {
-        reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`))
+        // Remote upload failed
+        if (localStorageFailed) {
+          // Both failed
+          reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`))
+        } else {
+          // Use local-only URL with hash (will be served via p2p)
+          console.warn(`Remote upload failed (${xhr.status}), using local p2p-only URL`)
+          resolve(`${server.url}/${sha256}.${file.type.split("/")[1] || "jpg"}`)
+        }
       }
     }
 
-    xhr.onerror = () => reject(new Error(`Upload to ${url} failed`))
+    xhr.onerror = () => {
+      // Network error
+      if (localStorageFailed) {
+        reject(new Error(`Upload to ${url} failed and local storage unavailable`))
+      } else {
+        // Use local-only URL (will be served via p2p)
+        console.warn("Remote upload network error, using local p2p-only URL")
+        resolve(`${server.url}/${sha256}.${file.type.split("/")[1] || "jpg"}`)
+      }
+    }
+
     xhr.send(file)
   })
 }

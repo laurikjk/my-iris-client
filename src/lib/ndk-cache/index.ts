@@ -726,6 +726,47 @@ export default class NDKCacheAdapterDexie implements NDKCacheAdapter {
   }
 
   /**
+   * Generic cache data storage
+   */
+  public async getCacheData<T>(
+    namespace: string,
+    key: string,
+    maxAgeInSecs?: number
+  ): Promise<T | undefined> {
+    try {
+      const fullKey = `${namespace}:${key}`
+      const result = await db.cacheData.get(fullKey)
+
+      if (!result) return undefined
+
+      if (maxAgeInSecs && result.cachedAt) {
+        const age = (Date.now() - result.cachedAt) / 1000
+        if (age > maxAgeInSecs) {
+          return undefined
+        }
+      }
+
+      return result.data as T
+    } catch (error) {
+      this.debug("Error getting cache data:", error)
+      return undefined
+    }
+  }
+
+  public async setCacheData<T>(namespace: string, key: string, data: T): Promise<void> {
+    try {
+      const fullKey = `${namespace}:${key}`
+      await db.cacheData.put({
+        key: fullKey,
+        data: data as any,
+        cachedAt: Date.now(),
+      })
+    } catch (error) {
+      this.debug("Error setting cache data:", error)
+    }
+  }
+
+  /**
    * Get a decrypted event from the cache by its wrapper ID
    */
   public async getDecryptedEvent(wrapperId: NDKEventId): Promise<NDKEvent | null> {
