@@ -20,10 +20,15 @@ interface MessageWaiter {
 }
 
 interface ActorState {
-  deviceId: string
-  manager: SessionManager
   secretKey: Uint8Array
   publicKey: string
+  defaultDeviceId: string
+  devices: Map<string, DeviceState>
+}
+
+interface DeviceState {
+  deviceId: string
+  manager: SessionManager
   storage: InMemoryStorageAdapter
   events: Rumor[]
   messageCounts: Map<string, number>
@@ -31,12 +36,17 @@ interface ActorState {
   unsub?: () => void
 }
 
+type ActorDeviceRef = ActorId | {actor: ActorId; deviceId?: string}
+
+type WaitTarget = ActorDeviceRef | ActorDeviceRef[] | "all-recipient-devices"
+
 type ScenarioStep =
-  | {type: "send"; from: ActorId; to: ActorId; message: string}
-  | {type: "expect"; actor: ActorId; message: string}
-  | {type: "expectAll"; actor: ActorId; messages: string[]}
-  | {type: "close"; actor: ActorId}
-  | {type: "restart"; actor: ActorId}
+  | {type: "send"; from: ActorDeviceRef; to: ActorDeviceRef; message: string; waitOn?: WaitTarget}
+  | {type: "expect"; actor: ActorId; deviceId?: string; message: string}
+  | {type: "expectAll"; actor: ActorId; deviceId?: string; messages: string[]}
+  | {type: "addDevice"; actor: ActorId; deviceId: string}
+  | {type: "close"; actor: ActorId; deviceId?: string}
+  | {type: "restart"; actor: ActorId; deviceId?: string}
   | {type: "clearEvents"}
   | {type: "noop"}
 
@@ -49,8 +59,8 @@ export async function runScenario(def: ScenarioDefinition): Promise<ScenarioCont
   const context: ScenarioContext = {
     relay,
     actors: {
-      alice: await bootstrapActor("alice-device-1", relay),
-      bob: await bootstrapActor("bob-device-1", relay),
+      alice: await bootstrapActor("alice", "alice-device-1", relay),
+      bob: await bootstrapActor("bob", "bob-device-1", relay),
     },
   }
 
@@ -58,19 +68,22 @@ export async function runScenario(def: ScenarioDefinition): Promise<ScenarioCont
     console.log(`\n--- Executing step: ${JSON.stringify(step)} ---`)
     switch (step.type) {
       case "send":
-        await sendMessage(context, step.from, step.to, step.message)
+        await sendMessage(context, step.from, step.to, step.message, step.waitOn)
         break
       case "expect":
-        await expectMessage(context, step.actor, step.message)
+        await expectMessage(context, step.actor, step.deviceId, step.message)
         break
       case "expectAll":
-        await expectAllMessages(context, step.actor, step.messages)
+        await expectAllMessages(context, step.actor, step.deviceId, step.messages)
+        break
+      case "addDevice":
+        await ensureDevice(context, {actor: step.actor, deviceId: step.deviceId})
         break
       case "close":
-        closeActor(context, step.actor)
+        closeDevice(context, {actor: step.actor, deviceId: step.deviceId})
         break
       case "restart":
-        await restartActor(context, step.actor)
+        await restartDevice(context, {actor: step.actor, deviceId: step.deviceId})
         break
       case "noop":
         await Promise.resolve()
@@ -89,105 +102,119 @@ export async function runScenario(def: ScenarioDefinition): Promise<ScenarioCont
 }
 
 async function bootstrapActor(
+  actorId: ActorId,
   deviceId: string,
-  relay: MockRelay,
-  existingSecretKey?: Uint8Array,
-  existingStorage?: InMemoryStorageAdapter
+  relay: MockRelay
 ): Promise<ActorState> {
   const {manager, secretKey, publicKey, mockStorage} = await createMockSessionManager(
     deviceId,
-    relay,
-    existingSecretKey,
-    existingStorage
+    relay
   )
 
-  const events: Rumor[] = []
-  const state: ActorState = {
-    deviceId,
-    manager,
+  const actorState: ActorState = {
     secretKey,
     publicKey,
-    storage: mockStorage,
-    events,
-    messageCounts: new Map(),
-    waiters: [],
+    defaultDeviceId: deviceId,
+    devices: new Map(),
   }
 
-  state.unsub = attachManagerListener(state)
+  const deviceState = createDeviceState(actorState, deviceId, manager, mockStorage)
+  actorState.devices.set(deviceId, deviceState)
 
-  return state
+  return actorState
 }
 
 async function sendMessage(
   context: ScenarioContext,
-  from: ActorId,
-  to: ActorId,
-  message: string
+  from: ActorDeviceRef,
+  to: ActorDeviceRef,
+  message: string,
+  waitOn?: WaitTarget
 ) {
-  const sender = context.actors[from]
-  const recipient = context.actors[to]
-  const wait = waitForMessage(recipient, to, message, {existingOk: false})
-  await sender.manager.sendMessage(recipient.publicKey, message)
-  await wait
+  const senderDevice = await ensureDevice(context, normalizeRef(from))
+  const recipientRef = normalizeRef(to)
+  const recipientActor = context.actors[recipientRef.actor]
+  if (!recipientActor) {
+    throw new Error(`Unknown recipient actor '${recipientRef.actor}'`)
+  }
+
+  const waitTargets = resolveWaitTargets(context, waitOn, recipientActor)
+  const waits = waitTargets.map((device) =>
+    waitForMessage(device, deviceLabel(recipientActor, device), message, {existingOk: false})
+  )
+
+  await senderDevice.manager.sendMessage(recipientActor.publicKey, message)
+  await Promise.all(waits)
 }
 
-async function expectMessage(context: ScenarioContext, actor: ActorId, message: string) {
-  const state = context.actors[actor]
-  await waitForMessage(state, actor, message, {existingOk: true})
+async function expectMessage(
+  context: ScenarioContext,
+  actor: ActorId,
+  deviceId: string | undefined,
+  message: string
+) {
+  const device = await ensureDevice(context, {actor, deviceId})
+  await waitForMessage(device, deviceLabel(context.actors[actor], device), message, {
+    existingOk: true,
+  })
 }
 
 async function expectAllMessages(
   context: ScenarioContext,
   actor: ActorId,
+  deviceId: string | undefined,
   messages: string[]
 ) {
   console.log(`\n\n\nExpecting all messages on ${actor}:`, messages)
+  const actorState = context.actors[actor]
+  const device = await ensureDevice(context, {actor, deviceId})
   for (const msg of messages) {
-    await waitForMessage(context.actors[actor], actor, msg, {existingOk: true})
+    await waitForMessage(device, deviceLabel(actorState, device), msg, {existingOk: true})
   }
 }
 
-function closeActor(context: ScenarioContext, actor: ActorId) {
-  const state = context.actors[actor]
-  rejectPendingWaiters(state, new Error(`Actor ${actor} closed`))
-  state.unsub?.()
-  state.manager.close()
+function closeDevice(context: ScenarioContext, ref: ActorDeviceRef) {
+  const device = getDevice(context, normalizeRef(ref))
+  rejectPendingWaiters(device, new Error(`Device ${refToString(ref)} closed`))
+  device.unsub?.()
+  device.manager.close()
 }
 
-async function restartActor(context: ScenarioContext, actor: ActorId) {
-  const state = context.actors[actor]
-  const {deviceId, manager, secretKey, storage, unsub} = state
-  unsub?.()
-  manager.close()
+async function restartDevice(context: ScenarioContext, ref: ActorDeviceRef) {
+  const normalized = normalizeRef(ref)
+  const actor = context.actors[normalized.actor]
+  const device = await ensureDevice(context, normalized)
+  device.unsub?.()
+  device.manager.close()
   const {manager: newManager} = await createMockSessionManager(
-    deviceId,
+    device.deviceId,
     context.relay,
-    secretKey,
-    storage
+    actor.secretKey,
+    device.storage
   )
 
-  state.manager = newManager
-  state.unsub = attachManagerListener(state)
+  device.manager = newManager
+  device.unsub = attachManagerListener(actor, device)
 }
 
-function attachManagerListener(state: ActorState): () => void {
+function attachManagerListener(actor: ActorState, device: DeviceState): () => void {
   const onEvent = (event: Rumor) => {
-    state.events.push(event)
+    device.events.push(event)
     const content = event.content ?? ""
-    const currentCount = state.messageCounts.get(content) ?? 0
+    const currentCount = device.messageCounts.get(content) ?? 0
     const nextCount = currentCount + 1
-    state.messageCounts.set(content, nextCount)
-    resolveWaiters(state, content, nextCount)
+    device.messageCounts.set(content, nextCount)
+    resolveWaiters(device, content, nextCount)
   }
 
-  const unsubscribe = state.manager.onEvent(onEvent)
+  const unsubscribe = device.manager.onEvent(onEvent)
   return () => {
     unsubscribe()
   }
 }
 
-function resolveWaiters(state: ActorState, content: string, count: number) {
-  const pending = state.waiters.slice()
+function resolveWaiters(device: DeviceState, content: string, count: number) {
+  const pending = device.waiters.slice()
   for (const waiter of pending) {
     if (waiter.message === content && count >= waiter.targetCount) {
       waiter.resolve()
@@ -196,13 +223,13 @@ function resolveWaiters(state: ActorState, content: string, count: number) {
 }
 
 function waitForMessage(
-  state: ActorState,
-  actor: ActorId,
+  device: DeviceState,
+  label: string,
   message: string,
   options: {existingOk: boolean}
 ): Promise<void> {
   const {existingOk} = options
-  const currentCount = state.messageCounts.get(message) ?? 0
+  const currentCount = device.messageCounts.get(message) ?? 0
   if (existingOk && currentCount > 0) {
     return Promise.resolve()
   }
@@ -210,13 +237,13 @@ function waitForMessage(
   return new Promise<void>((resolve, reject) => {
     const handleResolve = (waiter: MessageWaiter) => {
       clearTimeout(waiter.timeout)
-      removeWaiter(state, waiter)
+      removeWaiter(device, waiter)
       resolve()
     }
 
     const handleReject = (waiter: MessageWaiter, error: Error) => {
       clearTimeout(waiter.timeout)
-      removeWaiter(state, waiter)
+      removeWaiter(device, waiter)
       reject(error)
     }
 
@@ -228,25 +255,122 @@ function waitForMessage(
       timeout: setTimeout(() => {
         handleReject(
           waiter,
-          new Error(`Timed out waiting for message '${message}' on ${actor}`)
+          new Error(`Timed out waiting for message '${message}' on ${label}`)
         )
       }, 5000),
     }
 
-    state.waiters.push(waiter)
+    device.waiters.push(waiter)
   })
 }
 
-function removeWaiter(state: ActorState, waiter: MessageWaiter) {
-  const index = state.waiters.indexOf(waiter)
+function removeWaiter(device: DeviceState, waiter: MessageWaiter) {
+  const index = device.waiters.indexOf(waiter)
   if (index >= 0) {
-    state.waiters.splice(index, 1)
+    device.waiters.splice(index, 1)
   }
 }
 
-function rejectPendingWaiters(state: ActorState, error: Error) {
-  const waiters = state.waiters.slice()
+function rejectPendingWaiters(device: DeviceState, error: Error) {
+  const waiters = device.waiters.slice()
   for (const waiter of waiters) {
     waiter.reject(error)
   }
+}
+
+function normalizeRef(ref: ActorDeviceRef): {actor: ActorId; deviceId?: string} {
+  if (typeof ref === "string") {
+    return {actor: ref}
+  }
+  return ref
+}
+
+function refToString(ref: ActorDeviceRef): string {
+  const normalized = normalizeRef(ref)
+  return normalized.deviceId ? `${normalized.actor}/${normalized.deviceId}` : normalized.actor
+}
+
+async function ensureDevice(
+  context: ScenarioContext,
+  ref: {actor: ActorId; deviceId?: string}
+): Promise<DeviceState> {
+  const actor = context.actors[ref.actor]
+  if (!actor) {
+    throw new Error(`Unknown actor '${ref.actor}'`)
+  }
+  const deviceId = ref.deviceId || actor.defaultDeviceId
+  const existing = actor.devices.get(deviceId)
+  if (existing) return existing
+
+  const {manager, mockStorage} = await createMockSessionManager(
+    deviceId,
+    context.relay,
+    actor.secretKey
+  )
+
+  const deviceState = createDeviceState(actor, deviceId, manager, mockStorage)
+  actor.devices.set(deviceId, deviceState)
+  return deviceState
+}
+
+function getDevice(context: ScenarioContext, ref: {actor: ActorId; deviceId?: string}): DeviceState {
+  const actor = context.actors[ref.actor]
+  if (!actor) {
+    throw new Error(`Unknown actor '${ref.actor}'`)
+  }
+  const deviceId = ref.deviceId || actor.defaultDeviceId
+  const device = actor.devices.get(deviceId)
+  if (!device) {
+    throw new Error(`Device '${deviceId}' not registered for actor '${ref.actor}'`)
+  }
+  return device
+}
+
+function deviceLabel(actor: ActorState, device: DeviceState): string {
+  return `${actor.publicKey.slice(0, 8)}.../${device.deviceId}`
+}
+
+function createDeviceState(
+  actor: ActorState,
+  deviceId: string,
+  manager: SessionManager,
+  storage: InMemoryStorageAdapter
+): DeviceState {
+  const events: Rumor[] = []
+  const deviceState: DeviceState = {
+    deviceId,
+    manager,
+    storage,
+    events,
+    messageCounts: new Map(),
+    waiters: [],
+  }
+
+  deviceState.unsub = attachManagerListener(actor, deviceState)
+  return deviceState
+}
+
+function resolveWaitTargets(
+  context: ScenarioContext,
+  waitOn: WaitTarget | undefined,
+  recipient: ActorState
+): DeviceState[] {
+  if (!waitOn) {
+    const device = recipient.devices.get(recipient.defaultDeviceId)
+    if (!device) {
+      throw new Error(`Recipient actor missing default device`)
+    }
+    return [device]
+  }
+
+  if (waitOn === "all-recipient-devices") {
+    const devices = Array.from(recipient.devices.values())
+    if (devices.length === 0) {
+      throw new Error("Recipient has no devices to wait on")
+    }
+    return devices
+  }
+
+  const refs = Array.isArray(waitOn) ? waitOn : [waitOn]
+  return refs.map((ref) => getDevice(context, normalizeRef(ref)))
 }

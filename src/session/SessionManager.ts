@@ -508,10 +508,11 @@ export default class SessionManager {
 
     // Add to message history queue (will be sent when session is established)
     const completeEvent = event as Rumor
-    this.messageHistory.set(recipientIdentityKey, [
-      ...(this.messageHistory.get(recipientIdentityKey) || []),
-      completeEvent,
-    ])
+    const historyTargets = new Set([recipientIdentityKey, this.ourPublicKey])
+    for (const key of historyTargets) {
+      const existing = this.messageHistory.get(key) || []
+      this.messageHistory.set(key, [...existing, completeEvent])
+    }
 
     const userRecord = this.getOrCreateUserRecord(recipientIdentityKey)
     const ourUserRecord = this.getOrCreateUserRecord(this.ourPublicKey)

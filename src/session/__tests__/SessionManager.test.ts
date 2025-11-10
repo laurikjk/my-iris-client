@@ -78,6 +78,53 @@ describe("SessionManager", () => {
     expect(bobReceivedMessages)
   })
 
+  it("should deliver messages to all sender and recipient devices", async () => {
+    await runScenario({
+      steps: [
+        {type: "addDevice", actor: "alice", deviceId: "alice-device-2"},
+        {type: "addDevice", actor: "bob", deviceId: "bob-device-2"},
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: {actor: "bob"},
+          message: "alice broadcast",
+          waitOn: "all-recipient-devices",
+        },
+        {
+          type: "expect",
+          actor: "alice",
+          deviceId: "alice-device-2",
+          message: "alice broadcast",
+        },
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-2"},
+          to: {actor: "alice"},
+          message: "bob broadcast",
+          waitOn: "all-recipient-devices",
+        },
+        {
+          type: "expect",
+          actor: "bob",
+          deviceId: "bob-device-1",
+          message: "bob broadcast",
+        },
+        {
+          type: "expect",
+          actor: "alice",
+          deviceId: "alice-device-1",
+          message: "bob broadcast",
+        },
+        {
+          type: "expect",
+          actor: "alice",
+          deviceId: "alice-device-2",
+          message: "bob broadcast",
+        },
+      ],
+    })
+  })
+
   it("should handle back to back messages after initial, answer, and then", async () => {
     await runScenario({
       steps: [
