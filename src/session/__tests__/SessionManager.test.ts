@@ -81,6 +81,8 @@ describe("SessionManager", () => {
   it("should deliver messages to all sender and recipient devices", async () => {
     await runScenario({
       steps: [
+        {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
+        {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
         {type: "addDevice", actor: "alice", deviceId: "alice-device-2"},
         {type: "addDevice", actor: "bob", deviceId: "bob-device-2"},
         {
@@ -125,9 +127,56 @@ describe("SessionManager", () => {
     })
   })
 
+  it.skip(
+    "should eventually deliver to a restarted local device",
+    async () => {
+      // TODO: this test documents a current bug where a local device that was offline
+      // during send does not receive the backlog after it restarts. Remove the skip once
+      // SessionManager replays queued messages to our own devices after they come back.
+      await runScenario({
+        steps: [
+          {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
+          {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
+          {type: "addDevice", actor: "alice", deviceId: "alice-device-2"},
+          {type: "addDevice", actor: "bob", deviceId: "bob-device-2"},
+          {
+            type: "send",
+            from: {actor: "alice", deviceId: "alice-device-1"},
+            to: {actor: "bob"},
+            message: "warmup",
+            waitOn: "all-recipient-devices",
+          },
+          {
+            type: "expect",
+            actor: "alice",
+            deviceId: "alice-device-2",
+            message: "warmup",
+          },
+          {type: "close", actor: "alice", deviceId: "alice-device-2"},
+          {
+            type: "send",
+            from: {actor: "alice", deviceId: "alice-device-1"},
+            to: {actor: "bob"},
+            message: "offline-delivery",
+            waitOn: "all-recipient-devices",
+          },
+          {type: "restart", actor: "alice", deviceId: "alice-device-2"},
+          {
+            type: "expect",
+            actor: "alice",
+            deviceId: "alice-device-2",
+            message: "offline-delivery",
+          },
+        ],
+      })
+    }
+  )
+
   it("should handle back to back messages after initial, answer, and then", async () => {
     await runScenario({
       steps: [
+        {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
+        {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
         {type: "send", from: "alice", to: "bob", message: "alice to bob 1"},
         {type: "send", from: "bob", to: "alice", message: "bob to alice 1"},
         {type: "send", from: "alice", to: "bob", message: "alice to bob 2"},
@@ -138,6 +187,8 @@ describe("SessionManager", () => {
   it("should handle back to back messages after initial", async () => {
     await runScenario({
       steps: [
+        {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
+        {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
         {type: "send", from: "alice", to: "bob", message: "Initial message"},
         {type: "send", from: "bob", to: "alice", message: "Reply message"},
         {type: "send", from: "bob", to: "alice", message: "Reply message 2"},
@@ -148,6 +199,8 @@ describe("SessionManager", () => {
   it("should persist sessions across manager restarts", async () => {
     await runScenario({
       steps: [
+        {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
+        {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
         {type: "send", from: "alice", to: "bob", message: "Initial message"},
         {type: "send", from: "bob", to: "alice", message: "Reply message"},
         {type: "send", from: "bob", to: "alice", message: "Reply message 2"},
@@ -162,6 +215,8 @@ describe("SessionManager", () => {
   it("should resume communication after restart with stored sessions", async () => {
     await runScenario({
       steps: [
+        {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
+        {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
         {type: "send", from: "alice", to: "bob", message: "hello from alice"},
         {
           type: "send",
@@ -197,6 +252,8 @@ describe("SessionManager", () => {
   it("should deliver alice's message after bob restarts", async () => {
     await runScenario({
       steps: [
+        {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
+        {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
         {type: "send", from: "alice", to: "bob", message: "alice to bob 1"},
         {type: "send", from: "bob", to: "alice", message: "bob to alice 1"},
         {type: "send", from: "alice", to: "bob", message: "alice to bob 2"},
@@ -303,6 +360,8 @@ describe("SessionManager", () => {
   it("should deliver when receiver restarts multiple times", async () => {
     await runScenario({
       steps: [
+        {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
+        {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
         {type: "send", from: "alice", to: "bob", message: "1"},
         {type: "send", from: "bob", to: "alice", message: "2"},
         {type: "send", from: "alice", to: "bob", message: "3"},
@@ -317,6 +376,8 @@ describe("SessionManager", () => {
   it("should deliver when receiver restarts multiple times (clearEvents)", async () => {
     await runScenario({
       steps: [
+        {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
+        {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
         {type: "send", from: "alice", to: "bob", message: "1"},
         {type: "send", from: "bob", to: "alice", message: "2"},
         {type: "send", from: "alice", to: "bob", message: "3"},

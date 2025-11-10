@@ -3,6 +3,7 @@ import {createMockSessionManager} from "./mockSessionManager"
 import SessionManager from "../../SessionManager"
 import {Rumor} from "nostr-double-ratchet"
 import type {InMemoryStorageAdapter} from "../../StorageAdapter"
+import {generateSecretKey, getPublicKey} from "nostr-tools"
 
 export type ActorId = "alice" | "bob"
 
@@ -22,7 +23,7 @@ interface MessageWaiter {
 interface ActorState {
   secretKey: Uint8Array
   publicKey: string
-  defaultDeviceId: string
+  defaultDeviceId?: string
   devices: Map<string, DeviceState>
 }
 
@@ -59,8 +60,8 @@ export async function runScenario(def: ScenarioDefinition): Promise<ScenarioCont
   const context: ScenarioContext = {
     relay,
     actors: {
-      alice: await bootstrapActor("alice", "alice-device-1", relay),
-      bob: await bootstrapActor("bob", "bob-device-1", relay),
+      alice: createActorState(),
+      bob: createActorState(),
     },
   }
 
@@ -77,7 +78,7 @@ export async function runScenario(def: ScenarioDefinition): Promise<ScenarioCont
         await expectAllMessages(context, step.actor, step.deviceId, step.messages)
         break
       case "addDevice":
-        await ensureDevice(context, {actor: step.actor, deviceId: step.deviceId})
+        await addDevice(context, step.actor, step.deviceId)
         break
       case "close":
         closeDevice(context, {actor: step.actor, deviceId: step.deviceId})
@@ -101,27 +102,14 @@ export async function runScenario(def: ScenarioDefinition): Promise<ScenarioCont
   return context
 }
 
-async function bootstrapActor(
-  actorId: ActorId,
-  deviceId: string,
-  relay: MockRelay
-): Promise<ActorState> {
-  const {manager, secretKey, publicKey, mockStorage} = await createMockSessionManager(
-    deviceId,
-    relay
-  )
-
-  const actorState: ActorState = {
+function createActorState(): ActorState {
+  const secretKey = generateSecretKey()
+  const publicKey = getPublicKey(secretKey)
+  return {
     secretKey,
     publicKey,
-    defaultDeviceId: deviceId,
     devices: new Map(),
   }
-
-  const deviceState = createDeviceState(actorState, deviceId, manager, mockStorage)
-  actorState.devices.set(deviceId, deviceState)
-
-  return actorState
 }
 
 async function sendMessage(
@@ -131,7 +119,7 @@ async function sendMessage(
   message: string,
   waitOn?: WaitTarget
 ) {
-  const senderDevice = await ensureDevice(context, normalizeRef(from))
+  const senderDevice = getDevice(context, normalizeRef(from))
   const recipientRef = normalizeRef(to)
   const recipientActor = context.actors[recipientRef.actor]
   if (!recipientActor) {
@@ -153,7 +141,7 @@ async function expectMessage(
   deviceId: string | undefined,
   message: string
 ) {
-  const device = await ensureDevice(context, {actor, deviceId})
+  const device = getDevice(context, {actor, deviceId})
   await waitForMessage(device, deviceLabel(context.actors[actor], device), message, {
     existingOk: true,
   })
@@ -167,7 +155,7 @@ async function expectAllMessages(
 ) {
   console.log(`\n\n\nExpecting all messages on ${actor}:`, messages)
   const actorState = context.actors[actor]
-  const device = await ensureDevice(context, {actor, deviceId})
+  const device = getDevice(context, {actor, deviceId})
   for (const msg of messages) {
     await waitForMessage(device, deviceLabel(actorState, device), msg, {existingOk: true})
   }
@@ -183,7 +171,7 @@ function closeDevice(context: ScenarioContext, ref: ActorDeviceRef) {
 async function restartDevice(context: ScenarioContext, ref: ActorDeviceRef) {
   const normalized = normalizeRef(ref)
   const actor = context.actors[normalized.actor]
-  const device = await ensureDevice(context, normalized)
+  const device = getDevice(context, normalized)
   device.unsub?.()
   device.manager.close()
   const {manager: newManager} = await createMockSessionManager(
@@ -290,17 +278,11 @@ function refToString(ref: ActorDeviceRef): string {
   return normalized.deviceId ? `${normalized.actor}/${normalized.deviceId}` : normalized.actor
 }
 
-async function ensureDevice(
-  context: ScenarioContext,
-  ref: {actor: ActorId; deviceId?: string}
-): Promise<DeviceState> {
-  const actor = context.actors[ref.actor]
-  if (!actor) {
-    throw new Error(`Unknown actor '${ref.actor}'`)
+async function addDevice(context: ScenarioContext, actorId: ActorId, deviceId: string) {
+  const actor = getActor(context, actorId)
+  if (actor.devices.has(deviceId)) {
+    throw new Error(`Device '${deviceId}' already exists for actor '${actorId}'`)
   }
-  const deviceId = ref.deviceId || actor.defaultDeviceId
-  const existing = actor.devices.get(deviceId)
-  if (existing) return existing
 
   const {manager, mockStorage} = await createMockSessionManager(
     deviceId,
@@ -310,15 +292,26 @@ async function ensureDevice(
 
   const deviceState = createDeviceState(actor, deviceId, manager, mockStorage)
   actor.devices.set(deviceId, deviceState)
+  if (!actor.defaultDeviceId) {
+    actor.defaultDeviceId = deviceId
+  }
   return deviceState
 }
 
-function getDevice(context: ScenarioContext, ref: {actor: ActorId; deviceId?: string}): DeviceState {
-  const actor = context.actors[ref.actor]
+function getActor(context: ScenarioContext, actorId: ActorId): ActorState {
+  const actor = context.actors[actorId]
   if (!actor) {
-    throw new Error(`Unknown actor '${ref.actor}'`)
+    throw new Error(`Unknown actor '${actorId}'`)
   }
+  return actor
+}
+
+function getDevice(context: ScenarioContext, ref: {actor: ActorId; deviceId?: string}): DeviceState {
+  const actor = getActor(context, ref.actor)
   const deviceId = ref.deviceId || actor.defaultDeviceId
+  if (!deviceId) {
+    throw new Error(`Actor '${ref.actor}' has no devices. Add one with addDevice step.`)
+  }
   const device = actor.devices.get(deviceId)
   if (!device) {
     throw new Error(`Device '${deviceId}' not registered for actor '${ref.actor}'`)
@@ -356,9 +349,13 @@ function resolveWaitTargets(
   recipient: ActorState
 ): DeviceState[] {
   if (!waitOn) {
-    const device = recipient.devices.get(recipient.defaultDeviceId)
-    if (!device) {
+    const defaultId = recipient.defaultDeviceId
+    if (!defaultId) {
       throw new Error(`Recipient actor missing default device`)
+    }
+    const device = recipient.devices.get(defaultId)
+    if (!device) {
+      throw new Error(`Recipient actor missing device '${defaultId}'`)
     }
     return [device]
   }
