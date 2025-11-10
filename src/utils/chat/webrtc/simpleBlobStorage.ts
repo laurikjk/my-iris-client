@@ -84,7 +84,15 @@ export class SimpleBlobStorage {
   async list(
     offset = 0,
     limit = 20
-  ): Promise<{hash: string; size: number; mimeType?: string; stored_at: number; first_author?: string}[]> {
+  ): Promise<
+    {
+      hash: string
+      size: number
+      mimeType?: string
+      stored_at: number
+      first_author?: string
+    }[]
+  > {
     try {
       const results = await db.cacheData
         .where("key")

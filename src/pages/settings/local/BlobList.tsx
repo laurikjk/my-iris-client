@@ -11,7 +11,13 @@ import {UserRow} from "@/shared/components/user/UserRow"
 
 export function BlobList() {
   const [blobs, setBlobs] = useState<
-    {hash: string; size: number; mimeType?: string; stored_at: number; first_author?: string}[]
+    {
+      hash: string
+      size: number
+      mimeType?: string
+      stored_at: number
+      first_author?: string
+    }[]
   >([])
   const [blobCount, setBlobCount] = useState(0)
   const [blobTotalSize, setBlobTotalSize] = useState(0)

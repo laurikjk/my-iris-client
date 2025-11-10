@@ -63,7 +63,10 @@ test.describe("WebRTC Blossom via NDK", () => {
         const data = new Uint8Array(dataArray)
         const myPubkey = ndk().activeUser?.pubkey
         await storage.save(hash, data.buffer, "image/jpeg", myPubkey)
-        console.log("Page1: Blob stored with author, will serve via p2p:", hash.slice(0, 8))
+        console.log(
+          "Page1: Blob stored with author, will serve via p2p:",
+          hash.slice(0, 8)
+        )
       },
       {dataArray: Array.from(testData), hash: testHash}
     )
