@@ -117,9 +117,7 @@ const ChatSettings = () => {
               {device.isCurrent && (
                 <span className="badge badge-primary badge-sm">Current</span>
               )}
-              {isStale && (
-                <span className="badge badge-warning badge-sm">Stale</span>
-              )}
+              {isStale && <span className="badge badge-warning badge-sm">Stale</span>}
             </div>
             {deviceFoundDate && (
               <div className="text-xs text-base-content/50">
@@ -163,7 +161,9 @@ const ChatSettings = () => {
             <span className="badge badge-warning badge-sm">Stale</span>
           </div>
           {staleSinceDate && (
-            <span className="text-xs text-base-content/50">Stale since {staleSinceDate}</span>
+            <span className="text-xs text-base-content/50">
+              Stale since {staleSinceDate}
+            </span>
           )}
         </div>
         {deviceFoundDate && (

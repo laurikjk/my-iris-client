@@ -142,7 +142,9 @@ export function useBlossomCache(url: string, authorPubkey?: string): string {
     }
 
     // Check trust - only fetch blobs from trusted authors (distance <= 2)
-    const followDistance = authorPubkey ? socialGraph().getFollowDistance(authorPubkey) : 999
+    const followDistance = authorPubkey
+      ? socialGraph().getFollowDistance(authorPubkey)
+      : 999
     const isTrusted = followDistance <= 2
 
     if (!isTrusted) {
