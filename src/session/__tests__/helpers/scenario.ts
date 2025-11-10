@@ -23,7 +23,6 @@ interface MessageWaiter {
 interface ActorState {
   secretKey: Uint8Array
   publicKey: string
-  defaultDeviceId?: string
   devices: Map<string, DeviceState>
 }
 
@@ -37,17 +36,20 @@ interface DeviceState {
   unsub?: () => void
 }
 
-type ActorDeviceRef = ActorId | {actor: ActorId; deviceId?: string}
+interface ActorDeviceRef {
+  actor: ActorId
+  deviceId: string
+}
 
 type WaitTarget = ActorDeviceRef | ActorDeviceRef[] | "all-recipient-devices"
 
 type ScenarioStep =
-  | {type: "send"; from: ActorDeviceRef; to: ActorDeviceRef; message: string; waitOn?: WaitTarget}
-  | {type: "expect"; actor: ActorId; deviceId?: string; message: string}
-  | {type: "expectAll"; actor: ActorId; deviceId?: string; messages: string[]}
+  | {type: "send"; from: ActorDeviceRef; to: ActorId; message: string; waitOn?: WaitTarget}
+  | {type: "expect"; actor: ActorId; deviceId: string; message: string}
+  | {type: "expectAll"; actor: ActorId; deviceId: string; messages: string[]}
   | {type: "addDevice"; actor: ActorId; deviceId: string}
-  | {type: "close"; actor: ActorId; deviceId?: string}
-  | {type: "restart"; actor: ActorId; deviceId?: string}
+  | {type: "close"; actor: ActorId; deviceId: string}
+  | {type: "restart"; actor: ActorId; deviceId: string}
   | {type: "clearEvents"}
   | {type: "noop"}
 
@@ -115,15 +117,14 @@ function createActorState(): ActorState {
 async function sendMessage(
   context: ScenarioContext,
   from: ActorDeviceRef,
-  to: ActorDeviceRef,
+  to: ActorId,
   message: string,
   waitOn?: WaitTarget
 ) {
-  const senderDevice = getDevice(context, normalizeRef(from))
-  const recipientRef = normalizeRef(to)
-  const recipientActor = context.actors[recipientRef.actor]
+  const senderDevice = getDevice(context, from)
+  const recipientActor = context.actors[to]
   if (!recipientActor) {
-    throw new Error(`Unknown recipient actor '${recipientRef.actor}'`)
+    throw new Error(`Unknown recipient actor '${to}'`)
   }
 
   const waitTargets = resolveWaitTargets(context, waitOn, recipientActor)
@@ -162,16 +163,18 @@ async function expectAllMessages(
 }
 
 function closeDevice(context: ScenarioContext, ref: ActorDeviceRef) {
-  const device = getDevice(context, normalizeRef(ref))
+  const device = getDevice(context, ref)
   rejectPendingWaiters(device, new Error(`Device ${refToString(ref)} closed`))
   device.unsub?.()
   device.manager.close()
 }
 
 async function restartDevice(context: ScenarioContext, ref: ActorDeviceRef) {
-  const normalized = normalizeRef(ref)
-  const actor = context.actors[normalized.actor]
-  const device = getDevice(context, normalized)
+  const actor = context.actors[ref.actor]
+  if (!actor) {
+    throw new Error(`Unknown actor '${ref.actor}'`)
+  }
+  const device = getDevice(context, ref)
   device.unsub?.()
   device.manager.close()
   const {manager: newManager} = await createMockSessionManager(
@@ -266,16 +269,8 @@ function rejectPendingWaiters(device: DeviceState, error: Error) {
   }
 }
 
-function normalizeRef(ref: ActorDeviceRef): {actor: ActorId; deviceId?: string} {
-  if (typeof ref === "string") {
-    return {actor: ref}
-  }
-  return ref
-}
-
 function refToString(ref: ActorDeviceRef): string {
-  const normalized = normalizeRef(ref)
-  return normalized.deviceId ? `${normalized.actor}/${normalized.deviceId}` : normalized.actor
+  return `${ref.actor}/${ref.deviceId}`
 }
 
 async function addDevice(context: ScenarioContext, actorId: ActorId, deviceId: string) {
@@ -292,9 +287,6 @@ async function addDevice(context: ScenarioContext, actorId: ActorId, deviceId: s
 
   const deviceState = createDeviceState(actor, deviceId, manager, mockStorage)
   actor.devices.set(deviceId, deviceState)
-  if (!actor.defaultDeviceId) {
-    actor.defaultDeviceId = deviceId
-  }
   return deviceState
 }
 
@@ -306,15 +298,11 @@ function getActor(context: ScenarioContext, actorId: ActorId): ActorState {
   return actor
 }
 
-function getDevice(context: ScenarioContext, ref: {actor: ActorId; deviceId?: string}): DeviceState {
+function getDevice(context: ScenarioContext, ref: ActorDeviceRef): DeviceState {
   const actor = getActor(context, ref.actor)
-  const deviceId = ref.deviceId || actor.defaultDeviceId
-  if (!deviceId) {
-    throw new Error(`Actor '${ref.actor}' has no devices. Add one with addDevice step.`)
-  }
-  const device = actor.devices.get(deviceId)
+  const device = actor.devices.get(ref.deviceId)
   if (!device) {
-    throw new Error(`Device '${deviceId}' not registered for actor '${ref.actor}'`)
+    throw new Error(`Device '${ref.deviceId}' not registered for actor '${ref.actor}'`)
   }
   return device
 }
@@ -349,15 +337,11 @@ function resolveWaitTargets(
   recipient: ActorState
 ): DeviceState[] {
   if (!waitOn) {
-    const defaultId = recipient.defaultDeviceId
-    if (!defaultId) {
-      throw new Error(`Recipient actor missing default device`)
+    const devices = Array.from(recipient.devices.values())
+    if (devices.length === 0) {
+      throw new Error("Recipient actor has no devices. Add one before sending.")
     }
-    const device = recipient.devices.get(defaultId)
-    if (!device) {
-      throw new Error(`Recipient actor missing device '${defaultId}'`)
-    }
-    return [device]
+    return devices
   }
 
   if (waitOn === "all-recipient-devices") {
@@ -369,5 +353,5 @@ function resolveWaitTargets(
   }
 
   const refs = Array.isArray(waitOn) ? waitOn : [waitOn]
-  return refs.map((ref) => getDevice(context, normalizeRef(ref)))
+  return refs.map((ref) => getDevice(context, ref))
 }

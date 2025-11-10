@@ -88,7 +88,7 @@ describe("SessionManager", () => {
         {
           type: "send",
           from: {actor: "alice", deviceId: "alice-device-1"},
-          to: {actor: "bob"},
+          to: "bob",
           message: "alice broadcast",
           waitOn: "all-recipient-devices",
         },
@@ -101,7 +101,7 @@ describe("SessionManager", () => {
         {
           type: "send",
           from: {actor: "bob", deviceId: "bob-device-2"},
-          to: {actor: "alice"},
+          to: "alice",
           message: "bob broadcast",
           waitOn: "all-recipient-devices",
         },
@@ -142,7 +142,7 @@ describe("SessionManager", () => {
           {
             type: "send",
             from: {actor: "alice", deviceId: "alice-device-1"},
-            to: {actor: "bob"},
+            to: "bob",
             message: "warmup",
             waitOn: "all-recipient-devices",
           },
@@ -156,7 +156,7 @@ describe("SessionManager", () => {
           {
             type: "send",
             from: {actor: "alice", deviceId: "alice-device-1"},
-            to: {actor: "bob"},
+            to: "bob",
             message: "offline-delivery",
             waitOn: "all-recipient-devices",
           },
@@ -177,10 +177,30 @@ describe("SessionManager", () => {
       steps: [
         {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
         {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
-        {type: "send", from: "alice", to: "bob", message: "alice to bob 1"},
-        {type: "send", from: "bob", to: "alice", message: "bob to alice 1"},
-        {type: "send", from: "alice", to: "bob", message: "alice to bob 2"},
-        {type: "send", from: "alice", to: "bob", message: "alice to bob 3"},
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "alice to bob 1",
+        },
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
+          to: "alice",
+          message: "bob to alice 1",
+        },
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "alice to bob 2",
+        },
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "alice to bob 3",
+        },
       ],
     })
   })
@@ -189,9 +209,24 @@ describe("SessionManager", () => {
       steps: [
         {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
         {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
-        {type: "send", from: "alice", to: "bob", message: "Initial message"},
-        {type: "send", from: "bob", to: "alice", message: "Reply message"},
-        {type: "send", from: "bob", to: "alice", message: "Reply message 2"},
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "Initial message",
+        },
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
+          to: "alice",
+          message: "Reply message",
+        },
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
+          to: "alice",
+          message: "Reply message 2",
+        },
       ],
     })
   })
@@ -201,13 +236,38 @@ describe("SessionManager", () => {
       steps: [
         {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
         {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
-        {type: "send", from: "alice", to: "bob", message: "Initial message"},
-        {type: "send", from: "bob", to: "alice", message: "Reply message"},
-        {type: "send", from: "bob", to: "alice", message: "Reply message 2"},
-        {type: "restart", actor: "alice"},
-        {type: "restart", actor: "bob"},
-        {type: "send", from: "alice", to: "bob", message: "Message after restart"},
-        {type: "expect", actor: "bob", message: "Message after restart"},
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "Initial message",
+        },
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
+          to: "alice",
+          message: "Reply message",
+        },
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
+          to: "alice",
+          message: "Reply message 2",
+        },
+        {type: "restart", actor: "alice", deviceId: "alice-device-1"},
+        {type: "restart", actor: "bob", deviceId: "bob-device-1"},
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "Message after restart",
+        },
+        {
+          type: "expect",
+          actor: "bob",
+          deviceId: "bob-device-1",
+          message: "Message after restart",
+        },
       ],
     })
   })
@@ -217,34 +277,44 @@ describe("SessionManager", () => {
       steps: [
         {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
         {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
-        {type: "send", from: "alice", to: "bob", message: "hello from alice"},
         {
           type: "send",
-          from: "bob",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "hello from alice",
+        },
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
           to: "alice",
           message: "hey alice 1",
         },
         {
           type: "send",
-          from: "bob",
+          from: {actor: "bob", deviceId: "bob-device-1"},
           to: "alice",
           message: "hey alice 2",
         },
         {
           type: "send",
-          from: "bob",
+          from: {actor: "bob", deviceId: "bob-device-1"},
           to: "alice",
           message: "hey alice 3",
         },
-        {type: "close", actor: "bob"},
-        {type: "restart", actor: "bob"},
+        {type: "close", actor: "bob", deviceId: "bob-device-1"},
+        {type: "restart", actor: "bob", deviceId: "bob-device-1"},
         {
           type: "send",
-          from: "bob",
+          from: {actor: "bob", deviceId: "bob-device-1"},
           to: "alice",
           message: "hey alice after restart",
         },
-        {type: "expect", actor: "alice", message: "hey alice after restart"},
+        {
+          type: "expect",
+          actor: "alice",
+          deviceId: "alice-device-1",
+          message: "hey alice after restart",
+        },
       ],
     })
   })
@@ -254,18 +324,43 @@ describe("SessionManager", () => {
       steps: [
         {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
         {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
-        {type: "send", from: "alice", to: "bob", message: "alice to bob 1"},
-        {type: "send", from: "bob", to: "alice", message: "bob to alice 1"},
-        {type: "send", from: "alice", to: "bob", message: "alice to bob 2"},
-        {type: "send", from: "alice", to: "bob", message: "alice to bob 3"},
-        {type: "restart", actor: "bob"},
         {
           type: "send",
-          from: "bob",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "alice to bob 1",
+        },
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
+          to: "alice",
+          message: "bob to alice 1",
+        },
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "alice to bob 2",
+        },
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "alice to bob 3",
+        },
+        {type: "restart", actor: "bob", deviceId: "bob-device-1"},
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
           to: "alice",
           message: "bob after restart",
         },
-        {type: "expect", actor: "alice", message: "bob after restart"},
+        {
+          type: "expect",
+          actor: "alice",
+          deviceId: "alice-device-1",
+          message: "bob after restart",
+        },
       ],
     })
   })
@@ -362,13 +457,38 @@ describe("SessionManager", () => {
       steps: [
         {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
         {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
-        {type: "send", from: "alice", to: "bob", message: "1"},
-        {type: "send", from: "bob", to: "alice", message: "2"},
-        {type: "send", from: "alice", to: "bob", message: "3"},
-        {type: "restart", actor: "alice"},
-        {type: "send", from: "bob", to: "alice", message: "4"},
-        {type: "restart", actor: "alice"},
-        {type: "send", from: "bob", to: "alice", message: "5"},
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "1",
+        },
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
+          to: "alice",
+          message: "2",
+        },
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "3",
+        },
+        {type: "restart", actor: "alice", deviceId: "alice-device-1"},
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
+          to: "alice",
+          message: "4",
+        },
+        {type: "restart", actor: "alice", deviceId: "alice-device-1"},
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
+          to: "alice",
+          message: "5",
+        },
       ],
     })
   })
@@ -378,14 +498,39 @@ describe("SessionManager", () => {
       steps: [
         {type: "addDevice", actor: "alice", deviceId: "alice-device-1"},
         {type: "addDevice", actor: "bob", deviceId: "bob-device-1"},
-        {type: "send", from: "alice", to: "bob", message: "1"},
-        {type: "send", from: "bob", to: "alice", message: "2"},
-        {type: "send", from: "alice", to: "bob", message: "3"},
-        {type: "restart", actor: "alice"},
-        {type: "send", from: "bob", to: "alice", message: "4"},
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "1",
+        },
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
+          to: "alice",
+          message: "2",
+        },
+        {
+          type: "send",
+          from: {actor: "alice", deviceId: "alice-device-1"},
+          to: "bob",
+          message: "3",
+        },
+        {type: "restart", actor: "alice", deviceId: "alice-device-1"},
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
+          to: "alice",
+          message: "4",
+        },
         {type: "clearEvents"},
-        {type: "restart", actor: "alice"},
-        {type: "send", from: "bob", to: "alice", message: "5"},
+        {type: "restart", actor: "alice", deviceId: "alice-device-1"},
+        {
+          type: "send",
+          from: {actor: "bob", deviceId: "bob-device-1"},
+          to: "alice",
+          message: "5",
+        },
       ],
     })
   })
