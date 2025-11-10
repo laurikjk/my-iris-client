@@ -1,9 +1,8 @@
 import {INVITE_RESPONSE_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
 import {useSettingsStore} from "@/stores/settings"
-// import {useUserRecordsStore} from "@/stores/userRecords" // TEMP: Removed
-// import {useSessionsStore} from "@/stores/sessions" // TEMP: Removed
 import {SortedMap} from "./SortedMap/SortedMap"
 import {useUserStore} from "@/stores/user"
+import {getSessionManager} from "@/shared/services/PrivateChats"
 import {NDKTag, NDKEvent} from "@/lib/ndk"
 import debounce from "lodash/debounce"
 import {base64} from "@scure/base"
@@ -151,17 +150,30 @@ export const subscribeToDMNotifications = debounce(async () => {
   if (!pushSubscription) {
     return
   }
+
+  const {publicKey} = useUserStore.getState()
+  if (!publicKey) {
+    return
+  }
   // TODO: Re-enable message decryption after improving session rehydration
 
   // const invites = new Map()
   // const sessions = new Map()
 
-  const inviteRecipients: string[] = []
+  let inviteRecipients: string[] = []
   // Array.from(invites.values())
   // .map((i) => i.inviterEphemeralPublicKey)
   // .filter((a) => typeof a === "string") as string[]
 
-  const sessionAuthors: string[] = []
+  let sessionAuthors: string[] = []
+  try {
+    const sessionManager = getSessionManager()
+    await sessionManager.init()
+    const userRecords = sessionManager.getUserRecords()
+    sessionAuthors = extractSessionPubkeysFromUserRecords(userRecords)
+  } catch (error) {
+    console.error("Failed to load session data for DM push subscription:", error)
+  }
 
   const webPushData = {
     endpoint: pushSubscription.endpoint,
@@ -244,6 +256,34 @@ export const subscribeToDMNotifications = debounce(async () => {
 // Helper function to compare arrays
 function arrayEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((val, idx) => b[idx] === val)
+}
+
+function extractSessionPubkeysFromUserRecords(
+  userRecords: Map<string, unknown>
+): string[] {
+  return Array.from(userRecords.values())
+    .flatMap((record) => {
+      const devices = (record as {devices?: Map<string, unknown>})?.devices
+      if (!devices) return []
+      return Array.from(devices.values())
+        .filter(
+          (device) => device && (device as {staleAt?: number}).staleAt === undefined
+        )
+        .flatMap((device) => {
+          const {activeSession, inactiveSessions} = device as {
+            activeSession?: {state?: Record<string, unknown>}
+            inactiveSessions?: {state?: Record<string, unknown>}[]
+          }
+          return [activeSession, ...(inactiveSessions || [])]
+        })
+        .filter(Boolean)
+    })
+    .flatMap((session) => {
+      const state = (session as {state?: Record<string, unknown>})?.state
+      if (!state) return []
+      return [state.theirCurrentNostrPublicKey, state.theirNextNostrPublicKey]
+    })
+    .filter((key): key is string => typeof key === "string")
 }
 
 export const subscribeToNotifications = debounce(async () => {
