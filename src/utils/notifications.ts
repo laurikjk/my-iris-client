@@ -1,4 +1,5 @@
 import {INVITE_RESPONSE_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
+import type SessionManager from "@/session/SessionManager"
 import {useSettingsStore} from "@/stores/settings"
 import {SortedMap} from "./SortedMap/SortedMap"
 import {useUserStore} from "@/stores/user"
@@ -163,7 +164,7 @@ export const subscribeToDMNotifications = debounce(async () => {
     const sessionManager = getSessionManager()
     await sessionManager.init()
     const userRecords = sessionManager.getUserRecords()
-    sessionAuthors = extractSessionPubkeysFromUserRecords(userRecords)
+    sessionAuthors = extractSessionPubkeysFromUserRecords(userRecords, publicKey)
     const inviteRecipient = sessionManager.getDeviceInviteEphemeralKey()
     if (inviteRecipient) {
       inviteRecipients = [inviteRecipient]
@@ -255,28 +256,25 @@ function arrayEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((val, idx) => b[idx] === val)
 }
 
+type SessionUserRecords = ReturnType<SessionManager["getUserRecords"]>
+
 function extractSessionPubkeysFromUserRecords(
-  userRecords: Map<string, unknown>
+  userRecords: SessionUserRecords,
+  ourPublicKey?: string
 ): string[] {
-  return Array.from(userRecords.values())
-    .flatMap((record) => {
-      const devices = (record as {devices?: Map<string, unknown>})?.devices
-      if (!devices) return []
-      return Array.from(devices.values())
-        .filter(
-          (device) => device && (device as {staleAt?: number}).staleAt === undefined
-        )
-        .flatMap((device) => {
-          const {activeSession, inactiveSessions} = device as {
-            activeSession?: {state?: Record<string, unknown>}
-            inactiveSessions?: {state?: Record<string, unknown>}[]
-          }
-          return [activeSession, ...(inactiveSessions || [])]
-        })
+  return Array.from(userRecords.entries())
+    .filter(([publicKey]) => !ourPublicKey || publicKey !== ourPublicKey)
+    .flatMap(([, {devices}]) =>
+      Array.from(devices.values())
+        .filter(({staleAt}) => staleAt === undefined)
+        .flatMap(({activeSession, inactiveSessions = []}) => [
+          activeSession,
+          ...inactiveSessions,
+        ])
         .filter(Boolean)
-    })
+    )
     .flatMap((session) => {
-      const state = (session as {state?: Record<string, unknown>})?.state
+      const state = session?.state
       if (!state) return []
       return [state.theirCurrentNostrPublicKey, state.theirNextNostrPublicKey]
     })
