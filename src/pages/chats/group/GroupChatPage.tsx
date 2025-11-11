@@ -9,9 +9,11 @@ import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {MessageType} from "../message/Message"
 import {comparator} from "../utils/messageGrouping"
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
+import {useIsTopOfStack} from "@/navigation/useIsTopOfStack"
 
 const GroupChatPage = () => {
   const location = useLocation()
+  const isTopOfStack = useIsTopOfStack()
   // Extract group ID from pathname: /chats/group/:id
   const pathSegments = location.pathname.split("/").filter(Boolean)
   const id = pathSegments[2] || ""
@@ -30,9 +32,9 @@ const GroupChatPage = () => {
     : undefined
 
   const markGroupOpened = useCallback(() => {
-    if (!id) return
+    if (!id || !isTopOfStack) return
     markOpened(id)
-  }, [id, markOpened])
+  }, [id, markOpened, isTopOfStack])
 
   useEffect(() => {
     if (!id) return
@@ -40,13 +42,15 @@ const GroupChatPage = () => {
     markGroupOpened()
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
+      if (document.visibilityState === "visible" && isTopOfStack) {
         markGroupOpened()
       }
     }
 
     const handleFocus = () => {
-      markGroupOpened()
+      if (isTopOfStack) {
+        markGroupOpened()
+      }
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
@@ -56,12 +60,12 @@ const GroupChatPage = () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("focus", handleFocus)
     }
-  }, [id, markGroupOpened])
+  }, [id, markGroupOpened, isTopOfStack])
 
   useEffect(() => {
-    if (!id || lastMessageTimestamp === undefined) return
+    if (!id || lastMessageTimestamp === undefined || !isTopOfStack) return
     markOpened(id)
-  }, [id, lastMessageTimestamp, markOpened])
+  }, [id, lastMessageTimestamp, markOpened, isTopOfStack])
 
   if (!id || !group) {
     return <div className="p-4">Group not found</div>

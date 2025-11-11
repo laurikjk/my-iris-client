@@ -51,10 +51,41 @@ class WebRTCLogger extends EventEmitter {
       this.logs.shift()
     }
 
-    // Also log to console
-    const prefix = peerId ? `[${peerId}]` : "[webrtc]"
+    // Also log to console with color-coded peer IDs
+    let prefix = "[webrtc]"
+    let color = "#888"
+
+    if (peerId) {
+      // Check if peerId is in pubkey:uuid format
+      if (peerId.includes(":")) {
+        const [pubkey, uuid] = peerId.split(":")
+        const pubkeySlice = pubkey.slice(0, 8)
+        const uuidSlice = uuid.slice(0, 6)
+        prefix = `[${pubkeySlice}:${uuidSlice}]`
+        // Generate consistent color from uuid for different sessions
+        const hash = uuid.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
+        const colors = [
+          "#ff6b6b",
+          "#4ecdc4",
+          "#45b7d1",
+          "#96ceb4",
+          "#ffeaa7",
+          "#dfe6e9",
+          "#a29bfe",
+          "#fd79a8",
+        ]
+        color = colors[hash % colors.length]
+      } else {
+        prefix = `[${peerId}]`
+      }
+    }
+
     const directionStr = direction ? ` ${direction}` : ""
-    console.log(`${prefix}${directionStr} ${message}`)
+    console.log(
+      `%c${prefix}%c${directionStr} ${message}`,
+      `color: ${color}; font-weight: bold`,
+      ""
+    )
 
     this.emit("log", entry)
   }

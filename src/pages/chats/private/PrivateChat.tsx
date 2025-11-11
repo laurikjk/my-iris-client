@@ -11,12 +11,14 @@ import {KIND_REACTION} from "@/utils/constants"
 import {getSessionManager} from "@/shared/services/PrivateChats"
 import {getMillisecondTimestamp} from "nostr-double-ratchet/src"
 import {getEventHash} from "nostr-tools"
+import {useIsTopOfStack} from "@/navigation/useIsTopOfStack"
 
 const Chat = ({id}: {id: string}) => {
   // id is now userPubKey instead of sessionId
   const [haveReply, setHaveReply] = useState(false)
   const [haveSent, setHaveSent] = useState(false)
   const [replyingTo, setReplyingTo] = useState<MessageType | undefined>(undefined)
+  const isTopOfStack = useIsTopOfStack()
 
   // Allow messaging regardless of session state - sessions will be created automatically
 
@@ -31,9 +33,9 @@ const Chat = ({id}: {id: string}) => {
     : undefined
 
   const markChatOpened = useCallback(() => {
-    if (!id) return
+    if (!id || !isTopOfStack) return
     markOpened(id)
-  }, [id, markOpened])
+  }, [id, markOpened, isTopOfStack])
 
   useEffect(() => {
     if (!id) {
@@ -59,13 +61,15 @@ const Chat = ({id}: {id: string}) => {
     markChatOpened()
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
+      if (document.visibilityState === "visible" && isTopOfStack) {
         markChatOpened()
       }
     }
 
     const handleFocus = () => {
-      markChatOpened()
+      if (isTopOfStack) {
+        markChatOpened()
+      }
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
@@ -75,12 +79,12 @@ const Chat = ({id}: {id: string}) => {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("focus", handleFocus)
     }
-  }, [id, markChatOpened])
+  }, [id, markChatOpened, isTopOfStack])
 
   useEffect(() => {
-    if (!id || lastMessageTimestamp === undefined) return
+    if (!id || lastMessageTimestamp === undefined || !isTopOfStack) return
     markOpened(id)
-  }, [id, lastMessageTimestamp, markOpened])
+  }, [id, lastMessageTimestamp, markOpened, isTopOfStack])
 
   const handleSendReaction = async (messageId: string, emoji: string) => {
     const myPubKey = useUserStore.getState().publicKey

@@ -161,10 +161,12 @@ class PeerConnectionManager extends EventEmitter<{
 
     // Always send hello to enable connecting to own devices/sessions
     // (subscription includes own pubkey even with no mutual follows)
-    await sendSignalingMessage({
-      type: "hello",
+    const helloMsg = {
+      type: "hello" as const,
       peerId: this.myPeerId.uuid,
-    })
+    }
+    webrtcLogger.debug(undefined, `Sending hello with peerId: ${this.myPeerId.uuid}`)
+    await sendSignalingMessage(helloMsg)
   }
 
   private cleanupStaleUsers() {
@@ -250,6 +252,10 @@ class PeerConnectionManager extends EventEmitter<{
         return
       }
 
+      webrtcLogger.debug(
+        undefined,
+        `Received hello from ${senderPubkey.slice(0, 8)}... with peerId: ${message.peerId}`
+      )
       webrtcLogger.debug(`${senderPubkey}:hello`, `hello`, "down")
 
       // Track online users (including our other sessions)
