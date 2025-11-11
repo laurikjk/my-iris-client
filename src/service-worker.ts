@@ -333,21 +333,9 @@ self.addEventListener("push", (event) => {
       const data = event.data?.json() as PushData | undefined
       if (!data?.event) return
 
-      if (NOTIFICATION_CONFIGS[data.event.kind]) {
-        console.warn("[WebPush] Incoming chat push", {
-          kind: data.event.kind,
-          createdAt: data.event.created_at,
-          title: data.title,
-        })
-      }
-
       if (data.event.kind === MESSAGE_EVENT_KIND) {
         const result = await tryDecryptPrivateDM(data)
         if (result.success) {
-          console.warn("[WebPush] DM decrypted", {
-            kind: result.kind,
-            sessionId: result.sessionId,
-          })
           if (result.kind === KIND_CHANNEL_CREATE) {
             await self.registration.showNotification("New group invite", {
               icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
@@ -375,10 +363,6 @@ self.addEventListener("push", (event) => {
 
       if (NOTIFICATION_CONFIGS[data.event.kind]) {
         const config = NOTIFICATION_CONFIGS[data.event.kind]
-        console.warn("[WebPush] Showing chat notification", {
-          kind: data.event.kind,
-          url: config.url,
-        })
         await self.registration.showNotification(config.title, {
           icon: config.icon,
           data: {url: config.url, event: data.event},
