@@ -44,7 +44,13 @@ interface ActorDeviceRef {
 type WaitTarget = ActorDeviceRef | ActorDeviceRef[] | "all-recipient-devices"
 
 type ScenarioStep =
-  | {type: "send"; from: ActorDeviceRef; to: ActorId; message: string; waitOn?: WaitTarget}
+  | {
+      type: "send"
+      from: ActorDeviceRef
+      to: ActorId
+      message: string
+      waitOn?: WaitTarget
+    }
   | {type: "expect"; actor: ActorId; deviceId: string; message: string}
   | {type: "expectAll"; actor: ActorId; deviceId: string; messages: string[]}
   | {type: "addDevice"; actor: ActorId; deviceId: string}
@@ -129,7 +135,9 @@ async function sendMessage(
 
   const waitTargets = resolveWaitTargets(context, waitOn, recipientActor)
   const waits = waitTargets.map((device) =>
-    waitForMessage(device, deviceLabel(recipientActor, device), message, {existingOk: false})
+    waitForMessage(device, deviceLabel(recipientActor, device), message, {
+      existingOk: false,
+    })
   )
 
   await senderDevice.manager.sendMessage(recipientActor.publicKey, message)
@@ -139,7 +147,7 @@ async function sendMessage(
 async function expectMessage(
   context: ScenarioContext,
   actor: ActorId,
-  deviceId: string | undefined,
+  deviceId: string,
   message: string
 ) {
   const device = getDevice(context, {actor, deviceId})
@@ -151,7 +159,7 @@ async function expectMessage(
 async function expectAllMessages(
   context: ScenarioContext,
   actor: ActorId,
-  deviceId: string | undefined,
+  deviceId: string,
   messages: string[]
 ) {
   console.log(`\n\n\nExpecting all messages on ${actor}:`, messages)
