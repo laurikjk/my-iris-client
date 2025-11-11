@@ -155,12 +155,9 @@ export const subscribeToDMNotifications = debounce(async () => {
   if (!publicKey) {
     return
   }
-  // TODO: Re-enable message decryption after improving session rehydration
-
-  // const invites = new Map()
-  // const sessions = new Map()
 
   let inviteRecipients: string[] = []
+  // TODO: Re-implement without spam from session management
   // Array.from(invites.values())
   // .map((i) => i.inviterEphemeralPublicKey)
   // .filter((a) => typeof a === "string") as string[]
