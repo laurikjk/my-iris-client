@@ -157,10 +157,6 @@ export const subscribeToDMNotifications = debounce(async () => {
   }
 
   let inviteRecipients: string[] = []
-  // TODO: Re-implement without spam from session management
-  // Array.from(invites.values())
-  // .map((i) => i.inviterEphemeralPublicKey)
-  // .filter((a) => typeof a === "string") as string[]
 
   let sessionAuthors: string[] = []
   try {
@@ -168,6 +164,10 @@ export const subscribeToDMNotifications = debounce(async () => {
     await sessionManager.init()
     const userRecords = sessionManager.getUserRecords()
     sessionAuthors = extractSessionPubkeysFromUserRecords(userRecords)
+    const inviteRecipient = sessionManager.getDeviceInviteEphemeralKey()
+    if (inviteRecipient) {
+      inviteRecipients = [inviteRecipient]
+    }
   } catch (error) {
     console.error("Failed to load session data for DM push subscription:", error)
   }

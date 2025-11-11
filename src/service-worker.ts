@@ -247,7 +247,7 @@ const NOTIFICATION_CONFIGS: Record<
     icon: "/favicon.png",
   },
   [INVITE_RESPONSE_KIND]: {
-    title: "New messages",
+    title: "New private message",
     url: "/chats",
     icon: "/favicon.png",
   },
