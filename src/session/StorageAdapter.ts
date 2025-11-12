@@ -111,7 +111,7 @@ export class LocalForageStorageAdapter implements StorageAdapter {
   constructor() {
     this.store = localForage.createInstance({
       name: "iris-session-manager",
-      storeName: "session_private",
+      storeName: "session-private",
     })
 
     this.pendingMigration = this.shouldAttemptMigration() ? this.migrateFromLocalStorage() : null
