@@ -268,49 +268,109 @@ type DecryptResult =
       sessionId: string
     }
 
+const SESSION_STORAGE = localforage.createInstance({
+  name: "iris-session-manager",
+  storeName: "session-private",
+})
+
+const SESSION_STORAGE_PREFIX = "private"
+const USER_RECORD_PREFIX = "v1/user/"
+
+type StoredSessionEntry = string
+
+interface StoredDeviceRecord {
+  deviceId: string
+  activeSession: StoredSessionEntry | null
+  inactiveSessions: StoredSessionEntry[]
+  staleAt?: number
+}
+
+interface StoredUserRecord {
+  publicKey: string
+  devices: StoredDeviceRecord[]
+}
+
+interface StoredSessionState {
+  sessionId: string
+  serializedState: StoredSessionEntry
+}
+
+const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
+  try {
+    const keys = await SESSION_STORAGE.keys()
+    const userRecordKeys = keys.filter((key) =>
+      key.startsWith(`${SESSION_STORAGE_PREFIX}${USER_RECORD_PREFIX}`)
+    )
+
+    const sessions: StoredSessionState[] = []
+
+    for (const key of userRecordKeys) {
+      const record = await SESSION_STORAGE.getItem<StoredUserRecord>(key)
+      if (!record?.devices?.length) continue
+
+      for (const device of record.devices) {
+        if (device.staleAt !== undefined) continue
+        if (device.activeSession) {
+          sessions.push({sessionId: record.publicKey, serializedState: device.activeSession})
+        }
+        for (const serialized of device.inactiveSessions) {
+          sessions.push({sessionId: record.publicKey, serializedState: serialized})
+        }
+      }
+    }
+
+    return sessions
+  } catch (error) {
+    console.error("Failed to load stored sessions:", error)
+    return []
+  }
+}
+
 const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
   try {
-    const wrapper = await localforage.getItem("sessions")
-    if (wrapper) {
-      const parsed = typeof wrapper === "string" ? JSON.parse(wrapper) : wrapper
-      const sessionEntries: [string, string][] =
-        parsed?.state?.sessions ?? parsed?.sessions ?? []
+    const sessionEntries = await fetchStoredSessions()
 
-      for (const [sessionId, serState] of sessionEntries) {
-        const state = deserializeSessionState(serState)
-        const foundMatchingPubKey =
-          state.theirCurrentNostrPublicKey === data.event.pubkey ||
-          state.theirNextNostrPublicKey === data.event.pubkey
-
-        if (!foundMatchingPubKey) {
-          continue
-        }
-
-        const session = new Session((_, onEvent) => {
-          onEvent(data.event as unknown as VerifiedEvent)
-          return () => {}
-        }, state)
-
-        let unsubscribe: (() => void) | undefined
-        const innerEvent = await new Promise<Rumor | null>((resolve) => {
-          unsubscribe = session.onEvent((event) => {
-            resolve(event)
-          })
-        })
-
-        unsubscribe?.()
-
-        return innerEvent === null
-          ? {
-              success: false,
-            }
-          : {
-              success: true,
-              kind: innerEvent.kind,
-              content: innerEvent.content,
-              sessionId,
-            }
+    for (const {sessionId, serializedState} of sessionEntries) {
+      let state
+      try {
+        state = deserializeSessionState(serializedState)
+      } catch (error) {
+        console.error("Failed to deserialize session state:", error)
+        continue
       }
+
+      const foundMatchingPubKey =
+        state.theirCurrentNostrPublicKey === data.event.pubkey ||
+        state.theirNextNostrPublicKey === data.event.pubkey
+
+      if (!foundMatchingPubKey) {
+        continue
+      }
+
+      const session = new Session((_, onEvent) => {
+        onEvent(data.event as unknown as VerifiedEvent)
+        return () => {}
+      }, state)
+
+      let unsubscribe: (() => void) | undefined
+      const innerEvent = await new Promise<Rumor | null>((resolve) => {
+        unsubscribe = session.onEvent((event) => {
+          resolve(event)
+        })
+      })
+
+      unsubscribe?.()
+
+      return innerEvent === null
+        ? {
+            success: false,
+          }
+        : {
+            success: true,
+            kind: innerEvent.kind,
+            content: innerEvent.content,
+            sessionId,
+          }
     }
   } catch (err) {
     error("DM decryption failed:", err)
