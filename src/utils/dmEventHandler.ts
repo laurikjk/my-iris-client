@@ -5,6 +5,7 @@ import {useGroupsStore} from "@/stores/groups"
 import {getTag} from "./tagUtils"
 import {KIND_CHANNEL_CREATE} from "./constants"
 import {isTauri} from "./utils"
+import socialGraph from "./socialGraph"
 
 let unsubscribeSessionEvents: (() => void) | null = null
 
@@ -26,6 +27,10 @@ export const attachSessionEventListener = () => {
         unsubscribeSessionEvents = sessionManager.onEvent((event, pubKey) => {
           const {publicKey} = useUserStore.getState()
           if (!publicKey) return
+
+          // Block events from muted users
+          const mutedUsers = socialGraph().getMutedByUser(publicKey)
+          if (mutedUsers.has(pubKey)) return
 
           // Trigger desktop notification for DMs if on desktop
           if (isTauri() && event.pubkey !== publicKey) {
