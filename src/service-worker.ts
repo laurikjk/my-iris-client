@@ -6,7 +6,9 @@ import {
   deserializeSessionState,
   Session,
   Rumor,
+  deepCopyState,
 } from "nostr-double-ratchet/src"
+import type {SessionState} from "nostr-double-ratchet/src/types"
 import {PROFILE_AVATAR_WIDTH, EVENT_AVATAR_WIDTH} from "./shared/components/user/const"
 import {CacheFirst, StaleWhileRevalidate, NetworkOnly} from "workbox-strategies"
 import {CacheableResponsePlugin} from "workbox-cacheable-response"
@@ -18,6 +20,7 @@ import {clientsClaim} from "workbox-core"
 import {VerifiedEvent} from "nostr-tools"
 import localforage from "localforage"
 import {KIND_CHANNEL_CREATE} from "./utils/constants"
+import {LocalForageStorageAdapter} from "./session/StorageAdapter"
 
 // eslint-disable-next-line no-undef
 declare const self: ServiceWorkerGlobalScope & {
@@ -264,71 +267,195 @@ type DecryptResult =
       sessionId: string
     }
 
-const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
+type StoredDeviceRecord = {
+  deviceId: string
+  activeSession: string | null
+  inactiveSessions: string[]
+}
+
+type StoredUserRecord = {
+  publicKey: string
+  devices?: StoredDeviceRecord[]
+}
+
+type SessionLookupEntry = {
+  peerPubkey: string
+  deviceId: string
+  sessionState: SessionState
+}
+
+const USER_RECORD_PREFIX = "v1/user/"
+let sessionStorageAdapter: LocalForageStorageAdapter | null = null
+
+const getSessionStorage = () => {
+  if (!sessionStorageAdapter) {
+    sessionStorageAdapter = new LocalForageStorageAdapter()
+  }
+  return sessionStorageAdapter
+}
+
+const loadSessionsFromStorage = async (): Promise<SessionLookupEntry[]> => {
+  const storage = getSessionStorage()
   try {
-    const wrapper = await localforage.getItem("sessions")
-    if (wrapper) {
-      const parsed = typeof wrapper === "string" ? JSON.parse(wrapper) : wrapper
-      const sessionEntries: [string, string][] =
-        parsed?.state?.sessions ?? parsed?.sessions ?? []
+    const userKeys = await storage.list(USER_RECORD_PREFIX)
+    if (!userKeys.length) return []
 
-      for (const [sessionId, serState] of sessionEntries) {
-        const state = deserializeSessionState(serState)
-        const foundMatchingPubKey =
-          state.theirCurrentNostrPublicKey === data.event.pubkey ||
-          state.theirNextNostrPublicKey === data.event.pubkey
-
-        if (!foundMatchingPubKey) {
-          continue
+    const records = await Promise.all(
+      userKeys.map(async (key) => {
+        try {
+          return await storage.get<StoredUserRecord>(key)
+        } catch (error) {
+          console.error("Failed to load stored user record:", key, error)
+          return null
         }
+      })
+    )
 
-        const session = new Session((_, onEvent) => {
-          onEvent(data.event as unknown as VerifiedEvent)
-          return () => {}
-        }, state)
+    const entries: SessionLookupEntry[] = []
 
-        let unsubscribe: (() => void) | undefined
-        const innerEvent = await new Promise<Rumor | null>((resolve) => {
-          unsubscribe = session.onEvent((event) => {
-            resolve(event)
-          })
-        })
+    for (const record of records) {
+      if (!record?.devices?.length || !record.publicKey) continue
 
-        unsubscribe?.()
+      for (const device of record.devices) {
+        if (!device?.deviceId) continue
+        const serializedStates = [
+          ...(device.activeSession ? [device.activeSession] : []),
+          ...(device.inactiveSessions || []),
+        ]
 
-        return innerEvent === null
-          ? {
-              success: false,
-            }
-          : {
-              success: true,
-              kind: innerEvent.kind,
-              content: innerEvent.content,
-              sessionId,
-            }
+        for (const serializedState of serializedStates) {
+          if (!serializedState) continue
+          try {
+            const sessionState = deserializeSessionState(serializedState)
+            entries.push({
+              peerPubkey: record.publicKey,
+              deviceId: device.deviceId,
+              sessionState,
+            })
+          } catch (error) {
+            console.error(
+              "Failed to deserialize session state:",
+              record.publicKey,
+              device.deviceId,
+              error
+            )
+          }
+        }
       }
     }
+
+    return entries
+  } catch (error) {
+    console.error("Failed to enumerate sessions from storage:", error)
+    return []
+  }
+}
+
+const buildSessionIndex = async () => {
+  const entries = await loadSessionsFromStorage()
+  const index = new Map<string, SessionLookupEntry>()
+
+  for (const entry of entries) {
+    const candidates = new Set<string>()
+    if (entry.sessionState.theirCurrentNostrPublicKey) {
+      candidates.add(entry.sessionState.theirCurrentNostrPublicKey)
+    }
+    if (entry.sessionState.theirNextNostrPublicKey) {
+      candidates.add(entry.sessionState.theirNextNostrPublicKey)
+    }
+
+    const skippedKeys = entry.sessionState.skippedKeys || {}
+    Object.keys(skippedKeys).forEach((pubkey) => {
+      if (pubkey) {
+        candidates.add(pubkey)
+      }
+    })
+
+    candidates.forEach((pubkey) => index.set(pubkey, entry))
+  }
+
+  return index
+}
+
+const decryptWithState = async (
+  state: SessionState,
+  sessionId: string,
+  data: PushData
+): Promise<DecryptResult> => {
+  const throwawayState = deepCopyState(state)
+  const session = new Session((_, onEvent) => {
+    onEvent(data.event as unknown as VerifiedEvent)
+    return () => {}
+  }, throwawayState)
+
+  let unsubscribe: (() => void) | undefined
+  const innerEvent = await new Promise<Rumor | null>((resolve) => {
+    unsubscribe = session.onEvent((event) => {
+      resolve(event)
+    })
+  })
+
+  unsubscribe?.()
+
+  console.warn("[SW] Throwaway session resolved", innerEvent !== null)
+  if (innerEvent) {
+    console.warn("[SW] Inner event kind", innerEvent.kind)
+  }
+
+  return innerEvent === null
+    ? {
+        success: false,
+      }
+    : {
+        success: true,
+        kind: innerEvent.kind,
+        content: innerEvent.content,
+        sessionId,
+      }
+}
+
+const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
+  try {
+    console.warn("[SW] Attempting session-manager decryption for push", data.event?.id)
+    const sessionIndex = await buildSessionIndex()
+    console.warn("[SW] Indexed sessions", sessionIndex.size)
+    const matchedEntry = sessionIndex.get(data.event.pubkey)
+    if (matchedEntry) {
+      console.warn("[SW] Found matching session entry", matchedEntry.peerPubkey)
+      const result = await decryptWithState(
+        matchedEntry.sessionState,
+        matchedEntry.peerPubkey,
+        data
+      )
+      if (result.success) {
+        console.warn("[SW] Decryption succeeded via session manager store")
+        return result
+      }
+      console.warn("[SW] Decryption failed despite matching session entry")
+    } else {
+      console.warn("[SW] No matching session entry for pubkey", data.event.pubkey)
+    }
   } catch (err) {
-    console.error("DM decryption failed:", err)
+    console.error("DM decryption via session manager store failed:", err)
   }
-  return {
-    success: false,
-  }
+
+  console.warn("[SW] No valid session state for push payload")
+  return {success: false}
 }
 
 self.addEventListener("push", (event) => {
   event.waitUntil(
     (async () => {
-      // Check if we should show notification based on page visibility
-      const clients = await self.clients.matchAll({
-        type: "window",
-        includeUncontrolled: true,
-      })
-      const isPageVisible = clients.some((client) => client.visibilityState === "visible")
-      if (isPageVisible) {
-        console.debug("Page is visible, ignoring web push")
-        return
-      }
+      // // Check if we should show notification based on page visibility
+      // const clients = await self.clients.matchAll({
+      //   type: "window",
+      //   includeUncontrolled: true,
+      // })
+      // const isPageVisible = clients.some((client) => client.visibilityState === "visible")
+      // if (isPageVisible) {
+      //   console.debug("Page is visible, ignoring web push")
+      //   return
+      // }
 
       const data = event.data?.json() as PushData | undefined
       if (!data?.event) return
@@ -345,8 +472,11 @@ self.addEventListener("push", (event) => {
               },
             })
           } else {
+            const decryptedTitle = result.content?.trim()
             await self.registration.showNotification(
-              NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].title,
+              decryptedTitle && decryptedTitle.length
+                ? decryptedTitle
+                : NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].title,
               {
                 body: result.content,
                 icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
