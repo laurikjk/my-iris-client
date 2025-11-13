@@ -4,9 +4,11 @@ import {
   RiGithubLine,
   RiRefreshLine,
   RiUserFollowLine,
-  RiHeartLine,
-  RiDownload2Line,
   RiFileTextLine,
+  RiAppleFill,
+  RiGooglePlayFill,
+  RiAndroidFill,
+  RiMacbookFill,
 } from "@remixicon/react"
 import RightColumn from "@/shared/components/RightColumn"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
@@ -96,8 +98,6 @@ export const AboutPage = () => {
                 <RiUserFollowLine className="inline" /> Find people to follow
               </a>
             </p>
-
-            <h2>Community</h2>
             <p>
               <Link
                 to="/chats/1d2f13b495d7425b70298a8acd375897a632562043d461e89b63499363eaf8e7"
@@ -105,11 +105,6 @@ export const AboutPage = () => {
               >
                 <RiMessage3Line className="inline" /> Iris feedback, support and
                 discussion chat
-              </Link>
-            </p>
-            <p>
-              <Link to="/subscribe" className="flex items-center gap-1 w-fit">
-                <RiHeartLine className="inline" /> Subscribe to support Iris development
               </Link>
             </p>
 
@@ -127,7 +122,7 @@ export const AboutPage = () => {
                     }}
                     className="flex items-center gap-1 w-fit"
                   >
-                    <RiDownload2Line className="inline" /> iOS App Store
+                    <RiAppleFill className="inline" /> iOS App Store
                   </a>
                 </p>
                 <p>
@@ -141,7 +136,7 @@ export const AboutPage = () => {
                     }}
                     className="flex items-center gap-1 w-fit"
                   >
-                    <RiDownload2Line className="inline" /> Android Zapstore
+                    <RiAndroidFill className="inline" /> Android Zapstore
                   </a>
                 </p>
                 <p>
@@ -155,7 +150,7 @@ export const AboutPage = () => {
                     }}
                     className="flex items-center gap-1 w-fit"
                   >
-                    <RiDownload2Line className="inline" /> Google Play Store
+                    <RiGooglePlayFill className="inline" /> Google Play Store
                   </a>
                 </p>
                 <p>
@@ -167,7 +162,7 @@ export const AboutPage = () => {
                     }}
                     className="flex items-center gap-1 w-fit"
                   >
-                    <RiDownload2Line className="inline" /> Desktop
+                    <RiMacbookFill className="inline" /> Desktop
                   </a>
                 </p>
               </>
