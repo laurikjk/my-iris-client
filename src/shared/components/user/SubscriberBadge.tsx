@@ -1,6 +1,5 @@
 import {useSubscriptionStatus} from "@/shared/hooks/useSubscriptionStatus"
 import {getSubscriptionIcon} from "@/shared/utils/subscriptionIcons"
-import {Link} from "@/navigation"
 
 interface SubscriberBadgeProps {
   className?: string
@@ -53,13 +52,12 @@ export function SubscriberBadge({className = "", pubkey}: SubscriberBadgeProps) 
 
   return (
     <div className="inline-flex">
-      <Link
-        to="/subscribe"
-        className={`flex items-center gap-1 ${className} px-2 rounded-full border ${getBorderColor()} bg-base-200 no-underline`}
+      <div
+        className={`flex items-center gap-1 ${className} px-2 rounded-full border ${getBorderColor()} bg-base-200`}
       >
         {getSubscriptionIcon(tier)}
         <span className={`text-xs font-medium ${getTextColor()}`}>{getBadgeText()}</span>
-      </Link>
+      </div>
     </div>
   )
 }

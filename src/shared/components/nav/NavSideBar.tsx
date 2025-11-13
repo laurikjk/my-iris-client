@@ -1,14 +1,13 @@
 import {RiLoginBoxLine, RiLockLine, RiBugLine} from "@remixicon/react"
-import {useRef, useMemo, useEffect, useState} from "react"
+import {useRef, useMemo} from "react"
 import NavLink from "./NavLink"
 
 import {useWalletBalance} from "../../hooks/useWalletBalance"
 import {NotificationNavItem} from "./NotificationNavItem"
-import {SubscriptionNavItem} from "./SubscriptionNavItem"
 import {MessagesNavItem} from "./MessagesNavItem"
 import PublishButton from "../ui/PublishButton"
 import ErrorBoundary from "../ui/ErrorBoundary"
-import {formatAmount, isMobileTauri} from "@/utils/utils"
+import {formatAmount} from "@/utils/utils"
 import {usePublicKey} from "@/stores/user"
 import {useWalletStore} from "@/stores/wallet"
 import {useSettingsStore} from "@/stores/settings"
@@ -27,13 +26,8 @@ const NavSideBar = () => {
   const {showBalanceInNav} = useWalletStore()
   const myPubKey = usePublicKey()
   const {debug} = useSettingsStore()
-  const [isMobile, setIsMobile] = useState(false)
 
   const hasSigner = hasWriteAccess()
-
-  useEffect(() => {
-    isMobileTauri().then(setIsMobile)
-  }, [])
 
   const navItems = useMemo(() => {
     const configItems = navItemsConfig()
@@ -42,13 +36,9 @@ const NavSideBar = () => {
       if (item.label === "Chats" && !hasSigner) {
         return false
       }
-      // Hide Subscription in mobile Tauri apps
-      if (item.label === "Subscription" && isMobile) {
-        return false
-      }
       return !("requireLogin" in item) || (item.requireLogin && myPubKey)
     })
-  }, [myPubKey, hasSigner, isMobile])
+  }, [myPubKey, hasSigner])
 
   const logoUrl = CONFIG.navLogo
 
@@ -94,9 +84,6 @@ const NavSideBar = () => {
               }
               if (label === "Notifications") {
                 return <NotificationNavItem key={to} to={to} onClick={onClick} />
-              }
-              if (label === "Subscription") {
-                return <SubscriptionNavItem key={to} to={to} onClick={onClick} />
               }
               return (
                 <NavItem
