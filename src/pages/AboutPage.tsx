@@ -146,6 +146,20 @@ export const AboutPage = () => {
                 </p>
                 <p>
                   <a
+                    href="https://play.google.com/store/apps/details?id=to.iris.twa&pcampaignid=web_share"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      openExternalLink(
+                        "https://play.google.com/store/apps/details?id=to.iris.twa&pcampaignid=web_share"
+                      )
+                    }}
+                    className="flex items-center gap-1 w-fit"
+                  >
+                    <RiDownload2Line className="inline" /> Google Play Store
+                  </a>
+                </p>
+                <p>
+                  <a
                     href="https://github.com/irislib/iris-client/releases"
                     onClick={(e) => {
                       e.preventDefault()
