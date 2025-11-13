@@ -283,7 +283,7 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
   }
 
   return (
-    <div className="cashu-token-embed flex flex-col gap-3 p-4 bg-base-200 rounded-lg border border-base-300 my-2 min-w-80">
+    <div className="cashu-token-embed flex flex-col gap-3 p-4 bg-base-200 rounded-lg border border-base-300 my-2 sm:min-w-80">
       <div className="flex items-center gap-3">
         <div className="flex-shrink-0">
           <RiBitCoinFill className="w-10 h-10 text-warning" />
