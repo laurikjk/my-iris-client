@@ -146,7 +146,7 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
 
       // Fallback: extract from event content if memo is empty
       if (!message && event?.content) {
-        const tokenMatch = event.content.match(/cashu[A-Za-z0-9_-]+/)
+        const tokenMatch = event.content.match(/cashu[A-Za-z0-9_-]{20,}/)
         if (tokenMatch) {
           const afterToken = event.content
             .slice(tokenMatch.index! + tokenMatch[0].length)
@@ -393,7 +393,7 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
 }
 
 const CashuToken: Embed = {
-  regex: /(cashu[A-Za-z0-9_-]+)/gi,
+  regex: /(cashu[A-Za-z0-9_-]{20,})/gi,
   component: CashuTokenComponent,
   settingsKey: "cashu",
 }
