@@ -303,103 +303,100 @@ export function LocalData() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="p-4">
-        <div className="text-center">Loading Nostr data statistics...</div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="p-4">
-        <div className="text-center text-error">Error: {error}</div>
-      </div>
-    )
-  }
-
-  if (!stats) {
-    return (
-      <div className="p-4">
-        <div className="text-center">No data available</div>
-      </div>
-    )
-  }
-
-  const topKinds = Object.entries(stats.eventsByKind).slice(0, 10)
+  const topKinds = stats ? Object.entries(stats.eventsByKind).slice(0, 10) : []
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <SettingsGroup title="Overview">
-        <SettingsGroupItem>
-          <div className="flex justify-between items-center">
-            <span>Total events</span>
-            <span className="text-base-content/70">
-              {stats.totalEvents.toLocaleString()}
-            </span>
-          </div>
-        </SettingsGroupItem>
-
-        {stats.cacheHitRate && (
-          <SettingsGroupItem>
-            <div className="flex justify-between items-center">
-              <span>Cache hit rate</span>
-              <span className="text-base-content/70">{stats.cacheHitRate}</span>
-            </div>
-          </SettingsGroupItem>
-        )}
-
-        {stats.databaseSize && (
-          <SettingsGroupItem>
-            <div className="flex justify-between items-center">
-              <span>Storage used</span>
-              <span className="text-base-content/70">{stats.databaseSize}</span>
-            </div>
-          </SettingsGroupItem>
-        )}
-
-        {stats.oldestEvent && (
-          <SettingsGroupItem>
-            <div className="flex justify-between items-center">
-              <span>Oldest event</span>
-              <span className="text-base-content/70 text-sm">
-                {formatDate(stats.oldestEvent)}
-              </span>
-            </div>
-          </SettingsGroupItem>
-        )}
-
-        {stats.newestEvent && (
-          <SettingsGroupItem isLast>
-            <div className="flex justify-between items-center">
-              <span>Newest event</span>
-              <span className="text-base-content/70 text-sm">
-                {formatDate(stats.newestEvent)}
-              </span>
-            </div>
-          </SettingsGroupItem>
-        )}
-      </SettingsGroup>
-
-      <SettingsGroup title="Top Event Kinds">
-        {topKinds.map(([kind, count], index) => (
-          <SettingsGroupItem key={kind} isLast={index === topKinds.length - 1}>
-            <div className="flex justify-between items-center">
-              <div className="flex flex-col">
-                <span>{getKindName(parseInt(kind))}</span>
-                <span className="text-xs text-base-content/50">Kind {kind}</span>
-              </div>
-              <span className="text-base-content/70">{count.toLocaleString()}</span>
-            </div>
-          </SettingsGroupItem>
-        ))}
-      </SettingsGroup>
-
-      {Object.keys(stats.eventsByKind).length > 10 && (
-        <div className="text-sm text-base-content/50 text-center">
-          Showing top 10 of {Object.keys(stats.eventsByKind).length} event kinds
+      {loading && (
+        <div className="text-center text-base-content/70 text-sm">
+          Loading statistics...
         </div>
+      )}
+
+      {error && (
+        <div className="text-center text-error text-sm">
+          Error loading statistics: {error}
+        </div>
+      )}
+
+      {!loading && !error && !stats && (
+        <div className="text-center text-base-content/70 text-sm">
+          No data available
+        </div>
+      )}
+      {stats && (
+        <>
+          <SettingsGroup title="Overview">
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <span>Total events</span>
+                <span className="text-base-content/70">
+                  {stats.totalEvents.toLocaleString()}
+                </span>
+              </div>
+            </SettingsGroupItem>
+
+            {stats.cacheHitRate && (
+              <SettingsGroupItem>
+                <div className="flex justify-between items-center">
+                  <span>Cache hit rate</span>
+                  <span className="text-base-content/70">{stats.cacheHitRate}</span>
+                </div>
+              </SettingsGroupItem>
+            )}
+
+            {stats.databaseSize && (
+              <SettingsGroupItem>
+                <div className="flex justify-between items-center">
+                  <span>Storage used</span>
+                  <span className="text-base-content/70">{stats.databaseSize}</span>
+                </div>
+              </SettingsGroupItem>
+            )}
+
+            {stats.oldestEvent && (
+              <SettingsGroupItem>
+                <div className="flex justify-between items-center">
+                  <span>Oldest event</span>
+                  <span className="text-base-content/70 text-sm">
+                    {formatDate(stats.oldestEvent)}
+                  </span>
+                </div>
+              </SettingsGroupItem>
+            )}
+
+            {stats.newestEvent && (
+              <SettingsGroupItem isLast>
+                <div className="flex justify-between items-center">
+                  <span>Newest event</span>
+                  <span className="text-base-content/70 text-sm">
+                    {formatDate(stats.newestEvent)}
+                  </span>
+                </div>
+              </SettingsGroupItem>
+            )}
+          </SettingsGroup>
+
+          <SettingsGroup title="Top Event Kinds">
+            {topKinds.map(([kind, count], index) => (
+              <SettingsGroupItem key={kind} isLast={index === topKinds.length - 1}>
+                <div className="flex justify-between items-center">
+                  <div className="flex flex-col">
+                    <span>{getKindName(parseInt(kind))}</span>
+                    <span className="text-xs text-base-content/50">Kind {kind}</span>
+                  </div>
+                  <span className="text-base-content/70">{count.toLocaleString()}</span>
+                </div>
+              </SettingsGroupItem>
+            ))}
+          </SettingsGroup>
+
+          {Object.keys(stats.eventsByKind).length > 10 && (
+            <div className="text-sm text-base-content/50 text-center">
+              Showing top 10 of {Object.keys(stats.eventsByKind).length} event kinds
+            </div>
+          )}
+        </>
       )}
 
       <BlobList />
@@ -443,7 +440,7 @@ export function LocalData() {
           onClick={handleClearAll}
           variant="destructive"
           isLast
-          disabled={isClearing || loading}
+          disabled={isClearing}
         />
       </SettingsGroup>
     </div>
