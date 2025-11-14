@@ -26,6 +26,7 @@ const feedConfigs = {
     filterSeen: false,
     showReplies: false,
     includeChronological: false,
+    excludeOwnPosts: false,
     emptyMessage: "No popular posts found",
     loadingMessage: "Loading popular posts...",
   },
@@ -33,6 +34,7 @@ const feedConfigs = {
     filterSeen: true,
     showReplies: false,
     includeChronological: true,
+    excludeOwnPosts: true,
     emptyMessage: "No posts found for you",
     loadingMessage: "Loading...",
   },
@@ -61,6 +63,7 @@ const AlgorithmicFeed = function AlgorithmicFeed({
     filterSeen: config.filterSeen,
     showReplies: config.showReplies,
     popularRatio: config.includeChronological ? 0.5 : 1.0,
+    excludeOwnPosts: config.excludeOwnPosts,
   })
 
   return (
