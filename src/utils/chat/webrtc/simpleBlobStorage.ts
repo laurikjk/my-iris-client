@@ -1,19 +1,39 @@
-import type {NDKCacheAdapter} from "@/lib/ndk/cache"
-import {db} from "@/lib/ndk-cache/db"
+import Dexie from "dexie"
 
 /**
- * Simple blob storage using NDK cache's generic cache data
- * Avoids Dexie schema conflicts
+ * Dedicated Dexie database for blob storage
+ * Independent of NDK cache adapter
+ */
+class BlobDatabase extends Dexie {
+  blobs!: Dexie.Table<
+    {
+      hash: string
+      data: ArrayBuffer
+      size: number
+      mimeType?: string
+      first_author?: string
+      stored_at: number
+    },
+    string
+  >
+
+  constructor() {
+    super("iris-blob-storage")
+    this.version(1).stores({
+      blobs: "hash, stored_at",
+    })
+  }
+}
+
+const blobDb = new BlobDatabase()
+
+/**
+ * Simple blob storage using dedicated Dexie database
+ * No dependency on NDK cache adapter
  */
 export class SimpleBlobStorage {
-  private cache: NDKCacheAdapter
-
-  constructor(cache: NDKCacheAdapter) {
-    this.cache = cache
-  }
-
   async initialize() {
-    // No initialization needed for generic cache data
+    // Database auto-initializes
   }
 
   async get(hash: string): Promise<{
@@ -23,18 +43,8 @@ export class SimpleBlobStorage {
     mimeType?: string
     first_author?: string
   } | null> {
-    if (!this.cache.getCacheData) return null
-
     try {
-      const entry = await this.cache.getCacheData<{
-        hash: string
-        data: ArrayBuffer
-        size: number
-        mimeType?: string
-        first_author?: string
-        stored_at: number
-      }>("binary_blobs", hash)
-
+      const entry = await blobDb.blobs.get(hash)
       if (!entry) return null
 
       return {
@@ -45,7 +55,7 @@ export class SimpleBlobStorage {
         first_author: entry.first_author,
       }
     } catch (error) {
-      console.error("Error getting blob from cache:", error)
+      console.error("Error getting blob:", error)
       return null
     }
   }
@@ -56,15 +66,12 @@ export class SimpleBlobStorage {
     mimeType?: string,
     firstAuthor?: string
   ): Promise<void> {
-    if (!this.cache.setCacheData) return
-
     try {
       // Check if already exists - don't overwrite first_author
       const existing = await this.get(hash)
-
       const author = existing?.first_author || firstAuthor
 
-      await this.cache.setCacheData("binary_blobs", hash, {
+      await blobDb.blobs.put({
         hash,
         data,
         size: data.byteLength,
@@ -73,7 +80,7 @@ export class SimpleBlobStorage {
         stored_at: Date.now(),
       })
     } catch (error) {
-      console.error("Error saving blob to cache:", error)
+      console.error("Error saving blob:", error)
     }
   }
 
@@ -90,37 +97,20 @@ export class SimpleBlobStorage {
     }[]
   > {
     try {
-      const results = await db.cacheData
-        .where("key")
-        .startsWith("binary_blobs:")
+      const results = await blobDb.blobs
+        .orderBy("stored_at")
+        .reverse()
+        .offset(offset)
+        .limit(limit)
         .toArray()
 
-      // Sort by stored_at descending (most recent first)
-      results.sort((a, b) => {
-        const aData = a.data as {stored_at: number}
-        const bData = b.data as {stored_at: number}
-        return bData.stored_at - aData.stored_at
-      })
-
-      // Apply offset and limit
-      const paginated = results.slice(offset, offset + limit)
-
-      return paginated.map((entry) => {
-        const data = entry.data as {
-          hash: string
-          size: number
-          mimeType?: string
-          stored_at: number
-          first_author?: string
-        }
-        return {
-          hash: data.hash,
-          size: data.size,
-          mimeType: data.mimeType,
-          stored_at: data.stored_at,
-          first_author: data.first_author,
-        }
-      })
+      return results.map((entry) => ({
+        hash: entry.hash,
+        size: entry.size,
+        mimeType: entry.mimeType,
+        stored_at: entry.stored_at,
+        first_author: entry.first_author,
+      }))
     } catch (error) {
       console.error("Error listing blobs:", error)
       return []
@@ -129,7 +119,7 @@ export class SimpleBlobStorage {
 
   async count(): Promise<number> {
     try {
-      return await db.cacheData.where("key").startsWith("binary_blobs:").count()
+      return await blobDb.blobs.count()
     } catch (error) {
       console.error("Error counting blobs:", error)
       return 0
@@ -138,7 +128,7 @@ export class SimpleBlobStorage {
 
   async delete(hash: string): Promise<void> {
     try {
-      await db.cacheData.delete(`binary_blobs:${hash}`)
+      await blobDb.blobs.delete(hash)
     } catch (error) {
       console.error("Error deleting blob:", error)
     }
@@ -146,7 +136,7 @@ export class SimpleBlobStorage {
 
   async clear(): Promise<void> {
     try {
-      await db.cacheData.where("key").startsWith("binary_blobs:").delete()
+      await blobDb.blobs.clear()
     } catch (error) {
       console.error("Error clearing blobs:", error)
     }

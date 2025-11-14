@@ -90,25 +90,37 @@ const ProxyImg = (props: Props) => {
   useEffect(() => {
     // If we've already switched to the original, do NOT set the timer again
     if (proxyFailed || !src || !imgRef.current) return
-    // Otherwise, set your load timer
+
+    const img = imgRef.current
+
+    // Clear existing timeout
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
+
+    // Check if already loaded (cached)
+    if (img.complete && img.naturalWidth > 0) {
+      return
+    }
+
+    // Set load timeout
     timeoutRef.current = setTimeout(() => {
       handleError()
     }, LOAD_TIMEOUT)
 
-    // Check if the image loaded quickly
-    const checkLoading = () => {
-      if (imgRef.current?.complete || (imgRef.current?.naturalWidth ?? 0) > 0) {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current)
-          timeoutRef.current = null
-        }
+    // Use onload event instead of polling
+    const handleLoad = () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
       }
     }
 
-    checkLoading()
-    const checkInterval = setInterval(checkLoading, 100)
-    return () => clearInterval(checkInterval)
+    img.addEventListener('load', handleLoad)
+    return () => {
+      img.removeEventListener('load', handleLoad)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
   }, [src, proxyFailed])
 
   const handleError = () => {

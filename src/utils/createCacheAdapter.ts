@@ -1,36 +1,6 @@
-import type {NDKCacheAdapter, NDKEvent, NDKFilter, NDKRelay} from "@/lib/ndk"
+import type {NDKCacheAdapter} from "@/lib/ndk"
 import type {NDKCacheAdapterDexieOptions} from "@/lib/ndk-cache"
 import NDKCacheAdapterDexie from "@/lib/ndk-cache"
-
-/**
- * Cache hit statistics
- */
-export const cacheStats = {
-  cacheHits: 0, // Events loaded from cache
-  relayDuplicates: 0, // Events from relay that were already in cache
-  relayNew: 0, // Events from relay that were not in cache
-  cachedEventIds: new Set<string>(), // Track which events came from cache
-
-  reset() {
-    this.cacheHits = 0
-    this.relayDuplicates = 0
-    this.relayNew = 0
-    this.cachedEventIds.clear()
-  },
-
-  log() {
-    const total = this.cacheHits + this.relayNew
-    if (total === 0) return
-    const cacheEffectiveness = ((this.cacheHits / total) * 100).toFixed(1)
-    console.log(
-      `📊 Cache Performance:\n` +
-        `  - Loaded from cache: ${this.cacheHits} events\n` +
-        `  - New from relays: ${this.relayNew} events\n` +
-        `  - Relay duplicates (already cached): ${this.relayDuplicates} events\n` +
-        `  - Cache effectiveness: ${cacheEffectiveness}% (served from cache before relays)`
-    )
-  },
-}
 
 /**
  * Detect OPFS support (Origin Private File System)
@@ -52,62 +22,11 @@ async function hasOPFSSupport(): Promise<boolean> {
 }
 
 /**
- * Wrap adapter to track cache hits and relay duplicates
- */
-function wrapAdapterWithStats(adapter: NDKCacheAdapter): NDKCacheAdapter {
-  const originalQuery = adapter.query?.bind(adapter)
-  const originalSetEvent = adapter.setEvent?.bind(adapter)
-
-  // Track events loaded from cache
-  if (originalQuery) {
-    adapter.query = async function (subscription) {
-      const events = await originalQuery(subscription)
-      if (events && events.length > 0) {
-        cacheStats.cacheHits += events.length
-        // Track which events came from cache
-        events.forEach((event) => {
-          if (event.id) {
-            cacheStats.cachedEventIds.add(event.id)
-          }
-        })
-      }
-      return events
-    }
-  }
-
-  // Track events coming from relays (check if duplicate)
-  if (originalSetEvent) {
-    adapter.setEvent = async function (event: NDKEvent, filters: NDKFilter[], relay?: NDKRelay) {
-      const eventId = event.id
-      if (eventId) {
-        if (cacheStats.cachedEventIds.has(eventId)) {
-          // This event was already in cache - relay sent duplicate
-          cacheStats.relayDuplicates++
-        } else {
-          // New event from relay
-          cacheStats.relayNew++
-          cacheStats.cachedEventIds.add(eventId)
-        }
-      }
-      return originalSetEvent(event, filters, relay)
-    }
-  }
-
-  return adapter
-}
-
-/**
  * Create NDK cache adapter with SQLite WASM if supported, fallback to Dexie
  */
 export async function createNDKCacheAdapter(
   options: NDKCacheAdapterDexieOptions
 ): Promise<NDKCacheAdapter> {
-  // Reset stats on init
-  cacheStats.reset()
-
-  // Log stats every 30 seconds
-  setInterval(() => cacheStats.log(), 30000)
-
   // Check OPFS support
   const opfsSupported = await hasOPFSSupport()
   if (!opfsSupported) {
@@ -116,7 +35,8 @@ export async function createNDKCacheAdapter(
       "\n  - navigator.storage.getDirectory:",
       !!navigator.storage?.getDirectory
     )
-    return wrapAdapterWithStats(new NDKCacheAdapterDexie(options))
+    localStorage.setItem("ndk-cache-backend", "dexie")
+    return new NDKCacheAdapterDexie(options)
   }
 
   try {
@@ -143,13 +63,15 @@ export async function createNDKCacheAdapter(
       "\n  - Storage: Origin Private File System"
     )
 
-    return wrapAdapterWithStats(adapter as unknown as NDKCacheAdapter)
+    localStorage.setItem("ndk-cache-backend", "sqlite")
+    return adapter as unknown as NDKCacheAdapter
   } catch (error) {
     console.warn(
       "⚠️ NDK Cache: SQLite WASM failed, falling back to Dexie",
       "\n  - Error:",
       error
     )
-    return wrapAdapterWithStats(new NDKCacheAdapterDexie(options))
+    localStorage.setItem("ndk-cache-backend", "dexie")
+    return new NDKCacheAdapterDexie(options)
   }
 }

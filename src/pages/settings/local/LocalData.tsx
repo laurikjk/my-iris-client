@@ -5,6 +5,7 @@ import {useState, useEffect, MouseEvent} from "react"
 import {confirm} from "@/utils/utils"
 import Dexie from "dexie"
 import {BlobList} from "./BlobList"
+import {cacheStats} from "@/utils/cacheStats"
 
 interface EventStats {
   totalEvents: number
@@ -12,6 +13,8 @@ interface EventStats {
   databaseSize?: string
   oldestEvent?: number
   newestEvent?: number
+  storageBackend?: "Dexie (IndexedDB)" | "SQLite WASM (OPFS)" | "Unknown"
+  cacheHitRate?: string
 }
 
 interface NostrEvent {
@@ -35,20 +38,28 @@ export function LocalData() {
       setLoading(true)
       setError(null)
 
-      // Open the NDK Dexie database
-      const db = new Dexie("treelike-nostr")
+      // Detect storage backend from localStorage flag
+      const backend = localStorage.getItem("ndk-cache-backend")
+      let storageBackend: "Dexie (IndexedDB)" | "SQLite WASM (OPFS)" | "Unknown" = "Unknown"
+      let totalEvents = 0
+      let allEvents: NostrEvent[] = []
 
-      // Define schema based on NDK cache adapter
-      db.version(1).stores({
-        events: "id, pubkey, kind, created_at",
-        tags: "[eventId+tag], eventId, tag, value",
-      })
-
-      const eventsTable = db.table<NostrEvent>("events")
-
-      // Get all events
-      const allEvents = await eventsTable.toArray()
-      const totalEvents = allEvents.length
+      if (backend === "sqlite") {
+        storageBackend = "SQLite WASM (OPFS)"
+        // SQLite adapter does not expose direct table access, use count from cache stats
+        totalEvents = cacheStats.cacheHits + cacheStats.relayNew
+      } else if (backend === "dexie") {
+        storageBackend = "Dexie (IndexedDB)"
+        // Open the NDK Dexie database
+        const db = new Dexie("treelike-nostr")
+        db.version(1).stores({
+          events: "id, pubkey, kind, created_at",
+          tags: "[eventId+tag], eventId, tag, value",
+        })
+        const eventsTable = db.table<NostrEvent>("events")
+        allEvents = await eventsTable.toArray()
+        totalEvents = allEvents.length
+      }
 
       // Count by kind
       const eventsByKind: Record<number, number> = {}
@@ -86,18 +97,60 @@ export function LocalData() {
         }
       }
 
+      // Calculate cache hit rate
+      const total = cacheStats.cacheHits + cacheStats.relayNew
+      const hitRate = total > 0 ? ((cacheStats.cacheHits / total) * 100).toFixed(1) + "%" : "N/A"
+
       setStats({
         totalEvents,
         eventsByKind: sortedKinds,
         databaseSize: dbSize,
         oldestEvent: oldestTimestamp !== Infinity ? oldestTimestamp : undefined,
         newestEvent: newestTimestamp !== -Infinity ? newestTimestamp : undefined,
+        storageBackend,
+        cacheHitRate: hitRate,
       })
     } catch (err) {
       console.error("Error loading Nostr stats:", err)
       setError(err instanceof Error ? err.message : "Failed to load stats")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const checkSqliteDatabase = async (): Promise<boolean> => {
+    try {
+      if (!navigator.storage?.getDirectory) return false
+      const root = await navigator.storage.getDirectory()
+      // Check if SQLite database file exists
+      for await (const name of (root as any).keys()) {
+        if (name.includes("sqlite") || name.includes("-sqlite")) {
+          return true
+        }
+      }
+      return false
+    } catch (e) {
+      // Might fail if no files yet - check if estimate shows OPFS usage
+      try {
+        const estimate = await navigator.storage.estimate()
+        // If OPFS is supported and has usage, assume SQLite if Dexie not found
+        if (estimate.usage && estimate.usage > 0) {
+          const hasDexie = await checkDexieDatabase()
+          return !hasDexie // If no Dexie but has storage, it's SQLite
+        }
+      } catch {
+        return false
+      }
+      return false
+    }
+  }
+
+  const checkDexieDatabase = async (): Promise<boolean> => {
+    try {
+      const databases = await indexedDB.databases()
+      return databases.some((db) => db.name === "treelike-nostr")
+    } catch {
+      return false
     }
   }
 
@@ -228,6 +281,15 @@ export function LocalData() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <SettingsGroup title="Overview">
+        {stats.storageBackend && (
+          <SettingsGroupItem>
+            <div className="flex justify-between items-center">
+              <span>Storage backend</span>
+              <span className="text-base-content/70 text-sm">{stats.storageBackend}</span>
+            </div>
+          </SettingsGroupItem>
+        )}
+
         <SettingsGroupItem>
           <div className="flex justify-between items-center">
             <span>Total events</span>
@@ -236,6 +298,15 @@ export function LocalData() {
             </span>
           </div>
         </SettingsGroupItem>
+
+        {stats.cacheHitRate && (
+          <SettingsGroupItem>
+            <div className="flex justify-between items-center">
+              <span>Cache hit rate</span>
+              <span className="text-base-content/70">{stats.cacheHitRate}</span>
+            </div>
+          </SettingsGroupItem>
+        )}
 
         {stats.databaseSize && (
           <SettingsGroupItem>
