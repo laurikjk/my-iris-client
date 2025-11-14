@@ -795,6 +795,20 @@ export class NDKSubscription extends EventEmitter<{
     const ndkEvent = event instanceof NDKEvent ? event : new NDKEvent(this.ndk, event)
 
     if (!eventAlreadySeen) {
+      // Track cache stats (only in browser)
+      if (typeof window !== "undefined") {
+        try {
+          const {cacheStats} = require("@/utils/cacheStats")
+          if (fromCache) {
+            cacheStats.trackCacheEvent(eventId)
+          } else if (!optimisticPublish) {
+            cacheStats.trackRelayEvent(eventId)
+          }
+        } catch (e) {
+          // Ignore if stats module not available
+        }
+      }
+
       // Save to cache if needed (only for events from relays, not cache/optimistic)
       if (!fromCache && !optimisticPublish && this.ndk.cacheAdapter && !this.opts.dontSaveToCache) {
         this.ndk.cacheAdapter.setEvent(ndkEvent, this.filters, relay)
