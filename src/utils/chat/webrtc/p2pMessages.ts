@@ -1,5 +1,6 @@
-import {NDKEvent} from "@/lib/ndk"
+import {NDKEvent, type NDKRelay} from "@/lib/ndk"
 import {webrtcLogger} from "./Logger"
+import {getAllConnections} from "./PeerConnection"
 import type {WebRTCTransportPlugin} from "./WebRTCTransportPlugin"
 
 let webrtcPlugin: WebRTCTransportPlugin | null = null
@@ -19,12 +20,29 @@ export function getWebRTCPlugin(): WebRTCTransportPlugin | null {
 }
 
 /**
+ * Extract event ID from WebRTC message string without full JSON parse.
+ * Returns event ID if message is EVENT type, null otherwise.
+ */
+function getEventIdFromMessage(msg: string): string | null {
+  // Fast check: msg starts with ["EVENT"
+  if (msg.charCodeAt(2) !== 69 || msg.charCodeAt(3) !== 86) {
+    return null
+  }
+  const idPos = msg.indexOf('"id":"')
+  if (idPos === -1) {
+    return null
+  }
+  // Extract 64 chars after "id":"
+  return msg.substring(idPos + 6, idPos + 70)
+}
+
+/**
  * Handles incoming Nostr message from WebRTC peer
  * Supports EVENT, REQ, EOSE, and CLOSE message types
  */
 export function handleIncomingMessage(
   peerId: string,
-  eventData: unknown
+  messageData: string
 ): NDKEvent | null {
   const plugin = getWebRTCPlugin()
   if (!plugin) {
@@ -33,6 +51,25 @@ export function handleIncomingMessage(
   }
 
   try {
+    // Early dedup check before JSON.parse
+    const eventId = getEventIdFromMessage(messageData)
+    if (eventId && plugin.ndk) {
+      const seenData = plugin.ndk.subManager.seenEvents.get(eventId)
+      if (seenData?.processedEvent) {
+        // Already processed, mark peer as seen and dispatch to subs
+        const senderConn = getAllConnections().get(peerId)
+        if (senderConn) {
+          senderConn.seenEvents.set(eventId, true)
+        }
+        // Track this peer also saw it
+        const webrtcRelay = {url: `__webrtc__:${peerId}`} as NDKRelay
+        plugin.ndk.subManager.dispatchEvent(seenData.processedEvent, webrtcRelay, false)
+        return seenData.processedEvent
+      }
+    }
+
+    const eventData = JSON.parse(messageData)
+
     if (!Array.isArray(eventData)) {
       webrtcLogger.warn(peerId, "Invalid Nostr message format")
       return null

@@ -425,10 +425,9 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     this.dataChannel.onopen = () => webrtcLogger.debug(this.peerId, "Data channel open")
     this.dataChannel.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data)
-        handleIncomingEvent(this.peerId, data)
+        handleIncomingEvent(this.peerId, event.data)
       } catch (error) {
-        webrtcLogger.error(this.peerId, "Failed to parse data channel message")
+        webrtcLogger.error(this.peerId, "Error handling data channel message")
       }
     }
     this.dataChannel.onclose = () => {

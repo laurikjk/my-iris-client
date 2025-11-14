@@ -1,4 +1,9 @@
-import NDK, {NDKEvent, type NDKFilter, type NDKSubscription} from "@/lib/ndk"
+import NDK, {
+  NDKEvent,
+  type NDKFilter,
+  type NDKRelay,
+  type NDKSubscription,
+} from "@/lib/ndk"
 import type {NDKTransportPlugin} from "@/lib/ndk-transport-plugin"
 import {
   mergeFilters,
@@ -10,7 +15,7 @@ import {webrtcLogger} from "./Logger"
 import socialGraph from "@/utils/socialGraph"
 import {RateLimiter} from "./RateLimiter"
 import {getCachedName} from "@/utils/nostr"
-import {shouldHideUser, shouldHideEvent} from "@/utils/visibility"
+import {shouldHideUser} from "@/utils/visibility"
 import {incrementSent, incrementReceived, incrementSubscriptionsServed} from "./p2pStats"
 
 // Event kinds that bypass follow check but are rate limited
@@ -81,7 +86,7 @@ function sendGroupedFilters(groupKey: NDKFilterFingerprint) {
  */
 export class WebRTCTransportPlugin implements NDKTransportPlugin {
   readonly name = "webrtc"
-  private ndk?: NDK
+  public ndk?: NDK
 
   initialize(ndk: NDK): void {
     this.ndk = ndk
@@ -277,6 +282,11 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
 
     const event = new NDKEvent(this.ndk, eventJson as Record<string, unknown>)
 
+    if (!event.id) {
+      webrtcLogger.warn(peerId, "Event missing ID")
+      return null
+    }
+
     // Rate limit only private messages from unknown senders
     const isPrivateMessage = PRIVATE_MESSAGE_KINDS.includes(event.kind || 0)
     if (isPrivateMessage) {
@@ -299,20 +309,6 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       return null
     }
 
-    if (!event.id) {
-      webrtcLogger.warn(peerId, "Event missing ID")
-      return null
-    }
-
-    // Check if we've already seen this event
-    if (this.ndk.subManager.seenEvents.has(event.id)) {
-      const senderConn = getAllConnections().get(peerId)
-      if (senderConn) {
-        senderConn.seenEvents.set(event.id, true)
-      }
-      return null
-    }
-
     incrementReceived()
 
     const contentPreview =
@@ -331,11 +327,14 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       "down"
     )
 
-    // Mark event as seen by sender
+    // Mark event as seen by sender and track in manager with WebRTC origin
     const senderConn = getAllConnections().get(peerId)
     if (senderConn) {
       senderConn.seenEvents.set(event.id, true)
     }
+
+    // Create fake relay object for WebRTC tracking
+    const webrtcRelay = {url: `__webrtc__:${peerId}`} as NDKRelay
 
     // Forward to other peers who haven't seen it
     const connections = getAllConnections()
@@ -365,10 +364,8 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       }
     }
 
-    // Don't publish muted events to relays
-    if (!shouldHideEvent(event)) {
-      event.publish().catch(() => {})
-    }
+    // Dispatch to local subscriptions and track WebRTC origin
+    this.ndk.subManager.dispatchEvent(event, webrtcRelay, false)
 
     return event
   }

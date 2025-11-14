@@ -20,9 +20,9 @@ export class NDKSubscriptionManager {
   public subscriptions: Map<NDKSubscriptionId, NDKSubscription>
 
   // Use LRU cache instead of unbounded Map to prevent memory leaks
-  // Reduced from 10k to 1k since we now cache full NDKEvent objects
+  // Small cache since we store full NDKEvent objects (memory intensive)
   public seenEvents = new LRUCache<NDKEventId, SeenEventData>({
-    maxSize: 1000,
+    maxSize: 250,
     entryExpirationTimeInMS: 5 * 60 * 1000, // 5 minutes
   })
 
