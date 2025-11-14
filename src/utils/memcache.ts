@@ -1,10 +1,44 @@
 import {NDKEvent} from "@/lib/ndk"
 import {LRUCache} from "typescript-lru-cache"
 import throttle from "lodash/throttle"
-import localforage from "localforage"
+import Dexie, {type EntityTable} from "dexie"
 import {FeedType} from "@/stores/feed"
 
-export const seenEventIds = new LRUCache<string, boolean>({maxSize: 10000})
+// Dexie database for seen events
+class SeenEventsDb extends Dexie {
+  public seenEvents!: EntityTable<{id: string}, "id">
+  constructor() {
+    super("SeenEvents")
+    this.version(1).stores({
+      seenEvents: "id",
+    })
+  }
+}
+
+const seenDb = new SeenEventsDb()
+
+// Buffer for batching deletes - Dexie doesn't auto-batch separate delete() calls
+let evictedKeys: string[] = []
+
+const flushDeletes = () => {
+  if (evictedKeys.length === 0) return
+  const toDelete = evictedKeys.splice(0)
+  seenDb.seenEvents.bulkDelete(toDelete).catch(() => {})
+}
+
+const throttledFlushDeletes = throttle(flushDeletes, 1000, {
+  leading: false,
+  trailing: true,
+})
+
+// LRU cache with batched eviction deletes
+export const seenEventIds = new LRUCache<string, boolean>({
+  maxSize: 10000,
+  onEntryEvicted: ({key}) => {
+    evictedKeys.push(key)
+    throttledFlushDeletes()
+  },
+})
 
 // Cache for NIP-05 verification results
 export const nip05VerificationCache = new LRUCache<string, boolean>({maxSize: 1000})
@@ -53,25 +87,41 @@ export const getOrCreateAlgorithmicFeedCache = (feedId: FeedType) => {
   return feedCaches[feedId]
 }
 
-// Load seenEventIds from localForage
-localforage
-  .getItem<string[]>("seenEventIds")
-  .then((s) => {
-    if (s) {
-      s.forEach((id) => seenEventIds.set(id, true))
-    }
+// Load seenEventIds from Dexie on startup using streaming iterator
+seenDb.seenEvents
+  .each(({id}) => {
+    seenEventIds.set(id, true)
   })
   .catch((e) => {
     console.error("failed to load seenEventIds:", e)
   })
 
+// Batch buffer for pending writes
+let pendingSeenIds = new Set<string>()
+
 const throttledSave = throttle(
-  () => localforage.setItem("seenEventIds", [...seenEventIds.keys()]),
-  5000
+  async () => {
+    if (pendingSeenIds.size === 0) return
+
+    const toSave: {id: string}[] = []
+    for (const id of pendingSeenIds) {
+      toSave.push({id})
+    }
+    pendingSeenIds.clear()
+
+    try {
+      await seenDb.seenEvents.bulkPut(toSave)
+    } catch (e) {
+      console.error("failed to save seenEventIds:", e)
+    }
+  },
+  10000,
+  {leading: false, trailing: true}
 )
 
 export const addSeenEventId = (id: string) => {
   seenEventIds.set(id, true)
+  pendingSeenIds.add(id)
   throttledSave()
 }
 

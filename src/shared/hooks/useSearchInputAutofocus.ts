@@ -3,7 +3,7 @@ import {useNavigation} from "@/navigation"
 import {isAboveMobileBreakpoint} from "@/utils/utils"
 
 export function useSearchInputAutofocus(
-  inputRef: RefObject<HTMLInputElement>,
+  inputRef: RefObject<HTMLInputElement | null>,
   routePrefix: string
 ) {
   const {currentPath} = useNavigation()
