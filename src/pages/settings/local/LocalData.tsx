@@ -269,30 +269,48 @@ export function LocalData() {
     setIsClearing(true)
 
     try {
-      // Clear Dexie
-      const db = new Dexie("treelike-nostr")
-      await db.delete()
-      console.log("Cleared Dexie database")
+      // Clear all IndexedDB databases
+      if ("databases" in indexedDB) {
+        const databases = await indexedDB.databases()
+        await Promise.all(
+          databases.map(async (dbInfo) => {
+            if (dbInfo.name) {
+              const db = new Dexie(dbInfo.name)
+              await db.delete()
+              console.log(`Deleted database: ${dbInfo.name}`)
+            }
+          })
+        )
+      } else {
+        // Fallback: just delete the main one
+        const db = new Dexie("treelike-nostr")
+        await db.delete()
+        const db2 = new Dexie("irisdb-nostr")
+        await db2.delete()
+        console.log("Cleared Dexie database")
+      }
 
-      // Clear any leftover OPFS files (from previous SQLite usage)
+      // Clear OPFS completely
       if (navigator.storage?.getDirectory) {
         try {
           const root = await navigator.storage.getDirectory()
-          const dbName = "treelike-nostr-sqlite"
-          const sqliteFiles = [dbName, `${dbName}-journal`, `${dbName}-wal`, `${dbName}-shm`]
 
-          for (const fileName of sqliteFiles) {
+          // Remove all entries in OPFS root
+          for await (const [name] of root.entries()) {
             try {
-              await root.removeEntry(fileName)
-              console.log(`Removed OPFS file: ${fileName}`)
+              await root.removeEntry(name, {recursive: true})
+              console.log(`Removed OPFS entry: ${name}`)
             } catch (e) {
-              // File might not exist
+              console.warn(`Failed to remove OPFS entry ${name}:`, e)
             }
           }
         } catch (opfsErr) {
           console.warn("Could not clear OPFS:", opfsErr)
         }
       }
+
+      // Wait for deletions to complete
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
       // Reload to ensure clean state
       window.location.reload()
