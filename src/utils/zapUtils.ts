@@ -191,7 +191,10 @@ export async function createAndPublishZapInvoice(
   // Sign and PUBLISH the zap request
   const zapRequestEvent = new NDKEvent(ndk(), zapRequest)
   await zapRequestEvent.sign(signer)
-  await zapRequestEvent.publish() // This is the key difference - we publish it
+  // Fire and forget - don't await relay confirmation for zap requests
+  zapRequestEvent.publish().catch((err) => {
+    console.warn("Zap request publish warning (non-fatal):", err)
+  })
 
   // Get the invoice from the LNURL endpoint
   const invoiceUrl = new URL(lnurlData.callback)
