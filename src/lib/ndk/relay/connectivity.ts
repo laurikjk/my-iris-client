@@ -4,6 +4,7 @@ import {NDKEvent} from "../events/index.js"
 import {NDKKind} from "../events/kinds"
 import type {NDK, NDKNetDebug} from "../ndk/index.js"
 import type {NDKFilter} from "../subscription"
+import {Queue, yieldThread} from "../utils/queue.js"
 import type {NDKRelay, NDKRelayConnectionStats} from "."
 import {NDKRelayStatus} from "."
 import {NDKRelayKeepalive, probeRelayConnection} from "./keepalive"
@@ -52,6 +53,10 @@ export class NDKRelayConnectivity {
   private lastSleepCheck = Date.now()
   private lastMessageSent = Date.now()
   private wasIdle = false
+
+  // Message queue for async processing
+  private incomingMessageQueue = new Queue<string>()
+  private queueRunning = false
 
   constructor(ndkRelay: NDKRelay, ndk?: NDK) {
     this.ndkRelay = ndkRelay
@@ -442,27 +447,61 @@ export class NDKRelayConnectivity {
     // Record any activity from relay
     this.keepalive?.recordActivity()
 
+    // Enqueue message for async processing
+    this.incomingMessageQueue.enqueue(event.data as string)
+
+    // Start queue processor if not already running
+    if (!this.queueRunning) {
+      this.runQueue()
+    }
+  }
+
+  /**
+   * Async queue processor that yields to event loop between messages.
+   */
+  private async runQueue(): Promise<void> {
+    this.queueRunning = true
+
+    while (true) {
+      if (!this.handleNext()) {
+        break
+      }
+      await yieldThread()
+    }
+
+    this.queueRunning = false
+  }
+
+  /**
+   * Process next message from queue.
+   * @returns false if queue is empty, true otherwise
+   */
+  private handleNext(): boolean {
+    const msg = this.incomingMessageQueue.dequeue()
+    if (!msg) {
+      return false
+    }
+
     // Early exit for duplicate events before JSON.parse
-    const msg = event.data as string
     const eventId = this.getEventIdFromMessage(msg)
     if (eventId && this.ndk) {
       const seenData = this.ndk.subManager.seenEvents.get(eventId)
       if (seenData && seenData.relays.length > 0) {
         // Already processed from any relay, just track this relay saw it
         this.ndk.subManager.seenEvent(eventId, this.ndkRelay)
-        return
+        return true
       }
     }
 
     try {
-      const data = JSON.parse(event.data)
+      const data = JSON.parse(msg)
       const [cmd, id, ..._rest] = data
 
       // Check for registered protocol handlers first
       const handler = this.ndkRelay.getProtocolHandler(cmd)
       if (handler) {
         handler(this.ndkRelay, data)
-        return
+        return true
       }
 
       switch (cmd) {
@@ -471,15 +510,15 @@ export class NDKRelayConnectivity {
           const rawEvent = data[2] as NostrEvent
           if (!so) {
             this.debug(`Received event for unknown subscription ${id}`)
-            return
+            return true
           }
 
           const ndkEvent = this.processEvent(rawEvent)
-          if (!ndkEvent) return // Failed validation/verification
+          if (!ndkEvent) return true // Failed validation/verification
 
           // Pass processed NDKEvent to subscription
           so.onevent(ndkEvent)
-          return
+          return true
         }
         case "COUNT": {
           const payload = data[2] as {count: number}
@@ -488,13 +527,13 @@ export class NDKRelayConnectivity {
             cr.resolve(payload.count)
             this.openCountRequests.delete(id)
           }
-          return
+          return true
         }
         case "EOSE": {
           const so = this.openSubs.get(id)
-          if (!so) return
+          if (!so) return true
           so.oneose(id)
-          return
+          return true
         }
         case "OK": {
           const ok: boolean = data[2]
@@ -504,7 +543,7 @@ export class NDKRelayConnectivity {
 
           if (!ep || !firstEp) {
             this.debug("Received OK for unknown event publish", id)
-            return
+            return true
           }
 
           if (ok) {
@@ -556,22 +595,25 @@ export class NDKRelayConnectivity {
             // Only clear the publish map if it's not auth-required
             this.openEventPublishes.set(id, ep)
           }
-          return
+          return true
         }
         case "CLOSED": {
           const so = this.openSubs.get(id)
-          if (!so) return
+          if (!so) return true
           so.onclosed(data[2] as string)
-          return
+          return true
         }
         case "NOTICE":
           this.onNotice(data[1] as string)
-          return
+          return true
         case "AUTH": {
           this.onAuthRequested(data[1] as string)
-          return
+          return true
         }
       }
+
+      // Unknown message type
+      return true
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
@@ -579,7 +621,7 @@ export class NDKRelayConnectivity {
         `Error parsing message from ${this.ndkRelay.url}: ${error.message}`,
         error?.stack
       )
-      return
+      return true
     }
   }
 
