@@ -4,7 +4,6 @@ import throttle from "lodash/throttle"
 import localforage from "localforage"
 import {FeedType} from "@/stores/feed"
 
-export const eventsByIdCache = new LRUCache({maxSize: 500})
 export const seenEventIds = new LRUCache<string, boolean>({maxSize: 10000})
 
 // Cache for NIP-05 verification results

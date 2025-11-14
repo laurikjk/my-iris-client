@@ -1,4 +1,3 @@
-import {eventsByIdCache} from "@/utils/memcache.ts"
 import {useEffect, useMemo, useState, useRef, memo} from "react"
 import {NDKEvent, NDKSubscription} from "@/lib/ndk"
 import classNames from "classnames"
@@ -139,25 +138,18 @@ function FeedItem({
     }
 
     if (!event && eventIdHex) {
-      const cached = eventsByIdCache.get(eventIdHex)
-      if (cached) {
-        setEvent(cached)
-        setLoadingEvent(false)
-      } else {
-        const sub = ndk().subscribe(
-          {ids: [eventIdHex], authors: authorHints},
-          {closeOnEose: true}
-        )
-        subscriptionRef.current = sub
-
-        sub.on("event", (fetchedEvent: NDKEvent) => {
-          if (fetchedEvent && fetchedEvent.id) {
+      ndk()
+        .fetchEvent({ids: [eventIdHex], authors: authorHints})
+        .then((fetchedEvent) => {
+          if (fetchedEvent) {
             setEvent(fetchedEvent)
             setLoadingEvent(false)
-            eventsByIdCache.set(eventIdHex, fetchedEvent)
           }
         })
-      }
+        .catch((err) => {
+          console.error("Error fetching event:", err)
+          setLoadingEvent(false)
+        })
     } else {
       setLoadingEvent(false)
     }
@@ -174,7 +166,6 @@ function FeedItem({
     if (event) {
       const cleanup = handleEventContent(event, (referred) => {
         setReferredEvent(referred)
-        if (eventIdHex) eventsByIdCache.set(eventIdHex, referred)
       })
 
       return cleanup

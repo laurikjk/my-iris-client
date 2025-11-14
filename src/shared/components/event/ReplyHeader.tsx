@@ -1,7 +1,6 @@
 import {RiReplyLine} from "@remixicon/react"
 import {NDKEvent} from "@/lib/ndk"
 import {useState, useEffect} from "react"
-import {eventsByIdCache} from "@/utils/memcache.ts"
 import {ndk} from "@/utils/ndk"
 import {Name} from "@/shared/components/user/Name"
 
@@ -15,25 +14,13 @@ function ReplyHeader({repliedToEventId}: ReplyHeaderProps) {
   useEffect(() => {
     if (!repliedToEventId) return
 
-    const cached = eventsByIdCache.get(repliedToEventId)
-    if (cached) {
-      setRepliedToEvent(cached)
-      return
-    }
-
-    const sub = ndk().subscribe({ids: [repliedToEventId]}, {closeOnEose: true})
-
-    sub.on("event", (event: NDKEvent) => {
-      if (event && event.id === repliedToEventId) {
-        setRepliedToEvent(event)
-        eventsByIdCache.set(repliedToEventId, event)
-        sub.stop()
-      }
-    })
-
-    return () => {
-      sub.stop()
-    }
+    // Use NDK's built-in cache via fetchEvent
+    ndk()
+      .fetchEvent(repliedToEventId)
+      .then((event) => {
+        if (event) setRepliedToEvent(event)
+      })
+      .catch((err) => console.error("Error fetching replied event:", err))
   }, [repliedToEventId])
 
   return (

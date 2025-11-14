@@ -2,7 +2,6 @@ import {NDKEvent} from "@/lib/ndk"
 import {useState, useEffect} from "react"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
-import {eventsByIdCache} from "@/utils/memcache"
 
 /**
  * Custom hook for fetching longform events with memcaching
@@ -21,35 +20,17 @@ export function useLongformEvent(naddrData: nip19.AddressPointer | null) {
       return
     }
 
-    // Create a cache key for this specific longform event
-    const cacheKey = `longform:${naddrData.pubkey}:${naddrData.kind}:${naddrData.identifier}`
-
-    // Check if we already have this event cached
-    const cachedEvent = eventsByIdCache.get(cacheKey) as NDKEvent | undefined
-    if (cachedEvent) {
-      setEvent(cachedEvent)
-      setLoading(false)
-      setError(null)
-      return
-    }
-
-    // If not cached, fetch from network
     setLoading(true)
     setError(null)
 
     ndk()
-      .fetchEvent(
-        {
-          authors: [naddrData.pubkey],
-          kinds: [naddrData.kind],
-          "#d": [naddrData.identifier],
-        },
-        undefined
-      )
+      .fetchEvent({
+        authors: [naddrData.pubkey],
+        kinds: [naddrData.kind],
+        "#d": [naddrData.identifier],
+      })
       .then((fetchedEvent) => {
         if (fetchedEvent) {
-          // Cache the event for future use
-          eventsByIdCache.set(cacheKey, fetchedEvent)
           setEvent(fetchedEvent)
           setError(null)
         } else {

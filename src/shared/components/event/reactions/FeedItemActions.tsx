@@ -1,6 +1,5 @@
 import {NDKEvent} from "@/lib/ndk"
 import {useState, useEffect, RefObject} from "react"
-import {eventsByIdCache} from "@/utils/memcache.ts"
 import {ndk} from "@/utils/ndk"
 
 import FeedItemComment from "./FeedItemComment.tsx"
@@ -29,19 +28,12 @@ function FeedItemActions({
 
   useEffect(() => {
     if (!event && eventId) {
-      const cached = eventsByIdCache.get(eventId)
-      if (cached) {
-        setEvent(cached)
-      } else {
-        const sub = ndk().subscribe({ids: [eventId]}, {closeOnEose: true})
-        sub.on("event", (fetchedEvent: NDKEvent) => {
-          if (fetchedEvent && fetchedEvent.id) {
-            setEvent(fetchedEvent)
-            eventsByIdCache.set(eventId, fetchedEvent)
-          }
+      ndk()
+        .fetchEvent(eventId)
+        .then((fetchedEvent) => {
+          if (fetchedEvent) setEvent(fetchedEvent)
         })
-        return () => sub.stop()
-      }
+        .catch((err) => console.error("Error fetching event:", err))
     }
   }, [event, eventId])
 

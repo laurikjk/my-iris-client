@@ -1,5 +1,5 @@
+import {useEffect} from "react"
 import {useCallback, MouseEvent, useState, memo} from "react"
-import {eventsByIdCache} from "@/utils/memcache"
 import ErrorBoundary from "../ui/ErrorBoundary"
 import {NDKEvent} from "@/lib/ndk"
 import RelativeTime from "./RelativeTime"
@@ -37,23 +37,24 @@ function EventBorderless({
     [navigate]
   )
 
-  const [event, setEvent] = useState(
-    initialEvent || (eventId && eventsByIdCache.get(eventId))
-  )
+  const [event, setEvent] = useState(initialEvent)
+
+  useEffect(() => {
+    if (event || !eventId) return
+
+    ndk()
+      .fetchEvent(eventId)
+      .then((e) => {
+        if (e) setEvent(e)
+      })
+      .catch((err) => console.error("Error fetching event:", err))
+  }, [eventId, event])
 
   if (!event && !eventId) {
     throw new Error("must provide either event or eventId")
   }
 
   if (!event) {
-    ndk()
-      .fetchEvent({ids: [eventId!]})
-      .then((e: NDKEvent | null) => {
-        if (e && e.id) {
-          setEvent(e)
-          eventsByIdCache.set(e.id, e)
-        }
-      })
     return null
   }
 
