@@ -10,7 +10,7 @@ const useFollows = (pubKey: string | null | undefined, includeSelf = false) => {
     () => (pubKey ? new PublicKey(pubKey).toString() : ""),
     [pubKey]
   )
-  const [follows, setFollows] = useState<string[]>([])
+  const [follows, setFollows] = useState<string[] | undefined>(undefined)
   const subscriptionRef = useRef<NDKSubscription | null>(null)
 
   // Initialize follows when pubKeyHex changes
@@ -72,7 +72,8 @@ const useFollows = (pubKey: string | null | undefined, includeSelf = false) => {
     }
   }, [pubKeyHex, includeSelf, pubKey])
 
-  return follows
+  return follows ?? []
 }
 
 export default useFollows
+export {useFollows}

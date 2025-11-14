@@ -5,10 +5,16 @@ import {Fragment, useMemo, useState} from "react"
 import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {ProfileLink} from "./ProfileLink"
 import {Name} from "./Name"
+import useFollows from "@/shared/hooks/useFollows"
+import {useUserStore} from "@/stores/user"
 
 const MAX_MUTED_BY_DISPLAY = 3
 
 export default function MutedBy({pubkey}: {pubkey: string}) {
+  const myPubKey = useUserStore((state) => state.publicKey)
+  const follows = useFollows(myPubKey, true)
+  const socialGraphLoaded = useSocialGraphLoaded()
+
   const {mutedByArray, totalMutedBy} = useMemo(() => {
     const mutedBy = socialGraph().getUserMutedBy(pubkey)
     return {
@@ -22,7 +28,7 @@ export default function MutedBy({pubkey}: {pubkey: string}) {
   const mutedBy = socialGraph().getUserMutedBy(pubkey)
   const isRootMuted = mutedBy.has(root)
 
-  const showMutedWarning = (totalMutedBy > 0 && shouldHideUser(pubkey, 3)) || isRootMuted
+  const showMutedWarning = socialGraphLoaded && follows.length > 1 && ((totalMutedBy > 0 && shouldHideUser(pubkey, 3)) || isRootMuted)
 
   const [showMuterList, setShowMuterList] = useState<boolean>(false)
 
