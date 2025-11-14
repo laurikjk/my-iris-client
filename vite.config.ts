@@ -60,6 +60,13 @@ export default defineConfig({
         handler(level, log)
       },
       output: {
+        assetFileNames: (assetInfo) => {
+          // Keep WASM files in assets root with original name
+          if (assetInfo.name?.endsWith(".wasm")) {
+            return "assets/[name][extname]"
+          }
+          return "assets/[name]-[hash][extname]"
+        },
         manualChunks: (id) => {
           if (id.includes("nostr-social-graph/data/profileData.json")) {
             return "profileData"
@@ -87,6 +94,11 @@ export default defineConfig({
             id.includes("/src/shared/components/user/Name")
           ) {
             return "main"
+          }
+
+          // SQLite WASM cache - lazy load separate chunk
+          if (id.includes("@nostr-dev-kit/ndk-cache-sqlite-wasm")) {
+            return "ndk-cache-sqlite"
           }
 
           const vendorLibs = [
@@ -166,4 +178,5 @@ export default defineConfig({
     exclude: ["@vite/client", "@vite/env"],
     include: ["react", "react-dom"],
   },
+  assetsInclude: ["**/*.wasm"],
 })

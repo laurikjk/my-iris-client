@@ -69,6 +69,7 @@
     "@gandlaf21/bc-ur": "^1.1.12",
     "@noble/curves": "^1.9.7",
     "@noble/hashes": "^1.8.0",
+    "@nostr-dev-kit/ndk-cache-sqlite-wasm": "^0.6.1",
     "@remixicon/react": "^4.6.0",
     "@scure/base": "^1.2.6",
     "@tauri-apps/api": "2.8",

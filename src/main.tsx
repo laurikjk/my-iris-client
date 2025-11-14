@@ -77,7 +77,9 @@ const initializeApp = async () => {
   // Wait for settings to hydrate from localStorage before initializing NDK
   await useUserStore.getState().awaitHydration()
 
-  ndk()
+  // Initialize NDK (now async due to cache adapter)
+  const {initNDKAsync} = await import("@/utils/ndk")
+  await initNDKAsync()
 
   // Initialize debug system
   DebugManager
@@ -145,20 +147,23 @@ const initializeApp = async () => {
 
   // Perform migration before rendering the app
   migrateUserState()
+
+  // Return true when complete
+  return true
 }
 
-// Initialize app
-void initializeApp()
-
+// Initialize app and render when ready
 const root = ReactDOM.createRoot(document.getElementById("root")!)
 
-root.render(
-  <NavigationProvider>
-    <Layout>
-      <Router />
-    </Layout>
-  </NavigationProvider>
-)
+initializeApp().then(() => {
+  root.render(
+    <NavigationProvider>
+      <Layout>
+        <Router />
+      </Layout>
+    </NavigationProvider>
+  )
+})
 
 // Store subscriptions
 const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
