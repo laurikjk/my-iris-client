@@ -369,7 +369,9 @@ export class NDKRelayConnectivity {
     if (idPos === -1) {
       return null
     }
-    // Extract 64 hex chars after "id":"
+    // Extract 64 chars after "id":"
+    // Event IDs are always 64 hex chars. If not valid, LRU lookup will fail
+    // and we'll parse normally - no harm done.
     return msg.substring(idPos + 6, idPos + 70)
   }
 
@@ -384,8 +386,9 @@ export class NDKRelayConnectivity {
     const eventId = this.getEventIdFromMessage(msg)
     if (eventId && this.ndk) {
       const seenRelays = this.ndk.subManager.seenEvents.get(eventId)
-      if (seenRelays?.some((r: NDKRelay) => r.url === this.ndkRelay.url)) {
-        // Already processed this exact event from this relay
+      if (seenRelays && seenRelays.length > 0) {
+        // Already processed from any relay, just track this relay saw it
+        this.ndk.subManager.seenEvent(eventId, this.ndkRelay)
         return
       }
     }
