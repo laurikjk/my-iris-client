@@ -356,11 +356,39 @@ export class NDKRelayConnectivity {
    *
    * @param event - The MessageEvent containing the received message data.
    */
+  /**
+   * Fast extraction of event ID from JSON string without parsing.
+   * Returns event ID if message is EVENT type, null otherwise.
+   */
+  private getEventIdFromMessage(msg: string): string | null {
+    // Fast check: msg[2] === 'E' && msg[3] === 'V' (EVENT message)
+    if (msg.charCodeAt(2) !== 69 || msg.charCodeAt(3) !== 86) {
+      return null
+    }
+    const idPos = msg.indexOf('"id":"')
+    if (idPos === -1) {
+      return null
+    }
+    // Extract 64 hex chars after "id":"
+    return msg.substring(idPos + 6, idPos + 70)
+  }
+
   private onMessage(event: MessageEvent): void {
     this.netDebug?.(event.data, this.ndkRelay, "recv")
 
     // Record any activity from relay
     this.keepalive?.recordActivity()
+
+    // Early exit for duplicate events before JSON.parse
+    const msg = event.data as string
+    const eventId = this.getEventIdFromMessage(msg)
+    if (eventId && this.ndk) {
+      const seenRelays = this.ndk.subManager.seenEvents.get(eventId)
+      if (seenRelays?.some((r: NDKRelay) => r.url === this.ndkRelay.url)) {
+        // Already processed this exact event from this relay
+        return
+      }
+    }
 
     try {
       const data = JSON.parse(event.data)
