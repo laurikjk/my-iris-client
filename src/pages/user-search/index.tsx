@@ -62,13 +62,16 @@ export default function UserSearchPage() {
     // Show follows list only when no search term
     if (!follows) return []
 
+    const recentPubKeys = new Set(peopleSearch.recentSearches.map((r) => r.pubKey))
+
     return Array.from(follows)
+      .filter((pubkey) => !recentPubKeys.has(pubkey))
       .map((pubkey) => ({
         pubkey,
         followedByCount: graph.followedByFriends(pubkey).size,
       }))
-      .sort((a, b) => b.followedByCount - a.followedByCount)
-  }, [follows, graph, rootUser, searchValue, peopleSearch.searchResults])
+      .sort(() => Math.random() - 0.5)
+  }, [follows, graph, rootUser, searchValue, peopleSearch.searchResults, peopleSearch.recentSearches])
 
   const loadMore = () => {
     if (displayCount < displayUsers.length) {
@@ -134,6 +137,17 @@ export default function UserSearchPage() {
               </div>
 
               {!searchValue.trim() && <SocialGraphWidget background={false} />}
+
+              {!searchValue.trim() && peopleSearch.recentSearches.length > 0 && (
+                <div className="px-4 mt-4">
+                  <div className="menu-title text-sm px-0 py-2">Recent</div>
+                  <div className="flex flex-col gap-2">
+                    {peopleSearch.recentSearches.map((result) => (
+                      <UserRow key={result.pubKey} pubKey={result.pubKey} linkToProfile={true} />
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="mt-4">
                 <InfiniteScroll onLoadMore={loadMore}>
