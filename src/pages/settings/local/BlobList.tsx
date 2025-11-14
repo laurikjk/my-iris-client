@@ -46,6 +46,14 @@ export function BlobList() {
       const newOffset = reset ? 0 : blobOffset
       const newBlobs = await storage.list(newOffset, 20)
 
+      // Sort: 1) total requests DESC, 2) stored_at DESC
+      newBlobs.sort((a, b) => {
+        const aRequests = a.times_requested_locally + a.times_requested_by_peers
+        const bRequests = b.times_requested_locally + b.times_requested_by_peers
+        if (aRequests !== bRequests) return bRequests - aRequests
+        return b.stored_at - a.stored_at
+      })
+
       if (reset) {
         setBlobs(newBlobs)
         setBlobOffset(newBlobs.length)
