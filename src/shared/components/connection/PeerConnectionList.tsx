@@ -118,10 +118,21 @@ export function PeerConnectionList() {
     return {pubkey, connectedPeers, bandwidth, isMutualFollow}
   })
 
-  // Sort: connected first, then by lastSeen
+  // Get online status (from peerConnectionManager's online users)
+  const onlineUsers = peerConnectionManager.getOnlineUsers()
+  const onlineSet = new Set(onlineUsers.map((u) => u.pubkey))
+
+  // Sort: 1) connected, 2) online, 3) lastSeen
   mergedPeers.sort((a, b) => {
-    if (a.connectedPeers.length > 0 && b.connectedPeers.length === 0) return -1
-    if (a.connectedPeers.length === 0 && b.connectedPeers.length > 0) return 1
+    const aConnected = a.connectedPeers.length > 0
+    const bConnected = b.connectedPeers.length > 0
+    const aOnline = onlineSet.has(a.pubkey)
+    const bOnline = onlineSet.has(b.pubkey)
+
+    if (aConnected && !bConnected) return -1
+    if (!aConnected && bConnected) return 1
+    if (aOnline && !bOnline) return -1
+    if (!aOnline && bOnline) return 1
     return (b.bandwidth?.lastSeen || 0) - (a.bandwidth?.lastSeen || 0)
   })
 
