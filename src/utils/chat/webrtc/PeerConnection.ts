@@ -9,6 +9,9 @@ import {sendSignalingMessage} from "./signaling"
 import type {SignalingMessage} from "./types"
 import {handleIncomingEvent} from "./p2pNostr"
 import {useSettingsStore} from "@/stores/settings"
+import {incrementBlobSent, incrementBlobReceived} from "./p2pStats"
+import {updatePeerLastSeen} from "./peerBandwidthStats"
+import {trackPeerBlobSent, trackPeerBlobReceived} from "./peerBandwidthStats"
 
 const connections = new Map<string, PeerConnection>()
 
@@ -267,11 +270,15 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
     this.peerConnection.onconnectionstatechange = () => {
       this.log(`Connection state: ${this.peerConnection.connectionState}`)
-      if (
-        this.peerConnection.connectionState === "closed" ||
-        this.peerConnection.connectionState === "failed"
-      ) {
-        this.log(`Connection ${this.peerConnection.connectionState}`)
+      const state = this.peerConnection.connectionState
+
+      if (state === "connected") {
+        const peerPubkey = this.peerId.split(":")[0]
+        updatePeerLastSeen(peerPubkey)
+      }
+
+      if (state === "closed" || state === "failed") {
+        this.log(`Connection ${state}`)
         this.close()
       }
     }
@@ -806,6 +813,11 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
     this.log(`Blob transfer complete: ${hash.slice(0, 8)}...`)
     this.pendingBlobSends.delete(requestId)
+
+    // Track blob sent
+    const peerPubkey = this.peerId.split(":")[0]
+    incrementBlobSent(entry.size)
+    trackPeerBlobSent(peerPubkey, entry.size)
   }
 
   private async handleBlobOk(requestId: number, ok: Record<string, unknown>) {
@@ -884,6 +896,13 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
     const verified = hash === request.hash
     this.log(`Hash verification: ${verified ? "OK" : "FAILED"}`)
+
+    // Track blob received
+    if (verified) {
+      const peerPubkey = this.peerId.split(":")[0]
+      incrementBlobReceived(blob.byteLength)
+      trackPeerBlobReceived(peerPubkey, blob.byteLength)
+    }
 
     let result: ArrayBuffer | null = null
 

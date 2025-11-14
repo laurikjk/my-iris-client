@@ -17,6 +17,7 @@ import {RateLimiter} from "./RateLimiter"
 import {getCachedName} from "@/utils/nostr"
 import {shouldHideUser} from "@/utils/visibility"
 import {incrementSent, incrementReceived, incrementSubscriptionsServed} from "./p2pStats"
+import {trackPeerEventSent, trackPeerEventReceived, trackPeerBlobSent, trackPeerBlobReceived} from "./peerBandwidthStats"
 
 // Event kinds that bypass follow check but are rate limited
 const PRIVATE_MESSAGE_KINDS = [1059, 1060] // INVITE_RESPONSE, MESSAGE_EVENT
@@ -128,8 +129,11 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       }
 
       try {
+        const messageStr = JSON.stringify(message)
+        const peerPubkey = peerId.split(":")[0]
         conn.sendJsonData(message)
-        incrementSent()
+        incrementSent(messageStr.length)
+        trackPeerEventSent(peerPubkey, messageStr.length)
         conn.seenEvents.set(eventJson.id, true)
 
         const contentPreview =
@@ -254,9 +258,12 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       }
 
       try {
+        const messageStr = JSON.stringify(message)
+        const peerPubkey = peerId.split(":")[0]
         conn.sendJsonData(message)
+        incrementSent(messageStr.length)
+        trackPeerEventSent(peerPubkey, messageStr.length)
         conn.seenEvents.set(eventJson.id, true)
-        incrementSent()
 
         const contentPreview =
           eventJson.content && eventJson.content.length > 50
@@ -309,13 +316,15 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       return null
     }
 
-    incrementReceived()
+    const eventSize = JSON.stringify(event.rawEvent()).length
+    const peerPubkey = peerId.split(":")[0]
+    incrementReceived(eventSize)
+    trackPeerEventReceived(peerPubkey, eventSize)
 
     const contentPreview =
       event.content && event.content.length > 50
         ? event.content.slice(0, 50) + "..."
         : event.content || ""
-    const peerPubkey = peerId.split(":")[0]
     const authorName = getCachedName(event.pubkey)
     const authorInfo =
       peerPubkey === event.pubkey
