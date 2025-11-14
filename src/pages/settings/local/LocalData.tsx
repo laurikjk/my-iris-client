@@ -7,13 +7,17 @@ import Dexie from "dexie"
 import {BlobList} from "./BlobList"
 import {cacheStats} from "@/utils/cacheStats"
 
+interface IDBDatabaseInfo {
+  name: string
+  size?: string
+}
+
 interface EventStats {
   totalEvents: number
   eventsByKind: Record<number, number>
   databaseSize?: string
   oldestEvent?: number
   newestEvent?: number
-  storageBackend?: "Dexie (IndexedDB)" | "SQLite WASM (OPFS)" | "Unknown"
   cacheHitRate?: string
 }
 
@@ -32,35 +36,23 @@ export function LocalData() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isClearing, setIsClearing] = useState(false)
+  const [idbDatabases, setIdbDatabases] = useState<IDBDatabaseInfo[]>([])
+  const [showAllDatabases, setShowAllDatabases] = useState(false)
 
   const loadStats = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      // Detect storage backend from localStorage flag
-      const backend = localStorage.getItem("ndk-cache-backend")
-      let storageBackend: "Dexie (IndexedDB)" | "SQLite WASM (OPFS)" | "Unknown" =
-        "Unknown"
-      let totalEvents = 0
-      let allEvents: NostrEvent[] = []
-
-      if (backend === "sqlite") {
-        storageBackend = "SQLite WASM (OPFS)"
-        // SQLite adapter does not expose direct table access, use count from cache stats
-        totalEvents = cacheStats.cacheHits + cacheStats.relayNew
-      } else if (backend === "dexie") {
-        storageBackend = "Dexie (IndexedDB)"
-        // Open the NDK Dexie database
-        const db = new Dexie("treelike-nostr")
-        db.version(1).stores({
-          events: "id, pubkey, kind, created_at",
-          tags: "[eventId+tag], eventId, tag, value",
-        })
-        const eventsTable = db.table<NostrEvent>("events")
-        allEvents = await eventsTable.toArray()
-        totalEvents = allEvents.length
-      }
+      // Open the NDK Dexie database
+      const db = new Dexie("treelike-nostr")
+      db.version(1).stores({
+        events: "id, pubkey, kind, created_at",
+        tags: "[eventId+tag], eventId, tag, value",
+      })
+      const eventsTable = db.table<NostrEvent>("events")
+      const allEvents = await eventsTable.toArray()
+      const totalEvents = allEvents.length
 
       // Count by kind
       const eventsByKind: Record<number, number> = {}
@@ -89,7 +81,7 @@ export function LocalData() {
           {} as Record<number, number>
         )
 
-      // Estimate database size
+      // Total storage estimate
       let dbSize: string | undefined
       if ("estimate" in navigator.storage) {
         const estimate = await navigator.storage.estimate()
@@ -109,7 +101,6 @@ export function LocalData() {
         databaseSize: dbSize,
         oldestEvent: oldestTimestamp !== Infinity ? oldestTimestamp : undefined,
         newestEvent: newestTimestamp !== -Infinity ? newestTimestamp : undefined,
-        storageBackend,
         cacheHitRate: hitRate,
       })
     } catch (err) {
@@ -181,22 +172,96 @@ export function LocalData() {
     return kindNames[kind] || `Kind ${kind}`
   }
 
+  const loadAllDatabases = async () => {
+    try {
+      if (!("databases" in indexedDB)) {
+        console.warn("indexedDB.databases() not supported")
+        return
+      }
+
+      const databases = await indexedDB.databases()
+      const dbInfos: IDBDatabaseInfo[] = []
+
+      // Get storage estimate with per-database breakdown
+      let usageDetails: any = null
+      if ("estimate" in navigator.storage) {
+        const estimate = await navigator.storage.estimate()
+        usageDetails = (estimate as any).usageDetails
+      }
+
+      for (const dbInfo of databases) {
+        if (!dbInfo.name) continue
+
+        let sizeStr: string | undefined
+
+        // Try to get actual size from usageDetails
+        if (usageDetails?.indexedDB) {
+          // Some browsers provide per-database breakdown
+          const dbSize = (usageDetails as any)[dbInfo.name]
+          if (dbSize) {
+            sizeStr = formatBytes(dbSize)
+          }
+        }
+
+        // Fallback: estimate by counting records
+        if (!sizeStr) {
+          try {
+            const db = new Dexie(dbInfo.name)
+            await db.open()
+            const tableNames = db.tables.map((t: any) => t.name)
+
+            let totalCount = 0
+            for (const tableName of tableNames) {
+              try {
+                const count = await db.table(tableName).count()
+                totalCount += count
+              } catch {
+                // Skip tables we can't access
+              }
+            }
+
+            db.close()
+
+            if (totalCount > 0) {
+              sizeStr = `~${totalCount} records`
+            }
+          } catch (e) {
+            // Can't open/read this database
+          }
+        }
+
+        dbInfos.push({
+          name: dbInfo.name,
+          size: sizeStr,
+        })
+      }
+
+      setIdbDatabases(dbInfos)
+    } catch (err) {
+      console.error("Error loading databases:", err)
+    }
+  }
+
   useEffect(() => {
     loadStats()
+    loadAllDatabases()
 
     // Refresh stats every 30 seconds
-    const interval = setInterval(loadStats, 30000)
+    const interval = setInterval(() => {
+      loadStats()
+      loadAllDatabases()
+    }, 30000)
 
     return () => clearInterval(interval)
   }, [])
 
-  const handleClearDatabase = async (e?: MouseEvent) => {
+  const handleClearAll = async (e?: MouseEvent) => {
     e?.preventDefault()
     e?.stopPropagation()
 
     const confirmed = await confirm(
-      "This will delete all locally cached Nostr events. They will be re-downloaded from relays as needed. This action cannot be undone.",
-      "Clear local Nostr data?"
+      "Delete all local Nostr data? Events will be re-downloaded as needed. Page will reload.",
+      "Clear all local data?"
     )
 
     if (!confirmed) return
@@ -204,16 +269,36 @@ export function LocalData() {
     setIsClearing(true)
 
     try {
+      // Clear Dexie
       const db = new Dexie("treelike-nostr")
       await db.delete()
-      console.log("Cleared Nostr database")
+      console.log("Cleared Dexie database")
 
-      // Reload stats after clearing
-      await loadStats()
+      // Clear any leftover OPFS files (from previous SQLite usage)
+      if (navigator.storage?.getDirectory) {
+        try {
+          const root = await navigator.storage.getDirectory()
+          const dbName = "treelike-nostr-sqlite"
+          const sqliteFiles = [dbName, `${dbName}-journal`, `${dbName}-wal`, `${dbName}-shm`]
+
+          for (const fileName of sqliteFiles) {
+            try {
+              await root.removeEntry(fileName)
+              console.log(`Removed OPFS file: ${fileName}`)
+            } catch (e) {
+              // File might not exist
+            }
+          }
+        } catch (opfsErr) {
+          console.warn("Could not clear OPFS:", opfsErr)
+        }
+      }
+
+      // Reload to ensure clean state
+      window.location.reload()
     } catch (err) {
-      console.error("Error clearing database:", err)
-      setError(err instanceof Error ? err.message : "Failed to clear database")
-    } finally {
+      console.error("Error clearing all data:", err)
+      setError(err instanceof Error ? err.message : "Failed to clear all data")
       setIsClearing(false)
     }
   }
@@ -247,15 +332,6 @@ export function LocalData() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <SettingsGroup title="Overview">
-        {stats.storageBackend && (
-          <SettingsGroupItem>
-            <div className="flex justify-between items-center">
-              <span>Storage backend</span>
-              <span className="text-base-content/70 text-sm">{stats.storageBackend}</span>
-            </div>
-          </SettingsGroupItem>
-        )}
-
         <SettingsGroupItem>
           <div className="flex justify-between items-center">
             <span>Total events</span>
@@ -328,17 +404,43 @@ export function LocalData() {
 
       <BlobList />
 
+      {idbDatabases.length > 0 && (
+        <SettingsGroup title="All IndexedDB Databases">
+          <SettingsGroupItem>
+            <button
+              className="w-full text-left text-sm text-base-content/70"
+              onClick={() => setShowAllDatabases(!showAllDatabases)}
+            >
+              {showAllDatabases ? "▼" : "▶"} {idbDatabases.length} database
+              {idbDatabases.length !== 1 ? "s" : ""} found
+            </button>
+          </SettingsGroupItem>
+
+          {showAllDatabases &&
+            idbDatabases.map((db, index) => (
+              <SettingsGroupItem key={db.name} isLast={index === idbDatabases.length - 1}>
+                <div className="flex justify-between items-center">
+                  <span className="font-mono text-sm">{db.name}</span>
+                  {db.size && (
+                    <span className="text-base-content/70 text-sm">{db.size}</span>
+                  )}
+                </div>
+              </SettingsGroupItem>
+            ))}
+        </SettingsGroup>
+      )}
+
       <SettingsGroup title="Danger Zone">
         <SettingsGroupItem>
           <div className="text-sm text-base-content/70">
-            Clear all locally stored Nostr events. They will be re-downloaded from relays
-            as needed.
+            Clear ALL local Nostr data (IndexedDB + OPFS). Events will be re-downloaded from
+            relays as needed. This action cannot be undone.
           </div>
         </SettingsGroupItem>
 
         <SettingsButton
-          label={isClearing ? "Clearing..." : "Clear local events"}
-          onClick={handleClearDatabase}
+          label={isClearing ? "Clearing..." : "Clear all local data"}
+          onClick={handleClearAll}
           variant="destructive"
           isLast
           disabled={isClearing || loading}

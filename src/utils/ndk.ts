@@ -6,7 +6,7 @@ import NDK, {
   NDKRelayAuthPolicies,
   NDKUser,
 } from "@/lib/ndk"
-import {createNDKCacheAdapter} from "@/utils/createCacheAdapter"
+import NDKCacheAdapterDexie from "@/lib/ndk-cache"
 import {useUserStore} from "@/stores/user"
 import {useSettingsStore} from "@/stores/settings"
 import {DEFAULT_RELAYS} from "@/shared/constants/relays"
@@ -127,8 +127,10 @@ async function initNDK(opts?: NDKConstructorParams) {
     return true
   }
 
-  // Create cache adapter (async)
-  const cacheAdapter = await createNDKCacheAdapter({
+  // Create Dexie cache adapter
+  console.log("📦 NDK Cache: Using Dexie (IndexedDB)")
+  localStorage.setItem("ndk-cache-backend", "dexie")
+  const cacheAdapter = new NDKCacheAdapterDexie({
     dbName: "treelike-nostr",
     saveSig: true,
     cachePriority: (event) => {
