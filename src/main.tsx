@@ -77,6 +77,11 @@ const initializeApp = async () => {
   // Wait for settings to hydrate from localStorage before initializing NDK
   await useUserStore.getState().awaitHydration()
 
+  // Wait for social graph to load before rendering app
+  const {socialGraphLoaded} = await import("@/utils/socialGraph")
+  await socialGraphLoaded
+  console.log("✅ Social graph loaded")
+
   // Initialize NDK (now async due to cache adapter)
   const {initNDKAsync} = await import("@/utils/ndk")
   await initNDKAsync()
@@ -110,7 +115,10 @@ const initializeApp = async () => {
     subscribeToNotifications()
     subscribeToDMNotifications()
     migratePublicChats()
-    socialGraph().recalculateFollowDistances()
+    // Delay social graph to avoid race with NDK init
+    setTimeout(() => {
+      socialGraph().recalculateFollowDistances()
+    }, 100)
 
     // Initialize platform-specific notifications (non-blocking, parallel to web push)
     console.log("[Init] isTauri():", isTauri())

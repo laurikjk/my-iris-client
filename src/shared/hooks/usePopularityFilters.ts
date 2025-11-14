@@ -1,5 +1,8 @@
 import {useState, useCallback, useMemo} from "react"
-import socialGraph, {DEFAULT_SOCIAL_GRAPH_ROOT} from "@/utils/socialGraph"
+import socialGraph, {
+  DEFAULT_SOCIAL_GRAPH_ROOT,
+  useSocialGraphLoaded,
+} from "@/utils/socialGraph"
 import useFollows from "@/shared/hooks/useFollows"
 import {useUserStore} from "@/stores/user"
 import {
@@ -27,10 +30,13 @@ export default function usePopularityFilters(filterSeen?: boolean) {
   const myPubKey = useUserStore((state) => state.publicKey)
   const myFollows = useFollows(myPubKey, false)
   const shouldUseFallback = myFollows.length === 0
+  const isSocialGraphLoaded = useSocialGraphLoaded()
 
   const authors = useMemo(() => {
     if (shouldUseFallback) {
-      return Array.from(socialGraph().getFollowedByUser(DEFAULT_SOCIAL_GRAPH_ROOT))
+      // Use root user's follows immediately (pre-crawled graph loads sync from binary)
+      const root = socialGraph().getRoot()
+      return Array.from(socialGraph().getFollowedByUser(root))
     }
     return myFollows
   }, [shouldUseFallback, myFollows])
@@ -39,6 +45,7 @@ export default function usePopularityFilters(filterSeen?: boolean) {
     const filters = {
       since: oldestTimestamp,
       limit: LIMIT,
+      // Don't set authors to empty array - use undefined to match all
       authors: authors.length > 0 ? authors : undefined,
     }
     return filters

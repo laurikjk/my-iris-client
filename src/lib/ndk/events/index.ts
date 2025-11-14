@@ -576,19 +576,26 @@ export class NDKEvent extends EventEmitter {
     // send to active subscriptions that want this event (pass NDKEvent, not raw)
     this.ndk.subManager.dispatchEvent(this, undefined, true)
 
-    const relays = await relaySet.publish(this, timeoutMs, requiredRelayCount)
-    relays.forEach((relay) => this.ndk?.subManager.seenEvent(this.id, relay))
-
-    // Notify transport plugins after successful publish
+    // Notify transport plugins - let them handle publishing if registered
+    let pluginHandled = false
     for (const plugin of this.ndk.transportPlugins) {
       if (plugin.onPublish) {
         try {
           await plugin.onPublish(this)
+          pluginHandled = true
         } catch (error) {
           console.error("[NDK] Transport plugin onPublish error:", error)
         }
       }
     }
+
+    // If plugin handled publish, skip relay pool (worker transport case)
+    if (pluginHandled && this.ndk.pool.relays.size === 0) {
+      return new Set() // No relays in main thread, worker handled it
+    }
+
+    const relays = await relaySet.publish(this, timeoutMs, requiredRelayCount)
+    relays.forEach((relay) => this.ndk?.subManager.seenEvent(this.id, relay))
 
     return relays
   }

@@ -54,9 +54,10 @@ export class NDKRelayConnectivity {
   private lastMessageSent = Date.now()
   private wasIdle = false
 
-  // Message queue for async processing
-  private incomingMessageQueue = new Queue<string>()
-  private queueRunning = false
+  // Message queues for async processing (actor pattern: inbox/outbox)
+  private inbox!: Queue<string> // Initialized in constructor after handleMessage is bound
+  private outbox!: Queue<string>
+  private outboxProcessing = false
 
   constructor(ndkRelay: NDKRelay, ndk?: NDK) {
     this.ndkRelay = ndkRelay
@@ -64,6 +65,16 @@ export class NDKRelayConnectivity {
     const rand = Math.floor(Math.random() * 1000)
     this.debug = this.ndkRelay.debug.extend(`connectivity${rand}`)
     this.ndk = ndk
+
+    // Initialize queues with processors
+    this.inbox = new Queue<string>(100, (msg) => this.handleMessage(msg))
+    this.outbox = new Queue<string>(100, (msg) => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(msg)
+        this.netDebug?.(msg, this.ndkRelay, "send")
+      }
+    })
+
     this.setupMonitoring()
   }
 
@@ -447,41 +458,28 @@ export class NDKRelayConnectivity {
     // Record any activity from relay
     this.keepalive?.recordActivity()
 
-    // Enqueue message for async processing
-    this.incomingMessageQueue.enqueue(event.data as string)
+    // Enqueue message - queue auto-processes with yielding
+    this.inbox.enqueue(event.data as string)
+  }
 
-    // Start queue processor if not already running
-    if (!this.queueRunning) {
-      this.runQueue()
+  /**
+   * Process outbox queue - send all queued messages
+   */
+  private processOutbox(): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
+
+    let message = this.outbox.dequeue()
+    while (message) {
+      this.ws.send(message)
+      this.netDebug?.(message, this.ndkRelay, "send")
+      message = this.outbox.dequeue()
     }
   }
 
   /**
-   * Async queue processor that yields to event loop between messages.
+   * Handle individual message from inbox (called by Queue processor)
    */
-  private async runQueue(): Promise<void> {
-    this.queueRunning = true
-
-    while (true) {
-      if (!this.handleNext()) {
-        break
-      }
-      await yieldThread()
-    }
-
-    this.queueRunning = false
-  }
-
-  /**
-   * Process next message from queue.
-   * @returns false if queue is empty, true otherwise
-   */
-  private handleNext(): boolean {
-    const msg = this.incomingMessageQueue.dequeue()
-    if (!msg) {
-      return false
-    }
-
+  private handleMessage(msg: string): void {
     // Early exit for duplicate events before JSON.parse
     const eventId = this.getEventIdFromMessage(msg)
     if (eventId && this.ndk) {
@@ -489,7 +487,7 @@ export class NDKRelayConnectivity {
       if (seenData && seenData.relays.length > 0) {
         // Already processed from any relay, just track this relay saw it
         this.ndk.subManager.seenEvent(eventId, this.ndkRelay)
-        return true
+        return
       }
     }
 
@@ -501,7 +499,7 @@ export class NDKRelayConnectivity {
       const handler = this.ndkRelay.getProtocolHandler(cmd)
       if (handler) {
         handler(this.ndkRelay, data)
-        return true
+        return
       }
 
       switch (cmd) {
@@ -510,15 +508,15 @@ export class NDKRelayConnectivity {
           const rawEvent = data[2] as NostrEvent
           if (!so) {
             this.debug(`Received event for unknown subscription ${id}`)
-            return true
+            return
           }
 
           const ndkEvent = this.processEvent(rawEvent)
-          if (!ndkEvent) return true // Failed validation/verification
+          if (!ndkEvent) return // Failed validation/verification
 
           // Pass processed NDKEvent to subscription
           so.onevent(ndkEvent)
-          return true
+          return
         }
         case "COUNT": {
           const payload = data[2] as {count: number}
@@ -527,13 +525,13 @@ export class NDKRelayConnectivity {
             cr.resolve(payload.count)
             this.openCountRequests.delete(id)
           }
-          return true
+          return
         }
         case "EOSE": {
           const so = this.openSubs.get(id)
-          if (!so) return true
+          if (!so) return
           so.oneose(id)
-          return true
+          return
         }
         case "OK": {
           const ok: boolean = data[2]
@@ -543,13 +541,14 @@ export class NDKRelayConnectivity {
 
           if (!ep || !firstEp) {
             this.debug("Received OK for unknown event publish", id)
-            return true
+            return
           }
 
           if (ok) {
             firstEp.resolve(reason)
             // Clean up the pending auth publish since it succeeded
             this.pendingAuthPublishes.delete(id)
+            // Continue processing remaining resolvers
           } else {
             // Check if this is an auth-required error
             // Different relays use different error messages for auth requirements
@@ -595,25 +594,22 @@ export class NDKRelayConnectivity {
             // Only clear the publish map if it's not auth-required
             this.openEventPublishes.set(id, ep)
           }
-          return true
+          return
         }
         case "CLOSED": {
           const so = this.openSubs.get(id)
-          if (!so) return true
+          if (!so) return
           so.onclosed(data[2] as string)
-          return true
+          return
         }
         case "NOTICE":
           this.onNotice(data[1] as string)
-          return true
+          return
         case "AUTH": {
           this.onAuthRequested(data[1] as string)
-          return true
+          return
         }
       }
-
-      // Unknown message type
-      return true
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
@@ -621,7 +617,6 @@ export class NDKRelayConnectivity {
         `Error parsing message from ${this.ndkRelay.url}: ${error.message}`,
         error?.stack
       )
-      return true
     }
   }
 
@@ -854,14 +849,20 @@ export class NDKRelayConnectivity {
       this._status >= NDKRelayStatus.CONNECTED &&
       this.ws?.readyState === WebSocket.OPEN
     ) {
+      // Process outbox if messages queued
+      this.processOutbox()
+
+      // Send immediately
       this.ws?.send(message)
       this.netDebug?.(message, this.ndkRelay, "send")
       this.lastMessageSent = Date.now()
     } else {
+      // Queue message for when relay connects
       this.debug(
-        `Not connected to ${this.ndkRelay.url} (%d), not sending message ${message}`,
+        `Not connected to ${this.ndkRelay.url} (%d), queueing message`,
         this._status
       )
+      this.outbox.enqueue(message)
 
       // If we think we're connected but WebSocket is not open, we have a stale connection
       if (

@@ -48,7 +48,9 @@ export default function useCombinedPostFetcher({
       const popularCount = Math.floor(batchSize * popularRatio)
       const chronologicalCount = batchSize - popularCount
 
-      const popularIds = hasPopularData ? getNextPopular(popularCount) : []
+      // Always try to get popular posts - let the function return empty if there's no data
+      const popularIds = getNextPopular(popularCount)
+      // Only get chronological if we're configured for it
       const chronologicalIds = hasChronologicalData
         ? getNextChronological(chronologicalCount)
         : []
@@ -100,12 +102,10 @@ export default function useCombinedPostFetcher({
     setLoading(true)
     const newEvents = await loadBatch(10)
 
-    newEvents.forEach((event) => addSeenEventId(event.id))
-
-    setEvents(newEvents)
-    hasLoadedInitial.current = true
-    // Only set loading to false if we actually got events or tried multiple times
+    // If we got events, use them
     if (newEvents.length > 0) {
+      newEvents.forEach((event) => addSeenEventId(event.id))
+      setEvents(newEvents)
       setLoading(false)
     } else {
       // Try one more batch before giving up
@@ -114,6 +114,7 @@ export default function useCombinedPostFetcher({
       setEvents(secondBatch)
       setLoading(false)
     }
+    hasLoadedInitial.current = true
   }, [loadBatch])
 
   const loadMore = useCallback(async () => {

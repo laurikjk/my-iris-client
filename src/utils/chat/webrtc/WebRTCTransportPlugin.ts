@@ -64,7 +64,7 @@ function sendGroupedFilters(groupKey: NDKFilterFingerprint) {
   // Merge filters using NDK's logic
   const merged = mergeFilters(group.filters)
 
-  const subId = crypto.randomUUID()
+  const subId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
   const connections = getAllConnections()
   const message = ["REQ", subId, ...merged]
 
@@ -172,7 +172,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
     const fingerprint = filterFingerprint(filters, false)
     if (!fingerprint) {
       // Non-groupable filters, send immediately
-      const subId = crypto.randomUUID()
+      const subId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
       const connections = getAllConnections()
       const message = ["REQ", subId, ...filters]
 

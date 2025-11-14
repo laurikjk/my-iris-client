@@ -5,7 +5,7 @@ import type {SignalingMessage} from "./types"
 import {KIND_APP_DATA} from "@/utils/constants"
 
 function uuidv4() {
-  return crypto.randomUUID()
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
 }
 
 const WEBRTC_TAG = "webrtc"

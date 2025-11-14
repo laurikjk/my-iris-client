@@ -228,6 +228,10 @@ export const useSettingsStore = create<SettingsState>()(
           if (state.network.p2pOnlyMode === undefined) {
             state.network.p2pOnlyMode = false
           }
+          // Clean up deprecated useWorkerTransport setting
+          if ((state.network as any).useWorkerTransport !== undefined) {
+            delete (state.network as any).useWorkerTransport
+          }
           if (state.network.webrtcCallsEnabled === undefined) {
             state.network.webrtcCallsEnabled = true
           }

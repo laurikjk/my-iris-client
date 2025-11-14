@@ -1,8 +1,13 @@
 import {useState, useEffect} from "react"
-import {ndk as getNdk} from "@/utils/ndk"
+import {ndk as getNdk, getWorkerTransport} from "@/utils/ndk"
 import {Link} from "@/navigation"
 import {RiAddLine, RiCloseLine, RiDeleteBinLine} from "@remixicon/react"
 import {useUserStore, RelayConfig} from "@/stores/user"
+import {useSettingsStore} from "@/stores/settings"
+import {
+  useWorkerRelayStatus,
+  useWorkerRelayManager,
+} from "@/shared/hooks/useWorkerRelayStatus"
 
 interface RelayListProps {
   compact?: boolean
@@ -28,26 +33,20 @@ export function RelayList({
   const [showDiscoveredRelays, setShowDiscoveredRelays] = useState(false)
   const [showSavedRelays, setShowSavedRelays] = useState(true)
   const {relayConfigs, toggleRelayConnection, addRelay, removeRelay} = useUserStore()
-  const [ndkRelays, setNdkRelays] = useState(new Map())
+  const workerRelays = useWorkerRelayStatus()
+  const workerManager = useWorkerRelayManager()
 
   const normalizeRelayUrl = (url: string) => {
     // Normalize URL for comparison: remove trailing slash and ensure lowercase
     return url.replace(/\/$/, "").toLowerCase()
   }
 
-  useEffect(() => {
-    const updateStats = () => {
-      const ndk = getNdk()
-      setNdkRelays(new Map(ndk.pool.relays))
-    }
+  // Get relay map from worker
+  const ndkRelayMap = new Map(
+    workerRelays.relays.map((r) => [r.url, {connected: r.status >= 5, url: r.url}]),
+  )
 
-    updateStats()
-    const interval = setInterval(updateStats, 2000)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Get discovered relays (in NDK pool but not in saved configs)
-  const discoveredRelays = Array.from(ndkRelays.entries()).filter(([url]) => {
+  const discoveredRelays = Array.from(ndkRelayMap.entries()).filter(([url]) => {
     const normalizedNdkUrl = normalizeRelayUrl(url)
     const isInConfigs = relayConfigs?.some(
       (c) => normalizeRelayUrl(c.url) === normalizedNdkUrl
@@ -85,12 +84,12 @@ export function RelayList({
   }
 
   const getRelay = (config: RelayConfig) => {
-    let relay = ndkRelays.get(config.url)
+    let relay = ndkRelayMap.get(config.url)
     if (!relay && !config.url.endsWith("/")) {
-      relay = ndkRelays.get(config.url + "/")
+      relay = ndkRelayMap.get(config.url + "/")
     }
     if (!relay && config.url.endsWith("/")) {
-      relay = ndkRelays.get(config.url.slice(0, -1))
+      relay = ndkRelayMap.get(config.url.slice(0, -1))
     }
     return relay
   }

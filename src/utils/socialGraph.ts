@@ -6,7 +6,7 @@ import {VerifiedEvent} from "nostr-tools"
 import debounce from "lodash/debounce"
 import throttle from "lodash/throttle"
 import localForage from "localforage"
-import {ndk} from "@/utils/ndk"
+// Removed static import to avoid race condition - use dynamic import in setupSubscription
 import {useEffect, useState} from "react"
 import {KIND_CONTACTS, KIND_MUTE_LIST} from "@/utils/constants"
 import {EventEmitter} from "tseep"
@@ -127,10 +127,12 @@ function getFollowListsInternal(
 
   console.log("fetching", toFetch.size, missingOnly ? "missing" : "total", "follow lists")
 
-  const fetchBatch = (authors: string[]) => {
+  const fetchBatch = async (authors: string[]) => {
     if (isManual && !isManualRecrawling) return
 
-    const sub = ndk().subscribe(
+    const {ndk: getNdk, initNDKAsync} = await import("@/utils/ndk")
+    await initNDKAsync() // Ensure NDK is initialized
+    const sub = getNdk().subscribe(
       {
         kinds: [KIND_CONTACTS, KIND_MUTE_LIST],
         authors: authors,
@@ -138,7 +140,7 @@ function getFollowListsInternal(
       {closeOnEose: true}
     )
 
-    sub.on("event", (e) => {
+    sub.on("event", (e: any) => {
       handleSocialGraphEvent(e as unknown as VerifiedEvent)
       debouncedRemoveNonFollowed()
     })
@@ -219,7 +221,11 @@ async function setupSubscription(publicKey: string) {
   instance.setRoot(publicKey)
   await instance.recalculateFollowDistances()
   sub?.stop()
-  sub = ndk().subscribe({
+
+  // Import ndk lazily to avoid initialization race
+  const {ndk: getNdk, initNDKAsync} = await import("@/utils/ndk")
+  await initNDKAsync() // Ensure NDK is initialized
+  sub = getNdk().subscribe({
     kinds: [KIND_CONTACTS, KIND_MUTE_LIST],
     authors: [publicKey],
     limit: 1,

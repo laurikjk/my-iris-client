@@ -37,7 +37,9 @@ interface FeedConfig {
 export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig = {}) {
   const {showReplies = false, filterSeen = false, popularRatio = 0.5, excludeOwnPosts = false} = config
 
+  console.log("[useAlgorithmicFeed] Called with config:", config)
   const {currentFilters, expandFilters} = usePopularityFilters(filterSeen)
+  console.log("[useAlgorithmicFeed] currentFilters:", currentFilters)
 
   const {getNextMostPopular, hasInitialData: hasPopularData} = useReactionSubscription(
     currentFilters,

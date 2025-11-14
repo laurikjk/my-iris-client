@@ -7,6 +7,7 @@ import NDK, {
   NDKUser,
 } from "@/lib/ndk"
 import NDKCacheAdapterDexie from "@/lib/ndk-cache"
+import {NDKWorkerTransport} from "@/lib/ndk-transport-worker"
 import {useUserStore} from "@/stores/user"
 import {useSettingsStore} from "@/stores/settings"
 import {DEFAULT_RELAYS} from "@/shared/constants/relays"
@@ -21,6 +22,10 @@ let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
 let nip07Signer: NDKNip07Signer | undefined
 let initPromise: Promise<void> | null = null
+let workerTransport: NDKWorkerTransport | undefined
+
+// Always use worker transport
+const USE_WORKER_TRANSPORT = true
 
 function normalizeRelayUrl(url: string): string {
   // Ensure URL ends with / to match NDK's internal normalization
@@ -28,6 +33,13 @@ function normalizeRelayUrl(url: string): string {
 }
 
 export {DEFAULT_RELAYS}
+
+/**
+ * Get worker transport instance (only available when worker transport enabled)
+ */
+export function getWorkerTransport(): NDKWorkerTransport | undefined {
+  return workerTransport
+}
 
 /**
  * Get a singleton "default" NDK instance to get started quickly. If you want to init NDK with e.g. your own relays, pass them on the first call.
@@ -127,46 +139,28 @@ async function initNDK(opts?: NDKConstructorParams) {
     return true
   }
 
-  // Create Dexie cache adapter
-  console.log("📦 NDK Cache: Using Dexie (IndexedDB)")
-  localStorage.setItem("ndk-cache-backend", "dexie")
-  const cacheAdapter = new NDKCacheAdapterDexie({
-    dbName: "treelike-nostr",
-    saveSig: true,
-    cachePriority: (event) => {
-      // Don't cache muted events
-      if (shouldHideEvent(event)) {
-        return 0
-      }
-
-      const myPubKey = store.publicKey
-      if (!myPubKey) return 0
-
-      // Own events = priority 1.0
-      if (event.pubkey === myPubKey) {
-        return 1.0
-      }
-
-      // Priority based on follow distance: 1 / (distance + 1)
-      const distance = socialGraph().getFollowDistance(event.pubkey)
-      if (distance === Infinity) {
-        return 0 // Unknown author
-      }
-
-      return 1 / (distance + 1)
-    },
-  })
+  // Initialize worker transport
+  console.log("🔧 Using Worker Transport - relay connections + cache in worker thread")
+  // In dev, Vite serves workers from /src path, in prod from /dist
+  const workerPath =
+    import.meta.env.DEV ? "/src/workers/relay-worker.ts" : "/relay-worker.js"
+  workerTransport = new NDKWorkerTransport(workerPath)
 
   const options = opts || {
-    explicitRelayUrls: relays,
-    enableOutboxModel: enableOutbox,
-    autoConnectUserRelays,
-    relayConnectionFilter,
-    cacheAdapter: cacheAdapter as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    explicitRelayUrls: [], // Worker handles relays
+    enableOutboxModel: false, // Worker handles outbox
+    autoConnectUserRelays: false,
+    relayConnectionFilter: undefined,
+    cacheAdapter: undefined, // Worker handles cache
   }
 
   // Replace placeholder or create new instance
   const newInstance = new NDK(options)
+
+  // Connect worker transport
+  if (USE_WORKER_TRANSPORT && workerTransport) {
+    await workerTransport.connect(newInstance, relays)
+  }
 
   // If placeholder exists, copy its properties to the new instance
   if (ndkInstance) {
@@ -199,10 +193,19 @@ async function initNDK(opts?: NDKConstructorParams) {
 
   watchLocalSettings(ndkInstance)
   ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
-  setupVisibilityReconnection(ndkInstance)
-  attachRelayLogger(ndkInstance)
+
+  // Only setup relay monitoring if not using worker transport
+  if (!USE_WORKER_TRANSPORT) {
+    setupVisibilityReconnection(ndkInstance)
+    attachRelayLogger(ndkInstance)
+  }
+
   setupWebRTCTransport(ndkInstance)
-  ndkInstance.connect()
+
+  // Only call connect if not using worker (worker handles connection)
+  if (!USE_WORKER_TRANSPORT) {
+    ndkInstance.connect()
+  }
 
   console.log("NDK instance initialized", ndkInstance)
 }

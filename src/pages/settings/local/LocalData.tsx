@@ -296,7 +296,7 @@ export function LocalData() {
           const root = await navigator.storage.getDirectory()
 
           // Remove all entries in OPFS root
-          for await (const [name] of root.entries()) {
+          for await (const [name] of (root as any).entries()) {
             try {
               await root.removeEntry(name, {recursive: true})
               console.log(`Removed OPFS entry: ${name}`)

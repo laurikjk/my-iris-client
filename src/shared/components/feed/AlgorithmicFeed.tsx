@@ -46,6 +46,7 @@ const AlgorithmicFeed = function AlgorithmicFeed({
   forceShowZapAll = false,
   showZapAll = false,
 }: AlgorithmicFeedProps) {
+  console.log("[AlgorithmicFeed] Rendering, type:", type)
   const scrollContainer = useScrollContainer()
 
   const {small, showDisplaySelector} = {

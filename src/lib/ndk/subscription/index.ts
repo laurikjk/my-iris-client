@@ -811,21 +811,24 @@ export class NDKSubscription extends EventEmitter<{
 
       // Save to cache if needed (only for events from relays, not cache/optimistic)
       if (!fromCache && !optimisticPublish && this.ndk.cacheAdapter && !this.opts.dontSaveToCache) {
-        this.ndk.cacheAdapter.setEvent(ndkEvent, this.filters, relay)
+        try {
+          this.ndk.cacheAdapter.setEvent(ndkEvent, this.filters, relay)
+        } catch (error) {
+          // Cache might not be available (worker transport mode)
+          console.warn("[NDK Subscription] Failed to cache event:", error)
+        }
       }
 
-      // emit it
-      if (!optimisticPublish || this.skipOptimisticPublishEvent !== true) {
-        this.emitEvent(
-          this.opts?.wrap ?? false,
-          ndkEvent,
-          relay,
-          fromCache,
-          optimisticPublish
-        )
-        // mark the eventId as seen
-        this.eventFirstSeen.set(eventId, Date.now())
-      }
+      // emit it (always emit, including optimistic publishes)
+      this.emitEvent(
+        this.opts?.wrap ?? false,
+        ndkEvent,
+        relay,
+        fromCache,
+        optimisticPublish,
+      )
+      // mark the eventId as seen
+      this.eventFirstSeen.set(eventId, Date.now())
     } else {
       const timeSinceFirstSeen = Date.now() - (this.eventFirstSeen.get(eventId) || 0)
       this.emit(
@@ -920,9 +923,13 @@ export class NDKSubscription extends EventEmitter<{
   private eoseTimeout: ReturnType<typeof setTimeout> | undefined
   private eosed = false
 
-  public eoseReceived(relay: NDKRelay): void {
-    this.debug("EOSE received from %s", relay.url)
-    this.eosesSeen.add(relay)
+  public eoseReceived(relay: NDKRelay | null): void {
+    if (relay) {
+      this.debug("EOSE received from %s", relay.url)
+      this.eosesSeen.add(relay)
+    } else {
+      this.debug("EOSE received from worker transport")
+    }
 
     let lastEventSeen = this.lastEventReceivedAt
       ? Date.now() - this.lastEventReceivedAt
