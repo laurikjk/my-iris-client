@@ -1,3 +1,5 @@
+export const MOBILE_BREAKPOINT = 768
+
 export const isTauri = () =>
   typeof window !== "undefined" && !!(window.__TAURI__ || window.__TAURI_INTERNALS__)
 
@@ -10,6 +12,14 @@ export const isMobileTauri = async (): Promise<boolean> => {
   } catch {
     return false
   }
+}
+
+export const isMobileUA = (): boolean => {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+}
+
+export const isAboveMobileBreakpoint = (): boolean => {
+  return typeof window !== "undefined" && window.innerWidth >= MOBILE_BREAKPOINT
 }
 
 export const openExternalLink = async (url: string) => {

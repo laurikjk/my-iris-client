@@ -1,6 +1,5 @@
 import {useEffect, useRef, useState, FormEvent, useMemo, memo} from "react"
 import {useParams, useNavigate} from "@/navigation"
-import {useUIStore} from "@/stores/ui"
 import {useSearchStore} from "@/stores/search"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import Feed from "@/shared/components/feed/Feed"
@@ -8,6 +7,7 @@ import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import {KIND_TEXT_NOTE} from "@/utils/constants"
 import SearchInput from "@/shared/components/ui/SearchInput"
 import {handleNostrIdentifier} from "@/utils/handleNostrIdentifier"
+import {useSearchInputAutofocus} from "@/shared/hooks/useSearchInputAutofocus"
 
 interface SearchFiltersProps {
   showTabSelector?: boolean
@@ -20,7 +20,8 @@ const SearchFilters = memo(function SearchFilters({
   const decodedQuery = query ? decodeURIComponent(query) : ""
   const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const navItemClicked = useUIStore((state) => state.navItemClicked)
+
+  useSearchInputAutofocus(searchInputRef, '/search')
 
   // Use store for persistent state
   const searchQuery = useSearchStore((state) => state.searchQuery)
@@ -53,12 +54,6 @@ const SearchFilters = memo(function SearchFilters({
       setSearchTerm("")
     }
   }, [decodedQuery, searchQuery, setSearchQuery])
-
-  // Focus search input when search nav item is clicked
-  useEffect(() => {
-    if (navItemClicked.path !== "/search") return
-    searchInputRef.current?.focus()
-  }, [navItemClicked])
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()

@@ -11,6 +11,7 @@ import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import {SocialGraphWidget} from "@/shared/components/SocialGraphWidget"
 import classNames from "classnames"
 import {handleNostrIdentifier} from "@/utils/handleNostrIdentifier"
+import {useSearchInputAutofocus} from "@/shared/hooks/useSearchInputAutofocus"
 
 export default function UserSearchContent() {
   const {query} = useParams()
@@ -19,6 +20,8 @@ export default function UserSearchContent() {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [displayCount, setDisplayCount] = useState(20)
   const [searchValue, setSearchValue] = useState(decodedQuery)
+
+  useSearchInputAutofocus(searchInputRef, '/u')
 
   const peopleSearch = useSearch({
     maxResults: 10,

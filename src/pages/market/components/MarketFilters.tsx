@@ -9,6 +9,7 @@ import Feed from "@/shared/components/feed/Feed"
 import {RiMapPinLine} from "@remixicon/react"
 import {CategoryLabel} from "@/shared/components/market/CategoryLabel"
 import {buildMarketFeedConfig} from "@/pages/market/utils"
+import {useSearchInputAutofocus} from "@/shared/hooks/useSearchInputAutofocus"
 
 interface MarketFiltersProps {
   mapHeight?: string
@@ -26,6 +27,8 @@ export default function MarketFilters({
   const {category} = useParams()
   const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
+
+  useSearchInputAutofocus(searchInputRef, '/m')
   // Get search query and additional tags from URL
   const urlParams = new URLSearchParams(window.location.search)
   const searchFromUrl = urlParams.get("q")
