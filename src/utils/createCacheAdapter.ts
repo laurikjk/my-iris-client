@@ -1,6 +1,5 @@
 import type {NDKCacheAdapter} from "@/lib/ndk"
-import type {NDKCacheAdapterDexieOptions} from "@/lib/ndk-cache"
-import NDKCacheAdapterDexie from "@/lib/ndk-cache"
+import NDKCacheAdapterDexie, {type NDKCacheAdapterDexieOptions} from "@/lib/ndk-cache"
 
 /**
  * Detect OPFS support (Origin Private File System)

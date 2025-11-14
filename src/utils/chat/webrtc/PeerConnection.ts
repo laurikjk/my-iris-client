@@ -10,8 +10,11 @@ import type {SignalingMessage} from "./types"
 import {handleIncomingEvent} from "./p2pNostr"
 import {useSettingsStore} from "@/stores/settings"
 import {incrementBlobSent, incrementBlobReceived} from "./p2pStats"
-import {updatePeerLastSeen} from "./peerBandwidthStats"
-import {trackPeerBlobSent, trackPeerBlobReceived} from "./peerBandwidthStats"
+import {
+  updatePeerLastSeen,
+  trackPeerBlobSent,
+  trackPeerBlobReceived,
+} from "./peerBandwidthStats"
 
 const connections = new Map<string, PeerConnection>()
 
@@ -719,6 +722,9 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       return
     }
 
+    // Track peer request stat
+    storage.incrementPeerRequests(hash as string)
+
     // Track this send
     this.pendingBlobSends.set(requestId, {hash: hash as string, entry})
 
@@ -943,6 +949,11 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     }
 
     const requestId = this.nextBlobRequestId++
+
+    // Track local request stat
+    const {getBlobStorage} = await import("./blobManager")
+    const storage = getBlobStorage()
+    storage.incrementLocalRequests(hash)
 
     // Create promise that will be resolved by completeBlobTransfer
     return new Promise((resolve) => {

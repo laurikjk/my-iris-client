@@ -35,7 +35,10 @@ export const cacheStats = {
     if (total === 0) return
 
     const cacheEffectiveness = ((this.cacheHits / total) * 100).toFixed(1)
-    const bandwidthSaved = ((this.relayDuplicates / (this.relayDuplicates + this.relayNew)) * 100).toFixed(1)
+    const bandwidthSaved = (
+      (this.relayDuplicates / (this.relayDuplicates + this.relayNew)) *
+      100
+    ).toFixed(1)
 
     console.log(
       `📊 Cache Performance:\n` +

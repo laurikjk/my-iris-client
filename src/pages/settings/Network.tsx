@@ -359,11 +359,12 @@ export function Network() {
                 </div>
                 <div className="flex gap-4 text-sm flex-wrap">
                   <span>
-                    Events sent: <span className="font-mono">{p2pStats.eventsSent}</span> (
-                    {(p2pStats.eventBytesSent / 1024).toFixed(1)} KB)
+                    Events sent: <span className="font-mono">{p2pStats.eventsSent}</span>{" "}
+                    ({(p2pStats.eventBytesSent / 1024).toFixed(1)} KB)
                   </span>
                   <span>
-                    Events received: <span className="font-mono">{p2pStats.eventsReceived}</span> (
+                    Events received:{" "}
+                    <span className="font-mono">{p2pStats.eventsReceived}</span> (
                     {(p2pStats.eventBytesReceived / 1024).toFixed(1)} KB)
                   </span>
                   <span>
@@ -371,11 +372,13 @@ export function Network() {
                     {(p2pStats.blobBytesSent / 1024 / 1024).toFixed(1)} MB)
                   </span>
                   <span>
-                    Blobs received: <span className="font-mono">{p2pStats.blobsReceived}</span> (
+                    Blobs received:{" "}
+                    <span className="font-mono">{p2pStats.blobsReceived}</span> (
                     {(p2pStats.blobBytesReceived / 1024 / 1024).toFixed(1)} MB)
                   </span>
                   <span>
-                    Subs served: <span className="font-mono">{p2pStats.subscriptionsServed}</span>
+                    Subs served:{" "}
+                    <span className="font-mono">{p2pStats.subscriptionsServed}</span>
                   </span>
                 </div>
               </div>

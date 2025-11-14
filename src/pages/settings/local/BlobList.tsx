@@ -17,6 +17,8 @@ export function BlobList() {
       mimeType?: string
       stored_at: number
       first_author?: string
+      times_requested_locally: number
+      times_requested_by_peers: number
     }[]
   >([])
   const [blobCount, setBlobCount] = useState(0)
@@ -154,6 +156,10 @@ export function BlobList() {
                       <div className="text-xs text-base-content/50">
                         {blob.mimeType || "unknown"} · {formatBytes(blob.size)} ·{" "}
                         {new Date(blob.stored_at).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-base-content/50">
+                        Requested: {blob.times_requested_locally} local,{" "}
+                        {blob.times_requested_by_peers} peers
                       </div>
                     </div>
                     <div className="flex gap-1">

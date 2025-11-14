@@ -40,7 +40,8 @@ export function LocalData() {
 
       // Detect storage backend from localStorage flag
       const backend = localStorage.getItem("ndk-cache-backend")
-      let storageBackend: "Dexie (IndexedDB)" | "SQLite WASM (OPFS)" | "Unknown" = "Unknown"
+      let storageBackend: "Dexie (IndexedDB)" | "SQLite WASM (OPFS)" | "Unknown" =
+        "Unknown"
       let totalEvents = 0
       let allEvents: NostrEvent[] = []
 
@@ -99,7 +100,8 @@ export function LocalData() {
 
       // Calculate cache hit rate
       const total = cacheStats.cacheHits + cacheStats.relayNew
-      const hitRate = total > 0 ? ((cacheStats.cacheHits / total) * 100).toFixed(1) + "%" : "N/A"
+      const hitRate =
+        total > 0 ? ((cacheStats.cacheHits / total) * 100).toFixed(1) + "%" : "N/A"
 
       setStats({
         totalEvents,
@@ -115,42 +117,6 @@ export function LocalData() {
       setError(err instanceof Error ? err.message : "Failed to load stats")
     } finally {
       setLoading(false)
-    }
-  }
-
-  const checkSqliteDatabase = async (): Promise<boolean> => {
-    try {
-      if (!navigator.storage?.getDirectory) return false
-      const root = await navigator.storage.getDirectory()
-      // Check if SQLite database file exists
-      for await (const name of (root as any).keys()) {
-        if (name.includes("sqlite") || name.includes("-sqlite")) {
-          return true
-        }
-      }
-      return false
-    } catch (e) {
-      // Might fail if no files yet - check if estimate shows OPFS usage
-      try {
-        const estimate = await navigator.storage.estimate()
-        // If OPFS is supported and has usage, assume SQLite if Dexie not found
-        if (estimate.usage && estimate.usage > 0) {
-          const hasDexie = await checkDexieDatabase()
-          return !hasDexie // If no Dexie but has storage, it's SQLite
-        }
-      } catch {
-        return false
-      }
-      return false
-    }
-  }
-
-  const checkDexieDatabase = async (): Promise<boolean> => {
-    try {
-      const databases = await indexedDB.databases()
-      return databases.some((db) => db.name === "treelike-nostr")
-    } catch {
-      return false
     }
   }
 

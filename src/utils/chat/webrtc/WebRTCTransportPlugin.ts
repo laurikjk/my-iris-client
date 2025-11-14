@@ -17,7 +17,7 @@ import {RateLimiter} from "./RateLimiter"
 import {getCachedName} from "@/utils/nostr"
 import {shouldHideUser} from "@/utils/visibility"
 import {incrementSent, incrementReceived, incrementSubscriptionsServed} from "./p2pStats"
-import {trackPeerEventSent, trackPeerEventReceived, trackPeerBlobSent, trackPeerBlobReceived} from "./peerBandwidthStats"
+import {trackPeerEventSent, trackPeerEventReceived} from "./peerBandwidthStats"
 
 // Event kinds that bypass follow check but are rate limited
 const PRIVATE_MESSAGE_KINDS = [1059, 1060] // INVITE_RESPONSE, MESSAGE_EVENT

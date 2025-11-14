@@ -1,5 +1,4 @@
-import {useEffect} from "react"
-import {useCallback, MouseEvent, useState, memo} from "react"
+import {useEffect, useCallback, MouseEvent, useState, memo} from "react"
 import ErrorBoundary from "../ui/ErrorBoundary"
 import {NDKEvent} from "@/lib/ndk"
 import RelativeTime from "./RelativeTime"

@@ -29,7 +29,7 @@ const db = new PeerBandwidthDatabase()
 
 // In-memory cache (write to IDB throttled)
 const memCache = new Map<string, PeerBandwidthStats>()
-let dirtyPeers = new Set<string>()
+const dirtyPeers = new Set<string>()
 
 // Flush to IDB every 5 seconds
 const flushToIDB = throttle(

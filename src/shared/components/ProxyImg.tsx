@@ -114,9 +114,9 @@ const ProxyImg = (props: Props) => {
       }
     }
 
-    img.addEventListener('load', handleLoad)
+    img.addEventListener("load", handleLoad)
     return () => {
-      img.removeEventListener('load', handleLoad)
+      img.removeEventListener("load", handleLoad)
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
