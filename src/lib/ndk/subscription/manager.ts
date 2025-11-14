@@ -74,6 +74,13 @@ export class NDKSubscriptionManager {
    */
   public dispatchEvent(event: NostrEvent, relay?: NDKRelay, optimisticPublish = false) {
     if (relay) this.seenEvent(event.id!, relay)
+    // Also track cache-loaded events (relay = undefined) to prevent reprocessing
+    // when they later arrive from a relay
+    else if (!this.seenEvents.has(event.id!)) {
+      // Mark as seen from cache with sentinel value
+      // We use a minimal fake relay object just for dedup tracking
+      this.seenEvents.set(event.id!, [{url: "__cache__"} as NDKRelay])
+    }
 
     const subscriptions = this.subscriptions.values()
     const matchingSubs = []
