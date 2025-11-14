@@ -8,6 +8,7 @@ import NDK, {
 } from "@/lib/ndk"
 import {createNDKCacheAdapter} from "@/utils/createCacheAdapter"
 import {useUserStore} from "@/stores/user"
+import {useSettingsStore} from "@/stores/settings"
 import {DEFAULT_RELAYS} from "@/shared/constants/relays"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 import {relayLogger} from "@/utils/relay/RelayLogger"
@@ -191,6 +192,9 @@ async function initNDK(opts?: NDKConstructorParams) {
     ndkInstance.signer = nip07Signer
   }
 
+  // Set initial P2P mode
+  ndkInstance.p2pOnlyMode = useSettingsStore.getState().network.p2pOnlyMode
+
   watchLocalSettings(ndkInstance)
   ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
   setupVisibilityReconnection(ndkInstance)
@@ -314,6 +318,14 @@ function attachRelayLogger(instance: NDK) {
 }
 
 function watchLocalSettings(instance: NDK) {
+  // Watch P2P-only mode setting
+  useSettingsStore.subscribe((state, prevState) => {
+    if (state.network.p2pOnlyMode !== prevState.network.p2pOnlyMode) {
+      instance.p2pOnlyMode = state.network.p2pOnlyMode
+      console.log("P2P-only mode:", state.network.p2pOnlyMode ? "enabled" : "disabled")
+    }
+  })
+
   useUserStore.subscribe((state, prevState) => {
     // Outbox model changes are handled by page reload in Network.tsx
     // No need to recreate NDK instance here

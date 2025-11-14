@@ -380,6 +380,11 @@ export class NDK extends EventEmitter<{
   }> = []
 
   /**
+   * P2P-only mode: use relays only for signaling, get events from peers
+   */
+  public p2pOnlyMode: boolean = false
+
+  /**
    * Default relay-auth policy that will be used when a relay requests authentication,
    * if no other policy is specified for that relay.
    *

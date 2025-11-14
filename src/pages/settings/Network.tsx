@@ -79,25 +79,17 @@ export function Network() {
   }
 
   const handleOutboxModelToggle = async (enabled: boolean) => {
-    try {
-      setNdkOutboxModel(enabled)
-      // Reload app to reinitialize NDK with new setting
-      await new Promise((resolve) => setTimeout(resolve, 100))
-      window.location.reload()
-    } catch (error) {
-      console.error("Error toggling outbox model:", error)
-    }
+    setNdkOutboxModel(enabled)
+    // Outbox model requires pool reinitialization - reload required
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    window.location.reload()
   }
 
   const handleAutoConnectUserRelaysToggle = async (enabled: boolean) => {
-    try {
-      setAutoConnectUserRelays(enabled)
-      // Reload app to reinitialize NDK with new setting
-      await new Promise((resolve) => setTimeout(resolve, 100))
-      window.location.reload()
-    } catch (error) {
-      console.error("Error toggling auto-connect user relays:", error)
-    }
+    setAutoConnectUserRelays(enabled)
+    // Auto-connect changes require pool reinitialization - reload required
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    window.location.reload()
   }
 
   const hasDefaultRelays = useMemo(() => {
