@@ -41,18 +41,27 @@ export async function createNDKCacheAdapter(
   try {
     console.log("🔄 NDK Cache: Attempting to load SQLite WASM...")
 
-    // Lazy load SQLite WASM adapter (separate chunk)
-    const SqliteModule = await import("@nostr-dev-kit/ndk-cache-sqlite-wasm")
+    // Lazy load SQLite WASM adapter with timeout
+    const SqliteModule = await Promise.race([
+      import("@nostr-dev-kit/ndk-cache-sqlite-wasm"),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("SQLite import timeout")), 5000)
+      )
+    ]) as typeof import("@nostr-dev-kit/ndk-cache-sqlite-wasm")
 
     // Create sqlite adapter with WASM URL from public directory
-    // Use separate DB name to avoid conflict with existing Dexie database
     const adapter = new SqliteModule.default({
       dbName: (options.dbName || "ndk") + "-sqlite",
       wasmUrl: "/sql-wasm.wasm",
     })
 
-    // Initialize async
-    await adapter.initializeAsync()
+    // Initialize async with timeout
+    await Promise.race([
+      adapter.initializeAsync(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("SQLite init timeout")), 5000)
+      )
+    ])
 
     console.log(
       "✅ NDK Cache: Using SQLite WASM with OPFS",
