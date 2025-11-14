@@ -203,111 +203,117 @@ export function PeerConnectionList() {
             return (
               <div key={item.pubkey} className="flex flex-col gap-2">
                 <div
-                  className="flex items-center justify-between gap-3 p-3 bg-base-100 rounded-lg hover:bg-base-200 transition-colors cursor-pointer group"
+                  className="p-3 bg-base-100 rounded-lg hover:bg-base-200 transition-colors cursor-pointer group"
                   onClick={() => setExpandedPeer(isExpanded ? null : item.pubkey)}
                 >
-                  <div
-                    className="flex items-center gap-3 min-w-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ProfileLink pubKey={item.pubkey} className="flex items-center gap-3">
-                      <Avatar pubKey={item.pubkey} width={32} showOnlineIndicator />
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                          <Name pubKey={item.pubkey} />
-                          {item.connectedPeers.length > 0 && (
-                            <div className="flex items-center gap-1">
-                              {item.connectedPeers.map((peer) => (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    {/* User info row */}
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <ProfileLink
+                        pubKey={item.pubkey}
+                        className="flex items-center gap-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Avatar pubKey={item.pubkey} width={32} showOnlineIndicator />
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Name pubKey={item.pubkey} />
+                            {item.connectedPeers.length > 0 && (
+                              <div className="flex items-center gap-1">
+                                {item.connectedPeers.map((peer) => (
+                                  <span
+                                    key={peer.sessionId}
+                                    className="text-xs font-mono opacity-40 badge badge-xs"
+                                    title={`${peer.direction} - ${peer.sessionId}`}
+                                  >
+                                    {getDirectionIcon(peer.direction)}{" "}
+                                    {peer.sessionId.split(":")[1]?.slice(0, 6)}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {item.connectedPeers.length > 0 ? (
+                              <>
                                 <span
-                                  key={peer.sessionId}
-                                  className="text-xs font-mono opacity-40 badge badge-xs"
-                                  title={`${peer.direction} - ${peer.sessionId}`}
+                                  className={`badge badge-xs ${getStatusColor(item.connectedPeers[0].state)}`}
                                 >
-                                  {getDirectionIcon(peer.direction)}{" "}
-                                  {peer.sessionId.split(":")[1]?.slice(0, 6)}
+                                  {item.connectedPeers[0].state}
                                 </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {item.connectedPeers.length > 0 ? (
-                            <>
-                              <span
-                                className={`badge badge-xs ${getStatusColor(item.connectedPeers[0].state)}`}
-                              >
-                                {item.connectedPeers[0].state}
-                              </span>
-                              {item.connectedPeers[0].connectedAt && (
+                                {item.connectedPeers[0].connectedAt && (
+                                  <span className="text-xs text-base-content/60">
+                                    Connected{" "}
+                                    <RelativeTime
+                                      from={item.connectedPeers[0].connectedAt}
+                                    />
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              bw?.lastSeen && (
                                 <span className="text-xs text-base-content/60">
-                                  Connected{" "}
-                                  <RelativeTime
-                                    from={item.connectedPeers[0].connectedAt}
-                                  />
+                                  Last seen <RelativeTime from={bw.lastSeen} />
                                 </span>
-                              )}
-                            </>
-                          ) : (
-                            bw?.lastSeen && (
-                              <span className="text-xs text-base-content/60">
-                                Last seen <RelativeTime from={bw.lastSeen} />
-                              </span>
-                            )
-                          )}
+                              )
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </ProfileLink>
-                  </div>
-                  <div className="flex items-center gap-3 ml-auto">
-                    {bw && totalBytes > 0 && (
-                      <div className="text-sm flex items-center gap-2 font-mono">
-                        <span className="text-success font-semibold">
-                          ↑{formatBytes(bw.eventBytesSent + bw.blobBytesSent)}
-                        </span>
-                        <span className="text-info font-semibold">
-                          ↓{formatBytes(bw.eventBytesReceived + bw.blobBytesReceived)}
-                        </span>
-                      </div>
-                    )}
-                    {item.connectedPeers.length > 0 &&
-                      item.connectedPeers[0].state === "connected" && (
-                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                          {network.webrtcCallsEnabled && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleStartCall(item.connectedPeers[0], "audio")
-                                }
-                                className="btn btn-sm btn-ghost"
-                                title="Audio call"
-                              >
-                                <RiPhoneLine className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleStartCall(item.connectedPeers[0], "video")
-                                }
-                                className="btn btn-sm btn-ghost"
-                                title="Video call"
-                              >
-                                <RiVideoChatLine className="w-5 h-5" />
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => handleSendFile(item.connectedPeers[0])}
-                            className="btn btn-sm btn-ghost"
-                            title="Send file"
-                          >
-                            <RiFileTransferLine className="w-5 h-5" />
-                          </button>
+                      </ProfileLink>
+                    </div>
+
+                    {/* Stats and actions row */}
+                    <div className="flex items-center gap-3 sm:ml-auto">
+                      {bw && totalBytes > 0 && (
+                        <div className="text-xs sm:text-sm flex items-center gap-2 font-mono">
+                          <span className="text-success font-semibold">
+                            ↑{formatBytes(bw.eventBytesSent + bw.blobBytesSent)}
+                          </span>
+                          <span className="text-info font-semibold">
+                            ↓{formatBytes(bw.eventBytesReceived + bw.blobBytesReceived)}
+                          </span>
                         </div>
                       )}
-                    {bw && (
-                      <RiArrowDownSLine
-                        className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                      />
-                    )}
+                      {item.connectedPeers.length > 0 &&
+                        item.connectedPeers[0].state === "connected" && (
+                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                            {network.webrtcCallsEnabled && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleStartCall(item.connectedPeers[0], "audio")
+                                  }
+                                  className="btn btn-sm btn-ghost"
+                                  title="Audio call"
+                                >
+                                  <RiPhoneLine className="w-4 h-4 sm:w-5 sm:h-5" />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleStartCall(item.connectedPeers[0], "video")
+                                  }
+                                  className="btn btn-sm btn-ghost"
+                                  title="Video call"
+                                >
+                                  <RiVideoChatLine className="w-4 h-4 sm:w-5 sm:h-5" />
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() => handleSendFile(item.connectedPeers[0])}
+                              className="btn btn-sm btn-ghost"
+                              title="Send file"
+                            >
+                              <RiFileTransferLine className="w-4 h-4 sm:w-5 sm:h-5" />
+                            </button>
+                          </div>
+                        )}
+                      {bw && (
+                        <RiArrowDownSLine
+                          className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
 
