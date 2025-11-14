@@ -16,6 +16,7 @@ class BlobDatabase extends Dexie {
       stored_at: number
       times_requested_locally: number
       times_requested_by_peers: number
+      last_requested: number
     },
     string
   >
@@ -28,13 +29,29 @@ class BlobDatabase extends Dexie {
     this.version(2).stores({
       blobs: "hash, stored_at",
     })
+    this.version(3)
+      .stores({
+        blobs: "hash, stored_at, last_requested",
+      })
+      .upgrade((tx) => {
+        // Backfill last_requested to stored_at for existing blobs
+        return tx
+          .table("blobs")
+          .toCollection()
+          .modify((blob) => {
+            blob.last_requested = blob.stored_at
+          })
+      })
   }
 }
 
 const blobDb = new BlobDatabase()
 
 // In-memory cache for request stats (write to IDB throttled)
-const requestStatsCache = new Map<string, {local: number; peer: number}>()
+const requestStatsCache = new Map<
+  string,
+  {local: number; peer: number; lastRequested: number}
+>()
 const dirtyHashes = new Set<string>()
 
 // Flush to IDB every 5 seconds
@@ -47,6 +64,7 @@ const flushRequestStatsToIDB = throttle(
         await blobDb.blobs.update(hash, {
           times_requested_locally: stats.local,
           times_requested_by_peers: stats.peer,
+          last_requested: stats.lastRequested,
         })
       }
     })
@@ -70,6 +88,7 @@ export class SimpleBlobStorage {
       requestStatsCache.set(entry.hash, {
         local: entry.times_requested_locally || 0,
         peer: entry.times_requested_by_peers || 0,
+        lastRequested: entry.last_requested || entry.stored_at,
       })
     })
   }
@@ -80,8 +99,10 @@ export class SimpleBlobStorage {
     size: number
     mimeType?: string
     first_author?: string
+    stored_at: number
     times_requested_locally: number
     times_requested_by_peers: number
+    last_requested: number
   } | null> {
     try {
       const entry = await blobDb.blobs.get(hash)
@@ -93,8 +114,10 @@ export class SimpleBlobStorage {
         size: entry.size,
         mimeType: entry.mimeType,
         first_author: entry.first_author,
+        stored_at: entry.stored_at,
         times_requested_locally: entry.times_requested_locally || 0,
         times_requested_by_peers: entry.times_requested_by_peers || 0,
+        last_requested: entry.last_requested || entry.stored_at,
       }
     } catch (error) {
       console.error("Error getting blob:", error)
@@ -112,6 +135,7 @@ export class SimpleBlobStorage {
       // Check if already exists - don't overwrite first_author or stats
       const existing = await this.get(hash)
       const author = existing?.first_author || firstAuthor
+      const now = Date.now()
 
       await blobDb.blobs.put({
         hash,
@@ -119,9 +143,10 @@ export class SimpleBlobStorage {
         size: data.byteLength,
         mimeType,
         first_author: author,
-        stored_at: Date.now(),
+        stored_at: existing?.stored_at || now,
         times_requested_locally: existing?.times_requested_locally || 0,
         times_requested_by_peers: existing?.times_requested_by_peers || 0,
+        last_requested: now,
       })
     } catch (error) {
       console.error("Error saving blob:", error)
@@ -140,6 +165,7 @@ export class SimpleBlobStorage {
       first_author?: string
       times_requested_locally: number
       times_requested_by_peers: number
+      last_requested: number
     }[]
   > {
     try {
@@ -158,6 +184,7 @@ export class SimpleBlobStorage {
         first_author: entry.first_author,
         times_requested_locally: entry.times_requested_locally || 0,
         times_requested_by_peers: entry.times_requested_by_peers || 0,
+        last_requested: entry.last_requested || entry.stored_at,
       }))
     } catch (error) {
       console.error("Error listing blobs:", error)
@@ -191,20 +218,24 @@ export class SimpleBlobStorage {
   }
 
   incrementLocalRequests(hash: string): void {
-    const existing = requestStatsCache.get(hash) || {local: 0, peer: 0}
+    const existing = requestStatsCache.get(hash) || {local: 0, peer: 0, lastRequested: 0}
+    const now = Date.now()
     requestStatsCache.set(hash, {
       local: existing.local + 1,
       peer: existing.peer,
+      lastRequested: now,
     })
     dirtyHashes.add(hash)
     flushRequestStatsToIDB()
   }
 
   incrementPeerRequests(hash: string): void {
-    const existing = requestStatsCache.get(hash) || {local: 0, peer: 0}
+    const existing = requestStatsCache.get(hash) || {local: 0, peer: 0, lastRequested: 0}
+    const now = Date.now()
     requestStatsCache.set(hash, {
       local: existing.local,
       peer: existing.peer + 1,
+      lastRequested: now,
     })
     dirtyHashes.add(hash)
     flushRequestStatsToIDB()

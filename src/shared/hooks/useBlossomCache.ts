@@ -65,6 +65,7 @@ async function fetchBlobP2P(
     const storage = getBlobStorage()
     const cached = await storage.get(hash)
     if (cached) {
+      storage.incrementLocalRequests(hash)
       return new Blob([cached.data], {type: cached.mimeType})
     }
 

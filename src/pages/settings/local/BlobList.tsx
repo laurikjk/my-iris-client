@@ -19,6 +19,7 @@ export function BlobList() {
       first_author?: string
       times_requested_locally: number
       times_requested_by_peers: number
+      last_requested: number
     }[]
   >([])
   const [blobCount, setBlobCount] = useState(0)
@@ -162,11 +163,16 @@ export function BlobList() {
                       )}
                       <div className="font-mono text-xs break-all">{blob.hash}</div>
                       <div className="text-xs text-base-content/50">
-                        {blob.mimeType || "unknown"} · {formatBytes(blob.size)} ·{" "}
-                        {new Date(blob.stored_at).toLocaleString()}
+                        {blob.mimeType || "unknown"} · {formatBytes(blob.size)}
                       </div>
                       <div className="text-xs text-base-content/50">
-                        Requested: {blob.times_requested_locally} local,{" "}
+                        Stored: {new Date(blob.stored_at).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-base-content/50">
+                        Last requested: {new Date(blob.last_requested).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-base-content/50">
+                        Requests: {blob.times_requested_locally} local,{" "}
                         {blob.times_requested_by_peers} peers
                       </div>
                     </div>

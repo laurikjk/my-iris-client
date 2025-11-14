@@ -276,7 +276,10 @@ export function PeerConnectionList() {
                       )}
                       {item.connectedPeers.length > 0 &&
                         item.connectedPeers[0].state === "connected" && (
-                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                          <div
+                            className="flex gap-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             {network.webrtcCallsEnabled && (
                               <>
                                 <button

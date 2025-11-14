@@ -1,4 +1,4 @@
-import {ReactNode} from "react"
+import {ReactNode, MouseEvent} from "react"
 import {useLocation} from "@/navigation"
 import NavLink from "@/shared/components/nav/NavLink"
 import {getUserRoute, isSameUserRoute} from "@/utils/usernameCache"
@@ -8,7 +8,7 @@ interface ProfileLinkProps {
   pubKey: string
   children: ReactNode | ((props: {isActive: boolean}) => ReactNode)
   className?: string | ((props: {isActive: boolean}) => string)
-  onClick?: () => void
+  onClick?: (e: MouseEvent) => void
 }
 
 /**
