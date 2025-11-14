@@ -17,6 +17,7 @@ interface CombinedPostFetcherProps {
   hasChronologicalData: boolean
   cache: CombinedPostFetcherCache
   popularRatio?: number
+  excludeOwnPosts?: boolean
 }
 
 export default function useCombinedPostFetcher({
@@ -26,6 +27,7 @@ export default function useCombinedPostFetcher({
   hasChronologicalData,
   cache,
   popularRatio = 0.5,
+  excludeOwnPosts = false,
 }: CombinedPostFetcherProps) {
   const [events, setEvents] = useState<NDKEvent[]>(cache.events || [])
   const [loading, setLoading] = useState<boolean>(false)
@@ -73,7 +75,11 @@ export default function useCombinedPostFetcher({
       }
 
       const fetchedEvents = await ndk().fetchEvents(postFilter)
-      const eventsArray = Array.from(fetchedEvents)
+      let eventsArray = Array.from(fetchedEvents)
+
+      if (excludeOwnPosts && myPubKey) {
+        eventsArray = eventsArray.filter((event) => event.pubkey !== myPubKey)
+      }
 
       const shuffledEvents = shuffle(eventsArray)
 
@@ -86,6 +92,7 @@ export default function useCombinedPostFetcher({
       hasChronologicalData,
       popularRatio,
       myPubKey,
+      excludeOwnPosts,
     ]
   )
 

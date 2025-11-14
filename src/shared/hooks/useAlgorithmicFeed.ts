@@ -61,6 +61,7 @@ export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig 
     hasChronologicalData,
     cache: cache.combinedPostFetcher || {},
     popularRatio,
+    excludeOwnPosts,
   })
 
   return result
