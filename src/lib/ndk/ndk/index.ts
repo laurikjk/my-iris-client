@@ -1133,6 +1133,10 @@ export class NDK extends EventEmitter<{
       const subscribeOpts: NDKSubscriptionOptions = {
         ...(opts || {}),
         closeOnEose: true,
+        // Give cache 100ms to respond before querying relays
+        groupable: true,
+        groupableDelay: 100,
+        groupableDelayType: "at-least",
       }
       if (relaySet) subscribeOpts.relaySet = relaySet
 
