@@ -1,4 +1,5 @@
 import type {NostrEvent} from "../events"
+import type {NDKEvent} from "../events"
 import type {
   NDKFilter,
   NDKSubscription,
@@ -403,7 +404,7 @@ export class NDKRelaySubscription {
   }
 
   public onstart() {}
-  public onevent(event: NostrEvent) {
+  public onevent(event: NostrEvent | NDKEvent) {
     this.topSubManager.dispatchEvent(event, this.relay)
   }
 

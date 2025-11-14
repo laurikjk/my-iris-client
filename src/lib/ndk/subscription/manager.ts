@@ -1,10 +1,17 @@
 import {matchFilters, type VerifiedEvent} from "nostr-tools"
 import {LRUCache} from "typescript-lru-cache"
 import type {NDKEventId, NostrEvent} from "../events/index.js"
+import {NDKEvent} from "../events/index.js"
+import type {NDK} from "../ndk/index.js"
 import type {NDKRelay} from "../relay/index.js"
 import type {NDKSubscription} from "./index.js"
 
 export type NDKSubscriptionId = string
+
+type SeenEventData = {
+  relays: NDKRelay[]
+  processedEvent?: NDKEvent
+}
 
 /**
  * This class monitors active subscriptions.
@@ -13,8 +20,9 @@ export class NDKSubscriptionManager {
   public subscriptions: Map<NDKSubscriptionId, NDKSubscription>
 
   // Use LRU cache instead of unbounded Map to prevent memory leaks
-  public seenEvents = new LRUCache<NDKEventId, NDKRelay[]>({
-    maxSize: 10000, // Keep last 10k events
+  // Reduced from 10k to 1k since we now cache full NDKEvent objects
+  public seenEvents = new LRUCache<NDKEventId, SeenEventData>({
+    maxSize: 1000,
     entryExpirationTimeInMS: 5 * 60 * 1000, // 5 minutes
   })
 
@@ -37,10 +45,13 @@ export class NDKSubscriptionManager {
     })
   }
 
-  public seenEvent(eventId: NDKEventId, relay: NDKRelay) {
-    const current = this.seenEvents.get(eventId) || []
-    if (!current.some((r) => r.url === relay.url)) {
-      current.push(relay)
+  public seenEvent(eventId: NDKEventId, relay: NDKRelay, processedEvent?: NDKEvent) {
+    const current = this.seenEvents.get(eventId) || {relays: []}
+    if (!current.relays.some((r) => r.url === relay.url)) {
+      current.relays.push(relay)
+    }
+    if (processedEvent && !current.processedEvent) {
+      current.processedEvent = processedEvent
     }
     this.seenEvents.set(eventId, current)
   }
@@ -72,14 +83,37 @@ export class NDKSubscriptionManager {
    * @param relay Relay that sent the event
    * @param optimisticPublish Whether the event is coming from an optimistic publish
    */
-  public dispatchEvent(event: NostrEvent, relay?: NDKRelay, optimisticPublish = false) {
-    if (relay) this.seenEvent(event.id!, relay)
-    // Also track cache-loaded events (relay = undefined) to prevent reprocessing
-    // when they later arrive from a relay
-    else if (!this.seenEvents.has(event.id!)) {
-      // Mark as seen from cache with sentinel value
-      // We use a minimal fake relay object just for dedup tracking
-      this.seenEvents.set(event.id!, [{url: "__cache__"} as NDKRelay])
+  public dispatchEvent(event: NostrEvent | NDKEvent, relay?: NDKRelay, optimisticPublish = false) {
+    const eventId = event.id!
+    let ndkEvent: NDKEvent
+    const seenData = this.seenEvents.get(eventId)
+
+    // If already processed by another relay, use cached event
+    if (seenData?.processedEvent) {
+      ndkEvent = seenData.processedEvent
+      // Just track this relay saw it
+      if (relay) {
+        this.seenEvent(eventId, relay)
+      }
+    } else {
+      // Event should be NDKEvent from connectivity/cache/optimistic publish
+      if (event instanceof NDKEvent) {
+        ndkEvent = event
+      } else {
+        // Fallback: create NDKEvent if raw NostrEvent passed
+        // Get NDK instance from any subscription
+        const ndk = this.subscriptions.values().next().value?.ndk
+        ndkEvent = new NDKEvent(ndk, event)
+        if (ndk) ndkEvent.ndk = ndk
+      }
+
+      // Store processed event
+      if (relay) {
+        this.seenEvent(eventId, relay, ndkEvent)
+      } else if (!seenData) {
+        // Mark as seen from cache/optimistic with sentinel value
+        this.seenEvents.set(eventId, {relays: [{url: "__cache__"} as NDKRelay], processedEvent: ndkEvent})
+      }
     }
 
     const subscriptions = this.subscriptions.values()
@@ -87,7 +121,7 @@ export class NDKSubscriptionManager {
 
     // First pass: Filter matching
     for (const sub of subscriptions) {
-      if (matchFilters(sub.filters, event as VerifiedEvent)) {
+      if (matchFilters(sub.filters, ndkEvent.rawEvent() as VerifiedEvent)) {
         matchingSubs.push(sub)
       }
     }
@@ -103,7 +137,7 @@ export class NDKSubscriptionManager {
         } else if (!relay) {
           // Event from cache - check if any of the event's known relays
           // are in the subscription's relaySet
-          const eventOnRelays = this.seenEvents.get(event.id!) || []
+          const eventOnRelays = seenData?.relays || []
           shouldAccept = eventOnRelays.some((r) => sub.relaySet!.relays.has(r))
         } else {
           // Live event from a relay - check if the relay is in the subscription's relaySet
@@ -121,8 +155,8 @@ export class NDKSubscriptionManager {
         }
       }
 
-      // Deliver the event to the subscription
-      sub.eventReceived(event, relay, false, optimisticPublish)
+      // Pass processed NDKEvent to subscription
+      sub.eventReceived(ndkEvent, relay, relay === undefined && !optimisticPublish, optimisticPublish)
     }
   }
 }

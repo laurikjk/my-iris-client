@@ -284,6 +284,67 @@ export class NDKRelayConnectivity {
   }
 
   /**
+   * Process and validate an event received from the relay.
+   * @returns NDKEvent if valid, undefined if invalid
+   */
+  private processEvent(rawEvent: NostrEvent): NDKEvent | undefined {
+    // Create NDKEvent
+    const ndkEvent = new NDKEvent(this.ndk, rawEvent)
+    ndkEvent.ndk = this.ndk
+    ndkEvent.relay = this.ndkRelay
+
+    // Check expiration (NIP-40)
+    const expirationTag = ndkEvent.getMatchingTags("expiration")[0]
+    if (expirationTag && expirationTag[1]) {
+      const expirationTime = parseInt(expirationTag[1])
+      const now = Math.floor(Date.now() / 1000)
+      if (now >= expirationTime) {
+        this.debug(
+          "Event expired %s (expiration: %d, now: %d)",
+          rawEvent.id,
+          expirationTime,
+          now
+        )
+        // Queue for batched deletion from cache
+        if (this.ndk?.cacheAdapter && "queueExpiredEvent" in this.ndk.cacheAdapter) {
+          ;(this.ndk.cacheAdapter as any).queueExpiredEvent(rawEvent.id)
+        }
+        return undefined
+      }
+    }
+
+    // Validate event
+    if (!ndkEvent.isValid) {
+      this.debug("Event failed validation %s from relay %s", rawEvent.id, this.ndkRelay.url)
+      return undefined
+    }
+
+    // Verify signature
+    const shouldVerify = this.ndkRelay.shouldValidateEvent()
+    if (shouldVerify) {
+      if (this.ndk?.asyncSigVerification) {
+        // Async verification
+        ndkEvent.verifySignature(true)
+      } else {
+        // Sync verification
+        if (!ndkEvent.verifySignature(true)) {
+          this.debug("Event failed signature validation", rawEvent)
+          this.ndk?.reportInvalidSignature(ndkEvent, this.ndkRelay)
+          return undefined
+        }
+        this.ndkRelay.addValidatedEvent()
+      }
+    } else {
+      this.ndkRelay.addNonValidatedEvent()
+    }
+
+    // Store processed event in manager
+    this.ndk?.subManager.seenEvent(rawEvent.id!, this.ndkRelay, ndkEvent)
+
+    return ndkEvent
+  }
+
+  /**
    * Handles the error that occurred when attempting to connect to the NDK relay.
    * If `reconnect` is `true`, this method will initiate a reconnection attempt.
    * Otherwise, it will emit a `delayed-connect` event on the `ndkRelay` object,
@@ -385,8 +446,8 @@ export class NDKRelayConnectivity {
     const msg = event.data as string
     const eventId = this.getEventIdFromMessage(msg)
     if (eventId && this.ndk) {
-      const seenRelays = this.ndk.subManager.seenEvents.get(eventId)
-      if (seenRelays && seenRelays.length > 0) {
+      const seenData = this.ndk.subManager.seenEvents.get(eventId)
+      if (seenData && seenData.relays.length > 0) {
         // Already processed from any relay, just track this relay saw it
         this.ndk.subManager.seenEvent(eventId, this.ndkRelay)
         return
@@ -407,12 +468,17 @@ export class NDKRelayConnectivity {
       switch (cmd) {
         case "EVENT": {
           const so = this.openSubs.get(id)
-          const event = data[2] as NostrEvent
+          const rawEvent = data[2] as NostrEvent
           if (!so) {
             this.debug(`Received event for unknown subscription ${id}`)
             return
           }
-          so.onevent(event)
+
+          const ndkEvent = this.processEvent(rawEvent)
+          if (!ndkEvent) return // Failed validation/verification
+
+          // Pass processed NDKEvent to subscription
+          so.onevent(ndkEvent)
           return
         }
         case "COUNT": {

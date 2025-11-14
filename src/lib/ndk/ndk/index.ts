@@ -1078,6 +1078,23 @@ export class NDK extends EventEmitter<{
     let filters: NDKFilter[]
     let relaySet: NDKRelaySet | undefined
 
+    // Check seenEvents cache first if we have an event ID
+    if (typeof idOrFilter === "string") {
+      filters = [filterFromId(idOrFilter)]
+      // Extract event ID from filter
+      const eventId = filters[0]?.ids?.[0]
+      if (eventId) {
+        const seenData = this.subManager.seenEvents.get(eventId)
+        if (seenData?.processedEvent) {
+          return seenData.processedEvent
+        }
+      }
+    } else if (Array.isArray(idOrFilter)) {
+      filters = idOrFilter
+    } else {
+      filters = [idOrFilter]
+    }
+
     // Check if this relaySetOrRelay is an NDKRelay, if it is, make it a relaySet
     if (relaySetOrRelay instanceof NDKRelay) {
       relaySet = new NDKRelaySet(new Set([relaySetOrRelay]), this)
@@ -1098,14 +1115,6 @@ export class NDK extends EventEmitter<{
           relaySet = correctRelaySet(relaySet, this.pool)
         }
       }
-    }
-
-    if (typeof idOrFilter === "string") {
-      filters = [filterFromId(idOrFilter)]
-    } else if (Array.isArray(idOrFilter)) {
-      filters = idOrFilter
-    } else {
-      filters = [idOrFilter]
     }
 
     // Run guardrails check on the filter when it's passed as an object (not a string)

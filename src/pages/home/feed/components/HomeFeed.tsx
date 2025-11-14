@@ -5,7 +5,7 @@ import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import Feed from "@/shared/components/feed/Feed.tsx"
 import useFollows from "@/shared/hooks/useFollows"
-import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
+import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {usePublicKey} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
 import {

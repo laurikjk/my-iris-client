@@ -789,83 +789,15 @@ export class NDKSubscription extends EventEmitter<{
     optimisticPublish = false
   ) {
     const eventId = event.id! as NDKEventId
-
     const eventAlreadySeen = this.eventFirstSeen.has(eventId)
-    let ndkEvent: NDKEvent
 
-    if (event instanceof NDKEvent) ndkEvent = event
+    // Event should already be processed as NDKEvent by manager
+    const ndkEvent = event instanceof NDKEvent ? event : new NDKEvent(this.ndk, event)
 
     if (!eventAlreadySeen) {
-      // generate the ndkEvent
-      ndkEvent ??= new NDKEvent(this.ndk, event)
-      ndkEvent.ndk = this.ndk
-      ndkEvent.relay = relay
-
-      // Check expiration (NIP-40)
-      const expirationTag = ndkEvent.getMatchingTags("expiration")[0]
-      if (expirationTag && expirationTag[1]) {
-        const expirationTime = parseInt(expirationTag[1])
-        const now = Math.floor(Date.now() / 1000)
-        if (now >= expirationTime) {
-          // Event has expired, skip it and queue for cache deletion
-          this.debug("Event expired %s (expiration: %d, now: %d)", eventId, expirationTime, now)
-
-          // Queue for batched deletion from cache
-          if (this.ndk?.cacheAdapter && 'queueExpiredEvent' in this.ndk.cacheAdapter) {
-            (this.ndk.cacheAdapter as any).queueExpiredEvent(eventId)
-          }
-
-          return
-        }
-      }
-
-      // we don't want to validate/verify events that are either
-      // coming from the cache or have been published by us from within
-      // the client
-      if (!fromCache && !optimisticPublish) {
-        // validate it
-        if (!this.skipValidation) {
-          if (!ndkEvent.isValid) {
-            this.debug("Event failed validation %s from relay %s", eventId, relay?.url)
-            return
-          }
-        }
-
-        // verify it
-        if (relay) {
-          // Check if we need to verify this event based on sampling
-          const shouldVerify = relay.shouldValidateEvent()
-
-          if (shouldVerify && !this.skipVerification) {
-            // Set the relay on the event for async verification
-            ndkEvent.relay = relay
-
-            // Attempt verification
-            if (this.ndk.asyncSigVerification) {
-              // Async verification - call verifySignature but don't wait for result
-              // The validation stats will be tracked in the async callback
-              ndkEvent.verifySignature(true)
-            } else {
-              // Sync verification - check result immediately
-              if (!ndkEvent.verifySignature(true)) {
-                this.debug("Event failed signature validation", event)
-                // Report the invalid signature with relay information through the centralized method
-                this.ndk.reportInvalidSignature(ndkEvent, relay)
-                return
-              }
-
-              // Track successful validation
-              relay.addValidatedEvent()
-            }
-          } else {
-            // We skipped verification for this event
-            relay.addNonValidatedEvent()
-          }
-        }
-
-        if (this.ndk.cacheAdapter && !this.opts.dontSaveToCache) {
-          this.ndk.cacheAdapter.setEvent(ndkEvent, this.filters, relay)
-        }
+      // Save to cache if needed (only for events from relays, not cache/optimistic)
+      if (!fromCache && !optimisticPublish && this.ndk.cacheAdapter && !this.opts.dontSaveToCache) {
+        this.ndk.cacheAdapter.setEvent(ndkEvent, this.filters, relay)
       }
 
       // emit it
@@ -913,9 +845,9 @@ export class NDKSubscription extends EventEmitter<{
         this.ndk.cacheAdapter?.setEventDup &&
         !this.opts.dontSaveToCache
       ) {
-        // Get or create the NDKEvent instance
-        ndkEvent ??= event instanceof NDKEvent ? event : new NDKEvent(this.ndk, event)
-        this.ndk.cacheAdapter.setEventDup(ndkEvent, relay)
+        // Event should already be NDKEvent at this point
+        const evt = event instanceof NDKEvent ? event : new NDKEvent(this.ndk, event)
+        this.ndk.cacheAdapter.setEventDup(evt, relay)
       }
 
       if (relay) {
