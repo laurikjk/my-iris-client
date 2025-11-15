@@ -29,6 +29,7 @@ tauri-plugin-opener = "2.5"
 tauri-plugin-dialog = "2.4"
 tauri-plugin-deep-link = "2.4"
 tauri-plugin-os = "2"
+nostrdb = { git = "https://github.com/mmalmi/nostrdb-rs.git", version = "0.8.0" }
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-autostart = "2"

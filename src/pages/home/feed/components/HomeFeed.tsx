@@ -54,13 +54,6 @@ function HomeFeed() {
 
   const showNoFollows = followsInitialized && follows.length <= 1
 
-  console.log("[HomeFeed] State:", {
-    myPubKey: myPubKey?.slice(0, 8),
-    follows: follows.length,
-    followsInitialized,
-    showNoFollows,
-    socialGraphLoaded,
-  })
   const navItemClicked = useUIStore((state) => state.navItemClicked)
   const {
     activeFeed,
