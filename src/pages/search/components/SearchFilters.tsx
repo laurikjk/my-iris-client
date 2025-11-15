@@ -21,7 +21,7 @@ const SearchFilters = memo(function SearchFilters({
   const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  useSearchInputAutofocus(searchInputRef, '/search')
+  useSearchInputAutofocus(searchInputRef, "/search")
 
   // Use store for persistent state
   const searchQuery = useSearchStore((state) => state.searchQuery)

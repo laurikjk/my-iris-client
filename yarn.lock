@@ -4577,7 +4577,7 @@ nostr-tools@^2.15.2, nostr-tools@^2.16.2:
     "@scure/bip39" "1.2.1"
     nostr-wasm "0.1.0"
 
-nostr-wasm@0.1.0:
+nostr-wasm@0.1.0, nostr-wasm@^0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/nostr-wasm/-/nostr-wasm-0.1.0.tgz#17af486745feb2b7dd29503fdd81613a24058d94"
   integrity sha512-78BTryCLcLYv96ONU8Ws3Q1JzjlAt+43pWQhIl86xZmWeegYCNLPml7yQ+gG3vR6V5h4XGj+TxO+SS5dsThQIA==

@@ -46,7 +46,10 @@ export default function useReactionSubscription(
   useEffect(() => {
     const {since, limit, authors: filterAuthors} = currentFilters
 
-    console.log("[ReactionSubscription] Starting subscription, authors:", filterAuthors?.length || "undefined (match all)")
+    console.log(
+      "[ReactionSubscription] Starting subscription, authors:",
+      filterAuthors?.length || "undefined (match all)"
+    )
 
     const now = Math.floor(Date.now() / 1000)
 
@@ -73,7 +76,10 @@ export default function useReactionSubscription(
 
       reactionCount++
       if (reactionCount <= 5) {
-        console.log(`[ReactionSubscription] Reaction ${reactionCount} to post:`, originalPostId.slice(0, 8))
+        console.log(
+          `[ReactionSubscription] Reaction ${reactionCount} to post:`,
+          originalPostId.slice(0, 8)
+        )
       }
 
       unfilteredEventsReceivedAfterFilterChange.current += 1

@@ -139,8 +139,10 @@ async function initNDK(opts?: NDKConstructorParams) {
     return true
   }
 
-  // Initialize worker transport
-  console.log("🔧 Using Worker Transport - relay connections + cache in worker thread")
+  // Initialize worker transport with built-in sig verification
+  console.log(
+    "🔧 Using Worker Transport - relay connections + cache + WASM sig verification"
+  )
   // Vite bundles worker when it sees: new Worker(new URL(..., import.meta.url))
   const worker = new Worker(new URL("../workers/relay-worker.ts", import.meta.url), {
     type: "module",

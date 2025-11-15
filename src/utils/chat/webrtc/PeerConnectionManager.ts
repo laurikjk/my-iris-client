@@ -8,7 +8,10 @@ import {useUserStore} from "@/stores/user"
 import {useSettingsStore} from "@/stores/settings"
 
 function uuidv4() {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+  return (
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15)
+  )
 }
 
 function isMutualFollow(pubkey: string, myPubkey: string): boolean {

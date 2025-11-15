@@ -43,7 +43,7 @@ export function RelayList({
 
   // Get relay map from worker
   const ndkRelayMap = new Map(
-    workerRelays.relays.map((r) => [r.url, {connected: r.status >= 5, url: r.url}]),
+    workerRelays.relays.map((r) => [r.url, {connected: r.status >= 5, url: r.url}])
   )
 
   const discoveredRelays = Array.from(ndkRelayMap.entries()).filter(([url]) => {

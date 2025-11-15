@@ -28,7 +28,7 @@ export default function MarketFilters({
   const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  useSearchInputAutofocus(searchInputRef, '/m')
+  useSearchInputAutofocus(searchInputRef, "/m")
   // Get search query and additional tags from URL
   const urlParams = new URLSearchParams(window.location.search)
   const searchFromUrl = urlParams.get("q")

@@ -18,7 +18,7 @@ class SeenEventsDb extends Dexie {
 const seenDb = new SeenEventsDb()
 
 // Buffer for batching deletes - Dexie doesn't auto-batch separate delete() calls
-let evictedKeys: string[] = []
+const evictedKeys: string[] = []
 
 const flushDeletes = () => {
   if (evictedKeys.length === 0) return
@@ -97,7 +97,7 @@ seenDb.seenEvents
   })
 
 // Batch buffer for pending writes
-let pendingSeenIds = new Set<string>()
+const pendingSeenIds = new Set<string>()
 
 const throttledSave = throttle(
   async () => {

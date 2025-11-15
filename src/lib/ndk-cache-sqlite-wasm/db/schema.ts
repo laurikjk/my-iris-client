@@ -7,7 +7,7 @@
  */
 
 export const SCHEMA = {
-    events: `
+  events: `
         CREATE TABLE IF NOT EXISTS events (
             id TEXT PRIMARY KEY,
             pubkey TEXT,
@@ -23,26 +23,26 @@ export const SCHEMA = {
         CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);
         CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);
     `,
-    profiles: `
+  profiles: `
         CREATE TABLE IF NOT EXISTS profiles (
             pubkey TEXT PRIMARY KEY,
             profile TEXT,
             updated_at INTEGER
         );
     `,
-    nutzap_monitor_state: `
+  nutzap_monitor_state: `
         CREATE TABLE IF NOT EXISTS nutzap_monitor_state (
             id TEXT PRIMARY KEY,
             state TEXT
         );
     `,
-    decrypted_events: `
+  decrypted_events: `
         CREATE TABLE IF NOT EXISTS decrypted_events (
             id TEXT PRIMARY KEY,
             event TEXT
         );
     `,
-    unpublished_events: `
+  unpublished_events: `
         CREATE TABLE IF NOT EXISTS unpublished_events (
             id TEXT PRIMARY KEY,
             event TEXT,
@@ -50,7 +50,7 @@ export const SCHEMA = {
             lastTryAt INTEGER
         );
     `,
-    event_tags: `
+  event_tags: `
         CREATE TABLE IF NOT EXISTS event_tags (
             event_id TEXT NOT NULL,
             tag TEXT NOT NULL,
@@ -60,7 +60,7 @@ export const SCHEMA = {
         CREATE INDEX IF NOT EXISTS idx_event_tags_event_id ON event_tags(event_id);
         CREATE INDEX IF NOT EXISTS idx_event_tags_tag ON event_tags(tag);
     `,
-    cache_data: `
+  cache_data: `
         CREATE TABLE IF NOT EXISTS cache_data (
             namespace TEXT NOT NULL,
             key TEXT NOT NULL,
@@ -70,7 +70,7 @@ export const SCHEMA = {
         );
         CREATE INDEX IF NOT EXISTS idx_cache_data_namespace ON cache_data(namespace);
     `,
-    event_relays: `
+  event_relays: `
         CREATE TABLE IF NOT EXISTS event_relays (
             event_id TEXT NOT NULL,
             relay_url TEXT NOT NULL,
@@ -79,11 +79,11 @@ export const SCHEMA = {
         );
         CREATE INDEX IF NOT EXISTS idx_event_relays_event_id ON event_relays(event_id);
     `,
-    nip05: `
+  nip05: `
         CREATE TABLE IF NOT EXISTS nip05 (
             nip05 TEXT PRIMARY KEY,
             profile TEXT,
             fetched_at INTEGER NOT NULL
         );
     `,
-};
+}

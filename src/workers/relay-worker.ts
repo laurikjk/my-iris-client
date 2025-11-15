@@ -14,6 +14,27 @@ import {NDKSubscriptionCacheUsage} from "../lib/ndk/subscription"
 import {NDKRelay} from "../lib/ndk/relay"
 import NDKCacheAdapterDexie from "../lib/ndk-cache"
 
+// WASM sig verification - nostr-wasm Nostr interface
+interface WasmVerifier {
+  verifyEvent(event: unknown): void // throws on invalid sig
+}
+let wasmVerifier: WasmVerifier | null = null
+let wasmLoading = false
+
+async function loadWasm() {
+  if (wasmVerifier || wasmLoading) return
+  wasmLoading = true
+  try {
+    const {initNostrWasm} = await import("nostr-wasm")
+    wasmVerifier = await initNostrWasm()
+    console.log("[Relay Worker] WASM sig verifier loaded")
+  } catch (err) {
+    console.error("[Relay Worker] WASM load failed:", err)
+  } finally {
+    wasmLoading = false
+  }
+}
+
 interface WorkerMessage {
   type:
     | "init"
@@ -110,8 +131,33 @@ async function initialize(relayUrls?: string[]) {
       enableOutboxModel: false,
     })
 
+    // Setup custom sig verification with wasm fallback
+    ndk.signatureVerificationFunction = async (event: NDKEvent) => {
+      if (wasmVerifier) {
+        try {
+          wasmVerifier.verifyEvent({
+            id: event.id,
+            sig: event.sig!,
+            pubkey: event.pubkey,
+            content: event.content,
+            kind: event.kind!,
+            created_at: event.created_at!,
+            tags: event.tags,
+          })
+          return true
+        } catch {
+          return false
+        }
+      }
+      // Fallback to JS verification until wasm loads
+      return !!event.verifySignature(false)
+    }
+
+    // Lazy load wasm in background
+    loadWasm()
+
     // Forward relay notices to main thread
-    ndk.pool?.on("notice", (relay: any, notice: string) => {
+    ndk.pool?.on("notice", (relay: NDKRelay, notice: string) => {
       self.postMessage({
         type: "notice",
         relay: relay.url,
@@ -123,9 +169,7 @@ async function initialize(relayUrls?: string[]) {
     console.log("[Relay Worker] Connecting to relays...")
     await ndk.connect()
 
-    console.log(
-      `[Relay Worker] Initialized with ${ndk.pool?.relays.size || 0} relays`,
-    )
+    console.log(`[Relay Worker] Initialized with ${ndk.pool?.relays.size || 0} relays`)
 
     // Signal ready
     self.postMessage({type: "ready"} as WorkerResponse)
@@ -138,7 +182,11 @@ async function initialize(relayUrls?: string[]) {
   }
 }
 
-function handleSubscribe(subId: string, filters: NDKFilter[], opts?: WorkerSubscribeOpts) {
+function handleSubscribe(
+  subId: string,
+  filters: NDKFilter[],
+  opts?: WorkerSubscribeOpts
+) {
   if (!ndk) {
     console.error("[Relay Worker] NDK not initialized")
     return
@@ -221,7 +269,11 @@ async function handlePublish(
     if (opts?.verifySignature) {
       const isValid = event.verifySignature(false)
       if (!isValid) {
-        console.warn("[Relay Worker] Invalid signature for event from:", opts.source, eventData.id)
+        console.warn(
+          "[Relay Worker] Invalid signature for event from:",
+          opts.source,
+          eventData.id
+        )
         self.postMessage({
           type: "error",
           id,
@@ -235,7 +287,12 @@ async function handlePublish(
 
     // Dispatch to local subscriptions if requested
     if (destinations.includes("subscriptions")) {
-      console.log("[Relay Worker] Dispatching to subscriptions:", eventData.id, "source:", opts?.source)
+      console.log(
+        "[Relay Worker] Dispatching to subscriptions:",
+        eventData.id,
+        "source:",
+        opts?.source
+      )
       const fakeRelay = {url: opts?.source || "__local__"} as NDKRelay
       ndk.subManager.dispatchEvent(event, fakeRelay, false)
     }
@@ -257,13 +314,19 @@ async function handlePublish(
     let relays: any = undefined
     if (relayUrls && relayUrls.length > 0) {
       relays = ndk.pool?.relays
-        ? Array.from(ndk.pool.relays.values()).filter((r) =>
-            relayUrls.includes(r.url),
-          )
+        ? Array.from(ndk.pool.relays.values()).filter((r) => relayUrls.includes(r.url))
         : undefined
-      console.log("[Relay Worker] Publishing to specific relays:", relayUrls, "found:", relays?.length)
+      console.log(
+        "[Relay Worker] Publishing to specific relays:",
+        relayUrls,
+        "found:",
+        relays?.length
+      )
     } else {
-      console.log("[Relay Worker] Publishing to all relays, pool size:", ndk.pool?.relays.size)
+      console.log(
+        "[Relay Worker] Publishing to all relays, pool size:",
+        ndk.pool?.relays.size
+      )
     }
 
     // Increase timeout to allow relays to connect (10s)

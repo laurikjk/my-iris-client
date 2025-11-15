@@ -1,5 +1,5 @@
-import type { NDKEvent } from "@/lib/ndk";
-import type { NDKCacheAdapterSqliteWasm } from "../index";
+import type {NDKEvent} from "@/lib/ndk"
+import type {NDKCacheAdapterSqliteWasm} from "../index"
 
 /**
  * Adds an unpublished event to the SQLite WASM database.
@@ -9,29 +9,39 @@ import type { NDKCacheAdapterSqliteWasm } from "../index";
  * @param lastTryAt Timestamp of last try
  */
 export async function addUnpublishedEvent(
-    this: NDKCacheAdapterSqliteWasm,
-    event: NDKEvent,
-    relayUrls: string[],
-    lastTryAt: number = Date.now(),
+  this: NDKCacheAdapterSqliteWasm,
+  event: NDKEvent,
+  relayUrls: string[],
+  lastTryAt: number = Date.now()
 ): Promise<void> {
-    const stmt = `
+  const stmt = `
         INSERT OR REPLACE INTO unpublished_events (
             id, event, relays, lastTryAt
         ) VALUES (?, ?, ?, ?)
-    `;
+    `
 
-    await this.ensureInitialized();
+  await this.ensureInitialized()
 
-    if (this.useWorker) {
-        await this.postWorkerMessage({
-            type: "run",
-            payload: {
-                sql: stmt,
-                params: [event.id, event.serialize(true, true), JSON.stringify(relayUrls), lastTryAt],
-            },
-        });
-    } else {
-        if (!this.db) throw new Error("Database not initialized");
-        this.db.run(stmt, [event.id, event.serialize(true, true), JSON.stringify(relayUrls), lastTryAt]);
-    }
+  if (this.useWorker) {
+    await this.postWorkerMessage({
+      type: "run",
+      payload: {
+        sql: stmt,
+        params: [
+          event.id,
+          event.serialize(true, true),
+          JSON.stringify(relayUrls),
+          lastTryAt,
+        ],
+      },
+    })
+  } else {
+    if (!this.db) throw new Error("Database not initialized")
+    this.db.run(stmt, [
+      event.id,
+      event.serialize(true, true),
+      JSON.stringify(relayUrls),
+      lastTryAt,
+    ])
+  }
 }

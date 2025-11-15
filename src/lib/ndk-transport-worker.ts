@@ -131,7 +131,7 @@ export class NDKWorkerTransport {
     // Exponential backoff capped at 30s
     const delay = Math.min(1000 * Math.pow(2, this.restartAttempts - 1), 30_000)
     console.warn(
-      `[Worker Transport] Worker crashed (attempt ${this.restartAttempts}), restarting in ${delay}ms...`,
+      `[Worker Transport] Worker crashed (attempt ${this.restartAttempts}), restarting in ${delay}ms...`
     )
 
     await new Promise((resolve) => setTimeout(resolve, delay))
@@ -144,7 +144,9 @@ export class NDKWorkerTransport {
     if (this.ndk && this.relayUrls.length > 0) {
       try {
         await this.connect(this.ndk, this.relayUrls)
-        console.log(`[Worker Transport] Worker restarted successfully after ${this.restartAttempts} attempts`)
+        console.log(
+          `[Worker Transport] Worker restarted successfully after ${this.restartAttempts} attempts`
+        )
       } catch (error) {
         console.error("[Worker Transport] Failed to reconnect after restart:", error)
         // Will retry on next crash
@@ -198,7 +200,7 @@ export class NDKWorkerTransport {
         // Emit EOSE to main thread subscription (pass null instead of undefined)
         // Worker doesn't have relay reference, subscription handles it
         subscription.eoseReceived(null as any)
-      },
+      }
     )
   }
 
@@ -206,7 +208,9 @@ export class NDKWorkerTransport {
     if (!this.ready) await this.readyPromise
 
     return new Promise((resolve, reject) => {
-      const id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+      const id =
+        Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15)
       this.publishResolvers.set(id, {resolve, reject})
 
       this.worker.postMessage({
@@ -230,7 +234,7 @@ export class NDKWorkerTransport {
     subId: string,
     filters: NDKFilter[],
     onEvent: (event: NDKEvent) => void,
-    onEose?: () => void,
+    onEose?: () => void
   ): void {
     if (!this.subscriptions.has(subId)) {
       this.subscriptions.set(subId, new Set())
@@ -277,7 +281,9 @@ export class NDKWorkerTransport {
     }>
   > {
     return new Promise((resolve) => {
-      const id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+      const id =
+        Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15)
       const handler = (e: MessageEvent<WorkerResponse>) => {
         if (e.data.type === "relayStatus" && e.data.id === id) {
           this.worker.removeEventListener("message", handler)
@@ -340,7 +346,7 @@ export class NDKWorkerTransport {
     subId: string,
     filters: NDKFilter[],
     onEvent: (event: NDKEvent) => void,
-    onEose?: () => void,
+    onEose?: () => void
   ): void {
     // Register handlers same as regular subscribe
     if (!this.subscriptions.has(subId)) {

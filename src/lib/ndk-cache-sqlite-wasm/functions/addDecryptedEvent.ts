@@ -1,5 +1,5 @@
-import type { NDKEvent, NDKEventId } from "@/lib/ndk";
-import type { NDKCacheAdapterSqliteWasm } from "../index";
+import type {NDKEvent, NDKEventId} from "@/lib/ndk"
+import type {NDKCacheAdapterSqliteWasm} from "../index"
 
 /**
  * Adds a decrypted event to the SQLite WASM database.
@@ -7,26 +7,30 @@ import type { NDKCacheAdapterSqliteWasm } from "../index";
  * @param wrapperId - The ID of the gift-wrapped event (kind 1059) to use as the cache key
  * @param decryptedEvent - The decrypted rumor event to store
  */
-export async function addDecryptedEvent(this: NDKCacheAdapterSqliteWasm, wrapperId: NDKEventId, decryptedEvent: NDKEvent): Promise<void> {
-    await this.ensureInitialized();
+export async function addDecryptedEvent(
+  this: NDKCacheAdapterSqliteWasm,
+  wrapperId: NDKEventId,
+  decryptedEvent: NDKEvent
+): Promise<void> {
+  await this.ensureInitialized()
 
-    const serialized = decryptedEvent.serialize(true, true);
-    const stmt = `
+  const serialized = decryptedEvent.serialize(true, true)
+  const stmt = `
         INSERT OR REPLACE INTO decrypted_events (
             id, event
         ) VALUES (?, ?)
-    `;
+    `
 
-    if (this.useWorker) {
-        await this.postWorkerMessage({
-            type: "run",
-            payload: {
-                sql: stmt,
-                params: [wrapperId, serialized],
-            },
-        });
-    } else {
-        if (!this.db) throw new Error("Database not initialized");
-        this.db.run(stmt, [wrapperId, serialized]);
-    }
+  if (this.useWorker) {
+    await this.postWorkerMessage({
+      type: "run",
+      payload: {
+        sql: stmt,
+        params: [wrapperId, serialized],
+      },
+    })
+  } else {
+    if (!this.db) throw new Error("Database not initialized")
+    this.db.run(stmt, [wrapperId, serialized])
+  }
 }

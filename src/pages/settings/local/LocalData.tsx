@@ -338,9 +338,7 @@ export function LocalData() {
       )}
 
       {!loading && !error && !stats && (
-        <div className="text-center text-base-content/70 text-sm">
-          No data available
-        </div>
+        <div className="text-center text-base-content/70 text-sm">No data available</div>
       )}
       {stats && (
         <>
@@ -448,8 +446,8 @@ export function LocalData() {
       <SettingsGroup title="Danger Zone">
         <SettingsGroupItem>
           <div className="text-sm text-base-content/70">
-            Clear ALL local Nostr data (IndexedDB + OPFS). Events will be re-downloaded from
-            relays as needed. This action cannot be undone.
+            Clear ALL local Nostr data (IndexedDB + OPFS). Events will be re-downloaded
+            from relays as needed. This action cannot be undone.
           </div>
         </SettingsGroupItem>
 

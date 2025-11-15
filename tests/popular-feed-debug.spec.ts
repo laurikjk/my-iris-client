@@ -33,16 +33,23 @@ test("popular feed debug", async ({page}) => {
   console.log("Feed items:", feedItems)
 
   // Check for no posts message
-  const noPostsCount = await page.locator('text=No popular posts found').count()
+  const noPostsCount = await page.locator("text=No popular posts found").count()
   console.log("No posts messages:", noPostsCount)
 
   // Check for loading state
-  const loadingVisible = await page.locator('text=Loading').count()
+  const loadingVisible = await page.locator("text=Loading").count()
   console.log("Loading messages:", loadingVisible)
 
   // Filter relevant logs
-  const graphLogs = logs.filter((l) => l.toLowerCase().includes("social") || l.includes("✅"))
-  const authorLogs = logs.filter((l) => l.toLowerCase().includes("author") || l.toLowerCase().includes("popular") || l.toLowerCase().includes("filter"))
+  const graphLogs = logs.filter(
+    (l) => l.toLowerCase().includes("social") || l.includes("✅")
+  )
+  const authorLogs = logs.filter(
+    (l) =>
+      l.toLowerCase().includes("author") ||
+      l.toLowerCase().includes("popular") ||
+      l.toLowerCase().includes("filter")
+  )
   const subLogs = logs.filter((l) => l.toLowerCase().includes("subscri"))
 
   console.log("\n=== Graph logs ===")

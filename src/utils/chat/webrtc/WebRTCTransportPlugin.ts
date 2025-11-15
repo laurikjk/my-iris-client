@@ -64,7 +64,9 @@ function sendGroupedFilters(groupKey: NDKFilterFingerprint) {
   // Merge filters using NDK's logic
   const merged = mergeFilters(group.filters)
 
-  const subId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+  const subId =
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15)
   const connections = getAllConnections()
   const message = ["REQ", subId, ...merged]
 
@@ -172,7 +174,9 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
     const fingerprint = filterFingerprint(filters, false)
     if (!fingerprint) {
       // Non-groupable filters, send immediately
-      const subId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+      const subId =
+        Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15)
       const connections = getAllConnections()
       const message = ["REQ", subId, ...filters]
 
@@ -284,7 +288,10 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
    * Handle incoming EVENT message from WebRTC peer
    * Called by p2pMessages when EVENT is received
    */
-  async handleIncomingEvent(peerId: string, eventJson: unknown): Promise<NDKEvent | null> {
+  async handleIncomingEvent(
+    peerId: string,
+    eventJson: unknown
+  ): Promise<NDKEvent | null> {
     if (!this.ndk) return null
 
     const event = new NDKEvent(this.ndk, eventJson as Record<string, unknown>)

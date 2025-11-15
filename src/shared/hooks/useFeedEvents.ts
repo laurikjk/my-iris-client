@@ -91,9 +91,10 @@ export default function useFeedEvents({
     }
 
     // Cache expensive calls
-    const replyingTo = feedConfig.hideReplies || feedConfig.requiresReplies || feedConfig.repliesTo
-      ? getEventReplyingTo(event)
-      : null
+    const replyingTo =
+      feedConfig.hideReplies || feedConfig.requiresReplies || feedConfig.repliesTo
+        ? getEventReplyingTo(event)
+        : null
 
     if (feedConfig.hideReplies && replyingTo) return false
     if (feedConfig.requiresReplies && !replyingTo) return false

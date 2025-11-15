@@ -21,7 +21,7 @@ export default function UserSearchContent() {
   const [displayCount, setDisplayCount] = useState(20)
   const [searchValue, setSearchValue] = useState(decodedQuery)
 
-  useSearchInputAutofocus(searchInputRef, '/u')
+  useSearchInputAutofocus(searchInputRef, "/u")
 
   const peopleSearch = useSearch({
     maxResults: 10,

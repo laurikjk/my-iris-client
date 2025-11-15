@@ -71,7 +71,14 @@ export default function UserSearchPage() {
         followedByCount: graph.followedByFriends(pubkey).size,
       }))
       .sort(() => Math.random() - 0.5)
-  }, [follows, graph, rootUser, searchValue, peopleSearch.searchResults, peopleSearch.recentSearches])
+  }, [
+    follows,
+    graph,
+    rootUser,
+    searchValue,
+    peopleSearch.searchResults,
+    peopleSearch.recentSearches,
+  ])
 
   const loadMore = () => {
     if (displayCount < displayUsers.length) {
@@ -143,7 +150,11 @@ export default function UserSearchPage() {
                   <div className="menu-title text-sm px-0 py-2">Recent</div>
                   <div className="flex flex-col gap-2">
                     {peopleSearch.recentSearches.map((result) => (
-                      <UserRow key={result.pubKey} pubKey={result.pubKey} linkToProfile={true} />
+                      <UserRow
+                        key={result.pubKey}
+                        pubKey={result.pubKey}
+                        linkToProfile={true}
+                      />
                     ))}
                   </div>
                 </div>
