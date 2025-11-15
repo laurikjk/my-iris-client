@@ -223,11 +223,9 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                 });
             }
             Ok(NostrRequest::Unsubscribe { id }) => {
-                // Remove from our subscription map
                 SUBSCRIPTIONS.with(|subs| {
                     subs.borrow_mut().remove(&id);
                 });
-                // Send CLOSE to relays
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
                         let close_msg = ClientMessage::close(id.clone());
@@ -236,12 +234,58 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                     }
                 });
             }
+            Ok(NostrRequest::RemoveRelay { url }) => {
+                POOL.with(|p| {
+                    if let Some(pool) = p.borrow_mut().as_mut() {
+                        pool.relays.retain(|r| r.url() != url);
+                        info!(relay = %url, "Relay removed");
+                    }
+                });
+            }
+            Ok(NostrRequest::ConnectRelay { url }) => {
+                POOL.with(|p| {
+                    if let Some(pool) = p.borrow_mut().as_mut() {
+                        for relay in &mut pool.relays {
+                            if relay.url() == url {
+                                // Relay already exists, just update status
+                                relay.set_status(enostr::RelayStatus::Connecting);
+                                info!(relay = %url, "Reconnecting relay");
+                                return;
+                            }
+                        }
+                    }
+                });
+            }
+            Ok(NostrRequest::DisconnectRelay { url }) => {
+                POOL.with(|p| {
+                    if let Some(pool) = p.borrow_mut().as_mut() {
+                        for relay in &mut pool.relays {
+                            if relay.url() == url {
+                                relay.set_status(enostr::RelayStatus::Disconnected);
+                                info!(relay = %url, "Disconnected relay");
+                                break;
+                            }
+                        }
+                    }
+                });
+            }
+            Ok(NostrRequest::ReconnectDisconnected { reason }) => {
+                POOL.with(|p| {
+                    if let Some(pool) = p.borrow_mut().as_mut() {
+                        let mut reconnected = 0;
+                        for relay in &mut pool.relays {
+                            if matches!(relay.status(), enostr::RelayStatus::Disconnected) {
+                                relay.set_status(enostr::RelayStatus::Connecting);
+                                reconnected += 1;
+                            }
+                        }
+                        info!(count = reconnected, reason = ?reason, "Reconnecting disconnected relays");
+                    }
+                });
+            }
             Ok(NostrRequest::Close) => {
                 info!("Close command received");
                 break;
-            }
-            Ok(req) => {
-                debug!(request = ?req, "Unhandled request");
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => {},
             Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
