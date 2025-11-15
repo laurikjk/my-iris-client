@@ -7,6 +7,10 @@
  */
 
 // Can't use path aliases in worker, use relative imports
+import {createDebugLogger} from "../utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "../utils/constants"
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.NDK_RELAY)
+
 import NDK from "../lib/ndk"
 import {NDKEvent} from "../lib/ndk/events"
 import type {NDKFilter} from "../lib/ndk/subscription"
@@ -27,9 +31,9 @@ async function loadWasm() {
   try {
     const {initNostrWasm} = await import("nostr-wasm")
     wasmVerifier = await initNostrWasm()
-    console.log("[Relay Worker] WASM sig verifier loaded")
+    log("[Relay Worker] WASM sig verifier loaded")
   } catch (err) {
-    console.error("[Relay Worker] WASM load failed:", err)
+    error("[Relay Worker] WASM load failed:", err)
   } finally {
     wasmLoading = false
   }
@@ -113,19 +117,19 @@ const DEFAULT_RELAYS = [
 
 async function initialize(relayUrls?: string[]) {
   try {
-    console.log("[Relay Worker] Starting initialization with relays:", relayUrls)
+    log("[Relay Worker] Starting initialization with relays:", relayUrls)
 
     // Initialize Dexie cache for writing only (main thread handles reads)
-    console.log("[Relay Worker] Initializing cache adapter...")
+    log("[Relay Worker] Initializing cache adapter...")
     cache = new NDKCacheAdapterDexie({
       dbName: "treelike-nostr",
       saveSig: true,
     })
-    console.log("[Relay Worker] Cache adapter ready (write-only, main thread queries)")
+    log("[Relay Worker] Cache adapter ready (write-only, main thread queries)")
 
     // Initialize NDK with relay connections
     const relaysToUse = relayUrls && relayUrls.length > 0 ? relayUrls : DEFAULT_RELAYS
-    console.log("[Relay Worker] Creating NDK with relays:", relaysToUse)
+    log("[Relay Worker] Creating NDK with relays:", relaysToUse)
 
     ndk = new NDK({
       explicitRelayUrls: relaysToUse,
@@ -168,18 +172,18 @@ async function initialize(relayUrls?: string[]) {
     })
 
     // Connect to relays
-    console.log("[Relay Worker] Connecting to relays...")
+    log("[Relay Worker] Connecting to relays...")
     await ndk.connect()
 
-    console.log(`[Relay Worker] Initialized with ${ndk.pool?.relays.size || 0} relays`)
+    log(`[Relay Worker] Initialized with ${ndk.pool?.relays.size || 0} relays`)
 
     // Signal ready
     self.postMessage({type: "ready"} as WorkerResponse)
-  } catch (error) {
-    console.error("[Relay Worker] Initialization failed:", error)
+  } catch (err) {
+    error("[Relay Worker] Initialization failed:", err)
     self.postMessage({
       type: "error",
-      error: error instanceof Error ? error.message : String(error),
+      error: err instanceof Error ? err.message : String(err),
     } as WorkerResponse)
   }
 }
@@ -190,7 +194,7 @@ function handleSubscribe(
   opts?: WorkerSubscribeOpts
 ) {
   if (!ndk) {
-    console.error("[Relay Worker] NDK not initialized")
+    error("[Relay Worker] NDK not initialized")
     return
   }
 
@@ -271,7 +275,7 @@ async function handlePublish(
     if (opts?.verifySignature) {
       const isValid = event.verifySignature(false)
       if (!isValid) {
-        console.warn(
+        warn(
           "[Relay Worker] Invalid signature for event from:",
           opts.source,
           eventData.id
@@ -289,7 +293,7 @@ async function handlePublish(
 
     // Dispatch to local subscriptions if requested
     if (destinations.includes("subscriptions")) {
-      console.log(
+      log(
         "[Relay Worker] Dispatching to subscriptions:",
         eventData.id,
         "source:",
@@ -310,7 +314,7 @@ async function handlePublish(
       return
     }
 
-    console.log("[Relay Worker] Publishing event:", eventData.id)
+    log("[Relay Worker] Publishing event:", eventData.id)
 
     // Publish to specified relays or all connected relays
     let relays: any = undefined
@@ -318,33 +322,30 @@ async function handlePublish(
       relays = ndk.pool?.relays
         ? Array.from(ndk.pool.relays.values()).filter((r) => relayUrls.includes(r.url))
         : undefined
-      console.log(
+      log(
         "[Relay Worker] Publishing to specific relays:",
         relayUrls,
         "found:",
         relays?.length
       )
     } else {
-      console.log(
-        "[Relay Worker] Publishing to all relays, pool size:",
-        ndk.pool?.relays.size
-      )
+      log("[Relay Worker] Publishing to all relays, pool size:", ndk.pool?.relays.size)
     }
 
     // Increase timeout to allow relays to connect (10s)
     await event.publish(relays, 10_000)
 
-    console.log("[Relay Worker] Event published successfully:", eventData.id)
+    log("[Relay Worker] Event published successfully:", eventData.id)
     self.postMessage({
       type: "published",
       id,
     } as WorkerResponse)
-  } catch (error) {
-    console.error("[Relay Worker] Publish failed:", error)
+  } catch (err) {
+    error("[Relay Worker] Publish failed:", err)
     self.postMessage({
       type: "error",
       id,
-      error: error instanceof Error ? error.message : String(error),
+      error: err instanceof Error ? err.message : String(err),
     } as WorkerResponse)
   }
 }
@@ -407,15 +408,13 @@ function handleDisconnectRelay(url: string) {
 function handleReconnectDisconnected(reason: string) {
   if (!ndk?.pool) return
 
-  console.log(`[Relay Worker] ${reason}, checking relay connections...`)
+  log(`[Relay Worker] ${reason}, checking relay connections...`)
 
   // Force immediate reconnection for disconnected relays
   // NDKRelayStatus: DISCONNECTED=1, RECONNECTING=2, FLAPPING=3, CONNECTING=4, CONNECTED=5+
   for (const relay of ndk.pool.relays.values()) {
     if (relay.status < 5) {
-      console.log(
-        `[Relay Worker] Forcing reconnection to ${relay.url} (status: ${relay.status})`
-      )
+      log(`[Relay Worker] Forcing reconnection to ${relay.url} (status: ${relay.status})`)
       relay.connect()
     }
   }
@@ -437,7 +436,7 @@ let wasOffline = false
 
 self.addEventListener("online", () => {
   if (wasOffline) {
-    console.log("[Relay Worker] Network connection restored")
+    log("[Relay Worker] Network connection restored")
     wasOffline = false
     handleReconnectDisconnected("Network connection restored")
   }
@@ -445,7 +444,7 @@ self.addEventListener("online", () => {
 
 self.addEventListener("offline", () => {
   wasOffline = true
-  console.log("[Relay Worker] Network connection lost")
+  log("[Relay Worker] Network connection lost")
 })
 
 // Message handler
@@ -515,15 +514,15 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       break
 
     default:
-      console.warn("[Relay Worker] Unknown message type:", type)
+      warn("[Relay Worker] Unknown message type:", type)
   }
 }
 
 // Handle errors
-self.onerror = (error) => {
-  console.error("[Relay Worker] Error:", error)
+self.onerror = (err) => {
+  error("[Relay Worker] Error:", err)
   self.postMessage({
     type: "error",
-    error: error instanceof Error ? error.message : String(error),
+    error: err instanceof Error ? err.message : String(err),
   } as WorkerResponse)
 }

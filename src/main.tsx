@@ -13,6 +13,7 @@ import socialGraph from "./utils/socialGraph"
 import DebugManager from "./utils/DebugManager"
 import Layout from "@/shared/components/Layout"
 import {isTauri, isMobileTauri} from "./utils/utils"
+import {initializeDebugLogging} from "./utils/createDebugLogger"
 import {onOpenUrl} from "@tauri-apps/plugin-deep-link"
 import {
   enable as enableAutostart,
@@ -74,6 +75,9 @@ const checkDeletedAccount = async (publicKey: string) => {
 
 // Move initialization to a function to avoid side effects
 const initializeApp = async () => {
+  // Initialize debug logging first
+  initializeDebugLogging()
+
   // Wait for settings to hydrate from localStorage before initializing NDK
   await useUserStore.getState().awaitHydration()
 

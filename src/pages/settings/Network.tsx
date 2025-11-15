@@ -7,7 +7,6 @@ import {RelayList} from "@/shared/components/RelayList"
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {PeerConnectionList} from "@/shared/components/connection/PeerConnectionList"
-import {WebRTCLogViewer} from "@/shared/components/connection/WebRTCLogViewer"
 import {RelayLogViewer} from "@/shared/components/connection/RelayLogViewer"
 import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
 import {getP2PStats, resetP2PStats} from "@/utils/chat/webrtc/p2pNostr"
@@ -319,34 +318,6 @@ export function Network() {
               </div>
             </SettingsGroupItem>
             <SettingsGroupItem>
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                  <span>Log Level</span>
-                  <select
-                    value={network.webrtcLogLevel}
-                    onChange={(e) =>
-                      updateNetwork({
-                        webrtcLogLevel: e.target.value as
-                          | "debug"
-                          | "info"
-                          | "warn"
-                          | "error",
-                      })
-                    }
-                    className="select select-sm select-bordered"
-                  >
-                    <option value="debug">Debug</option>
-                    <option value="info">Info</option>
-                    <option value="warn">Warn</option>
-                    <option value="error">Error</option>
-                  </select>
-                </div>
-                <span className="text-sm text-base-content/60">
-                  Info: connection events, Warn/Error: problems only, Debug: all activity
-                </span>
-              </div>
-            </SettingsGroupItem>
-            <SettingsGroupItem>
               <PeerConnectionList />
             </SettingsGroupItem>
             <SettingsGroupItem>
@@ -382,9 +353,6 @@ export function Network() {
                   </span>
                 </div>
               </div>
-            </SettingsGroupItem>
-            <SettingsGroupItem isLast>
-              <WebRTCLogViewer />
             </SettingsGroupItem>
           </SettingsGroup>
 

@@ -17,6 +17,9 @@ import {WebRTCTransportPlugin} from "@/utils/chat/webrtc/WebRTCTransportPlugin"
 import {setWebRTCPlugin} from "@/utils/chat/webrtc/p2pMessages"
 import {shouldHideEvent} from "@/utils/visibility"
 import socialGraph from "@/utils/socialGraph"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.NDK_RELAY)
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
@@ -78,11 +81,11 @@ async function initNDK(opts?: NDKConstructorParams) {
     store.relayConfigs?.filter((c) => !c.disabled).map((c) => c.url) || []
   const relays = opts?.explicitRelayUrls || enabledRelays
 
-  console.log("Initializing NDK with enabled relays:", relays)
+  log("Initializing NDK with enabled relays:", relays)
 
   // Log when using test relay
   if (import.meta.env.VITE_USE_TEST_RELAY) {
-    console.log("🧪 Using test relay only: wss://temp.iris.to/")
+    log("🧪 Using test relay only: wss://temp.iris.to/")
   }
 
   const enableOutbox = import.meta.env.VITE_USE_LOCAL_RELAY ? false : store.ndkOutboxModel
@@ -91,7 +94,7 @@ async function initNDK(opts?: NDKConstructorParams) {
     ? false
     : store.autoConnectUserRelays
 
-  console.log(
+  log(
     "Initializing NDK with outbox model:",
     enableOutbox,
     "autoConnectUserRelays:",
@@ -110,7 +113,7 @@ async function initNDK(opts?: NDKConstructorParams) {
 
     // If relay is in config and disabled, block it
     if (relayConfig?.disabled) {
-      console.log("Blocking disabled relay:", relayUrl)
+      log("Blocking disabled relay:", relayUrl)
       return false
     }
 
@@ -128,7 +131,7 @@ async function initNDK(opts?: NDKConstructorParams) {
       : currentStore.autoConnectUserRelays
 
     if (!currentEnableOutbox && !currentAutoConnect) {
-      console.log("Blocking discovered relay:", relayUrl)
+      log("Blocking discovered relay:", relayUrl)
       return false
     }
 
@@ -137,9 +140,7 @@ async function initNDK(opts?: NDKConstructorParams) {
   }
 
   // Initialize worker transport with built-in sig verification
-  console.log(
-    "🔧 Using Worker Transport - relay connections + cache + WASM sig verification"
-  )
+  log("🔧 Using Worker Transport - relay connections + cache + WASM sig verification")
   // Vite bundles worker when it sees: new Worker(new URL(..., import.meta.url))
   const worker = new Worker(new URL("../workers/relay-worker.ts", import.meta.url), {
     type: "module",
@@ -176,7 +177,7 @@ async function initNDK(opts?: NDKConstructorParams) {
         ndkInstance.signer = privateKeySigner
       }
     } catch (e) {
-      console.error("Error setting initial private key signer:", e)
+      error("Error setting initial private key signer:", e)
     }
   }
 
@@ -197,7 +198,7 @@ async function initNDK(opts?: NDKConstructorParams) {
 
   setupWebRTCTransport(ndkInstance)
 
-  console.log("NDK instance initialized", ndkInstance)
+  log("NDK instance initialized", ndkInstance)
 }
 
 /**
@@ -257,7 +258,7 @@ function setupWebRTCTransport(instance: NDK) {
   // Register plugin with NDK (native hook support)
   instance.transportPlugins.push(plugin)
 
-  console.log("WebRTC transport plugin initialized")
+  log("WebRTC transport plugin initialized")
 }
 
 function attachRelayLogger(instance: NDK) {
@@ -279,7 +280,7 @@ function watchLocalSettings(instance: NDK) {
   useSettingsStore.subscribe((state, prevState) => {
     if (state.network.p2pOnlyMode !== prevState.network.p2pOnlyMode) {
       instance.p2pOnlyMode = state.network.p2pOnlyMode
-      console.log("P2P-only mode:", state.network.p2pOnlyMode ? "enabled" : "disabled")
+      log("P2P-only mode:", state.network.p2pOnlyMode ? "enabled" : "disabled")
     }
   })
 
@@ -295,7 +296,7 @@ function watchLocalSettings(instance: NDK) {
             instance.signer = privateKeySigner
           }
         } catch (e) {
-          console.error("Error setting private key signer:", e)
+          error("Error setting private key signer:", e)
         }
       } else {
         privateKeySigner = undefined
@@ -315,7 +316,7 @@ function watchLocalSettings(instance: NDK) {
             useUserStore.getState().setPublicKey(user.pubkey)
           })
           .catch((e) => {
-            console.error("Error getting NIP-07 user:", e)
+            error("Error getting NIP-07 user:", e)
             useUserStore.getState().setNip07Login(false)
           })
       }
@@ -360,7 +361,7 @@ function watchLocalSettings(instance: NDK) {
               instance.pool.removeRelay(relayConfig.url) ||
               instance.pool.removeRelay(normalizedUrl)
             if (removed) {
-              console.log("Removed disabled relay from pool:", relayConfig.url)
+              log("Removed disabled relay from pool:", relayConfig.url)
             }
           } else if (isEnabled && existsInPool) {
             // Ensure enabled relay is connected

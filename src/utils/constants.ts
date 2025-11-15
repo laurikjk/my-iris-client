@@ -56,3 +56,54 @@ export const KIND_PICTURE_FIRST = 20
 
 // Additional kinds found in codebase
 export const KIND_WALLET_CONNECT = 6927
+
+// Debug namespaces for debug pkg
+export const DEBUG_NAMESPACES = {
+  // NDK
+  NDK_RELAY: "ndk:relay",
+  NDK_RELAY_CONN: "ndk:relay:conn",
+  NDK_RELAY_ERROR: "ndk:relay:error",
+  NDK_RELAY_WARN: "ndk:relay:warn",
+  NDK_SUBSCRIPTION: "ndk:subscription",
+  NDK_SUBSCRIPTION_ERROR: "ndk:subscription:error",
+  NDK_SUBSCRIPTION_WARN: "ndk:subscription:warn",
+  NDK_CACHE: "ndk:cache",
+  NDK_CACHE_ERROR: "ndk:cache:error",
+  NDK_CACHE_WARN: "ndk:cache:warn",
+  NDK_POOL: "ndk:pool",
+  NDK_POOL_ERROR: "ndk:pool:error",
+  NDK_POOL_WARN: "ndk:pool:warn",
+
+  // WebRTC
+  WEBRTC_PEER: "webrtc:peer",
+  WEBRTC_PEER_LIFECYCLE: "webrtc:peer:lifecycle", // connect/disconnect/state changes
+  WEBRTC_PEER_MESSAGES: "webrtc:peer:messages", // offer/answer/ICE candidates
+  WEBRTC_PEER_DATA: "webrtc:peer:data", // data channel events
+  WEBRTC_SIGNALING: "webrtc:signaling",
+
+  // Cashu
+  CASHU_WALLET: "cashu:wallet",
+  CASHU_WALLET_ERROR: "cashu:wallet:error",
+  CASHU_WALLET_WARN: "cashu:wallet:warn",
+  CASHU_MINT: "cashu:mint",
+  CASHU_MINT_ERROR: "cashu:mint:error",
+  CASHU_MINT_WARN: "cashu:mint:warn",
+
+  // UI
+  UI_FEED: "ui:feed",
+  UI_FEED_ERROR: "ui:feed:error",
+  UI_FEED_WARN: "ui:feed:warn",
+  UI_CHAT: "ui:chat",
+  UI_CHAT_ERROR: "ui:chat:error",
+  UI_CHAT_WARN: "ui:chat:warn",
+
+  // Hooks
+  HOOKS: "hooks",
+  HOOKS_ERROR: "hooks:error",
+  HOOKS_WARN: "hooks:warn",
+
+  // Utils
+  UTILS: "utils",
+  UTILS_ERROR: "utils:error",
+  UTILS_WARN: "utils:warn",
+} as const

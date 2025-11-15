@@ -1,6 +1,10 @@
 import {NDKUserProfile} from "@/lib/ndk"
 import {loadProfileCache, profileCache} from "./profileCache"
 import Fuse from "fuse.js"
+import {createDebugLogger} from "./createDebugLogger"
+import {DEBUG_NAMESPACES} from "./constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 export type SearchResult = {
   name: string
@@ -16,7 +20,7 @@ let searchIndex: Fuse<SearchResult> = new Fuse<SearchResult>([], {
 })
 
 async function initializeSearchIndex() {
-  console.time("fuse init")
+  const start = performance.now()
   // Wait for profiles to be loaded from cache or profileData.json
   await loadProfileCache()
 
@@ -36,10 +40,11 @@ async function initializeSearchIndex() {
     keys: ["name", "nip05"],
     includeScore: true,
   })
-  console.timeEnd("fuse init")
+  const duration = performance.now() - start
+  log(`fuse init: ${duration.toFixed(2)} ms`)
 }
 
-initializeSearchIndex().catch(console.error)
+initializeSearchIndex().catch(error)
 
 export {searchIndex}
 

@@ -11,8 +11,11 @@ import {
   type NDKFilterFingerprint,
 } from "@/lib/ndk/subscription/grouping"
 import {getAllConnections} from "./PeerConnection"
-import {webrtcLogger} from "./Logger"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
 import socialGraph from "@/utils/socialGraph"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_PEER)
 import {RateLimiter} from "./RateLimiter"
 import {getCachedName} from "@/utils/nostr"
 import {shouldHideUser} from "@/utils/visibility"
@@ -76,9 +79,9 @@ function sendGroupedFilters(groupKey: NDKFilterFingerprint) {
     try {
       conn.sendJsonData(message)
       const filterStr = JSON.stringify(merged).slice(0, 200)
-      webrtcLogger.debug(peerId, `REQ ${subId} ${filterStr}`, "up")
-    } catch (error) {
-      webrtcLogger.error(peerId, "Failed to send subscription")
+      log(`REQ ${subId} ${filterStr}`)
+    } catch (err) {
+      error("Failed to send subscription")
     }
   }
 }
@@ -93,7 +96,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
 
   initialize(ndk: NDK): void {
     this.ndk = ndk
-    webrtcLogger.info(undefined, "WebRTC transport plugin initialized")
+    log("WebRTC transport plugin initialized")
   }
 
   /**
@@ -104,7 +107,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
     const eventJson = event.rawEvent()
 
     if (!eventJson || !eventJson.id) {
-      webrtcLogger.warn(undefined, "Cannot publish to peers: event not serialized")
+      warn("Cannot publish to peers: event not serialized")
       return
     }
 
@@ -120,7 +123,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       // Private messages: rate limit but don't check follows
       if (isPrivateMessage) {
         if (!outgoingRateLimiter.check(peerId)) {
-          webrtcLogger.warn(peerId, `Rate limit exceeded for kind ${eventJson.kind}`)
+          warn(`Rate limit exceeded for kind ${eventJson.kind}`)
           continue
         }
       } else {
@@ -142,13 +145,9 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
           eventJson.content && eventJson.content.length > 50
             ? eventJson.content.slice(0, 50) + "..."
             : eventJson.content || ""
-        webrtcLogger.debug(
-          peerId,
-          `EVENT kind ${eventJson.kind} ${eventJson.id?.slice(0, 8)} ${contentPreview}`,
-          "up"
-        )
-      } catch (error) {
-        webrtcLogger.error(peerId, "Failed to send event")
+        log(`EVENT kind ${eventJson.kind} ${eventJson.id?.slice(0, 8)} ${contentPreview}`)
+      } catch (err) {
+        error("Failed to send event")
       }
     }
   }
@@ -185,9 +184,9 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
         try {
           conn.sendJsonData(message)
           const filterStr = JSON.stringify(filters).slice(0, 200)
-          webrtcLogger.debug(peerId, `REQ ${subId} ${filterStr}`, "up")
-        } catch (error) {
-          webrtcLogger.error(peerId, "Failed to send subscription")
+          log(`REQ ${subId} ${filterStr}`)
+        } catch (err) {
+          error("Failed to send subscription")
         }
       }
       return
@@ -223,9 +222,9 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
 
       try {
         conn.sendJsonData(message)
-        webrtcLogger.debug(peerId, `CLOSE ${subId}`, "up")
-      } catch (error) {
-        webrtcLogger.error(peerId, "Failed to close subscription")
+        log(`CLOSE ${subId}`)
+      } catch (err) {
+        error("Failed to close subscription")
       }
     }
   }
@@ -252,7 +251,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
 
       if (isPrivateMessage) {
         if (!outgoingRateLimiter.check(peerId)) {
-          webrtcLogger.warn(peerId, `Rate limit exceeded for kind ${eventJson.kind}`)
+          warn(`Rate limit exceeded for kind ${eventJson.kind}`)
           continue
         }
       } else {
@@ -273,13 +272,11 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
           eventJson.content && eventJson.content.length > 50
             ? eventJson.content.slice(0, 50) + "..."
             : eventJson.content || ""
-        webrtcLogger.debug(
-          peerId,
-          `EVENT relayed kind ${eventJson.kind} ${eventJson.id.slice(0, 8)} ${contentPreview}`,
-          "up"
+        log(
+          `EVENT relayed kind ${eventJson.kind} ${eventJson.id.slice(0, 8)} ${contentPreview}`
         )
-      } catch (error) {
-        webrtcLogger.error(peerId, "Failed to relay event")
+      } catch (err) {
+        error("Failed to relay event")
       }
     }
   }
@@ -297,7 +294,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
     const event = new NDKEvent(this.ndk, eventJson as Record<string, unknown>)
 
     if (!event.id) {
-      webrtcLogger.warn(peerId, "Event missing ID")
+      warn("Event missing ID")
       return null
     }
 
@@ -307,10 +304,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       const followDistance = socialGraph().getFollowDistance(event.pubkey)
       if (followDistance > 2) {
         if (!incomingRateLimiter.check(peerId)) {
-          webrtcLogger.warn(
-            peerId,
-            `Rate limit exceeded for kind ${event.kind} from unknown sender`
-          )
+          warn(`Rate limit exceeded for kind ${event.kind} from unknown sender`)
           return null
         }
       }
@@ -319,7 +313,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
     // Verify signature
     const isValid = event.verifySignature(false)
     if (!isValid) {
-      webrtcLogger.warn(peerId, `Invalid signature ${event.id?.slice(0, 8)}`, "down")
+      warn(`Invalid signature ${event.id?.slice(0, 8)}`)
       return null
     }
 
@@ -337,10 +331,8 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       peerPubkey === event.pubkey
         ? ""
         : ` author: ${authorName} (${event.pubkey.slice(0, 8)})`
-    webrtcLogger.debug(
-      peerId,
-      `EVENT kind ${event.kind}${authorInfo} ${event.id?.slice(0, 8)} ${contentPreview}`,
-      "down"
+    log(
+      `EVENT kind ${event.kind}${authorInfo} ${event.id?.slice(0, 8)} ${contentPreview}`
     )
 
     // Mark event as seen by sender and track in manager with WebRTC origin
@@ -369,14 +361,14 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
             conn.sendJsonData(message)
             conn.seenEvents.set(event.id, true)
             forwardCount++
-          } catch (error) {
-            webrtcLogger.error(otherPeerId, "Failed to forward event")
+          } catch (err) {
+            error("Failed to forward event")
           }
         }
       }
 
       if (forwardCount > 0) {
-        webrtcLogger.debug(undefined, `↻ Forwarded event to ${forwardCount} peer(s)`)
+        log(`↻ Forwarded event to ${forwardCount} peer(s)`)
       }
     }
 
@@ -403,11 +395,11 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
     if (!this.ndk) return
 
     const filterStr = JSON.stringify(filters).slice(0, 200)
-    webrtcLogger.debug(peerId, `REQ ${subId} ${filterStr}`, "down")
+    log(`REQ ${subId} ${filterStr}`)
 
     // Rate limit incoming subscriptions
     if (!incomingSubRateLimiter.check(peerId)) {
-      webrtcLogger.warn(peerId, `Rate limit exceeded for incoming REQ`)
+      warn(`Rate limit exceeded for incoming REQ`)
       return
     }
 
@@ -435,29 +427,25 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
               peerConn.sendJsonData(message)
               peerConn.seenEvents.set(event.id, true)
               sentCount++
-            } catch (error) {
-              webrtcLogger.error(peerId, "Failed to send cached event")
+            } catch (err) {
+              error("Failed to send cached event")
             }
           }
 
           if (sentCount > 0) {
-            webrtcLogger.debug(
-              peerId,
-              `Sent ${sentCount} cached event(s) for ${subId}`,
-              "up"
-            )
+            log(`Sent ${sentCount} cached event(s) for ${subId}`)
           }
 
           // Send EOSE
           try {
             peerConn.sendJsonData(["EOSE", subId])
-            webrtcLogger.debug(peerId, `EOSE ${subId}`, "up")
-          } catch (error) {
-            webrtcLogger.error(peerId, "Failed to send EOSE")
+            log(`EOSE ${subId}`)
+          } catch (err) {
+            error("Failed to send EOSE")
           }
         })
         .catch(() => {
-          webrtcLogger.error(peerId, "Failed to fetch cached events")
+          error("Failed to fetch cached events")
         })
     }
   }
@@ -470,6 +458,6 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
     filterGroups.clear()
     recentSubs.clear()
 
-    webrtcLogger.info(undefined, "WebRTC transport plugin destroyed")
+    log("WebRTC transport plugin destroyed")
   }
 }

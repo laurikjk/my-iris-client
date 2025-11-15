@@ -18,6 +18,9 @@ import CopyButton from "@/shared/components/button/CopyButton"
 import {getSessionManager} from "@/shared/services/PrivateChats"
 import {savePaymentMetadata} from "@/stores/paymentMetadata"
 import {UserRow} from "@/shared/components/user/UserRow"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+const {log, warn, error: logError} = createDebugLogger(DEBUG_NAMESPACES.CASHU_WALLET)
 
 interface SendEcashShareProps {
   manager: Manager | null
@@ -63,10 +66,7 @@ export default function SendEcashShare({
     const autoSendDm = async () => {
       if (!selectedUserPubkey || !generatedToken) return
 
-      console.log(
-        "🚀 Auto-sending token to payment request recipient:",
-        selectedUserPubkey
-      )
+      log("🚀 Auto-sending token to payment request recipient:", selectedUserPubkey)
       setSendingDm(true)
       setError("")
 
@@ -75,26 +75,26 @@ export default function SendEcashShare({
         if (!sessionManager) {
           throw new Error("Session manager not available")
         }
-        console.log("✓ Session manager available")
+        log("✓ Session manager available")
 
         const myPubKey = useUserStore.getState().publicKey
         if (!myPubKey) {
           throw new Error("User not logged in")
         }
-        console.log("✓ User logged in:", myPubKey)
+        log("✓ User logged in:", myPubKey)
 
-        console.log("📨 Sending message...")
+        log("📨 Sending message...")
         const sentMessage = await sessionManager.sendMessage(
           selectedUserPubkey,
           generatedToken
         )
-        console.log("✓ Message sent:", sentMessage.id)
+        log("✓ Message sent:", sentMessage.id)
 
         // Update local store
         await usePrivateMessagesStore
           .getState()
           .upsert(selectedUserPubkey, myPubKey, sentMessage)
-        console.log("✓ Local store updated")
+        log("✓ Local store updated")
 
         // Save payment metadata
         try {
@@ -105,22 +105,21 @@ export default function SendEcashShare({
             undefined,
             undefined
           )
-          console.log("✓ Payment metadata saved")
+          log("✓ Payment metadata saved")
         } catch (err) {
-          console.warn("Failed to save payment metadata:", err)
+          warn("Failed to save payment metadata:", err)
         }
 
         // Navigate to chat
-        console.log("✓ Navigating to chat...")
+        log("✓ Navigating to chat...")
         onClose()
         navigate("/chats/chat", {
           state: {id: selectedUserPubkey},
         })
-      } catch (error) {
-        console.error("❌ Failed to auto-send token via DM:", error)
+      } catch (err) {
+        logError("❌ Failed to auto-send token via DM:", err)
         setError(
-          "Failed to send DM: " +
-            (error instanceof Error ? error.message : "Unknown error")
+          "Failed to send DM: " + (err instanceof Error ? err.message : "Unknown error")
         )
         setSendingDm(false)
       }
@@ -186,8 +185,8 @@ export default function SendEcashShare({
         amount: total,
         memo: decoded.memo || "",
       }
-    } catch (error) {
-      console.error("Failed to decode token:", error)
+    } catch (err) {
+      logError("Failed to decode token:", err)
       return {amount: 0, memo: ""}
     }
   }, [initialToken, generatedToken])
@@ -221,8 +220,8 @@ export default function SendEcashShare({
           )
         })
         setQrCodeUrl(url)
-      } catch (error) {
-        console.error("Error generating QR code:", error)
+      } catch (err) {
+        logError("Error generating QR code:", err)
       }
     }
     generateQR()
@@ -231,7 +230,7 @@ export default function SendEcashShare({
   const handleSendTokenDm = async (user: DoubleRatchetUser) => {
     if (!generatedToken) return
 
-    console.log("📤 Sending token via DM to:", user.pubkey)
+    log("📤 Sending token via DM to:", user.pubkey)
     setSendingDm(true)
     setError("")
     try {
@@ -239,42 +238,42 @@ export default function SendEcashShare({
       if (!sessionManager) {
         throw new Error("Session manager not available")
       }
-      console.log("✓ Session manager available")
+      log("✓ Session manager available")
 
       const myPubKey = useUserStore.getState().publicKey
       if (!myPubKey) {
         throw new Error("User not logged in")
       }
-      console.log("✓ User logged in:", myPubKey)
+      log("✓ User logged in:", myPubKey)
 
       // Send the message (dmMessage not implemented yet, just send token)
       const messageContent = generatedToken
-      console.log("📨 Sending message...")
+      log("📨 Sending message...")
       const sentMessage = await sessionManager.sendMessage(user.pubkey, messageContent)
-      console.log("✓ Message sent:", sentMessage.id)
+      log("✓ Message sent:", sentMessage.id)
 
       // Update local store
       await usePrivateMessagesStore.getState().upsert(user.pubkey, myPubKey, sentMessage)
-      console.log("✓ Local store updated")
+      log("✓ Local store updated")
 
       // Save payment metadata
       try {
         await savePaymentMetadata(generatedToken, "dm", user.pubkey, undefined, undefined)
-        console.log("✓ Payment metadata saved")
+        log("✓ Payment metadata saved")
       } catch (err) {
-        console.warn("Failed to save payment metadata:", err)
+        warn("Failed to save payment metadata:", err)
       }
 
       // Navigate to chat
-      console.log("✓ Navigating to chat...")
+      log("✓ Navigating to chat...")
       onClose()
       navigate("/chats/chat", {
         state: {id: user.pubkey},
       })
-    } catch (error) {
-      console.error("❌ Failed to send token via DM:", error)
+    } catch (err) {
+      logError("❌ Failed to send token via DM:", err)
       setError(
-        "Failed to send DM: " + (error instanceof Error ? error.message : "Unknown error")
+        "Failed to send DM: " + (err instanceof Error ? err.message : "Unknown error")
       )
     } finally {
       setSendingDm(false)
@@ -321,11 +320,11 @@ export default function SendEcashShare({
       // If any proof is spent, token is spent
       const isSpent = states.some((state) => state.state === "SPENT")
       setTokenStatus(isSpent ? "spent" : "unspent")
-    } catch (error) {
-      console.error("Failed to check token status:", error)
+    } catch (err) {
+      logError("Failed to check token status:", err)
       setError(
         "Failed to check status: " +
-          (error instanceof Error ? error.message : "Unknown error")
+          (err instanceof Error ? err.message : "Unknown error")
       )
     } finally {
       setCheckingStatus(false)
@@ -385,7 +384,7 @@ export default function SendEcashShare({
                   title: "Cashu Token",
                 })
               } catch (err) {
-                console.warn("Share failed:", err)
+                warn("Share failed:", err)
               }
             }}
           >

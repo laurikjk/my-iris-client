@@ -16,3 +16,4 @@
 - Be careful with react hook dependency arrays — they can easily cause refresh loops
 - Note that we're not using react-router-dom: we have our own custom stack router which keeps N previous views open in the background for fast back & fwd nav
 - Use commit log style similar to previous commits, no verbose descriptions. Make commits only if requested.
+- Use the "debug" package for logging, see other logging in the application

@@ -1,7 +1,10 @@
 import {NDKEvent, type NDKRelay} from "@/lib/ndk"
-import {webrtcLogger} from "./Logger"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
 import {getAllConnections} from "./PeerConnection"
 import type {WebRTCTransportPlugin} from "./WebRTCTransportPlugin"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_PEER)
 
 let webrtcPlugin: WebRTCTransportPlugin | null = null
 
@@ -46,7 +49,7 @@ export async function handleIncomingMessage(
 ): Promise<void> {
   const plugin = getWebRTCPlugin()
   if (!plugin) {
-    webrtcLogger.warn(peerId, "WebRTC plugin not initialized")
+    warn("WebRTC plugin not initialized")
     return
   }
 
@@ -71,7 +74,7 @@ export async function handleIncomingMessage(
     const eventData = JSON.parse(messageData)
 
     if (!Array.isArray(eventData)) {
-      webrtcLogger.warn(peerId, "Invalid Nostr message format")
+      warn("Invalid Nostr message format")
       return
     }
 
@@ -96,19 +99,19 @@ export async function handleIncomingMessage(
     // Handle ["EOSE", subscription_id] format
     if (type === "EOSE" && rest.length >= 1) {
       const [subId] = rest
-      webrtcLogger.debug(peerId, `EOSE ${subId}`, "down")
+      log(`EOSE ${subId}`)
       return
     }
 
     // Handle ["CLOSE", subscription_id] format
     if (type === "CLOSE" && rest.length >= 1) {
       const [subId] = rest
-      webrtcLogger.debug(peerId, `CLOSE ${subId}`, "down")
+      log(`CLOSE ${subId}`)
       return
     }
 
-    webrtcLogger.warn(peerId, `Unsupported message type: ${type}`)
-  } catch (error) {
-    webrtcLogger.error(peerId, "Error handling incoming message")
+    warn(`Unsupported message type: ${type}`)
+  } catch (err) {
+    error("Error handling incoming message")
   }
 }

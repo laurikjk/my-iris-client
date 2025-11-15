@@ -1,5 +1,9 @@
 import Dexie from "dexie"
 import throttle from "lodash/throttle"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {error} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_PEER)
 
 /**
  * Dedicated Dexie database for blob storage
@@ -119,8 +123,8 @@ export class SimpleBlobStorage {
         times_requested_by_peers: entry.times_requested_by_peers || 0,
         last_requested: entry.last_requested || entry.stored_at,
       }
-    } catch (error) {
-      console.error("Error getting blob:", error)
+    } catch (err) {
+      error("Error getting blob:", err)
       return null
     }
   }
@@ -148,8 +152,8 @@ export class SimpleBlobStorage {
         times_requested_by_peers: existing?.times_requested_by_peers || 0,
         last_requested: now,
       })
-    } catch (error) {
-      console.error("Error saving blob:", error)
+    } catch (err) {
+      error("Error saving blob:", err)
     }
   }
 
@@ -186,8 +190,8 @@ export class SimpleBlobStorage {
         times_requested_by_peers: entry.times_requested_by_peers || 0,
         last_requested: entry.last_requested || entry.stored_at,
       }))
-    } catch (error) {
-      console.error("Error listing blobs:", error)
+    } catch (err) {
+      error("Error listing blobs:", err)
       return []
     }
   }
@@ -195,8 +199,8 @@ export class SimpleBlobStorage {
   async count(): Promise<number> {
     try {
       return await blobDb.blobs.count()
-    } catch (error) {
-      console.error("Error counting blobs:", error)
+    } catch (err) {
+      error("Error counting blobs:", err)
       return 0
     }
   }
@@ -204,16 +208,16 @@ export class SimpleBlobStorage {
   async delete(hash: string): Promise<void> {
     try {
       await blobDb.blobs.delete(hash)
-    } catch (error) {
-      console.error("Error deleting blob:", error)
+    } catch (err) {
+      error("Error deleting blob:", err)
     }
   }
 
   async clear(): Promise<void> {
     try {
       await blobDb.blobs.clear()
-    } catch (error) {
-      console.error("Error clearing blobs:", error)
+    } catch (err) {
+      error("Error clearing blobs:", err)
     }
   }
 

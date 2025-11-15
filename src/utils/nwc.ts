@@ -7,6 +7,9 @@ import {
   NDKSubscription,
 } from "@/lib/ndk"
 import {nip04} from "nostr-tools"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.CASHU_WALLET)
 
 // NWC event kinds
 const NWC_REQUEST_KIND = 23194
@@ -62,10 +65,10 @@ export class SimpleNWCWallet {
           this.relays.push(relay)
           // Ensure relay is connected
           await relay.connect()
-          console.log(`🔗 NWC: Connected to relay ${relayUrl}`)
+          log(`🔗 NWC: Connected to relay ${relayUrl}`)
         }
-      } catch (error) {
-        console.warn(`Failed to connect to relay ${relayUrl}:`, error)
+      } catch (err) {
+        warn(`Failed to connect to relay ${relayUrl}:`, err)
       }
     }
 
@@ -77,7 +80,7 @@ export class SimpleNWCWallet {
     const ndkInstance = ndk()
     const pubkey = await this.signer.user().then((u) => u.pubkey)
 
-    console.log(
+    log(
       `🔍 NWC: Subscribing to responses from ${this.config.pubkey} to ${pubkey} on relays:`,
       this.config.relayUrls
     )
@@ -106,7 +109,7 @@ export class SimpleNWCWallet {
         return
       }
 
-      console.log(`📨 NWC: Received response for request ${requestId}`)
+      log(`📨 NWC: Received response for request ${requestId}`)
 
       try {
         // Decrypt the content
@@ -117,15 +120,15 @@ export class SimpleNWCWallet {
         )
 
         const response: NWCResponse = JSON.parse(decrypted)
-        console.log(`✅ NWC: Got ${response.result_type} response`)
+        log(`✅ NWC: Got ${response.result_type} response`)
 
         // Resolve the pending request
         const pending = this.pendingRequests.get(requestId)!
         clearTimeout(pending.timeout)
         this.pendingRequests.delete(requestId)
         pending.resolve(response)
-      } catch (error) {
-        console.error("Failed to process NWC response:", error)
+      } catch (err) {
+        error("Failed to process NWC response:", err)
       }
     })
   }
@@ -169,7 +172,7 @@ export class SimpleNWCWallet {
     })
 
     // Publish the event to specific relays
-    console.log(
+    log(
       `📤 NWC: Publishing request ${event.id} for ${method} to relays:`,
       this.config.relayUrls
     )
@@ -185,20 +188,20 @@ export class SimpleNWCWallet {
       const response = await this.sendRequest("get_balance")
 
       if (response.error) {
-        console.error("NWC balance error:", response.error)
+        error("NWC balance error:", response.error)
         return null
       }
 
       if (response.result && "balance" in response.result) {
         const msats = response.result.balance as number
         const bits = Math.floor(msats / 1000)
-        console.log(`💰 NWC: Balance: ${bits} bits`)
+        log(`💰 NWC: Balance: ${bits} bits`)
         return bits
       }
 
       return null
-    } catch (error) {
-      console.error("Failed to get balance:", error)
+    } catch (err) {
+      error("Failed to get balance:", err)
       return null
     }
   }
@@ -208,7 +211,7 @@ export class SimpleNWCWallet {
       const response = await this.sendRequest("pay_invoice", {invoice})
 
       if (response.error) {
-        console.error("NWC payment error:", response.error)
+        error("NWC payment error:", response.error)
         return null
       }
 
@@ -217,8 +220,8 @@ export class SimpleNWCWallet {
       }
 
       return null
-    } catch (error) {
-      console.error("Failed to pay invoice:", error)
+    } catch (err) {
+      error("Failed to pay invoice:", err)
       return null
     }
   }
@@ -236,7 +239,7 @@ export class SimpleNWCWallet {
       })
 
       if (response.error) {
-        console.error("NWC invoice error:", response.error)
+        error("NWC invoice error:", response.error)
         return null
       }
 
@@ -245,8 +248,8 @@ export class SimpleNWCWallet {
       }
 
       return null
-    } catch (error) {
-      console.error("Failed to create invoice:", error)
+    } catch (err) {
+      error("Failed to create invoice:", err)
       return null
     }
   }

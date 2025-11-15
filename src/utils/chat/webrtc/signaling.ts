@@ -1,8 +1,11 @@
 import {ndk} from "@/utils/ndk"
 import {NDKEvent} from "@/lib/ndk"
-import {webrtcLogger} from "./Logger"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
 import type {SignalingMessage} from "./types"
 import {KIND_APP_DATA} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_SIGNALING)
 
 function uuidv4() {
   return (
@@ -26,7 +29,7 @@ export async function sendSignalingMessage(
   const signer = ndkInstance.signer
 
   if (!signer) {
-    webrtcLogger.error(undefined, "No signer available for sending message")
+    error("No signer available for sending message")
     return
   }
 
@@ -37,8 +40,8 @@ export async function sendSignalingMessage(
     try {
       const recipientUser = ndkInstance.getUser({pubkey: recipientPubkey})
       content = await signer.encrypt(recipientUser, content)
-    } catch (error) {
-      webrtcLogger.error(undefined, "Failed to encrypt message")
+    } catch (err) {
+      error("Failed to encrypt message")
       return
     }
   }
@@ -54,12 +57,12 @@ export async function sendSignalingMessage(
   ]
 
   const peerId = recipientPubkey ? `${recipientPubkey}:broadcast` : "broadcast:broadcast"
-  webrtcLogger.debug(peerId, message.type, "up")
+  log(message.type)
 
   try {
     await event.publish()
-  } catch (error) {
-    webrtcLogger.error(undefined, "Failed to publish message")
+  } catch (err) {
+    error("Failed to publish message")
   }
 }
 
@@ -76,7 +79,7 @@ export function subscribeToSignaling(
   const signer = ndkInstance.signer
 
   if (!signer) {
-    webrtcLogger.error(undefined, "No signer available for subscription")
+    error("No signer available for subscription")
     return () => {}
   }
 
@@ -92,20 +95,17 @@ export function subscribeToSignaling(
     since: Math.floor((Date.now() - MESSAGE_TIMEOUT) / 1000),
   }
 
-  webrtcLogger.debug(
-    undefined,
-    `Subscribing with filter: ${authors.length} authors, since=${filter.since}`
-  )
+  log(`Subscribing with filter: ${authors.length} authors, since=${filter.since}`)
 
   const sub = ndkInstance.subscribe(filter, {closeOnEose: false})
 
-  webrtcLogger.info(undefined, `Signaling subscription started: ${sub.internalId}`)
+  log(`Signaling subscription started: ${sub.internalId}`)
 
   sub.on("event", async (event: NDKEvent) => {
     // Skip expired events
     const expiration = event.tags.find((tag) => tag[0] === "expiration")?.[1]
     if (expiration && parseInt(expiration) < Date.now() / 1000) {
-      webrtcLogger.debug(undefined, "Skipping expired signaling event")
+      log("Skipping expired signaling event")
       return
     }
 
@@ -117,9 +117,9 @@ export function subscribeToSignaling(
       try {
         const senderUser = ndkInstance.getUser({pubkey: senderPubkey})
         content = await signer.decrypt(senderUser, content)
-      } catch (error) {
+      } catch (err) {
         // Not for us, silently ignore
-        webrtcLogger.debug(undefined, "Failed to decrypt signaling message (not for us)")
+        log("Failed to decrypt signaling message (not for us)")
         return
       }
     }
@@ -127,10 +127,10 @@ export function subscribeToSignaling(
     // Parse and handle message
     try {
       const message = JSON.parse(content) as SignalingMessage
-      webrtcLogger.debug(`${senderPubkey}:signaling`, message.type, "down")
+      log(message.type)
       onMessage(message, senderPubkey)
-    } catch (error) {
-      webrtcLogger.error(undefined, "Failed to parse signaling message")
+    } catch (err) {
+      error("Failed to parse signaling message")
     }
   })
 

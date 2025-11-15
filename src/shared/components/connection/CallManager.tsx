@@ -13,6 +13,10 @@ import {
 } from "@remixicon/react"
 import {useSettingsStore} from "@/stores/settings"
 import {playRingtone, stopRingtone} from "@/utils/ringtone"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {warn, error} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_PEER)
 
 type CallRequest = {
   sessionId: string
@@ -153,9 +157,7 @@ export function CallManager() {
   useEffect(() => {
     if (localVideoRef.current && activeCall?.localStream) {
       localVideoRef.current.srcObject = activeCall.localStream
-      localVideoRef.current
-        .play()
-        .catch((e) => console.warn("Local video play failed:", e))
+      localVideoRef.current.play().catch((e) => warn("Local video play failed:", e))
     }
   }, [activeCall?.localStream])
 
@@ -164,14 +166,10 @@ export function CallManager() {
 
     if (activeCall.hasVideo && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = activeCall.remoteStream
-      remoteVideoRef.current
-        .play()
-        .catch((e) => console.warn("Remote video play failed:", e))
+      remoteVideoRef.current.play().catch((e) => warn("Remote video play failed:", e))
     } else if (!activeCall.hasVideo && remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = activeCall.remoteStream
-      remoteAudioRef.current
-        .play()
-        .catch((e) => console.warn("Remote audio play failed:", e))
+      remoteAudioRef.current.play().catch((e) => warn("Remote audio play failed:", e))
     }
   }, [activeCall?.remoteStream, activeCall?.hasVideo])
 
@@ -242,8 +240,8 @@ export function CallManager() {
         },
         conn.recipientPubkey
       )
-    } catch (error) {
-      console.error("Failed to accept call:", error)
+    } catch (err) {
+      error("Failed to accept call:", err)
       setActiveCall(null)
     }
   }
