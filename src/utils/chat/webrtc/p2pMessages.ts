@@ -40,14 +40,14 @@ function getEventIdFromMessage(msg: string): string | null {
  * Handles incoming Nostr message from WebRTC peer
  * Supports EVENT, REQ, EOSE, and CLOSE message types
  */
-export function handleIncomingMessage(
+export async function handleIncomingMessage(
   peerId: string,
   messageData: string
-): NDKEvent | null {
+): Promise<void> {
   const plugin = getWebRTCPlugin()
   if (!plugin) {
     webrtcLogger.warn(peerId, "WebRTC plugin not initialized")
-    return null
+    return
   }
 
   try {
@@ -64,7 +64,7 @@ export function handleIncomingMessage(
         // Track this peer also saw it
         const webrtcRelay = {url: `__webrtc__:${peerId}`} as NDKRelay
         plugin.ndk.subManager.dispatchEvent(seenData.processedEvent, webrtcRelay, false)
-        return seenData.processedEvent
+        return
       }
     }
 
@@ -72,7 +72,7 @@ export function handleIncomingMessage(
 
     if (!Array.isArray(eventData)) {
       webrtcLogger.warn(peerId, "Invalid Nostr message format")
-      return null
+      return
     }
 
     const [type, ...rest] = eventData
@@ -81,7 +81,7 @@ export function handleIncomingMessage(
     if (type === "REQ" && rest.length >= 2) {
       const [subId, ...filters] = rest
       plugin.handleIncomingREQ(peerId, subId, filters)
-      return null
+      return
     }
 
     // Handle ["EVENT", <event JSON>] format
@@ -89,27 +89,26 @@ export function handleIncomingMessage(
       // Client format: ["EVENT", <event>]
       // Relay format: ["EVENT", <subscription_id>, <event>]
       const eventJson = rest.length === 1 ? rest[0] : rest[1]
-      return plugin.handleIncomingEvent(peerId, eventJson)
+      await plugin.handleIncomingEvent(peerId, eventJson)
+      return
     }
 
     // Handle ["EOSE", subscription_id] format
     if (type === "EOSE" && rest.length >= 1) {
       const [subId] = rest
       webrtcLogger.debug(peerId, `EOSE ${subId}`, "down")
-      return null
+      return
     }
 
     // Handle ["CLOSE", subscription_id] format
     if (type === "CLOSE" && rest.length >= 1) {
       const [subId] = rest
       webrtcLogger.debug(peerId, `CLOSE ${subId}`, "down")
-      return null
+      return
     }
 
     webrtcLogger.warn(peerId, `Unsupported message type: ${type}`)
-    return null
   } catch (error) {
     webrtcLogger.error(peerId, "Error handling incoming message")
-    return null
   }
 }

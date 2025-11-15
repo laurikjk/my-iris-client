@@ -284,7 +284,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
    * Handle incoming EVENT message from WebRTC peer
    * Called by p2pMessages when EVENT is received
    */
-  handleIncomingEvent(peerId: string, eventJson: unknown): NDKEvent | null {
+  async handleIncomingEvent(peerId: string, eventJson: unknown): Promise<NDKEvent | null> {
     if (!this.ndk) return null
 
     const event = new NDKEvent(this.ndk, eventJson as Record<string, unknown>)
@@ -373,8 +373,17 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       }
     }
 
-    // Dispatch to local subscriptions and track WebRTC origin
-    this.ndk.subManager.dispatchEvent(event, webrtcRelay, false)
+    // Route to worker transport if available, otherwise local dispatch
+    const {getWorkerTransport} = await import("@/utils/ndk")
+    const workerTransport = getWorkerTransport()
+
+    if (workerTransport) {
+      // Inject into worker for dispatch + cache (no relay publish)
+      workerTransport.injectEvent(event.rawEvent(), `webrtc:${peerId}`)
+    } else {
+      // Fallback: dispatch locally (legacy path)
+      this.ndk.subManager.dispatchEvent(event, webrtcRelay, false)
+    }
 
     return event
   }

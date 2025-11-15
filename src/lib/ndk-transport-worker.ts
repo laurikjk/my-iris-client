@@ -3,6 +3,18 @@ import type {NDKEvent} from "./ndk/events"
 import type {NDKFilter} from "./ndk/subscription"
 import type {NDKRelay} from "./ndk/relay"
 
+interface WorkerSubscribeOpts {
+  destinations?: ("cache" | "relay")[] // Where to query: default ["cache", "relay"]
+  closeOnEose?: boolean
+  groupable?: boolean
+}
+
+interface WorkerPublishOpts {
+  publishTo?: ("cache" | "relay" | "subscriptions")[] // Where to send: default ["relay"]
+  verifySignature?: boolean // Verify sig in worker before dispatch (for untrusted sources)
+  source?: string // Source identifier (e.g., "webrtc:peerId")
+}
+
 interface WorkerMessage {
   type:
     | "init"
@@ -20,6 +32,8 @@ interface WorkerMessage {
   event?: any
   relays?: string[]
   url?: string
+  subscribeOpts?: WorkerSubscribeOpts
+  publishOpts?: WorkerPublishOpts
 }
 
 interface WorkerResponse {
@@ -302,6 +316,54 @@ export class NDKWorkerTransport {
    */
   async disconnectRelay(url: string): Promise<void> {
     this.worker.postMessage({type: "disconnectRelay", url} as WorkerMessage)
+  }
+
+  /**
+   * Inject event from WebRTC - verify, dispatch to subscriptions & cache, no relay publish
+   */
+  injectEvent(eventData: any, source: string): void {
+    this.worker.postMessage({
+      type: "publish",
+      event: eventData,
+      publishOpts: {
+        publishTo: ["subscriptions", "cache"],
+        verifySignature: true,
+        source,
+      },
+    } as WorkerMessage)
+  }
+
+  /**
+   * Cache-only subscription (e.g., for WebRTC REQ)
+   */
+  subscribeCacheOnly(
+    subId: string,
+    filters: NDKFilter[],
+    onEvent: (event: NDKEvent) => void,
+    onEose?: () => void,
+  ): void {
+    // Register handlers same as regular subscribe
+    if (!this.subscriptions.has(subId)) {
+      this.subscriptions.set(subId, new Set())
+    }
+    this.subscriptions.get(subId)!.add(onEvent)
+
+    if (onEose) {
+      if (!this.eoseHandlers.has(subId)) {
+        this.eoseHandlers.set(subId, new Set())
+      }
+      this.eoseHandlers.get(subId)!.add(onEose)
+    }
+
+    this.worker.postMessage({
+      type: "subscribe",
+      id: subId,
+      filters,
+      subscribeOpts: {
+        destinations: ["cache"],
+        closeOnEose: true,
+      },
+    } as WorkerMessage)
   }
 
   private setupMessageHandler(worker: Worker): void {

@@ -10,6 +10,7 @@
 import NDK from "../lib/ndk"
 import {NDKEvent} from "../lib/ndk/events"
 import type {NDKFilter} from "../lib/ndk/subscription"
+import {NDKSubscriptionCacheUsage} from "../lib/ndk/subscription"
 import {NDKRelay} from "../lib/ndk/relay"
 import NDKCacheAdapterDexie from "../lib/ndk-cache"
 
@@ -30,6 +31,20 @@ interface WorkerMessage {
   event?: any
   relays?: string[]
   url?: string
+  subscribeOpts?: WorkerSubscribeOpts
+  publishOpts?: WorkerPublishOpts
+}
+
+interface WorkerSubscribeOpts {
+  destinations?: ("cache" | "relay")[] // Where to query: default ["cache", "relay"]
+  closeOnEose?: boolean
+  groupable?: boolean
+}
+
+interface WorkerPublishOpts {
+  publishTo?: ("cache" | "relay" | "subscriptions")[] // Where to send: default ["relay"]
+  verifySignature?: boolean // Verify sig in worker before dispatch (for untrusted sources)
+  source?: string // Source identifier (e.g., "webrtc:peerId")
 }
 
 interface WorkerResponse {
@@ -123,7 +138,7 @@ async function initialize(relayUrls?: string[]) {
   }
 }
 
-function handleSubscribe(subId: string, filters: NDKFilter[]) {
+function handleSubscribe(subId: string, filters: NDKFilter[], opts?: WorkerSubscribeOpts) {
   if (!ndk) {
     console.error("[Relay Worker] NDK not initialized")
     return
@@ -134,10 +149,23 @@ function handleSubscribe(subId: string, filters: NDKFilter[]) {
     subscriptions.get(subId).stop()
   }
 
+  const destinations = opts?.destinations || ["cache", "relay"]
+  const cacheOnly = destinations.includes("cache") && !destinations.includes("relay")
+  const relayOnly = destinations.includes("relay") && !destinations.includes("cache")
+
+  let cacheUsage: NDKSubscriptionCacheUsage
+  if (cacheOnly) {
+    cacheUsage = NDKSubscriptionCacheUsage.ONLY_CACHE
+  } else if (relayOnly) {
+    cacheUsage = NDKSubscriptionCacheUsage.ONLY_RELAY
+  } else {
+    cacheUsage = NDKSubscriptionCacheUsage.PARALLEL
+  }
+
   const sub = ndk.subscribe(filters, {
-    closeOnEose: false,
-    groupable: true,
-    cacheUsage: "PARALLEL" as any, // Query cache + relays (main has no cache)
+    closeOnEose: opts?.closeOnEose ?? cacheOnly,
+    groupable: opts?.groupable ?? !cacheOnly,
+    cacheUsage,
   })
 
   sub.on("event", (event: NDKEvent) => {
@@ -153,6 +181,11 @@ function handleSubscribe(subId: string, filters: NDKFilter[]) {
       type: "eose",
       subId,
     } as WorkerResponse)
+
+    // Auto-cleanup cache-only subs after EOSE
+    if (cacheOnly) {
+      subscriptions.delete(subId)
+    }
   })
 
   subscriptions.set(subId, sub)
@@ -166,7 +199,12 @@ function handleUnsubscribe(subId: string) {
   }
 }
 
-async function handlePublish(id: string, eventData: any, relayUrls?: string[]) {
+async function handlePublish(
+  id: string,
+  eventData: any,
+  relayUrls?: string[],
+  opts?: WorkerPublishOpts
+) {
   if (!ndk) {
     self.postMessage({
       type: "error",
@@ -177,8 +215,43 @@ async function handlePublish(id: string, eventData: any, relayUrls?: string[]) {
   }
 
   try {
-    console.log("[Relay Worker] Publishing event:", eventData.id)
     const event = new NDKEvent(ndk, eventData)
+
+    // Verify signature if requested (e.g., WebRTC events from untrusted sources)
+    if (opts?.verifySignature) {
+      const isValid = event.verifySignature(false)
+      if (!isValid) {
+        console.warn("[Relay Worker] Invalid signature for event from:", opts.source, eventData.id)
+        self.postMessage({
+          type: "error",
+          id,
+          error: "Invalid signature",
+        } as WorkerResponse)
+        return
+      }
+    }
+
+    const destinations = opts?.publishTo || ["relay"]
+
+    // Dispatch to local subscriptions if requested
+    if (destinations.includes("subscriptions")) {
+      console.log("[Relay Worker] Dispatching to subscriptions:", eventData.id, "source:", opts?.source)
+      const fakeRelay = {url: opts?.source || "__local__"} as NDKRelay
+      ndk.subManager.dispatchEvent(event, fakeRelay, false)
+    }
+
+    // Cache handled automatically by NDK cache adapter on dispatch
+
+    // Publish to relays if requested
+    if (!destinations.includes("relay")) {
+      self.postMessage({
+        type: "published",
+        id,
+      } as WorkerResponse)
+      return
+    }
+
+    console.log("[Relay Worker] Publishing event:", eventData.id)
 
     // Publish to specified relays or all connected relays
     let relays: any = undefined
@@ -280,7 +353,7 @@ function handleClose() {
 // Message handler
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
   const data = e.data
-  const {type, id, filters, event, relays, url} = data
+  const {type, id, filters, event, relays, url, subscribeOpts, publishOpts} = data
 
   switch (type) {
     case "init":
@@ -289,7 +362,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
     case "subscribe":
       if (id && filters) {
-        handleSubscribe(id, filters as NDKFilter[])
+        handleSubscribe(id, filters as NDKFilter[], subscribeOpts)
       }
       break
 
@@ -301,7 +374,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
     case "publish":
       if (id && event) {
-        await handlePublish(id, event, relays)
+        await handlePublish(id, event, relays, publishOpts)
       }
       break
 
