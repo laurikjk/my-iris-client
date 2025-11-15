@@ -27,6 +27,7 @@ interface WorkerMessage {
     | "removeRelay"
     | "connectRelay"
     | "disconnectRelay"
+    | "reconnectDisconnected"
   id?: string
   filters?: NDKFilter[]
   event?: any
@@ -34,6 +35,7 @@ interface WorkerMessage {
   url?: string
   subscribeOpts?: WorkerSubscribeOpts
   publishOpts?: WorkerPublishOpts
+  reason?: string
 }
 
 interface WorkerResponse {
@@ -322,6 +324,13 @@ export class NDKWorkerTransport {
    */
   async disconnectRelay(url: string): Promise<void> {
     this.worker.postMessage({type: "disconnectRelay", url} as WorkerMessage)
+  }
+
+  /**
+   * Reconnect disconnected relays
+   */
+  reconnectDisconnected(reason: string): void {
+    this.worker.postMessage({type: "reconnectDisconnected", reason} as WorkerMessage)
   }
 
   /**

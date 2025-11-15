@@ -47,6 +47,7 @@ interface WorkerMessage {
     | "removeRelay"
     | "connectRelay"
     | "disconnectRelay"
+    | "reconnectDisconnected"
   id?: string
   filters?: NDKFilter[]
   event?: any
@@ -54,6 +55,7 @@ interface WorkerMessage {
   url?: string
   subscribeOpts?: WorkerSubscribeOpts
   publishOpts?: WorkerPublishOpts
+  reason?: string
 }
 
 interface WorkerSubscribeOpts {
@@ -402,6 +404,23 @@ function handleDisconnectRelay(url: string) {
   relay?.disconnect()
 }
 
+function handleReconnectDisconnected(reason: string) {
+  if (!ndk?.pool) return
+
+  console.log(`[Relay Worker] ${reason}, checking relay connections...`)
+
+  // Force immediate reconnection for disconnected relays
+  // NDKRelayStatus: DISCONNECTED=1, RECONNECTING=2, FLAPPING=3, CONNECTING=4, CONNECTED=5+
+  for (const relay of ndk.pool.relays.values()) {
+    if (relay.status < 5) {
+      console.log(
+        `[Relay Worker] Forcing reconnection to ${relay.url} (status: ${relay.status})`
+      )
+      relay.connect()
+    }
+  }
+}
+
 function handleClose() {
   // Stop all subscriptions
   subscriptions.forEach((sub) => sub.stop())
@@ -412,6 +431,22 @@ function handleClose() {
     ndk.pool.relays.forEach((relay) => relay.disconnect())
   }
 }
+
+// Listen for network status changes in worker
+let wasOffline = false
+
+self.addEventListener("online", () => {
+  if (wasOffline) {
+    console.log("[Relay Worker] Network connection restored")
+    wasOffline = false
+    handleReconnectDisconnected("Network connection restored")
+  }
+})
+
+self.addEventListener("offline", () => {
+  wasOffline = true
+  console.log("[Relay Worker] Network connection lost")
+})
 
 // Message handler
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
@@ -469,6 +504,10 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       if (data.url) {
         handleDisconnectRelay(data.url)
       }
+      break
+
+    case "reconnectDisconnected":
+      handleReconnectDisconnected(data.reason || "Reconnect requested")
       break
 
     case "close":

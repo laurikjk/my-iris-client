@@ -24,9 +24,6 @@ let nip07Signer: NDKNip07Signer | undefined
 let initPromise: Promise<void> | null = null
 let workerTransport: NDKWorkerTransport | undefined
 
-// Always use worker transport
-const USE_WORKER_TRANSPORT = true
-
 function normalizeRelayUrl(url: string): string {
   // Ensure URL ends with / to match NDK's internal normalization
   return url.endsWith("/") ? url : url + "/"
@@ -161,9 +158,7 @@ async function initNDK(opts?: NDKConstructorParams) {
   const newInstance = new NDK(options)
 
   // Connect worker transport
-  if (USE_WORKER_TRANSPORT && workerTransport) {
-    await workerTransport.connect(newInstance, relays)
-  }
+  await workerTransport.connect(newInstance, relays)
 
   // If placeholder exists, copy its properties to the new instance
   if (ndkInstance) {
@@ -197,18 +192,10 @@ async function initNDK(opts?: NDKConstructorParams) {
   watchLocalSettings(ndkInstance)
   ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
 
-  // Only setup relay monitoring if not using worker transport
-  if (!USE_WORKER_TRANSPORT) {
-    setupVisibilityReconnection(ndkInstance)
-    attachRelayLogger(ndkInstance)
-  }
+  // Setup visibility reconnection (forwards to worker)
+  setupVisibilityReconnection(ndkInstance)
 
   setupWebRTCTransport(ndkInstance)
-
-  // Only call connect if not using worker (worker handles connection)
-  if (!USE_WORKER_TRANSPORT) {
-    ndkInstance.connect()
-  }
 
   console.log("NDK instance initialized", ndkInstance)
 }
@@ -218,33 +205,14 @@ async function initNDK(opts?: NDKConstructorParams) {
  */
 function setupVisibilityReconnection(instance: NDK) {
   let wasHidden = false
-  let wasOffline = false
 
   const reconnectDisconnectedRelays = (reason: string) => {
-    console.log(`${reason}, checking relay connections...`)
-
-    // Force immediate reconnection for disconnected relays
-    // NDKRelayStatus: DISCONNECTED=1, RECONNECTING=2, FLAPPING=3, CONNECTING=4, CONNECTED=5+
-    for (const relay of instance.pool.relays.values()) {
-      if (relay.status < 5) {
-        // Check if this relay is explicitly disabled in config before reconnecting
-        const store = useUserStore.getState()
-        const relayConfig = store.relayConfigs?.find(
-          (c) => normalizeRelayUrl(c.url) === normalizeRelayUrl(relay.url)
-        )
-        if (relayConfig?.disabled) {
-          console.log(`Skipping reconnection to disabled relay: ${relay.url}`)
-          continue
-        }
-
-        // Not connected
-        console.log(`Forcing reconnection to ${relay.url} (status: ${relay.status})`)
-        relay.connect()
-      }
-    }
+    // Forward to worker transport
+    workerTransport?.reconnectDisconnected(reason)
   }
 
   // Handle visibility changes (PWA/mobile only - desktop keeps WS open)
+  // Network events handled in worker directly
   if (isTouchDevice) {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -276,25 +244,6 @@ function setupVisibilityReconnection(instance: NDK) {
       }
     })
   }
-
-  // Handle network status changes
-  const handleOnline = () => {
-    if (wasOffline) {
-      wasOffline = false
-      reconnectDisconnectedRelays("Network connection restored")
-    }
-  }
-
-  const handleOffline = () => {
-    wasOffline = true
-    console.log("Network connection lost")
-  }
-
-  window.addEventListener("online", handleOnline)
-  window.addEventListener("offline", handleOffline)
-
-  // Initialize offline state
-  wasOffline = !navigator.onLine
 }
 
 /**
