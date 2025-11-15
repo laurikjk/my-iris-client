@@ -53,7 +53,6 @@ export default defineConfig({
       input: {
         main: "index.html",
         debug: "debug.html",
-        "relay-worker": "src/workers/relay-worker.ts",
       },
       external: [],
       onLog(level, log, handler) {

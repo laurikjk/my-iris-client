@@ -10,6 +10,7 @@
 import NDK from "../lib/ndk"
 import {NDKEvent} from "../lib/ndk/events"
 import type {NDKFilter} from "../lib/ndk/subscription"
+import {NDKRelay} from "../lib/ndk/relay"
 import NDKCacheAdapterDexie from "../lib/ndk-cache"
 
 interface WorkerMessage {
@@ -239,7 +240,6 @@ function handleGetRelayStatus(requestId: string) {
 
 function handleAddRelay(url: string) {
   if (!ndk?.pool) return
-  const {NDKRelay} = require("../lib/ndk/relay")
   const relay = new NDKRelay(url)
   ndk.pool.addRelay(relay)
   relay.connect()
