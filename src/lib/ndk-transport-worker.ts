@@ -58,7 +58,7 @@ interface WorkerResponse {
 export class NDKWorkerTransport {
   public name = "worker-transport"
   private worker: Worker
-  private workerUrl: string
+  private workerUrl?: string
   private ndk?: NDK
   private relayUrls: string[] = []
   private subscriptions = new Map<string, Set<(event: NDKEvent) => void>>()
@@ -71,14 +71,23 @@ export class NDKWorkerTransport {
   private readyPromise!: Promise<void>
   private restartAttempts = 0
 
-  constructor(workerUrl = "/relay-worker.js") {
-    this.workerUrl = workerUrl
-    this.worker = this.createWorker()
+  constructor(workerOrUrl: Worker | string = "/relay-worker.js") {
+    if (typeof workerOrUrl === "string") {
+      this.workerUrl = workerOrUrl
+      this.worker = this.createWorker()
+    } else {
+      this.worker = workerOrUrl
+      this.setupWorker(this.worker)
+    }
   }
 
   private createWorker(): Worker {
-    const worker = new Worker(this.workerUrl, {type: "module"})
+    const worker = new Worker(this.workerUrl!, {type: "module"})
+    this.setupWorker(worker)
+    return worker
+  }
 
+  private setupWorker(worker: Worker) {
     this.readyPromise = new Promise((resolve) => {
       const handler = (e: MessageEvent<WorkerResponse>) => {
         if (e.data.type === "ready") {
@@ -99,8 +108,6 @@ export class NDKWorkerTransport {
 
     // Setup message handlers after worker is assigned
     this.setupMessageHandler(worker)
-
-    return worker
   }
 
   private async handleWorkerCrash() {

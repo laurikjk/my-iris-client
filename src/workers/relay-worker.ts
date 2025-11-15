@@ -240,7 +240,7 @@ function handleGetRelayStatus(requestId: string) {
 
 function handleAddRelay(url: string) {
   if (!ndk?.pool) return
-  const relay = new NDKRelay(url)
+  const relay = new NDKRelay(url, undefined, ndk)
   ndk.pool.addRelay(relay)
   relay.connect()
 }

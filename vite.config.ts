@@ -65,6 +65,10 @@ export default defineConfig({
           if (assetInfo.name?.endsWith(".wasm")) {
             return "assets/[name][extname]"
           }
+          // Worker files should be .js
+          if (assetInfo.name?.includes("worker")) {
+            return "assets/[name]-[hash].js"
+          }
           return "assets/[name]-[hash][extname]"
         },
         manualChunks: (id) => {
@@ -179,4 +183,12 @@ export default defineConfig({
     include: ["react", "react-dom"],
   },
   assetsInclude: ["**/*.wasm"],
+  worker: {
+    format: "es",
+    rollupOptions: {
+      output: {
+        entryFileNames: "assets/[name]-[hash].js",
+      },
+    },
+  },
 })

@@ -141,9 +141,11 @@ async function initNDK(opts?: NDKConstructorParams) {
 
   // Initialize worker transport
   console.log("🔧 Using Worker Transport - relay connections + cache in worker thread")
-  // Import worker using Vite's ?worker&url pattern for proper bundling
-  const workerUrl = new URL("../workers/relay-worker.ts", import.meta.url).href
-  workerTransport = new NDKWorkerTransport(workerUrl)
+  // Vite bundles worker when it sees: new Worker(new URL(..., import.meta.url))
+  const worker = new Worker(new URL("../workers/relay-worker.ts", import.meta.url), {
+    type: "module",
+  })
+  workerTransport = new NDKWorkerTransport(worker)
 
   const options = opts || {
     explicitRelayUrls: [], // Worker handles relays
