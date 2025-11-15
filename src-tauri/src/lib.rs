@@ -1,17 +1,23 @@
+mod filter_parser;
+
 #[cfg(mobile)]
 use tauri::Listener;
 use tauri::{Manager, Emitter};
 use std::cell::RefCell;
 use std::sync::mpsc::{channel, Sender, Receiver};
-use nostrdb::{Ndb, Config, Filter, FilterBuilder, Subscription};
+use nostrdb::{Ndb, Config, Filter, Subscription};
 use enostr::{RelayPool, ewebsock, ClientMessage};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tracing::{debug, info, warn, error, info_span};
+use tracing_subscriber::EnvFilter;
+use filter_parser::parse_filter;
 
 thread_local! {
     static NDB: RefCell<Option<Ndb>> = RefCell::new(None);
     static POOL: RefCell<Option<RelayPool>> = RefCell::new(None);
     static SUBSCRIPTIONS: RefCell<HashMap<String, Subscription>> = RefCell::new(HashMap::new());
+    static SUB_ID_MAP: RefCell<HashMap<u64, String>> = RefCell::new(HashMap::new());
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -111,12 +117,12 @@ struct AppState {
 
 #[tauri::command]
 async fn nostr_message(msg: NostrRequest, state: tauri::State<'_, AppState>) -> Result<(), String> {
-    log::info!("📬 Received from frontend: {:?}", msg);
+    debug!(msg = ?msg, "Received from frontend");
     state.nostr_tx.send(msg).map_err(|e| e.to_string())
 }
 
 fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: tauri::AppHandle) {
-    // Initialize on this thread
+    info!(target: "iris", "Initializing nostrdb and relay pool");
     let config = Config::new();
     let ndb = Ndb::new(&db_path, &config).expect("failed to initialize nostrdb");
     let pool = RelayPool::new();
@@ -133,25 +139,38 @@ fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: tauri::A
                         let relay_url = pool.relays[i].url().to_string();
                         match event {
                             ewebsock::WsEvent::Message(ewebsock::WsMessage::Text(text)) => {
-                                log::debug!("📨 Received from relay {}: {}", relay_url, &text[..text.len().min(100)]);
+                                debug!(relay = %relay_url, len = text.len(), "Received message");
 
                                 // Process through nostrdb (validates signature)
                                 NDB.with(|n| {
                                     if let Some(ndb) = n.borrow_mut().as_mut() {
                                         match ndb.process_event(&text) {
                                             Ok(_) => {
-                                                log::debug!("✅ Event processed and validated by nostrdb");
-                                                // TODO: Extract event from text and forward to frontend
+                                                debug!("Event validated, forwarding to frontend");
+                                                // Parse relay message to extract event and sub ID
+                                                if let Ok(msg) = serde_json::from_str::<serde_json::Value>(&text) {
+                                                    if let Some(arr) = msg.as_array() {
+                                                        if arr.len() >= 3 && arr[0].as_str() == Some("EVENT") {
+                                                            if let (Some(sub_id), Some(event)) = (arr[1].as_str(), arr.get(2)) {
+                                                                let _ = app_handle.emit("nostr_event", NostrResponse::Event {
+                                                                    sub_id: sub_id.to_string(),
+                                                                    event: event.clone(),
+                                                                    relay: Some(relay_url.clone()),
+                                                                });
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                             Err(e) => {
-                                                log::warn!("⚠️ Nostrdb rejected event (invalid sig or duplicate): {:?}", e);
+                                                warn!(error = ?e, "Event rejected");
                                             }
                                         }
                                     }
                                 });
                             }
                             ewebsock::WsEvent::Opened => {
-                                log::info!("🔗 Relay connected: {}", relay_url);
+                                info!(relay = %relay_url, "Connected");
                                 pool.relays[i].set_status(enostr::RelayStatus::Connected);
                                 let _ = app_handle.emit("nostr_event", serde_json::json!({
                                     "type": "relayConnected",
@@ -159,7 +178,7 @@ fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: tauri::A
                                 }));
                             }
                             ewebsock::WsEvent::Closed => {
-                                log::info!("🔌 Relay disconnected: {}", relay_url);
+                                info!(relay = %relay_url, "Disconnected");
                                 pool.relays[i].set_status(enostr::RelayStatus::Disconnected);
                                 let _ = app_handle.emit("nostr_event", serde_json::json!({
                                     "type": "relayDisconnected",
@@ -167,7 +186,7 @@ fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: tauri::A
                                 }));
                             }
                             ewebsock::WsEvent::Error(e) => {
-                                log::error!("❌ Relay error {}: {}", relay_url, e);
+                                error!(relay = %relay_url, error = %e, "Relay error");
                             }
                             _ => {
                                 // Ignore other message types (Binary, Ping, Pong, Unknown)
@@ -181,33 +200,32 @@ fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: tauri::A
         // Process commands
         match rx.try_recv() {
             Ok(NostrRequest::Init) => {
-                log::info!("🔌 Nostr thread initialized, sending Ready to frontend");
                 let _ = app_handle.emit("nostr_event", NostrResponse::Ready);
             }
             Ok(NostrRequest::AddRelay { url }) => {
-                log::info!("➕ Adding relay: {}", url);
+                info!(relay = %url, "Adding relay");
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
                         let wakeup = || {};
                         match pool.add_url(url.clone(), wakeup) {
                             Ok(_) => {
-                                log::info!("✅ Relay added: {}", url);
+                                info!(relay = %url, "Relay added");
                                 // Emit relay added event
                                 let _ = app_handle.emit("nostr_event", serde_json::json!({
                                     "type": "relayAdded",
                                     "url": url
                                 }));
                             }
-                            Err(e) => log::error!("❌ Failed to add relay {}: {:?}", url, e),
+                            Err(e) => error!(relay = %url, error = ?e, "Failed to add relay"),
                         }
                     }
                 });
             }
             Ok(NostrRequest::GetRelayStatus { id }) => {
-                log::info!("📊 GetRelayStatus request with id: {}", id);
+                debug!(id = %id, "GetRelayStatus request");
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow().as_ref() {
-                        log::info!("Pool has {} relays", pool.relays.len());
+                        debug!(count = pool.relays.len(), "Relay pool status");
                         let statuses: Vec<RelayStatusInfo> = pool.relays.iter().map(|relay| {
                             RelayStatusInfo {
                                 url: relay.url().to_string(),
@@ -220,7 +238,7 @@ fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: tauri::A
                             }
                         }).collect();
 
-                        log::info!("📡 Emitting relay status with {} relays", statuses.len());
+                        debug!(count = statuses.len(), "Emitting relay status");
                         let _ = app_handle.emit("nostr_event", NostrResponse::RelayStatus {
                             id,
                             relay_statuses: statuses,
@@ -228,43 +246,62 @@ fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: tauri::A
                     }
                 });
             }
-            Ok(NostrRequest::Subscribe { id, filters, subscribe_opts }) => {
-                log::info!("🔔 Subscribe request: {} with {} filters", id, filters.len());
+            Ok(NostrRequest::Subscribe { id, filters, subscribe_opts: _ }) => {
+                info!(sub_id = %id, filter_count = filters.len(), "Subscribe request");
 
-                NDB.with(|n| {
+                // Parse JSON filters
+                let parsed_filters: Vec<Filter> = filters
+                    .iter()
+                    .filter_map(|f| parse_filter(f))
+                    .collect();
+
+                if parsed_filters.is_empty() {
+                    warn!(sub_id = %id, "No valid filters");
+                    return;
+                }
+
+                let filter = if !parsed_filters.is_empty() {
+                    parsed_filters[0].clone()
+                } else {
+                    Filter::new().limit(500).build()
+                };
+
+                // Subscribe in nostrdb (local storage)
+                let ndb_sub_id = NDB.with(|n| {
                     if let Some(ndb) = n.borrow().as_ref() {
-                        // TODO: Parse JSON filters to nostrdb::Filter
-                        // For now, create a basic filter
-                        let filter = Filter::new().limit(100).build();
-
-                        match ndb.subscribe(&[filter]) {
+                        match ndb.subscribe(&[filter.clone()]) {
                             Ok(sub) => {
+                                let ndb_id = sub.id();
                                 SUBSCRIPTIONS.with(|subs| {
                                     subs.borrow_mut().insert(id.clone(), sub);
                                 });
-                                log::info!("✅ Created nostrdb subscription: {}", id);
+                                SUB_ID_MAP.with(|map| {
+                                    map.borrow_mut().insert(ndb_id, id.clone());
+                                });
+                                debug!(sub_id = %id, ndb_id = ndb_id, "Created nostrdb subscription");
+                                Some(ndb_id)
                             }
                             Err(e) => {
-                                log::error!("❌ Failed to subscribe: {:?}", e);
-                                let _ = app_handle.emit("nostr_event", NostrResponse::Error {
-                                    id: Some(id),
-                                    error: format!("Subscribe failed: {:?}", e),
-                                });
+                                error!(sub_id = %id, error = ?e, "Nostrdb subscribe failed");
+                                None
                             }
                         }
+                    } else {
+                        None
                     }
                 });
 
-                // Also subscribe on relay pool
+                // Send REQ to relays
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
-                        // TODO: Convert filters and send to relays
-                        log::debug!("TODO: Send subscription to relays");
+                        let req_msg = ClientMessage::req(id.clone(), parsed_filters.clone());
+                        pool.send(&req_msg);
+                        info!(sub_id = %id, relay_count = pool.relays.len(), filter_count = parsed_filters.len(), "Sent REQ to relays");
                     }
                 });
             }
-            Ok(NostrRequest::Publish { id, event, publish_opts }) => {
-                log::info!("📤 Publish request: {}", id);
+            Ok(NostrRequest::Publish { id, event, publish_opts: _ }) => {
+                info!(pub_id = %id, "Publish request");
 
                 // Publish event to relays
                 POOL.with(|p| {
@@ -275,14 +312,14 @@ fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: tauri::A
                             Ok(msg) => {
                                 for relay in &mut pool.relays {
                                     if let Err(e) = relay.send(&msg) {
-                                        log::error!("Failed to publish to relay: {:?}", e);
+                                        error!(error = ?e, "Failed to publish to relay");
                                     }
                                 }
-                                log::info!("✅ Published to {} relays", pool.relays.len());
+                                info!(relay_count = pool.relays.len(), "Published to relays");
                                 let _ = app_handle.emit("nostr_event", NostrResponse::Published { id });
                             }
                             Err(e) => {
-                                log::error!("❌ Failed to create event message: {:?}", e);
+                                error!(error = ?e, "Invalid event message");
                                 let _ = app_handle.emit("nostr_event", NostrResponse::Error {
                                     id: Some(id),
                                     error: format!("Invalid event: {:?}", e),
@@ -292,12 +329,26 @@ fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: tauri::A
                     }
                 });
             }
+            Ok(NostrRequest::Unsubscribe { id }) => {
+                // Remove from our subscription map
+                SUBSCRIPTIONS.with(|subs| {
+                    subs.borrow_mut().remove(&id);
+                });
+                // Send CLOSE to relays
+                POOL.with(|p| {
+                    if let Some(pool) = p.borrow_mut().as_mut() {
+                        let close_msg = ClientMessage::close(id.clone());
+                        pool.send(&close_msg);
+                        debug!(sub_id = %id, "Sent CLOSE to relays");
+                    }
+                });
+            }
             Ok(NostrRequest::Close) => {
-                log::info!("🛑 Nostr thread received Close command");
+                info!("Close command received");
                 break;
             }
             Ok(req) => {
-                log::debug!("📨 Unhandled request: {:?}", req);
+                debug!(request = ?req, "Unhandled request");
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => {},
             Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
@@ -309,6 +360,14 @@ fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: tauri::A
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize tracing with env filter (RUST_LOG=iris=debug)
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("iris=info,enostr=debug"))
+        )
+        .init();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![nostr_message])
@@ -335,11 +394,11 @@ pub fn run() {
 
                         match result {
                             Ok(_) => {
-                                log::info!("Nostr thread exited normally");
+                                info!("Nostr thread exited normally");
                                 break;
                             }
                             Err(e) => {
-                                log::error!("Nostr thread panicked: {:?}, restarting...", e);
+                                error!(panic = ?e, "Nostr thread panicked, restarting");
                                 std::thread::sleep(std::time::Duration::from_secs(1));
                                 // Thread restarts loop
                             }
@@ -350,13 +409,7 @@ pub fn run() {
 
             app.manage(AppState { nostr_tx: tx });
 
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
+            // Logging handled by tracing-subscriber
 
             // Check if launched with --minimized flag (from autostart) - desktop only
             #[cfg(any(target_os = "macos", windows, target_os = "linux"))]
@@ -399,7 +452,7 @@ pub fn run() {
 
                 // Listen for notification events
                 app.listen("notification-received", move |event| {
-                    log::info!("Notification received: {:?}", event);
+                    info!(event = ?event, "Notification received");
                 });
             }
 
