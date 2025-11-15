@@ -8,6 +8,7 @@ import NDK, {
 } from "@/lib/ndk"
 import NDKCacheAdapterDexie from "@/lib/ndk-cache"
 import {NDKWorkerTransport} from "@/lib/ndk-transport-worker"
+import {NDKTauriTransport} from "@/lib/ndk-transport-tauri"
 import {useUserStore} from "@/stores/user"
 import {useSettingsStore} from "@/stores/settings"
 import {DEFAULT_RELAYS} from "@/shared/constants/relays"
@@ -19,6 +20,7 @@ import {shouldHideEvent} from "@/utils/visibility"
 import socialGraph from "@/utils/socialGraph"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
+import {isTauri} from "@/utils/utils"
 const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.NDK_RELAY)
 
 let ndkInstance: NDK | null = null
@@ -26,6 +28,7 @@ let privateKeySigner: NDKPrivateKeySigner | undefined
 let nip07Signer: NDKNip07Signer | undefined
 let initPromise: Promise<void> | null = null
 let workerTransport: NDKWorkerTransport | undefined
+let tauriTransport: NDKTauriTransport | undefined
 
 function normalizeRelayUrl(url: string): string {
   // Ensure URL ends with / to match NDK's internal normalization
@@ -39,6 +42,13 @@ export {DEFAULT_RELAYS}
  */
 export function getWorkerTransport(): NDKWorkerTransport | undefined {
   return workerTransport
+}
+
+/**
+ * Get Tauri transport instance (only available in Tauri mode)
+ */
+export function getTauriTransport(): NDKTauriTransport | undefined {
+  return tauriTransport
 }
 
 /**
@@ -139,13 +149,18 @@ async function initNDK(opts?: NDKConstructorParams) {
     return true
   }
 
-  // Initialize worker transport with built-in sig verification
-  log("🔧 Using Worker Transport - relay connections + cache + WASM sig verification")
-  // Vite bundles worker when it sees: new Worker(new URL(..., import.meta.url))
-  const worker = new Worker(new URL("../workers/relay-worker.ts", import.meta.url), {
-    type: "module",
-  })
-  workerTransport = new NDKWorkerTransport(worker)
+  // Initialize transport based on environment
+  if (isTauri()) {
+    log("🔧 Using Tauri Transport - relay connections via Rust backend")
+    tauriTransport = new NDKTauriTransport()
+  } else {
+    log("🔧 Using Worker Transport - relay connections + cache + WASM sig verification")
+    // Vite bundles worker when it sees: new Worker(new URL(..., import.meta.url))
+    const worker = new Worker(new URL("../workers/relay-worker.ts", import.meta.url), {
+      type: "module",
+    })
+    workerTransport = new NDKWorkerTransport(worker)
+  }
 
   const options = opts || {
     explicitRelayUrls: [], // Worker handles relays
@@ -158,8 +173,9 @@ async function initNDK(opts?: NDKConstructorParams) {
   // Replace placeholder or create new instance
   const newInstance = new NDK(options)
 
-  // Connect worker transport
-  await workerTransport.connect(newInstance, relays)
+  // Connect transport
+  const transport = isTauri() ? tauriTransport : workerTransport
+  await transport!.connect(newInstance, relays)
 
   // If placeholder exists, copy its properties to the new instance
   if (ndkInstance) {
@@ -208,8 +224,9 @@ function setupVisibilityReconnection(instance: NDK) {
   let wasHidden = false
 
   const reconnectDisconnectedRelays = (reason: string) => {
-    // Forward to worker transport
-    workerTransport?.reconnectDisconnected(reason)
+    // Forward to transport
+    const transport = isTauri() ? tauriTransport : workerTransport
+    transport?.reconnectDisconnected?.(reason)
   }
 
   // Handle visibility changes (PWA/mobile only - desktop keeps WS open)

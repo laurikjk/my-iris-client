@@ -1,5 +1,6 @@
 import {useState, useEffect} from "react"
-import {getWorkerTransport} from "@/utils/ndk"
+import {getWorkerTransport, getTauriTransport} from "@/utils/ndk"
+import {isTauri} from "@/utils/utils"
 
 interface RelayStatus {
   url: string
@@ -20,19 +21,19 @@ export function useWorkerRelayStatus() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const worker = getWorkerTransport()
-    if (!worker) {
+    const transport = isTauri() ? getTauriTransport() : getWorkerTransport()
+    if (!transport) {
       setLoading(false)
       return
     }
 
     const fetchStatus = async () => {
       try {
-        const statuses = await worker.getRelayStatus()
+        const statuses = await transport.getRelayStatus()
         setRelays(statuses)
         setLoading(false)
       } catch (error) {
-        console.error("Failed to fetch relay status from worker:", error)
+        console.error("Failed to fetch relay status:", error)
         setLoading(false)
       }
     }
@@ -52,22 +53,22 @@ export function useWorkerRelayStatus() {
  * Hook to manage relays in worker
  */
 export function useWorkerRelayManager() {
-  const worker = getWorkerTransport()
+  const transport = isTauri() ? getTauriTransport() : getWorkerTransport()
 
   const addRelay = async (url: string) => {
-    await worker?.addRelay(url)
+    await transport?.addRelay(url)
   }
 
   const removeRelay = async (url: string) => {
-    await worker?.removeRelay(url)
+    await transport?.removeRelay(url)
   }
 
   const connectRelay = async (url: string) => {
-    await worker?.connectRelay(url)
+    await transport?.connectRelay(url)
   }
 
   const disconnectRelay = async (url: string) => {
-    await worker?.disconnectRelay(url)
+    await transport?.disconnectRelay(url)
   }
 
   return {
@@ -75,6 +76,6 @@ export function useWorkerRelayManager() {
     removeRelay,
     connectRelay,
     disconnectRelay,
-    available: !!worker,
+    available: !!transport,
   }
 }
