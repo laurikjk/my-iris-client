@@ -1,6 +1,8 @@
 mod filter_parser;
 mod nostr_types;
 mod nostr_thread;
+mod relay_handlers;
+mod subscription_handlers;
 
 #[cfg(mobile)]
 use tauri::Listener;

@@ -196,8 +196,8 @@ export class NDKTauriTransport {
   }
 
   async addRelay(url: string): Promise<void> {
-    await invoke('nostr_message', {
-      msg: {type: 'addRelay', url} as WorkerMessage
+    await invoke("nostr_message", {
+      msg: {type: "addRelay", url} as WorkerMessage,
     })
   }
 
@@ -330,12 +330,6 @@ export class NDKTauriTransport {
           resolve([])
         }
       }, 1000)
-    })
-  }
-
-  async addRelay(url: string): Promise<void> {
-    await invoke("nostr_message", {
-      msg: {type: "addRelay", url} as WorkerMessage,
     })
   }
 

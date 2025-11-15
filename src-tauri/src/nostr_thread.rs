@@ -1,12 +1,13 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::mpsc::Receiver;
-use nostrdb::{Ndb, Config, Filter, Subscription};
-use enostr::{RelayPool, ewebsock, ClientMessage};
+use nostrdb::{Ndb, Config, Subscription};
+use enostr::{RelayPool, ewebsock};
 use tauri::Emitter;
 use tracing::{debug, info, warn, error};
 use crate::nostr_types::{NostrRequest, NostrResponse, RelayStatusInfo};
-use crate::filter_parser::parse_filter;
+use crate::relay_handlers;
+use crate::subscription_handlers;
 
 thread_local! {
     static NDB: RefCell<Option<Ndb>> = RefCell::new(None);
@@ -19,7 +20,19 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
     info!(target: "iris", "Initializing nostrdb and relay pool");
     let config = Config::new();
     let ndb = Ndb::new(&db_path, &config).expect("failed to initialize nostrdb");
-    let pool = RelayPool::new();
+    let mut pool = RelayPool::new();
+
+    // Add multicast relay for local network discovery (WebRTC signaling)
+    let wakeup = || {}; // No-op wakeup
+    match enostr::PoolRelay::multicast(wakeup) {
+        Ok(multicast_relay) => {
+            pool.relays.push(multicast_relay);
+            info!("Multicast relay enabled for local network discovery");
+        }
+        Err(e) => {
+            warn!(error = ?e, "Failed to setup multicast relay");
+        }
+    }
 
     NDB.with(|n| *n.borrow_mut() = Some(ndb));
     POOL.with(|p| *p.borrow_mut() = Some(pool));
@@ -38,26 +51,48 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                                 // Process through nostrdb (validates signature)
                                 NDB.with(|n| {
                                     if let Some(ndb) = n.borrow_mut().as_mut() {
-                                        match ndb.process_event(&text) {
-                                            Ok(_) => {
-                                                debug!("Event validated, forwarding to frontend");
-                                                // Parse relay message to extract event and sub ID
-                                                if let Ok(msg) = serde_json::from_str::<serde_json::Value>(&text) {
-                                                    if let Some(arr) = msg.as_array() {
-                                                        if arr.len() >= 3 && arr[0].as_str() == Some("EVENT") {
-                                                            if let (Some(sub_id), Some(event)) = (arr[1].as_str(), arr.get(2)) {
-                                                                let _ = app_handle.emit("nostr_event", NostrResponse::Event {
-                                                                    sub_id: sub_id.to_string(),
-                                                                    event: event.clone(),
-                                                                    relay: Some(relay_url.clone()),
-                                                                });
+                                        // Try to parse as relay message first
+                                        if let Ok(msg) = serde_json::from_str::<serde_json::Value>(&text) {
+                                            if let Some(arr) = msg.as_array() {
+                                                match arr.get(0).and_then(|v| v.as_str()) {
+                                                    Some("EVENT") if arr.len() >= 3 => {
+                                                        // Validate with nostrdb
+                                                        match ndb.process_event(&text) {
+                                                            Ok(_) => {
+                                                                debug!("Event validated, forwarding");
+                                                                if let (Some(sub_id), Some(event)) = (arr[1].as_str(), arr.get(2)) {
+                                                                    let _ = app_handle.emit("nostr_event", NostrResponse::Event {
+                                                                        sub_id: sub_id.to_string(),
+                                                                        event: event.clone(),
+                                                                        relay: Some(relay_url.clone()),
+                                                                    });
+                                                                }
+                                                            }
+                                                            Err(e) => {
+                                                                warn!(error = ?e, "Event rejected");
                                                             }
                                                         }
                                                     }
+                                                    Some("NOTICE") if arr.len() >= 2 => {
+                                                        if let Some(notice) = arr[1].as_str() {
+                                                            warn!(relay = %relay_url, notice = %notice, "Relay notice");
+                                                        }
+                                                    }
+                                                    Some("EOSE") if arr.len() >= 2 => {
+                                                        if let Some(sub_id) = arr[1].as_str() {
+                                                            debug!(relay = %relay_url, sub_id = %sub_id, "End of stored events");
+                                                            let _ = app_handle.emit("nostr_event", NostrResponse::Eose {
+                                                                sub_id: sub_id.to_string(),
+                                                            });
+                                                        }
+                                                    }
+                                                    Some("OK") => {
+                                                        debug!(relay = %relay_url, "Event accepted");
+                                                    }
+                                                    _ => {
+                                                        debug!(relay = %relay_url, msg = %&text[..text.len().min(100)], "Unknown message");
+                                                    }
                                                 }
-                                            }
-                                            Err(e) => {
-                                                warn!(error = ?e, "Event rejected");
                                             }
                                         }
                                     }
@@ -97,20 +132,9 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                 let _ = app_handle.emit("nostr_event", NostrResponse::Ready);
             }
             Ok(NostrRequest::AddRelay { url }) => {
-                info!(relay = %url, "Adding relay");
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
-                        let wakeup = || {};
-                        match pool.add_url(url.clone(), wakeup) {
-                            Ok(_) => {
-                                info!(relay = %url, "Relay added");
-                                let _ = app_handle.emit("nostr_event", serde_json::json!({
-                                    "type": "relayAdded",
-                                    "url": url
-                                }));
-                            }
-                            Err(e) => error!(relay = %url, error = ?e, "Failed to add relay"),
-                        }
+                        relay_handlers::handle_add_relay(pool, url, &app_handle);
                     }
                 });
             }
@@ -139,147 +163,71 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                     }
                 });
             }
-            Ok(NostrRequest::Subscribe { id, filters, subscribe_opts: _ }) => {
-                info!(sub_id = %id, filter_count = filters.len(), "Subscribe request");
-
-                // Parse JSON filters
-                let parsed_filters: Vec<Filter> = filters
-                    .iter()
-                    .filter_map(|f| parse_filter(f))
-                    .collect();
-
-                if parsed_filters.is_empty() {
-                    warn!(sub_id = %id, "No valid filters");
-                    return;
-                }
-
-                let filter = if !parsed_filters.is_empty() {
-                    parsed_filters[0].clone()
-                } else {
-                    Filter::new().limit(500).build()
-                };
-
-                // Subscribe in nostrdb (local storage)
-                let _ndb_sub_id = NDB.with(|n| {
-                    if let Some(ndb) = n.borrow().as_ref() {
-                        match ndb.subscribe(&[filter.clone()]) {
-                            Ok(sub) => {
-                                let ndb_id = sub.id();
-                                SUBSCRIPTIONS.with(|subs| {
-                                    subs.borrow_mut().insert(id.clone(), sub);
-                                });
-                                SUB_ID_MAP.with(|map| {
-                                    map.borrow_mut().insert(ndb_id, id.clone());
-                                });
-                                debug!(sub_id = %id, ndb_id = ndb_id, "Created nostrdb subscription");
-                                Some(ndb_id)
-                            }
-                            Err(e) => {
-                                error!(sub_id = %id, error = ?e, "Nostrdb subscribe failed");
-                                None
-                            }
-                        }
-                    } else {
-                        None
-                    }
-                });
-
-                // Send REQ to relays
-                POOL.with(|p| {
-                    if let Some(pool) = p.borrow_mut().as_mut() {
-                        let req_msg = ClientMessage::req(id.clone(), parsed_filters.clone());
-                        pool.send(&req_msg);
-                        info!(sub_id = %id, relay_count = pool.relays.len(), filter_count = parsed_filters.len(), "Sent REQ to relays");
-                    }
+            Ok(NostrRequest::Subscribe { id, filters, subscribe_opts }) => {
+                NDB.with(|n| {
+                    POOL.with(|p| {
+                        SUBSCRIPTIONS.with(|subs| {
+                            SUB_ID_MAP.with(|map| {
+                                if let (Some(ndb), Some(pool)) = (n.borrow().as_ref(), p.borrow_mut().as_mut()) {
+                                    subscription_handlers::handle_subscribe(
+                                        id,
+                                        filters,
+                                        subscribe_opts,
+                                        ndb,
+                                        pool,
+                                        &mut subs.borrow_mut(),
+                                        &mut map.borrow_mut(),
+                                        &app_handle,
+                                    );
+                                }
+                            });
+                        });
+                    });
                 });
             }
-            Ok(NostrRequest::Publish { id, event, publish_opts: _ }) => {
-                info!(pub_id = %id, "Publish request");
-
-                // Publish event to relays
-                POOL.with(|p| {
-                    if let Some(pool) = p.borrow_mut().as_mut() {
-                        let event_json = serde_json::to_string(&event).unwrap_or_default();
-
-                        match ClientMessage::event_json(event_json) {
-                            Ok(msg) => {
-                                for relay in &mut pool.relays {
-                                    if let Err(e) = relay.send(&msg) {
-                                        error!(error = ?e, "Failed to publish to relay");
-                                    }
-                                }
-                                info!(relay_count = pool.relays.len(), "Published to relays");
-                                let _ = app_handle.emit("nostr_event", NostrResponse::Published { id });
-                            }
-                            Err(e) => {
-                                error!(error = ?e, "Invalid event message");
-                                let _ = app_handle.emit("nostr_event", NostrResponse::Error {
-                                    id: Some(id),
-                                    error: format!("Invalid event: {:?}", e),
-                                });
-                            }
+            Ok(NostrRequest::Publish { id, event, publish_opts }) => {
+                NDB.with(|n| {
+                    POOL.with(|p| {
+                        if let (Some(ndb), Some(pool)) = (n.borrow().as_ref(), p.borrow_mut().as_mut()) {
+                            subscription_handlers::handle_publish(id, event, publish_opts, ndb, pool, &app_handle);
                         }
-                    }
+                    });
                 });
             }
             Ok(NostrRequest::Unsubscribe { id }) => {
-                SUBSCRIPTIONS.with(|subs| {
-                    subs.borrow_mut().remove(&id);
-                });
                 POOL.with(|p| {
-                    if let Some(pool) = p.borrow_mut().as_mut() {
-                        let close_msg = ClientMessage::close(id.clone());
-                        pool.send(&close_msg);
-                        debug!(sub_id = %id, "Sent CLOSE to relays");
-                    }
+                    SUBSCRIPTIONS.with(|subs| {
+                        if let Some(pool) = p.borrow_mut().as_mut() {
+                            subscription_handlers::handle_unsubscribe(id, pool, &mut subs.borrow_mut());
+                        }
+                    });
                 });
             }
             Ok(NostrRequest::RemoveRelay { url }) => {
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
-                        pool.relays.retain(|r| r.url() != url);
-                        info!(relay = %url, "Relay removed");
+                        relay_handlers::handle_remove_relay(pool, url);
                     }
                 });
             }
             Ok(NostrRequest::ConnectRelay { url }) => {
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
-                        for relay in &mut pool.relays {
-                            if relay.url() == url {
-                                // Relay already exists, just update status
-                                relay.set_status(enostr::RelayStatus::Connecting);
-                                info!(relay = %url, "Reconnecting relay");
-                                return;
-                            }
-                        }
+                        relay_handlers::handle_connect_relay(pool, url);
                     }
                 });
             }
             Ok(NostrRequest::DisconnectRelay { url }) => {
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
-                        for relay in &mut pool.relays {
-                            if relay.url() == url {
-                                relay.set_status(enostr::RelayStatus::Disconnected);
-                                info!(relay = %url, "Disconnected relay");
-                                break;
-                            }
-                        }
+                        relay_handlers::handle_disconnect_relay(pool, url);
                     }
                 });
             }
             Ok(NostrRequest::ReconnectDisconnected { reason }) => {
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
-                        let mut reconnected = 0;
-                        for relay in &mut pool.relays {
-                            if matches!(relay.status(), enostr::RelayStatus::Disconnected) {
-                                relay.set_status(enostr::RelayStatus::Connecting);
-                                reconnected += 1;
-                            }
-                        }
-                        info!(count = reconnected, reason = ?reason, "Reconnecting disconnected relays");
+                        relay_handlers::handle_reconnect_disconnected(pool, reason);
                     }
                 });
             }
