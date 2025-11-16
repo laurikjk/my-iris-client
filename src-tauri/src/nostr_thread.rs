@@ -276,9 +276,9 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
             Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
         }
 
-        // Sleep only when idle to reduce CPU usage
+        // Sleep when idle to reduce CPU usage
         if !had_activity {
-            std::thread::sleep(std::time::Duration::from_millis(1));
+            std::thread::sleep(std::time::Duration::from_millis(100));
         }
     }
 }

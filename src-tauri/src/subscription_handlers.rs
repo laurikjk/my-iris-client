@@ -68,14 +68,12 @@ pub fn handle_subscribe(
 
         if has_ids {
             // Fast path: direct ID lookup, emit found events, track unfound IDs for relay REQ
-            let mut total_ids = 0;
             let mut emitted = 0;
             let mut unfound_ids = Vec::new();
 
             for field in filter.into_iter() {
                 if let nostrdb::FilterField::Ids(ids) = field {
                     for id_bytes in ids.into_iter() {
-                        total_ids += 1;
                         if let Ok(note_key) = ndb.get_notekey_by_id(&txn, id_bytes) {
                             if let Ok(note) = ndb.get_note_by_key(&txn, note_key) {
                                 if let Ok(event_json) = note.json() {
@@ -122,7 +120,7 @@ pub fn handle_subscribe(
                 }
             }
             if emitted > 0 {
-                debug!(sub_id = %id, count = emitted, elapsed_us = start.elapsed().as_micros(), "Emitted cached events");
+                debug!(sub_id = %id, count = emitted, "Emitted cached events");
             }
         }
     }
