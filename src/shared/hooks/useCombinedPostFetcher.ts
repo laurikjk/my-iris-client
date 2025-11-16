@@ -1,9 +1,9 @@
 import {useState, useEffect, useRef, useCallback} from "react"
 import {NDKEvent, NDKFilter} from "@/lib/ndk"
-import {ndk} from "@/utils/ndk"
 import {addSeenEventId} from "@/utils/memcache"
 import shuffle from "lodash/shuffle"
 import {useUserStore} from "@/stores/user"
+import {fetchEventsReliable} from "@/utils/fetchEventsReliable"
 
 interface CombinedPostFetcherCache {
   events?: NDKEvent[]
@@ -75,46 +75,15 @@ export default function useCombinedPostFetcher({
         ids: allIds,
       }
 
-      // Use subscribe with 2 second timeout to collect events
-      // fetchEvents() can return EOSE too early before relays deliver all events
-      const collectedEventsMap = new Map<string, NDKEvent>()
-      return new Promise((resolve) => {
-        let resolved = false
-        const sub = ndk().subscribe(postFilter)
+      const {promise} = fetchEventsReliable(postFilter, {timeout: 2000})
+      let eventsArray = await promise
 
-        sub.on("event", (event: NDKEvent) => {
-          collectedEventsMap.set(event.id, event)
-          // Early return if we got all requested events
-          if (collectedEventsMap.size === allIds.length) {
-            if (resolved) return
-            resolved = true
-            sub.stop()
-            let eventsArray = Array.from(collectedEventsMap.values())
+      if (excludeOwnPosts && myPubKey) {
+        eventsArray = eventsArray.filter((event) => event.pubkey !== myPubKey)
+      }
 
-            if (excludeOwnPosts && myPubKey) {
-              eventsArray = eventsArray.filter((event) => event.pubkey !== myPubKey)
-            }
-
-            const shuffledEvents = shuffle(eventsArray)
-            resolve(shuffledEvents)
-          }
-        })
-
-        // Timeout after 2 seconds
-        setTimeout(() => {
-          if (resolved) return
-          resolved = true
-          sub.stop()
-          let eventsArray = Array.from(collectedEventsMap.values())
-
-          if (excludeOwnPosts && myPubKey) {
-            eventsArray = eventsArray.filter((event) => event.pubkey !== myPubKey)
-          }
-
-          const shuffledEvents = shuffle(eventsArray)
-          resolve(shuffledEvents)
-        }, 2000)
-      }) as Promise<NDKEvent[]>
+      const shuffledEvents = shuffle(eventsArray)
+      return shuffledEvents
     },
     [
       getNextPopular,

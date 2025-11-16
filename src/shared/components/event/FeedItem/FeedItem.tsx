@@ -28,7 +28,7 @@ import LikeHeader from "../LikeHeader"
 import ZapReceiptHeader from "../ZapReceiptHeader"
 import ReplyHeader from "../ReplyHeader"
 import {nip19} from "nostr-tools"
-import {ndk} from "@/utils/ndk"
+import {fetchEventReliable} from "@/utils/fetchEventsReliable"
 import {KIND_TEXT_NOTE, KIND_REACTION, KIND_ZAP_RECEIPT} from "@/utils/constants"
 import InlineNoteCreator from "@/shared/components/create/InlineNoteCreator"
 import {usePublicKey} from "@/stores/user"
@@ -137,9 +137,16 @@ function FeedItem({
       subscriptionRef.current = null
     }
 
+    let unsubscribe: (() => void) | undefined
+
     if (!event && eventIdHex) {
-      ndk()
-        .fetchEvent({ids: [eventIdHex], authors: authorHints})
+      const {promise, unsubscribe: unsub} = fetchEventReliable(
+        {ids: [eventIdHex], authors: authorHints},
+        {timeout: 5000}
+      )
+      unsubscribe = unsub
+
+      promise
         .then((fetchedEvent) => {
           if (fetchedEvent) {
             setEvent(fetchedEvent)
@@ -155,6 +162,7 @@ function FeedItem({
     }
 
     return () => {
+      if (unsubscribe) unsubscribe()
       if (subscriptionRef.current) {
         subscriptionRef.current.stop()
         subscriptionRef.current = null

@@ -1,5 +1,5 @@
 import {useState} from "react"
-import {ndk} from "@/utils/ndk"
+import {fetchEventReliable} from "@/utils/fetchEventsReliable"
 
 export const useRebroadcast = () => {
   const [isRebroadcasting, setIsRebroadcasting] = useState(false)
@@ -11,7 +11,8 @@ export const useRebroadcast = () => {
 
     try {
       // Find the event by ID
-      const event = await ndk().fetchEvent(eventId)
+      const {promise} = fetchEventReliable(eventId, {timeout: 5000})
+      const event = await promise
 
       if (event) {
         // Republish to all connected relays

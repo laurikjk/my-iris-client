@@ -1,4 +1,4 @@
-import type NDK, {NDKCacheAdapter} from "@/lib/ndk"
+import type {default as NDK, NDKCacheAdapter} from "@/lib/ndk"
 import {runMigrations} from "./db/migrations"
 import {loadWasmAndInitDb} from "./db/wasm-loader"
 import {addDecryptedEvent} from "./functions/addDecryptedEvent"

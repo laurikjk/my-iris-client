@@ -2,8 +2,8 @@ import PopularChannelItem from "./PopularChannelItem"
 import {KIND_CHANNEL_MESSAGE, DEBUG_NAMESPACES} from "@/utils/constants"
 import socialGraph from "@/utils/socialGraph"
 import {useState, useEffect} from "react"
-import {ndk} from "@/utils/ndk"
 import {createDebugLogger} from "@/utils/createDebugLogger"
+import {fetchEventsReliable} from "@/utils/fetchEventsReliable"
 
 const {log} = createDebugLogger(DEBUG_NAMESPACES.UI_CHAT)
 
@@ -41,11 +41,12 @@ const PopularChannels = ({publicKey}: PopularChannelsProps) => {
 
       // Fetch channel messages from followed users
       log("Fetching channel messages from followed users")
-      const channelMessages = await ndk().fetchEvents({
-        kinds: [KIND_CHANNEL_MESSAGE],
-        authors: Array.from(followedUsers),
-        limit: 200,
-      })
+      const {promise} = fetchEventsReliable(
+        {kinds: [KIND_CHANNEL_MESSAGE], authors: Array.from(followedUsers), limit: 200},
+        {timeout: 5000}
+      )
+      const messagesArray = await promise
+      const channelMessages = new Set(messagesArray)
       log("Channel messages count:", channelMessages.size)
 
       // Process messages to identify channels and count unique authors
