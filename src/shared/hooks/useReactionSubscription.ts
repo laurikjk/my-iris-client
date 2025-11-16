@@ -95,6 +95,9 @@ export default function useReactionSubscription(
         pendingReactionCounts.current.set(originalPostId, new Set([event.id]))
       }
 
+      // Fetch the actual post to ensure it's cached
+      ndk().fetchEvents({ids: [originalPostId]})
+
       if (
         !hasInitialData &&
         pendingReactionCounts.current.size >= INITIAL_DATA_THRESHOLD

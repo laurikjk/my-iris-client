@@ -71,21 +71,50 @@ export default function useCombinedPostFetcher({
       if (allIds.length === 0) {
         return []
       }
-
       const postFilter: NDKFilter = {
         ids: allIds,
       }
 
-      const fetchedEvents = await ndk().fetchEvents(postFilter)
-      let eventsArray = Array.from(fetchedEvents)
+      // Use subscribe with 2 second timeout to collect events
+      // fetchEvents() can return EOSE too early before relays deliver all events
+      const collectedEventsMap = new Map<string, NDKEvent>()
+      return new Promise((resolve) => {
+        let resolved = false
+        const sub = ndk().subscribe(postFilter)
 
-      if (excludeOwnPosts && myPubKey) {
-        eventsArray = eventsArray.filter((event) => event.pubkey !== myPubKey)
-      }
+        sub.on("event", (event: NDKEvent) => {
+          collectedEventsMap.set(event.id, event)
+          // Early return if we got all requested events
+          if (collectedEventsMap.size === allIds.length) {
+            if (resolved) return
+            resolved = true
+            sub.stop()
+            let eventsArray = Array.from(collectedEventsMap.values())
 
-      const shuffledEvents = shuffle(eventsArray)
+            if (excludeOwnPosts && myPubKey) {
+              eventsArray = eventsArray.filter((event) => event.pubkey !== myPubKey)
+            }
 
-      return shuffledEvents
+            const shuffledEvents = shuffle(eventsArray)
+            resolve(shuffledEvents)
+          }
+        })
+
+        // Timeout after 2 seconds
+        setTimeout(() => {
+          if (resolved) return
+          resolved = true
+          sub.stop()
+          let eventsArray = Array.from(collectedEventsMap.values())
+
+          if (excludeOwnPosts && myPubKey) {
+            eventsArray = eventsArray.filter((event) => event.pubkey !== myPubKey)
+          }
+
+          const shuffledEvents = shuffle(eventsArray)
+          resolve(shuffledEvents)
+        }, 2000)
+      }) as Promise<NDKEvent[]>
     },
     [
       getNextPopular,

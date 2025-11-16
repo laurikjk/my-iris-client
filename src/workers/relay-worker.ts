@@ -217,7 +217,7 @@ function handleSubscribe(
   } else if (relayOnly) {
     cacheUsage = NDKSubscriptionCacheUsage.ONLY_RELAY
   } else {
-    cacheUsage = NDKSubscriptionCacheUsage.CACHE_FIRST
+    cacheUsage = NDKSubscriptionCacheUsage.PARALLEL
   }
 
   log(`[Relay Worker] Using cacheUsage: ${cacheUsage}`)

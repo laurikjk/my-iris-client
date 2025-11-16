@@ -62,7 +62,6 @@ export default function useChronologicalSubscription(
     if (!isSocialGraphLoaded || !follows.length) {
       return
     }
-
     const now = Math.floor(Date.now() / 1000)
     const chronologicalFilter: NDKFilter = {
       kinds: [KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT],

@@ -343,6 +343,5 @@ function watchLocalSettings(instance: NDK) {
         })
       }
     }
-
   })
 }
