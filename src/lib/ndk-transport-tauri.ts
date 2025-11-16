@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type NDK from "./ndk"
 import {NDKEvent} from "./ndk/events"
 import type {NDKFilter} from "./ndk/subscription"

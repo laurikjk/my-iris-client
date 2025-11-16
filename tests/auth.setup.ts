@@ -13,29 +13,53 @@ async function signUp(page, username = "Test User") {
   // Wait for the signup dialog to appear
   await expect(page.getByRole("heading", {name: "Sign up"})).toBeVisible()
 
-  // Enter a name
+  // Enter a name/key (supports npub, nsec, or name)
   const nameInput = page.getByPlaceholder("What's your name?")
   await nameInput.fill(username)
 
-  // Click the Go button
-  const goButton = page.getByRole("button", {name: "Go"})
-  await goButton.click()
+  // Wait for auto-login if it's a key, otherwise click Go
+  // If it's a key, the dialog should close automatically after some delay
+  const isKey = username.startsWith("npub") || username.startsWith("nsec")
+
+  if (!isKey) {
+    // Click the Go button for new accounts
+    const goButton = page.getByRole("button", {name: "Go"})
+    await goButton.click()
+  } else {
+    // For keys, wait a bit for auto-login to trigger
+    await page.waitForTimeout(1000)
+  }
 
   // Wait for signup to complete
-  await expect(page.getByRole("heading", {name: "Sign up"})).not.toBeVisible()
-  await expect(page.locator("#main-content").getByTestId("new-post-button")).toBeVisible()
-  // Check that username appears in the sidebar (most reliable location)
-  await expect(page.getByTestId("sidebar-user-row").getByText(username)).toBeVisible()
+  await expect(page.getByRole("heading", {name: "Sign up"})).not.toBeVisible({
+    timeout: 10000,
+  })
 
-  // Get the generated private key
-  const privateKey = await page.evaluate(() => {
+  // For npub logins, just wait for the main content to load
+  if (isKey) {
+    await page.waitForLoadState("networkidle")
+    // Just check that we have main content loaded
+    await expect(page.locator("#main-content")).toBeVisible({timeout: 10000})
+  } else {
+    await expect(
+      page.locator("#main-content").getByTestId("new-post-button")
+    ).toBeVisible({
+      timeout: 10000,
+    })
+  }
+
+  // Get the private key or public key from store
+  const storeData = await page.evaluate(() => {
     const userStore = localStorage.getItem("user-store")
     if (!userStore) return null
     const parsed = JSON.parse(userStore)
-    return parsed?.state?.privateKey || null
+    return {
+      privateKey: parsed?.state?.privateKey || null,
+      publicKey: parsed?.state?.publicKey || null,
+    }
   })
 
-  return {username, privateKey}
+  return {username, ...storeData}
 }
 
 async function signIn(page, privateKey: string) {

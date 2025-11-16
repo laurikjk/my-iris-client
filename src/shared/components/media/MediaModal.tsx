@@ -12,7 +12,7 @@ import {useMediaModalSidebarVisible, useUIStore} from "@/stores/ui"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface MediaModalProps {
   onClose: () => void

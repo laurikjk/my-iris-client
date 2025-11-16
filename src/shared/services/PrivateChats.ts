@@ -9,7 +9,7 @@ import {hexToBytes} from "nostr-tools/utils"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 const createSubscribe = (ndk: NDK): NostrSubscribe => {
   return (filter: NDKFilter, onEvent: (event: VerifiedEvent) => void) => {

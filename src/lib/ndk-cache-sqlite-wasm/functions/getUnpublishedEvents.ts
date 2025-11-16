@@ -50,7 +50,7 @@ export async function getUnpublishedEvents(
       results[0].values.length > 0
     ) {
       for (const row of results[0].values) {
-        const [id, eventStr, relaysStr, lastTryAt] = row
+        const [, eventStr, relaysStr, lastTryAt] = row
         try {
           const event = JSON.parse(eventStr as string)
           const relays = relaysStr ? JSON.parse(relaysStr as string) : []

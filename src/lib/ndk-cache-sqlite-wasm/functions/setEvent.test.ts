@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {NDKEvent, NDKKind} from "@/lib/ndk"
 import {beforeEach, describe, expect, it} from "vitest"
 import NDKCacheSqliteWasm from "../index"

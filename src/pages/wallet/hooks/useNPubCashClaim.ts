@@ -9,7 +9,7 @@ import {ndk} from "@/utils/ndk"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.CASHU_WALLET)
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.CASHU_WALLET)
 
 export function useNPubCashClaim(
   myPubKey: string | null,

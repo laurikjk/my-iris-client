@@ -1,7 +1,5 @@
 import {useState, useEffect} from "react"
 import {RiWebhookLine} from "@remixicon/react"
-import {ndk as getNdk, getWorkerTransport} from "@/utils/ndk"
-import {useSettingsStore} from "@/stores/settings"
 import {useUIStore} from "@/stores/ui"
 import {Link} from "@/navigation"
 import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"

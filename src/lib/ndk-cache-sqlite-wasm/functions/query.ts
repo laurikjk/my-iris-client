@@ -1,4 +1,5 @@
 import {matchFilter, NDKEvent, type NDKFilter, type NDKSubscription} from "@/lib/ndk"
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type {NDKCacheAdapterSqliteWasm} from "../index"
 import type {QueryExecResult} from "../types"
 import type {EventRelay} from "./getEventRelays"

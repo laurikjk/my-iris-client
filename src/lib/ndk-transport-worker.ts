@@ -1,6 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type NDK from "./ndk"
 import type {NDKEvent} from "./ndk/events"
-import type {NDKFilter} from "./ndk/subscription"
+import {
+  NDKSubscriptionCacheUsage,
+  type NDKFilter,
+  type NDKSubscriptionOptions,
+} from "./ndk/subscription"
 import type {NDKRelay} from "./ndk/relay"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
@@ -183,7 +188,11 @@ export class NDKWorkerTransport {
   }
 
   // Transport plugin hook - intercept subscriptions
-  onSubscribe(subscription: any, filters: NDKFilter[]): void {
+  onSubscribe(
+    subscription: any,
+    filters: NDKFilter[],
+    opts?: NDKSubscriptionOptions
+  ): void {
     const subId = subscription.subId || subscription.internalId
 
     // Listen for subscription close to clean up worker subscription
@@ -191,7 +200,7 @@ export class NDKWorkerTransport {
       this.unsubscribe(subId)
     })
 
-    // Forward subscription to worker
+    // Forward subscription to worker with cache usage options
     this.subscribe(
       subId,
       filters,
@@ -204,7 +213,8 @@ export class NDKWorkerTransport {
         // Emit EOSE to main thread subscription (pass null instead of undefined)
         // Worker doesn't have relay reference, subscription handles it
         subscription.eoseReceived(null as any)
-      }
+      },
+      opts
     )
   }
 
@@ -238,7 +248,8 @@ export class NDKWorkerTransport {
     subId: string,
     filters: NDKFilter[],
     onEvent: (event: NDKEvent) => void,
-    onEose?: () => void
+    onEose?: () => void,
+    opts?: NDKSubscriptionOptions
   ): void {
     if (!this.subscriptions.has(subId)) {
       this.subscriptions.set(subId, new Set())
@@ -252,10 +263,34 @@ export class NDKWorkerTransport {
       this.eoseHandlers.get(subId)!.add(onEose)
     }
 
+    // Convert cacheUsage enum to destinations array for worker
+    const subscribeOpts: WorkerSubscribeOpts = {}
+    if (opts?.cacheUsage) {
+      switch (opts.cacheUsage) {
+        case NDKSubscriptionCacheUsage.ONLY_CACHE:
+          subscribeOpts.destinations = ["cache"]
+          subscribeOpts.closeOnEose = true
+          break
+        case NDKSubscriptionCacheUsage.ONLY_RELAY:
+          subscribeOpts.destinations = ["relay"]
+          break
+        case NDKSubscriptionCacheUsage.PARALLEL:
+          subscribeOpts.destinations = ["cache", "relay"]
+          subscribeOpts.groupable = false
+          break
+        case NDKSubscriptionCacheUsage.CACHE_FIRST:
+        default:
+          subscribeOpts.destinations = ["cache", "relay"]
+          subscribeOpts.groupable = true
+          break
+      }
+    }
+
     this.worker.postMessage({
       type: "subscribe",
       id: subId,
       filters,
+      subscribeOpts,
     } as WorkerMessage)
   }
 

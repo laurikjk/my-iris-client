@@ -17,9 +17,8 @@ import {useWalletProviderStore} from "@/stores/walletProvider"
 import {savePaymentMetadata} from "@/stores/paymentMetadata"
 import {ndk} from "@/utils/ndk"
 import {getZapAmount} from "@/utils/nostr"
-import {KIND_ZAP_RECEIPT} from "@/utils/constants"
+import {KIND_ZAP_RECEIPT, DEBUG_NAMESPACES} from "@/utils/constants"
 import {createDebugLogger} from "@/utils/createDebugLogger"
-import {DEBUG_NAMESPACES} from "@/utils/constants"
 
 const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 

@@ -1,4 +1,4 @@
-import {NDKEvent, type NDKRelay} from "@/lib/ndk"
+import type {NDKRelay} from "@/lib/ndk"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
 import {getAllConnections} from "./PeerConnection"

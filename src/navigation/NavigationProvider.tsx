@@ -6,10 +6,6 @@ import {matchPath} from "./utils"
 import {NavigationContext} from "./contexts"
 
 const MAX_STACK_SIZE = 5
-const SKIP_CACHE_PATTERNS = [
-  /^\/\w+\/replies\//, // Reply feeds
-  /^\/notifications/, // Notifications should always refresh
-]
 
 type NavigationState = {
   stack: StackItem[]
@@ -189,10 +185,6 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
       window.removeEventListener("popstate", handlePopState)
     }
   }, [])
-
-  const shouldCachePage = (url: string): boolean => {
-    return !SKIP_CACHE_PATTERNS.some((pattern) => pattern.test(url))
-  }
 
   const shouldAlwaysKeep = (url: string): boolean => {
     // Check if this URL matches any route with alwaysKeep flag

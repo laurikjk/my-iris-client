@@ -15,11 +15,11 @@ import {
   KIND_ZAP_RECEIPT,
   KIND_HIGHLIGHT,
   KIND_PICTURE_FIRST,
+  DEBUG_NAMESPACES,
 } from "@/utils/constants"
 import {createDebugLogger} from "@/utils/createDebugLogger"
-import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UI_FEED)
+const {log, warn} = createDebugLogger(DEBUG_NAMESPACES.UI_FEED)
 
 // Callback for desktop notifications
 let desktopNotificationCallback: ((event: NDKEvent) => void) | null = null

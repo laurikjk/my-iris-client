@@ -1,8 +1,5 @@
 import {useState, useCallback, useMemo} from "react"
-import socialGraph, {
-  DEFAULT_SOCIAL_GRAPH_ROOT,
-  useSocialGraphLoaded,
-} from "@/utils/socialGraph"
+import socialGraph from "@/utils/socialGraph"
 import useFollows from "@/shared/hooks/useFollows"
 import {useUserStore} from "@/stores/user"
 import {
@@ -30,7 +27,6 @@ export default function usePopularityFilters(filterSeen?: boolean) {
   const myPubKey = useUserStore((state) => state.publicKey)
   const myFollows = useFollows(myPubKey, false)
   const shouldUseFallback = myFollows.length === 0
-  const isSocialGraphLoaded = useSocialGraphLoaded()
 
   const authors = useMemo(() => {
     if (shouldUseFallback) {

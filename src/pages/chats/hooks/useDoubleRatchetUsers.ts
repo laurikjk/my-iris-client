@@ -6,9 +6,7 @@ import socialGraph from "@/utils/socialGraph"
 import {ndk} from "@/utils/ndk"
 import {NDKEvent, NDKSubscription} from "@/lib/ndk"
 import {createDebugLogger} from "@/utils/createDebugLogger"
-import {DEBUG_NAMESPACES} from "@/utils/constants"
-
-const {log} = createDebugLogger(DEBUG_NAMESPACES.UI_CHAT)
+import {DEBUG_NAMESPACES, KIND_APP_DATA} from "@/utils/constants"
 import {
   // subscribeToDoubleRatchetUsersChanges, // TEMP: Unused
   searchDoubleRatchetUsers,
@@ -19,7 +17,8 @@ import {
   removeDoubleRatchetUser,
   DoubleRatchetUser,
 } from "../utils/doubleRatchetUsers"
-import {KIND_APP_DATA} from "@/utils/constants"
+
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UI_CHAT)
 
 export const useDoubleRatchetUsers = () => {
   const [users, setUsers] = useState<DoubleRatchetUser[]>([])

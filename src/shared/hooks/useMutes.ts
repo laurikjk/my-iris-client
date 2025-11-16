@@ -4,11 +4,10 @@ import {useEffect, useState, useMemo, useRef} from "react"
 import {NostrEvent} from "nostr-social-graph"
 import {NDKEvent, NDKSubscription} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
-import {KIND_MUTE_LIST} from "@/utils/constants"
+import {KIND_MUTE_LIST, DEBUG_NAMESPACES} from "@/utils/constants"
 import {createDebugLogger} from "@/utils/createDebugLogger"
-import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+const {log, warn} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 const useMutes = (pubKey?: string) => {
   const pubKeyHex = useMemo(

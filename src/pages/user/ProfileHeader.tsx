@@ -27,7 +27,7 @@ import {Helmet} from "react-helmet"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 const ProfileHeader = ({
   pubKey,

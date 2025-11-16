@@ -5,7 +5,7 @@ import Embed, {type EmbedComponentProps} from "./index.ts"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 function CashuTokenComponent({match, event}: EmbedComponentProps) {
   const [amount, setAmount] = useState<number | null>(null)

@@ -1,4 +1,5 @@
-import {NDKEvent, NDKKind, type NDKSubscription} from "@/lib/ndk"
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import {NDKEvent, type NDKSubscription} from "@/lib/ndk"
 import {beforeEach, describe, expect, it} from "vitest"
 import NDKCacheSqliteWasm from "../index"
 

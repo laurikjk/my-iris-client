@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type {NDKEvent, NDKRelay} from "@/lib/ndk"
 import type {NDKCacheAdapterSqliteWasm} from "../index"
 

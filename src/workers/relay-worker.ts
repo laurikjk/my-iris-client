@@ -5,6 +5,7 @@
  * Main thread communicates via NDKWorkerTransport.
  * Cache operations delegated to separate cache worker.
  */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Can't use path aliases in worker, use relative imports
 import {createDebugLogger} from "../utils/createDebugLogger"
@@ -13,8 +14,7 @@ const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.NDK_RELAY)
 
 import NDK from "../lib/ndk"
 import {NDKEvent} from "../lib/ndk/events"
-import type {NDKFilter} from "../lib/ndk/subscription"
-import {NDKSubscriptionCacheUsage} from "../lib/ndk/subscription"
+import {NDKSubscriptionCacheUsage, type NDKFilter} from "../lib/ndk/subscription"
 import {NDKRelay} from "../lib/ndk/relay"
 import NDKCacheAdapterDexie from "../lib/ndk-cache"
 
@@ -198,6 +198,10 @@ function handleSubscribe(
     return
   }
 
+  log(
+    `[Relay Worker] handleSubscribe subId=${subId}, filters=${JSON.stringify(filters)}, opts=${JSON.stringify(opts)}`
+  )
+
   // Clean up existing subscription with same ID
   if (subscriptions.has(subId)) {
     subscriptions.get(subId).stop()
@@ -215,6 +219,8 @@ function handleSubscribe(
   } else {
     cacheUsage = NDKSubscriptionCacheUsage.CACHE_FIRST
   }
+
+  log(`[Relay Worker] Using cacheUsage: ${cacheUsage}`)
 
   const sub = ndk.subscribe(filters, {
     closeOnEose: opts?.closeOnEose ?? cacheOnly,
@@ -450,7 +456,7 @@ self.addEventListener("offline", () => {
 // Message handler
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
   const data = e.data
-  const {type, id, filters, event, relays, url, subscribeOpts, publishOpts} = data
+  const {type, id, filters, event, relays, subscribeOpts, publishOpts} = data
 
   switch (type) {
     case "init":

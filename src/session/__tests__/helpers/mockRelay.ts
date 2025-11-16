@@ -3,7 +3,7 @@ import {NDKEvent, NDKPrivateKeySigner} from "@/lib/ndk"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+const {log, warn} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 type Subscriber = {
   id: string

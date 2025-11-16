@@ -17,7 +17,7 @@ import {
 } from "@/utils/constants"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface ReactedTime {
   time: number

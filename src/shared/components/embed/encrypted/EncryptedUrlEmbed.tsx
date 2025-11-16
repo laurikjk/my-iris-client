@@ -5,7 +5,7 @@ import {EmbedEvent} from "../index"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface EncryptedUrlEmbedProps {
   url: string

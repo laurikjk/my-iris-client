@@ -73,7 +73,7 @@ function sendGroupedFilters(groupKey: NDKFilterFingerprint) {
   const connections = getAllConnections()
   const message = ["REQ", subId, ...merged]
 
-  for (const [peerId, conn] of connections.entries()) {
+  for (const conn of connections.values()) {
     if (conn.dataChannel?.readyState !== "open") continue
 
     try {
@@ -179,7 +179,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
       const connections = getAllConnections()
       const message = ["REQ", subId, ...filters]
 
-      for (const [peerId, conn] of connections.entries()) {
+      for (const conn of connections.values()) {
         if (conn.dataChannel?.readyState !== "open") continue
         try {
           conn.sendJsonData(message)
@@ -217,7 +217,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
     const connections = getAllConnections()
     const message = ["CLOSE", subId]
 
-    for (const [peerId, conn] of connections.entries()) {
+    for (const conn of connections.values()) {
       if (conn.dataChannel?.readyState !== "open") continue
 
       try {

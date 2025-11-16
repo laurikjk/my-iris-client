@@ -11,6 +11,7 @@ import {setEventDupSync} from "./functions/setEventDup"
 const PROTOCOL_VERSION = "0.8.1"
 const PROTOCOL_NAME = "ndk-cache-sqlite"
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 let db: any = null
 let SQL: any = null
 let dbName: string = "ndk-cache"
@@ -50,7 +51,6 @@ async function initializeDatabase(config: {dbName: string; wasmUrl?: string}) {
     const sqlJsConfig: any = {}
     if (config.wasmUrl) {
       sqlJsConfig.locateFile = () => config.wasmUrl
-    } else {
     }
     SQL = await initSqlJs(sqlJsConfig)
 

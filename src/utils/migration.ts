@@ -1,11 +1,10 @@
-import {KIND_CHANNEL_MESSAGE} from "@/utils/constants"
+import {KIND_CHANNEL_MESSAGE, DEBUG_NAMESPACES} from "@/utils/constants"
 import {usePublicChatsStore} from "@/stores/publicChats"
 import {useUserStore} from "../stores/user"
 import {ndk} from "@/utils/ndk"
 import {createDebugLogger} from "@/utils/createDebugLogger"
-import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 export const migrateUserState = () => {
   const migrateFromLocalStorage = <T>(key: string, defaultValue: T): T => {

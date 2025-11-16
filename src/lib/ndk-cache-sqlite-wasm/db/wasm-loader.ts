@@ -3,7 +3,8 @@
  * Uses sql.js and persists the database in IndexedDB.
  * Automatically saves the database 1000ms after the last write.
  */
-import {loadFromIndexedDB, openIndexedDB, saveToIndexedDB} from "./indexeddb-utils"
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import {loadFromIndexedDB, saveToIndexedDB} from "./indexeddb-utils"
 
 export async function loadWasmAndInitDb(
   wasmUrl?: string,

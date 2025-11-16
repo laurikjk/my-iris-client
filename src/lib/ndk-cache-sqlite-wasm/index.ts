@@ -1,5 +1,4 @@
-import type NDK from "@/lib/ndk"
-import type {NDKCacheAdapter} from "@/lib/ndk"
+import type NDK, {NDKCacheAdapter} from "@/lib/ndk"
 import {runMigrations} from "./db/migrations"
 import {loadWasmAndInitDb} from "./db/wasm-loader"
 import {addDecryptedEvent} from "./functions/addDecryptedEvent"
@@ -112,21 +111,22 @@ export class NDKCacheAdapterSqliteWasm implements NDKCacheAdapter {
         )
         throw new Error("Worker URL configuration error.")
       }
-    } else {
+    }
+
+    // Helper function at function body root
+    function hasMessage(e: unknown): e is {message: string} {
+      return (
+        typeof e === "object" &&
+        e !== null &&
+        "message" in e &&
+        typeof (e as {message: unknown}).message === "string"
+      )
     }
 
     // Use module type for imports
     try {
       this.worker = new Worker(effectiveWorkerUrl, {type: "module"})
     } catch (err: unknown) {
-      function hasMessage(e: unknown): e is {message: string} {
-        return (
-          typeof e === "object" &&
-          e !== null &&
-          "message" in e &&
-          typeof (e as {message: unknown}).message === "string"
-        )
-      }
       const msg = hasMessage(err) ? err.message.toLowerCase() : ""
       if (
         msg.includes("404") ||

@@ -1,5 +1,5 @@
-import type {NDKEvent, NDKFilter, NDKRelay} from "@/lib/ndk"
-import {NDKKind, profileFromEvent} from "@/lib/ndk"
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import {NDKKind, type NDKEvent, type NDKFilter, type NDKRelay} from "@/lib/ndk"
 import type {NDKCacheAdapterSqliteWasm} from "../index"
 
 /**

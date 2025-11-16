@@ -2,13 +2,12 @@ import {useState, useMemo} from "react"
 import {useNavigate} from "@/navigation"
 import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
 import Feed from "@/shared/components/feed/Feed"
-import {KIND_TEXT_NOTE, KIND_EPHEMERAL} from "@/utils/constants"
+import {KIND_TEXT_NOTE, KIND_EPHEMERAL, DEBUG_NAMESPACES} from "@/utils/constants"
 import {NDKEvent} from "@/lib/ndk"
 import {type FeedConfig} from "@/stores/feed"
 import {createDebugLogger} from "@/utils/createDebugLogger"
-import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface MapWithEventsProps {
   selectedGeohashes: string[]

@@ -4,13 +4,13 @@ import {
   KIND_TEXT_NOTE,
   KIND_LONG_FORM_CONTENT,
   KIND_PICTURE_FIRST,
+  DEBUG_NAMESPACES,
 } from "@/utils/constants"
 import {clearAlgorithmicFeedCaches} from "@/utils/memcache"
 import type {FeedConfig} from "@/types/feed"
 import {createDebugLogger} from "@/utils/createDebugLogger"
-import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UI_FEED)
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UI_FEED)
 
 interface FeedState {
   activeFeed: string

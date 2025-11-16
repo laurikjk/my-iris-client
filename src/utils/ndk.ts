@@ -6,22 +6,18 @@ import NDK, {
   NDKRelayAuthPolicies,
   NDKUser,
 } from "@/lib/ndk"
-import NDKCacheAdapterDexie from "@/lib/ndk-cache"
 import {NDKWorkerTransport} from "@/lib/ndk-transport-worker"
 import {NDKTauriTransport} from "@/lib/ndk-transport-tauri"
 import {useUserStore} from "@/stores/user"
 import {useSettingsStore} from "@/stores/settings"
 import {DEFAULT_RELAYS} from "@/shared/constants/relays"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
-import {relayLogger} from "@/utils/relay/RelayLogger"
 import {WebRTCTransportPlugin} from "@/utils/chat/webrtc/WebRTCTransportPlugin"
 import {setWebRTCPlugin} from "@/utils/chat/webrtc/p2pMessages"
-import {shouldHideEvent} from "@/utils/visibility"
-import socialGraph from "@/utils/socialGraph"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
 import {isTauri} from "@/utils/utils"
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.NDK_RELAY)
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.NDK_RELAY)
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
@@ -111,44 +107,6 @@ async function initNDK(opts?: NDKConstructorParams) {
     autoConnectUserRelays
   )
 
-  // Check relay connection filter - always check current state from store
-  const relayConnectionFilter = (relayUrl: string) => {
-    const currentStore = useUserStore.getState()
-    const normalizedUrl = normalizeRelayUrl(relayUrl)
-
-    // Check if relay is in current config
-    const relayConfig = currentStore.relayConfigs?.find(
-      (c) => normalizeRelayUrl(c.url) === normalizedUrl
-    )
-
-    // If relay is in config and disabled, block it
-    if (relayConfig?.disabled) {
-      log("Blocking disabled relay:", relayUrl)
-      return false
-    }
-
-    // If relay is in config and enabled, allow it
-    if (relayConfig && !relayConfig.disabled) {
-      return true
-    }
-
-    // If relay not in config, check outbox/autoConnect settings
-    const currentEnableOutbox = import.meta.env.VITE_USE_LOCAL_RELAY
-      ? false
-      : currentStore.ndkOutboxModel
-    const currentAutoConnect = import.meta.env.VITE_USE_LOCAL_RELAY
-      ? false
-      : currentStore.autoConnectUserRelays
-
-    if (!currentEnableOutbox && !currentAutoConnect) {
-      log("Blocking discovered relay:", relayUrl)
-      return false
-    }
-
-    // Otherwise allow (outbox/autoConnect will handle discovery)
-    return true
-  }
-
   // Initialize transport based on environment
   if (isTauri()) {
     log("🔧 Using Tauri Transport - relay connections via Rust backend")
@@ -206,11 +164,17 @@ async function initNDK(opts?: NDKConstructorParams) {
   // Set initial P2P mode
   ndkInstance.p2pOnlyMode = useSettingsStore.getState().network.p2pOnlyMode
 
+  // Set initial activeUser from store (important for cache queries after refresh)
+  if (store.publicKey) {
+    ndkInstance.activeUser = new NDKUser({hexpubkey: store.publicKey})
+    log("Set initial activeUser:", store.publicKey.slice(0, 16) + "...")
+  }
+
   watchLocalSettings(ndkInstance)
   ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
 
   // Setup visibility reconnection (forwards to worker)
-  setupVisibilityReconnection(ndkInstance)
+  setupVisibilityReconnection()
 
   setupWebRTCTransport(ndkInstance)
 
@@ -220,7 +184,7 @@ async function initNDK(opts?: NDKConstructorParams) {
 /**
  * Setup listeners for visibility changes and network status to force immediate reconnection
  */
-function setupVisibilityReconnection(instance: NDK) {
+function setupVisibilityReconnection() {
   let wasHidden = false
 
   const reconnectDisconnectedRelays = (reason: string) => {
@@ -276,20 +240,6 @@ function setupWebRTCTransport(instance: NDK) {
   instance.transportPlugins.push(plugin)
 
   log("WebRTC transport plugin initialized")
-}
-
-function attachRelayLogger(instance: NDK) {
-  // Attach to existing relays
-  for (const relay of instance.pool.relays.values()) {
-    relayLogger.attachToRelay(relay)
-  }
-
-  // Attach to new relays as they're added
-  const originalAddRelay = instance.pool.addRelay.bind(instance.pool)
-  instance.pool.addRelay = (relay: NDKRelay) => {
-    relayLogger.attachToRelay(relay)
-    return originalAddRelay(relay)
-  }
 }
 
 function watchLocalSettings(instance: NDK) {

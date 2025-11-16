@@ -8,13 +8,13 @@ import {
   KIND_REPOST,
   KIND_REACTION,
   KIND_ZAP_RECEIPT,
+  DEBUG_NAMESPACES,
 } from "@/utils/constants"
 import {sendNotification} from "@tauri-apps/plugin-notification"
 import {setDesktopNotificationCallback} from "@/shared/components/feed/notificationsSubscription"
 import {createDebugLogger} from "@/utils/createDebugLogger"
-import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 /**
  * Initialize desktop notifications by subscribing to NDK for relevant events

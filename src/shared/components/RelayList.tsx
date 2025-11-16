@@ -1,13 +1,8 @@
-import {useState, useEffect} from "react"
-import {ndk as getNdk, getWorkerTransport} from "@/utils/ndk"
+import {useState} from "react"
 import {Link} from "@/navigation"
 import {RiAddLine, RiCloseLine, RiDeleteBinLine} from "@remixicon/react"
 import {useUserStore, RelayConfig} from "@/stores/user"
-import {useSettingsStore} from "@/stores/settings"
-import {
-  useWorkerRelayStatus,
-  useWorkerRelayManager,
-} from "@/shared/hooks/useWorkerRelayStatus"
+import {useWorkerRelayStatus} from "@/shared/hooks/useWorkerRelayStatus"
 
 interface RelayListProps {
   compact?: boolean
@@ -34,7 +29,6 @@ export function RelayList({
   const [showSavedRelays, setShowSavedRelays] = useState(true)
   const {relayConfigs, toggleRelayConnection, addRelay, removeRelay} = useUserStore()
   const workerRelays = useWorkerRelayStatus()
-  const workerManager = useWorkerRelayManager()
 
   const normalizeRelayUrl = (url: string) => {
     // Normalize URL for comparison: remove trailing slash and ensure lowercase

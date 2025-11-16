@@ -7,7 +7,7 @@ import {generateSecretKey, getPublicKey} from "nostr-tools"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 export type ActorId = "alice" | "bob"
 

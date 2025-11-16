@@ -1,11 +1,10 @@
 import {ndk} from "@/utils/ndk"
 import {NDKEvent} from "@/lib/ndk"
 import {createDebugLogger} from "@/utils/createDebugLogger"
-import {DEBUG_NAMESPACES} from "@/utils/constants"
+import {DEBUG_NAMESPACES, KIND_APP_DATA} from "@/utils/constants"
 import type {SignalingMessage} from "./types"
-import {KIND_APP_DATA} from "@/utils/constants"
 
-const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_SIGNALING)
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_SIGNALING)
 
 function uuidv4() {
   return (
@@ -56,7 +55,6 @@ export async function sendSignalingMessage(
     ["expiration", Math.floor((Date.now() + MESSAGE_TIMEOUT) / 1000).toString()],
   ]
 
-  const peerId = recipientPubkey ? `${recipientPubkey}:broadcast` : "broadcast:broadcast"
   log(message.type)
 
   try {
