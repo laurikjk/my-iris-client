@@ -1,6 +1,7 @@
 import {NDKEvent} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
 import {KIND_BLOSSOM_AUTH} from "@/utils/constants"
+import {useUserStore} from "@/stores/user"
 import {calculateSHA256} from "./utils"
 import type {MediaServer} from "./types"
 
@@ -19,8 +20,7 @@ export async function uploadToBlossom(
     await storage.initialize()
 
     const arrayBuffer = await file.arrayBuffer()
-    const {ndk} = await import("@/utils/ndk")
-    const myPubkey = ndk().activeUser?.pubkey
+    const myPubkey = useUserStore.getState().publicKey
     await storage.save(sha256, arrayBuffer, file.type, myPubkey)
   } catch (storageError) {
     console.warn("Failed to save to local blob storage:", storageError)

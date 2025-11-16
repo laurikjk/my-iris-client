@@ -63,7 +63,6 @@ function Logout() {
   async function cleanupNDK() {
     const ndkInstance = ndk()
     ndkInstance.signer = undefined
-    ndkInstance.activeUser = undefined
     ndkInstance.pool.relays.forEach((relay) => {
       relay.disconnect()
     })

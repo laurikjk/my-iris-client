@@ -344,10 +344,5 @@ function watchLocalSettings(instance: NDK) {
       }
     }
 
-    if (state.publicKey !== prevState.publicKey) {
-      instance.activeUser = state.publicKey
-        ? new NDKUser({hexpubkey: state.publicKey})
-        : undefined
-    }
   })
 }
