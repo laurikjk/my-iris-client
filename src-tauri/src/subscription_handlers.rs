@@ -52,25 +52,76 @@ pub fn handle_subscribe(
     }
 
     // Query existing events and emit them immediately
+    // Use optimized ID lookup for ID-based queries
+    let mut all_ids_found = false;
     if let Ok(txn) = Transaction::new(ndb) {
-        if let Ok(results) = ndb.query(&txn, &[filter.clone()], 1000) {
-            let mut emitted = 0;
-            for result in results.iter() {
-                if let Ok(event_json) = result.note.json() {
-                    if let Ok(event) = serde_json::from_str::<serde_json::Value>(&event_json) {
-                        let _ = _app_handle.emit("nostr_event", NostrResponse::Event {
-                            sub_id: id.clone(),
-                            event,
-                            relay: None,
-                        });
-                        emitted += 1;
+        let mut emitted = 0;
+
+        // Check if this is an ID-based query
+        let has_ids = filter.into_iter().any(|field| matches!(field, nostrdb::FilterField::Ids(_)));
+
+        if has_ids {
+            // Fast path: direct ID lookup
+            let mut total_ids = 0;
+            for field in filter.into_iter() {
+                if let nostrdb::FilterField::Ids(ids) = field {
+                    for id_bytes in ids.into_iter() {
+                        total_ids += 1;
+                        if let Ok(note_key) = ndb.get_notekey_by_id(&txn, id_bytes) {
+                            if let Ok(note) = ndb.get_note_by_key(&txn, note_key) {
+                                if let Ok(event_json) = note.json() {
+                                    if let Ok(event) = serde_json::from_str::<serde_json::Value>(&event_json) {
+                                        let _ = _app_handle.emit("nostr_event", NostrResponse::Event {
+                                            sub_id: id.clone(),
+                                            event,
+                                            relay: None,
+                                        });
+                                        emitted += 1;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
-            if emitted > 0 {
-                debug!(sub_id = %id, count = emitted, "Emitted cached events");
+
+            // Check if all requested IDs found
+            if emitted == total_ids && total_ids > 0 {
+                all_ids_found = true;
+                debug!(sub_id = %id, count = emitted, "All requested IDs found in cache");
+            }
+        } else {
+            // Slow path: full query for non-ID filters
+            if let Ok(results) = ndb.query(&txn, &[filter.clone()], 1000) {
+                for result in results.iter() {
+                    if let Ok(event_json) = result.note.json() {
+                        if let Ok(event) = serde_json::from_str::<serde_json::Value>(&event_json) {
+                            let _ = _app_handle.emit("nostr_event", NostrResponse::Event {
+                                sub_id: id.clone(),
+                                event,
+                                relay: None,
+                            });
+                            emitted += 1;
+                        }
+                    }
+                }
             }
         }
+
+        if emitted > 0 {
+            debug!(sub_id = %id, count = emitted, "Emitted cached events");
+        }
+    }
+
+    // Always send EOSE after cache query completes
+    let _ = _app_handle.emit("nostr_event", NostrResponse::Eose {
+        sub_id: id.clone(),
+    });
+
+    // Skip relay REQ if all IDs found in cache or cache-only
+    if all_ids_found {
+        debug!(sub_id = %id, "Skipping relay REQ - all events in cache");
+        return;
     }
 
     // Send REQ to relays (unless cache-only)

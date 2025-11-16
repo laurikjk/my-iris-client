@@ -2,7 +2,6 @@
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
 import localforage from "localforage"
-import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 
 interface SettingsState {
   // Appearance settings
@@ -103,7 +102,7 @@ export const useSettingsStore = create<SettingsState>()(
         showReplies: true,
         showZaps: true,
         showReactionsBar: true,
-        showReactionCounts: !isTouchDevice, // Hide in feed on mobile by default
+        showReactionCounts: true,
         showReactionCountsInStandalone: true, // Always show in post view by default
         hideReactionsBarInStandalone: false, // Hide reactions bar in standalone posts
         hideZapsBarInStandalone: false, // Hide zaps bar in standalone posts
