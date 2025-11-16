@@ -38,14 +38,44 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
     POOL.with(|p| *p.borrow_mut() = Some(pool));
 
     loop {
+        let mut had_activity = false;
+
         // Process relay events
         POOL.with(|p| {
             if let Some(pool) = p.borrow_mut().as_mut() {
                 for i in 0..pool.relays.len() {
                     while let Some(event) = pool.relays[i].try_recv() {
+                        had_activity = true;
                         let relay_url = pool.relays[i].url().to_string();
                         match event {
                             ewebsock::WsEvent::Message(ewebsock::WsMessage::Text(text)) => {
+                                // Fast path: check for duplicate EVENT messages using string ops
+                                let mut already_had = false;
+                                if text.len() > 3 && text.as_bytes()[2] == b'E' && text.as_bytes()[3] == b'V' {
+                                    if let Some(id_pos) = text.find(r#""id":""#) {
+                                        let id_start = id_pos + 6;
+                                        let id_end = id_start + 64;
+                                        if id_end <= text.len() {
+                                            let id_str = &text[id_start..id_end];
+                                            let mut id_bytes = [0u8; 32];
+                                            if hex::decode_to_slice(id_str, &mut id_bytes).is_ok() {
+                                                NDB.with(|n| {
+                                                    if let Some(ndb) = n.borrow().as_ref() {
+                                                        if let Ok(txn) = nostrdb::Transaction::new(ndb) {
+                                                            already_had = ndb.get_notekey_by_id(&txn, &id_bytes).is_ok();
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Skip if already had - don't process or forward
+                                if already_had {
+                                    continue;
+                                }
+
                                 debug!(relay = %relay_url, len = text.len(), "Received message");
 
                                 // Process through nostrdb (validates signature)
@@ -59,7 +89,6 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                                                         // Validate with nostrdb
                                                         match ndb.process_event(&text) {
                                                             Ok(_) => {
-                                                                debug!("Event validated, forwarding");
                                                                 if let (Some(sub_id), Some(event)) = (arr[1].as_str(), arr.get(2)) {
                                                                     let _ = app_handle.emit("nostr_event", NostrResponse::Event {
                                                                         sub_id: sub_id.to_string(),
@@ -80,10 +109,8 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                                                     }
                                                     Some("EOSE") if arr.len() >= 2 => {
                                                         if let Some(sub_id) = arr[1].as_str() {
-                                                            debug!(relay = %relay_url, sub_id = %sub_id, "End of stored events");
-                                                            let _ = app_handle.emit("nostr_event", NostrResponse::Eose {
-                                                                sub_id: sub_id.to_string(),
-                                                            });
+                                                            debug!(relay = %relay_url, sub_id = %sub_id, "End of stored events (not forwarding to frontend)");
+                                                            // Don't forward EOSEs - they flood the IPC channel
                                                         }
                                                     }
                                                     Some("OK") => {
@@ -129,9 +156,11 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
         // Process commands
         match rx.try_recv() {
             Ok(NostrRequest::Init) => {
+                had_activity = true;
                 let _ = app_handle.emit("nostr_event", NostrResponse::Ready);
             }
             Ok(NostrRequest::AddRelay { url }) => {
+                had_activity = true;
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
                         relay_handlers::handle_add_relay(pool, url, &app_handle);
@@ -139,6 +168,7 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                 });
             }
             Ok(NostrRequest::GetRelayStatus { id }) => {
+                had_activity = true;
                 debug!(id = %id, "GetRelayStatus request");
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow().as_ref() {
@@ -164,6 +194,7 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                 });
             }
             Ok(NostrRequest::Subscribe { id, filters, subscribe_opts }) => {
+                had_activity = true;
                 NDB.with(|n| {
                     POOL.with(|p| {
                         SUBSCRIPTIONS.with(|subs| {
@@ -186,6 +217,7 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                 });
             }
             Ok(NostrRequest::Publish { id, event, publish_opts }) => {
+                had_activity = true;
                 NDB.with(|n| {
                     POOL.with(|p| {
                         if let (Some(ndb), Some(pool)) = (n.borrow().as_ref(), p.borrow_mut().as_mut()) {
@@ -195,6 +227,7 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                 });
             }
             Ok(NostrRequest::Unsubscribe { id }) => {
+                had_activity = true;
                 POOL.with(|p| {
                     SUBSCRIPTIONS.with(|subs| {
                         if let Some(pool) = p.borrow_mut().as_mut() {
@@ -204,6 +237,7 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                 });
             }
             Ok(NostrRequest::RemoveRelay { url }) => {
+                had_activity = true;
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
                         relay_handlers::handle_remove_relay(pool, url);
@@ -211,6 +245,7 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                 });
             }
             Ok(NostrRequest::ConnectRelay { url }) => {
+                had_activity = true;
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
                         relay_handlers::handle_connect_relay(pool, url);
@@ -218,6 +253,7 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                 });
             }
             Ok(NostrRequest::DisconnectRelay { url }) => {
+                had_activity = true;
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
                         relay_handlers::handle_disconnect_relay(pool, url);
@@ -225,6 +261,7 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                 });
             }
             Ok(NostrRequest::ReconnectDisconnected { reason }) => {
+                had_activity = true;
                 POOL.with(|p| {
                     if let Some(pool) = p.borrow_mut().as_mut() {
                         relay_handlers::handle_reconnect_disconnected(pool, reason);
@@ -239,6 +276,9 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
             Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
         }
 
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        // Sleep only when idle to reduce CPU usage
+        if !had_activity {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
     }
 }

@@ -38,31 +38,40 @@ pub fn handle_subscribe(
 
     let filter = parsed_filters[0].clone();
 
-    // Subscribe in nostrdb
-    match ndb.subscribe(&[filter.clone()]) {
-        Ok(sub) => {
-            let ndb_id = sub.id();
-            subscriptions.insert(id.clone(), sub);
-            sub_id_map.insert(ndb_id, id.clone());
-            debug!(sub_id = %id, ndb_id = ndb_id, "Created nostrdb subscription");
+    // Check if this is an ID-based query (check without consuming iterator)
+    let is_id_query = filter.clone().into_iter().any(|field| matches!(field, nostrdb::FilterField::Ids(_)));
+
+    // Subscribe in nostrdb (skip for ID queries - we handle them via direct lookup)
+    if !is_id_query {
+        match ndb.subscribe(&[filter.clone()]) {
+            Ok(sub) => {
+                let ndb_id = sub.id();
+                subscriptions.insert(id.clone(), sub);
+                sub_id_map.insert(ndb_id, id.clone());
+                info!(sub_id = %id, ndb_id = ndb_id, "Created nostrdb subscription");
+            }
+            Err(e) => {
+                error!(sub_id = %id, error = ?e, active_subs = subscriptions.len(), "Nostrdb subscribe failed");
+            }
         }
-        Err(e) => {
-            error!(sub_id = %id, error = ?e, "Nostrdb subscribe failed");
-        }
+    } else {
+        info!(sub_id = %id, "Skipping nostrdb subscription for ID query");
     }
 
-    // Query existing events and emit them immediately
-    // Use optimized ID lookup for ID-based queries
-    let mut all_ids_found = false;
-    if let Ok(txn) = Transaction::new(ndb) {
-        let mut emitted = 0;
+    // Query cache and determine what to fetch from relays (single cache pass)
+    let mut relay_filters = parsed_filters.clone();
+    let mut skip_relay_req = cache_only;
 
+    if let Ok(txn) = Transaction::new(ndb) {
         // Check if this is an ID-based query
         let has_ids = filter.into_iter().any(|field| matches!(field, nostrdb::FilterField::Ids(_)));
 
         if has_ids {
-            // Fast path: direct ID lookup
+            // Fast path: direct ID lookup, emit found events, track unfound IDs for relay REQ
             let mut total_ids = 0;
+            let mut emitted = 0;
+            let mut unfound_ids = Vec::new();
+
             for field in filter.into_iter() {
                 if let nostrdb::FilterField::Ids(ids) = field {
                     for id_bytes in ids.into_iter() {
@@ -80,18 +89,24 @@ pub fn handle_subscribe(
                                     }
                                 }
                             }
+                        } else {
+                            unfound_ids.push(*id_bytes);
                         }
                     }
                 }
             }
 
-            // Check if all requested IDs found
-            if emitted == total_ids && total_ids > 0 {
-                all_ids_found = true;
-                debug!(sub_id = %id, count = emitted, "All requested IDs found in cache");
+
+            // Skip relay REQ if all IDs found
+            if unfound_ids.is_empty() {
+                skip_relay_req = true;
+            } else if emitted > 0 {
+                // Update relay filters to only request unfound IDs
+                relay_filters = vec![nostrdb::Filter::new().ids(unfound_ids.iter()).build()];
             }
         } else {
             // Slow path: full query for non-ID filters
+            let mut emitted = 0;
             if let Ok(results) = ndb.query(&txn, &[filter.clone()], 1000) {
                 for result in results.iter() {
                     if let Ok(event_json) = result.note.json() {
@@ -106,82 +121,22 @@ pub fn handle_subscribe(
                     }
                 }
             }
-        }
-
-        if emitted > 0 {
-            debug!(sub_id = %id, count = emitted, "Emitted cached events");
+            if emitted > 0 {
+                debug!(sub_id = %id, count = emitted, elapsed_us = start.elapsed().as_micros(), "Emitted cached events");
+            }
         }
     }
 
-    // Always send EOSE after cache query completes
-    let _ = _app_handle.emit("nostr_event", NostrResponse::Eose {
-        sub_id: id.clone(),
-    });
-
-    // Skip relay REQ if all IDs found in cache or cache-only
-    if all_ids_found {
-        debug!(sub_id = %id, "Skipping relay REQ - all events in cache");
+    // Skip relay REQ if all events found in cache
+    if skip_relay_req {
+        debug!(sub_id = %id, "All events in cache - skipping relay REQ and EOSE");
         return;
     }
 
-    // Send REQ to relays (unless cache-only)
-    if !cache_only {
-        // Check if filter has ids - optimize by checking cache first
-        let mut relay_filters = parsed_filters.clone();
-        let mut total_ids = 0;
-        let mut found_ids = 0;
 
-        for filter in &mut relay_filters {
-            if let Some(ids_field) = filter.into_iter().find_map(|field| {
-                if let nostrdb::FilterField::Ids(ids) = field {
-                    Some(ids)
-                } else {
-                    None
-                }
-            }) {
-                let txn = Transaction::new(ndb).ok();
-                if let Some(ref txn) = txn {
-                    let mut unfound_ids = Vec::new();
-
-                    for id in ids_field.into_iter() {
-                        total_ids += 1;
-                        // Check if event exists in nostrdb
-                        if ndb.get_notekey_by_id(txn, id).is_err() {
-                            unfound_ids.push(*id);
-                        } else {
-                            found_ids += 1;
-                        }
-                    }
-
-                    if found_ids > 0 {
-                        debug!(sub_id = %id, found = found_ids, total = total_ids, "Cache hits for event IDs");
-                    }
-
-                    // Skip relay REQ if all events found in cache
-                    if unfound_ids.is_empty() {
-                        debug!(sub_id = %id, "All events in cache, skipping relay REQ");
-                        return;
-                    }
-
-                    // Replace filter ids with only unfound ones
-                    *filter = nostrdb::Filter::new().ids(unfound_ids.iter()).build();
-                }
-            }
-        }
-
-        if found_ids > 0 {
-            let req_msg = ClientMessage::req(id.clone(), relay_filters);
-            pool.send(&req_msg);
-            info!(sub_id = %id, relay_count = pool.relays.len(), cached = found_ids, requesting = total_ids - found_ids, "Sent optimized REQ to relays");
-        } else {
-            let filter_count = relay_filters.len();
-            let req_msg = ClientMessage::req(id.clone(), relay_filters);
-            pool.send(&req_msg);
-            info!(sub_id = %id, relay_count = pool.relays.len(), filter_count = filter_count, "Sent REQ to relays");
-        }
-    } else {
-        debug!(sub_id = %id, "Cache-only query, skipping relays");
-    }
+    let req_msg = ClientMessage::req(id.clone(), relay_filters);
+    pool.send(&req_msg);
+    info!(sub_id = %id, relay_count = pool.relays.len(), "Sent REQ to relays");
 }
 
 pub fn handle_unsubscribe(
