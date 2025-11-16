@@ -29,6 +29,10 @@ import {
 } from "./hooks/useHistoryEnrichment"
 import {useNPubCashClaim} from "./hooks/useNPubCashClaim"
 import {useWalletRefresh} from "./hooks/useWalletRefresh"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.CASHU_WALLET)
 
 const DEFAULT_MINT = "https://mint.coinos.io"
 
@@ -134,13 +138,13 @@ export default function CashuWallet() {
     setShowQRScanner(false)
     setQrError("")
 
-    console.log("🔍 QR scanned:", result.substring(0, 50) + "...")
+    log("🔍 QR scanned:", result.substring(0, 50) + "...")
 
     // Strip cashu: URI prefix if present
     let cleanResult = result
     if (result.toLowerCase().startsWith("cashu:")) {
       cleanResult = result.slice(6)
-      console.log("✂️ Stripped cashu: prefix, now:", cleanResult.substring(0, 50) + "...")
+      log("✂️ Stripped cashu: prefix, now:", cleanResult.substring(0, 50) + "...")
     }
 
     // Check if it's a Cashu token
@@ -160,8 +164,8 @@ export default function CashuWallet() {
         setSendDialogInitialInvoice(cleanResult)
         setShowSendDialog(true)
         return
-      } catch (error) {
-        console.error("Failed to decode payment request:", error)
+      } catch (err) {
+        error("Failed to decode payment request:", err)
         setQrError("Invalid payment request")
         return
       }
@@ -183,7 +187,7 @@ export default function CashuWallet() {
       return
     }
 
-    console.error("❌ Unrecognized QR format. First 100 chars:", result.substring(0, 100))
+    error("❌ Unrecognized QR format. First 100 chars:", result.substring(0, 100))
     setQrError("Unrecognized QR code format")
   }
 
@@ -276,7 +280,7 @@ export default function CashuWallet() {
             const info = await mint.getInfo()
             setCachedMintInfo(mintUrl, info)
           } catch (err) {
-            console.warn(`Failed to fetch info for ${mintUrl}:`, err)
+            warn(`Failed to fetch info for ${mintUrl}:`, err)
           }
         }
 
@@ -292,12 +296,12 @@ export default function CashuWallet() {
 
         // Listen to events for real-time updates
         const updateData = async (eventName: string) => {
-          console.log(`🎯 Event received: ${eventName}, updating wallet data...`)
+          log(`🎯 Event received: ${eventName}, updating wallet data...`)
           try {
             await handleDataRefresh()
-            console.log(`✅ Updated from ${eventName}`)
-          } catch (error) {
-            console.error("Failed to refresh data:", error)
+            log(`✅ Updated from ${eventName}`)
+          } catch (err) {
+            error("Failed to refresh data:", err)
           }
         }
 
@@ -313,8 +317,8 @@ export default function CashuWallet() {
         return () => {
           unsubscribers.forEach((unsub) => unsub())
         }
-      } catch (error) {
-        console.error("Failed to initialize Cashu manager:", error)
+      } catch (err) {
+        error("Failed to initialize Cashu manager:", err)
       } finally {
         setLoading(false)
       }
@@ -330,8 +334,8 @@ export default function CashuWallet() {
         )
         const data = await response.json()
         setUsdRate(parseFloat(data.data.rates.USD))
-      } catch (error) {
-        console.error("Failed to fetch USD rate:", error)
+      } catch (err) {
+        error("Failed to fetch USD rate:", err)
       }
     }
     fetchUsdRate()

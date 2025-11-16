@@ -18,6 +18,10 @@ import {savePaymentMetadata} from "@/stores/paymentMetadata"
 import {ndk} from "@/utils/ndk"
 import {getZapAmount} from "@/utils/nostr"
 import {KIND_ZAP_RECEIPT} from "@/utils/constants"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface ZapModalProps {
   onClose: () => void
@@ -57,7 +61,7 @@ function ZapModal({
   const [shouldSetDefault, setShouldSetDefault] = useState(false)
   const [shouldSetDefaultComment, setShouldSetDefaultComment] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [error, setError] = useState<string>("")
+  const [errorMessage, setErrorMessage] = useState<string>("")
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [zapRefresh, setZapRefresh] = useState(false)
   const amounts: Record<string, string> = {
@@ -107,17 +111,17 @@ function ZapModal({
 
   const handleZap = async () => {
     setNoAddress(false)
-    setError("")
+    setErrorMessage("")
     setIsProcessing(true)
     try {
       if (Number(zapAmount) < 1) {
-        setError("Zap amount must be greater than 0")
+        setErrorMessage("Zap amount must be greater than 0")
         setIsProcessing(false)
         return
       }
-    } catch (error) {
-      setError("Zap amount must be a valid number")
-      console.warn("Zap amount must be a number: ", error)
+    } catch (err) {
+      setErrorMessage("Zap amount must be a valid number")
+      warn("Zap amount must be a number: ", err)
       setIsProcessing(false)
       return
     }
@@ -132,8 +136,8 @@ function ZapModal({
       }
 
       const lnPay: LnPayCb = async ({pr}) => {
-        console.log("🎯 lnPay callback called, invoice:", pr.slice(0, 30) + "...")
-        console.log("💳 hasWallet:", hasWallet, "activeProviderType:", activeProviderType)
+        log("🎯 lnPay callback called, invoice:", pr.slice(0, 30) + "...")
+        log("💳 hasWallet:", hasWallet, "activeProviderType:", activeProviderType)
 
         // Always set the invoice for QR code display
         setBolt11Invoice(pr)
@@ -141,12 +145,12 @@ function ZapModal({
 
         if (hasWallet) {
           // Save zap metadata
-          console.log("💾 Saving zap metadata for invoice:", pr.slice(0, 30) + "...")
+          log("💾 Saving zap metadata for invoice:", pr.slice(0, 30) + "...")
           try {
             await savePaymentMetadata(pr, "zap", event.pubkey, event.id)
-            console.log("✅ Zap metadata saved successfully")
+            log("✅ Zap metadata saved successfully")
           } catch (err) {
-            console.error("❌ Failed to save zap metadata:", err)
+            error("❌ Failed to save zap metadata:", err)
           }
 
           // Optimistic update: immediately close modal and show zapped state
@@ -156,20 +160,21 @@ function ZapModal({
 
           // Attempt wallet payment in background
           setTimeout(() => {
-            console.log("💸 Starting wallet payment...")
+            log("💸 Starting wallet payment...")
             walletProviderSendPayment(pr)
               .then(() => {
-                console.log("✅ Payment succeeded")
+                log("✅ Payment succeeded")
               })
-              .catch(async (error: Error) => {
-                console.warn("Wallet payment failed:", error)
+              .catch(async (caughtError: Error) => {
+                warn("Wallet payment failed:", caughtError)
                 // Revert optimistic update
                 setZapped(false)
                 setZapRefresh(!zapRefresh)
                 // Show error toast with link to event
                 const {useToastStore} = await import("@/stores/toast")
                 const {nip19} = await import("nostr-tools")
-                const errorMsg = error instanceof Error ? error.message : "Payment failed"
+                const errorMsg =
+                  caughtError instanceof Error ? caughtError.message : "Payment failed"
                 const noteId = nip19.noteEncode(event.id)
                 const recipientName =
                   profile?.name || profile?.displayName || event.pubkey.slice(0, 8)
@@ -214,13 +219,13 @@ function ZapModal({
         amount,
         unit: "msat",
       })
-    } catch (error) {
-      console.warn("Zap failed: ", error)
-      if (error instanceof Error) {
-        if (error.message.includes("No zap endpoint found")) {
+    } catch (err) {
+      warn("Zap failed: ", err)
+      if (err instanceof Error) {
+        if (err.message.includes("No zap endpoint found")) {
           setNoAddress(true)
         } else {
-          setError(error.message || "Failed to process zap. Please try again.")
+          setErrorMessage(err.message || "Failed to process zap. Please try again.")
         }
       }
     } finally {
@@ -251,7 +256,7 @@ function ZapModal({
         }
       })
     } catch (error) {
-      console.warn("Unable to fetch zap receipt", error)
+      warn("Unable to fetch zap receipt", error)
     }
   }
 
@@ -270,17 +275,17 @@ function ZapModal({
       const generateQRCode = async () => {
         try {
           const QRCode = await import("qrcode")
-          QRCode.toDataURL(`lightning:${bolt11Invoice}`, function (error, url) {
-            if (error) {
-              setError("Failed to generate QR code")
-              console.error("Error generating QR code:", error)
+          QRCode.toDataURL(`lightning:${bolt11Invoice}`, function (err, url) {
+            if (err) {
+              setErrorMessage("Failed to generate QR code")
+              error("Error generating QR code:", err)
             } else {
               setQrCodeUrl(url)
             }
           })
-        } catch (error) {
-          setError("Failed to generate QR code")
-          console.error("Error importing QRCode:", error)
+        } catch (err) {
+          setErrorMessage("Failed to generate QR code")
+          error("Error importing QRCode:", err)
         }
       }
       generateQRCode()
@@ -329,9 +334,9 @@ function ZapModal({
                 <span>Attempting to pay with your wallet...</span>
               </div>
             )}
-            {error && (
+            {errorMessage && (
               <div className="alert alert-warning">
-                <span>{error}</span>
+                <span>{errorMessage}</span>
               </div>
             )}
             <p className="text-center">
@@ -362,7 +367,7 @@ function ZapModal({
             {noAddress && (
               <span className="text-red-500">The user has no lightning address.</span>
             )}
-            {error && <span className="text-red-500">{error}</span>}
+            {errorMessage && <span className="text-red-500">{errorMessage}</span>}
 
             <div className="flex gap-2">
               <input

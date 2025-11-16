@@ -1,5 +1,9 @@
 import {matchFilter, VerifiedEvent, UnsignedEvent, Filter} from "nostr-tools"
 import {NDKEvent, NDKPrivateKeySigner} from "@/lib/ndk"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 type Subscriber = {
   id: string
@@ -72,8 +76,8 @@ export class MockRelay {
     this.subscribers.set(subId, subscriber)
 
     if (this.debug) {
-      console.log("MockRelay: new subscription", subId, "with filter", filter)
-      console.log(
+      log("MockRelay: new subscription", subId, "with filter", filter)
+      log(
         "MockRelay: delivering",
         this.events.length,
         "existing events to new subscriber"
@@ -90,14 +94,14 @@ export class MockRelay {
   private deliverToSubscriber(subscriber: Subscriber, event: VerifiedEvent): void {
     if (!subscriber.delivered.has(event.id) && matchFilter(subscriber.filter, event)) {
       if (this.debug) {
-        console.log("Delivering event", event.id, "to subscriber", subscriber.id)
+        log("Delivering event", event.id, "to subscriber", subscriber.id)
       }
       subscriber.delivered.add(event.id)
       try {
         subscriber.onEvent(event)
       } catch (error) {
         if (this.shouldIgnoreDecryptionError(error)) {
-          console.warn("MockRelay: ignored decrypt error", error)
+          warn("MockRelay: ignored decrypt error", error)
           return
         }
         throw error

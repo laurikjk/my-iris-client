@@ -13,7 +13,11 @@ import {
   KIND_REPOST,
   KIND_REACTION,
   KIND_ZAP_RECEIPT,
+  DEBUG_NAMESPACES,
 } from "@/utils/constants"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface ReactedTime {
   time: number
@@ -133,8 +137,8 @@ async function getOrCreatePushSubscription() {
             userVisibleOnly: true,
             applicationServerKey: vapidKey,
           })
-        } catch (e) {
-          console.error("Failed to subscribe to push notifications:", e)
+        } catch (err) {
+          error("Failed to subscribe to push notifications:", err)
           return null
         }
       }
@@ -169,8 +173,8 @@ export const subscribeToDMNotifications = debounce(async () => {
     if (inviteRecipient) {
       inviteRecipients = [inviteRecipient]
     }
-  } catch (error) {
-    console.error("Failed to load session data for DM push subscription:", error)
+  } catch (err) {
+    error("Failed to load session data for DM push subscription:", err)
   }
 
   const webPushData = {
@@ -326,7 +330,7 @@ export const subscribeToNotifications = debounce(async () => {
     }
 
     if (kinds.length === 0) {
-      console.log("No notification types enabled, skipping subscription")
+      log("No notification types enabled, skipping subscription")
       return
     }
 
@@ -380,7 +384,7 @@ export const subscribeToNotifications = debounce(async () => {
       )
     }
   } catch (e) {
-    console.error(e)
+    error(e)
   }
 }, 5000)
 

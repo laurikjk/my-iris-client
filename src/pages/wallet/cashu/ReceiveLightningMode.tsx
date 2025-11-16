@@ -8,6 +8,10 @@ import CopyButton from "@/shared/components/button/CopyButton"
 import {decode} from "light-bolt11-decoder"
 import {useQRCode} from "../hooks/useQRCode"
 import {ndk} from "@/utils/ndk"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.CASHU_WALLET)
 
 interface ReceiveLightningModeProps {
   manager: Manager | null
@@ -30,7 +34,7 @@ export default function ReceiveLightningMode({
   const [addressCopied, setAddressCopied] = useState(false)
   const [hasMintConfigured, setHasMintConfigured] = useState<boolean>(false)
   const [checkingMint, setCheckingMint] = useState<boolean>(false)
-  const [error, setError] = useState<string>("")
+  const [errorMessage, setErrorMessage] = useState<string>("")
 
   // Generate QR for lightning address (when no invoice yet)
   const lightningAddress = myPubKey ? getLightningAddress(myPubKey) : ""
@@ -67,7 +71,7 @@ export default function ReceiveLightningMode({
           setLightningDescription(String(descSection.value))
         }
       } catch (err) {
-        console.warn("Failed to decode invoice:", err)
+        warn("Failed to decode invoice:", err)
       }
     }
 
@@ -94,12 +98,12 @@ export default function ReceiveLightningMode({
           if (signer) {
             const info = await getNPubCashInfo(signer)
             if (info?.mintUrl) {
-              console.log(`Adding default npub.cash mint: ${info.mintUrl}`)
+              log(`Adding default npub.cash mint: ${info.mintUrl}`)
               try {
                 await manager.mint.addMint(info.mintUrl)
                 setHasMintConfigured(true)
-              } catch (error) {
-                console.error("Failed to add default mint:", error)
+              } catch (err) {
+                error("Failed to add default mint:", err)
                 setHasMintConfigured(false)
               }
             } else {
@@ -111,8 +115,8 @@ export default function ReceiveLightningMode({
         } else {
           setHasMintConfigured(true)
         }
-      } catch (error) {
-        console.error("Error checking mint:", error)
+      } catch (err) {
+        error("Error checking mint:", err)
         setHasMintConfigured(false)
       } finally {
         setCheckingMint(false)
@@ -125,7 +129,7 @@ export default function ReceiveLightningMode({
   const createLightningInvoice = async () => {
     if (!manager || !mintUrl || !lightningAmount) return
     setReceiving(true)
-    setError("")
+    setErrorMessage("")
     try {
       const quote = await manager.quotes.createMintQuote(
         mintUrl,
@@ -133,11 +137,11 @@ export default function ReceiveLightningMode({
         lightningDescription.trim() || undefined
       )
       setInvoice(quote.request)
-    } catch (error) {
-      console.error("Failed to create mint quote:", error)
-      setError(
+    } catch (err) {
+      error("Failed to create mint quote:", err)
+      setErrorMessage(
         "Failed to create invoice: " +
-          (error instanceof Error ? error.message : "Unknown error")
+          (err instanceof Error ? err.message : "Unknown error")
       )
     } finally {
       setReceiving(false)
@@ -235,9 +239,9 @@ export default function ReceiveLightningMode({
 
   return (
     <div className="space-y-4">
-      {error && (
+      {errorMessage && (
         <div className="alert alert-error">
-          <span>{error}</span>
+          <span>{errorMessage}</span>
         </div>
       )}
 

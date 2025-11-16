@@ -5,6 +5,10 @@ import {useUserStore} from "@/stores/user"
 import socialGraph from "@/utils/socialGraph"
 import {ndk} from "@/utils/ndk"
 import {NDKEvent, NDKSubscription} from "@/lib/ndk"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UI_CHAT)
 import {
   // subscribeToDoubleRatchetUsersChanges, // TEMP: Unused
   searchDoubleRatchetUsers,
@@ -93,7 +97,7 @@ export const useDoubleRatchetUsers = () => {
     const checkSocialGraphChanges = () => {
       const currentSize = socialGraph().getUsersByFollowDistance(1).size
       if (currentSize !== socialGraphSize) {
-        console.log(`Social graph size changed from ${socialGraphSize} to ${currentSize}`)
+        log(`Social graph size changed from ${socialGraphSize} to ${currentSize}`)
         createSubscription()
       }
     }
@@ -119,7 +123,7 @@ export const useDoubleRatchetUsers = () => {
         const isFollowed = currentFollows.has(pubkey)
 
         if (!isSessionPartner && !isFollowed) {
-          console.log("Removing stale user from doubleRatchetUsers:", pubkey)
+          log("Removing stale user from doubleRatchetUsers:", pubkey)
           removeDoubleRatchetUser(pubkey)
         }
       })

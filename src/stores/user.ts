@@ -2,6 +2,10 @@ import {getDefaultServers} from "@/pages/settings/mediaservers-utils"
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
 import {DEFAULT_RELAYS} from "@/shared/constants/relays"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 type MediaServerProtocol = "blossom" | "nip96"
 
@@ -187,7 +191,7 @@ export const useUserStore = create<UserState>()(
         if (state) {
           // Migration: Initialize relayConfigs with DEFAULT_RELAYS if empty
           if (!state.relayConfigs || state.relayConfigs.length === 0) {
-            console.log("Migrating: Adding default relays to relayConfigs")
+            log("Migrating: Adding default relays to relayConfigs")
             state.relayConfigs = DEFAULT_RELAYS.map((url) => ({url}))
             state.relays = DEFAULT_RELAYS
           }

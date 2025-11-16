@@ -9,6 +9,10 @@ import {SwipableCarousel} from "../ui/SwipableCarousel"
 import {SwipeItem} from "@/shared/hooks/useSwipable"
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import {useMediaModalSidebarVisible, useUIStore} from "@/stores/ui"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface MediaModalProps {
   onClose: () => void
@@ -145,7 +149,7 @@ function MediaModal({
           <div
             className="absolute inset-0 flex items-center justify-center"
             onClick={(e) => {
-              console.log("MediaModal Clicked:", e.target === e.currentTarget)
+              log("MediaModal Clicked:", e.target === e.currentTarget)
               if (e.target === e.currentTarget) {
                 onClose()
               }

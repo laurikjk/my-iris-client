@@ -18,6 +18,10 @@ import {clientsClaim} from "workbox-core"
 import {VerifiedEvent} from "nostr-tools"
 import localforage from "localforage"
 import {KIND_CHANNEL_CREATE} from "./utils/constants"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 // eslint-disable-next-line no-undef
 declare const self: ServiceWorkerGlobalScope & {
@@ -139,7 +143,7 @@ self.addEventListener("install", (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          console.debug("Deleting cache: ", cacheName)
+          log("Deleting cache: ", cacheName)
           return caches.delete(cacheName)
         })
       )
@@ -166,27 +170,27 @@ interface PushData {
 self.addEventListener("notificationclick", (event) => {
   const notificationData = event.notification.data
   event.notification.close()
-  console.debug("Notification clicked:", notificationData)
+  log("Notification clicked:", notificationData)
 
   event.waitUntil(
     (async function () {
       // Handle both direct URL and nested event data structure
       const path = notificationData?.url || notificationData?.event?.url
       if (!path) {
-        console.debug("No URL in notification data")
+        log("No URL in notification data")
         return
       }
 
       // If it's already a full URL, use URL constructor, otherwise just use the path
       const pathname = path.startsWith("http") ? new URL(path).pathname : path
       const fullUrl = `${self.location.origin}${pathname}`
-      console.debug("Navigating to:", fullUrl)
+      log("Navigating to:", fullUrl)
 
       const allClients = await self.clients.matchAll({
         type: "window",
         includeUncontrolled: true,
       })
-      console.debug("Found clients:", allClients.length)
+      log("Found clients:", allClients.length)
 
       if (allClients.length > 0) {
         // Try to find a visible client first, otherwise use the first one
@@ -197,32 +201,32 @@ self.addEventListener("notificationclick", (event) => {
 
         try {
           await client.focus()
-          console.debug("Client focused, sending navigation message")
+          log("Client focused, sending navigation message")
           // Add a small delay to ensure focus completes before navigation
           await new Promise((resolve) => setTimeout(resolve, 100))
           await client.postMessage({
             type: "NAVIGATE_REACT_ROUTER",
             url: fullUrl,
           })
-          console.debug("Navigation message sent successfully")
+          log("Navigation message sent successfully")
           return
-        } catch (error) {
-          console.error("Failed to focus client or send navigation message:", error)
+        } catch (err) {
+          error("Failed to focus client or send navigation message:", err)
           // Fall through to opening new window
         }
       }
 
-      console.debug("No clients found or client communication failed, opening new window")
+      log("No clients found or client communication failed, opening new window")
       if (self.clients.openWindow) {
         try {
           const newClient = await self.clients.openWindow(fullUrl)
-          console.debug("New window opened successfully")
+          log("New window opened successfully")
           return newClient
-        } catch (error) {
-          console.error("Failed to open new window:", error)
+        } catch (err) {
+          error("Failed to open new window:", err)
         }
       } else {
-        console.error("openWindow not available")
+        error("openWindow not available")
       }
     })()
   )
@@ -309,7 +313,7 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
       }
     }
   } catch (err) {
-    console.error("DM decryption failed:", err)
+    error("DM decryption failed:", err)
   }
   return {
     success: false,
@@ -326,7 +330,7 @@ self.addEventListener("push", (event) => {
       })
       const isPageVisible = clients.some((client) => client.visibilityState === "visible")
       if (isPageVisible) {
-        console.debug("Page is visible, ignoring web push")
+        log("Page is visible, ignoring web push")
         return
       }
 

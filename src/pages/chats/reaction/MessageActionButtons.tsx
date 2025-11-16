@@ -3,9 +3,12 @@ import {RiHeartAddLine, RiReplyLine} from "@remixicon/react"
 // import {useSessionsStore} from "@/stores/sessions" // TEMP: Removed
 import {MouseEvent, useState} from "react"
 import classNames from "classnames"
-import {KIND_REACTION} from "@/utils/constants"
+import {KIND_REACTION, DEBUG_NAMESPACES} from "@/utils/constants"
 import {MessageDropdown} from "./MessageDropdown"
 import {MessageInfoModal} from "./MessageInfoModal"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UI_CHAT)
 
 type MessageActionButtonsProps = {
   messageId: string
@@ -36,7 +39,7 @@ const MessageActionButtons = ({
 }: MessageActionButtonsProps) => {
   // TEMP: Dummy sendMessage function
   const sendMessage = async (sessionId: string, event: unknown) => {
-    console.log("TEMP: sendMessage called but not implemented", sessionId, event)
+    log("TEMP: sendMessage called but not implemented", sessionId, event)
   }
   const [showReactionsPicker, setShowReactionsPicker] = useState(false)
   const [pickerPosition, setPickerPosition] = useState<{clientY?: number}>({})

@@ -2,6 +2,10 @@ import type NDK from "./ndk"
 import type {NDKEvent} from "./ndk/events"
 import type {NDKFilter} from "./ndk/subscription"
 import type {NDKRelay} from "./ndk/relay"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log} = createDebugLogger(DEBUG_NAMESPACES.NDK_WORKER)
 
 interface WorkerSubscribeOpts {
   destinations?: ("cache" | "relay")[] // Where to query: default ["cache", "relay"]
@@ -146,9 +150,7 @@ export class NDKWorkerTransport {
     if (this.ndk && this.relayUrls.length > 0) {
       try {
         await this.connect(this.ndk, this.relayUrls)
-        console.log(
-          `[Worker Transport] Worker restarted successfully after ${this.restartAttempts} attempts`
-        )
+        log(`Worker restarted successfully after ${this.restartAttempts} attempts`)
       } catch (error) {
         console.error("[Worker Transport] Failed to reconnect after restart:", error)
         // Will retry on next crash

@@ -4,6 +4,10 @@ import SessionManager from "../../SessionManager"
 import {Rumor} from "nostr-double-ratchet"
 import type {InMemoryStorageAdapter} from "../../StorageAdapter"
 import {generateSecretKey, getPublicKey} from "nostr-tools"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 export type ActorId = "alice" | "bob"
 
@@ -74,7 +78,7 @@ export async function runScenario(def: ScenarioDefinition): Promise<ScenarioCont
   }
 
   for (const step of def.steps) {
-    console.log(`\n--- Executing step: ${JSON.stringify(step)} ---`)
+    log(`\n--- Executing step: ${JSON.stringify(step)} ---`)
     switch (step.type) {
       case "send":
         await sendMessage(context, step.from, step.to, step.message, step.waitOn)
@@ -162,7 +166,7 @@ async function expectAllMessages(
   deviceId: string,
   messages: string[]
 ) {
-  console.log(`\n\n\nExpecting all messages on ${actor}:`, messages)
+  log(`\n\n\nExpecting all messages on ${actor}:`, messages)
   const actorState = context.actors[actor]
   const device = getDevice(context, {actor, deviceId})
   for (const msg of messages) {

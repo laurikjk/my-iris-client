@@ -2,6 +2,10 @@ import {formatSize} from "@/shared/utils/formatSize"
 import {useEffect, useState, useMemo} from "react"
 import {RiDownload2Line} from "@remixicon/react"
 import {EmbedEvent} from "../index"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface EncryptedUrlEmbedProps {
   url: string
@@ -97,20 +101,20 @@ async function streamAndDecryptChunksToDownload({
   fileName: string
   onProgress?: (percent: number) => void
 }) {
-  console.log("[streamAndDecryptChunksToDownload] baseUrl:", baseUrl)
-  console.log("[streamAndDecryptChunksToDownload] chunkHashes:", chunkHashes)
+  log("[streamAndDecryptChunksToDownload] baseUrl:", baseUrl)
+  log("[streamAndDecryptChunksToDownload] chunkHashes:", chunkHashes)
   // Create a stream for the browser download
   const stream = new ReadableStream({
     async pull(controller) {
       for (let i = 0; i < chunkHashes.length; i++) {
         const chunkUrl = baseUrl.replace(/[^/]+$/, `${chunkHashes[i]}.bin`)
-        console.log(
+        log(
           `[streamAndDecryptChunksToDownload] Fetching chunk ${i + 1}/${chunkHashes.length}:`,
           chunkUrl
         )
         const resp = await fetch(chunkUrl)
         if (!resp.ok) {
-          console.error(
+          error(
             `[streamAndDecryptChunksToDownload] Failed to fetch chunk ${i + 1}:`,
             chunkUrl,
             resp.status
@@ -168,7 +172,7 @@ function isChunked(meta: unknown): boolean {
 
 function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState<number | null>(null)
   const meta = useMemo(
@@ -183,7 +187,7 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
     let revoked = false
     let currentBlobUrl: string | null = null
     setLoading(true)
-    setError(null)
+    setErrorMessage(null)
     setBlobUrl(null)
     fetch(url)
       .then((res) => {
@@ -199,8 +203,8 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
         setBlobUrl(url)
         setLoading(false)
       })
-      .catch((e) => {
-        setError(e.message || "Failed to decrypt file")
+      .catch((err) => {
+        setErrorMessage(err.message || "Failed to decrypt file")
         setLoading(false)
       })
     return () => {
@@ -213,14 +217,14 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
   const handleDownload = async () => {
     if (!meta) return
     setLoading(true)
-    setError(null)
+    setErrorMessage(null)
     setProgress(0)
     try {
       if (isChunked(meta)) {
-        console.log("[handleDownload] Detected chunked file, meta:", meta)
+        log("[handleDownload] Detected chunked file, meta:", meta)
         // 1. Fetch and decrypt index
         const index = await fetchAndParseIndex(url, meta.key)
-        console.log("[handleDownload] Index file:", index)
+        log("[handleDownload] Index file:", index)
         // 2. Stream, decrypt, and download all chunks directly (not the index file)
         await streamAndDecryptChunksToDownload({
           baseUrl: url,
@@ -229,7 +233,7 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
           fileName: index.fileName || meta.name,
           onProgress: (p) => {
             setProgress(p)
-            console.log(`[handleDownload] Progress: ${p}%`)
+            log(`[handleDownload] Progress: ${p}%`)
           },
         })
       } else {
@@ -250,9 +254,11 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
           document.body.removeChild(a)
         }, 1000)
       }
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e) || "Failed to decrypt file")
-      console.error("[handleDownload] Error:", e)
+    } catch (err: unknown) {
+      setErrorMessage(
+        err instanceof Error ? err.message : String(err) || "Failed to decrypt file"
+      )
+      error("[handleDownload] Error:", err)
     } finally {
       setLoading(false)
       setProgress(null)
@@ -316,7 +322,7 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
             <div className="text-xs mt-1">{progress}%</div>
           </div>
         )}
-        {error && <span className="text-error text-xs">{error}</span>}
+        {errorMessage && <span className="text-error text-xs">{errorMessage}</span>}
       </div>
     )
   }
@@ -324,7 +330,7 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
   // Unchunked images: display inline
   if (isImage(meta.name)) {
     if (loading) return <div className="p-2 text-sm text-gray-500">Decrypting...</div>
-    if (error) return <div className="p-2 text-sm text-error">{error}</div>
+    if (errorMessage) return <div className="p-2 text-sm text-error">{errorMessage}</div>
     if (blobUrl) {
       return (
         <img
@@ -340,7 +346,7 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
   // Unchunked videos: display inline
   if (isVideo(meta.name)) {
     if (loading) return <div className="p-2 text-sm text-gray-500">Decrypting...</div>
-    if (error) return <div className="p-2 text-sm text-error">{error}</div>
+    if (errorMessage) return <div className="p-2 text-sm text-error">{errorMessage}</div>
     if (blobUrl) {
       return (
         <video
@@ -352,7 +358,7 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
         </video>
       )
     }
-    console.log("blobUrl", blobUrl)
+    log("blobUrl", blobUrl)
     return null
   }
 
@@ -376,7 +382,7 @@ function EncryptedUrlEmbed({url, event}: EncryptedUrlEmbedProps) {
           <div className="text-xs mt-1">{progress}%</div>
         </div>
       )}
-      {error && <span className="text-error text-xs">{error}</span>}
+      {errorMessage && <span className="text-error text-xs">{errorMessage}</span>}
     </div>
   )
 }

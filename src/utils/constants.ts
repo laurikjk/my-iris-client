@@ -73,6 +73,10 @@ export const DEBUG_NAMESPACES = {
   NDK_POOL: "ndk:pool",
   NDK_POOL_ERROR: "ndk:pool:error",
   NDK_POOL_WARN: "ndk:pool:warn",
+  NDK_WORKER: "ndk:worker",
+  NDK_WORKER_ERROR: "ndk:worker:error",
+  NDK_WORKER_WARN: "ndk:worker:warn",
+  NDK_TRANSPORT: "ndk:transport",
 
   // WebRTC
   WEBRTC_PEER: "webrtc:peer",

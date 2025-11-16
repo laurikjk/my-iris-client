@@ -8,11 +8,14 @@ import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {SettingsButton} from "@/shared/components/settings/SettingsButton"
 import {confirm} from "@/utils/utils"
-import {KIND_CONTACTS} from "@/utils/constants"
+import {KIND_CONTACTS, DEBUG_NAMESPACES} from "@/utils/constants"
 import {unsubscribeAll} from "@/utils/notifications"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useDraftStore} from "@/stores/draft"
 import {revokeCurrentDevice} from "@/shared/services/PrivateChats"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 // Helper function to add timeout to any promise
 const withTimeout = (promise: Promise<unknown>, ms: number): Promise<unknown> => {
@@ -44,7 +47,7 @@ function DeleteAccount() {
       localStorage.clear()
       await localforage.clear()
     } catch (err) {
-      console.error("Error clearing storage:", err)
+      error("Error clearing storage:", err)
     }
   }
 
@@ -52,9 +55,9 @@ function DeleteAccount() {
     try {
       await usePrivateMessagesStore.getState().clear()
       useDraftStore.getState().clearAll()
-      console.log("All stores cleaned up")
+      log("All stores cleaned up")
     } catch (err) {
-      console.error("Error cleaning up stores:", err)
+      error("Error cleaning up stores:", err)
     }
   }
 
@@ -66,49 +69,49 @@ function DeleteAccount() {
       const existingSub = await reg.pushManager.getSubscription()
       if (existingSub) {
         await existingSub.unsubscribe()
-        console.log("Unsubscribed from push notifications")
+        log("Unsubscribed from push notifications")
       }
     } catch (e) {
-      console.error("Error unsubscribing from service worker:", e)
+      error("Error unsubscribing from service worker:", e)
     }
   }
 
   async function performLogout() {
     try {
       try {
-        console.log("[Logout] Unsubscribing from notifications")
+        log("[Logout] Unsubscribing from notifications")
         await withTimeout(unsubscribeAll(), 3000)
       } catch (e) {
-        console.error("Error unsubscribing from push notifications:", e)
+        error("Error unsubscribing from push notifications:", e)
       }
 
       try {
         await withTimeout(cleanupStores(), 3000)
       } catch (e) {
-        console.error("Error cleaning up stores:", e)
+        error("Error cleaning up stores:", e)
       }
 
       try {
         await revokeCurrentDevice()
       } catch (e) {
-        console.error("Error revoking current device:", e)
+        error("Error revoking current device:", e)
       }
 
-      console.log("[Logout] Cleaning up NDK")
+      log("[Logout] Cleaning up NDK")
       await withTimeout(cleanupNDK(), 3000)
-      console.log("[Logout] Resetting user store")
+      log("[Logout] Resetting user store")
       const {reset} = useUserStore.getState()
       reset()
     } catch (e) {
-      console.error("Error during logout cleanup:", e)
+      error("Error during logout cleanup:", e)
     } finally {
       try {
-        console.log("[Logout] Final cleanup")
+        log("[Logout] Final cleanup")
         await withTimeout(Promise.all([cleanupStorage(), cleanupServiceWorker()]), 5000)
       } catch (e) {
-        console.error("Error during final cleanup:", e)
+        error("Error during final cleanup:", e)
       } finally {
-        console.log("[Logout] Reloading app")
+        log("[Logout] Reloading app")
         navigate("/")
         location.reload()
       }
@@ -118,7 +121,7 @@ function DeleteAccount() {
   async function handleDeleteAccount(e?: MouseEvent) {
     e?.preventDefault()
     e?.stopPropagation()
-    console.log("[DeleteAccount] Starting delete account process")
+    log("[DeleteAccount] Starting delete account process")
 
     const confirmed = await confirm(
       "This will mark your account as deleted on Nostr and log you out. This action cannot be undone.",
@@ -126,7 +129,7 @@ function DeleteAccount() {
     )
 
     if (confirmed) {
-      console.log("[DeleteAccount] User confirmed")
+      log("[DeleteAccount] User confirmed")
       setIsDeletingAccount(true)
 
       try {
@@ -135,7 +138,7 @@ function DeleteAccount() {
         if (user) {
           user.profile = {name: "Account deleted", deleted: "true" as string}
           await user.publish()
-          console.log("[DeleteAccount] Published deleted profile")
+          log("[DeleteAccount] Published deleted profile")
         }
 
         // Publish empty follow list
@@ -147,7 +150,7 @@ function DeleteAccount() {
           tags: [],
         })
         await emptyFollowList.publish()
-        console.log("[DeleteAccount] Published empty follow list")
+        log("[DeleteAccount] Published empty follow list")
 
         // Wait a moment for events to propagate
         await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -155,14 +158,14 @@ function DeleteAccount() {
         // Now perform logout
         await performLogout()
       } catch (e) {
-        console.error("Error during account deletion:", e)
+        error("Error during account deletion:", e)
         // Still perform logout even if profile update fails
         await performLogout()
       } finally {
         setIsDeletingAccount(false)
       }
     } else {
-      console.log("[DeleteAccount] User cancelled")
+      log("[DeleteAccount] User cancelled")
     }
   }
 

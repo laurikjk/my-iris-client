@@ -1,4 +1,8 @@
 import type {WebLNProvider} from "@/types/global"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 export interface WebLNWalletBalance {
   amount: number
@@ -11,7 +15,7 @@ export class SimpleWebLNWallet {
   async connect(): Promise<boolean> {
     try {
       if (!window.webln) {
-        console.log("WebLN not available")
+        log("WebLN not available")
         return false
       }
 
@@ -30,8 +34,8 @@ export class SimpleWebLNWallet {
       }
       this.provider = webln
       return true
-    } catch (error) {
-      console.error("Failed to connect WebLN:", error)
+    } catch (err) {
+      error("Failed to connect WebLN:", err)
       return false
     }
   }
@@ -69,8 +73,8 @@ export class SimpleWebLNWallet {
         return this._balance.amount
       }
       return null
-    } catch (error) {
-      console.error("Failed to get WebLN balance:", error)
+    } catch (err) {
+      error("Failed to get WebLN balance:", err)
       return null
     }
   }

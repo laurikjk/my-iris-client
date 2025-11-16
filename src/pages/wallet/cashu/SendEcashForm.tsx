@@ -3,6 +3,10 @@ import type {Manager} from "@/lib/cashu/core/index"
 import {getEncodedToken} from "@cashu/cashu-ts"
 import {savePaymentMetadata} from "@/stores/paymentMetadata"
 import {UserRow} from "@/shared/components/user/UserRow"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.CASHU_WALLET)
 
 interface SendEcashFormProps {
   manager: Manager | null
@@ -28,7 +32,7 @@ export default function SendEcashForm({
   const [sendAmount, setSendAmount] = useState<number>(initialAmount)
   const [sendNote, setSendNote] = useState<string>(initialNote)
   const [sending, setSending] = useState(false)
-  const [error, setError] = useState<string>("")
+  const [errorMessage, setErrorMessage] = useState<string>("")
 
   // Update state when initial values change (e.g., from payment request decode)
   useEffect(() => {
@@ -47,12 +51,12 @@ export default function SendEcashForm({
     if (!manager) return
 
     if (!sendAmount || sendAmount <= 0) {
-      setError("Please enter a valid amount")
+      setErrorMessage("Please enter a valid amount")
       return
     }
 
     setSending(true)
-    setError("")
+    setErrorMessage("")
     try {
       const balances = await manager.wallet.getBalances()
       let useMint = mintUrl
@@ -76,17 +80,14 @@ export default function SendEcashForm({
 
         if (requestedBalance >= sendAmount && matchingMint) {
           useMint = matchingMint
-          console.log("✓ Using requested mint with sufficient balance:", matchingMint)
+          log("✓ Using requested mint with sufficient balance:", matchingMint)
         } else {
-          console.warn(
-            "⚠️ Insufficient balance on requested mint, using mint selection:",
-            {
-              requested: requestedMint,
-              matchingMint,
-              requestedBalance,
-              needed: sendAmount,
-            }
-          )
+          warn("⚠️ Insufficient balance on requested mint, using mint selection:", {
+            requested: requestedMint,
+            matchingMint,
+            requestedBalance,
+            needed: sendAmount,
+          })
           // Fall back to smart mint selection
           const {selectMintForPayment} = await import("@/lib/cashu/mintSelection")
           useMint = selectMintForPayment(balances, sendAmount)
@@ -115,16 +116,16 @@ export default function SendEcashForm({
             sendNote.trim() || undefined
           )
         } catch (err) {
-          console.warn("Failed to save send note:", err)
+          warn("Failed to save send note:", err)
         }
       }
 
       onTokenCreated(encoded)
-    } catch (error) {
-      console.error("Failed to create ecash token:", error)
-      setError(
+    } catch (err) {
+      error("Failed to create ecash token:", err)
+      setErrorMessage(
         "Failed to create token: " +
-          (error instanceof Error ? error.message : "Unknown error")
+          (err instanceof Error ? err.message : "Unknown error")
       )
     } finally {
       setSending(false)
@@ -133,9 +134,9 @@ export default function SendEcashForm({
 
   return (
     <div className="space-y-4">
-      {error && (
+      {errorMessage && (
         <div className="alert alert-error">
-          <span>{error}</span>
+          <span>{errorMessage}</span>
         </div>
       )}
       {selectedUserPubkey && (

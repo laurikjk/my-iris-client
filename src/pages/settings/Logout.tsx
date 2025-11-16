@@ -13,6 +13,10 @@ import {useWalletProviderStore} from "@/stores/walletProvider"
 import {SettingsButton} from "@/shared/components/settings/SettingsButton"
 import {confirm} from "@/utils/utils"
 import {revokeCurrentDevice} from "@/shared/services/PrivateChats"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 // Helper function to add timeout to any promise
 const withTimeout = (promise: Promise<unknown>, ms: number): Promise<unknown> => {
@@ -40,8 +44,8 @@ function Logout() {
           try {
             const balance = await getBalance()
             setCashuBalance(balance ?? connection.balance ?? null)
-          } catch (error) {
-            console.error("Error getting Cashu balance:", error)
+          } catch (err) {
+            error("Error getting Cashu balance:", err)
             // Fall back to stored balance if live call fails
             setCashuBalance(connection.balance ?? null)
           }
@@ -71,7 +75,7 @@ function Logout() {
       localStorage.clear()
       await localforage.clear()
     } catch (err) {
-      console.error("Error clearing storage:", err)
+      error("Error clearing storage:", err)
     }
   }
 
@@ -85,9 +89,9 @@ function Logout() {
       useDraftStore.getState().clearAll()
 
       // For stores without reset methods, we'll rely on storage clearing
-      console.log("All stores cleaned up")
+      log("All stores cleaned up")
     } catch (err) {
-      console.error("Error cleaning up stores:", err)
+      error("Error cleaning up stores:", err)
     }
   }
 
@@ -99,10 +103,10 @@ function Logout() {
       const existingSub = await reg.pushManager.getSubscription()
       if (existingSub) {
         await existingSub.unsubscribe()
-        console.log("Unsubscribed from push notifications")
+        log("Unsubscribed from push notifications")
       }
     } catch (e) {
-      console.error("Error unsubscribing from service worker:", e)
+      error("Error unsubscribing from service worker:", e)
     }
   }
 
@@ -110,41 +114,41 @@ function Logout() {
     try {
       // Try to unsubscribe from notifications first, while we still have the signer
       try {
-        console.log("[Logout] Unsubscribing from notifications")
+        log("[Logout] Unsubscribing from notifications")
         await withTimeout(unsubscribeAll(), 3000)
       } catch (e) {
-        console.error("Error unsubscribing from push notifications:", e)
+        error("Error unsubscribing from push notifications:", e)
       }
 
       // Clean up stores first (while we still have access to data)
       try {
         await withTimeout(cleanupStores(), 3000)
       } catch (e) {
-        console.error("Error cleaning up stores:", e)
+        error("Error cleaning up stores:", e)
       }
 
       try {
         await revokeCurrentDevice()
       } catch (e) {
-        console.error("Error revoking current device:", e)
+        error("Error revoking current device:", e)
       }
 
-      console.log("[Logout] Cleaning up NDK")
+      log("[Logout] Cleaning up NDK")
       await withTimeout(cleanupNDK(), 3000)
-      console.log("[Logout] Resetting user store")
+      log("[Logout] Resetting user store")
       const {reset} = useUserStore.getState()
       reset()
     } catch (e) {
-      console.error("Error during logout cleanup:", e)
+      error("Error during logout cleanup:", e)
     } finally {
       try {
-        console.log("[Logout] Final cleanup")
+        log("[Logout] Final cleanup")
         await withTimeout(Promise.all([cleanupStorage(), cleanupServiceWorker()]), 5000)
       } catch (e) {
-        console.error("Error during final cleanup:", e)
+        error("Error during final cleanup:", e)
       } finally {
         // Ensure spinner always stops and navigation happens
-        console.log("[Logout] Reloading app")
+        log("[Logout] Reloading app")
         navigate("/")
         location.reload()
       }
@@ -154,19 +158,19 @@ function Logout() {
   async function handleLogout(e?: MouseEvent) {
     e?.preventDefault()
     e?.stopPropagation()
-    console.log("[Logout] Starting logout process")
+    log("[Logout] Starting logout process")
 
     const confirmed =
       !store.privateKey ||
       (await confirm("Make sure you have a backup of your secret key.", "Log out?"))
 
     if (confirmed) {
-      console.log("[Logout] User confirmed")
+      log("[Logout] User confirmed")
       setIsLoggingOut(true)
       await performLogout()
       setIsLoggingOut(false)
     } else {
-      console.log("[Logout] User cancelled")
+      log("[Logout] User cancelled")
     }
   }
 

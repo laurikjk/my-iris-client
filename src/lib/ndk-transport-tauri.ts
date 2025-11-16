@@ -106,7 +106,6 @@ export class NDKTauriTransport {
   }
 
   private handleResponse(response: WorkerResponse) {
-    console.log("[Tauri Transport] handleResponse:", response.type, response)
     switch (response.type) {
       case "ready":
         this.ready = true
@@ -159,18 +158,6 @@ export class NDKTauriTransport {
             this.publishResolvers.delete(response.id)
           }
         }
-        break
-
-      case "relayConnected":
-        console.log("🔗 Relay connected:", response.relay)
-        break
-
-      case "relayDisconnected":
-        console.log("🔌 Relay disconnected:", response.relay)
-        break
-
-      case "relayAdded":
-        console.log("✅ Relay added:", response)
         break
     }
   }

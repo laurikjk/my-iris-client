@@ -5,6 +5,10 @@ import AccountName from "./AccountName"
 import {Link} from "@/navigation"
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface RegisterFormProps {
   minLength: number
@@ -55,38 +59,38 @@ function RegisterForm({minLength, subscriptionPlan, onRegister}: RegisterFormPro
     setErrorMessage("")
 
     try {
-      console.log(`Checking availability for: ${name}`)
+      log(`Checking availability for: ${name}`)
       const url = `${CONFIG.defaultSettings.irisApiUrl}/user/available?name=${encodeURIComponent(name)}&public_key=${pubKey}`
 
       const response = await fetch(url)
       const text = await response.text()
-      console.log(`API response (${response.status}): ${text}`)
+      log(`API response (${response.status}): ${text}`)
 
       try {
         const json = JSON.parse(text)
-        console.log("Parsed JSON:", json)
+        log("Parsed JSON:", json)
 
         if (json.available === true) {
-          console.log("Username IS available")
+          log("Username IS available")
           setIsValid(true)
           setStatusMessage("Username is available")
           setErrorMessage("")
         } else {
-          console.log("Username is NOT available")
+          log("Username is NOT available")
           setIsValid(false)
           const message = json.message || "This username is not available"
-          console.log(`Setting error message: "${message}"`)
+          log(`Setting error message: "${message}"`)
           setErrorMessage(message)
           setStatusMessage("")
         }
       } catch (e) {
-        console.error("Parse error:", e)
+        error("Parse error:", e)
         setErrorMessage("Error parsing response")
         setStatusMessage("")
         setIsValid(false)
       }
-    } catch (error) {
-      console.error("Network error:", error)
+    } catch (err) {
+      error("Network error:", err)
       setErrorMessage("Network error checking username")
       setStatusMessage("")
       setIsValid(false)

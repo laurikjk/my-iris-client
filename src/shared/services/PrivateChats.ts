@@ -6,6 +6,10 @@ import NDK, {NDKEvent, NDKFilter} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
 import {useUserStore} from "../../stores/user"
 import {hexToBytes} from "nostr-tools/utils"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 const createSubscribe = (ndk: NDK): NostrSubscribe => {
   return (filter: NDKFilter, onEvent: (event: VerifiedEvent) => void) => {
@@ -104,7 +108,7 @@ export const deleteDeviceInvite = async (deviceId: string) => {
   await deletionEvent.sign()
   await deletionEvent.publish()
 
-  console.log("Published invite tombstone for device:", deviceId)
+  log("Published invite tombstone for device:", deviceId)
 
   // Delete invite from localStorage to prevent republishing
   const {LocalStorageAdapter} = await import("../../session/StorageAdapter")
@@ -118,7 +122,7 @@ export const deleteDeviceInvite = async (deviceId: string) => {
 export const deleteCurrentDeviceInvite = async () => {
   const manager = getSessionManager()
   if (!manager) {
-    console.log("No session manager, skipping invite tombstone")
+    log("No session manager, skipping invite tombstone")
     return
   }
 

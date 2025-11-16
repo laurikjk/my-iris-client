@@ -213,7 +213,7 @@ function handleSubscribe(
   } else if (relayOnly) {
     cacheUsage = NDKSubscriptionCacheUsage.ONLY_RELAY
   } else {
-    cacheUsage = NDKSubscriptionCacheUsage.PARALLEL
+    cacheUsage = NDKSubscriptionCacheUsage.CACHE_FIRST
   }
 
   const sub = ndk.subscribe(filters, {

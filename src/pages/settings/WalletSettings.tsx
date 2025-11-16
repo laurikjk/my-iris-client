@@ -7,6 +7,10 @@ import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
 import {CashuSeedBackup} from "@/shared/components/settings/CashuSeedBackup"
 import {ChangeEvent, useState, useEffect} from "react"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log} = createDebugLogger(DEBUG_NAMESPACES.CASHU_WALLET)
 
 const WalletSettings = () => {
   const {balance} = useWalletBalance()
@@ -104,7 +108,7 @@ const WalletSettings = () => {
   }
 
   const getCurrentWalletDisplay = () => {
-    console.log("📱 Getting current wallet display:", {
+    log("📱 Getting current wallet display:", {
       activeProviderType,
       activeNWCId,
       nwcConnectionsCount: nwcConnections.length,
@@ -115,7 +119,7 @@ const WalletSettings = () => {
     if (activeProviderType === "native") return "Native WebLN"
     if (activeProviderType === "nwc" && activeNWCId) {
       const connection = nwcConnections.find((c) => c.id === activeNWCId)
-      console.log("📱 Found NWC connection:", connection?.name)
+      log("📱 Found NWC connection:", connection?.name)
       return connection ? connection.name : "Unknown NWC"
     }
     return "Cashu Wallet"
@@ -151,7 +155,7 @@ const WalletSettings = () => {
             {/* Cashu wallet option */}
             <SettingsGroupItem
               onClick={() => {
-                console.log("🖱️ Div clicked for cashu wallet")
+                log("🖱️ Div clicked for cashu wallet")
                 setSelectedWallet("cashu")
                 setActiveProviderType("cashu")
                 useWalletProviderStore.getState().refreshActiveProvider()
@@ -183,7 +187,7 @@ const WalletSettings = () => {
             {/* No wallet option */}
             <SettingsGroupItem
               onClick={() => {
-                console.log("🖱️ Div clicked for disabled wallet")
+                log("🖱️ Div clicked for disabled wallet")
                 setSelectedWallet("disabled")
                 setActiveProviderType("disabled")
               }}
@@ -212,7 +216,7 @@ const WalletSettings = () => {
             {nativeWallet && (
               <SettingsGroupItem
                 onClick={() => {
-                  console.log("🖱️ Div clicked for native wallet")
+                  log("🖱️ Div clicked for native wallet")
                   setSelectedWallet("native")
                   setActiveProviderType("native")
                   useWalletProviderStore.getState().refreshActiveProvider()
@@ -253,7 +257,7 @@ const WalletSettings = () => {
                   onClick={(e) => {
                     // Don't trigger selection when clicking delete button
                     if (e && (e.target as HTMLElement).closest(".btn-error")) return
-                    console.log("🖱️ Div clicked for NWC:", conn.name)
+                    log("🖱️ Div clicked for NWC:", conn.name)
                     const walletId = `nwc:${conn.id}`
                     setSelectedWallet(walletId)
                     setActiveProviderType("nwc")

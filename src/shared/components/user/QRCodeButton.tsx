@@ -7,6 +7,10 @@ import Icon from "@/shared/components/Icons/Icon"
 import {useNavigate} from "@/navigation"
 import {UserRow} from "./UserRow"
 import QRCodeModalEnhanced from "./QRCodeModalEnhanced"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 const QRScanner = lazy(() => import("../QRScanner"))
 
 interface QRCodeModalProps {
@@ -39,8 +43,8 @@ function QRCodeModal({
           })
         })
         setQrCodeUrl(url as string)
-      } catch (error) {
-        console.error("Error generating QR code:", error)
+      } catch (err) {
+        error("Error generating QR code:", err)
       }
     }
     generateQR()
@@ -56,8 +60,8 @@ function QRCodeModal({
         const devices = await navigator.mediaDevices?.enumerateDevices()
         const hasCamera = devices?.some((device) => device.kind === "videoinput") ?? false
         setIsCameraAvailable(hasCamera)
-      } catch (error) {
-        console.error("Error checking camera availability:", error)
+      } catch (err) {
+        error("Error checking camera availability:", err)
         setIsCameraAvailable(false)
       }
     }
@@ -71,7 +75,7 @@ function QRCodeModal({
       const k = new PublicKey(scannedData.replace("nostr:", "")).toBech32("npub")
       navigate(`/${k}`)
     } catch (e) {
-      console.log("got qr data", scannedData)
+      log("got qr data", scannedData)
       // ignore
     }
   }

@@ -8,6 +8,10 @@ import {confirm} from "@/utils/utils"
 import BlobImage from "./BlobImage"
 import {nip19} from "nostr-tools"
 import {UserRow} from "@/shared/components/user/UserRow"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 export function BlobList() {
   const [blobs, setBlobs] = useState<
@@ -74,8 +78,8 @@ export function BlobList() {
         const addedSize = newBlobs.reduce((sum, blob) => sum + blob.size, 0)
         setBlobTotalSize(blobTotalSize + addedSize)
       }
-    } catch (error) {
-      console.error("Error loading blobs:", error)
+    } catch (err) {
+      error("Error loading blobs:", err)
     } finally {
       setLoadingBlobs(false)
     }
@@ -92,8 +96,8 @@ export function BlobList() {
       const eventIds = events.map((e) => e.id)
       setBlobUsages(new Map(blobUsages.set(hash, eventIds)))
       return eventIds
-    } catch (error) {
-      console.error("Error finding blob usages:", error)
+    } catch (err) {
+      error("Error finding blob usages:", err)
       return []
     }
   }
@@ -111,12 +115,12 @@ export function BlobList() {
     try {
       const storage = getBlobStorage()
       await storage.clear()
-      console.log("Cleared blob storage")
+      log("Cleared blob storage")
 
       // Reload blobs
       await loadBlobs(true)
     } catch (err) {
-      console.error("Error clearing blobs:", err)
+      error("Error clearing blobs:", err)
     } finally {
       setIsClearingBlobs(false)
     }

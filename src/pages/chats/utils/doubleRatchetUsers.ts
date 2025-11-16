@@ -4,8 +4,11 @@ import {handleProfile} from "@/utils/profileSearch"
 import {ndk} from "@/utils/ndk"
 import debounce from "lodash/debounce"
 import Fuse from "fuse.js"
-import {KIND_METADATA} from "@/utils/constants"
+import {KIND_METADATA, DEBUG_NAMESPACES} from "@/utils/constants"
 import {shouldHideUser} from "@/utils/visibility"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+
+const {log, warn} = createDebugLogger(DEBUG_NAMESPACES.UI_CHAT)
 
 export interface DoubleRatchetUser {
   pubkey: string
@@ -66,7 +69,7 @@ const updateUserDataFromCache = () => {
 // Update the search index with new user data (internal)
 const updateDoubleRatchetSearchIndexImmediate = () => {
   updateUserDataFromCache()
-  console.log("Updated double ratchet search index", userData.size)
+  log("Updated double ratchet search index", userData.size)
 
   // If we have users without profiles and we're not already fetching, fetch them
   const usersWithoutProfiles = Array.from(doubleRatchetUsers).filter(
@@ -74,7 +77,7 @@ const updateDoubleRatchetSearchIndexImmediate = () => {
   )
 
   if (usersWithoutProfiles.length > 0 && !isFetchingProfiles) {
-    console.log("Fetching profiles for", usersWithoutProfiles.length, "users")
+    log("Fetching profiles for", usersWithoutProfiles.length, "users")
     isFetchingProfiles = true
 
     const sub = ndk().subscribe(
@@ -90,7 +93,7 @@ const updateDoubleRatchetSearchIndexImmediate = () => {
           addCachedProfile(event.pubkey, profile)
           handleProfile(event.pubkey, profile)
         } catch (e) {
-          console.warn("Failed to parse profile for", event.pubkey, e)
+          warn("Failed to parse profile for", event.pubkey, e)
         }
       }
     })

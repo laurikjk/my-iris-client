@@ -6,6 +6,10 @@ import {getTag} from "./tagUtils"
 import {KIND_CHANNEL_CREATE} from "./constants"
 import {isTauri} from "./utils"
 import socialGraph from "./socialGraph"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 let unsubscribeSessionEvents: (() => void) | null = null
 
@@ -17,7 +21,7 @@ export const attachSessionEventListener = () => {
   try {
     const sessionManager = getSessionManager()
     if (!sessionManager) {
-      console.error("Session manager not available")
+      error("Session manager not available")
       return
     }
     void sessionManager
@@ -46,9 +50,9 @@ export const attachSessionEventListener = () => {
               const group = JSON.parse(event.content)
               const {addGroup} = useGroupsStore.getState()
               addGroup(group)
-              console.log("Received group creation:", group.name, group.id)
+              log("Received group creation:", group.name, group.id)
             } catch (e) {
-              console.error("Failed to parse group creation event:", e)
+              error("Failed to parse group creation event:", e)
             }
             return
           }
@@ -67,11 +71,11 @@ export const attachSessionEventListener = () => {
                 createdAt: Date.now(),
               }
               addGroup(placeholderGroup)
-              console.log("Created placeholder group:", lTag)
+              log("Created placeholder group:", lTag)
             }
 
             // Group message or reaction - store under group ID
-            console.log("Received group message for group:", lTag)
+            log("Received group message for group:", lTag)
             void usePrivateMessagesStore.getState().upsert(lTag, publicKey, event)
             return
           }
@@ -87,13 +91,10 @@ export const attachSessionEventListener = () => {
           void usePrivateMessagesStore.getState().upsert(from, to, event)
         })
       })
-      .catch((error) => {
-        console.error(
-          "Failed to initialize session manager (possibly corrupt data):",
-          error
-        )
+      .catch((err) => {
+        error("Failed to initialize session manager (possibly corrupt data):", err)
       })
-  } catch (error) {
-    console.error("Failed to attach session event listener", error)
+  } catch (err) {
+    error("Failed to attach session event listener", err)
   }
 }

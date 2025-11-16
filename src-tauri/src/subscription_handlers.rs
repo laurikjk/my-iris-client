@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use nostrdb::{Ndb, Filter, Subscription};
+use nostrdb::{Ndb, Filter, Subscription, Transaction};
 use enostr::{RelayPool, ClientMessage};
 use tauri::Emitter;
 use tracing::{debug, info, warn, error};
@@ -53,9 +53,59 @@ pub fn handle_subscribe(
 
     // Send REQ to relays (unless cache-only)
     if !cache_only {
-        let req_msg = ClientMessage::req(id.clone(), parsed_filters.clone());
-        pool.send(&req_msg);
-        info!(sub_id = %id, relay_count = pool.relays.len(), filter_count = parsed_filters.len(), "Sent REQ to relays");
+        // Check if filter has ids - optimize by checking cache first
+        let mut relay_filters = parsed_filters.clone();
+        let mut total_ids = 0;
+        let mut found_ids = 0;
+
+        for filter in &mut relay_filters {
+            if let Some(ids_field) = filter.into_iter().find_map(|field| {
+                if let nostrdb::FilterField::Ids(ids) = field {
+                    Some(ids)
+                } else {
+                    None
+                }
+            }) {
+                let txn = Transaction::new(ndb).ok();
+                if let Some(ref txn) = txn {
+                    let mut unfound_ids = Vec::new();
+
+                    for id in ids_field.into_iter() {
+                        total_ids += 1;
+                        // Check if event exists in nostrdb
+                        if ndb.get_notekey_by_id(txn, id).is_err() {
+                            unfound_ids.push(*id);
+                        } else {
+                            found_ids += 1;
+                        }
+                    }
+
+                    if found_ids > 0 {
+                        debug!(sub_id = %id, found = found_ids, total = total_ids, "Cache hits for event IDs");
+                    }
+
+                    // Skip relay REQ if all events found in cache
+                    if unfound_ids.is_empty() {
+                        debug!(sub_id = %id, "All events in cache, skipping relay REQ");
+                        return;
+                    }
+
+                    // Replace filter ids with only unfound ones
+                    *filter = nostrdb::Filter::new().ids(unfound_ids.iter()).build();
+                }
+            }
+        }
+
+        if found_ids > 0 {
+            let req_msg = ClientMessage::req(id.clone(), relay_filters);
+            pool.send(&req_msg);
+            info!(sub_id = %id, relay_count = pool.relays.len(), cached = found_ids, requesting = total_ids - found_ids, "Sent optimized REQ to relays");
+        } else {
+            let filter_count = relay_filters.len();
+            let req_msg = ClientMessage::req(id.clone(), relay_filters);
+            pool.send(&req_msg);
+            info!(sub_id = %id, relay_count = pool.relays.len(), filter_count = filter_count, "Sent REQ to relays");
+        }
     } else {
         debug!(sub_id = %id, "Cache-only query, skipping relays");
     }

@@ -1,6 +1,10 @@
 import {DebugSession} from "@/debug/DebugSession"
 import {useSettingsStore} from "@/stores/settings"
 import {ndk} from "./ndk"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 class DebugManager {
   private static instance: DebugManager
@@ -39,7 +43,7 @@ class DebugManager {
     // Start heartbeat
     this.startHeartbeat()
 
-    console.log(
+    log(
       "Debug session initialized",
       debugPrivateKey ? "with persistence" : "without persistence"
     )
@@ -50,7 +54,7 @@ class DebugManager {
       this.stopHeartbeat()
       this.debugSession.close()
       this.debugSession = null
-      console.log("Debug session cleaned up")
+      log("Debug session cleaned up")
     }
   }
 
@@ -126,7 +130,7 @@ class DebugManager {
         this.debugSession.publish("data", heartbeatData)
 
         // Send subscription data separately to avoid size limits
-        console.log(
+        log(
           "📊 Sending subscription data:",
           Object.keys(subscriptionsData).length,
           "subscriptions"

@@ -3,6 +3,10 @@ import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {SettingsButton} from "@/shared/components/settings/SettingsButton"
 import socialGraph, {getFollowLists, stopRecrawl} from "@/utils/socialGraph"
 import {useSocialGraphStore} from "@/stores/socialGraph"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 export function Maintenance() {
   const crawling = useSocialGraphStore((state) => state.isRecrawling)
@@ -10,7 +14,7 @@ export function Maintenance() {
   const handleRecalculateDistances = () => {
     socialGraph().recalculateFollowDistances()
     const removed = socialGraph().removeMutedNotFollowedUsers()
-    console.log("Removed", removed, "muted not followed users")
+    log("Removed", removed, "muted not followed users")
   }
   return (
     <SettingsGroup title="Maintenance">

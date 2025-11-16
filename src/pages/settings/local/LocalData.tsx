@@ -6,6 +6,10 @@ import {confirm} from "@/utils/utils"
 import Dexie from "dexie"
 import {BlobList} from "./BlobList"
 import {cacheStats} from "@/utils/cacheStats"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface IDBDatabaseInfo {
   name: string
@@ -34,7 +38,7 @@ interface NostrEvent {
 export function LocalData() {
   const [stats, setStats] = useState<EventStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isClearing, setIsClearing] = useState(false)
   const [idbDatabases, setIdbDatabases] = useState<IDBDatabaseInfo[]>([])
   const [showAllDatabases, setShowAllDatabases] = useState(false)
@@ -42,7 +46,7 @@ export function LocalData() {
   const loadStats = async () => {
     try {
       setLoading(true)
-      setError(null)
+      setErrorMessage(null)
 
       // Open the NDK Dexie database
       const db = new Dexie("treelike-nostr")
@@ -103,9 +107,11 @@ export function LocalData() {
         newestEvent: newestTimestamp !== -Infinity ? newestTimestamp : undefined,
         cacheHitRate: hitRate,
       })
-    } catch (err) {
-      console.error("Error loading Nostr stats:", err)
-      setError(err instanceof Error ? err.message : "Failed to load stats")
+    } catch (caughtError) {
+      error("Error loading Nostr stats:", caughtError)
+      setErrorMessage(
+        caughtError instanceof Error ? caughtError.message : "Failed to load stats"
+      )
     } finally {
       setLoading(false)
     }
@@ -175,7 +181,7 @@ export function LocalData() {
   const loadAllDatabases = async () => {
     try {
       if (!("databases" in indexedDB)) {
-        console.warn("indexedDB.databases() not supported")
+        warn("indexedDB.databases() not supported")
         return
       }
 
@@ -237,8 +243,8 @@ export function LocalData() {
       }
 
       setIdbDatabases(dbInfos)
-    } catch (err) {
-      console.error("Error loading databases:", err)
+    } catch (caughtError) {
+      error("Error loading databases:", caughtError)
     }
   }
 
@@ -277,7 +283,7 @@ export function LocalData() {
             if (dbInfo.name) {
               const db = new Dexie(dbInfo.name)
               await db.delete()
-              console.log(`Deleted database: ${dbInfo.name}`)
+              log(`Deleted database: ${dbInfo.name}`)
             }
           })
         )
@@ -287,7 +293,7 @@ export function LocalData() {
         await db.delete()
         const db2 = new Dexie("irisdb-nostr")
         await db2.delete()
-        console.log("Cleared Dexie database")
+        log("Cleared Dexie database")
       }
 
       // Clear OPFS completely
@@ -299,13 +305,13 @@ export function LocalData() {
           for await (const [name] of (root as any).entries()) {
             try {
               await root.removeEntry(name, {recursive: true})
-              console.log(`Removed OPFS entry: ${name}`)
+              log(`Removed OPFS entry: ${name}`)
             } catch (e) {
-              console.warn(`Failed to remove OPFS entry ${name}:`, e)
+              warn(`Failed to remove OPFS entry ${name}:`, e)
             }
           }
         } catch (opfsErr) {
-          console.warn("Could not clear OPFS:", opfsErr)
+          warn("Could not clear OPFS:", opfsErr)
         }
       }
 
@@ -314,9 +320,11 @@ export function LocalData() {
 
       // Reload to ensure clean state
       window.location.reload()
-    } catch (err) {
-      console.error("Error clearing all data:", err)
-      setError(err instanceof Error ? err.message : "Failed to clear all data")
+    } catch (caughtError) {
+      error("Error clearing all data:", caughtError)
+      setErrorMessage(
+        caughtError instanceof Error ? caughtError.message : "Failed to clear all data"
+      )
       setIsClearing(false)
     }
   }
@@ -331,13 +339,13 @@ export function LocalData() {
         </div>
       )}
 
-      {error && (
+      {errorMessage && (
         <div className="text-center text-error text-sm">
-          Error loading statistics: {error}
+          Error loading statistics: {errorMessage}
         </div>
       )}
 
-      {!loading && !error && !stats && (
+      {!loading && !errorMessage && !stats && (
         <div className="text-center text-base-content/70 text-sm">No data available</div>
       )}
       {stats && (

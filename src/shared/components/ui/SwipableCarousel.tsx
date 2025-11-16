@@ -7,6 +7,10 @@ import {
 } from "react"
 import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import {SwipeItem, useSwipable} from "@/shared/hooks/useSwipable"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface SwipableCarouselProps {
   items: SwipeItem[]
@@ -213,7 +217,7 @@ export function SwipableCarousel({
         onMouseLeave={isDragging ? handlers.onDragEnd : undefined}
         onTransitionEnd={handlers.onTransitionEnd}
         onClick={(e) => {
-          console.log("SwipableCarousel clicked:", {
+          log("SwipableCarousel clicked:", {
             wasDragged: wasDragged.current,
             isCurrentTarget: e.target === e.currentTarget,
             target: e.target,
@@ -232,7 +236,7 @@ export function SwipableCarousel({
             (isCarouselContainer || isMediaItemContainer) &&
             onBackgroundClick
           ) {
-            console.log("Calling onBackgroundClick")
+            log("Calling onBackgroundClick")
             onBackgroundClick()
           }
         }}

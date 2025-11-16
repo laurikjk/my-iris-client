@@ -7,6 +7,10 @@ import {
 } from "@/utils/constants"
 import {clearAlgorithmicFeedCaches} from "@/utils/memcache"
 import type {FeedConfig} from "@/types/feed"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UI_FEED)
 
 interface FeedState {
   activeFeed: string
@@ -203,7 +207,7 @@ export const useFeedStore = create<FeedState>()(
             .filter((config): config is FeedConfig => config !== undefined)
         },
         resetAllFeedsToDefaults: () => {
-          console.log("Resetting feeds to defaults")
+          log("Resetting feeds to defaults")
           set({
             feedConfigs: {...defaultFeedConfigs},
             enabledFeedIds: DEFAULT_ENABLED_FEED_IDS,

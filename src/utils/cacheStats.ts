@@ -1,3 +1,8 @@
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+
 /**
  * Track cache effectiveness: how many events loaded from cache vs relays
  */
@@ -40,7 +45,7 @@ export const cacheStats = {
       100
     ).toFixed(1)
 
-    console.log(
+    log(
       `📊 Cache Performance:\n` +
         `  Cache served: ${this.cacheHits} events (${cacheEffectiveness}% of total)\n` +
         `  New from relays: ${this.relayNew} events\n` +

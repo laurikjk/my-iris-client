@@ -6,6 +6,10 @@ import {getTag} from "@/utils/nostr"
 import {PopularityFilters} from "./usePopularityFilters"
 import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {seenEventIds} from "@/utils/memcache"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 const LOW_THRESHOLD = 20
 const INITIAL_DATA_THRESHOLD = 5
@@ -46,7 +50,7 @@ export default function useReactionSubscription(
   useEffect(() => {
     const {since, limit, authors: filterAuthors} = currentFilters
 
-    console.log(
+    log(
       "[ReactionSubscription] Starting subscription, authors:",
       filterAuthors?.length || "undefined (match all)"
     )
@@ -76,7 +80,7 @@ export default function useReactionSubscription(
 
       reactionCount++
       if (reactionCount <= 5) {
-        console.log(
+        log(
           `[ReactionSubscription] Reaction ${reactionCount} to post:`,
           originalPostId.slice(0, 8)
         )

@@ -24,6 +24,10 @@ import useProfile from "@/shared/hooks/useProfile.ts"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import Icon from "@/shared/components/Icons/Icon"
 import {Helmet} from "react-helmet"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 const ProfileHeader = ({
   pubKey,
@@ -60,16 +64,16 @@ const ProfileHeader = ({
       return
     }
 
-    console.log("Checking for invites from user:", pubKeyHex)
+    log("Checking for invites from user:", pubKeyHex)
 
     const unsubscribe = Invite.fromUser(pubKeyHex, subscribe, (invite) => {
-      console.log("Found invite from user:", pubKeyHex, invite)
+      log("Found invite from user:", pubKeyHex, invite)
       setHasInvites(true)
     })
 
     // Cleanup subscription on unmount
     return () => {
-      console.log("Cleaning up invite subscription for user:", pubKeyHex)
+      log("Cleaning up invite subscription for user:", pubKeyHex)
       unsubscribe()
     }
   }, [pubKeyHex, myPubKey])
