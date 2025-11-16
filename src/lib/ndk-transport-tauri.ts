@@ -211,7 +211,12 @@ export class NDKTauriTransport {
         subscription.eventReceived(event, undefined, false)
       },
       () => {
-        subscription.eoseReceived(null as any)
+        // Backend already handled EOSE logic (waiting for cache + relays)
+        // Bypass main thread's eoseReceived() which fails due to empty pool.connectedRelays()
+        // Instead, directly trigger the EOSE callback that fetchEvents/fetchEvent registered
+        if (subscription.opts?.onEose) {
+          subscription.opts.onEose()
+        }
       }
     )
   }

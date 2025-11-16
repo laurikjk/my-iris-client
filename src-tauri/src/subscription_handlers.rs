@@ -51,6 +51,28 @@ pub fn handle_subscribe(
         }
     }
 
+    // Query existing events and emit them immediately
+    if let Ok(txn) = Transaction::new(ndb) {
+        if let Ok(results) = ndb.query(&txn, &[filter.clone()], 1000) {
+            let mut emitted = 0;
+            for result in results.iter() {
+                if let Ok(event_json) = result.note.json() {
+                    if let Ok(event) = serde_json::from_str::<serde_json::Value>(&event_json) {
+                        let _ = _app_handle.emit("nostr_event", NostrResponse::Event {
+                            sub_id: id.clone(),
+                            event,
+                            relay: None,
+                        });
+                        emitted += 1;
+                    }
+                }
+            }
+            if emitted > 0 {
+                debug!(sub_id = %id, count = emitted, "Emitted cached events");
+            }
+        }
+    }
+
     // Send REQ to relays (unless cache-only)
     if !cache_only {
         // Check if filter has ids - optimize by checking cache first
