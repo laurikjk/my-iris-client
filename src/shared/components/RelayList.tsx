@@ -40,15 +40,19 @@ export function RelayList({
     workerRelays.relays.map((r) => [r.url, {connected: r.status >= 5, url: r.url}])
   )
 
+  // Separate multicast relay from discovered relays
+  const multicastRelay = Array.from(ndkRelayMap.entries()).find(([url]) =>
+    url === "multicast" || url.startsWith("multicast://")
+  )
+
   const discoveredRelays = Array.from(ndkRelayMap.entries()).filter(([url]) => {
     const normalizedNdkUrl = normalizeRelayUrl(url)
     const isInConfigs = relayConfigs?.some(
       (c) => normalizeRelayUrl(c.url) === normalizedNdkUrl
     )
 
-    // Show all relays in NDK pool that aren't in saved configs
-    // (regardless of connection status - they can still be connecting)
-    return !isInConfigs
+    // Filter out multicast and saved relays
+    return !isInConfigs && url !== "multicast" && !url.startsWith("multicast://")
   })
 
   // Sort relays alphabetically
@@ -214,6 +218,37 @@ export function RelayList({
                 )
               })}
           </>
+        )}
+
+        {/* Multicast relay section */}
+        {multicastRelay && (
+          <div className={`${padding} ${itemClassName} opacity-80`}>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className={`${textSize} font-medium text-base-content/80`}>
+                  Local network discovery
+                </div>
+                <div className={`${compact ? "text-[10px]" : "text-xs"} text-base-content/40`}>
+                  {multicastRelay[0]}
+                </div>
+              </div>
+              <div className={`flex items-center ${compact ? "gap-2" : "gap-4"}`}>
+                {compact ? (
+                  <div
+                    className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                      multicastRelay[1].connected ? "bg-success" : "bg-warning"
+                    }`}
+                  />
+                ) : (
+                  <span
+                    className={`badge ${
+                      multicastRelay[1].connected ? "badge-success" : "badge-warning"
+                    }`}
+                  ></span>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         {showDiscovered && (

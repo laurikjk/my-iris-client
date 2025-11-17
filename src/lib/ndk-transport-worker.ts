@@ -12,6 +12,7 @@ import {DEBUG_NAMESPACES} from "@/utils/constants"
 import type {
   WorkerMessage,
   WorkerResponse,
+  WorkerSubscribeOpts,
   LocalDataStats,
 } from "./ndk-transport-types"
 

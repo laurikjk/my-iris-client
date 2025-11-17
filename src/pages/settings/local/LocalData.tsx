@@ -6,9 +6,9 @@ import {useState, useEffect, MouseEvent} from "react"
 import {confirm} from "@/utils/utils"
 import Dexie from "dexie"
 import {BlobList} from "./BlobList"
-import {cacheStats} from "@/utils/cacheStats"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
+import {getTauriTransport, getWorkerTransport} from "@/utils/ndk"
 
 const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
@@ -25,16 +25,6 @@ interface EventStats {
   newestEvent?: number
 }
 
-interface NostrEvent {
-  id: string
-  pubkey: string
-  created_at: number
-  kind: number
-  tags: string[][]
-  content: string
-  sig: string
-}
-
 export function LocalData() {
   const [stats, setStats] = useState<EventStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -48,34 +38,17 @@ export function LocalData() {
       setLoading(true)
       setErrorMessage(null)
 
-      // Open the NDK Dexie database
-      const db = new Dexie("treelike-nostr")
-      db.version(1).stores({
-        events: "id, pubkey, kind, created_at",
-        tags: "[eventId+tag], eventId, tag, value",
-      })
-      const eventsTable = db.table<NostrEvent>("events")
-      const allEvents = await eventsTable.toArray()
-      const totalEvents = allEvents.length
+      // Get stats from transport (worker or tauri backend)
+      const transport = getTauriTransport() || getWorkerTransport()
 
-      // Count by kind
-      const eventsByKind: Record<number, number> = {}
-      let oldestTimestamp = Infinity
-      let newestTimestamp = -Infinity
+      if (!transport?.getStats) {
+        throw new Error("No transport with getStats available")
+      }
 
-      allEvents.forEach((event) => {
-        eventsByKind[event.kind] = (eventsByKind[event.kind] || 0) + 1
-
-        if (event.created_at < oldestTimestamp) {
-          oldestTimestamp = event.created_at
-        }
-        if (event.created_at > newestTimestamp) {
-          newestTimestamp = event.created_at
-        }
-      })
+      const stats = await transport.getStats()
 
       // Sort kinds by count
-      const sortedKinds = Object.entries(eventsByKind)
+      const sortedKinds = Object.entries(stats.eventsByKind)
         .sort(([, a], [, b]) => b - a)
         .reduce(
           (acc, [kind, count]) => {
@@ -95,11 +68,11 @@ export function LocalData() {
       }
 
       setStats({
-        totalEvents,
+        totalEvents: stats.totalEvents,
         eventsByKind: sortedKinds,
         databaseSize: dbSize,
-        oldestEvent: oldestTimestamp !== Infinity ? oldestTimestamp : undefined,
-        newestEvent: newestTimestamp !== -Infinity ? newestTimestamp : undefined,
+        oldestEvent: undefined,
+        newestEvent: undefined,
       })
     } catch (caughtError) {
       error("Error loading Nostr stats:", caughtError)

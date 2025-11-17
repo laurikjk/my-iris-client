@@ -24,6 +24,9 @@ async fn nostr_message(msg: NostrRequest, state: tauri::State<'_, AppState>) -> 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize rustls crypto provider (required for TLS connections)
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     // Initialize tracing with env filter (RUST_LOG=iris=debug)
     tracing_subscriber::fmt()
         .with_env_filter(

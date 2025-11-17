@@ -23,6 +23,7 @@ serde = { version = "1.0", features = ["derive"] }
 hex = "0.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
 tauri = { version = "2.6.2", features = [] }
 tauri-plugin-notification = "2"
 tauri-plugin-swipe-back-ios = "1.0.0"

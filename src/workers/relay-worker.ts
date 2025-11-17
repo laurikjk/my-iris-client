@@ -16,7 +16,13 @@ import NDK from "../lib/ndk"
 import {NDKEvent} from "../lib/ndk/events"
 import {NDKSubscriptionCacheUsage, type NDKFilter} from "../lib/ndk/subscription"
 import {NDKRelay} from "../lib/ndk/relay"
-import NDKCacheAdapterDexie from "../lib/ndk-cache"
+import NDKCacheAdapterDexie, {db} from "../lib/ndk-cache"
+import type {
+  WorkerMessage,
+  WorkerResponse,
+  WorkerSubscribeOpts,
+  WorkerPublishOpts,
+} from "../lib/ndk-transport-types"
 
 // WASM sig verification - nostr-wasm Nostr interface
 interface WasmVerifier {
@@ -39,69 +45,7 @@ async function loadWasm() {
   }
 }
 
-interface WorkerMessage {
-  type:
-    | "init"
-    | "subscribe"
-    | "unsubscribe"
-    | "publish"
-    | "close"
-    | "getRelayStatus"
-    | "addRelay"
-    | "removeRelay"
-    | "connectRelay"
-    | "disconnectRelay"
-    | "reconnectDisconnected"
-  id?: string
-  filters?: NDKFilter[]
-  event?: any
-  relays?: string[]
-  url?: string
-  subscribeOpts?: WorkerSubscribeOpts
-  publishOpts?: WorkerPublishOpts
-  reason?: string
-}
-
-interface WorkerSubscribeOpts {
-  destinations?: ("cache" | "relay")[] // Where to query: default ["cache", "relay"]
-  closeOnEose?: boolean
-  groupable?: boolean
-}
-
-interface WorkerPublishOpts {
-  publishTo?: ("cache" | "relay" | "subscriptions")[] // Where to send: default ["relay"]
-  verifySignature?: boolean // Verify sig in worker before dispatch (for untrusted sources)
-  source?: string // Source identifier (e.g., "webrtc:peerId")
-}
-
-interface WorkerResponse {
-  type:
-    | "ready"
-    | "event"
-    | "eose"
-    | "notice"
-    | "published"
-    | "error"
-    | "relayStatus"
-    | "relayAdded"
-    | "relayConnected"
-    | "relayDisconnected"
-  subId?: string
-  event?: any
-  relay?: string
-  notice?: string
-  error?: string
-  id?: string
-  relayStatuses?: Array<{
-    url: string
-    status: number
-    stats?: {
-      attempts: number
-      success: number
-      connectedAt?: number
-    }
-  }>
-}
+// Types imported from ndk-transport-types.ts
 
 let ndk: NDK
 let cache: NDKCacheAdapterDexie
@@ -428,7 +372,7 @@ function handleReconnectDisconnected(reason: string) {
 
 async function handleGetStats(id: string) {
   try {
-    if (!cache?.dexieDb) {
+    if (!db) {
       self.postMessage({
         type: "stats",
         id,
@@ -441,17 +385,18 @@ async function handleGetStats(id: string) {
     }
 
     // Use count() - much faster than toArray()
-    const totalEvents = await cache.dexieDb.events.count()
+    const totalEvents = await db.events.count()
 
     // Get all unique kinds using index, then count each
-    const kinds = await cache.dexieDb.events.orderBy("kind").uniqueKeys()
+    const kinds = await db.events.orderBy("kind").uniqueKeys()
     const eventsByKind: Record<number, number> = {}
 
     // Count events per kind using indexed queries
     await Promise.all(
       kinds.map(async (kind) => {
-        const count = await cache.dexieDb.events.where("kind").equals(kind).count()
-        eventsByKind[kind as number] = count
+        const kindNum = Number(kind)
+        const count = await db.events.where("kind").equals(kindNum).count()
+        eventsByKind[kindNum] = count
       })
     )
 
