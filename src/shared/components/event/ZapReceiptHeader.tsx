@@ -67,7 +67,12 @@ function ZapReceiptHeader({
         )}
         <span className="text-base-content/50">→</span>
         {zapRecipient && (
-          <UserRow pubKey={zapRecipient} avatarWidth={20} showOnlineIndicator={false} />
+          <UserRow
+            pubKey={zapRecipient}
+            avatarWidth={20}
+            showOnlineIndicator={false}
+            showAvatar={!referredEvent}
+          />
         )}
         {zapComment && (
           <>

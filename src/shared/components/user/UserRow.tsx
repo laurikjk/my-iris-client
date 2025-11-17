@@ -15,6 +15,7 @@ export function UserRow({
   showBadge = true,
   showHoverCard = false,
   showOnlineIndicator = true,
+  showAvatar = true,
 }: {
   pubKey: string
   description?: ReactNode
@@ -24,19 +25,22 @@ export function UserRow({
   showBadge?: boolean
   showHoverCard?: boolean
   showOnlineIndicator?: boolean
+  showAvatar?: boolean
 }) {
   const {hoverProps, showCard, cardRef} = useHoverCard(showHoverCard)
 
   const mainContent = (
     <div className="flex flex-row items-center gap-2 justify-between">
       <div className="flex items-center gap-2 flex-row break-words [overflow-wrap:anywhere]">
-        <Avatar
-          pubKey={pubKey}
-          showTooltip={false}
-          showBadge={showBadge}
-          showOnlineIndicator={showOnlineIndicator}
-          width={avatarWidth}
-        />
+        {showAvatar && (
+          <Avatar
+            pubKey={pubKey}
+            showTooltip={false}
+            showBadge={showBadge}
+            showOnlineIndicator={showOnlineIndicator}
+            width={avatarWidth}
+          />
+        )}
         <Name pubKey={pubKey} className={textClassName} />
       </div>
       <span className="text-base-content">{description}</span>
