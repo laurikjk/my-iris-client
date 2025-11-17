@@ -426,6 +426,56 @@ function handleReconnectDisconnected(reason: string) {
   }
 }
 
+async function handleGetStats(id: string) {
+  try {
+    if (!cache?.dexieDb) {
+      self.postMessage({
+        type: "stats",
+        id,
+        stats: {
+          totalEvents: 0,
+          eventsByKind: {},
+        },
+      } as WorkerResponse)
+      return
+    }
+
+    // Use count() - much faster than toArray()
+    const totalEvents = await cache.dexieDb.events.count()
+
+    // Get all unique kinds using index, then count each
+    const kinds = await cache.dexieDb.events.orderBy("kind").uniqueKeys()
+    const eventsByKind: Record<number, number> = {}
+
+    // Count events per kind using indexed queries
+    await Promise.all(
+      kinds.map(async (kind) => {
+        const count = await cache.dexieDb.events.where("kind").equals(kind).count()
+        eventsByKind[kind as number] = count
+      })
+    )
+
+    self.postMessage({
+      type: "stats",
+      id,
+      stats: {
+        totalEvents,
+        eventsByKind,
+      },
+    } as WorkerResponse)
+  } catch (err) {
+    error("[Relay Worker] Failed to get stats:", err)
+    self.postMessage({
+      type: "stats",
+      id,
+      stats: {
+        totalEvents: 0,
+        eventsByKind: {},
+      },
+    } as WorkerResponse)
+  }
+}
+
 function handleClose() {
   // Stop all subscriptions
   subscriptions.forEach((sub) => sub.stop())
@@ -513,6 +563,12 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
     case "reconnectDisconnected":
       handleReconnectDisconnected(data.reason || "Reconnect requested")
+      break
+
+    case "getStats":
+      if (id) {
+        handleGetStats(id)
+      }
       break
 
     case "close":

@@ -23,7 +23,6 @@ interface EventStats {
   databaseSize?: string
   oldestEvent?: number
   newestEvent?: number
-  cacheHitRate?: string
 }
 
 interface NostrEvent {
@@ -95,18 +94,12 @@ export function LocalData() {
         }
       }
 
-      // Calculate cache hit rate
-      const total = cacheStats.cacheHits + cacheStats.relayNew
-      const hitRate =
-        total > 0 ? ((cacheStats.cacheHits / total) * 100).toFixed(1) + "%" : "N/A"
-
       setStats({
         totalEvents,
         eventsByKind: sortedKinds,
         databaseSize: dbSize,
         oldestEvent: oldestTimestamp !== Infinity ? oldestTimestamp : undefined,
         newestEvent: newestTimestamp !== -Infinity ? newestTimestamp : undefined,
-        cacheHitRate: hitRate,
       })
     } catch (caughtError) {
       error("Error loading Nostr stats:", caughtError)
@@ -361,14 +354,6 @@ export function LocalData() {
               </div>
             </SettingsGroupItem>
 
-            {stats.cacheHitRate && (
-              <SettingsGroupItem>
-                <div className="flex justify-between items-center">
-                  <span>Cache hit rate</span>
-                  <span className="text-base-content/70">{stats.cacheHitRate}</span>
-                </div>
-              </SettingsGroupItem>
-            )}
 
             {stats.databaseSize && (
               <SettingsGroupItem>

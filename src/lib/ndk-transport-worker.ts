@@ -9,72 +9,13 @@ import {
 import type {NDKRelay} from "./ndk/relay"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
+import type {
+  WorkerMessage,
+  WorkerResponse,
+  LocalDataStats,
+} from "./ndk-transport-types"
 
 const {log} = createDebugLogger(DEBUG_NAMESPACES.NDK_WORKER)
-
-interface WorkerSubscribeOpts {
-  destinations?: ("cache" | "relay")[] // Where to query: default ["cache", "relay"]
-  closeOnEose?: boolean
-  groupable?: boolean
-}
-
-interface WorkerPublishOpts {
-  publishTo?: ("cache" | "relay" | "subscriptions")[] // Where to send: default ["relay"]
-  verifySignature?: boolean // Verify sig in worker before dispatch (for untrusted sources)
-  source?: string // Source identifier (e.g., "webrtc:peerId")
-}
-
-interface WorkerMessage {
-  type:
-    | "init"
-    | "subscribe"
-    | "unsubscribe"
-    | "publish"
-    | "close"
-    | "getRelayStatus"
-    | "addRelay"
-    | "removeRelay"
-    | "connectRelay"
-    | "disconnectRelay"
-    | "reconnectDisconnected"
-  id?: string
-  filters?: NDKFilter[]
-  event?: any
-  relays?: string[]
-  url?: string
-  subscribeOpts?: WorkerSubscribeOpts
-  publishOpts?: WorkerPublishOpts
-  reason?: string
-}
-
-interface WorkerResponse {
-  type:
-    | "ready"
-    | "event"
-    | "eose"
-    | "notice"
-    | "published"
-    | "error"
-    | "relayStatus"
-    | "relayAdded"
-    | "relayConnected"
-    | "relayDisconnected"
-  subId?: string
-  event?: any
-  relay?: string
-  notice?: string
-  error?: string
-  id?: string
-  relayStatuses?: Array<{
-    url: string
-    status: number
-    stats?: {
-      attempts: number
-      success: number
-      connectedAt?: number
-    }
-  }>
-}
 
 /**
  * NDK transport that communicates with relay worker
@@ -95,6 +36,7 @@ export class NDKWorkerTransport {
   private ready = false
   private readyPromise!: Promise<void>
   private restartAttempts = 0
+  private statsCallbacks = new Map<string, (stats: LocalDataStats) => void>()
 
   constructor(workerOrUrl: Worker | string = "/relay-worker.js") {
     if (typeof workerOrUrl === "string") {
@@ -469,7 +411,39 @@ export class NDKWorkerTransport {
           }
           console.error("[Worker Transport]", error)
           break
+
+        case "stats":
+          if (id) {
+            const callback = this.statsCallbacks.get(id)
+            if (callback) {
+              callback(e.data.stats!)
+              this.statsCallbacks.delete(id)
+            }
+          }
+          break
       }
     }
   }
+
+  async getStats(): Promise<LocalDataStats> {
+    const id = Math.random().toString(36).substring(7)
+
+    return new Promise((resolve) => {
+      this.statsCallbacks.set(id, resolve)
+
+      this.worker.postMessage({
+        type: "getStats",
+        id,
+      } as WorkerMessage)
+
+      setTimeout(() => {
+        if (this.statsCallbacks.has(id)) {
+          this.statsCallbacks.delete(id)
+          resolve({totalEvents: 0, eventsByKind: {}})
+        }
+      }, 1000)
+    })
+  }
 }
+
+export type {LocalDataStats}

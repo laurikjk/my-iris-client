@@ -37,6 +37,9 @@ pub enum NostrRequest {
     ReconnectDisconnected {
         reason: Option<String>,
     },
+    GetStats {
+        id: String,
+    },
     Close,
 }
 
@@ -83,10 +86,21 @@ pub enum NostrResponse {
         #[serde(rename = "relayStatuses")]
         relay_statuses: Vec<RelayStatusInfo>,
     },
+    Stats {
+        id: String,
+        stats: LocalDataStats,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RelayStatusInfo {
     pub url: String,
     pub status: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalDataStats {
+    pub total_events: usize,
+    pub events_by_kind: std::collections::HashMap<u32, usize>,
 }

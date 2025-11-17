@@ -25,6 +25,7 @@ interface WorkerMessage {
     | "publish"
     | "close"
     | "getRelayStatus"
+    | "getStats"
     | "addRelay"
     | "removeRelay"
     | "connectRelay"
@@ -40,6 +41,12 @@ interface WorkerMessage {
   reason?: string
 }
 
+interface LocalDataStats {
+  totalEvents: number
+  eventsByKind: Record<number, number>
+  databaseSize?: string
+}
+
 interface WorkerResponse {
   type:
     | "ready"
@@ -49,6 +56,7 @@ interface WorkerResponse {
     | "published"
     | "error"
     | "relayStatus"
+    | "stats"
     | "relayAdded"
     | "relayConnected"
     | "relayDisconnected"
@@ -67,6 +75,7 @@ interface WorkerResponse {
       connectedAt?: number
     }
   }>
+  stats?: LocalDataStats
 }
 
 /**
@@ -87,6 +96,7 @@ export class NDKTauriTransport {
   private readyPromise!: Promise<void>
   private unlisten?: UnlistenFn
   private relayStatusCallbacks = new Map<string, (statuses: any[]) => void>()
+  private statsCallbacks = new Map<string, (stats: LocalDataStats) => void>()
 
   constructor() {
     this.setupTauri()
@@ -118,6 +128,16 @@ export class NDKTauriTransport {
           if (callback) {
             callback(response.relayStatuses || [])
             this.relayStatusCallbacks.delete(response.id)
+          }
+        }
+        break
+
+      case "stats":
+        if (response.id && response.stats) {
+          const callback = this.statsCallbacks.get(response.id)
+          if (callback) {
+            callback(response.stats)
+            this.statsCallbacks.delete(response.id)
           }
         }
         break
@@ -343,4 +363,26 @@ export class NDKTauriTransport {
       msg: {type: "disconnectRelay", url} as WorkerMessage,
     })
   }
+
+  async getStats(): Promise<LocalDataStats> {
+    const id = Math.random().toString(36).substring(7)
+
+    return new Promise((resolve) => {
+      this.statsCallbacks.set(id, resolve)
+
+      invoke("nostr_message", {
+        msg: {type: "getStats", id} as WorkerMessage,
+      })
+
+      // Timeout fallback
+      setTimeout(() => {
+        if (this.statsCallbacks.has(id)) {
+          this.statsCallbacks.delete(id)
+          resolve({totalEvents: 0, eventsByKind: {}})
+        }
+      }, 1000)
+    })
+  }
 }
+
+export type {LocalDataStats}

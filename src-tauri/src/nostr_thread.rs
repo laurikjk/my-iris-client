@@ -126,7 +126,7 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                                 });
                             }
                             ewebsock::WsEvent::Opened => {
-                                info!(relay = %relay_url, "Connected");
+                                info!(relay = %relay_url, "Relay connection opened");
                                 pool.relays[i].set_status(enostr::RelayStatus::Connected);
                                 let _ = app_handle.emit("nostr_event", serde_json::json!({
                                     "type": "relayConnected",
@@ -174,14 +174,18 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                     if let Some(pool) = p.borrow().as_ref() {
                         debug!(count = pool.relays.len(), "Relay pool status");
                         let statuses: Vec<RelayStatusInfo> = pool.relays.iter().map(|relay| {
+                            let url = relay.url().to_string();
+                            let enostr_status = relay.status();
+                            // Map to NDK status values: CONNECTED=5, CONNECTING=4, DISCONNECTED=1
+                            let ndk_status = match enostr_status {
+                                enostr::RelayStatus::Connected => 5,
+                                enostr::RelayStatus::Connecting => 4,
+                                enostr::RelayStatus::Disconnected => 1,
+                            };
+                            debug!(relay = %url, enostr_status = ?enostr_status, ndk_status = ndk_status, "Relay status");
                             RelayStatusInfo {
-                                url: relay.url().to_string(),
-                                // Map to NDK status values: CONNECTED=5, CONNECTING=1, DISCONNECTED=4
-                                status: match relay.status() {
-                                    enostr::RelayStatus::Connected => 5,
-                                    enostr::RelayStatus::Connecting => 1,
-                                    enostr::RelayStatus::Disconnected => 4,
-                                },
+                                url,
+                                status: ndk_status,
                             }
                         }).collect();
 
@@ -266,6 +270,23 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                     if let Some(pool) = p.borrow_mut().as_mut() {
                         relay_handlers::handle_reconnect_disconnected(pool, reason);
                     }
+                });
+            }
+            Ok(NostrRequest::GetStats { id }) => {
+                had_activity = true;
+                use crate::nostr_types::LocalDataStats;
+                use std::collections::HashMap;
+
+                // nostrdb doesn't expose count API directly - return zeros for now
+                // Can be improved later with ndb_stat bindings
+                let stats = LocalDataStats {
+                    total_events: 0,
+                    events_by_kind: HashMap::new(),
+                };
+
+                let _ = app_handle.emit("nostr_event", NostrResponse::Stats {
+                    id: id.clone(),
+                    stats
                 });
             }
             Ok(NostrRequest::Close) => {
