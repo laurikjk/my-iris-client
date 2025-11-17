@@ -51,6 +51,18 @@ let ndk: NDK
 let cache: NDKCacheAdapterDexie
 const subscriptions = new Map<string, any>()
 
+// Attach status change listeners to a relay
+function attachRelayListeners(relay: NDKRelay) {
+  const handler = (eventType: string) => {
+    log(`[Relay Worker] ${relay.url} ${eventType}, status: ${relay.status}`)
+    broadcastRelayStatus()
+  }
+  relay.on("connect", () => handler("connected"))
+  relay.on("disconnect", () => handler("disconnected"))
+  relay.on("flapping", () => handler("flapping"))
+  relay.on("authed", () => handler("authed"))
+}
+
 // Default relays if none provided
 const DEFAULT_RELAYS = [
   "wss://relay.damus.io",
@@ -118,6 +130,11 @@ async function initialize(relayUrls?: string[]) {
     // Connect to relays
     log("[Relay Worker] Connecting to relays...")
     await ndk.connect()
+
+    // Attach status listeners to all relays after connection
+    ndk.pool?.relays.forEach((relay) => {
+      attachRelayListeners(relay)
+    })
 
     log(`[Relay Worker] Initialized with ${ndk.pool?.relays.size || 0} relays`)
 
@@ -300,17 +317,10 @@ async function handlePublish(
   }
 }
 
-function handleGetRelayStatus(requestId: string) {
-  if (!ndk?.pool) {
-    self.postMessage({
-      type: "relayStatus",
-      id: requestId,
-      relayStatuses: [],
-    } as WorkerResponse)
-    return
-  }
+function getRelayStatuses() {
+  if (!ndk?.pool) return []
 
-  const statuses = Array.from(ndk.pool.relays.values()).map((relay) => ({
+  return Array.from(ndk.pool.relays.values()).map((relay) => ({
     url: relay.url,
     status: relay.status,
     stats: {
@@ -319,10 +329,21 @@ function handleGetRelayStatus(requestId: string) {
       connectedAt: (relay.connectivity as any)?.connectedAt,
     },
   }))
+}
 
+function handleGetRelayStatus(requestId: string) {
   self.postMessage({
     type: "relayStatus",
     id: requestId,
+    relayStatuses: getRelayStatuses(),
+  } as WorkerResponse)
+}
+
+function broadcastRelayStatus() {
+  const statuses = getRelayStatuses()
+  log(`[Relay Worker] Broadcasting status update: ${statuses.length} relays`)
+  self.postMessage({
+    type: "relayStatusUpdate",
     relayStatuses: statuses,
   } as WorkerResponse)
 }
@@ -331,6 +352,7 @@ function handleAddRelay(url: string) {
   if (!ndk?.pool) return
   const relay = new NDKRelay(url, undefined, ndk)
   ndk.pool.addRelay(relay)
+  attachRelayListeners(relay)
   relay.connect()
 }
 
@@ -368,6 +390,28 @@ function handleReconnectDisconnected(reason: string) {
       relay.connect()
     }
   }
+}
+
+function handleBrowserOffline() {
+  if (!ndk?.pool) return
+
+  log("[Relay Worker] Browser offline event received, disconnecting all relays")
+
+  // Immediately disconnect all connected relays
+  for (const relay of ndk.pool.relays.values()) {
+    if (relay.status >= 5) {
+      // CONNECTED or higher
+      log(`[Relay Worker] Disconnecting ${relay.url} due to browser offline`)
+      relay.disconnect()
+    }
+  }
+}
+
+function handleBrowserOnline() {
+  if (!ndk?.pool) return
+
+  log("[Relay Worker] Browser online event received, reconnecting relays")
+  handleReconnectDisconnected("Browser came online")
 }
 
 async function handleGetStats(id: string) {
@@ -508,6 +552,14 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
     case "reconnectDisconnected":
       handleReconnectDisconnected(data.reason || "Reconnect requested")
+      break
+
+    case "browserOffline":
+      handleBrowserOffline()
+      break
+
+    case "browserOnline":
+      handleBrowserOnline()
       break
 
     case "getStats":

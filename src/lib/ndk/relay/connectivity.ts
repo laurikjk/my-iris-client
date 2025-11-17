@@ -67,11 +67,18 @@ export class NDKRelayConnectivity {
     this.ndk = ndk
 
     // Initialize queues with processors
-    this.inbox = new Queue<string>(1000, (msg) => this.handleMessage(msg))
-    this.outbox = new Queue<string>(1000, (msg) => {
+    // Inbox: 200 messages (receiving is cheap, allow burst capacity)
+    // Outbox: 50 messages (~50KB per relay, 1.5MB for 30 relays)
+    this.inbox = new Queue<string>(200, (msg) => this.handleMessage(msg))
+    this.outbox = new Queue<string>(50, (msg) => {
       if (this.ws?.readyState === WebSocket.OPEN) {
-        this.ws.send(msg)
-        this.netDebug?.(msg, this.ndkRelay, "send")
+        try {
+          this.ws.send(msg)
+          this.netDebug?.(msg, this.ndkRelay, "send")
+        } catch (e) {
+          this.debug("WebSocket send failed:", e)
+          this.handleStaleConnection()
+        }
       }
     })
 
@@ -82,6 +89,12 @@ export class NDKRelayConnectivity {
    * Sets up keepalive, WebSocket state monitoring, and sleep detection
    */
   private setupMonitoring(): void {
+    // Listen for browser online/offline events for immediate detection
+    if (typeof window !== "undefined") {
+      window.addEventListener("offline", this.handleBrowserOffline)
+      window.addEventListener("online", this.handleBrowserOnline)
+    }
+
     // Setup keepalive to detect silent relays
     this.keepalive = new NDKRelayKeepalive(120000, async () => {
       this.debug("Relay silence detected, probing connection")
@@ -107,7 +120,7 @@ export class NDKRelayConnectivity {
       }
     })
 
-    // Monitor WebSocket readyState every 5 seconds
+    // Monitor WebSocket readyState every 2 seconds (faster detection)
     this.wsStateMonitor = setInterval(() => {
       if (this._status === NDKRelayStatus.CONNECTED) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
@@ -115,7 +128,7 @@ export class NDKRelayConnectivity {
           this.handleStaleConnection()
         }
       }
-    }, 5000)
+    }, 2000)
 
     // Detect system sleep by monitoring time gaps
     this.sleepDetector = setInterval(() => {
@@ -289,6 +302,12 @@ export class NDKRelayConnectivity {
     if (this.sleepDetector) {
       clearInterval(this.sleepDetector)
       this.sleepDetector = undefined
+    }
+
+    // Remove browser event listeners
+    if (typeof window !== "undefined") {
+      window.removeEventListener("offline", this.handleBrowserOffline)
+      window.removeEventListener("online", this.handleBrowserOnline)
     }
 
     try {
@@ -470,8 +489,14 @@ export class NDKRelayConnectivity {
 
     let message = this.outbox.dequeue()
     while (message) {
-      this.ws.send(message)
-      this.netDebug?.(message, this.ndkRelay, "send")
+      try {
+        this.ws.send(message)
+        this.netDebug?.(message, this.ndkRelay, "send")
+      } catch (e) {
+        this.debug("WebSocket send failed during outbox processing:", e)
+        this.handleStaleConnection()
+        return // Stop processing outbox
+      }
       message = this.outbox.dequeue()
     }
   }
@@ -853,9 +878,16 @@ export class NDKRelayConnectivity {
       this.processOutbox()
 
       // Send immediately
-      this.ws?.send(message)
-      this.netDebug?.(message, this.ndkRelay, "send")
-      this.lastMessageSent = Date.now()
+      try {
+        this.ws?.send(message)
+        this.netDebug?.(message, this.ndkRelay, "send")
+        this.lastMessageSent = Date.now()
+      } catch (e) {
+        this.debug("WebSocket send failed:", e)
+        this.handleStaleConnection()
+        // Re-queue the message
+        this.outbox.enqueue(message)
+      }
     } else {
       // Queue message for when relay connects
       this.debug(
@@ -871,6 +903,15 @@ export class NDKRelayConnectivity {
       ) {
         this.debug(`Stale connection detected, WebSocket state: ${this.ws?.readyState}`)
         // Force disconnect and reconnect
+        this.handleStaleConnection()
+      }
+
+      // Detect saturated outbox - if queue is near full and we think we're connected, connection is dead
+      // Threshold at 80% of capacity (40/50)
+      if (this._status >= NDKRelayStatus.CONNECTED && this.outbox.size > 40) {
+        this.debug(
+          `Outbox saturated (${this.outbox.size}/50 messages), connection likely dead`
+        )
         this.handleStaleConnection()
       }
     }
@@ -1068,5 +1109,25 @@ export class NDKRelayConnectivity {
     return (
       this._status >= NDKRelayStatus.CONNECTED && this.ws?.readyState === WebSocket.OPEN
     )
+  }
+
+  /**
+   * Handle browser offline event - immediately disconnect all relays
+   */
+  private handleBrowserOffline = () => {
+    if (this._status >= NDKRelayStatus.CONNECTED) {
+      this.debug("Browser offline event, disconnecting")
+      this.handleStaleConnection()
+    }
+  }
+
+  /**
+   * Handle browser online event - reconnect if disconnected
+   */
+  private handleBrowserOnline = () => {
+    if (this._status === NDKRelayStatus.DISCONNECTED) {
+      this.debug("Browser online event, reconnecting")
+      this.connect()
+    }
   }
 }

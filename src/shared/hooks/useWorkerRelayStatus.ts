@@ -1,6 +1,10 @@
 import {useState, useEffect} from "react"
 import {getWorkerTransport, getTauriTransport} from "@/utils/ndk"
 import {isTauri} from "@/utils/utils"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log} = createDebugLogger(DEBUG_NAMESPACES.NDK_WORKER)
 
 interface RelayStatus {
   url: string
@@ -14,7 +18,7 @@ interface RelayStatus {
 
 /**
  * Hook to get relay status from worker thread
- * Polls worker every 2 seconds for relay connectivity info
+ * Receives push updates when relay status changes, with 5s polling fallback
  */
 export function useWorkerRelayStatus() {
   const [relays, setRelays] = useState<RelayStatus[]>([])
@@ -41,9 +45,27 @@ export function useWorkerRelayStatus() {
     // Initial fetch
     fetchStatus()
 
-    // Poll every 2s
-    const interval = setInterval(fetchStatus, 2000)
-    return () => clearInterval(interval)
+    // Listen for push updates from worker
+    const unsubscribe =
+      "onRelayStatusUpdate" in transport
+        ? (
+            transport as {
+              onRelayStatusUpdate: (cb: (s: RelayStatus[]) => void) => () => void
+            }
+          ).onRelayStatusUpdate((statuses: RelayStatus[]) => {
+            log("Received status update:", statuses)
+            setRelays(statuses)
+            setLoading(false)
+          })
+        : undefined
+
+    // Fallback polling every 5s in case push updates miss something
+    const interval = setInterval(fetchStatus, 5000)
+
+    return () => {
+      clearInterval(interval)
+      unsubscribe?.()
+    }
   }, [])
 
   return {relays, loading}

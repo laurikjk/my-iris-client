@@ -4,6 +4,7 @@ import {useUIStore} from "@/stores/ui"
 import {Link} from "@/navigation"
 import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
 import {useWorkerRelayStatus} from "@/shared/hooks/useWorkerRelayStatus"
+import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
 
 interface RelayConnectivityIndicatorProps {
   className?: string
@@ -17,6 +18,7 @@ export const RelayConnectivityIndicator = ({
   const {showRelayIndicator} = useUIStore()
   const workerRelays = useWorkerRelayStatus()
   const [peerCount, setPeerCount] = useState(0)
+  const isOnline = useOnlineStatus()
 
   useEffect(() => {
     const updatePeerCount = () => {
@@ -51,6 +53,7 @@ export const RelayConnectivityIndicator = ({
       className={`flex items-center justify-center gap-1 ${getColorClass()} ${className} hover:opacity-75 transition-opacity`}
       title={`${relayCount} relays, ${peerCount} peers connected`}
     >
+      {!isOnline && <span className="text-xs text-error mr-1">offline</span>}
       <RiWebhookLine className="w-5 h-5" />
       {showCount && <span className="text-sm font-bold">{totalCount}</span>}
     </Link>

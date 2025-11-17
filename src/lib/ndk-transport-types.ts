@@ -32,6 +32,8 @@ export interface WorkerMessage {
     | "connectRelay"
     | "disconnectRelay"
     | "reconnectDisconnected"
+    | "browserOffline"
+    | "browserOnline"
   id?: string
   filters?: NDKFilter[]
   event?: unknown
@@ -51,6 +53,7 @@ export interface WorkerResponse {
     | "published"
     | "error"
     | "relayStatus"
+    | "relayStatusUpdate"
     | "stats"
     | "relayAdded"
     | "relayConnected"

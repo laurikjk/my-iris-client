@@ -38,6 +38,7 @@ export class NDKWorkerTransport {
   private readyPromise!: Promise<void>
   private restartAttempts = 0
   private statsCallbacks = new Map<string, (stats: LocalDataStats) => void>()
+  private relayStatusCallbacks = new Set<(statuses: any[]) => void>()
 
   constructor(workerOrUrl: Worker | string = "/relay-worker.js") {
     if (typeof workerOrUrl === "string") {
@@ -121,7 +122,21 @@ export class NDKWorkerTransport {
       relays: relayUrls || [],
     } as WorkerMessage)
 
+    // Forward browser online/offline events to worker
+    if (typeof window !== "undefined") {
+      window.addEventListener("offline", this.handleOffline)
+      window.addEventListener("online", this.handleOnline)
+    }
+
     await this.readyPromise
+  }
+
+  private handleOffline = () => {
+    this.worker.postMessage({type: "browserOffline"} as WorkerMessage)
+  }
+
+  private handleOnline = () => {
+    this.worker.postMessage({type: "browserOnline"} as WorkerMessage)
   }
 
   // Transport plugin hook - intercept publishes
@@ -248,6 +263,12 @@ export class NDKWorkerTransport {
   }
 
   close(): void {
+    // Remove event listeners
+    if (typeof window !== "undefined") {
+      window.removeEventListener("offline", this.handleOffline)
+      window.removeEventListener("online", this.handleOnline)
+    }
+
     this.worker.postMessage({type: "close"} as WorkerMessage)
     this.worker.terminate()
   }
@@ -422,8 +443,19 @@ export class NDKWorkerTransport {
             }
           }
           break
+
+        case "relayStatusUpdate":
+          if (e.data.relayStatuses) {
+            this.relayStatusCallbacks.forEach((cb) => cb(e.data.relayStatuses!))
+          }
+          break
       }
     }
+  }
+
+  onRelayStatusUpdate(callback: (statuses: any[]) => void): () => void {
+    this.relayStatusCallbacks.add(callback)
+    return () => this.relayStatusCallbacks.delete(callback)
   }
 
   async getStats(): Promise<LocalDataStats> {
