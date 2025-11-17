@@ -14,6 +14,11 @@ declare global {
     iosRegisterPushToken?: (token: string) => void
     // Android - will be injected by native code
     androidRegisterPushToken?: (token: string) => void
+    androidHandlePushNotification?: (payload: {
+      title?: string
+      body?: string
+      data?: Record<string, string>
+    }) => void
   }
 }
 
@@ -69,6 +74,12 @@ function setupAndroidPushNotifications() {
   window.androidRegisterPushToken = async (token: string) => {
     log("Received Android FCM token")
     await registerTokenWithServer(token, "android")
+  }
+
+  // This will be called by Android native code when notification is received
+  window.androidHandlePushNotification = (payload) => {
+    log("Received Android push notification:", payload)
+    handlePushNotification(payload)
   }
 
   // Request Android to register for FCM
