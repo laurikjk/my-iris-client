@@ -37,4 +37,8 @@ export interface FeedConfig {
   feedStrategy?: FeedType
   // Show zap all button
   showZapAll?: boolean
+  // Show author in zap receipt headers
+  showAuthorInZapReceipts?: boolean
+  // Show events by unknown users in this feed
+  showEventsByUnknownUsers?: boolean
 }

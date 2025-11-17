@@ -366,6 +366,7 @@ const Feed = memo(function Feed({
                       event={event}
                       borderTop={borderTopFirst && index === 0}
                       highlightAsNew={eventsToHighlight.has(event.id)}
+                      showAuthorInZapReceipts={feedConfig.showAuthorInZapReceipts}
                     />
                   </div>
                 ))}

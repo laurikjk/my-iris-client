@@ -48,6 +48,7 @@ type FeedItemProps = {
   onEvent?: (event: NDKEvent) => void
   borderTop?: boolean
   highlightAsNew?: boolean
+  showAuthorInZapReceipts?: boolean
 }
 
 function FeedItem({
@@ -65,6 +66,7 @@ function FeedItem({
   onEvent,
   borderTop,
   highlightAsNew = false,
+  showAuthorInZapReceipts,
 }: FeedItemProps) {
   const [expanded, setExpanded] = useState(false)
   const [hasActualReplies, setHasActualReplies] = useState(false)
@@ -288,9 +290,13 @@ function FeedItem({
               <LikeHeader event={event} />
             </div>
           )}
-          {event.kind === KIND_ZAP_RECEIPT && referredEvent && (
+          {event.kind === KIND_ZAP_RECEIPT && (
             <div className="flex flex-row select-none mb-2 px-4">
-              <ZapReceiptHeader event={event} />
+              <ZapReceiptHeader
+                event={event}
+                referredEvent={referredEvent}
+                showAuthor={showAuthorInZapReceipts}
+              />
             </div>
           )}
           {event.kind === KIND_TEXT_NOTE &&

@@ -56,6 +56,11 @@ export function useDonationCalculation(
 
     const total = donations.reduce((sum, d) => sum + d.amount, 0)
     const effectiveTotal = zapDonationEnabled ? total : 0
-    return {donationPubkeys: pubkeys, totalDonationAmount: total, recipientNames: names, effectiveDonationAmount: effectiveTotal}
+    return {
+      donationPubkeys: pubkeys,
+      totalDonationAmount: total,
+      recipientNames: names,
+      effectiveDonationAmount: effectiveTotal,
+    }
   }, [zapDonationEnabled, zapDonationRecipients, zapDonationMinAmount, zapAmount])
 }

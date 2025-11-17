@@ -10,7 +10,7 @@ import Dropdown from "@/shared/components/ui/Dropdown.tsx"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {EVENT_AVATAR_WIDTH} from "../../user/const.ts"
 import {NDKEvent} from "@/lib/ndk"
-import {getZappingUser, isRepost} from "@/utils/nostr"
+import {isRepost} from "@/utils/nostr"
 import {KIND_ZAP_RECEIPT} from "@/utils/constants"
 
 type FeedItemHeaderProps = {
@@ -51,22 +51,23 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
 
   // Determine which user to display based on event type
   const getDisplayUser = () => {
-    // For zap receipts without referred event, show the zapping user
-    if (event.kind === KIND_ZAP_RECEIPT && !referredEvent) {
-      return getZappingUser(event, false) || event.pubkey
-    }
     // For reposts, wait for referredEvent to avoid showing reposter's avatar
     if (isRepost(event) && !referredEvent) {
       return null
     }
-    // For other events with referredEvent (reactions, zaps), show referred author
+    // For zap receipts, show referred post author if it exists (post zap)
+    // Otherwise don't show header (profile zap - handled by ZapReceiptHeader)
+    if (event.kind === KIND_ZAP_RECEIPT) {
+      return referredEvent?.pubkey || null
+    }
+    // For events with referredEvent (reactions), show referred author
     // Otherwise show event author
     return referredEvent?.pubkey || event.pubkey
   }
 
   const displayUser = getDisplayUser()
 
-  // Don't render if we're waiting for the referredEvent to load
+  // Don't render if we're waiting for the referredEvent to load or zap receipt
   if (!displayUser) {
     return null
   }

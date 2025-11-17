@@ -114,7 +114,9 @@ export class LocalForageStorageAdapter implements StorageAdapter {
       storeName: "session-private",
     })
 
-    this.pendingMigration = this.shouldAttemptMigration() ? this.migrateFromLocalStorage() : null
+    this.pendingMigration = this.shouldAttemptMigration()
+      ? this.migrateFromLocalStorage()
+      : null
   }
 
   private shouldAttemptMigration() {

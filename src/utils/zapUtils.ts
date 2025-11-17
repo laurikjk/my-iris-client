@@ -533,6 +533,8 @@ export async function sendDonationZaps(
 ): Promise<void> {
   const {nip19} = await import("nostr-tools")
 
+  console.log("💝 DONATION ZAPS: Starting", donations)
+
   for (const donation of donations) {
     try {
       let lightningAddress: string | null = null
@@ -544,20 +546,24 @@ export async function sendDonationZaps(
         const decoded = nip19.decode(donation.recipient)
         if (decoded.type === "npub") {
           recipientPubkey = decoded.data
-          // Fetch profile to get lightning address
+          console.log("💝 DONATION: Decoded npub to pubkey:", recipientPubkey)
+          // Fetch profile to get lightning address - force relay fetch
           const ndkInstance = ndk()
           const user = ndkInstance.getUser({pubkey: recipientPubkey})
-          await user.fetchProfile()
+          await user.fetchProfile({cacheUsage: 1}) // ONLY_RELAY
+          console.log("💝 DONATION: Full profile:", user.profile)
           lightningAddress = user.profile?.lud16 || user.profile?.lud06 || null
+          console.log("💝 DONATION: Lightning address:", lightningAddress)
         }
       } else if (donation.recipient.includes("@")) {
         // Direct lightning address - just send payment, no zap
         lightningAddress = donation.recipient
+        console.log("💝 DONATION: Direct lightning address:", lightningAddress)
       }
 
       if (!lightningAddress) {
         console.warn(
-          `No lightning address found for donation recipient: ${donation.recipient}`
+          `💝 DONATION: No lightning address found for recipient: ${donation.recipient}`
         )
         continue
       }
@@ -568,28 +574,45 @@ export async function sendDonationZaps(
       // For lightning addresses: get regular invoice
       let invoice: string
       if (recipientPubkey) {
+        console.log(
+          "💝 DONATION: Creating donation zap invoice for pubkey:",
+          recipientPubkey
+        )
         invoice = await createZapInvoiceInternal(
           {pubkey: recipientPubkey},
           amountMsats,
-          `Donation: ${donation.amount} sats via iris.to`,
+          `donation via iris.to`,
           lightningAddress,
           signer,
           true // Mark as donation zap
         )
+        console.log("💝 DONATION: Created zap invoice:", invoice.slice(0, 50) + "...")
       } else {
         // Regular lightning payment (no zap event)
+        console.log(
+          "💝 DONATION: Creating regular invoice for address:",
+          lightningAddress
+        )
         invoice = await getLNURLInvoice(
           lightningAddress,
           donation.amount,
-          `Donation: ${donation.amount} sats via iris.to`
+          `donation via iris.to`
         )
+        console.log("💝 DONATION: Created regular invoice:", invoice.slice(0, 50) + "...")
       }
 
       // Send payment
+      console.log("💝 DONATION: Sending payment...")
       await sendPayment(invoice)
+      console.log("💝 DONATION: Payment sent successfully")
     } catch (error) {
-      console.warn(`Failed to send donation to ${donation.recipient}:`, error)
+      console.warn(
+        `💝 DONATION: Failed to send donation to ${donation.recipient}:`,
+        error
+      )
       // Continue with other donations even if one fails
     }
   }
+
+  console.log("💝 DONATION ZAPS: Completed all donations")
 }
