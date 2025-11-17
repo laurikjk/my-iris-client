@@ -10,7 +10,7 @@ import Dropdown from "@/shared/components/ui/Dropdown.tsx"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {EVENT_AVATAR_WIDTH} from "../../user/const.ts"
 import {NDKEvent} from "@/lib/ndk"
-import {getZappingUser} from "@/utils/nostr"
+import {getZappingUser, isRepost} from "@/utils/nostr"
 import {KIND_ZAP_RECEIPT} from "@/utils/constants"
 
 type FeedItemHeaderProps = {
@@ -49,12 +49,26 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
 
   const onClose = useCallback(() => setShowDropdown(false), [setShowDropdown])
 
-  // For zap receipts without referred event, show the zapping user as author
+  // Determine which user to display based on event type
   const getDisplayUser = () => {
+    // For zap receipts without referred event, show the zapping user
     if (event.kind === KIND_ZAP_RECEIPT && !referredEvent) {
       return getZappingUser(event, false) || event.pubkey
     }
+    // For reposts, wait for referredEvent to avoid showing reposter's avatar
+    if (isRepost(event) && !referredEvent) {
+      return null
+    }
+    // For other events with referredEvent (reactions, zaps), show referred author
+    // Otherwise show event author
     return referredEvent?.pubkey || event.pubkey
+  }
+
+  const displayUser = getDisplayUser()
+
+  // Don't render if we're waiting for the referredEvent to load
+  if (!displayUser) {
+    return null
   }
 
   return (
@@ -65,7 +79,7 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
         <UserRow
           avatarWidth={EVENT_AVATAR_WIDTH}
           showHoverCard={true}
-          pubKey={getDisplayUser()}
+          pubKey={displayUser}
         />
       </div>
       <div className="select-none flex justify-end items-center">

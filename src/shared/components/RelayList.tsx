@@ -41,8 +41,8 @@ export function RelayList({
   )
 
   // Separate multicast relay from discovered relays
-  const multicastRelay = Array.from(ndkRelayMap.entries()).find(([url]) =>
-    url === "multicast" || url.startsWith("multicast://")
+  const multicastRelay = Array.from(ndkRelayMap.entries()).find(
+    ([url]) => url === "multicast" || url.startsWith("multicast://")
   )
 
   const discoveredRelays = Array.from(ndkRelayMap.entries()).filter(([url]) => {
@@ -228,7 +228,9 @@ export function RelayList({
                 <div className={`${textSize} font-medium text-base-content/80`}>
                   Local network discovery
                 </div>
-                <div className={`${compact ? "text-[10px]" : "text-xs"} text-base-content/40`}>
+                <div
+                  className={`${compact ? "text-[10px]" : "text-xs"} text-base-content/40`}
+                >
                   {multicastRelay[0]}
                 </div>
               </div>

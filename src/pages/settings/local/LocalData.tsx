@@ -327,7 +327,6 @@ export function LocalData() {
               </div>
             </SettingsGroupItem>
 
-
             {stats.databaseSize && (
               <SettingsGroupItem>
                 <div className="flex justify-between items-center">
