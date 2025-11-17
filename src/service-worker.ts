@@ -268,52 +268,139 @@ type DecryptResult =
       sessionId: string
     }
 
+const SESSION_STORAGE = localforage.createInstance({
+  name: "iris-session-manager",
+  storeName: "session-private",
+})
+
+const SESSION_STORAGE_PREFIX = "private"
+const USER_RECORD_PREFIX = "v1/user/"
+
+type StoredSessionEntry = string
+
+interface StoredDeviceRecord {
+  deviceId: string
+  activeSession: StoredSessionEntry | null
+  inactiveSessions: StoredSessionEntry[]
+  staleAt?: number
+}
+
+interface StoredUserRecord {
+  publicKey: string
+  devices: StoredDeviceRecord[]
+}
+
+interface StoredSessionState {
+  sessionId: string
+  serializedState: StoredSessionEntry
+}
+
+const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
+  try {
+    const keys = await SESSION_STORAGE.keys()
+    const userRecordKeys = keys.filter((key) =>
+      key.startsWith(`${SESSION_STORAGE_PREFIX}${USER_RECORD_PREFIX}`)
+    )
+
+    const userRecords = await Promise.all(
+      userRecordKeys.map((key) => SESSION_STORAGE.getItem<StoredUserRecord>(key))
+    ).then((userRecords) =>
+      userRecords.filter((ur): ur is StoredUserRecord => ur !== null)
+    )
+
+    const sessions: StoredSessionState[] = userRecords.flatMap((record) =>
+      record.devices
+        .filter((device) => device.staleAt === undefined)
+        .flatMap((device) => {
+          const sessions = device.activeSession
+            ? [device.activeSession, ...device.inactiveSessions]
+            : device.inactiveSessions
+
+          return sessions.map((serialized) => ({
+            sessionId: record.publicKey,
+            serializedState: serialized,
+          }))
+        })
+    )
+
+    return sessions
+  } catch (error) {
+    return []
+  }
+}
+
 const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
   try {
-    const wrapper = await localforage.getItem("sessions")
-    if (wrapper) {
-      const parsed = typeof wrapper === "string" ? JSON.parse(wrapper) : wrapper
-      const sessionEntries: [string, string][] =
-        parsed?.state?.sessions ?? parsed?.sessions ?? []
+    const sessionEntries = await fetchStoredSessions()
 
-      for (const [sessionId, serState] of sessionEntries) {
-        const state = deserializeSessionState(serState)
-        const foundMatchingPubKey =
+    const matchingSession = sessionEntries.find(({serializedState}) => {
+      try {
+        const state = deserializeSessionState(serializedState)
+        return (
           state.theirCurrentNostrPublicKey === data.event.pubkey ||
           state.theirNextNostrPublicKey === data.event.pubkey
+        )
+      } catch (error) {
+        return false
+      }
+    })
 
-        if (!foundMatchingPubKey) {
-          continue
-        }
-
-        const session = new Session((_, onEvent) => {
-          onEvent(data.event as unknown as VerifiedEvent)
-          return () => {}
-        }, state)
-
-        let unsubscribe: (() => void) | undefined
-        const innerEvent = await new Promise<Rumor | null>((resolve) => {
-          unsubscribe = session.onEvent((event) => {
-            resolve(event)
-          })
-        })
-
-        unsubscribe?.()
-
-        return innerEvent === null
-          ? {
-              success: false,
-            }
-          : {
-              success: true,
-              kind: innerEvent.kind,
-              content: innerEvent.content,
-              sessionId,
-            }
+    if (!matchingSession) {
+      return {
+        success: false,
       }
     }
+
+    const state = deserializeSessionState(matchingSession.serializedState)
+    const {sessionId} = matchingSession
+
+    const eventForSession: VerifiedEvent = {
+      ...(data.event as unknown as VerifiedEvent),
+      tags: data.event.tags.filter(([key]) => key === "header"),
+    }
+
+    let deliverToSession: ((event: VerifiedEvent) => void) | undefined
+    const session = new Session((_, onEvent) => {
+      deliverToSession = onEvent
+      return () => {
+        deliverToSession = undefined
+      }
+    }, state)
+
+    let unsubscribe: (() => void) | undefined
+    const innerEvent = await new Promise<Rumor | null>((resolve) => {
+      const timeout = setTimeout(() => {
+        resolve(null)
+      }, 1500)
+      unsubscribe = session.onEvent((event) => {
+        clearTimeout(timeout)
+        resolve(event)
+      })
+      if (deliverToSession) {
+        // Deliver encrypted event after subscription wiring to avoid race
+        deliverToSession(eventForSession)
+      } else {
+        error("DM decrypt: session transport not ready to receive event", {
+          sessionId,
+          eventId: data.event.id,
+        })
+      }
+    })
+
+    unsubscribe?.()
+
+    return innerEvent === null
+      ? {
+          success: false,
+        }
+      : {
+          success: true,
+          kind: innerEvent.kind,
+          content: innerEvent.content,
+          sessionId,
+        }
   } catch (err) {
-    error("DM decryption failed:", err)
+    error("DM decrypt: failed", err)
   }
   return {
     success: false,
