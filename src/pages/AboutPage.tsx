@@ -259,6 +259,7 @@ export const AboutPage = () => {
                       },
                     }}
                     borderTopFirst={false}
+                    showDisplayAsSelector={false}
                   />
                 </div>
               )}

@@ -55,10 +55,16 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
     if (isRepost(event) && !referredEvent) {
       return null
     }
-    // For zap receipts, show referred post author if it exists (post zap)
+    // For zap receipts, show zap recipient if there's a referred post (post zap)
     // Otherwise don't show header (profile zap - handled by ZapReceiptHeader)
     if (event.kind === KIND_ZAP_RECEIPT) {
-      return referredEvent?.pubkey || null
+      if (!referredEvent) {
+        // Profile zap - no large avatar
+        return null
+      }
+      // Post zap - show the zap recipient (p tag), not the post author
+      const zapRecipient = event.tags.find((tag) => tag[0] === "p")?.[1]
+      return zapRecipient || null
     }
     // For events with referredEvent (reactions), show referred author
     // Otherwise show event author
