@@ -70,11 +70,12 @@ export const AboutPage = () => {
   }, [])
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
-      <Header title="About" />
-      <ScrollablePageContainer>
-        <div className="mx-4 md:mx-8 my-4">
-          <div className="prose max-w-prose">
+    <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <Header title="About" />
+        <ScrollablePageContainer>
+          <div className="mx-4 md:mx-8 my-4">
+            <div className="prose max-w-prose">
             <h1>About</h1>
             <p>{CONFIG.aboutText}</p>
 
@@ -264,9 +265,10 @@ export const AboutPage = () => {
                 </div>
               )}
             </div>
+            </div>
           </div>
-        </div>
-      </ScrollablePageContainer>
+        </ScrollablePageContainer>
+      </div>
       <RightColumn>
         {() => (
           <>
