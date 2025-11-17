@@ -2,6 +2,8 @@ import {MouseEvent, ReactNode, useState, memo, useMemo, useCallback} from "react
 import reactStringReplace from "react-string-replace"
 
 import {allEmbeds, smallEmbeds, EmbedEvent} from "./embed"
+import {isOnlyEmoji} from "@/utils/textFormatting"
+import classNames from "classnames"
 
 const HyperText = memo(
   ({
@@ -21,6 +23,7 @@ const HyperText = memo(
   }) => {
     const [isExpanded, setIsExpanded] = useState(false)
     const content = children.trim()
+    const isEmojiOnly = useMemo(() => isOnlyEmoji(content), [content])
 
     const toggleShowMore = useCallback(
       (e: MouseEvent<HTMLAnchorElement>) => {
@@ -282,7 +285,12 @@ const HyperText = memo(
     }, [groupedChildren])
 
     return (
-      <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+      <div
+        className={classNames(
+          "whitespace-pre-wrap break-words [overflow-wrap:anywhere]",
+          isEmojiOnly && "text-6xl"
+        )}
+      >
         {renderedChildren}
       </div>
     )
