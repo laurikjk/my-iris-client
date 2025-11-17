@@ -18,6 +18,7 @@ import {NavItem} from "./NavItem"
 import {ndk} from "@/utils/ndk"
 import {RelayConnectivityIndicator} from "../RelayConnectivityIndicator"
 import {hasWriteAccess} from "@/utils/auth"
+import {ColumnLayoutToggle} from "./ColumnLayoutToggle"
 
 const NavSideBar = () => {
   const ref = useRef<HTMLDivElement>(null)
@@ -122,6 +123,12 @@ const NavSideBar = () => {
         {myPubKey && (
           <>
             <div className="flex flex-col p-4 gap-2">
+              <div className="hidden lg:flex xl:hidden justify-center mb-2">
+                <ColumnLayoutToggle compact />
+              </div>
+              <div className="hidden xl:flex justify-start mb-2">
+                <ColumnLayoutToggle />
+              </div>
               <div className="flex justify-center md:justify-center xl:justify-start mb-2">
                 <RelayConnectivityIndicator className="md:hidden xl:flex" />
                 <RelayConnectivityIndicator className="hidden md:flex xl:hidden" />
