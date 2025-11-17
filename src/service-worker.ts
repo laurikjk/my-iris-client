@@ -324,7 +324,7 @@ const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
 
     return sessions
   } catch (error) {
-    console.error("Failed to load stored sessions:", error)
+    error("Failed to load stored sessions", error)
     return []
   }
 }
@@ -337,7 +337,7 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
       try {
         state = deserializeSessionState(serializedState)
       } catch (error) {
-        console.error("Failed to deserialize session state:", error)
+        error("DM decrypt: failed to deserialize session state", error)
         continue
       }
 
@@ -348,19 +348,6 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
       if (!foundMatchingPubKey) {
         continue
       }
-
-      console.warn("DM decrypt: found matching session", {
-        sessionId,
-        eventPubkey: data.event.pubkey,
-      })
-
-      const headerTag = data.event.tags.find(([key]) => key === "header")
-      console.warn("DM decrypt: delivering event to session", {
-        sessionId,
-        hasHeaderTag: Boolean(headerTag?.[1]),
-        headerLength: headerTag?.[1]?.length ?? 0,
-        eventId: data.event.id,
-      })
 
       const eventForSession: VerifiedEvent = {
         ...(data.event as unknown as VerifiedEvent),
@@ -376,23 +363,10 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
 
       let unsubscribe: (() => void) | undefined
       const innerEvent = await new Promise<Rumor | null>((resolve) => {
-        console.warn("DM decrypt: waiting for session to emit decrypted rumor", {
-          sessionId,
-          event: data.event
-        })
         const timeout = setTimeout(() => {
-          console.warn("DM decrypt: timed out waiting for decrypted rumor", {
-            sessionId,
-            eventId: data.event.id,
-          })
           resolve(null)
         }, 1500)
         unsubscribe = session.onEvent((event) => {
-          console.warn("DM decrypt: session emitted rumor", {
-            sessionId,
-            kind: event.kind,
-            hasContent: Boolean(event.content),
-          })
           clearTimeout(timeout)
           resolve(event)
         })
@@ -400,7 +374,7 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
           // Deliver encrypted event after subscription wiring to avoid race
           deliverToSession(eventForSession)
         } else {
-          console.error("DM decrypt: session transport not ready to receive event", {
+          error("DM decrypt: session transport not ready to receive event", {
             sessionId,
             eventId: data.event.id,
           })
@@ -408,11 +382,6 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
       })
 
       unsubscribe?.()
-
-      console.warn("DM decrypt: session processing complete", {
-        sessionId,
-        result: innerEvent ? "success" : "null",
-      })
 
       return innerEvent === null
         ? {
@@ -426,9 +395,8 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
           }
     }
 
-    console.warn("DM decrypt: exhausted stored sessions without finding a match")
   } catch (err) {
-    error("DM decryption failed:", err)
+    error("DM decrypt: failed", err)
   }
   return {
     success: false,
@@ -445,26 +413,15 @@ self.addEventListener("push", (event) => {
       })
       const isPageVisible = clients.some((client) => client.visibilityState === "visible")
       if (isPageVisible) {
-        log("Page is visible, ignoring web push")
         //return
       }
 
       const data = event.data?.json() as PushData | undefined
       if (!data?.event) return
 
-      console.warn("Service worker received push event", {
-        kind: data.event.kind,
-        id: data.event.id,
-        pubkey: data.event.pubkey,
-      })
-
       if (data.event.kind === MESSAGE_EVENT_KIND) {
         const result = await tryDecryptPrivateDM(data)
         if (result.success) {
-          console.warn("DM decrypt: notification will use decrypted content", {
-            kind: result.kind,
-            sessionId: result.sessionId,
-          })
           if (result.kind === KIND_CHANNEL_CREATE) {
             await self.registration.showNotification("New group invite", {
               icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
@@ -489,34 +446,16 @@ self.addEventListener("push", (event) => {
           return
         }
 
-        const headerTag = data.event.tags.find(([key]) => key === "header")
-        console.warn(
-          "DM decrypt: failed to decrypt, falling back to generic notification",
-          {
-            eventId: data.event.id,
-            pubkey: data.event.pubkey,
-            hasHeaderTag: Boolean(headerTag?.[1]),
-          }
-        )
       }
 
       if (NOTIFICATION_CONFIGS[data.event.kind]) {
         const config = NOTIFICATION_CONFIGS[data.event.kind]
-        console.warn("Showing notification via NOTIFICATION_CONFIGS", {
-          kind: data.event.kind,
-          title: config.title,
-        })
         await self.registration.showNotification(config.title, {
           icon: config.icon,
           data: {url: config.url, event: data.event},
         })
         return
       }
-
-      console.warn("Showing notification via data payload", {
-        title: data.title,
-        kind: data.event.kind,
-      })
 
       const imgproxySettings = (await localforage.getItem("imgproxy-settings")) as {
         url: string
