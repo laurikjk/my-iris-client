@@ -417,7 +417,8 @@ self.addEventListener("push", (event) => {
       })
       const isPageVisible = clients.some((client) => client.visibilityState === "visible")
       if (isPageVisible) {
-        //return
+        log("Page is visible, ignoring web push")
+        return
       }
 
       const data = event.data?.json() as PushData | undefined
