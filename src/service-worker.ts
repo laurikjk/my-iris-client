@@ -362,9 +362,16 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
         eventId: data.event.id,
       })
 
+      const eventForSession: VerifiedEvent = {
+        ...(data.event as unknown as VerifiedEvent),
+        tags: data.event.tags.filter(([key]) => key === "header"),
+      }
+      let deliverToSession: ((event: VerifiedEvent) => void) | undefined
       const session = new Session((_, onEvent) => {
-        onEvent(data.event as unknown as VerifiedEvent)
-        return () => {}
+        deliverToSession = onEvent
+        return () => {
+          deliverToSession = undefined
+        }
       }, state)
 
       let unsubscribe: (() => void) | undefined
@@ -389,8 +396,15 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
           clearTimeout(timeout)
           resolve(event)
         })
-
-
+        if (deliverToSession) {
+          // Deliver encrypted event after subscription wiring to avoid race
+          deliverToSession(eventForSession)
+        } else {
+          console.error("DM decrypt: session transport not ready to receive event", {
+            sessionId,
+            eventId: data.event.id,
+          })
+        }
       })
 
       unsubscribe?.()
