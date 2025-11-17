@@ -4,7 +4,6 @@ import {ChangeEvent, useEffect, useState} from "react"
 import {getPublicKey, nip19} from "nostr-tools"
 import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
-import {useSettingsStore} from "@/stores/settings"
 import classNames from "classnames"
 import {ndk} from "@/utils/ndk"
 import {NSEC_NPUB_REGEX, HEX_REGEX} from "@/utils/validation"
@@ -16,7 +15,6 @@ interface SignInProps {
 export default function SignIn({onClose}: SignInProps) {
   const {setNip07Login, setPublicKey, setPrivateKey} = useUserStore()
   const setShowLoginDialog = useUIStore((state) => state.setShowLoginDialog)
-  const updateAppearance = useSettingsStore((state) => state.updateAppearance)
   const [inputPrivateKey, setInputPrivateKey] = useState("")
 
   useEffect(() => {

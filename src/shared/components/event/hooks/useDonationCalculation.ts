@@ -14,7 +14,12 @@ export function useDonationCalculation(
 ) {
   return useMemo(() => {
     if (zapDonationRecipients.length === 0) {
-      return {donationPubkeys: [], totalDonationAmount: 0, recipientNames: []}
+      return {
+        donationPubkeys: [],
+        totalDonationAmount: 0,
+        recipientNames: [],
+        effectiveDonationAmount: 0,
+      }
     }
 
     const calculateMultiRecipientDonations = (

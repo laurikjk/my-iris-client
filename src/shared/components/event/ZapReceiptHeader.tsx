@@ -78,7 +78,9 @@ function ZapReceiptHeader({
           <>
             <span className="text-base-content/50">:</span>
             <span className="break-words italic">
-              "<ReactionContent content={zapComment} event={event} />"
+              &ldquo;
+              <ReactionContent content={zapComment} event={event} />
+              &rdquo;
             </span>
           </>
         )}

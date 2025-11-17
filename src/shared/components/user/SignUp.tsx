@@ -4,7 +4,6 @@ import {NDKEvent, NDKPrivateKeySigner} from "@/lib/ndk"
 import {bytesToHex} from "@noble/hashes/utils"
 import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
-import {useSettingsStore} from "@/stores/settings"
 import {ndk} from "@/utils/ndk"
 import {NSEC_NPUB_REGEX} from "@/utils/validation"
 
@@ -15,7 +14,6 @@ interface SignUpProps {
 export default function SignUp({onClose}: SignUpProps) {
   const [newUserName, setNewUserName] = useState("")
   const {setShowLoginDialog} = useUIStore()
-  const updateAppearance = useSettingsStore((state) => state.updateAppearance)
   const inputRef = useRef<HTMLInputElement>(null)
   const setState = useUserStore.setState
 

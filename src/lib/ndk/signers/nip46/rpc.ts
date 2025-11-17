@@ -56,9 +56,11 @@ export class NDKNostrRpc extends EventEmitter {
       this.relaySet = new NDKRelaySet(new Set(), ndk, this.pool)
       for (const url of relayUrls) {
         const relay = this.pool.getRelay(url, false, false)
-        relay.authPolicy = NDKRelayAuthPolicies.signIn({ndk, signer, debug})
-        this.relaySet.addRelay(relay)
-        relay.connect()
+        if (relay) {
+          relay.authPolicy = NDKRelayAuthPolicies.signIn({ndk, signer, debug})
+          this.relaySet.addRelay(relay)
+          relay.connect()
+        }
       }
     }
 

@@ -22,7 +22,7 @@ interface ZapFormInputsProps {
   // Donation
   zapDonationEnabled: boolean
   setZapDonationEnabled: (enabled: boolean) => void
-  zapDonationRecipients: Array<{pubkey: string; percentage: number}>
+  zapDonationRecipients: Array<{recipient: string; percentage: number}>
   donationPubkeys: string[]
   recipientNames: string[]
   totalDonationAmount: number

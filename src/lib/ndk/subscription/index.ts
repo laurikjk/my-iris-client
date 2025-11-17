@@ -495,9 +495,10 @@ export class NDKSubscription extends EventEmitter<{
   public relaysMissingEose(): WebSocket["url"][] {
     if (!this.relayFilters) return []
 
-    const relaysMissingEose = Array.from(this.relayFilters?.keys()).filter(
-      (url) => !this.eosesSeen.has(this.pool.getRelay(url, false, false))
-    )
+    const relaysMissingEose = Array.from(this.relayFilters?.keys()).filter((url) => {
+      const relay = this.pool.getRelay(url, false, false)
+      return relay && !this.eosesSeen.has(relay)
+    })
 
     return relaysMissingEose
   }
@@ -737,7 +738,9 @@ export class NDKSubscription extends EventEmitter<{
     // iterate through the this.relayFilters
     for (const [relayUrl, filters] of this.relayFilters) {
       const relay = this.pool.getRelay(relayUrl, true, true, filters)
-      relay.subscribe(this, filters)
+      if (relay) {
+        relay.subscribe(this, filters)
+      }
     }
   }
 
@@ -768,7 +771,9 @@ export class NDKSubscription extends EventEmitter<{
 
         // Connect to the relay and subscribe
         const relay = this.pool.getRelay(relayUrl, true, true, filters)
-        relay.subscribe(this, filters)
+        if (relay) {
+          relay.subscribe(this, filters)
+        }
       }
     }
   }

@@ -5,6 +5,10 @@ import {makeZapRequest} from "nostr-tools/nip57"
 import {ndk, DEFAULT_RELAYS} from "@/utils/ndk"
 import {KIND_ZAP_RECEIPT} from "@/utils/constants"
 import {bech32} from "@scure/base"
+import {NDKSubscriptionCacheUsage} from "@/lib/ndk/subscription"
+import debug from "debug"
+
+const log = debug("iris:zapUtils")
 
 export function getZappingUser(event: NDKEvent, npub = true) {
   const description = event.tags?.find((t) => t[0] === "description")?.[1]
@@ -533,7 +537,7 @@ export async function sendDonationZaps(
 ): Promise<void> {
   const {nip19} = await import("nostr-tools")
 
-  console.log("💝 DONATION ZAPS: Starting", donations)
+  log("💝 DONATION ZAPS: Starting", donations)
 
   for (const donation of donations) {
     try {
@@ -546,23 +550,23 @@ export async function sendDonationZaps(
         const decoded = nip19.decode(donation.recipient)
         if (decoded.type === "npub") {
           recipientPubkey = decoded.data
-          console.log("💝 DONATION: Decoded npub to pubkey:", recipientPubkey)
+          log("💝 DONATION: Decoded npub to pubkey:", recipientPubkey)
           // Fetch profile to get lightning address - force relay fetch
           const ndkInstance = ndk()
           const user = ndkInstance.getUser({pubkey: recipientPubkey})
-          await user.fetchProfile({cacheUsage: 1}) // ONLY_RELAY
-          console.log("💝 DONATION: Full profile:", user.profile)
+          await user.fetchProfile({cacheUsage: NDKSubscriptionCacheUsage.ONLY_RELAY})
+          log("💝 DONATION: Full profile:", user.profile)
           lightningAddress = user.profile?.lud16 || user.profile?.lud06 || null
-          console.log("💝 DONATION: Lightning address:", lightningAddress)
+          log("💝 DONATION: Lightning address:", lightningAddress)
         }
       } else if (donation.recipient.includes("@")) {
         // Direct lightning address - just send payment, no zap
         lightningAddress = donation.recipient
-        console.log("💝 DONATION: Direct lightning address:", lightningAddress)
+        log("💝 DONATION: Direct lightning address:", lightningAddress)
       }
 
       if (!lightningAddress) {
-        console.warn(
+        log(
           `💝 DONATION: No lightning address found for recipient: ${donation.recipient}`
         )
         continue
@@ -574,10 +578,7 @@ export async function sendDonationZaps(
       // For lightning addresses: get regular invoice
       let invoice: string
       if (recipientPubkey) {
-        console.log(
-          "💝 DONATION: Creating donation zap invoice for pubkey:",
-          recipientPubkey
-        )
+        log("💝 DONATION: Creating donation zap invoice for pubkey:", recipientPubkey)
         invoice = await createZapInvoiceInternal(
           {pubkey: recipientPubkey},
           amountMsats,
@@ -586,33 +587,27 @@ export async function sendDonationZaps(
           signer,
           true // Mark as donation zap
         )
-        console.log("💝 DONATION: Created zap invoice:", invoice.slice(0, 50) + "...")
+        log("💝 DONATION: Created zap invoice:", invoice.slice(0, 50) + "...")
       } else {
         // Regular lightning payment (no zap event)
-        console.log(
-          "💝 DONATION: Creating regular invoice for address:",
-          lightningAddress
-        )
+        log("💝 DONATION: Creating regular invoice for address:", lightningAddress)
         invoice = await getLNURLInvoice(
           lightningAddress,
           donation.amount,
           `donation via iris.to`
         )
-        console.log("💝 DONATION: Created regular invoice:", invoice.slice(0, 50) + "...")
+        log("💝 DONATION: Created regular invoice:", invoice.slice(0, 50) + "...")
       }
 
       // Send payment
-      console.log("💝 DONATION: Sending payment...")
+      log("💝 DONATION: Sending payment...")
       await sendPayment(invoice)
-      console.log("💝 DONATION: Payment sent successfully")
+      log("💝 DONATION: Payment sent successfully")
     } catch (error) {
-      console.warn(
-        `💝 DONATION: Failed to send donation to ${donation.recipient}:`,
-        error
-      )
+      log(`💝 DONATION: Failed to send donation to ${donation.recipient}:`, error)
       // Continue with other donations even if one fails
     }
   }
 
-  console.log("💝 DONATION ZAPS: Completed all donations")
+  log("💝 DONATION ZAPS: Completed all donations")
 }

@@ -34,9 +34,9 @@ interface UseZapModalHandlersParams {
   shouldSetDefaultComment: boolean
   hasWallet: boolean
   activeProviderType: string | undefined
-  walletProviderSendPayment: (pr: string) => Promise<void>
+  walletProviderSendPayment: (pr: string) => Promise<{preimage?: string} | void>
   zapDonationEnabled: boolean
-  zapDonationRecipients: Array<{pubkey: string; percentage: number}>
+  zapDonationRecipients: Array<{recipient: string; percentage: number}>
   zapDonationMinAmount: number
   bolt11Invoice: string
   zapRefresh: boolean
