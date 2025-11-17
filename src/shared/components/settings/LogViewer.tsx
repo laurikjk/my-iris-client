@@ -216,7 +216,7 @@ export function LogViewer() {
           </div>
 
           {/* Log Display */}
-          <div className="bg-base-300 rounded-lg p-3 font-mono text-xs space-y-1 max-h-64 overflow-y-auto">
+          <div className="bg-base-300 rounded-lg p-3 font-mono text-xs space-y-1 max-h-64 overflow-y-auto select-text">
             {filteredLogs.length === 0 ? (
               <div className="text-base-content/40">No logs to display</div>
             ) : (
