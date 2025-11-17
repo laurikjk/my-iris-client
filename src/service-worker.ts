@@ -302,29 +302,29 @@ const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
       key.startsWith(`${SESSION_STORAGE_PREFIX}${USER_RECORD_PREFIX}`)
     )
 
-    const sessions: StoredSessionState[] = []
+    const userRecords = await Promise.all(
+      userRecordKeys.map((key) => SESSION_STORAGE.getItem<StoredUserRecord>(key))
+    ).then((userRecords) =>
+      userRecords.filter((ur): ur is StoredUserRecord => ur !== null)
+    )
 
-    for (const key of userRecordKeys) {
-      const record = await SESSION_STORAGE.getItem<StoredUserRecord>(key)
-      if (!record?.devices?.length) continue
+    const sessions: StoredSessionState[] = userRecords.flatMap((record) =>
+      record.devices
+        .filter((device) => device.staleAt === undefined)
+        .flatMap((device) => {
+          const sessions = device.activeSession
+            ? [device.activeSession, ...device.inactiveSessions]
+            : device.inactiveSessions
 
-      for (const device of record.devices) {
-        if (device.staleAt !== undefined) continue
-        if (device.activeSession) {
-          sessions.push({
+          return sessions.map((serialized) => ({
             sessionId: record.publicKey,
-            serializedState: device.activeSession,
-          })
-        }
-        for (const serialized of device.inactiveSessions) {
-          sessions.push({sessionId: record.publicKey, serializedState: serialized})
-        }
-      }
-    }
+            serializedState: serialized,
+          }))
+        })
+    )
 
     return sessions
   } catch (error) {
-    error("Failed to load stored sessions", error)
     return []
   }
 }
@@ -332,69 +332,73 @@ const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
 const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
   try {
     const sessionEntries = await fetchStoredSessions()
-    for (const {sessionId, serializedState} of sessionEntries) {
-      let state
+
+    const matchingSession = sessionEntries.find(({serializedState}) => {
       try {
-        state = deserializeSessionState(serializedState)
+        const state = deserializeSessionState(serializedState)
+        return (
+          state.theirCurrentNostrPublicKey === data.event.pubkey ||
+          state.theirNextNostrPublicKey === data.event.pubkey
+        )
       } catch (error) {
-        error("DM decrypt: failed to deserialize session state", error)
-        continue
+        return false
       }
+    })
 
-      const foundMatchingPubKey =
-        state.theirCurrentNostrPublicKey === data.event.pubkey ||
-        state.theirNextNostrPublicKey === data.event.pubkey
-
-      if (!foundMatchingPubKey) {
-        continue
+    if (!matchingSession) {
+      return {
+        success: false,
       }
-
-      const eventForSession: VerifiedEvent = {
-        ...(data.event as unknown as VerifiedEvent),
-        tags: data.event.tags.filter(([key]) => key === "header"),
-      }
-      let deliverToSession: ((event: VerifiedEvent) => void) | undefined
-      const session = new Session((_, onEvent) => {
-        deliverToSession = onEvent
-        return () => {
-          deliverToSession = undefined
-        }
-      }, state)
-
-      let unsubscribe: (() => void) | undefined
-      const innerEvent = await new Promise<Rumor | null>((resolve) => {
-        const timeout = setTimeout(() => {
-          resolve(null)
-        }, 1500)
-        unsubscribe = session.onEvent((event) => {
-          clearTimeout(timeout)
-          resolve(event)
-        })
-        if (deliverToSession) {
-          // Deliver encrypted event after subscription wiring to avoid race
-          deliverToSession(eventForSession)
-        } else {
-          error("DM decrypt: session transport not ready to receive event", {
-            sessionId,
-            eventId: data.event.id,
-          })
-        }
-      })
-
-      unsubscribe?.()
-
-      return innerEvent === null
-        ? {
-            success: false,
-          }
-        : {
-            success: true,
-            kind: innerEvent.kind,
-            content: innerEvent.content,
-            sessionId,
-          }
     }
 
+    const state = deserializeSessionState(matchingSession.serializedState)
+    const {sessionId} = matchingSession
+
+    const eventForSession: VerifiedEvent = {
+      ...(data.event as unknown as VerifiedEvent),
+      tags: data.event.tags.filter(([key]) => key === "header"),
+    }
+
+    let deliverToSession: ((event: VerifiedEvent) => void) | undefined
+    const session = new Session((_, onEvent) => {
+      deliverToSession = onEvent
+      return () => {
+        deliverToSession = undefined
+      }
+    }, state)
+
+    let unsubscribe: (() => void) | undefined
+    const innerEvent = await new Promise<Rumor | null>((resolve) => {
+      const timeout = setTimeout(() => {
+        resolve(null)
+      }, 1500)
+      unsubscribe = session.onEvent((event) => {
+        clearTimeout(timeout)
+        resolve(event)
+      })
+      if (deliverToSession) {
+        // Deliver encrypted event after subscription wiring to avoid race
+        deliverToSession(eventForSession)
+      } else {
+        error("DM decrypt: session transport not ready to receive event", {
+          sessionId,
+          eventId: data.event.id,
+        })
+      }
+    })
+
+    unsubscribe?.()
+
+    return innerEvent === null
+      ? {
+          success: false,
+        }
+      : {
+          success: true,
+          kind: innerEvent.kind,
+          content: innerEvent.content,
+          sessionId,
+        }
   } catch (err) {
     error("DM decrypt: failed", err)
   }
@@ -445,7 +449,6 @@ self.addEventListener("push", (event) => {
           }
           return
         }
-
       }
 
       if (NOTIFICATION_CONFIGS[data.event.kind]) {
