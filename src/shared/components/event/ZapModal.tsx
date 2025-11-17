@@ -12,6 +12,8 @@ import {RiCheckLine, RiFileCopyLine} from "@remixicon/react"
 import {Avatar} from "@/shared/components/user/Avatar"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {Name} from "@/shared/components/user/Name"
+import {DonationCheckbox} from "./DonationCheckbox"
+import {useDonationCalculation} from "./hooks/useDonationCalculation"
 import {useUserStore} from "@/stores/user"
 import {useWalletProviderStore} from "@/stores/walletProvider"
 import {savePaymentMetadata} from "@/stores/paymentMetadata"
@@ -41,8 +43,16 @@ function ZapModal({
   initialAmount,
   paymentFailed,
 }: ZapModalProps) {
-  const {defaultZapAmount, setDefaultZapAmount, defaultZapComment, setDefaultZapComment} =
-    useUserStore()
+  const {
+    defaultZapAmount,
+    setDefaultZapAmount,
+    defaultZapComment,
+    setDefaultZapComment,
+    zapDonationEnabled,
+    setZapDonationEnabled,
+    zapDonationRecipients,
+    zapDonationMinAmount,
+  } = useUserStore()
   const {activeProviderType, sendPayment: walletProviderSendPayment} =
     useWalletProviderStore()
 
@@ -63,6 +73,15 @@ function ZapModal({
   const [errorMessage, setErrorMessage] = useState<string>("")
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [zapRefresh, setZapRefresh] = useState(false)
+
+  // Calculate donation details
+  const {donationPubkeys, totalDonationAmount, recipientNames, effectiveDonationAmount} =
+    useDonationCalculation(
+      zapDonationEnabled,
+      zapDonationRecipients,
+      zapDonationMinAmount,
+      zapAmount
+    )
   const amounts: Record<string, string> = {
     ...(defaultZapAmount > 0 ? {[defaultZapAmount.toString()]: ""} : {}),
     "1": "⚡",
@@ -161,8 +180,36 @@ function ZapModal({
           setTimeout(() => {
             log("💸 Starting wallet payment...")
             walletProviderSendPayment(pr)
-              .then(() => {
+              .then(async () => {
                 log("✅ Payment succeeded")
+
+                // Send donation zaps if enabled
+                if (zapDonationEnabled && zapDonationRecipients.length > 0) {
+                  log("💝 Sending donation zaps...")
+                  try {
+                    const {calculateMultiRecipientDonations, sendDonationZaps} =
+                      await import("@/utils/nostr")
+                    const donations = calculateMultiRecipientDonations(
+                      Number(zapAmount),
+                      zapDonationRecipients,
+                      zapDonationMinAmount
+                    )
+
+                    const ndkInstance = ndk()
+                    const signer = ndkInstance.signer
+                    if (signer) {
+                      await sendDonationZaps(
+                        donations,
+                        signer,
+                        event,
+                        walletProviderSendPayment
+                      )
+                      log("✅ Donation zaps sent")
+                    }
+                  } catch (donationError) {
+                    warn("Donation zaps failed (non-fatal):", donationError)
+                  }
+                }
               })
               .catch(async (caughtError: Error) => {
                 warn("Wallet payment failed:", caughtError)
@@ -417,16 +464,29 @@ function ZapModal({
               <span className="label-text">Save comment as default</span>
             </label>
 
+            <DonationCheckbox
+              zapDonationEnabled={zapDonationEnabled}
+              setZapDonationEnabled={setZapDonationEnabled}
+              zapDonationRecipients={zapDonationRecipients}
+              donationPubkeys={donationPubkeys}
+              recipientNames={recipientNames}
+              totalDonationAmount={totalDonationAmount}
+            />
+
             <button
               type="submit"
               className="btn btn-primary w-full"
               disabled={isProcessing}
             >
-              {isProcessing ? (
-                <div className="loading loading-spinner loading-sm" />
-              ) : (
-                `Zap ${zapAmount} bits`
-              )}
+              {(() => {
+                if (isProcessing) {
+                  return <div className="loading loading-spinner loading-sm" />
+                }
+                if (zapDonationEnabled && effectiveDonationAmount > 0) {
+                  return `Zap ${Number(zapAmount) + effectiveDonationAmount} bits`
+                }
+                return `Zap ${zapAmount} bits`
+              })()}
             </button>
           </form>
         )}

@@ -73,19 +73,21 @@ export const fetchZappedAmount = async (event: NDKEvent): Promise<number> => {
 
 /**
  * Creates a zap invoice manually by fetching LNURL data and creating a zap request
- * @param event - The event to zap
+ * @param target - Either {event: NDKEvent} for event zap or {pubkey: string} for profile zap
  * @param amountMsats - Amount in millisatoshis
  * @param comment - Optional zap comment
  * @param lud16 - Lightning address (e.g. user@domain.com)
  * @param signer - NDK signer to sign the zap request
+ * @param isDonation - If true, adds "irisdonation" tag to the zap request
  * @returns Lightning invoice string
  */
-export async function createZapInvoice(
-  event: NDKEvent,
+async function createZapInvoiceInternal(
+  target: {event: NDKEvent} | {pubkey: string},
   amountMsats: number,
   comment: string,
   lud16: string,
-  signer: NDKSigner
+  signer: NDKSigner,
+  isDonation = false
 ): Promise<string> {
   // Fetch LNURL data
   const [name, domain] = lud16.split("@")
@@ -107,16 +109,32 @@ export async function createZapInvoice(
   const connectedRelays = ndkInstance.pool?.connectedRelays()?.map((r) => r.url) || []
   const relaysToUse = connectedRelays.length > 0 ? connectedRelays : DEFAULT_RELAYS
 
-  // Get the raw event which has all required properties
-  const rawEvent = event.rawEvent ? event.rawEvent() : event
+  // Create zap request (event or profile)
+  let zapRequest
+  if ("event" in target) {
+    const rawEvent = target.event.rawEvent ? target.event.rawEvent() : target.event
+    zapRequest = makeZapRequest({
+      event: rawEvent as NostrEvent,
+      amount: amountMsats,
+      comment: comment || "",
+      relays: relaysToUse.slice(0, 4),
+    })
+  } else {
+    zapRequest = makeZapRequest({
+      pubkey: target.pubkey,
+      amount: amountMsats,
+      comment: comment || "",
+      relays: relaysToUse.slice(0, 4),
+    })
+  }
 
-  // Create event zap request (not profile zap)
-  const zapRequest = makeZapRequest({
-    event: rawEvent as NostrEvent, // nostr-tools expects Event type
-    amount: amountMsats, // nostr-tools expects number, not string
-    comment: comment || "",
-    relays: relaysToUse.slice(0, 4), // Use first 4 relays as per NIP-57
-  })
+  // Add donation tag if this is a donation zap
+  if (isDonation) {
+    if (!zapRequest.tags) {
+      zapRequest.tags = []
+    }
+    zapRequest.tags.push(["t", "irisdonation"])
+  }
 
   // Sign the zap request
   const zapRequestEvent = new NDKEvent(ndk(), zapRequest)
@@ -140,6 +158,25 @@ export async function createZapInvoice(
   }
 
   return invoice
+}
+
+/**
+ * Creates a zap invoice for an event
+ * @param event - The event to zap
+ * @param amountMsats - Amount in millisatoshis
+ * @param comment - Optional zap comment
+ * @param lud16 - Lightning address (e.g. user@domain.com)
+ * @param signer - NDK signer to sign the zap request
+ * @returns Lightning invoice string
+ */
+export async function createZapInvoice(
+  event: NDKEvent,
+  amountMsats: number,
+  comment: string,
+  lud16: string,
+  signer: NDKSigner
+): Promise<string> {
+  return createZapInvoiceInternal({event}, amountMsats, comment, lud16, signer)
 }
 
 /**
@@ -385,4 +422,174 @@ export async function getLNURLInvoice(
   }
 
   return invoiceData.pr
+}
+
+/**
+ * Calculate donation splits for multiple recipients
+ * @param baseAmount - Original zap amount in bits (satoshis)
+ * @param recipients - Array of recipients with their percentages
+ * @param minAmount - Minimum donation amount in bits (default 1)
+ * @returns Array of donation amounts for each recipient
+ */
+export function calculateMultiRecipientDonations(
+  baseAmount: number,
+  recipients: Array<{recipient: string; percentage: number}>,
+  minAmount: number = 1
+): Array<{recipient: string; amount: number}> {
+  return recipients.map((r) => {
+    const donationFromPercentage = Math.floor((baseAmount * r.percentage) / 100)
+    const amount = Math.max(donationFromPercentage, minAmount)
+    return {
+      recipient: r.recipient,
+      amount,
+    }
+  })
+}
+
+/**
+ * Create a profile zap invoice (zap to user, not event)
+ * @param recipientPubkey - Pubkey of the recipient
+ * @param amountMsats - Amount in millisatoshis
+ * @param comment - Optional zap comment
+ * @param lud16 - Lightning address (e.g. user@domain.com)
+ * @param signer - NDK signer to sign the zap request
+ * @returns Lightning invoice string
+ */
+export async function createProfileZapInvoice(
+  recipientPubkey: string,
+  amountMsats: number,
+  comment: string,
+  lud16: string,
+  signer: NDKSigner
+): Promise<string> {
+  // Fetch LNURL data
+  const [name, domain] = lud16.split("@")
+  const lnurlEndpoint = `https://${domain}/.well-known/lnurlp/${name}`
+
+  const lnurlResponse = await fetch(lnurlEndpoint)
+  if (!lnurlResponse.ok) {
+    throw new Error(`Failed to fetch LNURL endpoint: ${lnurlResponse.status}`)
+  }
+
+  const lnurlData = await lnurlResponse.json()
+
+  if (!lnurlData.allowsNostr) {
+    throw new Error("This lightning address doesn't support Nostr zaps")
+  }
+
+  // Get relays from NDK pool or use defaults
+  const ndkInstance = ndk()
+  const connectedRelays = ndkInstance.pool?.connectedRelays()?.map((r) => r.url) || []
+  const relaysToUse = connectedRelays.length > 0 ? connectedRelays : DEFAULT_RELAYS
+
+  // Create profile zap request (zap to user, not event)
+  const zapRequest = makeZapRequest({
+    pubkey: recipientPubkey,
+    amount: amountMsats,
+    comment: comment || "",
+    relays: relaysToUse.slice(0, 4),
+  })
+
+  // Sign the zap request
+  const zapRequestEvent = new NDKEvent(ndk(), zapRequest)
+  await zapRequestEvent.sign(signer)
+
+  // Get the invoice from the LNURL endpoint
+  const invoiceUrl = new URL(lnurlData.callback)
+  invoiceUrl.searchParams.append("amount", amountMsats.toString())
+  invoiceUrl.searchParams.append("nostr", JSON.stringify(zapRequestEvent.rawEvent()))
+
+  const invoiceResponse = await fetch(invoiceUrl.toString())
+  if (!invoiceResponse.ok) {
+    throw new Error(`Failed to fetch invoice: ${invoiceResponse.status}`)
+  }
+
+  const invoiceData = await invoiceResponse.json()
+  const invoice = invoiceData.pr
+
+  if (!invoice) {
+    throw new Error("No invoice returned from LNURL endpoint")
+  }
+
+  return invoice
+}
+
+/**
+ * Send donation zaps to multiple recipients
+ * Handles both npub and lightning address recipients
+ * - For npub: Creates profile zap to the donation recipient
+ * - For lightning address: Sends regular Lightning payment (no zap event)
+ * @param donations - Array of recipients with amounts to send
+ * @param signer - NDK signer
+ * @param originalEvent - The event that was zapped (unused, kept for compatibility)
+ * @param sendPayment - Function to send payment (from wallet provider)
+ * @returns Promise that resolves when all donations are processed
+ */
+export async function sendDonationZaps(
+  donations: Array<{recipient: string; amount: number}>,
+  signer: NDKSigner,
+  originalEvent: NDKEvent,
+  sendPayment: (invoice: string) => Promise<{preimage?: string} | void>
+): Promise<void> {
+  const {nip19} = await import("nostr-tools")
+
+  for (const donation of donations) {
+    try {
+      let lightningAddress: string | null = null
+      let recipientPubkey: string | null = null
+
+      // Detect if recipient is npub or lightning address
+      if (donation.recipient.startsWith("npub")) {
+        // Convert npub to pubkey and fetch profile for lightning address
+        const decoded = nip19.decode(donation.recipient)
+        if (decoded.type === "npub") {
+          recipientPubkey = decoded.data
+          // Fetch profile to get lightning address
+          const ndkInstance = ndk()
+          const user = ndkInstance.getUser({pubkey: recipientPubkey})
+          await user.fetchProfile()
+          lightningAddress = user.profile?.lud16 || user.profile?.lud06 || null
+        }
+      } else if (donation.recipient.includes("@")) {
+        // Direct lightning address - just send payment, no zap
+        lightningAddress = donation.recipient
+      }
+
+      if (!lightningAddress) {
+        console.warn(
+          `No lightning address found for donation recipient: ${donation.recipient}`
+        )
+        continue
+      }
+
+      const amountMsats = donation.amount * 1000
+
+      // For npub recipients: create profile zap
+      // For lightning addresses: get regular invoice
+      let invoice: string
+      if (recipientPubkey) {
+        invoice = await createZapInvoiceInternal(
+          {pubkey: recipientPubkey},
+          amountMsats,
+          `Donation: ${donation.amount} sats via iris.to`,
+          lightningAddress,
+          signer,
+          true // Mark as donation zap
+        )
+      } else {
+        // Regular lightning payment (no zap event)
+        invoice = await getLNURLInvoice(
+          lightningAddress,
+          donation.amount,
+          `Donation: ${donation.amount} sats via iris.to`
+        )
+      }
+
+      // Send payment
+      await sendPayment(invoice)
+    } catch (error) {
+      console.warn(`Failed to send donation to ${donation.recipient}:`, error)
+      // Continue with other donations even if one fails
+    }
+  }
 }

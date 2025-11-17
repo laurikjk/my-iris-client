@@ -67,8 +67,8 @@ export class NDKRelayConnectivity {
     this.ndk = ndk
 
     // Initialize queues with processors
-    this.inbox = new Queue<string>(100, (msg) => this.handleMessage(msg))
-    this.outbox = new Queue<string>(100, (msg) => {
+    this.inbox = new Queue<string>(1000, (msg) => this.handleMessage(msg))
+    this.outbox = new Queue<string>(1000, (msg) => {
       if (this.ws?.readyState === WebSocket.OPEN) {
         this.ws.send(msg)
         this.netDebug?.(msg, this.ndkRelay, "send")

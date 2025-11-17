@@ -6,17 +6,31 @@ import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
 import {CashuSeedBackup} from "@/shared/components/settings/CashuSeedBackup"
+import {UserRow} from "@/shared/components/user/UserRow"
 import {ChangeEvent, useState, useEffect} from "react"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
+import {nip19} from "nostr-tools"
 
 const {log} = createDebugLogger(DEBUG_NAMESPACES.CASHU_WALLET)
 
 const WalletSettings = () => {
   const {balance} = useWalletBalance()
   const {showBalanceInNav, setShowBalanceInNav} = useWalletStore()
-  const {defaultZapAmount, setDefaultZapAmount, defaultZapComment, setDefaultZapComment} =
-    useUserStore()
+  const {
+    defaultZapAmount,
+    setDefaultZapAmount,
+    defaultZapComment,
+    setDefaultZapComment,
+    zapDonationEnabled,
+    setZapDonationEnabled,
+    zapDonationRecipients,
+    addZapDonationRecipient,
+    removeZapDonationRecipient,
+    updateZapDonationRecipient,
+    zapDonationMinAmount,
+    setZapDonationMinAmount,
+  } = useUserStore()
 
   const {
     activeProviderType,
@@ -34,6 +48,10 @@ const WalletSettings = () => {
   const [newNWCConnection, setNewNWCConnection] = useState("")
   const [isConnecting, setIsConnecting] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
+
+  const [showAddRecipientForm, setShowAddRecipientForm] = useState(false)
+  const [newRecipient, setNewRecipient] = useState("")
+  const [newPercentage, setNewPercentage] = useState("5")
 
   // Local state to track selected wallet - this ensures UI updates immediately
   const [selectedWallet, setSelectedWallet] = useState<string>(() => {
@@ -411,6 +429,178 @@ const WalletSettings = () => {
             <SettingsGroupItem isLast>
               <CashuSeedBackup />
             </SettingsGroupItem>
+          </SettingsGroup>
+
+          <SettingsGroup title="Zap Donations">
+            <SettingsGroupItem onClick={() => setZapDonationEnabled(!zapDonationEnabled)}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="font-medium">Enable automatic donations</div>
+                  <div className="text-sm text-base-content/60">
+                    Donate a percentage of each zap to recipients
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  className="toggle toggle-primary"
+                  checked={zapDonationEnabled}
+                  onChange={(e) => setZapDonationEnabled(e.target.checked)}
+                />
+              </div>
+            </SettingsGroupItem>
+
+            {zapDonationEnabled && (
+              <>
+                {zapDonationRecipients.map((r) => {
+                  const isNpub = r.recipient.startsWith("npub")
+                  let pubkey: string | null = null
+
+                  if (isNpub) {
+                    try {
+                      const decoded = nip19.decode(r.recipient)
+                      if (decoded.type === "npub") {
+                        pubkey = decoded.data
+                      }
+                    } catch {
+                      // Invalid npub, will show raw text
+                    }
+                  }
+
+                  return (
+                    <SettingsGroupItem key={r.recipient}>
+                      <div className="flex items-center justify-between gap-3 w-full">
+                        <div className="flex-1 min-w-0">
+                          {pubkey ? (
+                            <UserRow
+                              pubKey={pubkey}
+                              description={`${r.percentage}%`}
+                              avatarWidth={32}
+                              showBadge={true}
+                              showHoverCard={false}
+                              showOnlineIndicator={false}
+                              linkToProfile={true}
+                            />
+                          ) : (
+                            <>
+                              <div className="font-medium text-sm truncate">
+                                {r.recipient}
+                              </div>
+                              <div className="text-sm text-base-content/60">
+                                {r.percentage}%
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            className="input input-bordered input-sm w-16"
+                            value={r.percentage}
+                            onChange={(e) => {
+                              const val = Number(e.target.value)
+                              if (val >= 0 && val <= 100) {
+                                updateZapDonationRecipient(r.recipient, val)
+                              }
+                            }}
+                            min="0"
+                            max="100"
+                          />
+                          <button
+                            className="btn btn-error btn-sm"
+                            onClick={() => removeZapDonationRecipient(r.recipient)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    </SettingsGroupItem>
+                  )
+                })}
+
+                {showAddRecipientForm && (
+                  <SettingsGroupItem>
+                    <div className="space-y-3">
+                      <div className="form-control">
+                        <input
+                          type="text"
+                          className="input input-bordered input-sm"
+                          placeholder="npub... or user@domain.com"
+                          value={newRecipient}
+                          onChange={(e) => setNewRecipient(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text">Percentage (%)</span>
+                        </label>
+                        <input
+                          type="number"
+                          className="input input-bordered input-sm"
+                          value={newPercentage}
+                          onChange={(e) => setNewPercentage(e.target.value)}
+                          min="0"
+                          max="100"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          className="btn btn-sm btn-ghost"
+                          onClick={() => {
+                            setShowAddRecipientForm(false)
+                            setNewRecipient("")
+                            setNewPercentage("5")
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => {
+                            if (newRecipient.trim()) {
+                              addZapDonationRecipient(
+                                newRecipient.trim(),
+                                Number(newPercentage)
+                              )
+                              setNewRecipient("")
+                              setNewPercentage("5")
+                              setShowAddRecipientForm(false)
+                            }
+                          }}
+                          disabled={!newRecipient.trim()}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  </SettingsGroupItem>
+                )}
+
+                {!showAddRecipientForm && (
+                  <SettingsGroupItem>
+                    <button
+                      className="btn btn-neutral btn-sm w-full"
+                      onClick={() => setShowAddRecipientForm(true)}
+                    >
+                      + Add recipient
+                    </button>
+                  </SettingsGroupItem>
+                )}
+
+                <SettingsInputItem
+                  label="Always donate at least"
+                  value={zapDonationMinAmount.toString()}
+                  onChange={(value) => {
+                    const val = Number(value)
+                    if (!isNaN(val) && val >= 0) {
+                      setZapDonationMinAmount(val)
+                    }
+                  }}
+                  type="text"
+                  rightContent={<span className="text-base-content/60">₿</span>}
+                  isLast
+                />
+              </>
+            )}
           </SettingsGroup>
 
           <SettingsGroup title="Legacy Wallet">

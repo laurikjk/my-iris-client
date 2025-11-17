@@ -17,6 +17,8 @@ export {
   parseZapReceipt,
   calculateTotalZapAmount,
   groupZapsByUser,
+  calculateMultiRecipientDonations,
+  sendDonationZaps,
   type ZapInfo,
 } from "./zapUtils"
 

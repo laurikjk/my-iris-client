@@ -40,6 +40,13 @@ interface UserState {
   ndkOutboxModel: boolean
   autoConnectUserRelays: boolean
 
+  zapDonationEnabled: boolean
+  zapDonationRecipients: Array<{
+    recipient: string // npub or lightning address
+    percentage: number
+  }>
+  zapDonationMinAmount: number
+
   hasHydrated: boolean
 
   setPublicKey: (publicKey: string) => void
@@ -61,6 +68,14 @@ interface UserState {
   setDefaultZapComment: (defaultZapComment: string) => void
   setNdkOutboxModel: (ndkOutboxModel: boolean) => void
   setAutoConnectUserRelays: (autoConnectUserRelays: boolean) => void
+  setZapDonationEnabled: (enabled: boolean) => void
+  setZapDonationRecipients: (
+    recipients: Array<{recipient: string; percentage: number}>
+  ) => void
+  addZapDonationRecipient: (recipient: string, percentage: number) => void
+  removeZapDonationRecipient: (recipient: string) => void
+  updateZapDonationRecipient: (recipient: string, percentage: number) => void
+  setZapDonationMinAmount: (amount: number) => void
   reset: () => void
   ensureDefaultMediaserver: (isSubscriber: boolean) => void
   awaitHydration: () => Promise<void>
@@ -87,6 +102,14 @@ export const useUserStore = create<UserState>()(
         defaultZapComment: "",
         ndkOutboxModel: !import.meta.env.VITE_USE_LOCAL_RELAY,
         autoConnectUserRelays: !import.meta.env.VITE_USE_LOCAL_RELAY,
+        zapDonationEnabled: false,
+        zapDonationRecipients: [
+          {
+            recipient: "npub10pensatlcfwktnvjjw2dtem38n6rvw8g6fv73h84cuacxn4c28eqyfn34f",
+            percentage: 5,
+          },
+        ],
+        zapDonationMinAmount: 1,
         hasHydrated: false,
       }
 
@@ -156,6 +179,30 @@ export const useUserStore = create<UserState>()(
         setNdkOutboxModel: (ndkOutboxModel: boolean) => set({ndkOutboxModel}),
         setAutoConnectUserRelays: (autoConnectUserRelays: boolean) =>
           set({autoConnectUserRelays}),
+        setZapDonationEnabled: (enabled: boolean) => set({zapDonationEnabled: enabled}),
+        setZapDonationRecipients: (
+          recipients: Array<{recipient: string; percentage: number}>
+        ) => set({zapDonationRecipients: recipients}),
+        addZapDonationRecipient: (recipient: string, percentage: number) =>
+          set((state) => ({
+            zapDonationRecipients: [
+              ...state.zapDonationRecipients,
+              {recipient, percentage},
+            ],
+          })),
+        removeZapDonationRecipient: (recipient: string) =>
+          set((state) => ({
+            zapDonationRecipients: state.zapDonationRecipients.filter(
+              (r) => r.recipient !== recipient
+            ),
+          })),
+        updateZapDonationRecipient: (recipient: string, percentage: number) =>
+          set((state) => ({
+            zapDonationRecipients: state.zapDonationRecipients.map((r) =>
+              r.recipient === recipient ? {recipient, percentage} : r
+            ),
+          })),
+        setZapDonationMinAmount: (amount: number) => set({zapDonationMinAmount: amount}),
         reset: () => set(initialState),
         ensureDefaultMediaserver: (isSubscriber: boolean) =>
           set((state) => {
