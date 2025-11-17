@@ -98,14 +98,14 @@ async function handleNotificationEvent(event: NDKEvent) {
 
   // Check if we've already seen this notification
   const lastNotification = useNotificationsStore.getState().latestNotification
-  if (event.created_at && event.created_at * 1000 <= lastNotification) {
+  if (event.created_at && event.created_at <= lastNotification) {
     log("[Desktop Notifications] Already seen, skipping")
     return // Already seen
   }
 
   // Update latest notification timestamp
   if (event.created_at) {
-    useNotificationsStore.getState().setLatestNotification(event.created_at * 1000)
+    useNotificationsStore.getState().setLatestNotification(event.created_at)
   }
 
   // Check user preferences
