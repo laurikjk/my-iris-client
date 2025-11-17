@@ -108,14 +108,14 @@ function Index() {
 
   // When single column layout is enabled on desktop, show the normal home layout
   return (
-    <>
-      <Header showBack={false} showNotifications={true}>
-        <span className="px-3 py-2">{feedName}</span>
-      </Header>
-      <section
-        className="flex w-full justify-center h-full overflow-hidden"
-        data-main-scroll-container="single-column"
-      >
+    <section
+      className="flex w-full justify-center h-full overflow-hidden"
+      data-main-scroll-container="single-column"
+    >
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header showBack={false} showNotifications={true}>
+          <span className="px-3 py-2">{feedName}</span>
+        </Header>
         <div
           data-scrollable
           data-header-scroll-target
@@ -123,25 +123,25 @@ function Index() {
         >
           <HomeFeed />
         </div>
-        <RightColumn>
-          {() => (
-            <>
-              <SocialGraphWidget />
-              <RelayStats />
-              <Widget title="Popular" className="h-96">
-                <AlgorithmicFeed
-                  type="popular"
-                  displayOptions={{
-                    small: true,
-                    showDisplaySelector: false,
-                  }}
-                />
-              </Widget>
-            </>
-          )}
-        </RightColumn>
-      </section>
-    </>
+      </div>
+      <RightColumn>
+        {() => (
+          <>
+            <SocialGraphWidget />
+            <RelayStats />
+            <Widget title="Popular" className="h-96">
+              <AlgorithmicFeed
+                type="popular"
+                displayOptions={{
+                  small: true,
+                  showDisplaySelector: false,
+                }}
+              />
+            </Widget>
+          </>
+        )}
+      </RightColumn>
+    </section>
   )
 }
 

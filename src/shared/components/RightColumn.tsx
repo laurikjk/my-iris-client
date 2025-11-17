@@ -43,7 +43,7 @@ function RightColumn({children}: RightColumnProps) {
 
   return (
     <ErrorBoundary>
-      <div className="px-4 py-4 h-screen overflow-y-scroll scrollbar-hide sticky top-0 flex flex-col gap-4 w-1/3 hidden lg:flex border-l border-custom">
+      <div className="px-4 py-4 h-full overflow-y-scroll scrollbar-hide sticky top-0 flex flex-col gap-4 w-1/3 hidden lg:flex border-l border-custom">
         <div className="flex items-center gap-2">
           <div className="flex-1">
             <SearchBox searchNotes={true} />
