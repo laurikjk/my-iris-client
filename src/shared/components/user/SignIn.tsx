@@ -31,7 +31,6 @@ export default function SignIn({onClose}: SignInProps) {
           const publicKey = decoded.data as string
           setPublicKey(publicKey)
           setPrivateKey("") // No private key for view-only mode
-          updateAppearance({singleColumnLayout: false})
           setShowLoginDialog(false)
           onClose()
         }
@@ -46,7 +45,6 @@ export default function SignIn({onClose}: SignInProps) {
           setPublicKey(publicKey)
           localStorage.setItem("cashu.ndk.privateKeySignerPrivateKey", hex)
           localStorage.setItem("cashu.ndk.pubkey", publicKey)
-          updateAppearance({singleColumnLayout: false})
           setShowLoginDialog(false)
           onClose()
         }
@@ -61,7 +59,6 @@ export default function SignIn({onClose}: SignInProps) {
           setPublicKey(publicKey)
           localStorage.setItem("cashu.ndk.privateKeySignerPrivateKey", hex)
           localStorage.setItem("cashu.ndk.pubkey", publicKey)
-          updateAppearance({singleColumnLayout: false})
           setShowLoginDialog(false)
           onClose()
         }
@@ -75,7 +72,6 @@ export default function SignIn({onClose}: SignInProps) {
         const publicKey = await window.nostr.getPublicKey()
         setPublicKey(publicKey)
         setNip07Login(true)
-        updateAppearance({singleColumnLayout: false})
         setShowLoginDialog(false)
         onClose()
       } catch (error) {

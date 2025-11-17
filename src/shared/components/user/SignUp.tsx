@@ -40,7 +40,6 @@ export default function SignUp({onClose}: SignUpProps) {
             publicKey,
             privateKey: "", // No private key for view-only mode
           })
-          updateAppearance({singleColumnLayout: false})
           setShowLoginDialog(false)
           onClose()
         } catch (error) {
@@ -65,7 +64,6 @@ export default function SignUp({onClose}: SignUpProps) {
           const privateKeySigner = new NDKPrivateKeySigner(privateKeyHex)
           ndk().signer = privateKeySigner
 
-          updateAppearance({singleColumnLayout: false})
           setShowLoginDialog(false)
           onClose()
         } catch (error) {
@@ -115,7 +113,6 @@ export default function SignUp({onClose}: SignUpProps) {
       profileEvent.publish()
     }
 
-    updateAppearance({singleColumnLayout: false})
     setShowLoginDialog(false)
   }
 

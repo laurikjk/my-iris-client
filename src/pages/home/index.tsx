@@ -15,13 +15,12 @@ import {
   type FeedConfig,
 } from "@/stores/feed"
 import Header from "@/shared/components/header/Header"
-import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import {useMemo} from "react"
 import useFollows from "@/shared/hooks/useFollows"
 import {usePublicKey} from "@/stores/user"
 
 function Index() {
-  const {appearance, updateAppearance} = useSettingsStore()
+  const {appearance} = useSettingsStore()
   const isLargeScreen = useIsLargeScreen()
   const triggerFeedRefresh = useFeedStore((state) => state.triggerFeedRefresh)
   const myPubKey = usePublicKey()

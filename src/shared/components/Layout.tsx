@@ -46,7 +46,7 @@ const Layout = ({children}: {children: ReactNode}) => {
   const newPostOpen = useUIStore((state) => state.newPostOpen)
   const setNewPostOpen = useUIStore((state) => state.setNewPostOpen)
   const navItemClicked = useUIStore((state) => state.navItemClicked)
-  const {appearance, updateAppearance} = useSettingsStore()
+  const {appearance} = useSettingsStore()
   const goToNotifications = useUIStore((state) => state.goToNotifications)
   const showLoginDialog = useUIStore((state) => state.showLoginDialog)
   const setShowLoginDialog = useUIStore((state) => state.setShowLoginDialog)

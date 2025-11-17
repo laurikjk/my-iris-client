@@ -6,14 +6,19 @@ interface ColumnLayoutToggleProps {
   compact?: boolean
 }
 
-export function ColumnLayoutToggle({showLabel = false, compact = false}: ColumnLayoutToggleProps) {
+export function ColumnLayoutToggle({
+  showLabel = false,
+  compact = false,
+}: ColumnLayoutToggleProps) {
   const {appearance, updateAppearance} = useSettingsStore()
 
   if (compact) {
     return (
       <button
         className="btn btn-circle btn-ghost"
-        onClick={() => updateAppearance({singleColumnLayout: !appearance.singleColumnLayout})}
+        onClick={() =>
+          updateAppearance({singleColumnLayout: !appearance.singleColumnLayout})
+        }
         title={
           appearance.singleColumnLayout ? "Two-column layout" : "Single-column layout"
         }
