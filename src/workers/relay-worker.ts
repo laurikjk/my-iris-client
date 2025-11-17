@@ -50,6 +50,7 @@ async function loadWasm() {
 let ndk: NDK
 let cache: NDKCacheAdapterDexie
 const subscriptions = new Map<string, any>()
+const connectedRelays = new Set<string>() // Track relays that were connected before offline
 
 // Attach status change listeners to a relay
 function attachRelayListeners(relay: NDKRelay) {
@@ -57,7 +58,10 @@ function attachRelayListeners(relay: NDKRelay) {
     log(`[Relay Worker] ${relay.url} ${eventType}, status: ${relay.status}`)
     broadcastRelayStatus()
   }
-  relay.on("connect", () => handler("connected"))
+  relay.on("connect", () => {
+    connectedRelays.add(relay.url)
+    handler("connected")
+  })
   relay.on("disconnect", () => handler("disconnected"))
   relay.on("flapping", () => handler("flapping"))
   relay.on("authed", () => handler("authed"))
@@ -134,6 +138,10 @@ async function initialize(relayUrls?: string[]) {
     // Attach status listeners to all relays after connection
     ndk.pool?.relays.forEach((relay) => {
       attachRelayListeners(relay)
+      // Track relays that are already connected
+      if (relay.status >= 5) {
+        connectedRelays.add(relay.url)
+      }
     })
 
     log(`[Relay Worker] Initialized with ${ndk.pool?.relays.size || 0} relays`)
@@ -351,9 +359,9 @@ function broadcastRelayStatus() {
 function handleAddRelay(url: string) {
   if (!ndk?.pool) return
   const relay = new NDKRelay(url, undefined, ndk)
-  ndk.pool.addRelay(relay)
   attachRelayListeners(relay)
-  relay.connect()
+  ndk.pool.addRelay(relay) // This will connect automatically
+  broadcastRelayStatus()
 }
 
 function handleRemoveRelay(url: string) {
@@ -382,10 +390,10 @@ function handleReconnectDisconnected(reason: string) {
 
   log(`[Relay Worker] ${reason}, checking relay connections...`)
 
-  // Force immediate reconnection for disconnected relays
+  // Force immediate reconnection only for relays that were connected before
   // NDKRelayStatus: DISCONNECTED=1, RECONNECTING=2, FLAPPING=3, CONNECTING=4, CONNECTED=5+
   for (const relay of ndk.pool.relays.values()) {
-    if (relay.status < 5) {
+    if (relay.status < 5 && connectedRelays.has(relay.url)) {
       log(`[Relay Worker] Forcing reconnection to ${relay.url} (status: ${relay.status})`)
       relay.connect()
     }
