@@ -10,7 +10,7 @@ import classNames from "classnames"
 import {useHeaderScroll} from "./useHeaderScroll"
 import {HeaderNavigation} from "./HeaderNavigation"
 import {useHeaderClick} from "./useHeaderClick"
-import {RelayConnectivityIndicator} from "../RelayConnectivityIndicator"
+import {RelayConnectivityIndicator, OfflineIndicator} from "../RelayConnectivityIndicator"
 
 interface HeaderProps {
   title?: string
@@ -86,6 +86,7 @@ const Header = ({
         </div>
         <div className="flex items-center gap-2 mr-2 flex-shrink-0">
           <div className="md:hidden flex items-center gap-2">
+            <OfflineIndicator className="badge-sm" />
             <RelayConnectivityIndicator />
           </div>
           {rightContent}

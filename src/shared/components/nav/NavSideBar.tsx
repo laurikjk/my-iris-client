@@ -16,7 +16,7 @@ import {UserRow} from "../user/UserRow"
 import {useUIStore} from "@/stores/ui"
 import {NavItem} from "./NavItem"
 import {ndk} from "@/utils/ndk"
-import {RelayConnectivityIndicator} from "../RelayConnectivityIndicator"
+import {RelayConnectivityIndicator, OfflineIndicator} from "../RelayConnectivityIndicator"
 import {hasWriteAccess} from "@/utils/auth"
 import {ColumnLayoutToggle} from "./ColumnLayoutToggle"
 
@@ -60,10 +60,13 @@ const NavSideBar = () => {
           {myPubKey && !ndk().signer && (
             <div
               title="Read-only mode"
-              className="px-4 py-2 mx-2 md:mx-0 xl:mx-2 flex items-center gap-2 text-error text-xl"
+              className="px-4 py-2 mx-2 md:mx-0 xl:mx-2 flex items-center gap-2"
             >
-              <RiLockLine className="w-6 h-6" />
-              <span className="hidden xl:inline">Read-only mode</span>
+              <RiLockLine className="w-6 h-6 text-error md:hidden xl:inline" />
+              <span className="badge badge-error badge-md md:badge-sm">
+                <span className="hidden xl:inline">Read-only</span>
+                <RiLockLine className="w-4 h-4 xl:hidden" />
+              </span>
             </div>
           )}
           {debug.enabled && (
@@ -129,9 +132,12 @@ const NavSideBar = () => {
               <div className="hidden xl:flex justify-start mb-2">
                 <ColumnLayoutToggle />
               </div>
-              <div className="flex justify-center md:justify-center xl:justify-start mb-2">
-                <RelayConnectivityIndicator className="md:hidden xl:flex" />
-                <RelayConnectivityIndicator className="hidden md:flex xl:hidden" />
+              <div className="hidden md:flex md:flex-col xl:flex-row items-center xl:items-center gap-1 mb-2">
+                {/* Offline indicator - md-lg (above), xl (after indicator) */}
+                <OfflineIndicator className="md:flex xl:hidden badge-md" />
+                {/* Relay indicator */}
+                <RelayConnectivityIndicator className="xl:flex-row" />
+                <OfflineIndicator className="hidden xl:flex badge-md" />
               </div>
               <div className="flex-1">
                 <UserRow
