@@ -296,7 +296,6 @@ interface StoredSessionState {
 }
 
 const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
-  console.warn("DM decrypt: loading stored sessions from localforage")
   try {
     const keys = await SESSION_STORAGE.keys()
     const userRecordKeys = keys.filter((key) =>
@@ -312,7 +311,10 @@ const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
       for (const device of record.devices) {
         if (device.staleAt !== undefined) continue
         if (device.activeSession) {
-          sessions.push({sessionId: record.publicKey, serializedState: device.activeSession})
+          sessions.push({
+            sessionId: record.publicKey,
+            serializedState: device.activeSession,
+          })
         }
         for (const serialized of device.inactiveSessions) {
           sessions.push({sessionId: record.publicKey, serializedState: serialized})
@@ -320,10 +322,6 @@ const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
       }
     }
 
-    console.warn("DM decrypt: sessions prepared", {
-      userRecords: userRecordKeys.length,
-      sessionCount: sessions.length,
-    })
     return sessions
   } catch (error) {
     console.error("Failed to load stored sessions:", error)
@@ -334,10 +332,6 @@ const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
 const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
   try {
     const sessionEntries = await fetchStoredSessions()
-    if (!sessionEntries.length) {
-      console.warn("DM decrypt: no stored sessions available")
-    }
-
     for (const {sessionId, serializedState} of sessionEntries) {
       let state
       try {
@@ -352,12 +346,6 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
         state.theirNextNostrPublicKey === data.event.pubkey
 
       if (!foundMatchingPubKey) {
-        console.warn("DM decrypt: no pubkey match for session", {
-          sessionId,
-          theirCurrent: state.theirCurrentNostrPublicKey,
-          theirNext: state.theirNextNostrPublicKey,
-          eventPubkey: data.event.pubkey,
-        })
         continue
       }
 
@@ -374,13 +362,8 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
         eventId: data.event.id,
       })
 
-      const eventForSession: VerifiedEvent = {
-        ...data.event,
-        tags: data.event.tags.filter(([key]) => key === "header"),
-      }
-
       const session = new Session((_, onEvent) => {
-        onEvent(eventForSession)
+        onEvent(data.event as unknown as VerifiedEvent)
         return () => {}
       }, state)
 
@@ -388,7 +371,7 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
       const innerEvent = await new Promise<Rumor | null>((resolve) => {
         console.warn("DM decrypt: waiting for session to emit decrypted rumor", {
           sessionId,
-          eventId: data.event.id,
+          event: data.event
         })
         const timeout = setTimeout(() => {
           console.warn("DM decrypt: timed out waiting for decrypted rumor", {
@@ -406,6 +389,8 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
           clearTimeout(timeout)
           resolve(event)
         })
+
+
       })
 
       unsubscribe?.()
@@ -447,7 +432,7 @@ self.addEventListener("push", (event) => {
       const isPageVisible = clients.some((client) => client.visibilityState === "visible")
       if (isPageVisible) {
         log("Page is visible, ignoring web push")
-        return
+        //return
       }
 
       const data = event.data?.json() as PushData | undefined
@@ -491,11 +476,14 @@ self.addEventListener("push", (event) => {
         }
 
         const headerTag = data.event.tags.find(([key]) => key === "header")
-        console.warn("DM decrypt: failed to decrypt, falling back to generic notification", {
-          eventId: data.event.id,
-          pubkey: data.event.pubkey,
-          hasHeaderTag: Boolean(headerTag?.[1]),
-        })
+        console.warn(
+          "DM decrypt: failed to decrypt, falling back to generic notification",
+          {
+            eventId: data.event.id,
+            pubkey: data.event.pubkey,
+            hasHeaderTag: Boolean(headerTag?.[1]),
+          }
+        )
       }
 
       if (NOTIFICATION_CONFIGS[data.event.kind]) {
