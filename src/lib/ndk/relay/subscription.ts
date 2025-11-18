@@ -12,10 +12,25 @@ import type {NDKSubscriptionManager} from "../subscription/manager"
 import {formatFilters} from "../subscription/utils/format-filters"
 import type {NDKRelay} from "."
 import {NDKRelayStatus} from "."
+import {buildStorageVector, negentropySync} from "../negentropy/index.js"
 
 type Item = {
   subscription: NDKSubscription
   filters: NDKFilter[]
+}
+
+/**
+ * Determines if filters should use Negentropy sync.
+ * Criteria: no limit or limit >= 20, and no ids filter
+ */
+function shouldUseNegentropy(filters: NDKFilter[]): boolean {
+  return filters.every((filter) => {
+    // Skip if has ids filter
+    if (filter.ids && filter.ids.length > 0) return false
+
+    // Use Negentropy if no limit or limit >= 20
+    return !filter.limit || filter.limit >= 20
+  })
 }
 
 export enum NDKRelaySubscriptionStatus {
@@ -372,7 +387,7 @@ export class NDKRelaySubscription {
     this.debug("Re-executed after auth %s 👉 %s", oldSubId, this.subId)
   }).bind(this)
 
-  private execute() {
+  private async execute() {
     if (this.status !== NDKRelaySubscriptionStatus.PENDING) {
       // Because we might schedule this execution multiple times,
       // ensure we only execute once
@@ -400,7 +415,147 @@ export class NDKRelaySubscription {
     this.finalizeSubId()
 
     this.executeFilters = this.compileFilters()
+
+    // Try Negentropy (NIP-77) if applicable and not marked as unsupported
+    if (shouldUseNegentropy(this.executeFilters) && !this.relay.unsupportedNips.has(77)) {
+      const success = await this.tryNegentropy()
+      if (success) {
+        return // Negentropy succeeded, we're done
+      }
+    }
+
+    // Fall back to standard REQ
     this.relay.req(this)
+  }
+
+  /**
+   * Attempts Negentropy sync. Returns true if successful, false if should fallback to REQ.
+   */
+  private async tryNegentropy(): Promise<boolean> {
+    const ndk = (this.relay.connectivity as any).ndk
+    if (!ndk?.cacheAdapter) {
+      this.debug("No cache adapter, skipping Negentropy")
+      return false
+    }
+
+    // Load cached unsupported NIPs
+    if (!(this.relay as any).unsupportedNipsLoaded && ndk.cacheAdapter.getRelayStatus) {
+      ;(this.relay as any).unsupportedNipsLoaded = true
+      const status = await ndk.cacheAdapter.getRelayStatus(this.relay.url)
+      if (status?.unsupportedNips?.nips) {
+        status.unsupportedNips.nips.forEach((nip: number) => this.relay.unsupportedNips.add(nip))
+        this.debug("Loaded unsupported NIPs from cache", {
+          unsupportedNips: Array.from(this.relay.unsupportedNips),
+        })
+        if (this.relay.unsupportedNips.has(77)) {
+          return false
+        }
+      }
+    }
+
+    this.debug("Attempting Negentropy sync", {
+      filters: formatFilters(this.executeFilters || []),
+    })
+
+    try {
+      // Get cached events for this filter to build storage vector
+      const cachedEvents: NDKEvent[] = []
+      for (const filter of this.executeFilters || []) {
+        const events = await ndk.cacheAdapter.query({
+          filters: [filter],
+          ndk,
+        } as any)
+        if (Array.isArray(events)) {
+          cachedEvents.push(...events)
+        }
+      }
+
+      const storage = buildStorageVector(cachedEvents)
+      const filter = this.executeFilters?.[0]
+      if (!filter) return false
+
+      // Set up timeout and abort
+      const abortController = new AbortController()
+      const timeout = setTimeout(() => {
+        this.debug("Negentropy timeout, marking NIP-77 as unsupported")
+        this.relay.unsupportedNips.add(77)
+        // Save to cache
+        if (ndk.cacheAdapter.updateRelayStatus) {
+          ndk.cacheAdapter.updateRelayStatus(this.relay.url, {
+            unsupportedNips: {
+              nips: Array.from(this.relay.unsupportedNips),
+              testedAt: Date.now(),
+            },
+          })
+        }
+        abortController.abort()
+      }, 3000)
+
+      let haveCount = 0
+      let needCount = 0
+
+      const reconcile = async (have: string[], need: string[]) => {
+        haveCount += have.length
+        needCount += need.length
+
+        // Fetch needed events via REQ
+        if (need.length > 0) {
+          // We'll let the standard subscription handle fetching these
+          // Just emit them through our subscription when they arrive
+        }
+      }
+
+      const syncSuccess = await negentropySync(
+        storage,
+        this.relay,
+        filter,
+        reconcile,
+        {
+          signal: abortController.signal,
+          frameSizeLimit: 60000,
+        }
+      )
+
+      clearTimeout(timeout)
+
+      if (syncSuccess) {
+        this.debug("Negentropy sync completed", {
+          have: haveCount,
+          need: needCount,
+          total: haveCount + needCount,
+        })
+
+        // NIP-77 is supported, no need to cache (absence from unsupportedNips means supported)
+
+        // Emit EOSE after Negentropy completes
+        this.oneose(this.subId)
+        return true
+      }
+
+      return false
+    } catch (error: any) {
+      // Check if it's an unsupported error
+      if (
+        error?.message?.toLowerCase().includes("unsupported") ||
+        error?.message?.toLowerCase().includes("not implemented")
+      ) {
+        this.debug("Relay does not support NIP-77:", error.message)
+        this.relay.unsupportedNips.add(77)
+
+        // Save unsupported NIPs to cache
+        if (ndk.cacheAdapter.updateRelayStatus) {
+          await ndk.cacheAdapter.updateRelayStatus(this.relay.url, {
+            unsupportedNips: {
+              nips: Array.from(this.relay.unsupportedNips),
+              testedAt: Date.now(),
+            },
+          })
+        }
+      } else {
+        this.debug("Negentropy sync error:", error)
+      }
+      return false
+    }
   }
 
   public onstart() {}

@@ -47,12 +47,16 @@ export async function negentropySync(
   return new Promise<boolean>((resolve, reject) => {
     const messageHandlers = new Map<string, (relay: NDKRelay, message: unknown[]) => void>()
     let isActive = true
+    let noticeHandler: ((notice: string) => void) | undefined
 
     const cleanup = () => {
       isActive = false
       messageHandlers.forEach((handler, type) => {
         relay.unregisterProtocolHandler(type)
       })
+      if (noticeHandler) {
+        relay.off("notice", noticeHandler)
+      }
       opts?.signal?.removeEventListener("abort", onAbort)
     }
 
@@ -106,9 +110,24 @@ export async function negentropySync(
     const handleNegErr = (_relay: NDKRelay, message: unknown[]) => {
       if (!isActive || message[1] !== subId) return
 
-      log("Received NEG-ERR", message[2])
+      const errorMsg = message[2] as string
+      log("Received NEG-ERR", errorMsg)
       cleanup()
-      reject(new Error(message[2] as string))
+      reject(new Error(errorMsg))
+    }
+
+    // NOTICE handler for unsupported detection
+    const handleNotice = (notice: string) => {
+      const lowerNotice = notice.toLowerCase()
+      if (
+        lowerNotice.includes("unsupported") ||
+        lowerNotice.includes("not implemented") ||
+        lowerNotice.includes("neg-")
+      ) {
+        log("Relay sent unsupported NOTICE, aborting Negentropy", notice)
+        cleanup()
+        reject(new Error(`Unsupported: ${notice}`))
+      }
     }
 
     // Register handlers
@@ -116,6 +135,10 @@ export async function negentropySync(
     relay.registerProtocolHandler("NEG-ERR", handleNegErr)
     messageHandlers.set("NEG-MSG", handleNegMsg)
     messageHandlers.set("NEG-ERR", handleNegErr)
+
+    // Listen for NOTICE messages
+    noticeHandler = handleNotice
+    relay.on("notice", noticeHandler)
 
     // Listen for abort signal
     if (opts?.signal) {

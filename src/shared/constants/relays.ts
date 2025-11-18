@@ -4,8 +4,8 @@ const PRODUCTION_RELAYS = [
   "wss://temp.iris.to/",
   "wss://vault.iris.to/",
   "wss://relay.damus.io/",
-  "wss://relay.nostr.band/",
   "wss://relay.snort.social/",
+  "wss://nos.lol/",
 ]
 
 const TEST_RELAY = ["wss://temp.iris.to/"]

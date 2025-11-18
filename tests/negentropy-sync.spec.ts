@@ -69,19 +69,24 @@ test.skip("Negentropy sync with relay", async ({page}) => {
           limit: 100,
         }
 
-        const success = await negentropySync(storage, relay, filter, async (have, need) => {
-          console.log(`negentropy reconcile: have=${have.length}, need=${need.length}`)
+        const success = await negentropySync(
+          storage,
+          relay,
+          filter,
+          async (have, need) => {
+            console.log(`negentropy reconcile: have=${have.length}, need=${need.length}`)
 
-          if (have.length > 0) {
-            return {
-              error: `Expected empty storage to have 0 events, got ${have.length}`,
+            if (have.length > 0) {
+              return {
+                error: `Expected empty storage to have 0 events, got ${have.length}`,
+              }
+            }
+
+            for (const id of need) {
+              receivedEventIds.add(id)
             }
           }
-
-          for (const id of need) {
-            receivedEventIds.add(id)
-          }
-        })
+        )
 
         relay.disconnect()
 

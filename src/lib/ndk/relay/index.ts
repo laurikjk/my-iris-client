@@ -126,6 +126,17 @@ export class NDKRelay extends EventEmitter<{
   private _relayInfo?: NDKRelayInformation
 
   /**
+   * NIPs that have been tested and found to be unsupported by this relay.
+   * Set of NIP numbers (e.g., 77 for Negentropy).
+   */
+  public unsupportedNips: Set<number> = new Set()
+
+  /**
+   * Whether unsupported NIPs have been loaded from cache.
+   */
+  private unsupportedNipsLoaded = false
+
+  /**
    * The lowest validation ratio this relay can reach.
    */
   public lowestValidationRatio?: number

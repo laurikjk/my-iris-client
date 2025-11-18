@@ -50,6 +50,10 @@ export interface RelayStatus {
     data: NDKRelayInformation
     fetchedAt: number
   }
+  unsupportedNips?: {
+    nips: number[]
+    testedAt: number
+  }
   metadata?: Record<string, Record<string, unknown>>
 }
 
