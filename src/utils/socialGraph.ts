@@ -186,18 +186,31 @@ function getMissingFollowLists(myPubKey: string) {
 }
 
 let isLoaded = false
+let resolveLoaded: ((value: boolean) => void) | null = null
 
-export const socialGraphLoaded = new Promise((resolve) => {
+export const socialGraphLoaded = new Promise<boolean>((resolve) => {
+  resolveLoaded = resolve
+})
+
+// Initialize social graph (separate from subscription setup)
+export const initializeSocialGraph = async () => {
   const currentPublicKey = useUserStore.getState().publicKey
-  initializeInstance(currentPublicKey || undefined).then(() => {
-    if (currentPublicKey) {
-      setupSubscription(currentPublicKey)
-    } else {
-      instance.setRoot(DEFAULT_SOCIAL_GRAPH_ROOT)
-    }
-    isLoaded = true
-    resolve(true)
-  })
+  await initializeInstance(currentPublicKey || undefined)
+
+  if (!currentPublicKey) {
+    instance.setRoot(DEFAULT_SOCIAL_GRAPH_ROOT)
+  }
+
+  isLoaded = true
+  resolveLoaded?.(true)
+}
+
+// Setup subscription (called after NDK is ready)
+export const setupSocialGraphSubscriptions = async () => {
+  const currentPublicKey = useUserStore.getState().publicKey
+  if (currentPublicKey) {
+    await setupSubscription(currentPublicKey)
+  }
 
   useUserStore.subscribe((state, prevState) => {
     if (state.publicKey !== prevState.publicKey) {
@@ -208,7 +221,10 @@ export const socialGraphLoaded = new Promise((resolve) => {
       }
     }
   })
-})
+}
+
+// Auto-initialize on module load
+initializeSocialGraph()
 
 export const useSocialGraphLoaded = () => {
   const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(isLoaded)

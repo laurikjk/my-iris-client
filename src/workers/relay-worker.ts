@@ -131,22 +131,20 @@ async function initialize(relayUrls?: string[]) {
       } as WorkerResponse)
     })
 
-    // Connect to relays
-    log("[Relay Worker] Connecting to relays...")
-    await ndk.connect()
+    // Connect to relays (non-blocking - don't wait for all relays)
+    log("[Relay Worker] Starting relay connections...")
+    ndk.connect().then(() => {
+      log(`[Relay Worker] All relays connected`)
+    })
 
-    // Attach status listeners to all relays after connection
+    // Attach status listeners immediately
     ndk.pool?.relays.forEach((relay) => {
       attachRelayListeners(relay)
-      // Track relays that are already connected
-      if (relay.status >= 5) {
-        connectedRelays.add(relay.url)
-      }
     })
 
     log(`[Relay Worker] Initialized with ${ndk.pool?.relays.size || 0} relays`)
 
-    // Signal ready
+    // Signal ready immediately - don't wait for relay connections
     self.postMessage({type: "ready"} as WorkerResponse)
   } catch (err) {
     error("[Relay Worker] Initialization failed:", err)
