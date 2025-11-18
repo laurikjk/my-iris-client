@@ -276,6 +276,7 @@ const SESSION_STORAGE = localforage.createInstance({
 
 const SESSION_STORAGE_PREFIX = "private"
 const USER_RECORD_PREFIX = "v1/user/"
+const PROFILE_CACHE_KEY = "profileCache"
 
 type StoredSessionEntry = string
 
@@ -295,6 +296,35 @@ interface StoredSessionState {
   sessionId: string
   serializedState: StoredSessionEntry
   userPublicKey: string
+}
+
+type CachedProfileEntry = [string, string, ...string[]]
+
+let cachedProfileNames: Map<string, string> | null = null
+
+const loadCachedProfileNames = async (): Promise<Map<string, string>> => {
+  if (cachedProfileNames) {
+    return cachedProfileNames
+  }
+
+  const entries = await localforage.getItem<CachedProfileEntry[]>(PROFILE_CACHE_KEY)
+  const profileMap = new Map<string, string>()
+  if (Array.isArray(entries)) {
+    for (const entry of entries) {
+      if (Array.isArray(entry) && typeof entry[0] === "string" && typeof entry[1] === "string") {
+        profileMap.set(entry[0], entry[1])
+      }
+    }
+  }
+
+  cachedProfileNames = profileMap
+  return profileMap
+}
+
+const getProfileName = async (pubkey: string): Promise<string | undefined> => {
+  if (!pubkey) return undefined
+  const map = await loadCachedProfileNames()
+  return map.get(pubkey)
 }
 
 const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
@@ -440,17 +470,18 @@ self.addEventListener("push", (event) => {
               },
             })
           } else {
-            await self.registration.showNotification(
-              `New private message from ${result.userPublicKey}`,
-              {
-                body: result.content,
-                icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
-                data: {
-                  url: "/chats",
-                  event: data.event,
-                },
-              }
-            )
+            const profileName = await getProfileName(result.userPublicKey)
+            const title = profileName
+              ? `New private message from ${profileName}`
+              : `New private message from ${result.userPublicKey}`
+            await self.registration.showNotification(title, {
+              body: result.content,
+              icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
+              data: {
+                url: `/chats/${encodeURIComponent(result.sessionId)}`,
+                event: data.event,
+              },
+            })
           }
           return
         }
