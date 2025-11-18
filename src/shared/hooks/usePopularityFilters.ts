@@ -1,5 +1,5 @@
 import {useState, useCallback, useMemo} from "react"
-import socialGraph from "@/utils/socialGraph"
+import socialGraph, {DEFAULT_SOCIAL_GRAPH_ROOT} from "@/utils/socialGraph"
 import useFollows from "@/shared/hooks/useFollows"
 import {useUserStore} from "@/stores/user"
 import {
@@ -32,7 +32,12 @@ export default function usePopularityFilters(filterSeen?: boolean) {
     if (shouldUseFallback) {
       // Use root user's follows immediately (pre-crawled graph loads sync from binary)
       const root = socialGraph().getRoot()
-      return Array.from(socialGraph().getFollowedByUser(root))
+      const rootFollows = Array.from(socialGraph().getFollowedByUser(root))
+      // If root follows is also empty, use DEFAULT_SOCIAL_GRAPH_ROOT's follows as last resort
+      if (rootFollows.length === 0) {
+        return Array.from(socialGraph().getFollowedByUser(DEFAULT_SOCIAL_GRAPH_ROOT))
+      }
+      return rootFollows
     }
     return myFollows
   }, [shouldUseFallback, myFollows])
