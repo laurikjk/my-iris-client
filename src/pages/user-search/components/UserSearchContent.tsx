@@ -150,9 +150,8 @@ export default function UserSearchContent() {
                       "bg-primary text-primary-content": index === activeIndex,
                       "hover:bg-primary/20": index !== activeIndex,
                     })}
-                    onClick={() => handleSelectUser(index)}
                   >
-                    <UserRow pubKey={pubkey} linkToProfile={false} />
+                    <UserRow pubKey={pubkey} linkToProfile={true} />
                   </div>
                 ))}
               </div>

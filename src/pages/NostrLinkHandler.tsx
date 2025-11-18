@@ -1,6 +1,6 @@
 import {CLOUDFLARE_CSAM_FLAGGED} from "@/utils/cloudflare_banned_users"
 import {hexToBytes, bytesToHex} from "@noble/hashes/utils"
-import {useParams, Link} from "@/navigation"
+import {useParams, Link, useLocation} from "@/navigation"
 import {sha256} from "@noble/hashes/sha256"
 import {useEffect, useState, useMemo} from "react"
 import {nip05, nip19} from "nostr-tools"
@@ -8,7 +8,7 @@ import {Page404} from "@/pages/Page404"
 import ThreadPage from "@/pages/thread"
 import ProfilePage from "@/pages/user"
 import {useUserStore} from "@/stores/user"
-import {getCachedUsername} from "@/utils/usernameCache"
+import {getCachedUsername, addUsernameToCache} from "@/utils/usernameCache"
 
 const CLOUDFLARE_CSAM_EXPLANATION_NOTE =
   "note1pu5kvxwfzytxsw6vkqd4eu6e0xr8znaur6sl38r4swl3klgsn6dqzlpnsl"
@@ -16,9 +16,13 @@ const CLOUDFLARE_CSAM_MESSAGE = "Flagged as CSAM by Cloudflare. See explanation 
 
 export default function NostrLinkHandler() {
   const {link} = useParams()
+  const location = useLocation()
   const [error, setError] = useState<string>()
   const [asyncPubkey, setAsyncPubkey] = useState<string>()
   const myPubKey = useUserStore((state) => state.publicKey)
+
+  // Check if pubkey was passed in location state to skip async resolution
+  const statePubkey = location.state?.pubkey as string | undefined
 
   // Memoize link parsing to prevent recalculation
   const linkData = useMemo(() => {
@@ -47,8 +51,11 @@ export default function NostrLinkHandler() {
           const decoded = nip19.decode(link)
           naddrData = decoded.data as {pubkey: string; kind: number; identifier: string}
         } else if (!isNote && !isProfile && !isAddress) {
-          // Username/nip05 - check if it's our own cached username first
-          if (myPubKey && getCachedUsername(myPubKey) === link) {
+          // Username/nip05 - check if pubkey was passed in state first
+          if (statePubkey) {
+            pubkey = statePubkey
+          } else if (myPubKey && getCachedUsername(myPubKey) === link) {
+            // Check if it's our own cached username
             pubkey = myPubKey
           } else {
             // Username/nip05 - needs async resolution
@@ -61,7 +68,7 @@ export default function NostrLinkHandler() {
     }
 
     return {isProfile, isNote, isAddress, pubkey, naddrData, needsAsyncResolution}
-  }, [link, myPubKey])
+  }, [link, myPubKey, statePubkey])
 
   const [loading, setLoading] = useState(linkData.needsAsyncResolution)
 
@@ -83,9 +90,19 @@ export default function NostrLinkHandler() {
 
         if (resolved) {
           setAsyncPubkey(resolved.pubkey)
+          // Cache the resolved username
+          addUsernameToCache(
+            resolved.pubkey,
+            link.includes("@") ? link : `${link}@iris.to`,
+            true
+          )
+        } else {
+          // Username not found - fallback to 404
+          setLoading(false)
         }
       } catch (err) {
         console.error("Resolution error:", err)
+        setLoading(false)
       } finally {
         setLoading(false)
       }
