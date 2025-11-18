@@ -266,6 +266,7 @@ type DecryptResult =
       kind: number
       content: string
       sessionId: string
+      userPublicKey: string
     }
 
 const SESSION_STORAGE = localforage.createInstance({
@@ -293,6 +294,7 @@ interface StoredUserRecord {
 interface StoredSessionState {
   sessionId: string
   serializedState: StoredSessionEntry
+  userPublicKey: string
 }
 
 const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
@@ -319,6 +321,7 @@ const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
           return sessions.map((serialized) => ({
             sessionId: record.publicKey,
             serializedState: serialized,
+            userPublicKey: record.publicKey,
           }))
         })
     )
@@ -352,7 +355,7 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
     }
 
     const state = deserializeSessionState(matchingSession.serializedState)
-    const {sessionId} = matchingSession
+    const {sessionId, userPublicKey} = matchingSession
 
     const eventForSession: VerifiedEvent = {
       ...(data.event as unknown as VerifiedEvent),
@@ -398,6 +401,7 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
           kind: innerEvent.kind,
           content: innerEvent.content,
           sessionId,
+          userPublicKey,
         }
   } catch (err) {
     error("DM decrypt: failed", err)
@@ -437,7 +441,7 @@ self.addEventListener("push", (event) => {
             })
           } else {
             await self.registration.showNotification(
-              NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].title,
+              `New private message from ${result.userPublicKey}`,
               {
                 body: result.content,
                 icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
