@@ -153,6 +153,7 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
     exclude: ["tests/**/*", "node_modules/**/*"],
+    environment: "node",
   },
   server: {
     hmr: {

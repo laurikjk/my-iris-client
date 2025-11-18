@@ -263,6 +263,48 @@ export interface NDKSubscriptionOptions {
    * );
    */
   exclusiveRelay?: boolean
+
+  /**
+   * Use Negentropy (NIP-77) sync protocol instead of standard REQ.
+   * When enabled, the subscription will:
+   * 1. Check if relay supports NIP-77 via NIP-11 metadata
+   * 2. Build a local storage vector from cached events matching the filter
+   * 3. Use set reconciliation to efficiently sync only missing events
+   *
+   * This is significantly more bandwidth-efficient for syncing large event sets,
+   * especially useful for:
+   * - Initial sync of event collections
+   * - Periodic updates with minimal data transfer
+   * - Syncing from multiple relays efficiently
+   *
+   * Requires relay to support NIP-77. If relay doesn't support it, falls back
+   * to standard subscription behavior.
+   *
+   * @default false
+   * @example
+   * // Use Negentropy to sync reactions efficiently
+   * ndk.subscribe(
+   *   { kinds: [7], "#e": ["note_id"] },
+   *   { useNegentropy: true }
+   * );
+   */
+  useNegentropy?: boolean
+
+  /**
+   * Frame size limit for Negentropy sync (in bytes).
+   * Limits the size of Negentropy protocol messages to prevent timeouts
+   * and manage bandwidth on constrained connections.
+   *
+   * Only used when useNegentropy is true.
+   *
+   * @default undefined (no limit)
+   * @example
+   * ndk.subscribe(
+   *   { kinds: [1], authors: ["pubkey"] },
+   *   { useNegentropy: true, negentropyFrameSizeLimit: 60000 }
+   * );
+   */
+  negentropyFrameSizeLimit?: number
 }
 
 /**

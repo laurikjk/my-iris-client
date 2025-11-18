@@ -59,6 +59,8 @@ export {NDK as default} from "./ndk/index.js"
 export * as nip19 from "./nip19/index.js"
 // Re-export nip49 utilities for private key encryption
 export * as nip49 from "./nip49/index.js"
+// Re-export Negentropy utilities
+export * from "./negentropy/index.js"
 export * from "./relay/auth-policies.js"
 export * from "./relay/index.js"
 export * from "./relay/sets/index.js"

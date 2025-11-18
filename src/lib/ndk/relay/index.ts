@@ -429,6 +429,28 @@ export class NDKRelay extends EventEmitter<{
   public get info(): NDKRelayInformation | undefined {
     return this._relayInfo
   }
+
+  /**
+   * Checks if the relay supports a specific NIP.
+   * Returns true if the relay explicitly lists support in NIP-11 metadata.
+   * Returns undefined if relay info hasn't been fetched yet.
+   * Use fetchInfo() first to populate relay information.
+   *
+   * @param nip The NIP number to check (e.g., 77 for Negentropy)
+   * @returns true if supported, false if not supported, undefined if unknown
+   *
+   * @example
+   * ```typescript
+   * await relay.fetchInfo();
+   * if (relay.supportsNip(77)) {
+   *   // Use Negentropy sync
+   * }
+   * ```
+   */
+  public supportsNip(nip: number): boolean | undefined {
+    if (!this._relayInfo) return undefined
+    return this._relayInfo.supported_nips?.includes(nip) ?? false
+  }
 }
 
 export {SignatureVerificationStats, startSignatureVerificationStats}
