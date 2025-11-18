@@ -17,6 +17,8 @@ const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 export const DEFAULT_SOCIAL_GRAPH_ROOT =
   "4523be58d395b1b196a9b8c82b038b6895cb02b683d0c253a955068dba1facd0"
 
+export const DEFAULT_CRAWL_DEGREE = 3
+
 let instance = new SocialGraph(DEFAULT_SOCIAL_GRAPH_ROOT)
 let isInitialized = false
 
@@ -161,7 +163,7 @@ function getFollowListsInternal(
       if (toFetch.size > 0) {
         setTimeout(() => {
           processBatch()
-        }, 5000)
+        }, 1000)
       } else if (isManual) {
         isManualRecrawling = false
         useSocialGraphStore.getState().setIsRecrawling(false)

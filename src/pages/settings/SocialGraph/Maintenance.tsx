@@ -1,15 +1,22 @@
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {SettingsButton} from "@/shared/components/settings/SettingsButton"
-import socialGraph, {getFollowLists, stopRecrawl} from "@/utils/socialGraph"
+import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
+import socialGraph, {
+  getFollowLists,
+  stopRecrawl,
+  DEFAULT_CRAWL_DEGREE,
+} from "@/utils/socialGraph"
 import {useSocialGraphStore} from "@/stores/socialGraph"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
+import {useState} from "react"
 
 const {log} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 export function Maintenance() {
   const crawling = useSocialGraphStore((state) => state.isRecrawling)
+  const [followDegree, setFollowDegree] = useState(String(DEFAULT_CRAWL_DEGREE))
 
   const handleRecalculateDistances = () => {
     socialGraph().recalculateFollowDistances()
@@ -27,11 +34,27 @@ export function Maintenance() {
         </div>
       </SettingsGroupItem>
 
+      <SettingsInputItem
+        label="Recrawl degree"
+        value={followDegree}
+        type="text"
+        onChange={(val) => {
+          const num = parseInt(val, 10)
+          if (!isNaN(num) && num >= 1 && num <= 5) {
+            setFollowDegree(val)
+          } else if (val === "") {
+            setFollowDegree("")
+          }
+        }}
+        description="1-5, higher = more users crawled"
+      />
+
       <SettingsGroupItem isLast={!crawling}>
         <div className="flex flex-col space-y-1">
           <button
             onClick={() => {
-              getFollowLists(socialGraph().getRoot(), false, 2)
+              const degree = parseInt(followDegree, 10) || DEFAULT_CRAWL_DEGREE
+              getFollowLists(socialGraph().getRoot(), false, degree)
             }}
             className="text-info text-left"
             disabled={crawling}
