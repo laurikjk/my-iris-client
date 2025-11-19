@@ -443,13 +443,24 @@ export class NDKRelaySubscription {
     )?.subscription.opts.useNegentropy
 
     // Try Negentropy (NIP-77) if applicable and not disabled
-    if (
-      shouldUseNegentropy(this.executeFilters, explicitUseNegentropy) &&
-      this.relay.negentropySupport !== false
-    ) {
+    const shouldUseNeg = shouldUseNegentropy(this.executeFilters, explicitUseNegentropy)
+    const negSupported = this.relay.negentropySupport !== false
+
+    if (shouldUseNeg && negSupported) {
       const success = await this.tryNegentropy()
       if (success) {
         return // Negentropy succeeded, we're done
+      }
+      this.debug("Negentropy failed, falling back to REQ")
+    } else {
+      if (!shouldUseNeg) {
+        this.debug("Skipping negentropy: filter not eligible", {
+          filters: formatFilters(this.executeFilters || []),
+        })
+      } else if (!negSupported) {
+        this.debug("Skipping negentropy: relay marked as unsupported", {
+          negentropySupport: this.relay.negentropySupport,
+        })
       }
     }
 
@@ -463,7 +474,7 @@ export class NDKRelaySubscription {
   private async tryNegentropy(): Promise<boolean> {
     const ndk = (this.relay.connectivity as any).ndk
     if (!ndk?.cacheAdapter) {
-      this.debug("No cache adapter, skipping Negentropy")
+      this.debug("tryNegentropy failed: no cache adapter")
       return false
     }
 
@@ -487,7 +498,10 @@ export class NDKRelaySubscription {
 
       const storage = buildStorageVector(cachedEvents)
       const filter = this.executeFilters?.[0]
-      if (!filter) return false
+      if (!filter) {
+        this.debug("tryNegentropy failed: no filter")
+        return false
+      }
 
       // Set up timeout and abort
       const abortController = new AbortController()
@@ -497,7 +511,7 @@ export class NDKRelaySubscription {
           this.relay.negentropySupport = false
         }
         abortController.abort()
-      }, 3000)
+      }, 10000)
 
       let haveCount = 0
       let needCount = 0
@@ -515,9 +529,15 @@ export class NDKRelaySubscription {
         }
       }
 
+      // Get frame size limit from subscription options or use default
+      const frameSizeLimit =
+        Array.from(this.items.values()).find(
+          (item) => item.subscription.opts.negentropyFrameSizeLimit !== undefined
+        )?.subscription.opts.negentropyFrameSizeLimit || 60000
+
       const syncSuccess = await negentropySync(storage, this.relay, filter, reconcile, {
         signal: abortController.signal,
-        frameSizeLimit: 60000,
+        frameSizeLimit,
       })
 
       clearTimeout(timeout)
@@ -568,6 +588,7 @@ export class NDKRelaySubscription {
         return true
       }
 
+      this.debug("tryNegentropy failed: sync unsuccessful")
       return false
     } catch (error: any) {
       // Check if it's an unsupported error
