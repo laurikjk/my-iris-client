@@ -13,6 +13,7 @@ import {formatFilters} from "../subscription/utils/format-filters"
 import type {NDKRelay} from "."
 import {NDKRelayStatus} from "."
 import {buildStorageVector, negentropySync} from "../negentropy/index.js"
+import {isReplaceableKind, isAddressableKind} from "nostr-tools/kinds"
 
 type Item = {
   subscription: NDKSubscription
@@ -36,6 +37,17 @@ function shouldUseNegentropy(
   return filters.every((filter) => {
     // Skip if has ids filter
     if (filter.ids && filter.ids.length > 0) return false
+
+    // Skip if single author + replaceable kinds
+    // (relays only keep latest, negentropy pointless)
+    if (filter.authors?.length === 1 && filter.kinds) {
+      const allReplaceable = filter.kinds.every(isReplaceableKind)
+      if (allReplaceable) return false
+
+      // Skip if addressable/parameterized replaceable with "d" tag filter
+      const hasAddressable = filter.kinds.some(isAddressableKind)
+      if (hasAddressable && filter["#d"]) return false
+    }
 
     // Use Negentropy if no limit or limit >= 20
     return !filter.limit || filter.limit >= 20

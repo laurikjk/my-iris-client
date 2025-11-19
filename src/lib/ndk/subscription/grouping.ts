@@ -76,5 +76,13 @@ export function mergeFilters(filters: NDKFilter[]): NDKFilter[] {
     })
   })
 
-  return [...result, lastResult as NDKFilter]
+  const merged = [...result, lastResult as NDKFilter]
+
+  // Strip redundant filters when ids present (event IDs are unique)
+  return merged.map((filter) => {
+    if (filter.ids && filter.ids.length > 0) {
+      return {ids: filter.ids}
+    }
+    return filter
+  })
 }
