@@ -38,7 +38,7 @@ function Naddr({naddr, data}: {naddr: string; data: nip19.AddressPointer}) {
         undefined
       )
       .then((e) => e && e.id && setEvent(e))
-  })
+  }, [data.pubkey, data.kind, data.identifier])
 
   if (!event) {
     return (
