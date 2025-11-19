@@ -405,7 +405,7 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
 }
 
 const CashuToken: Embed = {
-  regex: /(cashu[A-Za-z0-9_-]{20,})/gi,
+  regex: /(?<![/.])(?:^|\s)(cashu[A-Za-z0-9_-]{20,})(?:\s|$)/gi,
   component: CashuTokenComponent,
   settingsKey: "cashu",
 }
