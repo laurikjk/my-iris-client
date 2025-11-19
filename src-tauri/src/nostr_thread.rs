@@ -43,15 +43,68 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
         // Process relay events
         POOL.with(|p| {
             if let Some(pool) = p.borrow_mut().as_mut() {
-                for i in 0..pool.relays.len() {
-                    while let Some(event) = pool.relays[i].try_recv() {
-                        had_activity = true;
-                        let relay_url = pool.relays[i].url().to_string();
-                        match event {
-                            ewebsock::WsEvent::Message(ewebsock::WsMessage::Text(text)) => {
-                                // Fast path: check for duplicate EVENT messages using string ops
-                                let mut already_had = false;
-                                if text.len() > 3 && text.as_bytes()[2] == b'E' && text.as_bytes()[3] == b'V' {
+                while let Some(pool_event) = pool.try_recv() {
+                    had_activity = true;
+                    let relay_url = pool_event.relay.clone();
+                    let event = pool_event.event;
+
+                    // Handle negentropy events
+                    if let Some(neg_event) = pool_event.negentropy_event {
+                        use enostr::NegentropyEvent;
+                        match neg_event {
+                            NegentropyEvent::NeedLocalEvents { relay_url, sub_id, filter } => {
+                                debug!("Negentropy NeedLocalEvents for sub {} on {}", sub_id, relay_url);
+                                // Query local events from ndb
+                                NDB.with(|n| {
+                                    if let Some(ndb) = n.borrow().as_ref() {
+                                        if let Ok(txn) = nostrdb::Transaction::new(ndb) {
+                                            let notes = match ndb.query(&txn, &[filter.clone()], 1000) {
+                                                Ok(results) => {
+                                                    results.iter().map(|r| r.note.clone()).collect::<Vec<_>>()
+                                                }
+                                                Err(_) => vec![],
+                                            };
+                                            debug!("Providing {} local events for negentropy sync", notes.len());
+                                            if let Err(e) = pool.add_negentropy_notes(&relay_url, &sub_id, filter, &notes) {
+                                                warn!("Failed to add negentropy notes: {}", e);
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            NegentropyEvent::NeedEvents { relay_url, sub_id, event_ids } => {
+                                debug!("Negentropy NeedEvents: {} IDs for sub {} on {}", event_ids.len(), sub_id, relay_url);
+                                // Relay has these events, we need to fetch them
+                                if !event_ids.is_empty() {
+                                    let fetch_filter = nostrdb::Filter::new()
+                                        .ids(event_ids.iter().map(|s| {
+                                            let mut bytes = [0u8; 32];
+                                            let _ = hex::decode_to_slice(s, &mut bytes);
+                                            bytes
+                                        }).collect::<Vec<_>>().iter())
+                                        .build();
+                                    let fetch_msg = enostr::ClientMessage::req(format!("{}-fetch", sub_id), vec![fetch_filter]);
+                                    pool.send(&fetch_msg);
+                                }
+                            }
+                            NegentropyEvent::HaveEvents { event_ids, .. } => {
+                                debug!("Negentropy HaveEvents: we have {} events relay doesn't", event_ids.len());
+                                // We have these, relay doesn't - could upload if bidirectional
+                            }
+                            NegentropyEvent::SyncComplete { sub_id, .. } => {
+                                debug!("Negentropy sync complete for {}", sub_id);
+                            }
+                            NegentropyEvent::Error { sub_id, error, .. } => {
+                                warn!("Negentropy error for {}: {}", sub_id, error);
+                            }
+                        }
+                    }
+
+                    match event {
+                        ewebsock::WsEvent::Message(ewebsock::WsMessage::Text(text)) => {
+                            // Fast path: check for duplicate EVENT messages using string ops
+                            let mut already_had = false;
+                            if text.len() > 3 && text.as_bytes()[2] == b'E' && text.as_bytes()[3] == b'V' {
                                     if let Some(id_pos) = text.find(r#""id":""#) {
                                         let id_start = id_pos + 6;
                                         let id_end = id_start + 64;
@@ -127,7 +180,7 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                             }
                             ewebsock::WsEvent::Opened => {
                                 info!(relay = %relay_url, "Relay connection opened");
-                                pool.relays[i].set_status(enostr::RelayStatus::Connected);
+                                // Status already set by pool.try_recv()
                                 let _ = app_handle.emit("nostr_event", serde_json::json!({
                                     "type": "relayConnected",
                                     "relay": relay_url
@@ -135,7 +188,7 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                             }
                             ewebsock::WsEvent::Closed => {
                                 info!(relay = %relay_url, "Disconnected");
-                                pool.relays[i].set_status(enostr::RelayStatus::Disconnected);
+                                // Status already set by pool.try_recv()
                                 let _ = app_handle.emit("nostr_event", serde_json::json!({
                                     "type": "relayDisconnected",
                                     "relay": relay_url
@@ -150,7 +203,6 @@ pub fn nostr_thread(rx: &Receiver<NostrRequest>, db_path: &str, app_handle: taur
                         }
                     }
                 }
-            }
         });
 
         // Process commands

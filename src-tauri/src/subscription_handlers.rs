@@ -131,10 +131,9 @@ pub fn handle_subscribe(
         return;
     }
 
-
-    let req_msg = ClientMessage::req(id.clone(), relay_filters);
-    pool.send(&req_msg);
-    info!(sub_id = %id, relay_count = pool.relays.len(), "Sent REQ to relays");
+    // Use pool.subscribe() which handles negentropy for eligible filters
+    pool.subscribe(id.clone(), relay_filters);
+    info!(sub_id = %id, relay_count = pool.relays.len(), "Subscribed to relays (with negentropy if eligible)");
 }
 
 pub fn handle_unsubscribe(
