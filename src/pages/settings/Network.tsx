@@ -148,7 +148,7 @@ export function Network() {
               </div>
             </SettingsGroupItem>
 
-            <SettingsGroupItem isLast>
+            <SettingsGroupItem>
               <div className="flex justify-between items-center">
                 <div className="flex flex-col">
                   <span>Auto-connect to Your Relays</span>
@@ -160,6 +160,23 @@ export function Network() {
                   type="checkbox"
                   checked={autoConnectUserRelays}
                   onChange={(e) => handleAutoConnectUserRelaysToggle(e.target.checked)}
+                  className="toggle toggle-primary"
+                />
+              </div>
+            </SettingsGroupItem>
+
+            <SettingsGroupItem isLast>
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span>Enable Negentropy Sync</span>
+                  <span className="text-sm text-base-content/60">
+                    Efficient event reconciliation protocol (NIP-77)
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={network.negentropyEnabled}
+                  onChange={(e) => updateNetwork({negentropyEnabled: e.target.checked})}
                   className="toggle toggle-primary"
                 />
               </div>

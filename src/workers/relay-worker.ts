@@ -23,6 +23,7 @@ import type {
   WorkerSubscribeOpts,
   WorkerPublishOpts,
 } from "../lib/ndk-transport-types"
+import type {SettingsState} from "../stores/settings"
 
 // WASM sig verification - nostr-wasm Nostr interface
 interface WasmVerifier {
@@ -51,6 +52,7 @@ let ndk: NDK
 let cache: NDKCacheAdapterDexie
 const subscriptions = new Map<string, any>()
 const connectedRelays = new Set<string>() // Track relays that were connected before offline
+let settings: SettingsState | undefined
 
 // Attach status change listeners to a relay
 function attachRelayListeners(relay: NDKRelay) {
@@ -74,9 +76,15 @@ const DEFAULT_RELAYS = [
   "wss://relay.snort.social",
 ]
 
-async function initialize(relayUrls?: string[]) {
+async function initialize(relayUrls?: string[], initialSettings?: SettingsState) {
   try {
     log("[Relay Worker] Starting initialization with relays:", relayUrls)
+
+    // Store settings
+    if (initialSettings) {
+      settings = initialSettings
+      log("[Relay Worker] Settings initialized:", settings)
+    }
 
     // Initialize Dexie cache for writing only (main thread handles reads)
     log("[Relay Worker] Initializing cache adapter...")
@@ -94,6 +102,7 @@ async function initialize(relayUrls?: string[]) {
       explicitRelayUrls: relaysToUse,
       cacheAdapter: cache, // For writing fresh events to cache
       enableOutboxModel: false,
+      negentropyEnabled: settings?.network.negentropyEnabled ?? false,
     })
 
     // Setup custom sig verification with wasm fallback
@@ -481,6 +490,16 @@ function handleClose() {
   }
 }
 
+function handleUpdateSettings(newSettings: SettingsState) {
+  log("[Relay Worker] Updating settings:", newSettings)
+  settings = newSettings
+
+  // Update NDK negentropy setting if initialized
+  if (ndk) {
+    ndk.negentropyEnabled = settings.network.negentropyEnabled
+  }
+}
+
 // Listen for network status changes in worker
 let wasOffline = false
 
@@ -504,7 +523,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
   switch (type) {
     case "init":
-      await initialize(relays)
+      await initialize(relays, data.settings)
       break
 
     case "subscribe":
@@ -575,6 +594,12 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
     case "close":
       handleClose()
+      break
+
+    case "updateSettings":
+      if (data.settings) {
+        handleUpdateSettings(data.settings)
+      }
       break
 
     default:

@@ -43,7 +43,7 @@ test.skip("Negentropy sync with relay", async ({page}) => {
 
       try {
         // Connect to relay
-        const relay = new NDKRelay(relayUrl, undefined, {} as any)
+        const relay = new NDKRelay(relayUrl, undefined, {} as Record<string, unknown>)
         await relay.connect(10000)
 
         // Check NIP-77 support
@@ -95,10 +95,11 @@ test.skip("Negentropy sync with relay", async ({page}) => {
           eventCount: receivedEventIds.size,
           eventIds: Array.from(receivedEventIds).slice(0, 5), // Sample
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as {message: string; stack?: string}
         return {
-          error: error.message,
-          stack: error.stack,
+          error: err.message,
+          stack: err.stack,
         }
       }
     },
@@ -146,7 +147,7 @@ test.skip("Negentropy incremental sync", async ({page}) => {
       )
 
       try {
-        const relay = new NDKRelay(relayUrl, undefined, {} as any)
+        const relay = new NDKRelay(relayUrl, undefined, {} as Record<string, unknown>)
         await relay.connect(10000)
 
         const supportsNeg = relay.supportsNip(77)
@@ -173,7 +174,7 @@ test.skip("Negentropy incremental sync", async ({page}) => {
         const mockEvents = firstSyncIds.map((id) => ({
           id,
           created_at: 1000000,
-        })) as any[]
+        })) as Array<{id: string; created_at: number}>
 
         const storage2 = buildStorageVector(mockEvents)
         let totalDiff = 0
@@ -190,8 +191,9 @@ test.skip("Negentropy incremental sync", async ({page}) => {
           firstSyncCount: firstSyncIds.length,
           secondSyncDiff: totalDiff,
         }
-      } catch (error: any) {
-        return {error: error.message}
+      } catch (error: unknown) {
+        const err = error as {message: string}
+        return {error: err.message}
       }
     },
     {pubkey: TEST_PUBKEY, relayUrl: RELAY_URL}
@@ -232,7 +234,7 @@ test.skip("Negentropy with frame size limit", async ({page}) => {
       )
 
       try {
-        const relay = new NDKRelay(relayUrl, undefined, {} as any)
+        const relay = new NDKRelay(relayUrl, undefined, {} as Record<string, unknown>)
         await relay.connect(10000)
 
         const supportsNeg = relay.supportsNip(77)
@@ -264,8 +266,9 @@ test.skip("Negentropy with frame size limit", async ({page}) => {
           success,
           eventCount: receivedEventIds.length,
         }
-      } catch (error: any) {
-        return {error: error.message}
+      } catch (error: unknown) {
+        const err = error as {message: string}
+        return {error: err.message}
       }
     },
     {pubkey: TEST_PUBKEY, relayUrl: RELAY_URL}

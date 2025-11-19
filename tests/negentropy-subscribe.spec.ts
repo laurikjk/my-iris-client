@@ -61,14 +61,17 @@ test("Subscribe with Negentropy to relay.damus.io", async ({page}) => {
         }
 
         // Track NEG-* protocol messages
-        const originalSend = (relay.connectivity as any).send
-        ;(relay.connectivity as any).send = function (msg: string) {
+        const connectivity = relay.connectivity as {send: (msg: string) => unknown}
+        const originalSend = connectivity.send
+        connectivity.send = function (msg: string) {
           try {
             const parsed = JSON.parse(msg)
             if (parsed[0]?.startsWith("NEG-")) {
               protocolMessages.push(parsed[0])
             }
-          } catch {}
+          } catch {
+            // ignore parse errors
+          }
           return originalSend.call(this, msg)
         }
 
@@ -104,8 +107,9 @@ test("Subscribe with Negentropy to relay.damus.io", async ({page}) => {
           sampleIds: Array.from(receivedEventIds).slice(0, 3),
           protocolMessages,
         }
-      } catch (error: any) {
-        return {error: error.message, stack: error.stack}
+      } catch (error: unknown) {
+        const err = error as {message: string; stack?: string}
+        return {error: err.message, stack: err.stack}
       }
     },
     {pubkey: TEST_PUBKEY, relayUrl: RELAY_URL}
@@ -224,8 +228,9 @@ test.skip("Subscribe with Negentropy receives both historical and new events", a
           newCount: newEvents.size,
           totalCount: historicalEvents.size + newEvents.size,
         }
-      } catch (error: any) {
-        return {error: error.message}
+      } catch (error: unknown) {
+        const err = error as {message: string}
+        return {error: err.message}
       }
     },
     {pubkey: TEST_PUBKEY, relayUrl: RELAY_URL}

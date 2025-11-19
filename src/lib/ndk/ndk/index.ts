@@ -88,6 +88,12 @@ export interface NDKConstructorParams {
   autoConnectUserRelays?: boolean
 
   /**
+   * Enable negentropy sync (NIP-77) for efficient event reconciliation
+   * @default false
+   */
+  negentropyEnabled?: boolean
+
+  /**
    * Signer to use for signing events by default
    */
   signer?: NDKSigner
@@ -385,6 +391,11 @@ export class NDK extends EventEmitter<{
   public p2pOnlyMode: boolean = false
 
   /**
+   * Enable negentropy sync (NIP-77) for efficient event reconciliation
+   */
+  public negentropyEnabled: boolean = false
+
+  /**
    * Default relay-auth policy that will be used when a relay requests authentication,
    * if no other policy is specified for that relay.
    *
@@ -448,6 +459,7 @@ export class NDK extends EventEmitter<{
     })
 
     this.autoConnectUserRelays = opts.autoConnectUserRelays ?? true
+    this.negentropyEnabled = opts.negentropyEnabled ?? false
 
     this.clientName = opts.clientName
     this.clientNip89 = opts.clientNip89

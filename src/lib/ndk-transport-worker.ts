@@ -15,6 +15,7 @@ import type {
   WorkerSubscribeOpts,
   LocalDataStats,
 } from "./ndk-transport-types"
+import {useSettingsStore} from "@/stores/settings"
 
 const {log} = createDebugLogger(DEBUG_NAMESPACES.NDK_WORKER)
 
@@ -117,9 +118,21 @@ export class NDKWorkerTransport {
     }
     ndk.transportPlugins.push(this as any) // Type compatibility handled at runtime
 
+    const settingsState = useSettingsStore.getState()
+    const settings = {
+      appearance: settingsState.appearance,
+      content: settingsState.content,
+      imgproxy: settingsState.imgproxy,
+      notifications: settingsState.notifications,
+      network: settingsState.network,
+      desktop: settingsState.desktop,
+      debug: settingsState.debug,
+      legal: settingsState.legal,
+    }
     this.worker.postMessage({
       type: "init",
       relays: relayUrls || [],
+      settings,
     } as WorkerMessage)
 
     // Forward browser online/offline events to worker
@@ -127,6 +140,24 @@ export class NDKWorkerTransport {
       window.addEventListener("offline", this.handleOffline)
       window.addEventListener("online", this.handleOnline)
     }
+
+    // Subscribe to settings changes and forward to worker
+    useSettingsStore.subscribe((state) => {
+      const settings = {
+        appearance: state.appearance,
+        content: state.content,
+        imgproxy: state.imgproxy,
+        notifications: state.notifications,
+        network: state.network,
+        desktop: state.desktop,
+        debug: state.debug,
+        legal: state.legal,
+      }
+      this.worker.postMessage({
+        type: "updateSettings",
+        settings,
+      } as WorkerMessage)
+    })
 
     await this.readyPromise
   }

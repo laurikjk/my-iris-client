@@ -1,4 +1,5 @@
 import type {NDKFilter} from "./ndk/subscription"
+import type {SettingsState} from "../stores/settings"
 
 export interface WorkerSubscribeOpts {
   destinations?: ("cache" | "relay")[]
@@ -34,6 +35,7 @@ export interface WorkerMessage {
     | "reconnectDisconnected"
     | "browserOffline"
     | "browserOnline"
+    | "updateSettings"
   id?: string
   filters?: NDKFilter[]
   event?: unknown
@@ -42,6 +44,7 @@ export interface WorkerMessage {
   subscribeOpts?: WorkerSubscribeOpts
   publishOpts?: WorkerPublishOpts
   reason?: string
+  settings?: SettingsState
 }
 
 export interface WorkerResponse {

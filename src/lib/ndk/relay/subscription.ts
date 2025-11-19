@@ -437,13 +437,20 @@ export class NDKRelaySubscription {
 
     this.executeFilters = this.compileFilters()
 
+    // Check NDK-level negentropy setting
+    const ndk = (this.relay.connectivity as any)?.ndk
+    const globalNegentropyEnabled = ndk?.negentropyEnabled ?? false
+
     // Check if any subscription explicitly requested Negentropy
     const explicitUseNegentropy = Array.from(this.items.values()).find(
       (item) => item.subscription.opts.useNegentropy !== undefined
     )?.subscription.opts.useNegentropy
 
+    // Global setting takes precedence if disabled
+    const effectiveNegPreference = globalNegentropyEnabled ? explicitUseNegentropy : false
+
     // Try Negentropy (NIP-77) if applicable and not disabled
-    const shouldUseNeg = shouldUseNegentropy(this.executeFilters, explicitUseNegentropy)
+    const shouldUseNeg = shouldUseNegentropy(this.executeFilters, effectiveNegPreference)
     const negSupported = this.relay.negentropySupport !== false
 
     if (shouldUseNeg && negSupported) {
