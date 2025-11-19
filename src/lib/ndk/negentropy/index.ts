@@ -45,7 +45,10 @@ export async function negentropySync(
   let msg: string | null = initialMessage
 
   return new Promise<boolean>((resolve, reject) => {
-    const messageHandlers = new Map<string, (relay: NDKRelay, message: unknown[]) => void>()
+    const messageHandlers = new Map<
+      string,
+      (relay: NDKRelay, message: unknown[]) => void
+    >()
     let isActive = true
     let noticeHandler: ((notice: string) => void) | undefined
 
@@ -81,6 +84,12 @@ export async function negentropySync(
     const handleNegMsg = async (_relay: NDKRelay, message: unknown[]) => {
       if (!isActive || message[1] !== subId) return
 
+      // Mark negentropy as supported (once true, never changes)
+      if (relay.negentropySupport !== true) {
+        relay.negentropySupport = true
+        log("Relay supports negentropy", relay.url)
+      }
+
       try {
         const receivedMsg = message[2] as string
         const [newMsg, have, need] = ne.reconcile<string>(receivedMsg)
@@ -110,6 +119,12 @@ export async function negentropySync(
     const handleNegErr = (_relay: NDKRelay, message: unknown[]) => {
       if (!isActive || message[1] !== subId) return
 
+      // Mark negentropy as supported (even if error - protocol exists)
+      if (relay.negentropySupport !== true) {
+        relay.negentropySupport = true
+        log("Relay supports negentropy (via NEG-ERR)", relay.url)
+      }
+
       const errorMsg = message[2] as string
       log("Received NEG-ERR", errorMsg)
       cleanup()
@@ -119,6 +134,24 @@ export async function negentropySync(
     // NOTICE handler for unsupported detection
     const handleNotice = (notice: string) => {
       const lowerNotice = notice.toLowerCase()
+
+      // Check for explicit "negentropy disabled" message
+      if (lowerNotice.includes("negentropy disabled")) {
+        // Only mark as disabled if not already confirmed as supported
+        if (relay.negentropySupport !== true) {
+          relay.negentropySupport = false
+          log("Relay disabled negentropy", notice)
+        } else {
+          log(
+            "Relay sent negentropy disabled but already confirmed working, ignoring",
+            notice
+          )
+        }
+        cleanup()
+        reject(new Error(`Unsupported: ${notice}`))
+        return
+      }
+
       if (
         lowerNotice.includes("unsupported") ||
         lowerNotice.includes("not implemented") ||

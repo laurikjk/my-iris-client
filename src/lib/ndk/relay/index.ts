@@ -132,6 +132,22 @@ export class NDKRelay extends EventEmitter<{
   public unsupportedNips: Set<number> = new Set()
 
   /**
+   * NIPs that have been confirmed to be supported by this relay.
+   * Once a NIP is marked as supported, it will never be marked as unsupported.
+   * Set of NIP numbers (e.g., 77 for Negentropy).
+   */
+  public supportedNips: Set<number> = new Set()
+
+  /**
+   * Negentropy (NIP-77) support status for this relay.
+   * - undefined: not tested yet
+   * - true: confirmed working (received NEG-MSG or NEG-ERR)
+   * - false: confirmed disabled (received NOTICE "negentropy disabled")
+   * Once set to true, never changes. In-memory only.
+   */
+  public negentropySupport?: boolean
+
+  /**
    * Whether unsupported NIPs have been loaded from cache.
    */
   private unsupportedNipsLoaded = false
