@@ -81,9 +81,7 @@ const ProfileHeader = ({
   const handleStartChat = () => {
     // Navigate directly to chat with userPubKey
     // The chats store will handle session creation automatically
-    navigate("/chats/chat", {
-      state: {id: pubKeyHex},
-    })
+    navigate(`/chats/chat/${pubKeyHex}`)
   }
 
   return (

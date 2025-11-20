@@ -31,10 +31,7 @@ function Messages() {
       >
         {(() => {
           const pathSegments = location.pathname.split("/").filter(Boolean)
-          // pathSegments: ['chats'] or ['chats', 'new'] or ['chats', 'chat'] etc.
-
           if (pathSegments.length === 1) {
-            // Just /chats - show NewChat
             return <NewChat />
           }
 
@@ -43,19 +40,17 @@ function Messages() {
           if (subPath === "new") {
             return <NewChat />
           } else if (subPath === "chat") {
-            return (
-              <PrivateChat
-                key={location.state?.id as string}
-                id={location.state?.id as string}
-              />
-            )
+            const chatIdFromPath = pathSegments[2]
+            const targetId = chatIdFromPath || (location.state?.id as string | undefined)
+            if (targetId) {
+              return <PrivateChat key={targetId} id={targetId} />
+            }
+            return <NewChat />
           } else if (subPath === "group") {
             return <GroupGroupRoutes />
           } else if (pathSegments[2] === "details") {
-            // :id/details
             return <PublicChatDetails />
           } else if (subPath) {
-            // :id - public chat
             return <PublicChat key={location.pathname} />
           }
 

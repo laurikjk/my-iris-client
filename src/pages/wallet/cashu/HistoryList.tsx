@@ -94,9 +94,7 @@ export default function HistoryList({
             if (entry.type === "mint") {
               navigate(`/${nip19.npubEncode(entry.paymentMetadata.sender)}`)
             } else {
-              navigate("/chats/chat", {
-                state: {id: entry.paymentMetadata.sender},
-              })
+              navigate(`/chats/chat/${entry.paymentMetadata.sender}`)
             }
           }
         }

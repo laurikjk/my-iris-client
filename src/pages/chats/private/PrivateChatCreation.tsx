@@ -13,9 +13,7 @@ const PrivateChatCreation = () => {
 
     // Navigate directly to chat with userPubKey
     // The chats store will handle session creation automatically
-    navigate("/chats/chat", {
-      state: {id: user.pubkey},
-    })
+    navigate(`/chats/chat/${user.pubkey}`)
   }
 
   if (!myPubKey) {

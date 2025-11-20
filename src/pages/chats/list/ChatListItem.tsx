@@ -257,8 +257,7 @@ const ChatListItem = ({id, isPublic = false, type}: ChatListItemProps) => {
   } else if (isPublic) {
     chatRoute = `/chats/${id}`
   } else {
-    // For private chats, id is now userPubKey
-    chatRoute = "/chats/chat"
+    chatRoute = `/chats/chat/${id}`
   }
 
   return (

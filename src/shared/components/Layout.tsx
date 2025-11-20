@@ -207,9 +207,11 @@ const Layout = ({children}: {children: ReactNode}) => {
     const handleServiceWorkerMessage = (event: MessageEvent<ServiceWorkerMessage>) => {
       if (event.data?.type === "NAVIGATE_REACT_ROUTER") {
         const url = new URL(event.data.url)
-        if (url.pathname.match(/^\/chats\/[^/]+$/)) {
+        if (url.pathname.match(/^\/chats\/chat\/[^/]+$/)) {
+          navigate(url.pathname + url.search + url.hash)
+        } else if (url.pathname.match(/^\/chats\/[^/]+$/)) {
           const chatId = url.pathname.split("/").pop()
-          navigate("/chats/chat", {state: {id: chatId}})
+          navigate(`/chats/chat/${chatId}`)
         } else {
           navigate(url.pathname + url.search + url.hash)
         }

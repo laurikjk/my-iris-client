@@ -113,9 +113,7 @@ export default function SendEcashShare({
         // Navigate to chat
         log("✓ Navigating to chat...")
         onClose()
-        navigate("/chats/chat", {
-          state: {id: selectedUserPubkey},
-        })
+        navigate(`/chats/chat/${selectedUserPubkey}`)
       } catch (err) {
         logError("❌ Failed to auto-send token via DM:", err)
         setError(
@@ -267,9 +265,7 @@ export default function SendEcashShare({
       // Navigate to chat
       log("✓ Navigating to chat...")
       onClose()
-      navigate("/chats/chat", {
-        state: {id: user.pubkey},
-      })
+      navigate(`/chats/chat/${user.pubkey}`)
     } catch (err) {
       logError("❌ Failed to send token via DM:", err)
       setError(
@@ -343,7 +339,7 @@ export default function SendEcashShare({
           className="alert alert-info cursor-pointer hover:bg-info/30 transition-colors"
           onClick={() => {
             onClose()
-            navigate("/chats/chat", {state: {id: recipientPubkey}})
+            navigate(`/chats/chat/${recipientPubkey}`)
           }}
         >
           <div className="flex flex-col gap-2 w-full">
