@@ -20,6 +20,8 @@ import localforage from "localforage"
 import {KIND_CHANNEL_CREATE} from "./utils/constants"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
+import {profileCache, arrayToProfile} from "@/utils/profileCache"
+import {PublicKey} from "@/shared/utils/PublicKey"
 
 const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
@@ -427,8 +429,51 @@ self.addEventListener("push", (event) => {
       if (data.event.kind === MESSAGE_EVENT_KIND) {
         const result = await tryDecryptPrivateDM(data)
         if (result.success) {
+          const sessionPubkey = result.sessionId?.split(":").shift() || ""
+          let normalizedPubkey: string | null = null
+          try {
+            normalizedPubkey = new PublicKey(sessionPubkey).toString()
+          } catch (err) {
+            error(
+              "service-worker: failed to normalize session pubkey",
+              sessionPubkey,
+              err
+            )
+            normalizedPubkey = sessionPubkey
+          }
+
+          let senderProfile = normalizedPubkey
+            ? profileCache.get(normalizedPubkey)
+            : undefined
+
+          if (!senderProfile && normalizedPubkey) {
+            try {
+              const storedProfiles = await localforage.getItem<string[][]>("profileCache")
+              if (Array.isArray(storedProfiles)) {
+                const match = storedProfiles.find((entry) => entry[0] === normalizedPubkey)
+                if (match) {
+                  senderProfile = arrayToProfile(match, normalizedPubkey)
+                  profileCache.set(normalizedPubkey, senderProfile)
+                }
+              }
+            } catch (err) {
+              error("service-worker: failed to read profile cache", err)
+            }
+          }
+
+          const senderName = senderProfile
+            ? senderProfile.display_name ||
+              senderProfile.name ||
+              senderProfile.username ||
+              (typeof senderProfile.nip05 === "string"
+                ? senderProfile.nip05.split("@")[0]
+                : undefined)
+            : undefined
           if (result.kind === KIND_CHANNEL_CREATE) {
-            await self.registration.showNotification("New group invite", {
+            const groupInviteTitle = senderName
+              ? `${senderName} invited you to a group`
+              : "New group invite"
+            await self.registration.showNotification(groupInviteTitle, {
               icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
               data: {
                 url: `/chats/${encodeURIComponent(result.sessionId)}`,
@@ -436,8 +481,11 @@ self.addEventListener("push", (event) => {
               },
             })
           } else {
+            const dmTitle = senderName
+              ? `New message from ${senderName}`
+              : NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].title
             await self.registration.showNotification(
-              NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].title,
+              dmTitle,
               {
                 body: result.content,
                 icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,

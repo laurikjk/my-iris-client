@@ -63,7 +63,7 @@ const sanitizePicture = (picture: string): string | undefined => {
 }
 
 // Convert condensed array to NDKUserProfile
-const arrayToProfile = (item: string[], pubkey?: string): NDKUserProfile => {
+export const arrayToProfile = (item: string[], pubkey?: string): NDKUserProfile => {
   const [, name, nip05, picture] = item
   const profile: NDKUserProfile = {}
 
@@ -122,7 +122,6 @@ const throttledSaveProfiles = throttle(() => {
     }
   })
 
-  // Don't save if we have too few profiles (likely an error or data loss)
   if (profileData.length < 10) {
     warn(
       `Not saving profile cache with only ${profileData.length} profiles (minimum: 10)`
