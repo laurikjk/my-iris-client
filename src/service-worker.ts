@@ -268,6 +268,19 @@ type DecryptResult =
       sessionId: string
     }
 
+type SuccessfulDecryptResult = Extract<DecryptResult, {success: true}>
+
+type TryDecryptInviteResult =
+  | {
+      success: false
+      decryptResult: DecryptResult
+    }
+  | {
+      success: true
+      groupId: string
+      decryptResult: SuccessfulDecryptResult
+    }
+
 const SESSION_STORAGE = localforage.createInstance({
   name: "iris-session-manager",
   storeName: "session-private",
@@ -407,6 +420,34 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
   }
 }
 
+const tryDecryptInvite = async (data: PushData): Promise<TryDecryptInviteResult> => {
+  const decryptResult = await tryDecryptPrivateDM(data)
+  if (!decryptResult.success || decryptResult.kind !== KIND_CHANNEL_CREATE) {
+    return {
+      success: false,
+      decryptResult,
+    }
+  }
+
+  try {
+    const parsed = JSON.parse(decryptResult.content) as {id?: string}
+    if (parsed?.id && typeof parsed.id === "string") {
+      return {
+        success: true,
+        groupId: parsed.id,
+        decryptResult,
+      }
+    }
+  } catch (err) {
+    error("DM decrypt: failed to parse group invite", err)
+  }
+
+  return {
+    success: false,
+    decryptResult,
+  }
+}
+
 self.addEventListener("push", (event) => {
   event.waitUntil(
     (async () => {
@@ -425,13 +466,22 @@ self.addEventListener("push", (event) => {
       if (!data?.event) return
 
       if (data.event.kind === MESSAGE_EVENT_KIND) {
-        const result = await tryDecryptPrivateDM(data)
+        const inviteResult = await tryDecryptInvite(data)
+        const result = inviteResult.decryptResult
         if (result.success) {
-          if (result.kind === KIND_CHANNEL_CREATE) {
+          if (inviteResult.success) {
             await self.registration.showNotification("New group invite", {
               icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
               data: {
-                url: `/chats/chat/${encodeURIComponent(result.sessionId)}`,
+                url: `/chats/group/${encodeURIComponent(inviteResult.groupId)}`,
+                event: data.event,
+              },
+            })
+          } else if (result.kind === KIND_CHANNEL_CREATE) {
+            await self.registration.showNotification("New group invite", {
+              icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
+              data: {
+                url: "/chats",
                 event: data.event,
               },
             })
