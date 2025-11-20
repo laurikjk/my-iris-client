@@ -11,6 +11,7 @@ import {useState} from "react"
 import {getSessionManager} from "@/shared/services/PrivateChats"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {confirm} from "@/utils/utils"
+import useProfile from "@/shared/hooks/useProfile"
 interface PrivateChatHeaderProps {
   id: string
   messages: SortedMap<string, MessageType>
@@ -75,12 +76,15 @@ const PrivateChatHeader = ({id}: PrivateChatHeaderProps) => {
   }
 
   const user = id.split(":").shift()!
+  const userProfile = useProfile(user, true)
+  const userDisplayName =
+    userProfile?.display_name || userProfile?.name || userProfile?.username
 
   const showWebRtc = false // button hidden until WebRTC flow is re-enabled
 
   return (
     <Header showNotifications={false} scrollDown={true} slideUp={false} bold={false}>
-      <div className="flex items-center justify-between w-full">
+      <div className="flex items-center justify-between w-full" title={userDisplayName || user}>
         <div className="flex flex-row items-center gap-2">
           {id && <UserRow avatarWidth={32} pubKey={user} />}
           <ConnectionStatus peerId={id} showDisconnect={true} />
