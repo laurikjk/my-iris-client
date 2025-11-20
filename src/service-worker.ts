@@ -266,6 +266,7 @@ type DecryptResult =
       kind: number
       content: string
       sessionId: string
+      groupId?: string
     }
 
 const SESSION_STORAGE = localforage.createInstance({
@@ -389,6 +390,8 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
 
     unsubscribe?.()
 
+    const groupId = innerEvent?.tags?.find((tag) => tag[0] === "l" && tag[1])?.[1]
+
     return innerEvent === null
       ? {
           success: false,
@@ -398,6 +401,7 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
           kind: innerEvent.kind,
           content: innerEvent.content,
           sessionId,
+          groupId,
         }
   } catch (err) {
     error("DM decrypt: failed", err)
@@ -436,13 +440,16 @@ self.addEventListener("push", (event) => {
               },
             })
           } else {
+            const targetUrl = result.groupId
+              ? `/chats/group/${encodeURIComponent(result.groupId)}`
+              : `/chats/chat/${encodeURIComponent(result.sessionId)}`
             await self.registration.showNotification(
               NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].title,
               {
                 body: result.content,
                 icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
                 data: {
-                  url: `/chats/chat/${encodeURIComponent(result.sessionId)}`,
+                  url: targetUrl,
                   event: data.event,
                 },
               }
