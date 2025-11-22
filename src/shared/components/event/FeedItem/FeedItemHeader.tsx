@@ -11,7 +11,7 @@ import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {EVENT_AVATAR_WIDTH} from "../../user/const.ts"
 import {NDKEvent} from "@/lib/ndk"
 import {isRepost} from "@/utils/nostr"
-import {KIND_ZAP_RECEIPT} from "@/utils/constants"
+import {KIND_ZAP_RECEIPT, KIND_REACTION} from "@/utils/constants"
 
 type FeedItemHeaderProps = {
   event: NDKEvent
@@ -53,6 +53,10 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
   const getDisplayUser = () => {
     // For reposts, wait for referredEvent to avoid showing reposter's avatar
     if (isRepost(event) && !referredEvent) {
+      return null
+    }
+    // For reactions, wait for referredEvent to avoid showing liker's avatar
+    if (event.kind === KIND_REACTION && !referredEvent) {
       return null
     }
     // For zap receipts, show zap recipient if there's a referred post (post zap)

@@ -45,6 +45,9 @@ export const migratePublicChats = async () => {
 
   if (localStorage.getItem(migrationKey)) return
 
+  // Wait for store to hydrate before adding chats
+  await usePublicChatsStore.getState().awaitHydration()
+
   const store = usePublicChatsStore.getState()
   const myPubKey = useUserStore.getState().publicKey
   const channelIds = new Set<string>([DEFAULT_PUBLIC_CHAT_ID])

@@ -126,7 +126,7 @@ const initializeApp = async () => {
 
     subscribeToNotifications()
     subscribeToDMNotifications()
-    migratePublicChats()
+    void migratePublicChats()
     // Delay social graph to avoid race with NDK init
     setTimeout(() => {
       socialGraph().recalculateFollowDistances()
@@ -200,7 +200,7 @@ const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
 
     subscribeToNotifications()
     subscribeToDMNotifications()
-    migratePublicChats()
+    void migratePublicChats()
 
     // Only initialize DM sessions if not in readonly mode
     if (hasWriteAccess()) {

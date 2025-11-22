@@ -23,21 +23,27 @@ interface PublicChatStore {
   lastSeen: Record<string, number>
   timestamps: Record<string, number>
   latestMessages: Record<string, LatestMessage>
+  hasHydrated: boolean
 
   updateLastSeen: (chatId: string) => void
   updateTimestamp: (chatId: string, timestamp: number) => void
   updateLatestMessage: (chatId: string, message: LatestMessage) => void
   addOrRefreshChatById: (chatId: string) => Promise<void>
   removePublicChat: (chatId: string) => void
+  awaitHydration: () => Promise<void>
 }
+
+let resolveHydration: (() => void) | null = null
+let hydrationPromise: Promise<void> | null = null
 
 const store = create<PublicChatStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       publicChats: {},
       lastSeen: {},
       timestamps: {},
       latestMessages: {},
+      hasHydrated: false,
 
       updateLastSeen: (chatId: string) => {
         set((state) => ({
@@ -104,6 +110,16 @@ const store = create<PublicChatStore>()(
           ),
         }))
       },
+
+      awaitHydration: () => {
+        if (get().hasHydrated) return Promise.resolve()
+        if (!hydrationPromise) {
+          hydrationPromise = new Promise<void>((resolve) => {
+            resolveHydration = resolve
+          })
+        }
+        return hydrationPromise
+      },
     }),
     {
       name: "publicChats",
@@ -133,6 +149,12 @@ const store = create<PublicChatStore>()(
           state.lastSeen = validLastSeen
           state.timestamps = validTimestamps
           state.latestMessages = validLatestMessages
+        }
+
+        state.hasHydrated = true
+        if (resolveHydration) {
+          resolveHydration()
+          resolveHydration = null
         }
       },
     }
