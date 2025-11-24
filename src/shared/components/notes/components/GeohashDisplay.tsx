@@ -16,7 +16,8 @@ export function GeohashDisplay({
   const draftStore = useDraftStore()
   const draft = draftStore.getDraft(draftKey)
   const hasGeohash = draft?.gTags && draft.gTags.length > 0
-  const hasExpiration = expirationDelta !== null
+  const hasExpiration =
+    expirationDelta !== null && typeof expirationDelta === "number" && expirationDelta > 0
 
   if (!hasGeohash && !hasExpiration) return null
 
@@ -47,7 +48,7 @@ export function GeohashDisplay({
         <div />
       )}
 
-      {hasExpiration && (
+      {hasExpiration && expirationDelta && (
         <div
           className="flex items-center gap-1 text-sm text-base-content/70"
           title={`Expires: ${new Intl.DateTimeFormat(undefined, {

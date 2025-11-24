@@ -55,7 +55,14 @@ function noteCreatorReducer(
     case "SET_EXPIRATION_DELTA":
       return {...state, expirationDelta: action.payload}
     case "RESET":
-      return initialState
+      return {
+        text: "",
+        imeta: [],
+        eventKind: KIND_TEXT_NOTE,
+        price: {amount: "", currency: "USD", frequency: ""},
+        title: "",
+        expirationDelta: null,
+      }
     case "LOAD_DRAFT":
       return {...state, ...action.payload}
     default:

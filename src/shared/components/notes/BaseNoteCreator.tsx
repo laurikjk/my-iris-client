@@ -82,9 +82,9 @@ export function BaseNoteCreator({
     draftKey,
     gTags: draft?.gTags,
     onPublishSuccess: () => {
+      clearDraft() // Clear draft BEFORE reset to prevent useEffect re-persistence
       dispatch({type: "RESET"})
       setIsFocused(false)
-      clearDraft()
     },
   })
 

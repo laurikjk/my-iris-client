@@ -1149,7 +1149,7 @@ export class NDK extends EventEmitter<{
       // Prepare options, including the relaySet if available
       const subscribeOpts: NDKSubscriptionOptions = {
         ...(opts || {}),
-        closeOnEose: true,
+        closeOnEose: false, // Keep sub open until we get event or timeout
         // Give cache 100ms to respond before querying relays
         groupable: true,
         groupableDelay: 100,
@@ -1157,9 +1157,7 @@ export class NDK extends EventEmitter<{
       }
       if (relaySet) subscribeOpts.relaySet = relaySet
 
-      /** This is a workaround, for some reason we're leaking subscriptions that should EOSE and fetchEvent is not
-       * seeing them; this is a temporary fix until we find the bug.
-       */
+      // 10s timeout - keep sub open to allow network relays to respond after cache EOSE
       const t2 = setTimeout(() => {
         s.stop()
         this.aiGuardrails["_nextCallDisabled"] = null
@@ -1173,6 +1171,7 @@ export class NDK extends EventEmitter<{
           // We only emit immediately when the event is not replaceable
           if (!event.isReplaceable()) {
             clearTimeout(t2)
+            s.stop()
             this.aiGuardrails["_nextCallDisabled"] = null
             resolve(event)
           } else if (!fetchedEvent || fetchedEvent.created_at! < event.created_at!) {
@@ -1180,9 +1179,8 @@ export class NDK extends EventEmitter<{
           }
         },
         onEose: () => {
-          clearTimeout(t2)
-          this.aiGuardrails["_nextCallDisabled"] = null
-          resolve(fetchedEvent)
+          // Don't close on EOSE - let timeout handle it
+          // This allows network relays to respond even if cache EOSEs first
         },
       })
     })

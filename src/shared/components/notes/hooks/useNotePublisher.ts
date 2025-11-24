@@ -39,6 +39,11 @@ export function useNotePublisher(params: UseNotePublisherParams) {
         myPubKey: params.myPubKey,
       })
 
+      // Validate tags are all valid arrays
+      event.tags = event.tags.filter(
+        (tag) => Array.isArray(tag) && tag.every((item) => typeof item === "string")
+      )
+
       await event.sign()
       event.publish().catch((error) => {
         console.error("Failed to publish note:", error)
