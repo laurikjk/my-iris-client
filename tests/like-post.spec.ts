@@ -15,7 +15,10 @@ test.describe("Post liking", () => {
       .fill(postContent)
     await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
-    // Verify post is visible
+    // Wait for navigation to post detail page
+    await page.waitForURL(/\/note[a-z0-9]+/, {timeout: 10000})
+
+    // Verify post is visible on detail page
     await expect(page.getByText(postContent).first()).toBeVisible({timeout: 10000})
 
     // Find the feed item containing our post text

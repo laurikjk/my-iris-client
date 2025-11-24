@@ -12,12 +12,9 @@ test("user can view post details", async ({page}) => {
     .fill(postContent)
   await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
-  await expect(page.getByText(postContent).first()).toBeVisible()
+  // Wait for navigation to complete
+  await page.waitForURL(/\/note[a-z0-9]+/, {timeout: 10000})
 
-  await page.getByText(postContent).first().click()
-
-  // Wait for navigation to the note page
-  await page.waitForURL(/\/note[a-z0-9]+/, {timeout: 5000})
-
-  await expect(page.getByText(postContent).first()).toBeVisible()
+  // Post should be visible on detail page
+  await expect(page.getByText(postContent).first()).toBeVisible({timeout: 10000})
 })
