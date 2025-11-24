@@ -84,9 +84,11 @@ const initializeApp = async () => {
   // Wait for settings to hydrate from localStorage before initializing NDK
   await useUserStore.getState().awaitHydration()
 
-  // Initialize NDK (now async due to cache adapter)
-  const {initNDKAsync} = await import("@/utils/ndk")
-  await initNDKAsync()
+  // Start NDK initialization in background (non-blocking)
+  import("@/utils/ndk").then(async ({initNDK}) => {
+    await initNDK()
+    log("✅ NDK initialized")
+  })
 
   // Load social graph in background (non-blocking)
   import("@/utils/socialGraph").then(

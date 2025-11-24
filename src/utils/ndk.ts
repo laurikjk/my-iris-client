@@ -47,39 +47,58 @@ export function getTauriTransport(): NDKTauriTransport | undefined {
   return tauriTransport
 }
 
+// Don't create placeholder - will be created in initNDK with proper transport
+// Early calls to ndk() will trigger initNDK automatically
+
 /**
  * Get a singleton "default" NDK instance to get started quickly. If you want to init NDK with e.g. your own relays, pass them on the first call.
  *
  * This needs to be called to make nip07 login features work.
- * @throws Error if NDK init options are passed after the first call or if called before initNDKAsync
+ * Automatically triggers initialization if not already started.
+ * @throws Error if NDK init options are passed after the first call
  */
 export const ndk = (opts?: NDKConstructorParams): NDK => {
-  if (!ndkInstance) {
-    throw new Error(
-      "NDK not initialized - call await initNDKAsync() before using ndk() or rendering app"
-    )
-  } else if (opts) {
+  if (!ndkInstance && !initPromise) {
+    // Auto-initialize on first access
+    initNDK()
+  }
+  if (opts) {
     throw new Error("NDK instance already initialized, cannot pass options")
   }
+  // Return instance even if still initializing - transport will queue messages
   return ndkInstance!
 }
 
 /**
- * Initialize NDK asynchronously (required due to async cache adapter)
- * Must be called before ndk() or before mounting React app
+ * Initialize NDK with worker transport and relay connections.
+ * Can be called without awaiting - messages will queue until ready.
  */
-export async function initNDKAsync(opts?: NDKConstructorParams): Promise<NDK> {
+export async function initNDK(opts?: NDKConstructorParams): Promise<NDK> {
   if (initPromise) {
     await initPromise
     return ndkInstance!
   }
 
-  initPromise = initNDK(opts)
+  // Create instance immediately so ndk() returns it synchronously
+  ndkInstance = new NDK({explicitRelayUrls: []})
+
+  // Create transport immediately (before any subscriptions)
+  if (isTauri()) {
+    tauriTransport = new NDKTauriTransport()
+  } else {
+    const worker = new Worker(new URL("../workers/relay-worker.ts", import.meta.url), {
+      type: "module",
+    })
+    workerTransport = new NDKWorkerTransport(worker)
+  }
+
+  // Start configuration asynchronously (but don't block return)
+  initPromise = performInit(opts)
   await initPromise
   return ndkInstance!
 }
 
-async function initNDK(opts?: NDKConstructorParams) {
+async function performInit(opts?: NDKConstructorParams) {
   const store = useUserStore.getState()
 
   // Only include enabled relays
@@ -107,48 +126,19 @@ async function initNDK(opts?: NDKConstructorParams) {
     autoConnectUserRelays
   )
 
-  // Initialize transport based on environment
-  if (isTauri()) {
-    log("🔧 Using Tauri Transport - relay connections via Rust backend")
-    tauriTransport = new NDKTauriTransport()
-  } else {
-    log("🔧 Using Worker Transport - relay connections + cache + WASM sig verification")
-    // Vite bundles worker when it sees: new Worker(new URL(..., import.meta.url))
-    const worker = new Worker(new URL("../workers/relay-worker.ts", import.meta.url), {
-      type: "module",
-    })
-    workerTransport = new NDKWorkerTransport(worker)
-  }
-
-  const options = opts || {
-    explicitRelayUrls: [], // Worker handles relays
-    enableOutboxModel: false, // Worker handles outbox
-    autoConnectUserRelays: false,
-    relayConnectionFilter: undefined,
-    cacheAdapter: undefined, // Worker handles cache
-  }
-
-  // Replace placeholder or create new instance
-  const newInstance = new NDK(options)
-
-  // Connect transport
+  // Transport already created in initNDK()
+  // Connect it synchronously (registers itself and sends init)
   const transport = isTauri() ? tauriTransport : workerTransport
-  await transport!.connect(newInstance, relays)
+  transport!.connect(ndkInstance!, relays) // Don't await - queues messages
 
-  // If placeholder exists, copy its properties to the new instance
-  if (ndkInstance) {
-    // Transfer any subscriptions or state from placeholder to real instance
-    Object.assign(ndkInstance, newInstance)
-  } else {
-    ndkInstance = newInstance
-  }
+  const ndk = ndkInstance!
 
   // Set up initial signer if we have a private key
   if (store.privateKey && typeof store.privateKey === "string") {
     try {
       privateKeySigner = new NDKPrivateKeySigner(store.privateKey)
       if (!store.nip07Login) {
-        ndkInstance.signer = privateKeySigner
+        ndk.signer = privateKeySigner
       }
     } catch (e) {
       error("Error setting initial private key signer:", e)
@@ -158,27 +148,27 @@ async function initNDK(opts?: NDKConstructorParams) {
   // Set up NIP-07 signer if enabled
   if (store.nip07Login) {
     nip07Signer = new NDKNip07Signer()
-    ndkInstance.signer = nip07Signer
+    ndk.signer = nip07Signer
   }
 
   // Set initial P2P mode
-  ndkInstance.p2pOnlyMode = useSettingsStore.getState().network.p2pOnlyMode
+  ndk.p2pOnlyMode = useSettingsStore.getState().network.p2pOnlyMode
 
   // Set initial activeUser from store (important for cache queries after refresh)
   if (store.publicKey) {
-    ndkInstance.activeUser = new NDKUser({hexpubkey: store.publicKey})
+    ndk.activeUser = new NDKUser({hexpubkey: store.publicKey})
     log("Set initial activeUser:", store.publicKey.slice(0, 16) + "...")
   }
 
-  watchLocalSettings(ndkInstance)
-  ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
+  watchLocalSettings(ndk)
+  ndk.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk})
 
   // Setup visibility reconnection (forwards to worker)
   setupVisibilityReconnection()
 
-  setupWebRTCTransport(ndkInstance)
+  setupWebRTCTransport(ndk)
 
-  log("NDK instance initialized", ndkInstance)
+  log("NDK instance initialized", ndk)
 }
 
 /**

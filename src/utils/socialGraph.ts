@@ -159,8 +159,8 @@ function getFollowListsInternal(
   const fetchBatch = async (authors: string[]) => {
     if (isManual && !isManualRecrawling) return
 
-    const {ndk: getNdk, initNDKAsync} = await import("@/utils/ndk")
-    await initNDKAsync() // Ensure NDK is initialized
+    const {ndk: getNdk, initNDK} = await import("@/utils/ndk")
+    initNDK() // Init in background - messages queue until ready
     const sub = getNdk().subscribe(
       {
         kinds: [KIND_CONTACTS, KIND_MUTE_LIST],
@@ -334,8 +334,8 @@ async function setupSubscription(publicKey: string) {
   sub?.stop()
 
   // Import ndk lazily to avoid initialization race
-  const {ndk: getNdk, initNDKAsync} = await import("@/utils/ndk")
-  await initNDKAsync() // Ensure NDK is initialized
+  const {ndk: getNdk, initNDK} = await import("@/utils/ndk")
+  initNDK() // Init in background - messages queue until ready
   sub = getNdk().subscribe({
     kinds: [KIND_CONTACTS, KIND_MUTE_LIST],
     authors: [publicKey],
