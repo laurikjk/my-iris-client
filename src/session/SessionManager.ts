@@ -492,25 +492,44 @@ export default class SessionManager {
     deviceId: string
   ): Promise<void> {
     const history = this.messageHistory.get(recipientPublicKey) || []
-    const userRecord = this.userRecords.get(recipientPublicKey)
-    if (!userRecord) {
-      return
-    }
-    const device = userRecord.devices.get(deviceId)
-    if (!device) {
-      return
-    }
-    if (device.staleAt !== undefined) {
-      return
-    }
-    for (const event of history) {
-      const {activeSession} = device
+    history.forEach(async (event) => {
+      const mr: MessageRecord = {
+        event,
+        publicKey: recipientPublicKey,
+        deviceId,
+      }
+      await this.storage.put(this.sessionKey(mr.publicKey, mr.deviceId, mr.event.id), mr)
+    })
+  }
 
-      if (!activeSession) continue
-      const {event: verifiedEvent} = activeSession.sendEvent(event)
+  async handleMessageRecord(mr: MessageRecord): Promise<void> {
+    try {
+      const userRecord = this.userRecords.get(mr.publicKey)
+      if (!userRecord) return
+      const deviceRecord = userRecord.devices.get(mr.deviceId)
+      if (!deviceRecord) return
+      const {activeSession} = deviceRecord
+      if (!activeSession) return
+      const {event: verifiedEvent} = activeSession.sendEvent(mr.event)
       await this.nostrPublish(verifiedEvent)
-      await this.storeUserRecord(recipientPublicKey)
+      await this.storeUserRecord(mr.publicKey)
+      await this.storage.del(this.sessionKey(mr.publicKey, mr.deviceId, mr.event.id))
+    } catch (error) {
+      console.error("Failed to handle message record:", error)
     }
+  }
+
+  async handleAllPendingMessages(): Promise<void> {
+    const prefix = this.versionPrefix + "/session/"
+    const keys = await this.storage.list(prefix)
+    await Promise.all(
+      keys.map(async (key) => {
+        const mr = await this.storage.get<MessageRecord>(key)
+        if (mr) {
+          await this.handleMessageRecord(mr).catch(console.error)
+        }
+      })
+    )
   }
 
   async sendEvent(
@@ -570,26 +589,13 @@ export default class SessionManager {
 
     Promise.all(
       messageRecords.map((mr) =>
-        this.storage
-          .put(
-            this.sessionKey(mr.publicKey, mr.deviceId, mr.event.id), // TODO: make their own key function
-            mr
-          )
-          .then(() => mr)
+        this.storage.put(
+          this.sessionKey(mr.publicKey, mr.deviceId, mr.event.id), // TODO: make their own key function
+          mr
+        )
       )
-    ).then((results) => {
-      results.forEach(async (mr) => {
-        const userRecord = this.userRecords.get(mr.publicKey)
-        if (!userRecord) return
-        const deviceRecord = userRecord.devices.get(mr.deviceId)
-        if (!deviceRecord) return
-        const {activeSession} = deviceRecord
-        if (!activeSession) return
-        const {event: verifiedEvent} = activeSession.sendEvent(mr.event)
-        await this.nostrPublish(verifiedEvent)
-        await this.storeUserRecord(mr.publicKey)
-        await this.storage.del(this.sessionKey(mr.publicKey, mr.deviceId, mr.event.id))
-      })
+    ).then(() => {
+      this.handleAllPendingMessages()
     })
 
     // Return the event with computed ID (same as library would compute)
