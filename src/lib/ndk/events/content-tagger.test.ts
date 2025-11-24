@@ -1,3 +1,4 @@
+import {describe, expect, it, vi, beforeEach, afterEach} from "vitest"
 import {generateContentTags} from "./content-tagger"
 import type {ContentTaggingOptions, NDKEvent, NDKTag} from "./index.js"
 
@@ -269,12 +270,14 @@ describe("await generateContentTags", () => {
     it("copies p-tags from target event when copyPTagsFromTarget is true", async () => {
       const content = "Reply to event"
       const opts: ContentTaggingOptions = {copyPTagsFromTarget: true}
+      const validPubkey1 = "1".repeat(64)
+      const validPubkey2 = "2".repeat(64)
       const mockEvent = {
         getMatchingTags: (tag: string) => {
           if (tag === "p") {
             return [
-              ["p", "pubkey1"],
-              ["p", "pubkey2"],
+              ["p", validPubkey1],
+              ["p", validPubkey2],
             ]
           }
           return []
@@ -289,8 +292,8 @@ describe("await generateContentTags", () => {
       )
 
       expect(processedTags).toEqual([
-        ["p", "pubkey1"],
-        ["p", "pubkey2"],
+        ["p", validPubkey1],
+        ["p", validPubkey2],
       ])
     })
 

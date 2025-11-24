@@ -152,6 +152,8 @@ describe("negentropySync", () => {
       } as any,
       registerProtocolHandler: vi.fn(),
       unregisterProtocolHandler: vi.fn(),
+      on: vi.fn(),
+      off: vi.fn(),
     }
   })
 

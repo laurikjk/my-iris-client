@@ -97,8 +97,10 @@ describe("NDKFollowPack", () => {
       const fp = new NDKFollowPack()
       expect(fp.pubkeys).toEqual([])
 
-      fp.pubkeys = ["pk1", "pk2"]
-      expect(fp.pubkeys).toEqual(["pk1", "pk2"])
+      const validPk1 = "1".repeat(64)
+      const validPk2 = "2".repeat(64)
+      fp.pubkeys = [validPk1, validPk2]
+      expect(fp.pubkeys).toEqual([validPk1, validPk2])
       expect(fp.tags.filter((t) => t[0] === "p").length).toBe(2)
 
       fp.pubkeys = []
@@ -135,7 +137,9 @@ describe("NDKFollowPack", () => {
 
     it("should remove all p tags when setting pubkeys to empty array", () => {
       const fp = new NDKFollowPack()
-      fp.pubkeys = ["pk1", "pk2"]
+      const validPk1 = "1".repeat(64)
+      const validPk2 = "2".repeat(64)
+      fp.pubkeys = [validPk1, validPk2]
       expect(fp.tags.filter((t) => t[0] === "p").length).toBe(2)
 
       fp.pubkeys = []

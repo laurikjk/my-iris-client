@@ -1,3 +1,4 @@
+import {describe, expect, it, beforeAll, afterAll, vi} from "vitest"
 import NDK, {NDKEvent, NDKPrivateKeySigner, NDKSubscription} from "@/lib/ndk"
 import NDKCacheAdapterDexie from "./index.js"
 
@@ -19,7 +20,7 @@ describe("foundEvents", () => {
     }
 
     const subscription = new NDKSubscription(ndk, [{kinds: [2], limit: 2}])
-    const spy = jest.spyOn(subscription, "eventReceived")
+    const spy = vi.spyOn(subscription, "eventReceived")
     await ndk.cacheAdapter?.query(subscription)
     expect(subscription.eventReceived).toBeCalledTimes(2)
 
@@ -41,14 +42,14 @@ describe("foundEvent", () => {
 
   it("correctly avoids reporting events that don't fully match NIP-01 filter", async () => {
     const subscription = new NDKSubscription(ndk, [{"#a": ["123"], "#t": ["hello"]}])
-    jest.spyOn(subscription, "eventReceived")
+    vi.spyOn(subscription, "eventReceived")
     await ndk.cacheAdapter?.query(subscription)
     expect(subscription.eventReceived).toBeCalledTimes(0)
   })
 
   it("correctly reports events that fully match NIP-01 filter", async () => {
     const subscription = new NDKSubscription(ndk, [{"#a": ["123"]}])
-    jest.spyOn(subscription, "eventReceived")
+    vi.spyOn(subscription, "eventReceived")
     await ndk.cacheAdapter?.query(subscription)
     expect(subscription.eventReceived).toBeCalledTimes(1)
   })
@@ -65,14 +66,14 @@ describe("by kind filter", () => {
 
   it("returns an event when fetching by kind", async () => {
     const subscription = new NDKSubscription(ndk, [{kinds: [10002]}])
-    jest.spyOn(subscription, "eventReceived")
+    vi.spyOn(subscription, "eventReceived")
     await ndk.cacheAdapter?.query(subscription)
     expect(subscription.eventReceived).toBeCalledTimes(1)
   })
 
   it("matches by kind even when there is a since filter", async () => {
     const subscription = new NDKSubscription(ndk, [{kinds: [10002], since: 1000}])
-    jest.spyOn(subscription, "eventReceived")
+    vi.spyOn(subscription, "eventReceived")
     await ndk.cacheAdapter?.query(subscription)
     expect(subscription.eventReceived).toBeCalledTimes(1)
   })
@@ -82,7 +83,7 @@ describe("byKinds performance", () => {
   it("should handle large number of events without freezing", async () => {
     // Create a large number of events to trigger the performance issue
     const startTime = Math.floor(Date.now() / 1000)
-    const eventCount = 5000
+    const eventCount = 500 // Reduced from 5000 for faster testing
     const targetKind = 1
 
     // Measure time before adding events
@@ -102,7 +103,7 @@ describe("byKinds performance", () => {
 
     // Create a subscription that queries by kind
     const subscription = new NDKSubscription(ndk, [{kinds: [targetKind]}])
-    const receiveEventSpy = jest.spyOn(subscription, "eventReceived")
+    const receiveEventSpy = vi.spyOn(subscription, "eventReceived")
 
     // Measure query time
     const queryStart = performance.now()

@@ -1,3 +1,4 @@
+import {describe, expect, it} from "vitest"
 import type {NostrEvent} from "../.."
 import {NDKKind} from "../index.js"
 import {NDKSubscriptionTier} from "./tier"

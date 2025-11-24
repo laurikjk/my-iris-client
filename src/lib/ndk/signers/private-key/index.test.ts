@@ -1,3 +1,4 @@
+import {describe, expect, it, vi, beforeEach, afterEach} from "vitest"
 import {bytesToHex} from "@noble/hashes/utils"
 import {nip19} from "nostr-tools"
 import {NDKEvent, type NostrEvent} from "../../index.js"
