@@ -373,6 +373,7 @@ export default class SessionManager {
         .then(() => this.upsertDeviceRecord(userRecord, deviceId))
         .then((dr) => this.attachSessionSubscription(userPubkey, dr, session))
         .then(() => this.sendMessageHistory(userPubkey, deviceId))
+        .then(() => this.handleAllPendingMessages())
         .catch(console.error)
     }
 
@@ -510,7 +511,10 @@ export default class SessionManager {
         publicKey: recipientPublicKey,
         deviceId,
       }
-      await this.storage.put(this.messageRecordKey(mr.publicKey, mr.deviceId, mr.event.id), mr)
+      await this.storage.put(
+        this.messageRecordKey(mr.publicKey, mr.deviceId, mr.event.id),
+        mr
+      )
     })
   }
 
@@ -608,7 +612,10 @@ export default class SessionManager {
 
     Promise.all(
       messageRecords.map((mr) =>
-        this.storage.put(this.messageRecordKey(mr.publicKey, mr.deviceId, mr.event.id), mr)
+        this.storage.put(
+          this.messageRecordKey(mr.publicKey, mr.deviceId, mr.event.id),
+          mr
+        )
       )
     ).then(() => {
       this.handleAllPendingMessages()
