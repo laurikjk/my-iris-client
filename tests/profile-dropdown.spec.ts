@@ -11,10 +11,8 @@ test.describe("Profile dropdown functionality", () => {
     // Use a hardcoded npub to test profile functionality
     const testNpub = "npub1g53mukxnjkcmr94fhryzkqutdz2ukq4ks0gvy5af25rgmwsl4ngq43drvk"
 
-    // Navigate to the other user's profile
-    const searchInput = page.getByPlaceholder("Search")
-    await searchInput.fill(testNpub)
-    await searchInput.press("Enter")
+    // Navigate directly to the other user's profile
+    await page.goto(`/${testNpub}`)
 
     // Wait for profile page to load
     await expect(page.url()).not.toMatch(/localhost:5173\/?$/)
@@ -40,43 +38,24 @@ test.describe("Profile dropdown functionality", () => {
 
   test("dropdown button does not appear for own profile", async ({page}) => {
     // Sign up as a test user
-    const username = "Test User"
-    await signUp(page, username)
+    await signUp(page, "Test User")
 
-    // Navigate to own profile
-    await page.goto("/profile")
+    // Click on own avatar/profile link in sidebar to navigate to own profile
+    const profileLink = page.locator('a[href*="npub"]').first()
+    await expect(profileLink).toBeVisible({timeout: 10000})
+    await profileLink.click()
 
     // Wait for profile page to load
-    await expect(page.url()).toContain("/profile")
+    await page.waitForURL(/npub/, {timeout: 10000})
 
-    // Check that the header is visible
-    const header = page.locator("header").first()
-    await expect(header).toBeVisible()
+    // Wait for page to render
+    await page.waitForLoadState("networkidle")
 
-    // Count dropdown buttons - should be different from other profiles
-    const dropdownButtons = await page.locator("header button.btn-circle.btn-ghost").all()
+    // Check that profile-dropdown-button (mute/block menu) doesn't exist
+    const dropdownButton = page.getByTestId("profile-dropdown-button")
+    const hasDropdownButton = await dropdownButton.count()
 
-    // Check none of them open a mute menu
-    let hasMuteDropdown = false
-    for (const button of dropdownButtons) {
-      // Try clicking each button
-      const isVisible = await button.isVisible()
-      if (isVisible) {
-        await button.click()
-        await page.waitForTimeout(200)
-
-        // Check if a dropdown with "Mute" appears
-        const muteOption = page
-          .locator(".dropdown-content:visible")
-          .locator('text="Mute"')
-        if (await muteOption.isVisible().catch(() => false)) {
-          hasMuteDropdown = true
-          break
-        }
-      }
-    }
-
-    // Should not have found a mute dropdown for own profile
-    expect(hasMuteDropdown).toBe(false)
+    // Should not have a dropdown button for own profile
+    expect(hasDropdownButton).toBe(0)
   })
 })
