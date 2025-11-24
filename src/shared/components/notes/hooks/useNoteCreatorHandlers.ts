@@ -48,6 +48,7 @@ export function useNoteCreatorHandlers(params: UseNoteCreatorHandlersParams) {
   const handleSubmit = async () => {
     const result = await params.publish(params.state)
     if (result && result.success) {
+      // No delay needed - cache operations are properly awaited in publish()
       // Navigate before closing modal (if not a reply)
       if (result.eventId && !params.replyingTo) {
         navigate(`/${nip19.noteEncode(result.eventId)}`)

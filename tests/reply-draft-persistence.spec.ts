@@ -17,6 +17,9 @@ test.describe("Reply draft persistence", () => {
     // Wait for navigation to post detail page
     await page.waitForURL(/\/note/, {timeout: 10000})
 
+    // Give the page a moment to render
+    await page.waitForLoadState("domcontentloaded")
+
     // Post should be visible - we're already on the detail page
     await expect(page.getByText("Post to reply to").first()).toBeVisible({timeout: 10000})
 

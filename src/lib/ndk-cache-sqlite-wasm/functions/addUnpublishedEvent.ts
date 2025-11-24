@@ -37,7 +37,7 @@ export async function addUnpublishedEvent(
       },
     })
     // Also add to main events table so queries can find it (optimistic local-first)
-    await this.setEvent(event)
+    await this.setEvent(event, [])
   } else {
     if (!this.db) throw new Error("Database not initialized")
     this.db.run(unpubStmt, [
@@ -47,6 +47,6 @@ export async function addUnpublishedEvent(
       lastTryAt,
     ])
     // Also add to main events table so queries can find it (optimistic local-first)
-    await this.setEvent(event)
+    await this.setEvent(event, [])
   }
 }
