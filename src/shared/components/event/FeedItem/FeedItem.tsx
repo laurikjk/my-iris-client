@@ -153,6 +153,12 @@ function FeedItem({
           if (fetchedEvent) {
             setEvent(fetchedEvent)
             setLoadingEvent(false)
+          } else {
+            // No event found - stop loading animation to indicate empty result
+            setLoadingEvent(false)
+            console.warn(
+              `Event ${eventIdHex.slice(0, 8)} not found in cache or relays after timeout`
+            )
           }
         })
         .catch((err) => {

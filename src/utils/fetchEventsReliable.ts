@@ -101,6 +101,8 @@ export function fetchEventsReliable(
     }, 5000)
 
     // Set timeout if specified
+    // For event-by-ID queries, timeout should only resolve if we have events OR timeout expires
+    // Don't resolve on timeout for ID queries - keep subscription open for relays
     if (opts?.timeout !== undefined) {
       timeoutHandle = setTimeout(() => {
         if (requestedIds.size > 0) {
@@ -112,9 +114,18 @@ export function fetchEventsReliable(
             )
           }
         }
+        // Resolve with what we have (may be empty for missing events)
         finalize(resolve)
       }, opts.timeout)
+    } else if (requestedIds.size === 0) {
+      // Non-ID query with no timeout - need to decide when to resolve
+      // Wait for EOSE since we don't know how many events to expect
+      sub.on("eose", () => {
+        log(`[fetchEventsReliable] Non-ID query EOSE, resolving with ${events.size} events`)
+        finalize(resolve)
+      })
     }
+    // If ID query with no timeout, subscription stays open indefinitely until all IDs found
   })
 
   return {
