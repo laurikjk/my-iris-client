@@ -14,11 +14,11 @@ test.describe("Reply draft persistence", () => {
       .fill("Post to reply to")
     await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
-    // Wait for the post to appear and click on it
-    await page.waitForTimeout(2000)
-    await expect(page.getByText("Post to reply to")).toBeVisible()
-    await page.getByText("Post to reply to").first().click()
-    await page.waitForURL(/\/note/)
+    // Wait for navigation to post detail page
+    await page.waitForURL(/\/note/, {timeout: 10000})
+
+    // Post should be visible - we're already on the detail page
+    await expect(page.getByText("Post to reply to").first()).toBeVisible({timeout: 10000})
 
     // Type a draft reply
     const replyDraft = "This is my draft reply that should persist"
@@ -54,9 +54,15 @@ test.describe("Reply draft persistence", () => {
       .getByPlaceholder("What's on your mind?")
       .fill("Post to reply to")
     await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
-    await page.waitForTimeout(2000)
 
-    // Now recreate the main draft since it was cleared
+    // Wait for navigation and get the note URL
+    await page.waitForURL(/\/note/, {timeout: 10000})
+    const noteUrl = page.url()
+
+    // Navigate back to home to create main draft
+    await page.goto("/")
+
+    // Create the main draft
     await page.locator("#main-content").getByTestId("new-post-button").click()
     await page
       .getByRole("dialog")
@@ -64,9 +70,9 @@ test.describe("Reply draft persistence", () => {
       .fill(mainDraft)
     await page.keyboard.press("Escape")
 
-    // Click on post to open standalone view and create a reply draft
-    await page.getByText("Post to reply to").first().click()
-    await page.waitForURL(/\/note/)
+    // Navigate back to the post we created
+    await page.goto(noteUrl)
+    await expect(page.getByText("Post to reply to").first()).toBeVisible({timeout: 10000})
     const replyDraft = "This is a reply draft"
     await page.getByPlaceholder("Write your reply...").fill(replyDraft)
 
@@ -98,11 +104,9 @@ test.describe("Reply draft persistence", () => {
       .getByPlaceholder("What's on your mind?")
       .fill("Post to reply to")
     await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
-    await page.waitForTimeout(1000)
 
-    // Click on post to open standalone view
-    await page.getByText("Post to reply to").first().click()
-    await page.waitForURL(/\/note/)
+    // Wait for navigation to post detail page - already there after publish
+    await page.waitForURL(/\/note/, {timeout: 10000})
 
     // Type and publish reply
     const replyContent = "This reply will be published"

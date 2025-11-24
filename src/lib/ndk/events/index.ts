@@ -562,7 +562,7 @@ export class NDKEvent extends EventEmitter {
     // add to cache for optimistic updates
     if (this.ndk.cacheAdapter?.addUnpublishedEvent && shouldTrackUnpublishedEvent(this)) {
       try {
-        this.ndk.cacheAdapter.addUnpublishedEvent(this, relaySet.relayUrls)
+        await this.ndk.cacheAdapter.addUnpublishedEvent(this, relaySet.relayUrls)
       } catch (e) {
         console.error("Error adding unpublished event to cache", e)
       }
