@@ -1,15 +1,13 @@
 import {test, expect} from "@playwright/test"
+import {signUp} from "./auth.setup"
 
 test.describe("Home Feed Scroll Behavior", () => {
   test("Mobile: scroll works and header is outside pull-to-refresh", async ({page}) => {
     // Set mobile viewport
     await page.setViewportSize({width: 375, height: 667})
 
-    // Navigate to home
-    await page.goto("http://localhost:5173/")
-
-    // Wait for content to load
-    await page.waitForTimeout(2000)
+    // Sign up to see content
+    await signUp(page)
 
     // Check if header exists and is visible
     const header = await page.locator("header").first()
@@ -44,11 +42,8 @@ test.describe("Home Feed Scroll Behavior", () => {
     // Set mobile viewport
     await page.setViewportSize({width: 375, height: 667})
 
-    // Navigate to home
-    await page.goto("http://localhost:5173/")
-
-    // Wait for content to load
-    await page.waitForTimeout(2000)
+    // Sign up to see content
+    await signUp(page)
 
     const header = await page.locator("header").first()
     const scrollable = await page.locator("[data-scrollable]").first()
@@ -140,11 +135,8 @@ test.describe("Home Feed Scroll Behavior", () => {
     // Set desktop viewport
     await page.setViewportSize({width: 1400, height: 900})
 
-    // Navigate to home
-    await page.goto("http://localhost:5173/")
-
-    // Wait for content to load
-    await page.waitForTimeout(2000)
+    // Sign up to see content
+    await signUp(page)
 
     // Ensure single-column layout
     const toggleButton = await page.locator('header button[title*="column"]').first()
@@ -174,11 +166,8 @@ test.describe("Home Feed Scroll Behavior", () => {
     // Set desktop viewport
     await page.setViewportSize({width: 1400, height: 900})
 
-    // Navigate to home
-    await page.goto("http://localhost:5173/")
-
-    // Wait for content to load
-    await page.waitForTimeout(2000)
+    // Sign up to see content
+    await signUp(page)
 
     // Find scrollable element
     const scrollable = await page.locator("[data-header-scroll-target]").first()

@@ -62,14 +62,17 @@ test.describe("Session persistence", () => {
       .fill(postContent)
     await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
-    // Wait for the dialog to close after posting
-    await expect(page.getByRole("dialog")).not.toBeVisible({timeout: 5000})
+    // After posting, we're navigated to the post detail page
+    await page.waitForURL(/\/note/, {timeout: 10000})
+
+    // Go back to home feed
+    await page.goto("/")
 
     // Wait for the post to appear in the feed before refreshing
     await expect(
       page.locator('[data-testid="feed-item"]').filter({hasText: postContent}).first()
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     })
 
     // Refresh the page
