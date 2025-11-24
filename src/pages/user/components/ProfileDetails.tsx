@@ -2,6 +2,7 @@ import {RiErrorWarningLine, RiGithubFill} from "@remixicon/react"
 import {ElementType, ReactNode, useEffect, useMemo, useState} from "react"
 import {NDKUserProfile} from "@/lib/ndk"
 import {useNavigate} from "@/navigation"
+import {useIsTopOfStack} from "@/navigation/useIsTopOfStack"
 import {nip19} from "nostr-tools"
 
 import HyperText from "@/shared/components/HyperText.tsx"
@@ -30,6 +31,7 @@ function ProfileDetails({
   pubKey,
 }: ProfileDetailsProps) {
   const navigate = useNavigate()
+  const isTopOfStack = useIsTopOfStack()
   const [isValidPubkey, setIsValidPubkey] = useState(true)
 
   const website = useMemo(() => {
@@ -60,6 +62,8 @@ function ProfileDetails({
   const isMuted = useMemo(() => mutes.includes(hexPub), [mutes, hexPub])
 
   useEffect(() => {
+    if (!isTopOfStack) return
+
     if (
       displayProfile?.nip05?.endsWith("@iris.to") &&
       displayProfile.nip05 !== "_@iris.to"
@@ -72,7 +76,7 @@ function ProfileDetails({
         navigate(newPath, {replace: true})
       }
     }
-  }, [displayProfile?.nip05, navigate])
+  }, [isTopOfStack, displayProfile?.nip05, navigate])
 
   const renderProfileField = (
     IconComponent: ElementType,

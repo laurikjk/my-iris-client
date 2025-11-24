@@ -1,4 +1,5 @@
 import {useParams, useNavigate} from "@/navigation"
+import {useIsTopOfStack} from "@/navigation/useIsTopOfStack"
 import {useRef, useState, useEffect, FormEvent, useMemo} from "react"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
 import SearchInput from "@/shared/components/ui/SearchInput"
@@ -26,6 +27,7 @@ export default function MarketFilters({
 }: MarketFiltersProps = {}) {
   const {category} = useParams()
   const navigate = useNavigate()
+  const isTopOfStack = useIsTopOfStack()
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   useSearchInputAutofocus(searchInputRef, "/m")
@@ -67,6 +69,8 @@ export default function MarketFilters({
   // Listen for URL changes to update selected geohash, search, and tags
   // Also restore query params if they're missing
   useEffect(() => {
+    if (!isTopOfStack) return
+
     const handleLocationChange = () => {
       const params = new URLSearchParams(window.location.search)
       const g = params.get("g")
@@ -99,7 +103,7 @@ export default function MarketFilters({
     return () => {
       window.removeEventListener("popstate", handleLocationChange)
     }
-  }, [selectedGeohash])
+  }, [isTopOfStack, selectedGeohash])
 
   useEffect(() => {
     const loadTags = async () => {
@@ -153,6 +157,8 @@ export default function MarketFilters({
 
   // Update URL when geohash is selected and trigger a navigation event
   const handleGeohashSelect = (geohash: string) => {
+    if (!isTopOfStack) return
+
     // Don't set wildcard geohashes, just unset
     if (!geohash || geohash === "*") {
       setSelectedGeohash(undefined)
@@ -220,6 +226,8 @@ export default function MarketFilters({
                 &quot;{searchFromUrl}&quot;
                 <button
                   onClick={() => {
+                    if (!isTopOfStack) return
+
                     // Clear search query from URL
                     const params = new URLSearchParams(window.location.search)
                     params.delete("q")
@@ -241,6 +249,8 @@ export default function MarketFilters({
                 {tag}
                 <button
                   onClick={() => {
+                    if (!isTopOfStack) return
+
                     // Remove this tag from selection
                     const newTags = selectedTags.filter((t) => t !== tag)
                     setSelectedTags(newTags)
@@ -292,6 +302,8 @@ export default function MarketFilters({
                 {selectedGeohash}
                 <button
                   onClick={() => {
+                    if (!isTopOfStack) return
+
                     setSelectedGeohash(undefined)
                     const params = new URLSearchParams(window.location.search)
                     params.delete("g")

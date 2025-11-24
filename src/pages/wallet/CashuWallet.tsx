@@ -17,6 +17,7 @@ import MintsList from "./cashu/MintsList"
 import TransactionDetailsModal from "./cashu/TransactionDetailsModal"
 import {formatUsd} from "./cashu/utils"
 import {Link, useNavigate, useLocation} from "@/navigation"
+import {useIsTopOfStack} from "@/navigation/useIsTopOfStack"
 import Header from "@/shared/components/header/Header"
 import Icon from "@/shared/components/Icons/Icon"
 import {usePublicKey} from "@/stores/user"
@@ -50,6 +51,7 @@ export default function CashuWallet() {
   const {activeProviderType} = useWalletProviderStore()
   const navigate = useNavigate()
   const location = useLocation()
+  const isTopOfStack = useIsTopOfStack()
   const myPubKey = usePublicKey()
   const {legal, updateLegal} = useSettingsStore()
 
@@ -214,6 +216,8 @@ export default function CashuWallet() {
 
   // Handle paymentRequest from URL params
   useEffect(() => {
+    if (!isTopOfStack) return
+
     const params = new URLSearchParams(location.search)
     const paymentRequest = params.get("paymentRequest")
     if (paymentRequest && manager) {
@@ -222,7 +226,7 @@ export default function CashuWallet() {
       // Clear the URL param
       window.history.replaceState({}, "", "/wallet")
     }
-  }, [location.search, manager])
+  }, [isTopOfStack, location.search, manager])
 
   // Track online/offline status
   useEffect(() => {
@@ -252,10 +256,12 @@ export default function CashuWallet() {
 
   // Redirect to settings if default Cashu wallet is not selected
   useEffect(() => {
+    if (!isTopOfStack) return
+
     if (activeProviderType !== undefined && activeProviderType !== "cashu") {
       navigate("/settings/wallet")
     }
-  }, [activeProviderType, navigate])
+  }, [isTopOfStack, activeProviderType, navigate])
 
   useEffect(() => {
     const init = async () => {

@@ -11,6 +11,7 @@ import {RiShare2Line} from "@remixicon/react"
 import {DoubleRatchetUserSearch} from "@/pages/chats/components/DoubleRatchetUserSearch"
 import type {DoubleRatchetUser} from "@/pages/chats/utils/doubleRatchetUsers"
 import {useNavigate} from "@/navigation"
+import {useIsTopOfStack} from "@/navigation/useIsTopOfStack"
 import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useUserStore} from "@/stores/user"
 import {useAnimatedQR} from "@/hooks/useAnimatedQR"
@@ -38,6 +39,7 @@ export default function SendEcashShare({
   onClose,
 }: SendEcashShareProps) {
   const navigate = useNavigate()
+  const isTopOfStack = useIsTopOfStack()
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [sendingDm, setSendingDm] = useState(false)
   const [error, setError] = useState<string>("")
@@ -63,6 +65,8 @@ export default function SendEcashShare({
 
   // Auto-send to payment request recipient if specified
   useEffect(() => {
+    if (!isTopOfStack) return
+
     const autoSendDm = async () => {
       if (!selectedUserPubkey || !generatedToken) return
 
@@ -126,7 +130,7 @@ export default function SendEcashShare({
     }
 
     autoSendDm()
-  }, [selectedUserPubkey, generatedToken, onClose, navigate])
+  }, [isTopOfStack, selectedUserPubkey, generatedToken, onClose, navigate])
 
   // Parse token to extract amount and memo
   const tokenData = useMemo(() => {
