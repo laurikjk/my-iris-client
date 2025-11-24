@@ -2,7 +2,8 @@ import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {SettingsButton} from "@/shared/components/settings/SettingsButton"
 import {SettingsInputItem} from "@/shared/components/settings/SettingsInputItem"
-import socialGraph, {
+import {
+  useSocialGraph,
   getFollowLists,
   stopRecrawl,
   DEFAULT_CRAWL_DEGREE,
@@ -15,12 +16,13 @@ import {useState} from "react"
 const {log} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 export function Maintenance() {
+  const socialGraph = useSocialGraph()
   const crawling = useSocialGraphStore((state) => state.isRecrawling)
   const [followDegree, setFollowDegree] = useState(String(DEFAULT_CRAWL_DEGREE))
 
   const handleRecalculateDistances = () => {
-    socialGraph().recalculateFollowDistances()
-    const removed = socialGraph().removeMutedNotFollowedUsers()
+    socialGraph.recalculateFollowDistances()
+    const removed = socialGraph.removeMutedNotFollowedUsers()
     log("Removed", removed, "muted not followed users")
   }
   return (
@@ -54,7 +56,7 @@ export function Maintenance() {
           <button
             onClick={() => {
               const degree = parseInt(followDegree, 10) || DEFAULT_CRAWL_DEGREE
-              getFollowLists(socialGraph().getRoot(), false, degree)
+              getFollowLists(socialGraph.getRoot(), false, degree)
             }}
             className="text-info text-left"
             disabled={crawling}

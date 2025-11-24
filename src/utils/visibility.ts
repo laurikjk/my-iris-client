@@ -1,7 +1,7 @@
 import {useSettingsStore} from "@/stores/settings"
 import {SocialGraphUtils} from "nostr-social-graph/src/SocialGraphUtils"
 import {LRUCache} from "typescript-lru-cache"
-import socialGraph from "./socialGraph"
+import {getSocialGraph} from "./socialGraph"
 
 const cache = new LRUCache<string, boolean>({maxSize: 100})
 
@@ -15,7 +15,7 @@ export const shouldHideUser = (
   allowUnknown = false
 ): boolean => {
   const {content} = useSettingsStore.getState()
-  const instance = socialGraph()
+  const instance = getSocialGraph()
 
   // Check if the result is already in the cache
   const cacheKey = `${pubKey}-${threshold}-${allowUnknown}`
@@ -45,7 +45,7 @@ export const shouldHideUser = (
 }
 
 export const isOvermuted = (pubKey: string, threshold = 1): boolean => {
-  const instance = socialGraph()
+  const instance = getSocialGraph()
   // SocialGraphUtils.isOvermuted already checks if root user (current user) has muted
   return SocialGraphUtils.isOvermuted(instance, pubKey, threshold)
 }

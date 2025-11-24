@@ -73,7 +73,8 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
     notifyGraphChange()
   }
 
-  await loadGraph()
+  // Non-blocking load
+  loadGraph()
 }
 
 const saveToLocalForage = async () => {
@@ -220,7 +221,7 @@ export const socialGraphLoaded = new Promise<boolean>((resolve) => {
 // Initialize social graph (separate from subscription setup)
 export const initializeSocialGraph = async () => {
   const currentPublicKey = useUserStore.getState().publicKey
-  await initializeInstance(currentPublicKey || undefined)
+  initializeInstance(currentPublicKey || undefined)
 
   if (!currentPublicKey) {
     instance.setRoot(DEFAULT_SOCIAL_GRAPH_ROOT)
@@ -520,4 +521,20 @@ export function getMutualFollows(pubkey?: string): string[] {
   )
 }
 
-export default () => instance
+/**
+ * Hook that returns the social graph instance and subscribes to changes.
+ * Components using this hook will re-render when the graph changes.
+ */
+export const useSocialGraph = () => {
+  // Subscribe to graph changes to trigger re-renders
+  useSyncExternalStore(subscribeToGraph, getGraphVersion, getGraphVersion)
+  return instance
+}
+
+/**
+ * Get the social graph instance directly (for non-React contexts).
+ * Use useSocialGraph() in components for automatic re-rendering.
+ */
+export const getSocialGraph = () => instance
+
+export default getSocialGraph

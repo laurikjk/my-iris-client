@@ -1,5 +1,5 @@
 import {NDKEvent} from "@/lib/ndk"
-import socialGraph from "@/utils/socialGraph"
+import {getSocialGraph} from "@/utils/socialGraph"
 import {NostrEvent} from "nostr-social-graph"
 import {ndk} from "@/utils/ndk"
 import {KIND_MUTE_LIST, KIND_FLAG_LIST} from "@/utils/constants"
@@ -34,12 +34,12 @@ const validateInputAndGetMutedList = (pubkey: string) => {
     throw new Error("Invalid pubkey: cannot be empty or whitespace")
   }
 
-  const myKey = socialGraph().getRoot()
+  const myKey = getSocialGraph().getRoot()
   if (!myKey || typeof myKey !== "string" || myKey.trim() === "") {
     throw new Error("Invalid user key: user not properly initialized")
   }
 
-  const mutedList = socialGraph().getMutedByUser(myKey)
+  const mutedList = getSocialGraph().getMutedByUser(myKey)
   return {mutedList, myKey}
 }
 
@@ -61,7 +61,7 @@ const updateMuteList = async (
 
   await muteEvent.sign()
 
-  socialGraph().handleEvent(muteEvent as NostrEvent)
+  getSocialGraph().handleEvent(muteEvent as NostrEvent)
 
   // Clear visibility cache so muted/unmuted users are immediately updated
   clearVisibilityCache()

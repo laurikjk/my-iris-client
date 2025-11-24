@@ -3,7 +3,7 @@ import {ProfileAbout} from "@/shared/components/user/ProfileAbout"
 import {UserRow} from "@/shared/components/user/UserRow"
 import FollowedBy from "./FollowedBy"
 import MutedBy from "./MutedBy"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import {usePublicKey} from "@/stores/user"
 import {useMemo} from "react"
 
@@ -18,11 +18,12 @@ const ProfileCard = ({
   showFollows?: boolean
   showHoverCard?: boolean
 }) => {
+  const socialGraph = useSocialGraph()
   const myPubKey = usePublicKey()
   const followsMe = useMemo(() => {
-    const follows = Array.from(socialGraph().getFollowedByUser(pubKey))
+    const follows = Array.from(socialGraph.getFollowedByUser(pubKey))
     return follows?.includes(myPubKey)
-  }, [pubKey, myPubKey])
+  }, [pubKey, myPubKey, socialGraph])
 
   return (
     <div className="flex flex-col font-normal text-base gap-2 profile-card">

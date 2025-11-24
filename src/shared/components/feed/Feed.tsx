@@ -15,7 +15,7 @@ import ZapAllButton from "./ZapAllButton"
 import {useFeedStore, type FeedConfig, getFeedCacheKey} from "@/stores/feed"
 import {getTag} from "@/utils/nostr"
 import MediaFeed from "./MediaFeed"
-import socialGraph, {useFollowsFromGraph} from "@/utils/socialGraph"
+import {useSocialGraph, useFollowsFromGraph} from "@/utils/socialGraph"
 import {addSeenEventId} from "@/utils/memcache.ts"
 
 interface FeedProps {
@@ -51,6 +51,7 @@ const Feed = memo(function Feed({
   onDisplayAsChange,
   forceShowZapAll = false,
 }: FeedProps) {
+  const socialGraph = useSocialGraph()
   if (!feedConfig?.filter) {
     throw new Error("Feed component requires feedConfig with filter")
   }
@@ -93,8 +94,8 @@ const Feed = memo(function Feed({
     switch (feedConfig.sortType) {
       case "followDistance":
         return (a: NDKEvent, b: NDKEvent) => {
-          const followDistanceA = socialGraph().getFollowDistance(a.pubkey)
-          const followDistanceB = socialGraph().getFollowDistance(b.pubkey)
+          const followDistanceA = socialGraph.getFollowDistance(a.pubkey)
+          const followDistanceB = socialGraph.getFollowDistance(b.pubkey)
           if (followDistanceA !== followDistanceB) {
             return followDistanceA - followDistanceB
           }

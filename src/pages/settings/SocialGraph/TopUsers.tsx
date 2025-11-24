@@ -3,11 +3,12 @@ import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {RiArrowRightSLine, RiArrowDownSLine} from "@remixicon/react"
 import {useState} from "react"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 
 const TOP_USERS_LIMIT = 20
 
 export function TopUsers() {
+  const socialGraph = useSocialGraph()
   const [showFollowed, setShowFollowed] = useState(false)
   const [showMuted, setShowMuted] = useState(false)
   const [topFollowedUsers, setTopFollowedUsers] = useState<
@@ -20,8 +21,8 @@ export function TopUsers() {
   const getTopNMostFollowedUsers = (n: number) => {
     const userFollowerCounts: Array<{user: string; count: number}> = []
 
-    for (const user of socialGraph()) {
-      const followers = socialGraph().getFollowersByUser(user)
+    for (const user of socialGraph) {
+      const followers = socialGraph.getFollowersByUser(user)
       userFollowerCounts.push({user, count: followers.size})
     }
 
@@ -32,8 +33,8 @@ export function TopUsers() {
   const getTopNMostMutedUsers = (n: number) => {
     const userMuteCounts: Array<{user: string; count: number}> = []
 
-    for (const user of socialGraph()) {
-      const mutedBy = socialGraph().getUserMutedBy(user)
+    for (const user of socialGraph) {
+      const mutedBy = socialGraph.getUserMutedBy(user)
       userMuteCounts.push({user, count: mutedBy.size})
     }
 

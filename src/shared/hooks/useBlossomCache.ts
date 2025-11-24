@@ -1,7 +1,7 @@
 import {useState, useEffect} from "react"
 import {getAllConnections} from "@/utils/chat/webrtc/PeerConnection"
 import {getBlobStorage} from "@/utils/chat/webrtc/blobManager"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 
 const BLOSSOM_HASH_REGEX = /\/([a-f0-9]{64})\.(jpe?g|png|gif|webp|mp4|webm)/i
 
@@ -131,6 +131,7 @@ async function fetchAndVerifyHTTP(
  * @param authorPubkey - Optional pubkey of the post author (for WoT check on HTTP fallback)
  */
 export function useBlossomCache(url: string, authorPubkey?: string): string {
+  const socialGraph = useSocialGraph()
   const [resolvedUrl, setResolvedUrl] = useState(url)
   const [attempted, setAttempted] = useState(false)
 
@@ -144,7 +145,7 @@ export function useBlossomCache(url: string, authorPubkey?: string): string {
 
     // Check trust - only fetch blobs from trusted authors (distance <= 2)
     const followDistance = authorPubkey
-      ? socialGraph().getFollowDistance(authorPubkey)
+      ? socialGraph.getFollowDistance(authorPubkey)
       : 999
     const isTrusted = followDistance <= 2
 

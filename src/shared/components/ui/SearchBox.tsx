@@ -11,7 +11,7 @@ import {useKeyboardNavigation} from "@/shared/hooks/useKeyboardNavigation"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {isOvermuted} from "@/utils/visibility"
 import {searchIndex} from "@/utils/profileSearch"
-import socialGraph, {useGraphSize} from "@/utils/socialGraph"
+import {useSocialGraph, useGraphSize} from "@/utils/socialGraph"
 import {useNavigate} from "@/navigation"
 import classNames from "classnames"
 import {nip19} from "nostr-tools"
@@ -53,6 +53,7 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
     },
     ref
   ) => {
+    const socialGraph = useSocialGraph()
     const [searchResults, setSearchResults] = useState<CustomSearchResult[]>([])
     const {recentSearches, setRecentSearches} = useSearchStore()
     const [isFocused, setIsFocused] = useState(false)
@@ -143,10 +144,10 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
         .map((result) => {
           const fuseScore = 1 - (result.score ?? 1)
           const followDistance = isSocialGraphLoaded
-            ? (socialGraph().getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE)
+            ? (socialGraph.getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE)
             : DEFAULT_DISTANCE
           const friendsFollowing = isSocialGraphLoaded
-            ? socialGraph().followedByFriends(result.item.pubKey).size || 0
+            ? socialGraph.followedByFriends(result.item.pubKey).size || 0
             : 0
 
           const nameLower = result.item.name.toLowerCase()

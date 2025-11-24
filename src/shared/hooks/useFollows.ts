@@ -1,4 +1,4 @@
-import socialGraph, {handleSocialGraphEvent} from "@/utils/socialGraph.ts"
+import {useSocialGraph, handleSocialGraphEvent} from "@/utils/socialGraph.ts"
 import {PublicKey} from "@/shared/utils/PublicKey"
 import {useEffect, useState, useMemo, useRef} from "react"
 import {NostrEvent} from "nostr-social-graph"
@@ -6,6 +6,7 @@ import {NDKEvent, NDKSubscription} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
 
 const useFollows = (pubKey: string | null | undefined, includeSelf = false) => {
+  const socialGraph = useSocialGraph()
   const pubKeyHex = useMemo(
     () => (pubKey ? new PublicKey(pubKey).toString() : ""),
     [pubKey]
@@ -16,11 +17,11 @@ const useFollows = (pubKey: string | null | undefined, includeSelf = false) => {
   // Initialize follows when pubKeyHex changes
   useEffect(() => {
     if (pubKeyHex) {
-      setFollows([...socialGraph().getFollowedByUser(pubKeyHex, includeSelf)])
+      setFollows([...socialGraph.getFollowedByUser(pubKeyHex, includeSelf)])
     } else {
       setFollows([])
     }
-  }, [pubKeyHex, includeSelf])
+  }, [pubKeyHex, includeSelf, socialGraph])
 
   useEffect(() => {
     // Clean up any existing subscription first
@@ -41,7 +42,7 @@ const useFollows = (pubKey: string | null | undefined, includeSelf = false) => {
 
         sub?.on("event", (event: NDKEvent) => {
           event.ndk = ndk()
-          socialGraph().handleEvent(event as NostrEvent)
+          socialGraph.handleEvent(event as NostrEvent)
           if (event && event.created_at && event.created_at > latestTimestamp) {
             latestTimestamp = event.created_at
             handleSocialGraphEvent(event as NostrEvent)
@@ -49,9 +50,7 @@ const useFollows = (pubKey: string | null | undefined, includeSelf = false) => {
               .getMatchingTags("p")
               .map((pTag) => pTag[1])
               .sort((a, b) => {
-                return (
-                  socialGraph().getFollowDistance(a) - socialGraph().getFollowDistance(b)
-                )
+                return socialGraph.getFollowDistance(a) - socialGraph.getFollowDistance(b)
               })
             if (includeSelf && pubKey) {
               pubkeys.unshift(pubKey)

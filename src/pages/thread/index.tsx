@@ -8,7 +8,7 @@ import {ScrollablePageContainer} from "@/shared/components/layout/ScrollablePage
 import {Name} from "@/shared/components/user/Name"
 import Widget from "@/shared/components/ui/Widget"
 import {useSettingsStore} from "@/stores/settings"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import {NDKEvent} from "@/lib/ndk"
 import {useState, useEffect, useCallback} from "react"
 import {getTags} from "@/utils/nostr"
@@ -25,6 +25,7 @@ export default function ThreadPage({
   isNaddr?: boolean
   naddrData?: nip19.AddressPointer | null
 }) {
+  const socialGraph = useSocialGraph()
   const [relevantPeople, setRelevantPeople] = useState(new Map<string, boolean>())
   const {content} = useSettingsStore()
   const [threadAuthor, setThreadAuthor] = useState<string | null>(null)
@@ -67,8 +68,7 @@ export default function ThreadPage({
     (event: NDKEvent) => {
       if (
         content.maxFollowDistanceForReplies !== undefined &&
-        socialGraph().getFollowDistance(event.pubkey) >
-          content.maxFollowDistanceForReplies
+        socialGraph.getFollowDistance(event.pubkey) > content.maxFollowDistanceForReplies
       )
         return
       if (!threadAuthor) setThreadAuthor(event.pubkey)

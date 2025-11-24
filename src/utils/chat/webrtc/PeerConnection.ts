@@ -3,7 +3,7 @@ import {EventEmitter} from "tseep"
 import {LRUCache} from "typescript-lru-cache"
 
 import {getCachedName} from "@/utils/nostr"
-import socialGraph from "@/utils/socialGraph"
+import {getSocialGraph} from "@/utils/socialGraph"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
 import {sendSignalingMessage} from "./signaling"
@@ -45,8 +45,8 @@ export async function getPeerConnection(
   // Reject untrusted users
   if (
     create &&
-    socialGraph().getFollowDistance(pubKey) > 1 &&
-    socialGraph().getRoot() !== pubKey
+    getSocialGraph().getFollowDistance(pubKey) > 1 &&
+    getSocialGraph().getRoot() !== pubKey
   ) {
     warn("Rejected connection from untrusted user")
     return
@@ -77,7 +77,7 @@ export async function getPeerConnection(
   // Create new connection if needed
   if (
     create &&
-    (pubKey === socialGraph().getRoot() ||
+    (pubKey === getSocialGraph().getRoot() ||
       !ask ||
       (await (
         await import("@/utils/utils")
@@ -206,7 +206,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
         type: "answer",
         answer,
         recipient: this.peerId,
-        peerId: this.mySessionId || socialGraph().getRoot(),
+        peerId: this.mySessionId || getSocialGraph().getRoot(),
       },
       this.recipientPubkey
     )
@@ -234,7 +234,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
             type: "candidate",
             candidate: event.candidate,
             recipient: this.peerId,
-            peerId: this.mySessionId || socialGraph().getRoot(),
+            peerId: this.mySessionId || getSocialGraph().getRoot(),
           },
           this.recipientPubkey
         )
@@ -352,7 +352,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
           type: "offer",
           offer,
           recipient: this.peerId,
-          peerId: this.mySessionId || socialGraph().getRoot(),
+          peerId: this.mySessionId || getSocialGraph().getRoot(),
         },
         this.recipientPubkey
       )
@@ -434,7 +434,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
         type: "offer",
         offer,
         recipient: this.peerId,
-        peerId: this.mySessionId || socialGraph().getRoot(),
+        peerId: this.mySessionId || getSocialGraph().getRoot(),
       },
       this.recipientPubkey
     )

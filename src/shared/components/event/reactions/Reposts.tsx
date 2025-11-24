@@ -1,12 +1,13 @@
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {shouldHideUser} from "@/utils/visibility"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import {NDKEvent} from "@/lib/ndk"
 import {useEffect, useState} from "react"
 import {ndk} from "@/utils/ndk"
 import {KIND_REPOST} from "@/utils/constants"
 
 export default function Reposts({event}: {event: NDKEvent}) {
+  const socialGraph = useSocialGraph()
   const [reactions, setReactions] = useState<Map<string, NDKEvent>>(new Map())
 
   useEffect(() => {
@@ -46,8 +47,8 @@ export default function Reposts({event}: {event: NDKEvent}) {
       {Array.from(reactions.values())
         .sort((a, b) => {
           return (
-            socialGraph().getFollowDistance(a.author.pubkey) -
-            socialGraph().getFollowDistance(b.author.pubkey)
+            socialGraph.getFollowDistance(a.author.pubkey) -
+            socialGraph.getFollowDistance(b.author.pubkey)
           )
         })
         .map((event) => (

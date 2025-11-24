@@ -2,7 +2,7 @@ import {useEffect, useState, useCallback} from "react"
 import {useUserStore} from "@/stores/user"
 // import {useUserRecordsStore} from "@/stores/userRecords" // TEMP: Removed
 // import {useSessionsStore} from "@/stores/sessions" // TEMP: Removed
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import {ndk} from "@/utils/ndk"
 import {NDKEvent, NDKSubscription} from "@/lib/ndk"
 import {createDebugLogger} from "@/utils/createDebugLogger"
@@ -21,6 +21,7 @@ import {
 const {log} = createDebugLogger(DEBUG_NAMESPACES.UI_CHAT)
 
 export const useDoubleRatchetUsers = () => {
+  const socialGraph = useSocialGraph()
   const [users, setUsers] = useState<DoubleRatchetUser[]>([])
   const [count, setCount] = useState(0)
   const myPubKey = useUserStore((state) => state.publicKey)
@@ -64,7 +65,7 @@ export const useDoubleRatchetUsers = () => {
         currentSub.stop()
       }
 
-      const authors = Array.from(socialGraph().getUsersByFollowDistance(1))
+      const authors = Array.from(socialGraph.getUsersByFollowDistance(1))
       authors.push(myPubKey)
       socialGraphSize = authors.length - 1 // excluding myPubKey
 
@@ -94,7 +95,7 @@ export const useDoubleRatchetUsers = () => {
 
     // Check if social graph size has changed and update subscription if needed
     const checkSocialGraphChanges = () => {
-      const currentSize = socialGraph().getUsersByFollowDistance(1).size
+      const currentSize = socialGraph.getUsersByFollowDistance(1).size
       if (currentSize !== socialGraphSize) {
         log(`Social graph size changed from ${socialGraphSize} to ${currentSize}`)
         createSubscription()
@@ -104,9 +105,7 @@ export const useDoubleRatchetUsers = () => {
     // Clean up stale users who are no longer in sessions or follows
     const cleanupStaleUsers = () => {
       const currentPartners = getCurrentSessionPartners()
-      const currentFollows = new Set(
-        Array.from(socialGraph().getUsersByFollowDistance(1))
-      )
+      const currentFollows = new Set(Array.from(socialGraph.getUsersByFollowDistance(1)))
 
       // Get all current double ratchet user pubkeys (from the Set, not just those with profiles)
       const allUserPubkeys = getAllDoubleRatchetUserPubkeys()

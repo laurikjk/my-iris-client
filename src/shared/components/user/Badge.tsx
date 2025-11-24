@@ -1,4 +1,4 @@
-import socialGraph from "@/utils/socialGraph.ts"
+import {useSocialGraph} from "@/utils/socialGraph.ts"
 import {RiCheckLine, RiVolumeMuteLine} from "@remixicon/react"
 import {useUserStore} from "@/stores/user"
 
@@ -9,6 +9,7 @@ export const Badge = ({
   pubKeyHex: string
   className?: string
 }) => {
+  const socialGraph = useSocialGraph()
   const publicKey = useUserStore((state) => state.publicKey)
   const loggedIn = !!publicKey
 
@@ -16,8 +17,8 @@ export const Badge = ({
     return null
   }
 
-  const root = socialGraph().getRoot()
-  const isMuted = socialGraph().getMutedByUser(root).has(pubKeyHex)
+  const root = socialGraph.getRoot()
+  const isMuted = socialGraph.getMutedByUser(root).has(pubKeyHex)
 
   if (isMuted) {
     return (
@@ -30,7 +31,7 @@ export const Badge = ({
     )
   }
 
-  const distance = socialGraph().getFollowDistance(pubKeyHex)
+  const distance = socialGraph.getFollowDistance(pubKeyHex)
   if (distance <= 2) {
     let tooltip
     let badgeClass
@@ -41,7 +42,7 @@ export const Badge = ({
       tooltip = "Following"
       badgeClass = "bg-primary"
     } else if (distance === 2) {
-      const followedByFriends = socialGraph().followedByFriends(pubKeyHex)
+      const followedByFriends = socialGraph.followedByFriends(pubKeyHex)
       tooltip = `Followed by ${followedByFriends.size} friends`
       badgeClass = followedByFriends.size > 10 ? "bg-accent" : "bg-neutral"
     }

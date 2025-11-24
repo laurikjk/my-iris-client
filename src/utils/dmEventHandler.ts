@@ -5,7 +5,7 @@ import {useGroupsStore} from "@/stores/groups"
 import {getTag} from "./tagUtils"
 import {KIND_CHANNEL_CREATE} from "./constants"
 import {isTauri} from "./utils"
-import socialGraph from "./socialGraph"
+import {getSocialGraph} from "./socialGraph"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
 
@@ -33,7 +33,7 @@ export const attachSessionEventListener = () => {
           if (!publicKey) return
 
           // Block events from muted users
-          const mutedUsers = socialGraph().getMutedByUser(publicKey)
+          const mutedUsers = getSocialGraph().getMutedByUser(publicKey)
           if (mutedUsers.has(pubKey)) return
 
           // Trigger desktop notification for DMs if on desktop

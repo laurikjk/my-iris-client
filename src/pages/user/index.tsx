@@ -14,7 +14,7 @@ import Widget from "@/shared/components/ui/Widget"
 import useFollows from "@/shared/hooks/useFollows"
 import {PublicKey} from "@/shared/utils/PublicKey"
 import FollowList from "./components/FollowList"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import ProfileHeader from "./ProfileHeader"
 import ProfileDropdownButton from "@/shared/components/user/ProfileDropdownButton"
 import {useUserStore} from "@/stores/user"
@@ -159,6 +159,7 @@ function useHasMarketEvents(pubKey: string) {
 }
 
 function UserPage({pubKey}: {pubKey: string}) {
+  const socialGraph = useSocialGraph()
   if (typeof pubKey !== "string") {
     throw new Error(
       "pubKey must be a string, received: " + typeof pubKey + " " + JSON.stringify(pubKey)
@@ -179,10 +180,10 @@ function UserPage({pubKey}: {pubKey: string}) {
 
   const filteredFollows = useMemo(() => {
     const filtered = myPubKey
-      ? follows.filter((follow) => socialGraph().getFollowDistance(follow) > 1)
+      ? follows.filter((follow) => socialGraph.getFollowDistance(follow) > 1)
       : follows
     return filtered.sort(() => Math.random() - 0.5) // Randomize order
-  }, [follows])
+  }, [follows, myPubKey, socialGraph])
 
   const visibleTabs = tabs.filter(
     (tab) =>

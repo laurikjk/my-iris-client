@@ -9,7 +9,7 @@ import {migrateUserState, migratePublicChats} from "./utils/migration"
 import pushNotifications from "./utils/pushNotifications"
 import {useSettingsStore} from "@/stores/settings"
 import {ndk} from "./utils/ndk"
-import socialGraph from "./utils/socialGraph"
+import {getSocialGraph} from "./utils/socialGraph"
 import DebugManager from "./utils/DebugManager"
 import Layout from "@/shared/components/Layout"
 import {isTauri, isMobileTauri} from "./utils/utils"
@@ -129,7 +129,7 @@ const initializeApp = async () => {
     void migratePublicChats()
     // Delay social graph to avoid race with NDK init
     setTimeout(() => {
-      socialGraph().recalculateFollowDistances()
+      getSocialGraph().recalculateFollowDistances()
     }, 100)
 
     // Initialize platform-specific notifications (non-blocking, parallel to web push)
