@@ -17,16 +17,19 @@
 - Be careful with react hook dependency arrays — they can easily cause refresh loops
 - Note that we're not using react-router-dom: we have our own custom stack router which keeps N previous views open in the background for fast back & fwd nav
 - **Stack Router Navigation Pattern**: Background views stay mounted with `display: none` and continue executing useEffect hooks. Always guard navigation/history operations with `useIsTopOfStack()`:
+
   ```tsx
   import {useIsTopOfStack} from "@/navigation/useIsTopOfStack"
 
   const isTopOfStack = useIsTopOfStack()
 
   useEffect(() => {
-    if (!isTopOfStack) return  // Skip when in background
+    if (!isTopOfStack) return // Skip when in background
     // Safe to call navigate(), window.history.pushState/replaceState, etc.
   }, [isTopOfStack, ...otherDeps])
   ```
+
   Without this guard, background views can trigger unwanted redirects when their state updates.
+
 - Use commit log style similar to previous commits, no verbose descriptions. Make commits only if requested.
 - Use the "debug" package for logging, see other logging in the application
