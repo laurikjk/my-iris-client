@@ -1,5 +1,6 @@
 # Development Guidelines
 
+- vision: Highly performant and normie-friendly offline-first Nostr web client that is not dependent on any single relay or other server. Featuring a Cashu wallet, secure DMs and social graph based content filtering. Can be packaged as a Tauri app for desktop/android/ios.
 - Don't hardcode Nostr event kinds or other magic numbers. Put them in a constants file`
 - Don't import React. Instead import from "react", e.g. `import {RefObject} from "react"`
 - Don't repeat yourself — build reusable hooks and components. Keep the code clean and beautiful.
@@ -12,7 +13,6 @@
 - Avoid adding external dependencies, implement especially UI things in our own repo when feasible
 - When creating new Playwright tests or debugging failing ones, capture screenshots (`page.screenshot()`) at key points to understand the visual state. Use temp directory (e.g., `/tmp/playwright-debug/`) or remove screenshots after debugging. Agents: Use headless mode if possible. Don't use the html reporter
 - Dont add "edited/deleted this" comments
-- Don't call anything "final"
 - If tests are not passing, adding long timeouts is usually not the solution. Publish & subscribe over nostr is fast.
 - Be careful with react hook dependency arrays — they can easily cause refresh loops
 - Note that we're not using react-router-dom: we have our own custom stack router which keeps N previous views open in the background for fast back & fwd nav
