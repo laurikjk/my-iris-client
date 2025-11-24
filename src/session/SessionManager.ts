@@ -516,16 +516,23 @@ export default class SessionManager {
 
   async handleMessageRecord(mr: MessageRecord): Promise<void> {
     try {
+      const key = this.messageRecordKey(mr.publicKey, mr.deviceId, mr.event.id)
       const userRecord = this.userRecords.get(mr.publicKey)
-      if (!userRecord) return
+      if (!userRecord) {
+        await this.storage.del(key)
+        return
+      }
       const deviceRecord = userRecord.devices.get(mr.deviceId)
-      if (!deviceRecord) return
+      if (!deviceRecord) {
+        await this.storage.del(key)
+        return
+      }
       const {activeSession} = deviceRecord
       if (!activeSession) return
       const {event: verifiedEvent} = activeSession.sendEvent(mr.event)
       await this.nostrPublish(verifiedEvent)
       await this.storeUserRecord(mr.publicKey)
-      await this.storage.del(this.messageRecordKey(mr.publicKey, mr.deviceId, mr.event.id))
+      await this.storage.del(key)
     } catch (error) {
       console.error("Failed to handle message record:", error)
     }
