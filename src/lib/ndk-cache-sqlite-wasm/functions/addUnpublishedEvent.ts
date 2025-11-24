@@ -14,19 +14,20 @@ export async function addUnpublishedEvent(
   relayUrls: string[],
   lastTryAt: number = Date.now()
 ): Promise<void> {
-  const stmt = `
+  await this.ensureInitialized()
+
+  // Add to unpublished_events table for retry logic
+  const unpubStmt = `
         INSERT OR REPLACE INTO unpublished_events (
             id, event, relays, lastTryAt
         ) VALUES (?, ?, ?, ?)
     `
 
-  await this.ensureInitialized()
-
   if (this.useWorker) {
     await this.postWorkerMessage({
       type: "run",
       payload: {
-        sql: stmt,
+        sql: unpubStmt,
         params: [
           event.id,
           event.serialize(true, true),
@@ -35,13 +36,17 @@ export async function addUnpublishedEvent(
         ],
       },
     })
+    // Also add to main events table so queries can find it (optimistic local-first)
+    await this.setEvent(event)
   } else {
     if (!this.db) throw new Error("Database not initialized")
-    this.db.run(stmt, [
+    this.db.run(unpubStmt, [
       event.id,
       event.serialize(true, true),
       JSON.stringify(relayUrls),
       lastTryAt,
     ])
+    // Also add to main events table so queries can find it (optimistic local-first)
+    await this.setEvent(event)
   }
 }

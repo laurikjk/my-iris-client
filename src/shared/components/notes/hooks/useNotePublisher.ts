@@ -45,7 +45,17 @@ export function useNotePublisher(params: UseNotePublisherParams) {
       )
 
       await event.sign()
-      event.publish().catch((error) => {
+
+      // Publish optimistically - don't wait for relay operations
+      // The publish() method adds to cache and dispatches to local subscriptions synchronously
+      // before awaiting relay operations, so we can fire-and-forget
+      const publishPromise = event.publish()
+
+      // Small delay to ensure synchronous cache/dispatch operations complete
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      // Background relay publish
+      publishPromise.catch((error) => {
         console.error("Failed to publish note:", error)
       })
 
