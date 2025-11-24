@@ -224,6 +224,18 @@ export default class SessionManager {
   private sessionKey(userPubkey: string, deviceId: string, sessionName: string) {
     return `${this.sessionKeyPrefix(userPubkey)}${deviceId}/${sessionName}`
   }
+
+  private messageRecordKey(userPubkey: string, deviceId: string, eventId: string) {
+    return `${this.messageRecordKeyPrefix(userPubkey)}${deviceId}/${eventId}`
+  }
+
+  private messageRecordKeyPrefix(userPubkey: string) {
+    return `${this.messageRecordGlobalPrefix()}${userPubkey}/`
+  }
+
+  private messageRecordGlobalPrefix() {
+    return `${this.versionPrefix}/message/`
+  }
   private inviteKey(userPubkey: string) {
     return this.userInviteKey(userPubkey)
   }
@@ -482,7 +494,7 @@ export default class SessionManager {
   }
 
   private async deleteUserSessionsFromStorage(userPubkey: string): Promise<void> {
-    const prefix = this.sessionKeyPrefix(userPubkey)
+    const prefix = this.messageRecordKeyPrefix(userPubkey)
     const keys = await this.storage.list(prefix)
     await Promise.all(keys.map((key) => this.storage.del(key)))
   }
@@ -498,7 +510,7 @@ export default class SessionManager {
         publicKey: recipientPublicKey,
         deviceId,
       }
-      await this.storage.put(this.sessionKey(mr.publicKey, mr.deviceId, mr.event.id), mr)
+      await this.storage.put(this.messageRecordKey(mr.publicKey, mr.deviceId, mr.event.id), mr)
     })
   }
 
@@ -513,14 +525,14 @@ export default class SessionManager {
       const {event: verifiedEvent} = activeSession.sendEvent(mr.event)
       await this.nostrPublish(verifiedEvent)
       await this.storeUserRecord(mr.publicKey)
-      await this.storage.del(this.sessionKey(mr.publicKey, mr.deviceId, mr.event.id))
+      await this.storage.del(this.messageRecordKey(mr.publicKey, mr.deviceId, mr.event.id))
     } catch (error) {
       console.error("Failed to handle message record:", error)
     }
   }
 
   async handleAllPendingMessages(): Promise<void> {
-    const prefix = this.versionPrefix + "/session/"
+    const prefix = this.messageRecordGlobalPrefix()
     const keys = await this.storage.list(prefix)
     await Promise.all(
       keys.map(async (key) => {
@@ -589,10 +601,7 @@ export default class SessionManager {
 
     Promise.all(
       messageRecords.map((mr) =>
-        this.storage.put(
-          this.sessionKey(mr.publicKey, mr.deviceId, mr.event.id), // TODO: make their own key function
-          mr
-        )
+        this.storage.put(this.messageRecordKey(mr.publicKey, mr.deviceId, mr.event.id), mr)
       )
     ).then(() => {
       this.handleAllPendingMessages()
