@@ -17,11 +17,12 @@ test.describe("Reply draft persistence", () => {
     // Wait for navigation to post detail page
     await page.waitForURL(/\/note/, {timeout: 10000})
 
-    // Give the page a moment to render
-    await page.waitForLoadState("domcontentloaded")
+    // Wait for FeedItem to render
+    await page.waitForLoadState("networkidle")
 
-    // Post should be visible - we're already on the detail page
-    await expect(page.getByText("Post to reply to").first()).toBeVisible({timeout: 10000})
+    // Wait for feed-item to appear
+    const feedItem = page.getByTestId("feed-item").filter({hasText: "Post to reply to"}).first()
+    await expect(feedItem).toBeVisible({timeout: 10000})
 
     // Type a draft reply
     const replyDraft = "This is my draft reply that should persist"

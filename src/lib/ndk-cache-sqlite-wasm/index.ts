@@ -238,6 +238,19 @@ export class NDKCacheAdapterSqliteWasm implements NDKCacheAdapter {
     })
   }
 
+  /**
+   * Flush any pending cache writes to IndexedDB (for tests)
+   */
+  public async flush(): Promise<void> {
+    if (this.useWorker) {
+      await this.postWorkerMessage({type: "flush", payload: {}})
+    } else if (this.db) {
+      const data = this.db.export()
+      const {saveToIndexedDB} = await import("./db/indexeddb-utils")
+      await saveToIndexedDB(this.dbName, data)
+    }
+  }
+
   // Modular method bindings (public field initializers)
   public setEvent = setEvent.bind(this)
   public setEventDup = setEventDup.bind(this)

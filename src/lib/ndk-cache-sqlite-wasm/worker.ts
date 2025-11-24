@@ -177,6 +177,18 @@ self.onmessage = async (event: MessageEvent) => {
         result = querySync(db, filters)
         break
       }
+      case "flush":
+        // Flush any pending IndexedDB saves immediately (for tests)
+        if (saveTimeout !== null) {
+          clearTimeout(saveTimeout)
+          saveTimeout = null
+        }
+        if (db && dbName) {
+          const data = db.export()
+          await saveToIndexedDB(dbName, data)
+        }
+        result = {flushed: true}
+        break
       default:
         throw new Error(`Unknown command type: ${type}`)
     }

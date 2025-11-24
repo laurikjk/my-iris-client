@@ -18,14 +18,16 @@ test.describe("Post liking", () => {
     // Wait for navigation to post detail page
     await page.waitForURL(/\/note[a-z0-9]+/, {timeout: 10000})
 
-    // Verify post is visible on detail page
-    await expect(page.getByText(postContent).first()).toBeVisible({timeout: 10000})
+    // Wait for React to render the FeedItem
+    await page.waitForLoadState("networkidle")
 
-    // Find the feed item containing our post text
+    // Wait specifically for feed-item to appear (the post container)
     const postElement = page
       .getByTestId("feed-item")
       .filter({hasText: postContent})
       .first()
+
+    await expect(postElement).toBeVisible({timeout: 10000})
 
     // Wait for the like button within this specific post
     const likeButton = postElement.getByTestId("like-button")
