@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef, useCallback} from "react"
+import {useState, useEffect, useRef, useCallback, type ReactNode} from "react"
 import {NavigationContextType, StackItem, NavigateOptions} from "./types"
 import {getRouteParams} from "./routeMatcher"
 import {routes} from "./routes"
@@ -12,7 +12,7 @@ type NavigationState = {
   currentIndex: number
 }
 
-export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
+export const NavigationProvider = ({children}: {children: ReactNode}) => {
   const [navState, setNavState] = useState<NavigationState>({
     stack: [],
     currentIndex: -1,
