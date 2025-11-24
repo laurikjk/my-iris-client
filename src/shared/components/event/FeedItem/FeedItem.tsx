@@ -142,9 +142,9 @@ function FeedItem({
     let unsubscribe: (() => void) | undefined
 
     if (!event && eventIdHex) {
+      // No timeout - keep subscription open until event arrives or component unmounts
       const {promise, unsubscribe: unsub} = fetchEventReliable(
-        {ids: [eventIdHex], authors: authorHints},
-        {timeout: 5000}
+        {ids: [eventIdHex], authors: authorHints}
       )
       unsubscribe = unsub
 
@@ -153,12 +153,6 @@ function FeedItem({
           if (fetchedEvent) {
             setEvent(fetchedEvent)
             setLoadingEvent(false)
-          } else {
-            // No event found - stop loading animation to indicate empty result
-            setLoadingEvent(false)
-            console.warn(
-              `Event ${eventIdHex.slice(0, 8)} not found in cache or relays after timeout`
-            )
           }
         })
         .catch((err) => {
