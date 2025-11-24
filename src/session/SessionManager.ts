@@ -29,6 +29,12 @@ interface UserRecord {
   devices: Map<string, DeviceRecord>
 }
 
+interface MessageRecord {
+  event: Rumor
+  publicKey: string
+  deviceId: string
+}
+
 type StoredSessionEntry = ReturnType<typeof serializeSessionState>
 
 interface StoredDeviceRecord {
@@ -527,24 +533,64 @@ export default class SessionManager {
     this.setupUser(recipientIdentityKey)
     this.setupUser(this.ourPublicKey)
 
-    const devices = [
-      ...Array.from(userRecord.devices.values()),
-      ...Array.from(ourUserRecord.devices.values()),
-    ].filter((device) => device.staleAt === undefined)
-
-    // Send to all devices in background (if sessions exist)
-    Promise.allSettled(
-      devices.map(async (device) => {
-        const {activeSession} = device
-        if (!activeSession) return
-        const {event: verifiedEvent} = activeSession.sendEvent(event)
-        await this.nostrPublish(verifiedEvent).catch(console.error)
-      })
+    const devicesRecipient = Array.from(userRecord.devices.values()).filter(
+      (device) => device.staleAt === undefined
     )
-      .then(() => {
-        this.storeUserRecord(recipientIdentityKey)
+
+    const devicesUs = Array.from(ourUserRecord.devices.values()).filter(
+      (device) => device.staleAt === undefined
+    )
+
+    const messageRecords: MessageRecord[] = [
+      ...devicesRecipient.map((device) => ({
+        event: completeEvent,
+        publicKey: recipientIdentityKey,
+        deviceId: device.deviceId,
+      })),
+      ...devicesUs.map((device) => ({
+        event: completeEvent,
+        publicKey: this.ourPublicKey,
+        deviceId: device.deviceId,
+      })),
+    ]
+
+    // // Send to all devices in background (if sessions exist)
+    // Promise.allSettled(
+    //   devices.map(async (device) => {
+    //     const {activeSession} = device
+    //     if (!activeSession) return
+    //     const {event: verifiedEvent} = activeSession.sendEvent(event)
+    //     await this.nostrPublish(verifiedEvent).catch(console.error)
+    //   })
+    // )
+    //   .then(() => {
+    //     this.storeUserRecord(recipientIdentityKey)
+    //   })
+    //   .catch(console.error)
+
+    Promise.all(
+      messageRecords.map((mr) =>
+        this.storage
+          .put(
+            this.sessionKey(mr.publicKey, mr.deviceId, mr.event.id), // TODO: make their own key function
+            mr
+          )
+          .then(() => mr)
+      )
+    ).then((results) => {
+      results.forEach(async (mr) => {
+        const userRecord = this.userRecords.get(mr.publicKey)
+        if (!userRecord) return
+        const deviceRecord = userRecord.devices.get(mr.deviceId)
+        if (!deviceRecord) return
+        const {activeSession} = deviceRecord
+        if (!activeSession) return
+        const {event: verifiedEvent} = activeSession.sendEvent(mr.event)
+        await this.nostrPublish(verifiedEvent)
+        await this.storeUserRecord(mr.publicKey)
+        await this.storage.del(this.sessionKey(mr.publicKey, mr.deviceId, mr.event.id))
       })
-      .catch(console.error)
+    })
 
     // Return the event with computed ID (same as library would compute)
     return completeEvent
