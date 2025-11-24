@@ -111,6 +111,11 @@ test.describe("Reply draft persistence", () => {
 
     // Wait for navigation to post detail page - already there after publish
     await page.waitForURL(/\/note/, {timeout: 10000})
+    await page.waitForLoadState("networkidle")
+
+    // Wait for feed-item to render with reply input
+    const feedItem = page.getByTestId("feed-item").filter({hasText: "Post to reply to"}).first()
+    await expect(feedItem).toBeVisible({timeout: 10000})
 
     // Type and publish reply
     const replyContent = "This reply will be published"
