@@ -7,7 +7,7 @@ import debounce from "lodash/debounce"
 import throttle from "lodash/throttle"
 import localForage from "localforage"
 // Removed static import to avoid race condition - use dynamic import in setupSubscription
-import {useEffect, useState} from "react"
+import {useEffect, useState, useCallback, useSyncExternalStore} from "react"
 import {KIND_CONTACTS, KIND_MUTE_LIST, DEBUG_NAMESPACES} from "@/utils/constants"
 import {EventEmitter} from "tseep"
 import {createDebugLogger} from "@/utils/createDebugLogger"
@@ -19,12 +19,21 @@ export const DEFAULT_SOCIAL_GRAPH_ROOT =
 
 export const DEFAULT_CRAWL_DEGREE = 3
 
-let instance = new SocialGraph(DEFAULT_SOCIAL_GRAPH_ROOT)
+// Start with empty graph - instant initialization
+const currentPublicKey = useUserStore.getState().publicKey
+let instance = new SocialGraph(currentPublicKey || DEFAULT_SOCIAL_GRAPH_ROOT)
 let isInitialized = false
+let graphVersion = 0 // Incremented on any change to trigger re-renders
 
 // Event emitter for social graph changes
 export const socialGraphEvents = new EventEmitter()
 socialGraphEvents.setMaxListeners?.(100) // Increase limit for multiple subscribers
+
+// Notify subscribers of graph changes
+const notifyGraphChange = () => {
+  graphVersion++
+  socialGraphEvents.emit("graphChanged", graphVersion)
+}
 
 async function loadPreCrawledGraph(publicKey: string): Promise<SocialGraph> {
   const binaryUrl = (await import("nostr-social-graph/data/socialGraph.bin?url")).default
@@ -39,24 +48,32 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
   if (isInitialized) {
     log("setting root", publicKey)
     instance.setRoot(publicKey)
+    notifyGraphChange()
     return
   }
   isInitialized = true
-  const data = await localForage.getItem("socialGraph")
-  if (data) {
-    try {
-      instance = await SocialGraph.fromBinary(publicKey, data as Uint8Array)
-      log("loaded local social graph of size", instance.size())
-    } catch (err) {
-      error("error deserializing", err)
+
+  // Load graph in background - don't block
+  const loadGraph = async () => {
+    const data = await localForage.getItem("socialGraph")
+    if (data) {
+      try {
+        instance = await SocialGraph.fromBinary(publicKey, data as Uint8Array)
+        log("loaded local social graph of size", instance.size())
+      } catch (err) {
+        error("error deserializing", err)
+        await localForage.removeItem("socialGraph")
+        instance = await loadPreCrawledGraph(publicKey)
+      }
+    } else {
+      log("no social graph found")
       await localForage.removeItem("socialGraph")
       instance = await loadPreCrawledGraph(publicKey)
     }
-  } else {
-    log("no social graph found")
-    await localForage.removeItem("socialGraph")
-    instance = await loadPreCrawledGraph(publicKey)
+    notifyGraphChange()
   }
+
+  await loadGraph()
 }
 
 const saveToLocalForage = async () => {
@@ -92,12 +109,18 @@ const throttledMuteListUpdate = throttle(() => {
 export const handleSocialGraphEvent = (evs: NostrEvent | Array<NostrEvent>) => {
   const events = Array.isArray(evs) ? evs : [evs]
   const hasMuteListUpdate = events.some((e) => e.kind === KIND_MUTE_LIST)
+  const hasFollowListUpdate = events.some((e) => e.kind === KIND_CONTACTS)
 
   instance.handleEvent(evs)
   throttledSave()
 
   if (hasMuteListUpdate) {
     throttledMuteListUpdate()
+  }
+
+  // Notify subscribers of follow list changes
+  if (hasFollowListUpdate) {
+    notifyGraphChange()
   }
 }
 
@@ -238,9 +261,75 @@ export const useSocialGraphLoaded = () => {
   return isSocialGraphLoaded
 }
 
+// Get current graph version for useSyncExternalStore
+const getGraphVersion = () => graphVersion
+const subscribeToGraph = (callback: () => void) => {
+  socialGraphEvents.on("graphChanged", callback)
+  return () => socialGraphEvents.off("graphChanged", callback)
+}
+
+/**
+ * Hook that returns follows for a user and re-renders when the social graph changes.
+ * This replaces the need to wait for socialGraphLoaded before rendering.
+ */
+export const useFollowsFromGraph = (
+  pubKey: string | null | undefined,
+  includeSelf = false
+): string[] => {
+  // Subscribe to graph changes
+  const version = useSyncExternalStore(subscribeToGraph, getGraphVersion, getGraphVersion)
+
+  // Compute follows when version changes
+  const follows = useCallback(() => {
+    if (!pubKey) return []
+    const followSet = instance.getFollowedByUser(pubKey, includeSelf)
+    return Array.from(followSet)
+  }, [pubKey, includeSelf, version])
+
+  return follows()
+}
+
+/**
+ * Hook that returns the follow distance for a user.
+ * Re-renders when the social graph changes.
+ */
+export const useFollowDistance = (pubKey: string | null | undefined): number => {
+  // Subscribe to graph changes - version triggers re-render
+  useSyncExternalStore(subscribeToGraph, getGraphVersion, getGraphVersion)
+
+  if (!pubKey) return 1000
+  return instance.getFollowDistance(pubKey)
+}
+
+/**
+ * Hook that returns whether a user is followed.
+ * Re-renders when the social graph changes.
+ */
+export const useIsFollowing = (
+  follower: string | null | undefined,
+  followedUser: string | null | undefined
+): boolean => {
+  // Subscribe to graph changes - triggers re-render
+  useSyncExternalStore(subscribeToGraph, getGraphVersion, getGraphVersion)
+
+  if (!follower || !followedUser) return false
+  return instance.isFollowing(follower, followedUser)
+}
+
+/**
+ * Hook that returns the current graph size info.
+ * Useful for debugging and showing loading progress.
+ */
+export const useGraphSize = () => {
+  // Subscribe to graph changes - triggers re-render
+  useSyncExternalStore(subscribeToGraph, getGraphVersion, getGraphVersion)
+  return instance.size()
+}
+
 async function setupSubscription(publicKey: string) {
   instance.setRoot(publicKey)
   await instance.recalculateFollowDistances()
+  notifyGraphChange()
   sub?.stop()
 
   // Import ndk lazily to avoid initialization race
@@ -263,7 +352,7 @@ async function setupSubscription(publicKey: string) {
     latestTime = ev.created_at
     handleSocialGraphEvent(ev as NostrEvent)
     queueMicrotask(() => getMissingFollowLists(publicKey))
-    instance.recalculateFollowDistances()
+    instance.recalculateFollowDistances().then(() => notifyGraphChange())
   })
 }
 

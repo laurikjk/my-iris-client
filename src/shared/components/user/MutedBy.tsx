@@ -2,18 +2,18 @@ import FollowList from "@/pages/user/components/FollowList"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {shouldHideUser} from "@/utils/visibility"
 import {Fragment, useMemo, useState} from "react"
-import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
+import socialGraph, {useFollowsFromGraph, useGraphSize} from "@/utils/socialGraph"
 import {ProfileLink} from "./ProfileLink"
 import {Name} from "./Name"
-import useFollows from "@/shared/hooks/useFollows"
 import {useUserStore} from "@/stores/user"
 
 const MAX_MUTED_BY_DISPLAY = 3
 
 export default function MutedBy({pubkey}: {pubkey: string}) {
   const myPubKey = useUserStore((state) => state.publicKey)
-  const follows = useFollows(myPubKey, true)
-  const socialGraphLoaded = useSocialGraphLoaded()
+  const follows = useFollowsFromGraph(myPubKey, true)
+  // Subscribe to graph changes to re-render when mute data loads
+  const graphSize = useGraphSize()
 
   const {mutedByArray, totalMutedBy} = useMemo(() => {
     const mutedBy = socialGraph().getUserMutedBy(pubkey)
@@ -21,17 +21,16 @@ export default function MutedBy({pubkey}: {pubkey: string}) {
       mutedByArray: Array.from(mutedBy).slice(0, MAX_MUTED_BY_DISPLAY),
       totalMutedBy: mutedBy.size,
     }
-  }, [pubkey])
-  useSocialGraphLoaded() // social graph updated hook needed?
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pubkey, graphSize])
 
   const root = socialGraph().getRoot()
   const mutedBy = socialGraph().getUserMutedBy(pubkey)
   const isRootMuted = mutedBy.has(root)
 
+  // Show warning when we have follows data loaded
   const showMutedWarning =
-    socialGraphLoaded &&
-    follows.length > 1 &&
-    ((totalMutedBy > 0 && shouldHideUser(pubkey, 3)) || isRootMuted)
+    follows.length > 1 && ((totalMutedBy > 0 && shouldHideUser(pubkey, 3)) || isRootMuted)
 
   const [showMuterList, setShowMuterList] = useState<boolean>(false)
 

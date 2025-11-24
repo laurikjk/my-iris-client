@@ -11,7 +11,7 @@ import {useKeyboardNavigation} from "@/shared/hooks/useKeyboardNavigation"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {isOvermuted} from "@/utils/visibility"
 import {searchIndex} from "@/utils/profileSearch"
-import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
+import socialGraph, {useGraphSize} from "@/utils/socialGraph"
 import {useNavigate} from "@/navigation"
 import classNames from "classnames"
 import {nip19} from "nostr-tools"
@@ -61,7 +61,9 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
     const navigate = useNavigate()
     const dropdownRef = useRef<HTMLDivElement>(null)
     const navItemClicked = useUIStore((state) => state.navItemClicked)
-    const isSocialGraphLoaded = useSocialGraphLoaded()
+    // Subscribe to graph changes for re-ranking search results
+    const graphSize = useGraphSize()
+    const isSocialGraphLoaded = graphSize.users > 1
 
     // Forward ref to the input element
     useImperativeHandle(ref, () => inputRef.current!, [])

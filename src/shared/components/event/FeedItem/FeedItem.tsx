@@ -143,9 +143,10 @@ function FeedItem({
 
     if (!event && eventIdHex) {
       // No timeout - keep subscription open until event arrives or component unmounts
-      const {promise, unsubscribe: unsub} = fetchEventReliable(
-        {ids: [eventIdHex], authors: authorHints}
-      )
+      const {promise, unsubscribe: unsub} = fetchEventReliable({
+        ids: [eventIdHex],
+        authors: authorHints,
+      })
       unsubscribe = unsub
 
       promise

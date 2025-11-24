@@ -67,7 +67,10 @@ test.describe("Session persistence", () => {
     await page.waitForLoadState("networkidle")
 
     // Post should be visible on detail page with feed-item
-    const detailPost = page.getByTestId("feed-item").filter({hasText: postContent}).first()
+    const detailPost = page
+      .getByTestId("feed-item")
+      .filter({hasText: postContent})
+      .first()
     await expect(detailPost).toBeVisible({timeout: 10000})
 
     // Refresh the page to test session persistence
@@ -75,7 +78,10 @@ test.describe("Session persistence", () => {
     await page.waitForLoadState("networkidle")
 
     // Post should still be visible after refresh
-    const postAfterRefresh = page.getByTestId("feed-item").filter({hasText: postContent}).first()
+    const postAfterRefresh = page
+      .getByTestId("feed-item")
+      .filter({hasText: postContent})
+      .first()
     await expect(postAfterRefresh).toBeVisible({timeout: 10000})
 
     // Find and click the like button

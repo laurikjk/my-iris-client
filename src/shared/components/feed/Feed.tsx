@@ -8,7 +8,6 @@ import {useUserStore} from "@/stores/user"
 
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
 import useFeedEvents from "@/shared/hooks/useFeedEvents.ts"
-import {useSocialGraphLoaded} from "@/utils/socialGraph.ts"
 import UnknownUserEvents from "./UnknownUserEvents.tsx"
 import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
@@ -16,8 +15,7 @@ import ZapAllButton from "./ZapAllButton"
 import {useFeedStore, type FeedConfig, getFeedCacheKey} from "@/stores/feed"
 import {getTag} from "@/utils/nostr"
 import MediaFeed from "./MediaFeed"
-import socialGraph from "@/utils/socialGraph"
-import useFollows from "@/shared/hooks/useFollows"
+import socialGraph, {useFollowsFromGraph} from "@/utils/socialGraph"
 import {addSeenEventId} from "@/utils/memcache.ts"
 
 interface FeedProps {
@@ -58,16 +56,9 @@ const Feed = memo(function Feed({
   }
 
   const myPubKey = useUserStore((state) => state.publicKey)
-  const isSocialGraphLoaded = useSocialGraphLoaded()
 
-  // Call useFollows to keep follow list updated in background
-  useFollows(myPubKey, true)
-
-  // Get follows synchronously from social graph instead of waiting for state
-  const follows = useMemo(() => {
-    if (!myPubKey || !isSocialGraphLoaded) return []
-    return Array.from(socialGraph().getFollowedByUser(myPubKey, true))
-  }, [myPubKey, isSocialGraphLoaded])
+  // Use reactive hook - automatically updates when social graph changes
+  const follows = useFollowsFromGraph(myPubKey, true)
 
   // Enhance filters with authors list for follow-distance-based feeds
   const filters = useMemo(() => {
@@ -321,10 +312,6 @@ const Feed = memo(function Feed({
       setForceUpdateCount((prev) => prev + 1)
     }
   }, [forceUpdate])
-
-  if (!isSocialGraphLoaded) {
-    return null
-  }
 
   return (
     <div className="relative">

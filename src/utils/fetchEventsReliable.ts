@@ -117,7 +117,9 @@ export function fetchEventsReliable(
     } else if (requestedIds.size === 0) {
       // Non-ID query with no timeout - wait for EOSE
       sub.on("eose", () => {
-        log(`[fetchEventsReliable] Non-ID query EOSE, resolving with ${events.size} events`)
+        log(
+          `[fetchEventsReliable] Non-ID query EOSE, resolving with ${events.size} events`
+        )
         finalize(resolve)
       })
     }

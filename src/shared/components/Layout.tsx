@@ -4,7 +4,7 @@ import NoteCreator from "@/shared/components/create/NoteCreator.tsx"
 import LoginDialog from "@/shared/components/user/LoginDialog"
 import NavSideBar from "@/shared/components/nav/NavSideBar"
 import {clearNotifications} from "@/utils/notifications"
-import {socialGraphLoaded} from "@/utils/socialGraph"
+import {useFollowsFromGraph} from "@/utils/socialGraph"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import Footer from "@/shared/components/Footer.tsx"
 import {useSettingsStore} from "@/stores/settings"
@@ -20,7 +20,6 @@ import HomeFeed from "@/pages/home/feed/components/HomeFeed"
 import UnifiedSearchContent from "@/shared/components/search/UnifiedSearchContent"
 import {ScrollProvider} from "@/contexts/ScrollContext"
 import Header from "@/shared/components/header/Header"
-import useFollows from "@/shared/hooks/useFollows"
 import {usePublicKey} from "@/stores/user"
 import {
   useFeedStore,
@@ -67,7 +66,8 @@ const Layout = ({children}: {children: ReactNode}) => {
 
   // Feed header logic for two-column layout
   const myPubKey = usePublicKey()
-  const follows = useFollows(myPubKey, true)
+  // Use reactive hook - updates when graph loads
+  const follows = useFollowsFromGraph(myPubKey, true)
   const {activeFeed, getAllFeedConfigs, loadFeedConfig} = useFeedStore()
   const enabledFeedIds = useEnabledFeedIds()
   const feedConfigs = useFeedConfigs()
@@ -118,7 +118,7 @@ const Layout = ({children}: {children: ReactNode}) => {
     !location.pathname.startsWith("/settings") &&
     !location.pathname.startsWith("/chats")
 
-  socialGraphLoaded.then() // just make sure we start loading social the graph
+  // Social graph loading is now non-blocking and reactive via useFollowsFromGraph
 
   // ToS state for Tauri apps
   const {legal, updateLegal} = useSettingsStore()

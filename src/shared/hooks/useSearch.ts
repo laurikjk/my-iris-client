@@ -2,7 +2,7 @@ import {useState, useEffect} from "react"
 import {useSearchStore, CustomSearchResult} from "@/stores/search"
 import {isOvermuted} from "@/utils/visibility"
 import {searchIndex} from "@/utils/profileSearch"
-import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
+import socialGraph, {useGraphSize} from "@/utils/socialGraph"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 import {NOSTR_REGEX, HEX_REGEX, NIP05_REGEX} from "@/utils/validation"
@@ -28,7 +28,9 @@ export function useSearch({
   const [searchResults, setSearchResults] = useState<CustomSearchResult[]>([])
   const [value, setValue] = useState<string>("")
   const {recentSearches, setRecentSearches} = useSearchStore()
-  const isSocialGraphLoaded = useSocialGraphLoaded()
+  // Use graph size to trigger re-search when graph updates
+  const graphSize = useGraphSize()
+  const isSocialGraphLoaded = graphSize.users > 1 // Graph is loaded if more than just root user
 
   useEffect(() => {
     const v = value.trim()

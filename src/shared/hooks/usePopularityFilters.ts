@@ -1,6 +1,8 @@
 import {useState, useCallback, useMemo} from "react"
-import socialGraph, {DEFAULT_SOCIAL_GRAPH_ROOT} from "@/utils/socialGraph"
-import useFollows from "@/shared/hooks/useFollows"
+import socialGraph, {
+  DEFAULT_SOCIAL_GRAPH_ROOT,
+  useFollowsFromGraph,
+} from "@/utils/socialGraph"
 import {useUserStore} from "@/stores/user"
 import {
   storeOldestTimestamp,
@@ -25,7 +27,8 @@ export default function usePopularityFilters(filterSeen?: boolean) {
   )
 
   const myPubKey = useUserStore((state) => state.publicKey)
-  const myFollows = useFollows(myPubKey, false)
+  // Use reactive hook - updates when graph loads
+  const myFollows = useFollowsFromGraph(myPubKey, false)
   const shouldUseFallback = myFollows.length === 0
 
   const authors = useMemo(() => {

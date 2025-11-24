@@ -2,8 +2,7 @@ import {useEffect, useRef, useState, useCallback} from "react"
 import {NDKFilter} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
 import {KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT} from "@/utils/constants"
-import {useSocialGraphLoaded} from "@/utils/socialGraph"
-import useFollows from "./useFollows"
+import {useFollowsFromGraph} from "@/utils/socialGraph"
 import {useUserStore} from "@/stores/user"
 import {seenEventIds} from "@/utils/memcache"
 import {getEventReplyingTo} from "@/utils/nostr"
@@ -30,8 +29,8 @@ export default function useChronologicalSubscription(
   excludeOwnPosts?: boolean
 ) {
   const myPubKey = useUserStore((state) => state.publicKey)
-  const follows = useFollows(myPubKey, true)
-  const isSocialGraphLoaded = useSocialGraphLoaded()
+  // Use reactive hook - will update when graph loads
+  const follows = useFollowsFromGraph(myPubKey, true)
 
   const showingPosts = useRef<Map<string, number>>(new Map())
   const pendingPosts = useRef<Map<string, number>>(new Map())
@@ -59,7 +58,8 @@ export default function useChronologicalSubscription(
   }, [])
 
   useEffect(() => {
-    if (!isSocialGraphLoaded || !follows.length) {
+    // Wait for follows to be loaded from social graph
+    if (!follows.length) {
       return
     }
     const now = Math.floor(Date.now() / 1000)
@@ -117,7 +117,7 @@ export default function useChronologicalSubscription(
       clearTimeout(timeout)
       sub.stop()
     }
-  }, [follows, isSocialGraphLoaded, oldestTimestamp])
+  }, [follows, oldestTimestamp])
 
   const expandTimestamp = useCallback(() => {
     setOldestTimestamp((prev) => {
