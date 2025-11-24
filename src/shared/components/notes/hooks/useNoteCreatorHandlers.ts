@@ -31,7 +31,8 @@ interface UseNoteCreatorHandlersParams {
   isFocused: boolean
   setIsFocused: (focused: boolean) => void
   replyingTo?: NDKEvent
-  isTopOfStack: boolean
+  onClose?: () => void
+  onPublishCallback?: () => void
 }
 
 export function useNoteCreatorHandlers(params: UseNoteCreatorHandlersParams) {
@@ -46,14 +47,14 @@ export function useNoteCreatorHandlers(params: UseNoteCreatorHandlersParams) {
 
   const handleSubmit = async () => {
     const result = await params.publish(params.state)
-    if (
-      result &&
-      result.success &&
-      result.eventId &&
-      !params.replyingTo &&
-      params.isTopOfStack
-    ) {
-      navigate(`/${nip19.noteEncode(result.eventId)}`)
+    if (result && result.success) {
+      // Navigate before closing modal (if not a reply)
+      if (result.eventId && !params.replyingTo) {
+        navigate(`/${nip19.noteEncode(result.eventId)}`)
+      }
+      // Close modal and call callback after navigation
+      params.onClose?.()
+      params.onPublishCallback?.()
     }
   }
 

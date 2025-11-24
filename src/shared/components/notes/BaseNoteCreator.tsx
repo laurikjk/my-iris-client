@@ -22,7 +22,6 @@ import {NoteActions} from "./components/NoteActions"
 import {UploadProgress} from "./components/UploadProgress"
 import {MentionDropdown} from "./components/MentionDropdown"
 import {GeohashDisplay} from "./components/GeohashDisplay"
-import {useIsTopOfStack} from "@/navigation/useIsTopOfStack"
 
 interface BaseNoteCreatorProps {
   onClose?: () => void
@@ -53,7 +52,6 @@ export function BaseNoteCreator({
 }: BaseNoteCreatorProps) {
   const myPubKey = usePublicKey()
   const ndkInstance = ndk()
-  const isTopOfStack = useIsTopOfStack()
 
   const draftKey = replyingTo?.id || (quotedEvent ? `quote-${quotedEvent.id}` : "") || ""
 
@@ -87,8 +85,6 @@ export function BaseNoteCreator({
       dispatch({type: "RESET"})
       setIsFocused(false)
       clearDraft()
-      onClose?.()
-      onPublishCallback?.()
     },
   })
 
@@ -121,7 +117,8 @@ export function BaseNoteCreator({
     isFocused,
     setIsFocused,
     replyingTo,
-    isTopOfStack,
+    onClose,
+    onPublishCallback,
   })
 
   useNoteCreatorEffects({
