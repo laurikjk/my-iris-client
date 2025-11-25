@@ -2,6 +2,7 @@ import {ndk} from "./ndk"
 import type {NDKEvent, NDKFilter, NDKSubscription} from "@/lib/ndk"
 import {createDebugLogger} from "./createDebugLogger"
 import {DEBUG_NAMESPACES} from "./constants"
+import {getEventSync, cacheEvent} from "./eventCache"
 
 const {log, warn} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
@@ -50,6 +51,21 @@ export function fetchEventsReliable(
     }
   })
 
+  // Check cache first for ID-based queries
+  if (requestedIds.size > 0) {
+    for (const id of requestedIds) {
+      const cached = getEventSync(id)
+      if (cached) {
+        events.set(id, cached)
+      }
+    }
+    if (events.size > 0) {
+      log(
+        `[fetchEventsReliable] Found ${events.size}/${requestedIds.size} events in cache`
+      )
+    }
+  }
+
   const promise = new Promise<NDKEvent[]>((resolve) => {
     // Log request info
     if (requestedIds.size > 0) {
@@ -61,12 +77,22 @@ export function fetchEventsReliable(
       )
     }
 
+    // If we already have all events from cache, resolve immediately
+    if (requestedIds.size > 0 && events.size === requestedIds.size) {
+      log(
+        `[fetchEventsReliable] All ${requestedIds.size} events found in cache, resolving`
+      )
+      resolve(Array.from(events.values()))
+      return
+    }
+
     sub = ndk().subscribe(filterArray, {
       closeOnEose: false, // Keep subscription open
     })
 
     sub.on("event", (event: NDKEvent) => {
       events.set(event.id, event)
+      cacheEvent(event) // Add to hot cache
       log(`[fetchEventsReliable] Received event: ${event.id.slice(0, 8)}`)
 
       // Early completion: if this is an ID query and we have all IDs, resolve immediately

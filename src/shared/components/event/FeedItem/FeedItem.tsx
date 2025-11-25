@@ -130,6 +130,8 @@ function FeedItem({
   useEffect(() => {
     if (event) {
       onEvent?.(event)
+      // Add to event cache for instant loading when navigating to detail page
+      import("@/utils/eventCache").then(({cacheEvent}) => cacheEvent(event))
     }
   }, [event, onEvent])
 

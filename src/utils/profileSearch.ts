@@ -89,7 +89,7 @@ async function populateFromSocialGraph() {
           batch.length = 0
 
           // Yield to main thread
-          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES))
+          await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_BATCHES))
         }
       }
 

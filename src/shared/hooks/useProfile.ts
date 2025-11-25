@@ -6,18 +6,88 @@ import {
 } from "@/lib/ndk"
 import {handleProfile} from "@/utils/profileSearch"
 import {PublicKey} from "@/shared/utils/PublicKey"
-import {useEffect, useMemo, useState, useRef} from "react"
+import {useCallback, useEffect, useMemo, useSyncExternalStore} from "react"
 import {addUsernameToCache} from "@/utils/usernameCache"
 import {ndk} from "@/utils/ndk"
 import {KIND_METADATA} from "@/utils/constants"
 import {getMainThreadDb} from "@/lib/ndk-cache/db"
 import {updateNameCache} from "@/utils/profileName"
+import {LRUCache} from "typescript-lru-cache"
+
+// Shared LRU cache for profiles - hot cache for active profiles
+const profileCache = new LRUCache<string, NDKUserProfile>({
+  maxSize: 100,
+})
+
+// Subscribers per pubkey
+const subscribers = new Map<string, Set<() => void>>()
+
+function notifySubscribers(pubKeyHex: string) {
+  const subs = subscribers.get(pubKeyHex)
+  if (subs) {
+    subs.forEach((cb) => cb())
+  }
+}
+
+// Subscription manager - one subscription per pubkey
+const activeSubscriptions = new Map<string, {sub: NDKSubscription; refCount: number}>()
+
+function subscribeToProfile(pubKeyHex: string) {
+  const existing = activeSubscriptions.get(pubKeyHex)
+  if (existing) {
+    existing.refCount++
+    return () => unsubscribeFromProfile(pubKeyHex)
+  }
+
+  const sub = ndk().subscribe(
+    {kinds: [KIND_METADATA], authors: [pubKeyHex]},
+    {
+      closeOnEose: true,
+      cacheUsage: NDKSubscriptionCacheUsage.PARALLEL,
+    }
+  )
+
+  activeSubscriptions.set(pubKeyHex, {sub, refCount: 1})
+
+  let latest = profileCache.get(pubKeyHex)?.created_at || 0
+  sub.on("event", (event: NDKEvent) => {
+    if (event.pubkey === pubKeyHex && event.kind === KIND_METADATA) {
+      if (!event.created_at || event.created_at <= latest) return
+
+      latest = event.created_at
+      try {
+        const newProfile = JSON.parse(event.content)
+        newProfile.created_at = event.created_at
+        if (newProfile.nip05) {
+          addUsernameToCache(pubKeyHex, newProfile.nip05, true)
+        }
+        profileCache.set(pubKeyHex, newProfile)
+        updateNameCache(pubKeyHex, newProfile)
+        handleProfile(pubKeyHex, newProfile)
+        notifySubscribers(pubKeyHex)
+      } catch {
+        // Invalid JSON
+      }
+    }
+  })
+
+  return () => unsubscribeFromProfile(pubKeyHex)
+}
+
+function unsubscribeFromProfile(pubKeyHex: string) {
+  const existing = activeSubscriptions.get(pubKeyHex)
+  if (!existing) return
+
+  existing.refCount--
+  if (existing.refCount <= 0) {
+    existing.sub.stop()
+    activeSubscriptions.delete(pubKeyHex)
+  }
+}
 
 export default function useProfile(pubKey?: string, subscribe = true) {
   const pubKeyHex = useMemo(() => {
-    if (!pubKey) {
-      return ""
-    }
+    if (!pubKey) return ""
     try {
       return new PublicKey(pubKey).toString()
     } catch (e) {
@@ -26,87 +96,58 @@ export default function useProfile(pubKey?: string, subscribe = true) {
     }
   }, [pubKey])
 
-  const [profile, setProfile] = useState<NDKUserProfile | null>(null)
-  const subscriptionRef = useRef<NDKSubscription | null>(null)
-  const initialLoadDone = useRef(false)
-
-  // Load from cache on mount
+  // Load from Dexie on mount if not in cache (stale-while-revalidate)
   useEffect(() => {
-    if (!pubKeyHex) {
-      setProfile(null)
-      return
-    }
+    if (!pubKeyHex) return
 
-    // Load from Dexie cache
+    const cached = profileCache.get(pubKeyHex)
+    if (cached) return
+
+    // Fetch from Dexie in background
     const db = getMainThreadDb()
-    db.profiles
-      .get(pubKeyHex)
-      .then((cached) => {
-        if (cached) {
-          setProfile(cached)
-          updateNameCache(pubKeyHex, cached)
-        }
-        initialLoadDone.current = true
-      })
-      .catch(() => {
-        initialLoadDone.current = true
-      })
-  }, [pubKeyHex])
-
-  // Subscribe to relay updates if requested
-  useEffect(() => {
-    if (subscriptionRef.current) {
-      subscriptionRef.current.stop()
-      subscriptionRef.current = null
-    }
-
-    if (!pubKeyHex) {
-      return
-    }
-
-    // If subscribe=false, only query cache (already done above)
-    if (!subscribe) {
-      return
-    }
-
-    const sub = ndk().subscribe(
-      {kinds: [KIND_METADATA], authors: [pubKeyHex]},
-      {
-        closeOnEose: true,
-        cacheUsage: NDKSubscriptionCacheUsage.PARALLEL,
-      }
-    )
-    subscriptionRef.current = sub
-
-    let latest = profile?.created_at || 0
-    sub.on("event", (event: NDKEvent) => {
-      if (event.pubkey === pubKeyHex && event.kind === KIND_METADATA) {
-        if (!event.created_at || event.created_at <= latest) {
-          return
-        }
-        latest = event.created_at
-        try {
-          const newProfile = JSON.parse(event.content)
-          newProfile.created_at = event.created_at
-          if (newProfile.nip05) {
-            addUsernameToCache(pubKeyHex, newProfile.nip05, true)
-          }
-          setProfile(newProfile)
-          updateNameCache(pubKeyHex, newProfile)
-          handleProfile(pubKeyHex, newProfile)
-        } catch {
-          // Invalid JSON in profile content
-        }
+    db.profiles.get(pubKeyHex).then((dexieProfile) => {
+      if (dexieProfile) {
+        profileCache.set(pubKeyHex, dexieProfile)
+        updateNameCache(pubKeyHex, dexieProfile)
+        notifySubscribers(pubKeyHex)
       }
     })
+  }, [pubKeyHex])
 
-    return () => {
-      if (subscriptionRef.current) {
-        subscriptionRef.current.stop()
-        subscriptionRef.current = null
-      }
-    }
+  // Subscribe to NDK updates
+  useEffect(() => {
+    if (!pubKeyHex || !subscribe) return
+    return subscribeToProfile(pubKeyHex)
   }, [pubKeyHex, subscribe])
+
+  // Stable subscribe function for useSyncExternalStore
+  const subscribeToStore = useCallback(
+    (callback: () => void) => {
+      if (!pubKeyHex) return () => {}
+
+      let subs = subscribers.get(pubKeyHex)
+      if (!subs) {
+        subs = new Set()
+        subscribers.set(pubKeyHex, subs)
+      }
+      subs.add(callback)
+
+      return () => {
+        subs?.delete(callback)
+        if (subs?.size === 0) {
+          subscribers.delete(pubKeyHex)
+        }
+      }
+    },
+    [pubKeyHex]
+  )
+
+  const getSnapshot = useCallback(() => {
+    return pubKeyHex ? profileCache.get(pubKeyHex) || null : null
+  }, [pubKeyHex])
+
+  // Use external store pattern
+  const profile = useSyncExternalStore(subscribeToStore, getSnapshot, getSnapshot)
 
   return profile
 }
