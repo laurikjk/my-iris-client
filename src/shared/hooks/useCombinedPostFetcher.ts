@@ -97,6 +97,8 @@ export default function useCombinedPostFetcher({
   )
 
   const loadInitial = useCallback(async () => {
+    if (isLoadingRef.current || hasLoadedInitial.current) return
+    isLoadingRef.current = true
     setLoading(true)
     const newEvents = await loadBatch(10)
 
@@ -105,6 +107,7 @@ export default function useCombinedPostFetcher({
       newEvents.forEach((event) => addSeenEventId(event.id))
       setEvents(newEvents)
       hasLoadedInitial.current = true
+      isLoadingRef.current = false
       setLoading(false)
     } else {
       // Try one more batch before giving up
@@ -113,11 +116,13 @@ export default function useCombinedPostFetcher({
       setEvents(secondBatch)
       if (secondBatch.length > 0) {
         hasLoadedInitial.current = true
+        isLoadingRef.current = false
         setLoading(false)
       } else {
         // Keep loading state true for a bit longer to allow subscriptions to receive more data
         setTimeout(() => {
           hasLoadedInitial.current = true
+          isLoadingRef.current = false
           setLoading(false)
         }, 3000)
       }

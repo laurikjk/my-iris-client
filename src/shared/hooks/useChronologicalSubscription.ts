@@ -83,12 +83,16 @@ export default function useChronologicalSubscription(
         return
       }
 
+      unfilteredEventsReceivedAfterFilterChange.current += 1
+
       if (!showingPosts.current.has(event.id) && !pendingPosts.current.has(event.id)) {
         pendingPosts.current.set(event.id, event.created_at)
 
         if (oldestEventAt.current === null || event.created_at < oldestEventAt.current) {
           oldestEventAt.current = event.created_at
         }
+
+        expansionsWithoutNewEvents.current = 0
       }
 
       if (!hasInitialData && pendingPosts.current.size >= INITIAL_DATA_THRESHOLD) {

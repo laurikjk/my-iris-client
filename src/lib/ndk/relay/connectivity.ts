@@ -793,6 +793,12 @@ export class NDKRelayConnectivity {
    * @param notice - The notice text received from the NDK relay.
    */
   private async onNotice(notice: string) {
+    if (notice.toLowerCase().includes("too many concurrent")) {
+      this.debug(`Too many concurrent REQs. Active subscriptions (${this.openSubs.size}):`)
+      for (const [subId, sub] of this.openSubs.entries()) {
+        this.debug(`  - ${subId}: ${JSON.stringify(sub.executeFilters).slice(0, 200)}`)
+      }
+    }
     this.ndkRelay.emit("notice", notice)
   }
 
