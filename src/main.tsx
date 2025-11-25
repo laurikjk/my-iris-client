@@ -90,15 +90,12 @@ const initializeApp = async () => {
     log("✅ NDK initialized")
   })
 
-  // Load social graph in background (non-blocking)
-  import("@/utils/socialGraph").then(
-    async ({socialGraphLoaded, setupSocialGraphSubscriptions}) => {
-      await socialGraphLoaded
-      log("✅ Social graph initialized")
-      await setupSocialGraphSubscriptions()
-      log("✅ Social graph subscriptions ready")
-    }
-  )
+  // Load social graph before rendering
+  const {socialGraphLoaded, setupSocialGraphSubscriptions} = await import("@/utils/socialGraph")
+  await socialGraphLoaded
+  log("✅ Social graph initialized")
+  await setupSocialGraphSubscriptions()
+  log("✅ Social graph subscriptions ready")
 
   // Initialize debug system
   DebugManager

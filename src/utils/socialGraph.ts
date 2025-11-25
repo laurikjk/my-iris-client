@@ -53,7 +53,6 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
   }
   isInitialized = true
 
-  // Load graph in background - don't block
   const loadGraph = async () => {
     const data = await localForage.getItem("socialGraph")
     if (data) {
@@ -73,8 +72,7 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
     notifyGraphChange()
   }
 
-  // Non-blocking load
-  loadGraph()
+  return loadGraph()
 }
 
 const saveToLocalForage = async () => {
@@ -221,7 +219,7 @@ export const socialGraphLoaded = new Promise<boolean>((resolve) => {
 // Initialize social graph (separate from subscription setup)
 export const initializeSocialGraph = async () => {
   const currentPublicKey = useUserStore.getState().publicKey
-  initializeInstance(currentPublicKey || undefined)
+  await initializeInstance(currentPublicKey || undefined)
 
   if (!currentPublicKey) {
     instance.setRoot(DEFAULT_SOCIAL_GRAPH_ROOT)
