@@ -5,6 +5,7 @@ export interface WorkerSubscribeOpts {
   destinations?: ("cache" | "relay")[]
   closeOnEose?: boolean
   groupable?: boolean
+  groupableDelay?: number
 }
 
 export interface WorkerPublishOpts {
