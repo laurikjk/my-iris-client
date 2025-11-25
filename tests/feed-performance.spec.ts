@@ -191,8 +191,7 @@ async function measureScrollPerformance(page: Page): Promise<number> {
         if (frameCount < targetFrames) {
           requestAnimationFrame(measureFrame)
         } else {
-          const avgFrameTime =
-            frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length
+          const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length
           resolve(avgFrameTime)
         }
       }
@@ -285,9 +284,7 @@ test.describe("Feed Performance Analysis", () => {
       .sort(([, a], [, b]) => b.size - a.size)
       .slice(0, 20)
     sortedTypes.forEach(([type, data]) => {
-      console.log(
-        `${type}: ${(data.size / 1024).toFixed(2)}KB (${data.count} objects)`
-      )
+      console.log(`${type}: ${(data.size / 1024).toFixed(2)}KB (${data.count} objects)`)
     })
 
     // Assertions - relaxed for test environment without actual feed data
@@ -354,11 +351,12 @@ test.describe("Feed Performance Analysis", () => {
     }
 
     // Check for memory growth
-    const memoryGrowth =
-      memorySnapshots[memorySnapshots.length - 1] - memorySnapshots[0]
+    const memoryGrowth = memorySnapshots[memorySnapshots.length - 1] - memorySnapshots[0]
     const growthPercent = (memoryGrowth / memorySnapshots[0]) * 100
 
-    console.log(`\nMemory growth: ${(memoryGrowth / 1024 / 1024).toFixed(2)}MB (${growthPercent.toFixed(1)}%)`)
+    console.log(
+      `\nMemory growth: ${(memoryGrowth / 1024 / 1024).toFixed(2)}MB (${growthPercent.toFixed(1)}%)`
+    )
 
     // Save memory trend
     const trendPath = path.join(OUTPUT_DIR, "memory-trend.json")
@@ -380,7 +378,9 @@ test.describe("Feed Performance Analysis", () => {
 
     // Warn if significant memory growth (>50%)
     if (growthPercent > 50) {
-      console.warn(`WARNING: Significant memory growth detected (${growthPercent.toFixed(1)}%)`)
+      console.warn(
+        `WARNING: Significant memory growth detected (${growthPercent.toFixed(1)}%)`
+      )
     }
 
     expect(growthPercent).toBeLessThan(100) // Memory shouldn't double
@@ -407,8 +407,7 @@ test.describe("Feed Performance Analysis", () => {
     for (let i = 0; i < 3; i++) {
       await page.evaluate(() => {
         const scrollable =
-          document.querySelector("[data-scrollable]") ||
-          document.documentElement
+          document.querySelector("[data-scrollable]") || document.documentElement
         if (scrollable && "scrollBy" in scrollable) {
           ;(scrollable as HTMLElement).scrollBy({top: 300, behavior: "smooth"})
         }
@@ -488,8 +487,7 @@ test.describe("Feed Performance Analysis", () => {
             line: stats.line,
           })),
           totalSamples: samples.length,
-          profileDuration:
-            timeDeltas.reduce((a: number, b: number) => a + b, 0) / 1000,
+          profileDuration: timeDeltas.reduce((a: number, b: number) => a + b, 0) / 1000,
         },
         null,
         2
@@ -575,17 +573,19 @@ test.describe("Feed Performance Analysis", () => {
     })
 
     // Sort by self time
-    const allFunctions = Array.from(functionStats.entries())
-      .sort(([, a], [, b]) => b.selfTime - a.selfTime)
+    const allFunctions = Array.from(functionStats.entries()).sort(
+      ([, a], [, b]) => b.selfTime - a.selfTime
+    )
 
     // Filter to application code (Vite dev server URLs contain the file path)
-    const appFunctions = allFunctions.filter(([, stats]) =>
-      (stats.url.includes("/src/") ||
-       stats.url.includes(".tsx") ||
-       stats.url.includes(".ts")) &&
-      !stats.url.includes("node_modules") &&
-      !stats.url.includes("@vite") &&
-      !stats.url.includes("@react-refresh")
+    const appFunctions = allFunctions.filter(
+      ([, stats]) =>
+        (stats.url.includes("/src/") ||
+          stats.url.includes(".tsx") ||
+          stats.url.includes(".ts")) &&
+        !stats.url.includes("node_modules") &&
+        !stats.url.includes("@vite") &&
+        !stats.url.includes("@react-refresh")
     )
 
     console.log("\n=== APPLICATION CODE CPU HOTSPOTS (Top 30) ===")
@@ -598,15 +598,17 @@ test.describe("Feed Performance Analysis", () => {
       const funcName = key.split("@")[0].substring(0, 40).padEnd(42)
       const time = `${(stats.selfTime / 1000).toFixed(2)}ms`.padStart(9)
       const hits = `${stats.hitCount}`.padStart(5)
-      const shortUrl = stats.url.split("/src/")[1] || stats.url.split("/").slice(-2).join("/")
+      const shortUrl =
+        stats.url.split("/src/")[1] || stats.url.split("/").slice(-2).join("/")
       console.log(`${funcName} | ${time} | ${hits} | ${shortUrl}:${stats.line}`)
     })
 
     // Also show top React/library functions
-    const reactFunctions = allFunctions.filter(([, stats]) =>
-      stats.url.includes("node_modules/react") ||
-      stats.url.includes("node_modules/zustand") ||
-      stats.url.includes("node_modules/@nostr")
+    const reactFunctions = allFunctions.filter(
+      ([, stats]) =>
+        stats.url.includes("node_modules/react") ||
+        stats.url.includes("node_modules/zustand") ||
+        stats.url.includes("node_modules/@nostr")
     )
 
     if (reactFunctions.length > 0) {
@@ -614,7 +616,9 @@ test.describe("Feed Performance Analysis", () => {
       reactFunctions.slice(0, 15).forEach(([key, stats]) => {
         const funcName = key.split("@")[0].substring(0, 40).padEnd(42)
         const time = `${(stats.selfTime / 1000).toFixed(2)}ms`.padStart(9)
-        const shortUrl = stats.url.split("node_modules/")[1]?.split("/").slice(0, 2).join("/") || "unknown"
+        const shortUrl =
+          stats.url.split("node_modules/")[1]?.split("/").slice(0, 2).join("/") ||
+          "unknown"
         console.log(`${funcName} | ${time} | ${shortUrl}`)
       })
     }
@@ -640,8 +644,7 @@ test.describe("Feed Performance Analysis", () => {
             line: stats.line,
           })),
           totalSamples: samples.length,
-          profileDuration:
-            timeDeltas.reduce((a: number, b: number) => a + b, 0) / 1000,
+          profileDuration: timeDeltas.reduce((a: number, b: number) => a + b, 0) / 1000,
         },
         null,
         2
@@ -652,7 +655,7 @@ test.describe("Feed Performance Analysis", () => {
     // Debug: show all URLs captured
     console.log("\n=== ALL CAPTURED URLs (sample) ===")
     const uniqueUrls = [...new Set(allFunctions.map(([, s]) => s.url))]
-    uniqueUrls.slice(0, 20).forEach(url => console.log(url))
+    uniqueUrls.slice(0, 20).forEach((url) => console.log(url))
 
     // Test passes as long as we got some profile data
     expect(allFunctions.length).toBeGreaterThan(0)

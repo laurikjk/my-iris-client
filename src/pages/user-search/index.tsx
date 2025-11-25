@@ -1,6 +1,7 @@
 import {useParams, useNavigate} from "@/navigation"
 import {useRef, useMemo, useState, useEffect} from "react"
 import {useSearch} from "@/shared/hooks/useSearch"
+import {useKeyboardNavigation} from "@/shared/hooks/useKeyboardNavigation"
 import {UserRow} from "@/shared/components/user/UserRow"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import {useSocialGraph} from "@/utils/socialGraph"
@@ -14,6 +15,8 @@ import {Helmet} from "react-helmet"
 import {useIsTwoColumnLayout} from "@/shared/hooks/useIsTwoColumnLayout"
 import {HomeRightColumn} from "@/pages/home/components/HomeRightColumn"
 import {handleNostrIdentifier} from "@/utils/handleNostrIdentifier"
+import {useSearchInputAutofocus} from "@/shared/hooks/useSearchInputAutofocus"
+import classNames from "classnames"
 
 export default function UserSearchPage() {
   const socialGraph = useSocialGraph()
@@ -24,6 +27,8 @@ export default function UserSearchPage() {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [displayCount, setDisplayCount] = useState(20)
   const [searchValue, setSearchValue] = useState(decodedQuery)
+
+  useSearchInputAutofocus(searchInputRef, "/u")
 
   // Update search value when URL changes
   useEffect(() => {
@@ -70,7 +75,7 @@ export default function UserSearchPage() {
         pubkey,
         followedByCount: socialGraph.followedByFriends(pubkey).size,
       }))
-      .sort(() => Math.random() - 0.5)
+      .sort((a, b) => b.followedByCount - a.followedByCount)
   }, [
     follows,
     socialGraph,
@@ -79,6 +84,30 @@ export default function UserSearchPage() {
     peopleSearch.searchResults,
     peopleSearch.recentSearches,
   ])
+
+  const handleSelectUser = (index: number) => {
+    const user = displayUsers[index]
+    if (user) {
+      try {
+        navigate(`/${nip19.npubEncode(user.pubkey)}`)
+      } catch (error) {
+        console.error("Error encoding pubkey:", error)
+        navigate(`/${user.pubkey}`)
+      }
+    }
+  }
+
+  const handleEscape = () => {
+    setSearchValue("")
+  }
+
+  const {activeIndex} = useKeyboardNavigation({
+    inputRef: searchInputRef,
+    items: displayUsers.slice(0, displayCount),
+    onSelect: handleSelectUser,
+    onEscape: handleEscape,
+    isActive: true,
+  })
 
   const loadMore = () => {
     if (displayCount < displayUsers.length) {
@@ -163,8 +192,17 @@ export default function UserSearchPage() {
               <div className="mt-4">
                 <InfiniteScroll onLoadMore={loadMore}>
                   <div className="flex flex-col gap-2 px-4">
-                    {displayUsers.slice(0, displayCount).map(({pubkey}) => (
-                      <UserRow key={pubkey} pubKey={pubkey} linkToProfile={true} />
+                    {displayUsers.slice(0, displayCount).map(({pubkey}, index) => (
+                      <div
+                        key={pubkey}
+                        className={classNames("rounded-md cursor-pointer p-2", {
+                          "bg-primary text-primary-content": index === activeIndex,
+                          "hover:bg-primary/20": index !== activeIndex,
+                        })}
+                        onClick={() => handleSelectUser(index)}
+                      >
+                        <UserRow pubKey={pubkey} linkToProfile={true} />
+                      </div>
                     ))}
                   </div>
                 </InfiniteScroll>
