@@ -1,5 +1,6 @@
 import {getPeerConnection} from "./PeerConnection"
-import {getSocialGraph, socialGraphEvents, socialGraphLoaded} from "@/utils/socialGraph"
+import {getSocialGraph, socialGraphLoaded} from "@/utils/socialGraph"
+import {useSocialGraphStore} from "@/stores/socialGraph"
 import {EventEmitter} from "tseep"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
@@ -80,15 +81,15 @@ class PeerConnectionManager extends EventEmitter<{
       // Get initial mutual follows and subscribe
       this.updateMutualFollowsAndResubscribe(myPubkey)
 
-      // Watch for social graph changes
-      const handleGraphUpdate = () => {
-        log("Social graph updated, rechecking mutual follows")
-        this.updateMutualFollowsAndResubscribe(myPubkey)
-      }
-      socialGraphEvents.on("updated", handleGraphUpdate)
-      this.socialGraphUnsubscribe = () => {
-        socialGraphEvents.off("updated", handleGraphUpdate)
-      }
+      // Watch for social graph changes via Zustand store
+      let previousVersion = useSocialGraphStore.getState().version
+      this.socialGraphUnsubscribe = useSocialGraphStore.subscribe((state) => {
+        if (state.version !== previousVersion) {
+          previousVersion = state.version
+          log("Social graph updated, rechecking mutual follows")
+          this.updateMutualFollowsAndResubscribe(myPubkey)
+        }
+      })
 
       // Send presence pings AFTER subscription is set up
       this.presencePingInterval = setInterval(

@@ -1,5 +1,6 @@
 import {useSettingsStore} from "@/stores/settings"
-import {getSocialGraph, socialGraphEvents, socialGraphLoaded} from "@/utils/socialGraph"
+import {getSocialGraph, socialGraphLoaded} from "@/utils/socialGraph"
+import {useSocialGraphStore} from "@/stores/socialGraph"
 import {shouldHideUser, shouldHideEvent} from "@/utils/visibility"
 import {getTag, getZappingUser, getZapAmount} from "@/utils/nostr.ts"
 import {notifications, Notification as IrisNotification} from "@/utils/notifications"
@@ -98,13 +99,19 @@ export const startNotificationsSubscription = debounce(async (myPubKey?: string)
 
   sub?.stop()
 
-  const handleMuteListUpdate = () => {
-    cleanupMutedNotifications()
-  }
+  // Subscribe to mute list changes via Zustand store
+  let previousMuteListVersion = useSocialGraphStore.getState().muteListVersion
+  const unsubscribe = useSocialGraphStore.subscribe((state) => {
+    if (state.muteListVersion !== previousMuteListVersion) {
+      previousMuteListVersion = state.muteListVersion
+      cleanupMutedNotifications()
+    }
+  })
 
-  // Remove old listener if exists and add new one
-  socialGraphEvents.removeListener("muteListUpdated", handleMuteListUpdate)
-  socialGraphEvents.on("muteListUpdated", handleMuteListUpdate)
+  // Store unsubscribe for cleanup
+  if (sub) {
+    sub.on("close", () => unsubscribe())
+  }
 
   cleanupMutedNotifications()
 

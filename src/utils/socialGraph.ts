@@ -7,9 +7,8 @@ import debounce from "lodash/debounce"
 import throttle from "lodash/throttle"
 import localForage from "localforage"
 // Removed static import to avoid race condition - use dynamic import in setupSubscription
-import {useEffect, useState, useCallback, useSyncExternalStore} from "react"
+import {useEffect, useState, useCallback} from "react"
 import {KIND_CONTACTS, KIND_MUTE_LIST, DEBUG_NAMESPACES} from "@/utils/constants"
-import {EventEmitter} from "tseep"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 
 const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
@@ -23,16 +22,10 @@ export const DEFAULT_CRAWL_DEGREE = 3
 const currentPublicKey = useUserStore.getState().publicKey
 let instance = new SocialGraph(currentPublicKey || DEFAULT_SOCIAL_GRAPH_ROOT)
 let isInitialized = false
-let graphVersion = 0 // Incremented on any change to trigger re-renders
 
-// Event emitter for social graph changes
-export const socialGraphEvents = new EventEmitter()
-socialGraphEvents.setMaxListeners?.(100) // Increase limit for multiple subscribers
-
-// Notify subscribers of graph changes
+// Notify subscribers of graph changes via Zustand store
 const notifyGraphChange = () => {
-  graphVersion++
-  socialGraphEvents.emit("graphChanged", graphVersion)
+  useSocialGraphStore.getState().incrementVersion()
 }
 
 async function loadPreCrawledGraph(publicKey: string): Promise<SocialGraph> {
@@ -100,9 +93,9 @@ const debouncedRemoveNonFollowed = debounce(() => {
   throttledSave()
 }, 11000)
 
-// Throttled mute list update event
+// Throttled mute list update notification
 const throttledMuteListUpdate = throttle(() => {
-  socialGraphEvents.emit("muteListUpdated")
+  useSocialGraphStore.getState().incrementMuteListVersion()
 }, 1000)
 
 export const handleSocialGraphEvent = (evs: NostrEvent | Array<NostrEvent>) => {
@@ -260,13 +253,6 @@ export const useSocialGraphLoaded = () => {
   return isSocialGraphLoaded
 }
 
-// Get current graph version for useSyncExternalStore
-const getGraphVersion = () => graphVersion
-const subscribeToGraph = (callback: () => void) => {
-  socialGraphEvents.on("graphChanged", callback)
-  return () => socialGraphEvents.off("graphChanged", callback)
-}
-
 /**
  * Hook that returns follows for a user and re-renders when the social graph changes.
  * This replaces the need to wait for socialGraphLoaded before rendering.
@@ -275,8 +261,8 @@ export const useFollowsFromGraph = (
   pubKey: string | null | undefined,
   includeSelf = false
 ): string[] => {
-  // Subscribe to graph changes
-  const version = useSyncExternalStore(subscribeToGraph, getGraphVersion, getGraphVersion)
+  // Subscribe to graph version changes via Zustand store
+  const version = useSocialGraphStore((state) => state.version)
 
   // Compute follows when version changes
   const follows = useCallback(() => {
@@ -293,8 +279,8 @@ export const useFollowsFromGraph = (
  * Re-renders when the social graph changes.
  */
 export const useFollowDistance = (pubKey: string | null | undefined): number => {
-  // Subscribe to graph changes - version triggers re-render
-  useSyncExternalStore(subscribeToGraph, getGraphVersion, getGraphVersion)
+  // Subscribe to graph version changes via Zustand store
+  useSocialGraphStore((state) => state.version)
 
   if (!pubKey) return 1000
   return instance.getFollowDistance(pubKey)
@@ -308,8 +294,8 @@ export const useIsFollowing = (
   follower: string | null | undefined,
   followedUser: string | null | undefined
 ): boolean => {
-  // Subscribe to graph changes - triggers re-render
-  useSyncExternalStore(subscribeToGraph, getGraphVersion, getGraphVersion)
+  // Subscribe to graph version changes via Zustand store
+  useSocialGraphStore((state) => state.version)
 
   if (!follower || !followedUser) return false
   return instance.isFollowing(follower, followedUser)
@@ -320,8 +306,8 @@ export const useIsFollowing = (
  * Useful for debugging and showing loading progress.
  */
 export const useGraphSize = () => {
-  // Subscribe to graph changes - triggers re-render
-  useSyncExternalStore(subscribeToGraph, getGraphVersion, getGraphVersion)
+  // Subscribe to graph version changes via Zustand store
+  useSocialGraphStore((state) => state.version)
   return instance.size()
 }
 
@@ -524,8 +510,8 @@ export function getMutualFollows(pubkey?: string): string[] {
  * Components using this hook will re-render when the graph changes.
  */
 export const useSocialGraph = () => {
-  // Subscribe to graph changes to trigger re-renders
-  useSyncExternalStore(subscribeToGraph, getGraphVersion, getGraphVersion)
+  // Subscribe to graph version changes via Zustand store
+  useSocialGraphStore((state) => state.version)
   return instance
 }
 
