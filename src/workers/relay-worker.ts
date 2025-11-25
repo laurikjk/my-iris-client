@@ -208,6 +208,7 @@ function handleSubscribe(
   const sub = ndk.subscribe(filters, {
     closeOnEose: opts?.closeOnEose ?? cacheOnly,
     groupable: opts?.groupable ?? !cacheOnly,
+    groupableDelay: opts?.groupableDelay,
     cacheUsage,
   })
 

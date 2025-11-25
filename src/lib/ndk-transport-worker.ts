@@ -292,6 +292,17 @@ export class NDKWorkerTransport {
       }
     }
 
+    // Pass through groupable options if explicitly set
+    if (opts?.groupable !== undefined) {
+      subscribeOpts.groupable = opts.groupable
+    }
+    if (opts?.groupableDelay !== undefined) {
+      subscribeOpts.groupableDelay = opts.groupableDelay
+    }
+    if (opts?.closeOnEose !== undefined) {
+      subscribeOpts.closeOnEose = opts.closeOnEose
+    }
+
     this.postMessage({
       type: "subscribe",
       id: subId,
