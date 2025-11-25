@@ -2,7 +2,7 @@ import {useState, useEffect} from "react"
 import {useSearchStore, CustomSearchResult} from "@/stores/search"
 import {isOvermuted} from "@/utils/visibility"
 import {searchIndex} from "@/utils/profileSearch"
-import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
+import {useSocialGraph, useGraphSize} from "@/utils/socialGraph"
 import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 import {NOSTR_REGEX, HEX_REGEX, NIP05_REGEX} from "@/utils/validation"
@@ -25,10 +25,13 @@ export function useSearch({
   onSelect,
   searchNotes = false,
 }: UseSearchOptions = {}) {
+  const socialGraph = useSocialGraph()
   const [searchResults, setSearchResults] = useState<CustomSearchResult[]>([])
   const [value, setValue] = useState<string>("")
   const {recentSearches, setRecentSearches} = useSearchStore()
-  const isSocialGraphLoaded = useSocialGraphLoaded()
+  // Use graph size to trigger re-search when graph updates
+  const graphSize = useGraphSize()
+  const isSocialGraphLoaded = graphSize.users > 1 // Graph is loaded if more than just root user
 
   useEffect(() => {
     const v = value.trim()
@@ -74,10 +77,10 @@ export function useSearch({
       .map((result) => {
         const fuseScore = 1 - (result.score ?? 1)
         const followDistance = isSocialGraphLoaded
-          ? (socialGraph().getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE)
+          ? (socialGraph.getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE)
           : DEFAULT_DISTANCE
         const friendsFollowing = isSocialGraphLoaded
-          ? socialGraph().followedByFriends(result.item.pubKey).size || 0
+          ? socialGraph.followedByFriends(result.item.pubKey).size || 0
           : 0
 
         const nameLower = result.item.name.toLowerCase()
@@ -119,7 +122,7 @@ export function useSearch({
         : []),
       ...resultsWithAdjustedScores.map((result) => result.item),
     ])
-  }, [value, isSocialGraphLoaded, searchNotes, maxResults])
+  }, [value, isSocialGraphLoaded, searchNotes, maxResults, socialGraph])
 
   const addToRecentSearches = (result: CustomSearchResult) => {
     const filtered = recentSearches.filter(

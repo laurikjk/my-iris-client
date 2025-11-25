@@ -1,10 +1,11 @@
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {ReactionContent} from "./ReactionContent"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import {NDKEvent} from "@/lib/ndk"
 import {useReactionsByAuthor} from "@/shared/hooks/useReactions"
 
 export default function Likes({event}: {event: NDKEvent}) {
+  const socialGraph = useSocialGraph()
   const reactions = useReactionsByAuthor(event.id)
 
   return (
@@ -13,8 +14,8 @@ export default function Likes({event}: {event: NDKEvent}) {
       {Array.from(reactions.values())
         .sort((a, b) => {
           return (
-            socialGraph().getFollowDistance(a.author.pubkey) -
-            socialGraph().getFollowDistance(b.author.pubkey)
+            socialGraph.getFollowDistance(a.author.pubkey) -
+            socialGraph.getFollowDistance(b.author.pubkey)
           )
         })
         .map((reactionEvent) => (

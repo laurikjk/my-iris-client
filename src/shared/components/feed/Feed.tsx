@@ -1,6 +1,7 @@
 import {useRef, useState, ReactNode, useEffect, useMemo, memo, useCallback} from "react"
 import {NDKEvent, NDKFilter} from "@/lib/ndk"
 
+import {PerfProfiler} from "@/utils/reactProfiler"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
 import useHistoryState from "@/shared/hooks/useHistoryState"
 import FeedItem from "../event/FeedItem/FeedItem"
@@ -8,7 +9,6 @@ import {useUserStore} from "@/stores/user"
 
 import {INITIAL_DISPLAY_COUNT, DISPLAY_INCREMENT} from "./utils"
 import useFeedEvents from "@/shared/hooks/useFeedEvents.ts"
-import {useSocialGraphLoaded} from "@/utils/socialGraph.ts"
 import UnknownUserEvents from "./UnknownUserEvents.tsx"
 import {DisplayAsSelector} from "./DisplayAsSelector"
 import NewEventsButton from "./NewEventsButton.tsx"
@@ -16,8 +16,7 @@ import ZapAllButton from "./ZapAllButton"
 import {useFeedStore, type FeedConfig, getFeedCacheKey} from "@/stores/feed"
 import {getTag} from "@/utils/nostr"
 import MediaFeed from "./MediaFeed"
-import socialGraph from "@/utils/socialGraph"
-import useFollows from "@/shared/hooks/useFollows"
+import {useSocialGraph, useFollowsFromGraph} from "@/utils/socialGraph"
 import {addSeenEventId} from "@/utils/memcache.ts"
 
 interface FeedProps {
@@ -53,21 +52,15 @@ const Feed = memo(function Feed({
   onDisplayAsChange,
   forceShowZapAll = false,
 }: FeedProps) {
+  const socialGraph = useSocialGraph()
   if (!feedConfig?.filter) {
     throw new Error("Feed component requires feedConfig with filter")
   }
 
   const myPubKey = useUserStore((state) => state.publicKey)
-  const isSocialGraphLoaded = useSocialGraphLoaded()
 
-  // Call useFollows to keep follow list updated in background
-  useFollows(myPubKey, true)
-
-  // Get follows synchronously from social graph instead of waiting for state
-  const follows = useMemo(() => {
-    if (!myPubKey || !isSocialGraphLoaded) return []
-    return Array.from(socialGraph().getFollowedByUser(myPubKey, true))
-  }, [myPubKey, isSocialGraphLoaded])
+  // Use reactive hook - automatically updates when social graph changes
+  const follows = useFollowsFromGraph(myPubKey, true)
 
   // Enhance filters with authors list for follow-distance-based feeds
   const filters = useMemo(() => {
@@ -102,8 +95,8 @@ const Feed = memo(function Feed({
     switch (feedConfig.sortType) {
       case "followDistance":
         return (a: NDKEvent, b: NDKEvent) => {
-          const followDistanceA = socialGraph().getFollowDistance(a.pubkey)
-          const followDistanceB = socialGraph().getFollowDistance(b.pubkey)
+          const followDistanceA = socialGraph.getFollowDistance(a.pubkey)
+          const followDistanceB = socialGraph.getFollowDistance(b.pubkey)
           if (followDistanceA !== followDistanceB) {
             return followDistanceA - followDistanceB
           }
@@ -322,80 +315,78 @@ const Feed = memo(function Feed({
     }
   }, [forceUpdate])
 
-  if (!isSocialGraphLoaded) {
-    return null
-  }
-
   return (
-    <div className="relative">
-      {showDisplayAsSelector && (
-        <DisplayAsSelector activeSelection={displayAs} onSelect={setDisplayAs} />
-      )}
-
-      {newEventsFiltered.length > 0 && !feedConfig.autoShowNewEvents && (
-        <NewEventsButton
-          newEventsFiltered={newEventsFiltered}
-          newEventsFrom={newEventsFromFiltered}
-          showNewEvents={showNewEventsWithHighlight}
-          firstFeedItemRef={firstFeedItemRef}
-        />
-      )}
-
-      {(feedConfig.showZapAll || forceShowZapAll) && filteredEvents.length > 0 && (
-        <ZapAllButton events={filteredEvents} />
-      )}
-
-      <div>
-        {filteredEvents.length > 0 && (
-          <InfiniteScroll onLoadMore={loadMoreItems}>
-            {displayAs === "grid" ? (
-              <MediaFeed events={gridEvents} eventsToHighlight={eventsToHighlight} />
-            ) : (
-              <>
-                {filteredEvents.slice(0, displayCount).map((event, index) => (
-                  <div
-                    key={event.id}
-                    ref={index === 0 ? firstFeedItemRef : null}
-                    data-event-id={event.id}
-                  >
-                    <FeedItem
-                      key={event.id}
-                      asReply={asReply}
-                      showRepliedTo={feedConfig.showRepliedTo ?? true}
-                      showReplies={showReplies}
-                      event={event}
-                      borderTop={borderTopFirst && index === 0}
-                      highlightAsNew={eventsToHighlight.has(event.id)}
-                      showAuthorInZapReceipts={feedConfig.showAuthorInZapReceipts}
-                    />
-                  </div>
-                ))}
-              </>
-            )}
-          </InfiniteScroll>
+    <PerfProfiler id="Feed">
+      <div className="relative">
+        {showDisplayAsSelector && (
+          <DisplayAsSelector activeSelection={displayAs} onSelect={setDisplayAs} />
         )}
-        {filteredEvents.length === 0 &&
-          newEventsFiltered.length === 0 &&
-          initialLoadDone &&
-          emptyPlaceholder}
-        {myPubKey && eventsByUnknownUsers.length > 0 && (
-          <div
-            className="p-4 border-t border-b border-custom text-info text-center transition-colors duration-200 ease-in-out hover:underline hover:bg-[var(--note-hover-color)] cursor-pointer"
-            onClick={() => setShowUnknownUserEvents(!showUnknownUserEvents)}
-          >
-            {showUnknownUserEvents ? "Hide" : "Show"} {eventsByUnknownUsers.length} events
-            by unknown users
-          </div>
-        )}
-        {showUnknownUserEvents && eventsByUnknownUsers.length > 0 && (
-          <UnknownUserEvents
-            eventsByUnknownUsers={eventsByUnknownUsers}
-            showRepliedTo={feedConfig.showRepliedTo ?? true}
-            asReply={true}
+
+        {newEventsFiltered.length > 0 && !feedConfig.autoShowNewEvents && (
+          <NewEventsButton
+            newEventsFiltered={newEventsFiltered}
+            newEventsFrom={newEventsFromFiltered}
+            showNewEvents={showNewEventsWithHighlight}
+            firstFeedItemRef={firstFeedItemRef}
           />
         )}
+
+        {(feedConfig.showZapAll || forceShowZapAll) && filteredEvents.length > 0 && (
+          <ZapAllButton events={filteredEvents} />
+        )}
+
+        <div>
+          {filteredEvents.length > 0 && (
+            <InfiniteScroll onLoadMore={loadMoreItems}>
+              {displayAs === "grid" ? (
+                <MediaFeed events={gridEvents} eventsToHighlight={eventsToHighlight} />
+              ) : (
+                <>
+                  {filteredEvents.slice(0, displayCount).map((event, index) => (
+                    <div
+                      key={event.id}
+                      ref={index === 0 ? firstFeedItemRef : null}
+                      data-event-id={event.id}
+                    >
+                      <FeedItem
+                        key={event.id}
+                        asReply={asReply}
+                        showRepliedTo={feedConfig.showRepliedTo ?? true}
+                        showReplies={showReplies}
+                        event={event}
+                        borderTop={borderTopFirst && index === 0}
+                        highlightAsNew={eventsToHighlight.has(event.id)}
+                        showAuthorInZapReceipts={feedConfig.showAuthorInZapReceipts}
+                      />
+                    </div>
+                  ))}
+                </>
+              )}
+            </InfiniteScroll>
+          )}
+          {filteredEvents.length === 0 &&
+            newEventsFiltered.length === 0 &&
+            initialLoadDone &&
+            emptyPlaceholder}
+          {myPubKey && eventsByUnknownUsers.length > 0 && (
+            <div
+              className="p-4 border-t border-b border-custom text-info text-center transition-colors duration-200 ease-in-out hover:underline hover:bg-[var(--note-hover-color)] cursor-pointer"
+              onClick={() => setShowUnknownUserEvents(!showUnknownUserEvents)}
+            >
+              {showUnknownUserEvents ? "Hide" : "Show"} {eventsByUnknownUsers.length}{" "}
+              events by unknown users
+            </div>
+          )}
+          {showUnknownUserEvents && eventsByUnknownUsers.length > 0 && (
+            <UnknownUserEvents
+              eventsByUnknownUsers={eventsByUnknownUsers}
+              showRepliedTo={feedConfig.showRepliedTo ?? true}
+              asReply={true}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </PerfProfiler>
   )
 })
 

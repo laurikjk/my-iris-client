@@ -3,7 +3,7 @@ import {useRef, useMemo, useState, useEffect} from "react"
 import {useSearch} from "@/shared/hooks/useSearch"
 import {UserRow} from "@/shared/components/user/UserRow"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import {nip19} from "nostr-tools"
 import Icon from "@/shared/components/Icons/Icon"
 import Header from "@/shared/components/header/Header"
@@ -16,6 +16,7 @@ import {HomeRightColumn} from "@/pages/home/components/HomeRightColumn"
 import {handleNostrIdentifier} from "@/utils/handleNostrIdentifier"
 
 export default function UserSearchPage() {
+  const socialGraph = useSocialGraph()
   const {query} = useParams()
   const decodedQuery = query ? decodeURIComponent(query) : ""
   const navigate = useNavigate()
@@ -46,16 +47,15 @@ export default function UserSearchPage() {
     peopleSearch.setValue(searchValue)
   }, [searchValue])
 
-  const graph = socialGraph()
-  const rootUser = graph.getRoot()
-  const follows = graph.getFollowedByUser(rootUser)
+  const rootUser = socialGraph.getRoot()
+  const follows = socialGraph.getFollowedByUser(rootUser)
 
   const displayUsers = useMemo(() => {
     if (searchValue.trim()) {
       // Show search results if we have any, otherwise show empty for search mode
       return peopleSearch.searchResults.map((result) => ({
         pubkey: result.pubKey,
-        followedByCount: graph.followedByFriends(result.pubKey).size,
+        followedByCount: socialGraph.followedByFriends(result.pubKey).size,
       }))
     }
 
@@ -68,12 +68,12 @@ export default function UserSearchPage() {
       .filter((pubkey) => !recentPubKeys.has(pubkey))
       .map((pubkey) => ({
         pubkey,
-        followedByCount: graph.followedByFriends(pubkey).size,
+        followedByCount: socialGraph.followedByFriends(pubkey).size,
       }))
       .sort(() => Math.random() - 0.5)
   }, [
     follows,
-    graph,
+    socialGraph,
     rootUser,
     searchValue,
     peopleSearch.searchResults,

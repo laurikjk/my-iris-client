@@ -13,7 +13,7 @@ import {
 import {getAllConnections} from "./PeerConnection"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
-import socialGraph from "@/utils/socialGraph"
+import {getSocialGraph} from "@/utils/socialGraph"
 
 const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_PEER)
 import {RateLimiter} from "./RateLimiter"
@@ -128,7 +128,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
         }
       } else {
         // Public messages: check follow distance <= 2 and not hidden
-        const followDistance = socialGraph().getFollowDistance(eventJson.pubkey)
+        const followDistance = getSocialGraph().getFollowDistance(eventJson.pubkey)
         if (followDistance > 2) continue
         if (shouldHideUser(eventJson.pubkey, 1, true)) continue
       }
@@ -255,7 +255,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
           continue
         }
       } else {
-        const followDistance = socialGraph().getFollowDistance(eventJson.pubkey)
+        const followDistance = getSocialGraph().getFollowDistance(eventJson.pubkey)
         if (followDistance > 2) continue
         if (shouldHideUser(eventJson.pubkey, 1, true)) continue
       }
@@ -301,7 +301,7 @@ export class WebRTCTransportPlugin implements NDKTransportPlugin {
     // Rate limit only private messages from unknown senders
     const isPrivateMessage = PRIVATE_MESSAGE_KINDS.includes(event.kind || 0)
     if (isPrivateMessage) {
-      const followDistance = socialGraph().getFollowDistance(event.pubkey)
+      const followDistance = getSocialGraph().getFollowDistance(event.pubkey)
       if (followDistance > 2) {
         if (!incomingRateLimiter.check(peerId)) {
           warn(`Rate limit exceeded for kind ${event.kind} from unknown sender`)

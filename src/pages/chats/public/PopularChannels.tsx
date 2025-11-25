@@ -1,6 +1,6 @@
 import PopularChannelItem from "./PopularChannelItem"
 import {KIND_CHANNEL_MESSAGE, DEBUG_NAMESPACES} from "@/utils/constants"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import {useState, useEffect} from "react"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {fetchEventsReliable} from "@/utils/fetchEventsReliable"
@@ -20,6 +20,7 @@ type PopularChannelsProps = {
 }
 
 const PopularChannels = ({publicKey}: PopularChannelsProps) => {
+  const socialGraph = useSocialGraph()
   const [popularChannels, setPopularChannels] = useState<PopularChannel[]>([])
   // Remove error state
   // const [error, setError] = useState<string | null>(null)
@@ -32,7 +33,7 @@ const PopularChannels = ({publicKey}: PopularChannelsProps) => {
       // Remove setError(null)
       log("Fetching popular channels for publicKey:", publicKey)
       // Get followed users using social graph
-      const followedUsers = await socialGraph().getUsersByFollowDistance(1)
+      const followedUsers = await socialGraph.getUsersByFollowDistance(1)
       log("Followed users count:", followedUsers.size)
       if (followedUsers.size === 0) {
         log("No followed users found")

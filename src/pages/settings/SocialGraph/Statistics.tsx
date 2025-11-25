@@ -1,14 +1,15 @@
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import {useState, useEffect} from "react"
 
 export function Statistics() {
-  const [socialGraphSize, setSocialGraphSize] = useState(socialGraph().size())
+  const socialGraph = useSocialGraph()
+  const [socialGraphSize, setSocialGraphSize] = useState(socialGraph.size())
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setSocialGraphSize(socialGraph().size())
+      setSocialGraphSize(socialGraph.size())
     }, 2000)
 
     return () => clearInterval(interval)

@@ -1,5 +1,5 @@
 import {useSettingsStore} from "@/stores/settings"
-import socialGraph, {socialGraphEvents, socialGraphLoaded} from "@/utils/socialGraph"
+import {getSocialGraph, socialGraphEvents, socialGraphLoaded} from "@/utils/socialGraph"
 import {shouldHideUser, shouldHideEvent} from "@/utils/visibility"
 import {getTag, getZappingUser, getZapAmount} from "@/utils/nostr.ts"
 import {notifications, Notification as IrisNotification} from "@/utils/notifications"
@@ -141,7 +141,7 @@ export const startNotificationsSubscription = debounce(async (myPubKey?: string)
       if (event.pubkey === myPubKey) return
       if (
         maxFollowDistanceForReplies !== undefined &&
-        socialGraph().getFollowDistance(event.pubkey) > maxFollowDistanceForReplies
+        getSocialGraph().getFollowDistance(event.pubkey) > maxFollowDistanceForReplies
       )
         return
       // Use shouldHideEvent which checks both author and mentions

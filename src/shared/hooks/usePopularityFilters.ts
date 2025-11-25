@@ -1,6 +1,9 @@
-import {useState, useCallback, useMemo} from "react"
-import socialGraph, {DEFAULT_SOCIAL_GRAPH_ROOT} from "@/utils/socialGraph"
-import useFollows from "@/shared/hooks/useFollows"
+import {useState, useCallback, useMemo, useRef} from "react"
+import {
+  useSocialGraph,
+  DEFAULT_SOCIAL_GRAPH_ROOT,
+  useFollowsFromGraph,
+} from "@/utils/socialGraph"
 import {useUserStore} from "@/stores/user"
 import {
   storeOldestTimestamp,
@@ -18,6 +21,7 @@ export interface PopularityFilters {
 }
 
 export default function usePopularityFilters(filterSeen?: boolean) {
+  const socialGraph = useSocialGraph()
   const [oldestTimestamp, setOldestTimestamp] = useState(
     filterSeen
       ? getStoredOldestTimestamp(STORAGE_KEY, 48)
@@ -25,22 +29,36 @@ export default function usePopularityFilters(filterSeen?: boolean) {
   )
 
   const myPubKey = useUserStore((state) => state.publicKey)
-  const myFollows = useFollows(myPubKey, false)
+  // Use reactive hook - updates when graph loads
+  const myFollows = useFollowsFromGraph(myPubKey, false)
   const shouldUseFallback = myFollows.length === 0
 
+  const authorsRef = useRef<string[]>([])
   const authors = useMemo(() => {
+    let newAuthors: string[]
     if (shouldUseFallback) {
       // Use root user's follows immediately (pre-crawled graph loads sync from binary)
-      const root = socialGraph().getRoot()
-      const rootFollows = Array.from(socialGraph().getFollowedByUser(root))
+      const root = socialGraph.getRoot()
+      const rootFollows = Array.from(socialGraph.getFollowedByUser(root))
       // If root follows is also empty, use DEFAULT_SOCIAL_GRAPH_ROOT's follows as last resort
       if (rootFollows.length === 0) {
-        return Array.from(socialGraph().getFollowedByUser(DEFAULT_SOCIAL_GRAPH_ROOT))
+        newAuthors = Array.from(socialGraph.getFollowedByUser(DEFAULT_SOCIAL_GRAPH_ROOT))
+      } else {
+        newAuthors = rootFollows
       }
-      return rootFollows
+    } else {
+      newAuthors = myFollows
     }
-    return myFollows
-  }, [shouldUseFallback, myFollows])
+
+    // Only update ref if content actually changed
+    if (
+      authorsRef.current.length !== newAuthors.length ||
+      !authorsRef.current.every((a, i) => a === newAuthors[i])
+    ) {
+      authorsRef.current = newAuthors
+    }
+    return authorsRef.current
+  }, [shouldUseFallback, myFollows, socialGraph])
 
   const currentFilters = useMemo<PopularityFilters>(() => {
     const filters = {

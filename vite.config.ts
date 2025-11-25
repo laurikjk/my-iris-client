@@ -100,11 +100,6 @@ export default defineConfig({
             return "main"
           }
 
-          // SQLite WASM cache - lazy load separate chunk
-          if (id.includes("@nostr-dev-kit/ndk-cache-sqlite-wasm")) {
-            return "ndk-cache-sqlite"
-          }
-
           const vendorLibs = [
             "react",
             "react-dom/client",

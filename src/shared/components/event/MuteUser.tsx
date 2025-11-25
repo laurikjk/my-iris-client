@@ -3,7 +3,7 @@ import {Hexpubkey, NDKEvent, NDKTag} from "@/lib/ndk"
 
 import {muteUser, unmuteUser} from "@/shared/services/Mute.tsx"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
-import socialGraph from "@/utils/socialGraph.ts"
+import {useSocialGraph} from "@/utils/socialGraph.ts"
 import {ndk} from "@/utils/ndk"
 import {getMuteLabel, getMutedLabel, getUnmuteLabel} from "@/utils/muteLabels"
 
@@ -16,17 +16,16 @@ interface MuteUserProps {
 }
 
 function MuteUser({user, setMuting, muteState, setMutedState}: MuteUserProps) {
+  const socialGraph = useSocialGraph()
   const [publishingError, setPublishingError] = useState<boolean>(false)
 
   // Get current mute status directly from socialGraph
-  const myKey = socialGraph().getRoot()
-  const isMuted = myKey ? socialGraph().getMutedByUser(myKey).has(user) : muteState
+  const myKey = socialGraph.getRoot()
+  const isMuted = myKey ? socialGraph.getMutedByUser(myKey).has(user) : muteState
   const [muted, setMuted] = useState<boolean>(isMuted)
 
   useEffect(() => {
-    const currentlyMuted = myKey
-      ? socialGraph().getMutedByUser(myKey).has(user)
-      : muteState
+    const currentlyMuted = myKey ? socialGraph.getMutedByUser(myKey).has(user) : muteState
     setMuted(currentlyMuted)
   }, [muteState, user, myKey])
 
@@ -36,12 +35,12 @@ function MuteUser({user, setMuting, muteState, setMutedState}: MuteUserProps) {
 
   const handleMuteUser = async () => {
     try {
-      const followDistance = socialGraph().getFollowDistance(user)
+      const followDistance = socialGraph.getFollowDistance(user)
       if (followDistance === 1) {
         // Unfollow the user if they are being followed
         const event = new NDKEvent(ndk())
         event.kind = 3
-        const followedUsers = socialGraph().getFollowedByUser(socialGraph().getRoot())
+        const followedUsers = socialGraph.getFollowedByUser(socialGraph.getRoot())
         followedUsers.delete(user)
         event.tags = Array.from(followedUsers).map((pubKey) => ["p", pubKey]) as NDKTag[]
         event.publish().catch((e) => console.warn("Error publishing unfollow event:", e))

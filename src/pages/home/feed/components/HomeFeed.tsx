@@ -4,8 +4,7 @@ import PublicKeyQRCodeButton from "@/shared/components/user/PublicKeyQRCodeButto
 import NotificationPrompt from "@/shared/components/NotificationPrompt"
 import AlgorithmicFeed from "@/shared/components/feed/AlgorithmicFeed"
 import Feed from "@/shared/components/feed/Feed.tsx"
-import useFollows from "@/shared/hooks/useFollows"
-import {useSocialGraphLoaded} from "@/utils/socialGraph"
+import {useFollowsFromGraph} from "@/utils/socialGraph"
 import {usePublicKey} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
 import {
@@ -33,24 +32,27 @@ const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
 function HomeFeed() {
   const containerRef = useRef<HTMLDivElement>(null)
   const myPubKey = usePublicKey()
-  const follows = useFollows(myPubKey, true)
-  const socialGraphLoaded = useSocialGraphLoaded()
+  // Use reactive hook - renders immediately with empty array, updates when graph loads
+  const follows = useFollowsFromGraph(myPubKey, true)
 
-  // Track if follows have been initialized (changes from initial state)
+  // Track if we've seen follows data (graph has loaded with data)
   const followsRef = useRef<number | null>(null)
-  const [followsInitialized, setFollowsInitialized] = useState(false)
+  const [followsInitialized, setFollowsInitialized] = useState(follows.length > 0)
 
   useEffect(() => {
-    if (!socialGraphLoaded || followsInitialized) return
+    if (followsInitialized) return
     if (followsRef.current === null) {
       followsRef.current = follows.length
+      if (follows.length > 0) {
+        setFollowsInitialized(true)
+      }
       return
     }
     // Once follows stabilize or change, we've loaded
     if (followsRef.current !== follows.length || follows.length > 0) {
       setFollowsInitialized(true)
     }
-  }, [follows.length, socialGraphLoaded, followsInitialized])
+  }, [follows.length, followsInitialized])
 
   const showNoFollows = followsInitialized && follows.length <= 1
 
@@ -146,10 +148,6 @@ function HomeFeed() {
   }, [activeFeedConfig])
 
   if (!activeFeedConfig?.filter && !activeFeedConfig?.feedStrategy) {
-    return null
-  }
-
-  if (!socialGraphLoaded) {
     return null
   }
 

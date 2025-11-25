@@ -9,7 +9,7 @@ import {migrateUserState, migratePublicChats} from "./utils/migration"
 import pushNotifications from "./utils/pushNotifications"
 import {useSettingsStore} from "@/stores/settings"
 import {ndk} from "./utils/ndk"
-import socialGraph from "./utils/socialGraph"
+import {getSocialGraph} from "./utils/socialGraph"
 import DebugManager from "./utils/DebugManager"
 import Layout from "@/shared/components/Layout"
 import {isTauri, isMobileTauri} from "./utils/utils"
@@ -84,19 +84,20 @@ const initializeApp = async () => {
   // Wait for settings to hydrate from localStorage before initializing NDK
   await useUserStore.getState().awaitHydration()
 
-  // Initialize NDK (now async due to cache adapter)
-  const {initNDKAsync} = await import("@/utils/ndk")
-  await initNDKAsync()
+  // Start NDK initialization in background (non-blocking)
+  import("@/utils/ndk").then(async ({initNDK}) => {
+    await initNDK()
+    log("✅ NDK initialized")
+  })
 
-  // Load social graph in background (non-blocking)
-  import("@/utils/socialGraph").then(
-    async ({socialGraphLoaded, setupSocialGraphSubscriptions}) => {
-      await socialGraphLoaded
-      log("✅ Social graph initialized")
-      await setupSocialGraphSubscriptions()
-      log("✅ Social graph subscriptions ready")
-    }
+  // Load social graph before rendering
+  const {socialGraphLoaded, setupSocialGraphSubscriptions} = await import(
+    "@/utils/socialGraph"
   )
+  await socialGraphLoaded
+  log("✅ Social graph initialized")
+  await setupSocialGraphSubscriptions()
+  log("✅ Social graph subscriptions ready")
 
   // Initialize debug system
   DebugManager
@@ -129,7 +130,7 @@ const initializeApp = async () => {
     void migratePublicChats()
     // Delay social graph to avoid race with NDK init
     setTimeout(() => {
-      socialGraph().recalculateFollowDistances()
+      getSocialGraph().recalculateFollowDistances()
     }, 100)
 
     // Initialize platform-specific notifications (non-blocking, parallel to web push)

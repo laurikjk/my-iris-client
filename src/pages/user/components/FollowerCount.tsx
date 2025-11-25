@@ -1,6 +1,6 @@
 import {useMemo, useState, useEffect} from "react"
 
-import socialGraph from "@/utils/socialGraph.ts"
+import {useSocialGraph} from "@/utils/socialGraph.ts"
 import {NostrEvent} from "nostr-social-graph"
 import {formatAmount} from "@/utils/utils.ts"
 import {ndk} from "@/utils/ndk"
@@ -13,27 +13,28 @@ import {Name} from "@/shared/components/user/Name"
 import FollowList from "./FollowList.tsx"
 
 const FollowerCount = ({pubKey}: {pubKey: string}) => {
+  const socialGraph = useSocialGraph()
   const initialFollowers = useMemo(
     () =>
-      Array.from(socialGraph().getFollowersByUser(pubKey)).filter(
+      Array.from(socialGraph.getFollowersByUser(pubKey)).filter(
         (follower) => !shouldHideUser(follower)
       ),
-    [pubKey]
+    [pubKey, socialGraph]
   )
   const [followers, setFollowers] = useState<string[]>(initialFollowers)
   const [showFollowList, setShowFollowList] = useState<boolean>(false)
 
   useEffect(() => {
     // If no known followers but we have a social graph, query followers from relays
-    if (followers.length === 0 && socialGraph().getUsersByFollowDistance(1).size > 0) {
+    if (followers.length === 0 && socialGraph.getUsersByFollowDistance(1).size > 0) {
       const filter = {
         kinds: [3],
         ["#p"]: [pubKey],
       }
       const sub = ndk().subscribe(filter)
       sub.on("event", (event) => {
-        socialGraph().handleEvent(event as NostrEvent)
-        const newFollowers = Array.from(socialGraph().getFollowersByUser(pubKey)).filter(
+        socialGraph.handleEvent(event as NostrEvent)
+        const newFollowers = Array.from(socialGraph.getFollowersByUser(pubKey)).filter(
           (follower) => !shouldHideUser(follower)
         )
         setFollowers(newFollowers)
@@ -43,7 +44,7 @@ const FollowerCount = ({pubKey}: {pubKey: string}) => {
         sub.stop()
       }
     }
-  }, [followers.length, pubKey])
+  }, [followers.length, pubKey, socialGraph])
 
   const handleFollowersClick = () => {
     setShowFollowList(!showFollowList)

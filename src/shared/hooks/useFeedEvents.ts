@@ -3,7 +3,7 @@ import {eventComparator} from "../components/feed/utils"
 import {NDKEvent, NDKFilter} from "@/lib/ndk"
 import {SortedMap} from "@/utils/SortedMap/SortedMap"
 import {shouldHideUser, shouldHideEvent} from "@/utils/visibility"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import {seenEventIds} from "@/utils/memcache"
 import {useUserStore} from "@/stores/user"
 import debounce from "lodash/debounce"
@@ -41,6 +41,7 @@ export default function useFeedEvents({
   bottomVisibleEventTimestamp = Infinity,
   displayAs = "list",
 }: UseFeedEventsProps) {
+  const socialGraph = useSocialGraph()
   const bottomVisibleEventTimestampRef = useRef(bottomVisibleEventTimestamp)
   bottomVisibleEventTimestampRef.current = bottomVisibleEventTimestamp
   const myPubKey = useUserStore((state) => state.publicKey)
@@ -143,7 +144,7 @@ export default function useFeedEvents({
     // Follow distance filtering
     // Skip followDistance entirely when custom authors are defined
     if (feedConfig.followDistance !== undefined && !hasCustomAuthors) {
-      const eventFollowDistance = socialGraph().getFollowDistance(event.pubkey)
+      const eventFollowDistance = socialGraph.getFollowDistance(event.pubkey)
       if (eventFollowDistance > feedConfig.followDistance) return false
     }
 
@@ -282,7 +283,7 @@ export default function useFeedEvents({
     }
     return Array.from(eventsRef.current.values()).filter(
       (event) =>
-        socialGraph().getFollowDistance(event.pubkey) > feedConfig.followDistance! &&
+        socialGraph.getFollowDistance(event.pubkey) > feedConfig.followDistance! &&
         !(filters.authors && filters.authors.includes(event.pubkey)) &&
         // Only include events that aren't heavily muted
         !shouldHideUser(event.pubkey, undefined, true)

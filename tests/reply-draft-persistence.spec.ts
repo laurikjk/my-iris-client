@@ -21,7 +21,10 @@ test.describe("Reply draft persistence", () => {
     await page.waitForLoadState("networkidle")
 
     // Wait for feed-item to appear
-    const feedItem = page.getByTestId("feed-item").filter({hasText: "Post to reply to"}).first()
+    const feedItem = page
+      .getByTestId("feed-item")
+      .filter({hasText: "Post to reply to"})
+      .first()
     await expect(feedItem).toBeVisible({timeout: 10000})
 
     // Type a draft reply
@@ -114,7 +117,10 @@ test.describe("Reply draft persistence", () => {
     await page.waitForLoadState("networkidle")
 
     // Wait for feed-item to render with reply input
-    const feedItem = page.getByTestId("feed-item").filter({hasText: "Post to reply to"}).first()
+    const feedItem = page
+      .getByTestId("feed-item")
+      .filter({hasText: "Post to reply to"})
+      .first()
     await expect(feedItem).toBeVisible({timeout: 10000})
 
     // Type and publish reply

@@ -3,13 +3,14 @@ import {PublicKey} from "@/shared/utils/PublicKey"
 import {useMemo, useState, useEffect} from "react"
 
 import {unmuteUser} from "@/shared/services/Mute"
-import socialGraph, {handleSocialGraphEvent} from "@/utils/socialGraph.ts"
+import {useSocialGraph, handleSocialGraphEvent} from "@/utils/socialGraph.ts"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
 import {getUnmuteLabel} from "@/utils/muteLabels"
 import {NostrEvent} from "nostr-social-graph"
 
 export function FollowButton({pubKey, small = true}: {pubKey: string; small?: boolean}) {
+  const socialGraph = useSocialGraph()
   const myPubKey = useUserStore((state) => state.publicKey)
   const [isHovering, setIsHovering] = useState(false)
   const [, setUpdated] = useState(0)
@@ -32,8 +33,8 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
 
   try {
     if (myPubKey && pubKeyHex) {
-      isFollowing = socialGraph().isFollowing(myPubKey, pubKeyHex)
-      isMuted = socialGraph().getMutedByUser(myPubKey).has(pubKeyHex)
+      isFollowing = socialGraph.isFollowing(myPubKey, pubKeyHex)
+      isMuted = socialGraph.getMutedByUser(myPubKey).has(pubKeyHex)
     }
   } catch (error) {
     console.error("Error checking social graph:", error)
@@ -57,7 +58,7 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
 
     const event = new NDKEvent(ndk())
     event.kind = 3
-    const followedUsers = socialGraph().getFollowedByUser(myPubKey)
+    const followedUsers = socialGraph.getFollowedByUser(myPubKey)
 
     if (isMuted) {
       // Handle unmute case - just unmute, don't follow

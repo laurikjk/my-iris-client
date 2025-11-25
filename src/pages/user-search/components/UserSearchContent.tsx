@@ -4,7 +4,7 @@ import {useSearch} from "@/shared/hooks/useSearch"
 import {useKeyboardNavigation} from "@/shared/hooks/useKeyboardNavigation"
 import {UserRow} from "@/shared/components/user/UserRow"
 import InfiniteScroll from "@/shared/components/ui/InfiniteScroll"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import {nip19} from "nostr-tools"
 import Icon from "@/shared/components/Icons/Icon"
 import SearchTabSelector from "@/shared/components/search/SearchTabSelector"
@@ -14,6 +14,7 @@ import {handleNostrIdentifier} from "@/utils/handleNostrIdentifier"
 import {useSearchInputAutofocus} from "@/shared/hooks/useSearchInputAutofocus"
 
 export default function UserSearchContent() {
+  const socialGraph = useSocialGraph()
   const {query} = useParams()
   const decodedQuery = query ? decodeURIComponent(query) : ""
   const navigate = useNavigate()
@@ -40,16 +41,15 @@ export default function UserSearchContent() {
     peopleSearch.setValue(searchValue)
   }, [searchValue])
 
-  const graph = socialGraph()
-  const rootUser = graph.getRoot()
-  const follows = graph.getFollowedByUser(rootUser)
+  const rootUser = socialGraph.getRoot()
+  const follows = socialGraph.getFollowedByUser(rootUser)
 
   const displayUsers = useMemo(() => {
     if (searchValue.trim()) {
       // Show search results if we have any, otherwise show empty for search mode
       return peopleSearch.searchResults.map((result) => ({
         pubkey: result.pubKey,
-        followedByCount: graph.followedByFriends(result.pubKey).size,
+        followedByCount: socialGraph.followedByFriends(result.pubKey).size,
       }))
     }
 
@@ -59,10 +59,10 @@ export default function UserSearchContent() {
     return Array.from(follows)
       .map((pubkey) => ({
         pubkey,
-        followedByCount: graph.followedByFriends(pubkey).size,
+        followedByCount: socialGraph.followedByFriends(pubkey).size,
       }))
       .sort((a, b) => b.followedByCount - a.followedByCount)
-  }, [follows, graph, rootUser, searchValue, peopleSearch.searchResults])
+  }, [follows, socialGraph, rootUser, searchValue, peopleSearch.searchResults])
 
   const handleSelectUser = (index: number) => {
     const user = displayUsers[index]

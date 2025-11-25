@@ -40,6 +40,7 @@ export class NDKWorkerTransport {
   private restartAttempts = 0
   private statsCallbacks = new Map<string, (stats: LocalDataStats) => void>()
   private relayStatusCallbacks = new Set<(statuses: any[]) => void>()
+  private messageQueue: WorkerMessage[] = []
 
   constructor(workerOrUrl: Worker | string = "/relay-worker.js") {
     if (typeof workerOrUrl === "string") {
@@ -64,6 +65,7 @@ export class NDKWorkerTransport {
           this.ready = true
           worker.removeEventListener("message", handler)
           this.restartAttempts = 0 // Reset on successful init
+          this.flushMessageQueue()
           resolve()
         }
       }
@@ -129,6 +131,7 @@ export class NDKWorkerTransport {
       debug: settingsState.debug,
       legal: settingsState.legal,
     }
+    // Send init directly - don't queue (worker needs this to become ready)
     this.worker.postMessage({
       type: "init",
       relays: relayUrls || [],
@@ -153,21 +156,37 @@ export class NDKWorkerTransport {
         debug: state.debug,
         legal: state.legal,
       }
-      this.worker.postMessage({
+      this.postMessage({
         type: "updateSettings",
         settings,
       } as WorkerMessage)
     })
 
-    await this.readyPromise
+    // Don't await - let worker init in background
+  }
+
+  private postMessage(msg: WorkerMessage): void {
+    if (this.ready) {
+      this.worker.postMessage(msg)
+    } else {
+      this.messageQueue.push(msg)
+    }
+  }
+
+  private flushMessageQueue(): void {
+    log(`[Worker Transport] Flushing ${this.messageQueue.length} queued messages`)
+    while (this.messageQueue.length > 0) {
+      const msg = this.messageQueue.shift()!
+      this.worker.postMessage(msg)
+    }
   }
 
   private handleOffline = () => {
-    this.worker.postMessage({type: "browserOffline"} as WorkerMessage)
+    this.postMessage({type: "browserOffline"} as WorkerMessage)
   }
 
   private handleOnline = () => {
-    this.worker.postMessage({type: "browserOnline"} as WorkerMessage)
+    this.postMessage({type: "browserOnline"} as WorkerMessage)
   }
 
   // Transport plugin hook - intercept publishes
@@ -208,15 +227,13 @@ export class NDKWorkerTransport {
   }
 
   async publish(event: NDKEvent, relays?: NDKRelay[]): Promise<void> {
-    if (!this.ready) await this.readyPromise
-
     return new Promise((resolve, reject) => {
       const id =
         Math.random().toString(36).substring(2, 15) +
         Math.random().toString(36).substring(2, 15)
       this.publishResolvers.set(id, {resolve, reject})
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "publish",
         id,
         event: event.rawEvent(),
@@ -275,7 +292,7 @@ export class NDKWorkerTransport {
       }
     }
 
-    this.worker.postMessage({
+    this.postMessage({
       type: "subscribe",
       id: subId,
       filters,
@@ -287,7 +304,7 @@ export class NDKWorkerTransport {
     this.subscriptions.delete(subId)
     this.eoseHandlers.delete(subId)
 
-    this.worker.postMessage({
+    this.postMessage({
       type: "unsubscribe",
       id: subId,
     } as WorkerMessage)
@@ -300,7 +317,7 @@ export class NDKWorkerTransport {
       window.removeEventListener("online", this.handleOnline)
     }
 
-    this.worker.postMessage({type: "close"} as WorkerMessage)
+    this.postMessage({type: "close"} as WorkerMessage)
     this.worker.terminate()
   }
 
@@ -325,7 +342,7 @@ export class NDKWorkerTransport {
         }
       }
       this.worker.addEventListener("message", handler)
-      this.worker.postMessage({type: "getRelayStatus", id} as WorkerMessage)
+      this.postMessage({type: "getRelayStatus", id} as WorkerMessage)
       setTimeout(() => resolve([]), 1000) // Timeout fallback
     })
   }
@@ -334,42 +351,42 @@ export class NDKWorkerTransport {
    * Add relay to worker pool
    */
   async addRelay(url: string): Promise<void> {
-    this.worker.postMessage({type: "addRelay", url} as WorkerMessage)
+    this.postMessage({type: "addRelay", url} as WorkerMessage)
   }
 
   /**
    * Remove relay from worker pool
    */
   async removeRelay(url: string): Promise<void> {
-    this.worker.postMessage({type: "removeRelay", url} as WorkerMessage)
+    this.postMessage({type: "removeRelay", url} as WorkerMessage)
   }
 
   /**
    * Connect specific relay
    */
   async connectRelay(url: string): Promise<void> {
-    this.worker.postMessage({type: "connectRelay", url} as WorkerMessage)
+    this.postMessage({type: "connectRelay", url} as WorkerMessage)
   }
 
   /**
    * Disconnect specific relay
    */
   async disconnectRelay(url: string): Promise<void> {
-    this.worker.postMessage({type: "disconnectRelay", url} as WorkerMessage)
+    this.postMessage({type: "disconnectRelay", url} as WorkerMessage)
   }
 
   /**
    * Reconnect disconnected relays
    */
   reconnectDisconnected(reason: string): void {
-    this.worker.postMessage({type: "reconnectDisconnected", reason} as WorkerMessage)
+    this.postMessage({type: "reconnectDisconnected", reason} as WorkerMessage)
   }
 
   /**
    * Inject event from WebRTC - verify, dispatch to subscriptions & cache, no relay publish
    */
   injectEvent(eventData: any, source: string): void {
-    this.worker.postMessage({
+    this.postMessage({
       type: "publish",
       event: eventData,
       publishOpts: {
@@ -402,7 +419,7 @@ export class NDKWorkerTransport {
       this.eoseHandlers.get(subId)!.add(onEose)
     }
 
-    this.worker.postMessage({
+    this.postMessage({
       type: "subscribe",
       id: subId,
       filters,
@@ -495,7 +512,7 @@ export class NDKWorkerTransport {
     return new Promise((resolve) => {
       this.statsCallbacks.set(id, resolve)
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "getStats",
         id,
       } as WorkerMessage)

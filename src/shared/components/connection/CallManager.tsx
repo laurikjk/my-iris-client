@@ -229,14 +229,14 @@ export function CallManager() {
 
       // Import dynamically to avoid circular dependency
       const {sendSignalingMessage} = await import("@/utils/chat/webrtc/signaling")
-      const {default: socialGraph} = await import("@/utils/socialGraph")
+      const {getSocialGraph} = await import("@/utils/socialGraph")
 
       await sendSignalingMessage(
         {
           type: "offer",
           offer,
           recipient: conn.peerId,
-          peerId: conn.mySessionId || socialGraph().getRoot(),
+          peerId: conn.mySessionId || getSocialGraph().getRoot(),
         },
         conn.recipientPubkey
       )

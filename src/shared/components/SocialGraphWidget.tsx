@@ -1,6 +1,6 @@
 import {useState, useEffect, useCallback} from "react"
 import {nip19} from "nostr-tools"
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import {Link, useNavigate} from "@/navigation"
 import Widget from "@/shared/components/ui/Widget"
 import {formatAmount} from "@/utils/utils"
@@ -10,18 +10,19 @@ interface SocialGraphWidgetProps {
 }
 
 export function SocialGraphWidget({background = true}: SocialGraphWidgetProps = {}) {
-  const [socialGraphSize, setSocialGraphSize] = useState(socialGraph().size())
+  const socialGraph = useSocialGraph()
+  const [socialGraphSize, setSocialGraphSize] = useState(socialGraph.size())
   const navigate = useNavigate()
 
   useEffect(() => {
     const updateStats = () => {
-      setSocialGraphSize(socialGraph().size())
+      setSocialGraphSize(socialGraph.size())
     }
 
     updateStats()
     const interval = setInterval(updateStats, 2000)
     return () => clearInterval(interval)
-  }, [])
+  }, [socialGraph])
 
   const distanceData = socialGraphSize.sizeByDistance || {}
   const distance1 = distanceData[1] || 0
@@ -32,7 +33,7 @@ export function SocialGraphWidget({background = true}: SocialGraphWidgetProps = 
 
   const pickRandomAtDistance = useCallback(
     (distance: number) => {
-      const users = socialGraph().getUsersByFollowDistance(distance)
+      const users = socialGraph.getUsersByFollowDistance(distance)
       if (users && users.size > 0) {
         const userArray = Array.from(users)
         const randomUser = userArray[Math.floor(Math.random() * userArray.length)]
@@ -40,7 +41,7 @@ export function SocialGraphWidget({background = true}: SocialGraphWidgetProps = 
         navigate(`/${npub}`)
       }
     },
-    [navigate]
+    [navigate, socialGraph]
   )
 
   const pickRandomAtDistance3Plus = useCallback(() => {

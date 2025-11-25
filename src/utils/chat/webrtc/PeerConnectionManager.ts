@@ -1,5 +1,5 @@
 import {getPeerConnection} from "./PeerConnection"
-import socialGraph, {socialGraphEvents, socialGraphLoaded} from "@/utils/socialGraph"
+import {getSocialGraph, socialGraphEvents, socialGraphLoaded} from "@/utils/socialGraph"
 import {EventEmitter} from "tseep"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
@@ -19,8 +19,8 @@ function uuidv4() {
 
 function isMutualFollow(pubkey: string, myPubkey: string): boolean {
   return (
-    socialGraph().getFollowedByUser(pubkey).has(myPubkey) &&
-    socialGraph().getFollowedByUser(myPubkey).has(pubkey)
+    getSocialGraph().getFollowedByUser(pubkey).has(myPubkey) &&
+    getSocialGraph().getFollowedByUser(myPubkey).has(pubkey)
   )
 }
 
@@ -193,7 +193,7 @@ class PeerConnectionManager extends EventEmitter<{
 
   private getMutualFollows(myPubkey: string): Set<string> {
     const mutualFollows = new Set<string>()
-    const myFollows = socialGraph().getFollowedByUser(myPubkey)
+    const myFollows = getSocialGraph().getFollowedByUser(myPubkey)
 
     for (const pubkey of myFollows) {
       if (isMutualFollow(pubkey, myPubkey)) {
@@ -244,7 +244,7 @@ class PeerConnectionManager extends EventEmitter<{
   private async handleSignalingMessage(message: SignalingMessage, senderPubkey: string) {
     if (!this.myPeerId) return
 
-    const myPubkey = socialGraph().getRoot()
+    const myPubkey = getSocialGraph().getRoot()
     if (!myPubkey) return
 
     // Update online presence
@@ -384,7 +384,7 @@ class PeerConnectionManager extends EventEmitter<{
   }
 
   private async maintainConnections() {
-    const myPubkey = socialGraph().getRoot()
+    const myPubkey = getSocialGraph().getRoot()
     if (!myPubkey) return
 
     let changed = false

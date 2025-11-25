@@ -114,7 +114,16 @@ export function fetchEventsReliable(
         }
         finalize(resolve)
       }, opts.timeout)
+    } else if (requestedIds.size === 0) {
+      // Non-ID query with no timeout - wait for EOSE
+      sub.on("eose", () => {
+        log(
+          `[fetchEventsReliable] Non-ID query EOSE, resolving with ${events.size} events`
+        )
+        finalize(resolve)
+      })
     }
+    // ID query with no timeout: subscription stays open until all IDs found or manually unsubscribed
   })
 
   return {

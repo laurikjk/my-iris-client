@@ -4,7 +4,6 @@ import {ndk} from "@/utils/ndk"
 import {KIND_REACTION, KIND_REPOST, DEBUG_NAMESPACES} from "@/utils/constants"
 import {getTag} from "@/utils/nostr"
 import {PopularityFilters} from "./usePopularityFilters"
-import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {seenEventIds} from "@/utils/memcache"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {fetchEventsReliable} from "@/utils/fetchEventsReliable"
@@ -26,7 +25,6 @@ export default function useReactionSubscription(
   cache: ReactionSubscriptionCache,
   filterSeen?: boolean
 ) {
-  const isSocialGraphLoaded = useSocialGraphLoaded()
   const showingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const pendingReactionCounts = useRef<Map<string, Set<string>>>(new Map())
   const oldestEventAt = useRef<number | null>(null)
@@ -126,7 +124,7 @@ export default function useReactionSubscription(
       clearTimeout(timeout)
       sub.stop()
     }
-  }, [currentFilters, isSocialGraphLoaded])
+  }, [currentFilters])
 
   const getNextMostPopular = (n: number): string[] => {
     // Note: We don't call expandFilters() here to avoid triggering re-renders during data fetching

@@ -2,36 +2,35 @@ import FollowList from "@/pages/user/components/FollowList"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import {shouldHideUser} from "@/utils/visibility"
 import {Fragment, useMemo, useState} from "react"
-import socialGraph, {useSocialGraphLoaded} from "@/utils/socialGraph"
+import {useSocialGraph, useFollowsFromGraph, useGraphSize} from "@/utils/socialGraph"
 import {ProfileLink} from "./ProfileLink"
 import {Name} from "./Name"
-import useFollows from "@/shared/hooks/useFollows"
 import {useUserStore} from "@/stores/user"
 
 const MAX_MUTED_BY_DISPLAY = 3
 
 export default function MutedBy({pubkey}: {pubkey: string}) {
+  const socialGraph = useSocialGraph()
   const myPubKey = useUserStore((state) => state.publicKey)
-  const follows = useFollows(myPubKey, true)
-  const socialGraphLoaded = useSocialGraphLoaded()
+  const follows = useFollowsFromGraph(myPubKey, true)
+  // Subscribe to graph changes to re-render when mute data loads
+  const graphSize = useGraphSize()
 
   const {mutedByArray, totalMutedBy} = useMemo(() => {
-    const mutedBy = socialGraph().getUserMutedBy(pubkey)
+    const mutedBy = socialGraph.getUserMutedBy(pubkey)
     return {
       mutedByArray: Array.from(mutedBy).slice(0, MAX_MUTED_BY_DISPLAY),
       totalMutedBy: mutedBy.size,
     }
-  }, [pubkey])
-  useSocialGraphLoaded() // social graph updated hook needed?
+  }, [pubkey, graphSize, socialGraph])
 
-  const root = socialGraph().getRoot()
-  const mutedBy = socialGraph().getUserMutedBy(pubkey)
+  const root = socialGraph.getRoot()
+  const mutedBy = socialGraph.getUserMutedBy(pubkey)
   const isRootMuted = mutedBy.has(root)
 
+  // Show warning when we have follows data loaded
   const showMutedWarning =
-    socialGraphLoaded &&
-    follows.length > 1 &&
-    ((totalMutedBy > 0 && shouldHideUser(pubkey, 3)) || isRootMuted)
+    follows.length > 1 && ((totalMutedBy > 0 && shouldHideUser(pubkey, 3)) || isRootMuted)
 
   const [showMuterList, setShowMuterList] = useState<boolean>(false)
 
@@ -72,7 +71,7 @@ export default function MutedBy({pubkey}: {pubkey: string}) {
           <div className="w-[400px] max-w-full">
             <h3 className="text-xl font-semibold mb-4">Muters</h3>
             <div className="overflow-y-auto max-h-[50vh]">
-              <FollowList follows={Array.from(socialGraph().getUserMutedBy(pubkey))} />
+              <FollowList follows={Array.from(socialGraph.getUserMutedBy(pubkey))} />
             </div>
           </div>
         </Modal>

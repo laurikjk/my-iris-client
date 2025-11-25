@@ -3,16 +3,17 @@ import {Fragment, useMemo} from "react"
 import {AvatarGroup} from "./AvatarGroup"
 import {Name} from "./Name"
 
-import socialGraph from "@/utils/socialGraph"
+import {useSocialGraph} from "@/utils/socialGraph"
 import {ProfileLink} from "./ProfileLink"
 import {Badge} from "./Badge"
 
 const MAX_FOLLOWED_BY_FRIENDS = 3
 
 export default function FollowedBy({pubkey}: {pubkey: string}) {
-  const followDistance = socialGraph().getFollowDistance(pubkey)
+  const socialGraph = useSocialGraph()
+  const followDistance = socialGraph.getFollowDistance(pubkey)
   const {followedByFriendsArray, totalFollowedByFriends} = useMemo(() => {
-    const followedByFriends = socialGraph().followedByFriends(pubkey)
+    const followedByFriends = socialGraph.followedByFriends(pubkey)
     return {
       followedByFriendsArray: Array.from(followedByFriends).slice(
         0,
@@ -20,7 +21,7 @@ export default function FollowedBy({pubkey}: {pubkey: string}) {
       ),
       totalFollowedByFriends: followedByFriends.size,
     }
-  }, [pubkey, followDistance])
+  }, [pubkey, followDistance, socialGraph])
 
   const renderFollowedByFriendsLinks = () => {
     return followedByFriendsArray.map((a, index) => (

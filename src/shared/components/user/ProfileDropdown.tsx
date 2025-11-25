@@ -3,7 +3,7 @@ import {nip19} from "nostr-tools"
 
 import {unmuteUser} from "@/shared/services/Mute.tsx"
 import {useUserStore} from "@/stores/user"
-import socialGraph from "@/utils/socialGraph.ts"
+import {useSocialGraph} from "@/utils/socialGraph.ts"
 import Dropdown from "@/shared/components/ui/Dropdown.tsx"
 import Modal from "@/shared/components/ui/Modal.tsx"
 import MuteUser from "@/shared/components/event/MuteUser.tsx"
@@ -16,6 +16,7 @@ type ProfileDropdownProps = {
 }
 
 function ProfileDropdown({pubKey, onClose}: ProfileDropdownProps) {
+  const socialGraph = useSocialGraph()
   const myPubKey = useUserStore((state) => state.publicKey)
   const setPublicKey = useUserStore((state) => state.setPublicKey)
   const [muting, setMuting] = useState(false)
@@ -23,7 +24,7 @@ function ProfileDropdown({pubKey, onClose}: ProfileDropdownProps) {
 
   const isLoggedIn = !!myPubKey
   const isOwnProfile = myPubKey === pubKey
-  const isMuted = isLoggedIn && socialGraph().getMutedByUser(myPubKey).has(pubKey)
+  const isMuted = isLoggedIn && socialGraph.getMutedByUser(myPubKey).has(pubKey)
 
   const handleViewAs = () => {
     setPublicKey(pubKey)

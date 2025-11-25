@@ -1,4 +1,4 @@
-import socialGraph, {handleSocialGraphEvent} from "@/utils/socialGraph.ts"
+import {useSocialGraph, handleSocialGraphEvent} from "@/utils/socialGraph.ts"
 import {PublicKey} from "@/shared/utils/PublicKey"
 import {useEffect, useState, useMemo, useRef} from "react"
 import {NostrEvent} from "nostr-social-graph"
@@ -10,13 +10,12 @@ import {createDebugLogger} from "@/utils/createDebugLogger"
 const {log, warn} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 const useMutes = (pubKey?: string) => {
+  const socialGraph = useSocialGraph()
   const pubKeyHex = useMemo(
-    () => (pubKey ? new PublicKey(pubKey).toString() : socialGraph().getRoot()),
-    [pubKey]
+    () => (pubKey ? new PublicKey(pubKey).toString() : socialGraph.getRoot()),
+    [pubKey, socialGraph]
   )
-  const [mutes, setMutes] = useState<string[]>([
-    ...socialGraph().getMutedByUser(pubKeyHex),
-  ])
+  const [mutes, setMutes] = useState<string[]>([...socialGraph.getMutedByUser(pubKeyHex)])
   const subscriptionRef = useRef<NDKSubscription | null>(null)
 
   useEffect(() => {
@@ -37,7 +36,7 @@ const useMutes = (pubKey?: string) => {
 
         sub?.on("event", (event: NDKEvent) => {
           event.ndk = ndk()
-          socialGraph().handleEvent(event as NostrEvent)
+          socialGraph.handleEvent(event as NostrEvent)
           if (event && event.created_at && event.created_at > latestTimestamp) {
             log(`Mute event received: ${event.kind} ${event.pubkey} ${event.created_at}`)
             latestTimestamp = event.created_at
@@ -46,9 +45,7 @@ const useMutes = (pubKey?: string) => {
               .getMatchingTags("p")
               .map((pTag) => pTag[1])
               .sort((a, b) => {
-                return (
-                  socialGraph().getFollowDistance(a) - socialGraph().getFollowDistance(b)
-                )
+                return socialGraph.getFollowDistance(a) - socialGraph.getFollowDistance(b)
               })
             setMutes(pubkeys)
           }
