@@ -177,7 +177,7 @@ export function handlePushNotification(data: unknown) {
       case 443: // DM
       case 444: // DM
         // Navigate to chats
-        window.location.href = `/chats/${eventData.sessionId || ""}`
+        window.location.href = "/chats"
         break
       default:
         // Navigate to the note

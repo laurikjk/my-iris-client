@@ -431,7 +431,7 @@ self.addEventListener("push", (event) => {
             await self.registration.showNotification("New group invite", {
               icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
               data: {
-                url: `/chats/${encodeURIComponent(result.sessionId)}`,
+                url: "/chats",
                 event: data.event,
               },
             })
@@ -442,7 +442,7 @@ self.addEventListener("push", (event) => {
                 body: result.content,
                 icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
                 data: {
-                  url: `/chats/${encodeURIComponent(result.sessionId)}`,
+                  url: "/chats",
                   event: data.event,
                 },
               }
