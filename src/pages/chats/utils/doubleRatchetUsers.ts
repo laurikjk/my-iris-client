@@ -1,5 +1,5 @@
 import {NDKUserProfile} from "@/lib/ndk"
-import {profileCache, addCachedProfile} from "@/utils/profileCache"
+import {getMainThreadDb} from "@/lib/ndk-cache/db"
 import {handleProfile} from "@/utils/profileSearch"
 import {ndk} from "@/utils/ndk"
 import debounce from "lodash/debounce"
@@ -48,14 +48,20 @@ const recreateSearchIndex = () => {
 // Track if we're currently fetching profiles to prevent infinite loops
 let isFetchingProfiles = false
 
-// Update user data map from profile cache
-const updateUserDataFromCache = () => {
+// Update user data map from Dexie cache
+const updateUserDataFromCache = async () => {
+  const db = getMainThreadDb()
+  const pubkeys = Array.from(doubleRatchetUsers)
+
   const updatedUsers = new Map<string, DoubleRatchetUser>()
-  doubleRatchetUsers.forEach((userPubkey) => {
-    const profile = profileCache.get(userPubkey)
+
+  // Batch fetch profiles from Dexie
+  const profiles = await db.profiles.bulkGet(pubkeys)
+
+  profiles.forEach((profile, index) => {
     if (profile) {
-      updatedUsers.set(userPubkey, {
-        pubkey: userPubkey,
+      updatedUsers.set(pubkeys[index], {
+        pubkey: pubkeys[index],
         profile,
       })
     }
@@ -64,18 +70,16 @@ const updateUserDataFromCache = () => {
   userData.clear()
   updatedUsers.forEach((user) => userData.set(user.pubkey, user))
   recreateSearchIndex()
+
+  return pubkeys.filter((_, index) => !profiles[index])
 }
 
 // Update the search index with new user data (internal)
-const updateDoubleRatchetSearchIndexImmediate = () => {
-  updateUserDataFromCache()
+const updateDoubleRatchetSearchIndexImmediate = async () => {
+  const usersWithoutProfiles = await updateUserDataFromCache()
   log("Updated double ratchet search index", userData.size)
 
   // If we have users without profiles and we're not already fetching, fetch them
-  const usersWithoutProfiles = Array.from(doubleRatchetUsers).filter(
-    (pubkey) => !profileCache.get(pubkey)
-  )
-
   if (usersWithoutProfiles.length > 0 && !isFetchingProfiles) {
     log("Fetching profiles for", usersWithoutProfiles.length, "users")
     isFetchingProfiles = true
@@ -90,7 +94,6 @@ const updateDoubleRatchetSearchIndexImmediate = () => {
         try {
           const profile = JSON.parse(event.content)
           profile.created_at = event.created_at
-          addCachedProfile(event.pubkey, profile)
           handleProfile(event.pubkey, profile)
         } catch (e) {
           warn("Failed to parse profile for", event.pubkey, e)
@@ -99,9 +102,9 @@ const updateDoubleRatchetSearchIndexImmediate = () => {
     })
 
     // Update index once when subscription ends, without triggering new lookups
-    sub.on("eose", () => {
+    sub.on("eose", async () => {
       isFetchingProfiles = false
-      updateUserDataFromCache()
+      await updateUserDataFromCache()
       notifySubscribers()
     })
   }

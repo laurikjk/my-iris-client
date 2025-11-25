@@ -24,4 +24,4 @@ export {
 
 export {getTag, getTags} from "./tagUtils"
 
-export {getCachedName} from "./profileCache"
+export {getCachedName} from "./profileName"

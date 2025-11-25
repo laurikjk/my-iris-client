@@ -76,9 +76,9 @@ export function ProfileSettings() {
     user.profile = newProfile
     await user.publish()
 
-    // Immediately update the cache so UI reflects changes
-    const {addCachedProfile} = await import("@/utils/profileCache")
-    addCachedProfile(myPubKey, newProfile)
+    // Update name cache for immediate UI reflection
+    const {updateNameCache} = await import("@/utils/profileName")
+    updateNameCache(myPubKey, newProfile)
 
     setSaveState("saved")
   }

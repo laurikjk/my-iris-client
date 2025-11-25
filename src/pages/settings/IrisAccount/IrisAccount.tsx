@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {SubscriberBadge} from "@/shared/components/user/SubscriberBadge"
-import {profileCache} from "@/utils/profileCache"
+import {getMainThreadDb} from "@/lib/ndk-cache/db"
 import ActiveAccount from "./ActiveAccount"
 import ChallengeForm from "./ChallengeForm"
 import {useUserStore} from "@/stores/user"
@@ -104,11 +104,12 @@ function IrisAccount() {
   // Setup effects
   useEffect(() => {
     // User store subscription handler
-    const handleUserChange = (state: any) => {
+    const handleUserChange = async (state: any) => {
       const userPubKey = state.publicKey
       if (userPubKey && typeof userPubKey === "string") {
-        const userProfile = profileCache.get(userPubKey) || {}
-        setProfile(userProfile)
+        const db = getMainThreadDb()
+        const userProfile = await db.profiles.get(userPubKey)
+        setProfile(userProfile || {})
 
         const isIrisToActive = Boolean(
           userProfile?.nip05 && userProfile.nip05.endsWith("@iris.to")

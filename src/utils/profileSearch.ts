@@ -1,5 +1,5 @@
 import {NDKUserProfile} from "@/lib/ndk"
-import {loadProfileCache, profileCache} from "./profileCache"
+import {getMainThreadDb} from "@/lib/ndk-cache/db"
 import Fuse from "fuse.js"
 import {createDebugLogger} from "./createDebugLogger"
 import {DEBUG_NAMESPACES} from "./constants"
@@ -21,27 +21,32 @@ let searchIndex: Fuse<SearchResult> = new Fuse<SearchResult>([], {
 
 async function initializeSearchIndex() {
   const start = performance.now()
-  // Wait for profiles to be loaded from cache or profileData.json
-  await loadProfileCache()
 
-  const processedData = [] as SearchResult[]
-  profileCache.forEach((profile, pubKey) => {
-    const name = profile.name || profile.username
-    if (name) {
-      processedData.push({
-        pubKey: String(pubKey),
-        name: String(name),
-        nip05: profile.nip05 || undefined,
-      })
+  try {
+    const db = getMainThreadDb()
+    const profiles = await db.profiles.toArray()
+
+    const processedData = [] as SearchResult[]
+    for (const profile of profiles) {
+      const name = profile.name || profile.username
+      if (name) {
+        processedData.push({
+          pubKey: profile.pubkey,
+          name: String(name),
+          nip05: profile.nip05 || undefined,
+        })
+      }
     }
-  })
 
-  searchIndex = new Fuse<SearchResult>(processedData, {
-    keys: ["name", "nip05"],
-    includeScore: true,
-  })
-  const duration = performance.now() - start
-  log(`fuse init: ${duration.toFixed(2)} ms`)
+    searchIndex = new Fuse<SearchResult>(processedData, {
+      keys: ["name", "nip05"],
+      includeScore: true,
+    })
+    const duration = performance.now() - start
+    log(`fuse init from dexie: ${duration.toFixed(2)} ms, ${profiles.length} profiles`)
+  } catch (e) {
+    error("Failed to initialize search index:", e)
+  }
 }
 
 initializeSearchIndex().catch(error)
@@ -56,8 +61,6 @@ export function handleProfile(pubKey: string, profile: NDKUserProfile) {
       const name = String(profile.name || profile.username)
       const nip05 = profile.nip05
       if (name) {
-        // not sure if this remove is efficient?
-        // should we have our internal map and reconstruct the searchIndex from it with debounce?
         searchIndex.remove((profile) => profile.pubKey === pubKey)
         searchIndex.add({name, pubKey, nip05})
       }

@@ -1,15 +1,17 @@
-import {NDKEvent, NDKUserProfile, NDKSubscription} from "@/lib/ndk"
+import {
+  NDKEvent,
+  NDKUserProfile,
+  NDKSubscription,
+  NDKSubscriptionCacheUsage,
+} from "@/lib/ndk"
 import {handleProfile} from "@/utils/profileSearch"
 import {PublicKey} from "@/shared/utils/PublicKey"
 import {useEffect, useMemo, useState, useRef} from "react"
-import {
-  profileCache,
-  addCachedProfile,
-  subscribeToProfileUpdates,
-} from "@/utils/profileCache"
 import {addUsernameToCache} from "@/utils/usernameCache"
 import {ndk} from "@/utils/ndk"
 import {KIND_METADATA} from "@/utils/constants"
+import {getMainThreadDb} from "@/lib/ndk-cache/db"
+import {updateNameCache} from "@/utils/profileName"
 
 export default function useProfile(pubKey?: string, subscribe = true) {
   const pubKeyHex = useMemo(() => {
@@ -24,14 +26,35 @@ export default function useProfile(pubKey?: string, subscribe = true) {
     }
   }, [pubKey])
 
-  const [profile, setProfile] = useState<NDKUserProfile | null>(
-    profileCache.get(pubKeyHex || "") || null
-  )
-
+  const [profile, setProfile] = useState<NDKUserProfile | null>(null)
   const subscriptionRef = useRef<NDKSubscription | null>(null)
+  const initialLoadDone = useRef(false)
 
+  // Load from cache on mount
   useEffect(() => {
-    // Clean up any existing subscription first
+    if (!pubKeyHex) {
+      setProfile(null)
+      return
+    }
+
+    // Load from Dexie cache
+    const db = getMainThreadDb()
+    db.profiles
+      .get(pubKeyHex)
+      .then((cached) => {
+        if (cached) {
+          setProfile(cached)
+          updateNameCache(pubKeyHex, cached)
+        }
+        initialLoadDone.current = true
+      })
+      .catch(() => {
+        initialLoadDone.current = true
+      })
+  }, [pubKeyHex])
+
+  // Subscribe to relay updates if requested
+  useEffect(() => {
     if (subscriptionRef.current) {
       subscriptionRef.current.stop()
       subscriptionRef.current = null
@@ -41,35 +64,39 @@ export default function useProfile(pubKey?: string, subscribe = true) {
       return
     }
 
-    const newProfile = profileCache.get(pubKeyHex || "") || null
-    setProfile(newProfile)
-
-    if (newProfile && !subscribe) {
+    // If subscribe=false, only query cache (already done above)
+    if (!subscribe) {
       return
     }
 
     const sub = ndk().subscribe(
       {kinds: [KIND_METADATA], authors: [pubKeyHex]},
-      {closeOnEose: true}
+      {
+        closeOnEose: true,
+        cacheUsage: NDKSubscriptionCacheUsage.PARALLEL,
+      }
     )
     subscriptionRef.current = sub
 
-    let latest = 0
+    let latest = profile?.created_at || 0
     sub.on("event", (event: NDKEvent) => {
       if (event.pubkey === pubKeyHex && event.kind === KIND_METADATA) {
         if (!event.created_at || event.created_at <= latest) {
           return
         }
         latest = event.created_at
-        const profile = JSON.parse(event.content)
-        profile.created_at = event.created_at
-        addCachedProfile(pubKeyHex, profile)
-        // Also add to username cache if iris.to address
-        if (profile.nip05) {
-          addUsernameToCache(pubKeyHex, profile.nip05, true)
+        try {
+          const newProfile = JSON.parse(event.content)
+          newProfile.created_at = event.created_at
+          if (newProfile.nip05) {
+            addUsernameToCache(pubKeyHex, newProfile.nip05, true)
+          }
+          setProfile(newProfile)
+          updateNameCache(pubKeyHex, newProfile)
+          handleProfile(pubKeyHex, newProfile)
+        } catch {
+          // Invalid JSON in profile content
         }
-        setProfile(profile)
-        handleProfile(pubKeyHex, profile)
       }
     })
 
@@ -80,21 +107,6 @@ export default function useProfile(pubKey?: string, subscribe = true) {
       }
     }
   }, [pubKeyHex, subscribe])
-
-  // Subscribe to cache updates
-  useEffect(() => {
-    if (!pubKeyHex) {
-      return undefined
-    }
-
-    const unsubscribe = subscribeToProfileUpdates((updatedPubkey, updatedProfile) => {
-      if (updatedPubkey === pubKeyHex) {
-        setProfile(updatedProfile)
-      }
-    })
-
-    return unsubscribe
-  }, [pubKeyHex])
 
   return profile
 }

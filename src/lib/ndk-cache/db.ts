@@ -131,3 +131,14 @@ export let db: Database
 export function createDatabase(name: string): void {
   db = new Database(name)
 }
+
+/**
+ * Get or create database connection for main thread
+ * Uses the same database name as the worker
+ */
+export function getMainThreadDb(): Database {
+  if (!db) {
+    db = new Database("treelike-nostr")
+  }
+  return db
+}
