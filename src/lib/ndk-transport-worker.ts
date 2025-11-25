@@ -282,12 +282,12 @@ export class NDKWorkerTransport {
           break
         case NDKSubscriptionCacheUsage.PARALLEL:
           subscribeOpts.destinations = ["cache", "relay"]
-          subscribeOpts.groupable = false
+          // Let worker default handle groupable - don't disable it
           break
         case NDKSubscriptionCacheUsage.CACHE_FIRST:
         default:
           subscribeOpts.destinations = ["cache", "relay"]
-          subscribeOpts.groupable = true
+          // Don't set groupable here - let explicit opts override or worker default
           break
       }
     }

@@ -205,10 +205,15 @@ function handleSubscribe(
 
   log(`[Relay Worker] Using cacheUsage: ${cacheUsage}`)
 
+  // Enable groupable by default for relay subscriptions to batch requests
+  // Cache-only subs don't need grouping (instant local response)
+  const shouldGroup = cacheOnly ? false : (opts?.groupable ?? true)
+  const groupableDelay = shouldGroup ? (opts?.groupableDelay ?? 100) : undefined
+
   const sub = ndk.subscribe(filters, {
     closeOnEose: opts?.closeOnEose ?? cacheOnly,
-    groupable: opts?.groupable ?? !cacheOnly,
-    groupableDelay: opts?.groupableDelay,
+    groupable: shouldGroup,
+    groupableDelay,
     cacheUsage,
   })
 
