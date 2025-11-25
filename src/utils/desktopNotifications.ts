@@ -8,24 +8,28 @@ import {
   KIND_REPOST,
   KIND_REACTION,
   KIND_ZAP_RECEIPT,
+  DEBUG_NAMESPACES,
 } from "@/utils/constants"
 import {sendNotification} from "@tauri-apps/plugin-notification"
 import {setDesktopNotificationCallback} from "@/shared/components/feed/notificationsSubscription"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 /**
  * Initialize desktop notifications by subscribing to NDK for relevant events
  * Only runs on desktop Tauri app
  */
 export async function initDesktopNotifications() {
-  console.log("[Desktop Notifications] initDesktopNotifications called")
+  log("[Desktop Notifications] initDesktopNotifications called")
   if (!isTauri()) {
-    console.log("[Desktop Notifications] Not running in Tauri, skipping")
+    log("[Desktop Notifications] Not running in Tauri, skipping")
     return
   }
 
   const myPubKey = useUserStore.getState().publicKey
   if (!myPubKey) {
-    console.log("[Desktop Notifications] No user public key, skipping")
+    log("[Desktop Notifications] No user public key, skipping")
     return
   }
 
@@ -34,15 +38,15 @@ export async function initDesktopNotifications() {
     const {isMobileTauri} = await import("./utils")
     const isMobile = await isMobileTauri()
     if (isMobile) {
-      console.log("[Desktop Notifications] Running on mobile, skipping")
+      log("[Desktop Notifications] Running on mobile, skipping")
       return
     }
   } catch (e) {
-    console.error("[Desktop Notifications] Failed to check platform:", e)
+    error("[Desktop Notifications] Failed to check platform:", e)
     return
   }
 
-  console.log("Initializing desktop notifications via NDK")
+  log("Initializing desktop notifications via NDK")
 
   // Build notification filter based on user preferences
   const prefs = useSettingsStore.getState().notifications.preferences || {
@@ -53,7 +57,7 @@ export async function initDesktopNotifications() {
     zaps: true,
     dms: true,
   }
-  console.log("[Desktop Notifications] Preferences:", prefs)
+  log("[Desktop Notifications] Preferences:", prefs)
 
   const kinds: number[] = []
 
@@ -70,7 +74,7 @@ export async function initDesktopNotifications() {
     kinds.push(KIND_ZAP_RECEIPT)
   }
 
-  console.log(
+  log(
     "[Desktop Notifications] Setting up callback to reuse existing notifications subscription"
   )
 
@@ -79,7 +83,7 @@ export async function initDesktopNotifications() {
     handleNotificationEvent(event)
   })
 
-  console.log("[Desktop Notifications] Callback registered")
+  log("[Desktop Notifications] Callback registered")
 }
 
 /**
@@ -88,20 +92,20 @@ export async function initDesktopNotifications() {
 async function handleNotificationEvent(event: NDKEvent) {
   const myPubKey = useUserStore.getState().publicKey
   if (!myPubKey || event.pubkey === myPubKey) {
-    console.log("[Desktop Notifications] Skipping own event")
+    log("[Desktop Notifications] Skipping own event")
     return // Don't notify on own events
   }
 
   // Check if we've already seen this notification
   const lastNotification = useNotificationsStore.getState().latestNotification
-  if (event.created_at && event.created_at * 1000 <= lastNotification) {
-    console.log("[Desktop Notifications] Already seen, skipping")
+  if (event.created_at && event.created_at <= lastNotification) {
+    log("[Desktop Notifications] Already seen, skipping")
     return // Already seen
   }
 
   // Update latest notification timestamp
   if (event.created_at) {
-    useNotificationsStore.getState().setLatestNotification(event.created_at * 1000)
+    useNotificationsStore.getState().setLatestNotification(event.created_at)
   }
 
   // Check user preferences
@@ -130,19 +134,19 @@ async function handleNotificationEvent(event: NDKEvent) {
 
       if (isReply) {
         if (!prefs.replies) {
-          console.log("[Desktop Notifications] Reply notification disabled, skipping")
+          log("[Desktop Notifications] Reply notification disabled, skipping")
           return
         }
         title = `${authorName} replied to you`
       } else if (mentionedPubkeys.includes(myPubKey)) {
         if (!prefs.mentions) {
-          console.log("[Desktop Notifications] Mention notification disabled, skipping")
+          log("[Desktop Notifications] Mention notification disabled, skipping")
           return
         }
         title = `${authorName} mentioned you`
       } else {
         if (!prefs.mentions) {
-          console.log("[Desktop Notifications] Mention notification disabled, skipping")
+          log("[Desktop Notifications] Mention notification disabled, skipping")
           return
         }
         title = `New post from ${authorName}`
@@ -152,7 +156,7 @@ async function handleNotificationEvent(event: NDKEvent) {
     }
     case KIND_REPOST:
       if (!prefs.reposts) {
-        console.log("[Desktop Notifications] Repost notification disabled, skipping")
+        log("[Desktop Notifications] Repost notification disabled, skipping")
         return
       }
       title = `${authorName} reposted you`
@@ -160,7 +164,7 @@ async function handleNotificationEvent(event: NDKEvent) {
       break
     case KIND_REACTION:
       if (!prefs.reactions) {
-        console.log("[Desktop Notifications] Reaction notification disabled, skipping")
+        log("[Desktop Notifications] Reaction notification disabled, skipping")
         return
       }
       title = `${authorName} reacted to your post`
@@ -168,7 +172,7 @@ async function handleNotificationEvent(event: NDKEvent) {
       break
     case KIND_ZAP_RECEIPT: {
       if (!prefs.zaps) {
-        console.log("[Desktop Notifications] Zap notification disabled, skipping")
+        log("[Desktop Notifications] Zap notification disabled, skipping")
         return
       }
       // Extract zap amount if available
@@ -192,15 +196,15 @@ async function handleNotificationEvent(event: NDKEvent) {
   }
 
   // Show notification
-  console.log("[Desktop Notifications] Showing notification:", {title, body})
+  log("[Desktop Notifications] Showing notification:", {title, body})
   try {
     await sendNotification({
       title,
       body,
     })
-    console.log("[Desktop Notifications] Notification sent successfully")
-  } catch (error) {
-    console.error("[Desktop Notifications] Failed to send notification:", error)
+    log("[Desktop Notifications] Notification sent successfully")
+  } catch (err) {
+    error("[Desktop Notifications] Failed to send notification:", err)
   }
 }
 
@@ -222,7 +226,7 @@ export async function handleDMEvent(
   }
 
   if (!prefs.dms) {
-    console.log("[Desktop DM Notification] DM notifications disabled")
+    log("[Desktop DM Notification] DM notifications disabled")
     return
   }
 
@@ -236,7 +240,7 @@ export async function handleDMEvent(
   const authorName = author.profile?.displayName || author.profile?.name || "Someone"
   const messagePreview = event.content ? event.content.slice(0, 100) : "New message"
 
-  console.log("[Desktop DM Notification] Showing notification for DM from:", authorName)
+  log("[Desktop DM Notification] Showing notification for DM from:", authorName)
 
   try {
     const {sendNotification} = await import("@tauri-apps/plugin-notification")
@@ -244,9 +248,9 @@ export async function handleDMEvent(
       title: `${authorName}`,
       body: messagePreview,
     })
-    console.log("[Desktop DM Notification] Sent successfully")
-  } catch (error) {
-    console.error("[Desktop DM Notification] Failed to send:", error)
+    log("[Desktop DM Notification] Sent successfully")
+  } catch (err) {
+    error("[Desktop DM Notification] Failed to send:", err)
   }
 }
 
@@ -255,5 +259,5 @@ export async function handleDMEvent(
  */
 export function stopDesktopNotifications() {
   setDesktopNotificationCallback(null)
-  console.log("[Desktop Notifications] Stopped")
+  log("[Desktop Notifications] Stopped")
 }

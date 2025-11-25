@@ -1,14 +1,20 @@
 import {getPeerConnection} from "./PeerConnection"
 import socialGraph, {socialGraphEvents, socialGraphLoaded} from "@/utils/socialGraph"
 import {EventEmitter} from "tseep"
-import {webrtcLogger} from "./Logger"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
 import {sendSignalingMessage, subscribeToSignaling} from "./signaling"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_PEER)
 import {PeerId, type SignalingMessage} from "./types"
 import {useUserStore} from "@/stores/user"
 import {useSettingsStore} from "@/stores/settings"
 
 function uuidv4() {
-  return crypto.randomUUID()
+  return (
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15)
+  )
 }
 
 function isMutualFollow(pubkey: string, myPubkey: string): boolean {
@@ -52,7 +58,7 @@ class PeerConnectionManager extends EventEmitter<{
 
     const {webrtcEnabled} = useSettingsStore.getState().network
     if (!webrtcEnabled) {
-      webrtcLogger.info(undefined, "WebRTC is disabled in settings")
+      log("WebRTC is disabled in settings")
       return
     }
 
@@ -60,23 +66,23 @@ class PeerConnectionManager extends EventEmitter<{
 
     const myPubkey = useUserStore.getState().publicKey
     if (!myPubkey) {
-      webrtcLogger.error(undefined, "Cannot start: no pubkey")
+      error("Cannot start: no pubkey")
       return
     }
 
     this.myPeerId = new PeerId(myPubkey, uuidv4())
-    webrtcLogger.info(undefined, `Starting with peer ID: ${this.myPeerId.short()}`)
+    log(`Starting with peer ID: ${this.myPeerId.short()}`)
 
     // Wait for social graph to load before starting
     socialGraphLoaded.then(() => {
-      webrtcLogger.info(undefined, "Social graph loaded, setting up WebRTC")
+      log("Social graph loaded, setting up WebRTC")
 
       // Get initial mutual follows and subscribe
       this.updateMutualFollowsAndResubscribe(myPubkey)
 
       // Watch for social graph changes
       const handleGraphUpdate = () => {
-        webrtcLogger.info(undefined, "Social graph updated, rechecking mutual follows")
+        log("Social graph updated, rechecking mutual follows")
         this.updateMutualFollowsAndResubscribe(myPubkey)
       }
       socialGraphEvents.on("updated", handleGraphUpdate)
@@ -108,7 +114,7 @@ class PeerConnectionManager extends EventEmitter<{
 
   private setupUnloadHandler() {
     const cleanup = () => {
-      webrtcLogger.info(undefined, "Page unloading, closing all connections")
+      log("Page unloading, closing all connections")
       // Close all connections synchronously
       for (const peer of this.peers.values()) {
         getPeerConnection(peer.sessionId, {create: false})
@@ -161,10 +167,12 @@ class PeerConnectionManager extends EventEmitter<{
 
     // Always send hello to enable connecting to own devices/sessions
     // (subscription includes own pubkey even with no mutual follows)
-    await sendSignalingMessage({
-      type: "hello",
+    const helloMsg = {
+      type: "hello" as const,
       peerId: this.myPeerId.uuid,
-    })
+    }
+    log(`Sending hello with peerId: ${this.myPeerId.uuid}`)
+    await sendSignalingMessage(helloMsg)
   }
 
   private cleanupStaleUsers() {
@@ -206,7 +214,7 @@ class PeerConnectionManager extends EventEmitter<{
         this.currentMutualFollows.has(pubkey)
       )
       if (same) {
-        webrtcLogger.info(undefined, "Mutual follows unchanged, skipping resubscription")
+        log("Mutual follows unchanged, skipping resubscription")
         return // No changes, skip resubscription
       }
     }
@@ -214,8 +222,7 @@ class PeerConnectionManager extends EventEmitter<{
     this.currentMutualFollows = newMutualFollows
 
     const followCount = newMutualFollows.size
-    webrtcLogger.info(
-      undefined,
+    log(
       followCount > 0
         ? `Found ${followCount} mutual follows, subscribing`
         : "No mutual follows, subscribing to own devices only"
@@ -250,7 +257,10 @@ class PeerConnectionManager extends EventEmitter<{
         return
       }
 
-      webrtcLogger.debug(`${senderPubkey}:hello`, `hello`, "down")
+      log(
+        `Received hello from ${senderPubkey.slice(0, 8)}... with peerId: ${message.peerId}`
+      )
+      log(`hello`)
 
       // Track online users (including our other sessions)
       this.onlineUsers.set(senderPubkey, {
@@ -279,7 +289,7 @@ class PeerConnectionManager extends EventEmitter<{
         if (shouldInitiate) {
           await this.connectToPeer(peerId)
         } else {
-          webrtcLogger.debug(peerIdStr, `Waiting for connection`, "down")
+          log(`Waiting for connection`)
         }
       }
       return
@@ -301,7 +311,7 @@ class PeerConnectionManager extends EventEmitter<{
 
         // Accept offers from own sessions or mutual follows
         if (!isOwnSession && !isMutual) {
-          webrtcLogger.warn(undefined, "Rejected offer from non-mutual follow")
+          warn("Rejected offer from non-mutual follow")
           return
         }
 
@@ -315,7 +325,7 @@ class PeerConnectionManager extends EventEmitter<{
             (p) => p.direction === "inbound"
           ).length
           if (inboundCount >= webrtcMaxInbound) {
-            webrtcLogger.warn(undefined, "Inbound connection quota full")
+            warn("Inbound connection quota full")
             return
           }
         }
@@ -325,10 +335,7 @@ class PeerConnectionManager extends EventEmitter<{
         if (existingConn) {
           const state = existingConn.peerConnection.connectionState
           if (state === "failed" || state === "closed") {
-            webrtcLogger.info(
-              peerIdStr,
-              `Cleaning up ${state} connection before accepting offer`
-            )
+            log(`Cleaning up ${state} connection before accepting offer`)
             existingConn.close()
             this.peers.delete(peerIdStr)
           }
@@ -389,7 +396,7 @@ class PeerConnectionManager extends EventEmitter<{
 
       // Remove failed, closed, or long-stuck "new" connections
       if (!conn || ["failed", "closed"].includes(state || "")) {
-        webrtcLogger.debug(sessionId, `Cleaning up ${state || "missing"} connection`)
+        log(`Cleaning up ${state || "missing"} connection`)
         // Ensure connection is fully closed
         if (conn) {
           conn.close()
@@ -400,7 +407,7 @@ class PeerConnectionManager extends EventEmitter<{
         // If stuck in "new" for more than 10 seconds, clean up
         const peer = this.peers.get(sessionId)
         if (peer && !peer.connectedAt) {
-          webrtcLogger.debug(sessionId, "Cleaning up stuck 'new' connection")
+          log("Cleaning up stuck 'new' connection")
           conn.close()
           this.peers.delete(sessionId)
           changed = true
@@ -419,7 +426,7 @@ class PeerConnectionManager extends EventEmitter<{
   private async connectToPeer(peerId: PeerId) {
     const peerIdStr = peerId.toString()
 
-    webrtcLogger.debug(peerIdStr, `Initiating connection`, "up")
+    log(`Initiating connection`)
 
     const peerConn = await getPeerConnection(peerIdStr, {
       ask: false,
@@ -429,7 +436,7 @@ class PeerConnectionManager extends EventEmitter<{
     })
 
     if (!peerConn) {
-      webrtcLogger.error(peerIdStr, "Failed to create peer connection")
+      error("Failed to create peer connection")
       return
     }
 
@@ -460,14 +467,14 @@ class PeerConnectionManager extends EventEmitter<{
 
     if (newState === "connected" && !peer.connectedAt) {
       peer.connectedAt = Date.now()
-      webrtcLogger.info(sessionId, `Connected`)
+      log(`Connected`)
     }
 
     peer.state = newState
 
     if (["failed", "closed"].includes(newState)) {
       if (oldState === "connected") {
-        webrtcLogger.info(sessionId, `Disconnected`)
+        log(`Disconnected`)
       }
       // Ensure connection is properly closed and cleaned up
       peerConn.close()

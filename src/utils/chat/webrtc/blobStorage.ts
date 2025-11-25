@@ -3,6 +3,10 @@ import type {
   CacheModuleCollection,
   NDKCacheAdapter,
 } from "@/lib/ndk/cache"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {warn} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_PEER)
 
 /**
  * Blob storage entry
@@ -76,7 +80,7 @@ export class BlobStorage {
 
   async initialize() {
     if (!this.cache.registerModule || !this.cache.getModuleCollection) {
-      console.warn("Cache adapter does not support modules, using fallback storage")
+      warn("Cache adapter does not support modules, using fallback storage")
       return
     }
 
@@ -89,8 +93,8 @@ export class BlobStorage {
       this.statsCollection = await this.cache.getModuleCollection<
         BlobStats & {id: string}
       >("webrtc_blobs", "stats")
-    } catch (error) {
-      console.warn("Failed to initialize blob storage module:", error)
+    } catch (err) {
+      warn("Failed to initialize blob storage module:", err)
       // Fallback to simple in-memory storage for tests
     }
   }

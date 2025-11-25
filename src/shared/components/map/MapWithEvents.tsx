@@ -2,9 +2,12 @@ import {useState, useMemo} from "react"
 import {useNavigate} from "@/navigation"
 import {GeohashMap} from "@/shared/components/geohash/GeohashMap"
 import Feed from "@/shared/components/feed/Feed"
-import {KIND_TEXT_NOTE, KIND_EPHEMERAL} from "@/utils/constants"
+import {KIND_TEXT_NOTE, KIND_EPHEMERAL, DEBUG_NAMESPACES} from "@/utils/constants"
 import {NDKEvent} from "@/lib/ndk"
 import {type FeedConfig} from "@/stores/feed"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface MapWithEventsProps {
   selectedGeohashes: string[]
@@ -84,10 +87,7 @@ export default function MapWithEvents({
                 (tag) => tag[0] === "location" && tag[1]
               )
               if (locationTags?.length > 0) {
-                console.log(
-                  "MapWithEvents received event with location:",
-                  locationTags[0][1]
-                )
+                log("MapWithEvents received event with location:", locationTags[0][1])
               }
               if (prev.some((e) => e.id === event.id)) return prev
               return [...prev.slice(-199), event]

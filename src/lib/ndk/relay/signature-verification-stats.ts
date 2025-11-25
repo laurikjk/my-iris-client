@@ -1,5 +1,8 @@
 import debug from "debug"
 import type {NDK} from "../ndk/index.js"
+import {createDebugLogger} from "../../../utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "../../../utils/constants"
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.NDK_RELAY)
 
 /**
  * SignatureVerificationStats - A class to track and report signature verification statistics
@@ -61,44 +64,44 @@ export class SignatureVerificationStats {
   public reportStats(): void {
     const stats = this.collectStats()
 
-    console.log("\n=== Signature Verification Sampling Stats ===")
-    console.log(`Timestamp: ${new Date().toISOString()}`)
-    console.log(`Total Relays: ${stats.totalRelays}`)
-    console.log(`Connected Relays: ${stats.connectedRelays}`)
+    log("\n=== Signature Verification Sampling Stats ===")
+    log(`Timestamp: ${new Date().toISOString()}`)
+    log(`Total Relays: ${stats.totalRelays}`)
+    log(`Connected Relays: ${stats.connectedRelays}`)
 
     if (stats.relayStats.length === 0) {
-      console.log("No relay statistics available")
+      log("No relay statistics available")
     } else {
-      console.log("\nRelay Statistics:")
+      log("\nRelay Statistics:")
 
       // Sort relays by URL for consistent output
       stats.relayStats.sort((a, b) => a.url.localeCompare(b.url))
 
       stats.relayStats.forEach((relayStat) => {
-        console.log(
+        log(
           `\n  ${relayStat.url} ${relayStat.connected ? "(connected)" : "(disconnected)"}`
         )
-        console.log(`    Validated Events: ${relayStat.validatedCount}`)
-        console.log(`    Non-validated Events: ${relayStat.nonValidatedCount}`)
-        console.log(`    Total Events: ${relayStat.totalEvents}`)
-        console.log(
+        log(`    Validated Events: ${relayStat.validatedCount}`)
+        log(`    Non-validated Events: ${relayStat.nonValidatedCount}`)
+        log(`    Total Events: ${relayStat.totalEvents}`)
+        log(
           `    Current Validation Ratio: ${relayStat.validationRatio.toFixed(4)} (${(relayStat.validationRatio * 100).toFixed(2)}%)`
         )
-        console.log(
+        log(
           `    Target Validation Ratio: ${relayStat.targetValidationRatio?.toFixed(4) || "N/A"} (${relayStat.targetValidationRatio ? (relayStat.targetValidationRatio * 100).toFixed(2) + "%" : "N/A"})`
         )
-        console.log(`    Trusted: ${relayStat.trusted ? "Yes" : "No"}`)
+        log(`    Trusted: ${relayStat.trusted ? "Yes" : "No"}`)
       })
     }
 
-    console.log("\nGlobal Settings:")
-    console.log(
+    log("\nGlobal Settings:")
+    log(
       `  Initial Validation Ratio: ${stats.initialValidationRatio.toFixed(4)} (${(stats.initialValidationRatio * 100).toFixed(2)}%)`
     )
-    console.log(
+    log(
       `  Lowest Validation Ratio: ${stats.lowestValidationRatio.toFixed(4)} (${(stats.lowestValidationRatio * 100).toFixed(2)}%)`
     )
-    console.log("===========================================\n")
+    log("===========================================\n")
   }
 
   /**

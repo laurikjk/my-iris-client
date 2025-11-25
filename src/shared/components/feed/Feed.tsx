@@ -58,7 +58,16 @@ const Feed = memo(function Feed({
   }
 
   const myPubKey = useUserStore((state) => state.publicKey)
-  const follows = useFollows(myPubKey, true)
+  const isSocialGraphLoaded = useSocialGraphLoaded()
+
+  // Call useFollows to keep follow list updated in background
+  useFollows(myPubKey, true)
+
+  // Get follows synchronously from social graph instead of waiting for state
+  const follows = useMemo(() => {
+    if (!myPubKey || !isSocialGraphLoaded) return []
+    return Array.from(socialGraph().getFollowedByUser(myPubKey, true))
+  }, [myPubKey, isSocialGraphLoaded])
 
   // Enhance filters with authors list for follow-distance-based feeds
   const filters = useMemo(() => {
@@ -307,8 +316,6 @@ const Feed = memo(function Feed({
     }
   }, [feedConfig.autoShowNewEvents, newEventsFiltered.length, showNewEventsWithHighlight])
 
-  const isSocialGraphLoaded = useSocialGraphLoaded()
-
   useEffect(() => {
     if (forceUpdate !== undefined) {
       setForceUpdateCount((prev) => prev + 1)
@@ -359,6 +366,7 @@ const Feed = memo(function Feed({
                       event={event}
                       borderTop={borderTopFirst && index === 0}
                       highlightAsNew={eventsToHighlight.has(event.id)}
+                      showAuthorInZapReceipts={feedConfig.showAuthorInZapReceipts}
                     />
                   </div>
                 ))}

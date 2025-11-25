@@ -2,11 +2,15 @@ import {useState, useEffect} from "react"
 import {RiBitCoinFill, RiLockLine} from "@remixicon/react"
 import type {Proof} from "@cashu/cashu-ts"
 import Embed, {type EmbedComponentProps} from "./index.ts"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 function CashuTokenComponent({match, event}: EmbedComponentProps) {
   const [amount, setAmount] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string>("")
+  const [errorMessage, setErrorMessage] = useState<string>("")
   const [copied, setCopied] = useState(false)
   const [redeeming, setRedeeming] = useState(false)
   const [redeemed, setRedeemed] = useState(false)
@@ -90,9 +94,11 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
           const myPubKey = useUserStore.getState().publicKey
           setCanRedeem(lockedPubkey === myPubKey)
         }
-      } catch (err) {
-        console.error("❌ Failed to decode cashu token:", err)
-        setError(err instanceof Error ? err.message : "Invalid token")
+      } catch (caughtError) {
+        error("❌ Failed to decode cashu token:", caughtError)
+        setErrorMessage(
+          caughtError instanceof Error ? caughtError.message : "Invalid token"
+        )
       } finally {
         setLoading(false)
       }
@@ -103,13 +109,13 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
 
   const handleRedeem = async () => {
     setRedeeming(true)
-    setError("")
+    setErrorMessage("")
     try {
       const {getCashuManager} = await import("@/lib/cashu/manager")
       const manager = getCashuManager()
 
       if (!manager) {
-        setError("Wallet not initialized")
+        setErrorMessage("Wallet not initialized")
         return
       }
 
@@ -146,7 +152,7 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
 
       // Fallback: extract from event content if memo is empty
       if (!message && event?.content) {
-        const tokenMatch = event.content.match(/cashu[A-Za-z0-9_-]+/)
+        const tokenMatch = event.content.match(/cashu[A-Za-z0-9_-]{20,}/)
         if (tokenMatch) {
           const afterToken = event.content
             .slice(tokenMatch.index! + tokenMatch[0].length)
@@ -171,7 +177,7 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
       if (mintUrl) {
         const isKnown = await manager.mint.isKnownMint(mintUrl)
         if (!isKnown) {
-          console.log("➕ Adding unknown mint before redeeming:", mintUrl)
+          log("➕ Adding unknown mint before redeeming:", mintUrl)
           await manager.mint.addMint(mintUrl)
         }
       }
@@ -189,9 +195,11 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
 
       setRedeemed(true)
       setLastCheckStatus(null) // Clear status display after redeeming
-    } catch (err) {
-      console.error("Failed to redeem token:", err)
-      setError(err instanceof Error ? err.message : "Failed to redeem")
+    } catch (caughtError) {
+      error("Failed to redeem token:", caughtError)
+      setErrorMessage(
+        caughtError instanceof Error ? caughtError.message : "Failed to redeem"
+      )
     } finally {
       setRedeeming(false)
     }
@@ -205,13 +213,13 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
 
   const handleCheckStatus = async () => {
     setChecking(true)
-    setError("")
+    setErrorMessage("")
     try {
       const {getCashuManager} = await import("@/lib/cashu/manager")
       const manager = getCashuManager()
 
       if (!manager) {
-        setError("Wallet not initialized")
+        setErrorMessage("Wallet not initialized")
         return
       }
 
@@ -232,7 +240,7 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
       }
 
       if (proofs.length === 0) {
-        setError("No proofs found in token")
+        setErrorMessage("No proofs found in token")
         return
       }
 
@@ -274,16 +282,18 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
         }
         setRedeemed(true)
       }
-    } catch (err) {
-      console.error("Failed to check token status:", err)
-      setError(err instanceof Error ? err.message : "Failed to check status")
+    } catch (caughtError) {
+      error("Failed to check token status:", caughtError)
+      setErrorMessage(
+        caughtError instanceof Error ? caughtError.message : "Failed to check status"
+      )
     } finally {
       setChecking(false)
     }
   }
 
   return (
-    <div className="cashu-token-embed flex flex-col gap-3 p-4 bg-base-200 rounded-lg border border-base-300 my-2 min-w-80">
+    <div className="cashu-token-embed flex flex-col gap-3 p-4 bg-base-200 rounded-lg border border-base-300 my-2 sm:min-w-80">
       <div className="flex items-center gap-3">
         <div className="flex-shrink-0">
           <RiBitCoinFill className="w-10 h-10 text-warning" />
@@ -291,8 +301,8 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
         <div className="flex-1 min-w-0">
           <div className="text-sm text-base-content/70">
             {loading && "Decoding token..."}
-            {error && <span className="text-error">{error}</span>}
-            {amount !== null && !error ? (
+            {errorMessage && <span className="text-error">{errorMessage}</span>}
+            {amount !== null && !errorMessage ? (
               <>
                 <div className="font-semibold text-base flex items-center gap-2">
                   {amount} bits
@@ -351,7 +361,9 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
               <button
                 onClick={handleRedeem}
                 className="text-xs text-base-content/50 hover:text-base-content/70 underline"
-                disabled={loading || !!error || redeeming || redeemed || tokenSpent}
+                disabled={
+                  loading || !!errorMessage || redeeming || redeemed || tokenSpent
+                }
               >
                 {redeeming && "Redeeming..."}
                 {!redeeming && redeemed && "Redeemed"}
@@ -373,7 +385,7 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
             <button
               onClick={handleRedeem}
               className="btn btn-primary btn-sm flex-1"
-              disabled={loading || !!error || redeeming || redeemed}
+              disabled={loading || !!errorMessage || redeeming || redeemed}
             >
               {redeeming ? "Redeeming..." : "Redeem"}
             </button>
@@ -393,7 +405,7 @@ function CashuTokenComponent({match, event}: EmbedComponentProps) {
 }
 
 const CashuToken: Embed = {
-  regex: /(cashu[A-Za-z0-9_-]+)/gi,
+  regex: /(?<![/.])(?:^|\s)(cashu[A-Za-z0-9_-]{20,})(?:\s|$)/gi,
   component: CashuTokenComponent,
   settingsKey: "cashu",
 }

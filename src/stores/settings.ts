@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {persist} from "zustand/middleware"
 import {create} from "zustand"
 import localforage from "localforage"
-import {isTouchDevice} from "@/shared/utils/isTouchDevice"
 
-interface SettingsState {
+export interface SettingsState {
   // Appearance settings
   appearance: {
     theme: string
@@ -53,10 +53,10 @@ interface SettingsState {
     webrtcMaxOutbound: number
     webrtcMaxInbound: number
     webrtcConnectToOwnDevices: boolean
-    webrtcLogLevel: "debug" | "info" | "warn" | "error"
     p2pOnlyMode: boolean
     webrtcCallsEnabled: boolean
     webrtcFileReceivingEnabled: boolean
+    negentropyEnabled: boolean
   }
   // Desktop settings
   desktop: {
@@ -102,7 +102,7 @@ export const useSettingsStore = create<SettingsState>()(
         showReplies: true,
         showZaps: true,
         showReactionsBar: true,
-        showReactionCounts: !isTouchDevice, // Hide in feed on mobile by default
+        showReactionCounts: true,
         showReactionCountsInStandalone: true, // Always show in post view by default
         hideReactionsBarInStandalone: false, // Hide reactions bar in standalone posts
         hideZapsBarInStandalone: false, // Hide zaps bar in standalone posts
@@ -130,10 +130,10 @@ export const useSettingsStore = create<SettingsState>()(
         webrtcMaxOutbound: 5,
         webrtcMaxInbound: 5,
         webrtcConnectToOwnDevices: true,
-        webrtcLogLevel: "info",
         p2pOnlyMode: false,
         webrtcCallsEnabled: true,
         webrtcFileReceivingEnabled: true,
+        negentropyEnabled: false,
       },
       desktop: {
         startOnBoot: true,
@@ -205,10 +205,10 @@ export const useSettingsStore = create<SettingsState>()(
             webrtcMaxOutbound: 5,
             webrtcMaxInbound: 5,
             webrtcConnectToOwnDevices: true,
-            webrtcLogLevel: "info",
             p2pOnlyMode: false,
             webrtcCallsEnabled: true,
             webrtcFileReceivingEnabled: true,
+            negentropyEnabled: false,
           }
         }
         // Migrate network settings without new fields
@@ -222,17 +222,24 @@ export const useSettingsStore = create<SettingsState>()(
           if (state.network.webrtcConnectToOwnDevices === undefined) {
             state.network.webrtcConnectToOwnDevices = true
           }
-          if (state.network.webrtcLogLevel === undefined) {
-            state.network.webrtcLogLevel = "info"
-          }
           if (state.network.p2pOnlyMode === undefined) {
             state.network.p2pOnlyMode = false
+          }
+          // Clean up deprecated settings
+          if ((state.network as any).useWorkerTransport !== undefined) {
+            delete (state.network as any).useWorkerTransport
+          }
+          if ((state.network as any).webrtcLogLevel !== undefined) {
+            delete (state.network as any).webrtcLogLevel
           }
           if (state.network.webrtcCallsEnabled === undefined) {
             state.network.webrtcCallsEnabled = true
           }
           if (state.network.webrtcFileReceivingEnabled === undefined) {
             state.network.webrtcFileReceivingEnabled = true
+          }
+          if (state.network.negentropyEnabled === undefined) {
+            state.network.negentropyEnabled = false
           }
         }
       },

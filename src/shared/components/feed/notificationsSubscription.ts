@@ -15,7 +15,11 @@ import {
   KIND_ZAP_RECEIPT,
   KIND_HIGHLIGHT,
   KIND_PICTURE_FIRST,
+  DEBUG_NAMESPACES,
 } from "@/utils/constants"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+
+const {log, warn} = createDebugLogger(DEBUG_NAMESPACES.UI_FEED)
 
 // Callback for desktop notifications
 let desktopNotificationCallback: ((event: NDKEvent) => void) | null = null
@@ -83,9 +87,7 @@ const cleanupMutedNotifications = () => {
   toRemove.forEach((key) => notifications.delete(key))
 
   if (cleanedCount > 0 || toRemove.length > 0) {
-    console.log(
-      `Cleaned ${cleanedCount} events and removed ${toRemove.length} notifications`
-    )
+    log(`Cleaned ${cleanedCount} events and removed ${toRemove.length} notifications`)
   }
 }
 
@@ -167,7 +169,7 @@ export const startNotificationsSubscription = debounce(async (myPubKey?: string)
         } as IrisNotification)
       const user = event.kind === KIND_ZAP_RECEIPT ? getZappingUser(event) : event.pubkey
       if (!user) {
-        console.warn("no user for event", event)
+        warn("no user for event", event)
         return
       }
 

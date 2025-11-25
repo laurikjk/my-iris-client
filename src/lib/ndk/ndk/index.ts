@@ -88,6 +88,12 @@ export interface NDKConstructorParams {
   autoConnectUserRelays?: boolean
 
   /**
+   * Enable negentropy sync (NIP-77) for efficient event reconciliation
+   * @default false
+   */
+  negentropyEnabled?: boolean
+
+  /**
    * Signer to use for signing events by default
    */
   signer?: NDKSigner
@@ -380,6 +386,16 @@ export class NDK extends EventEmitter<{
   }> = []
 
   /**
+   * P2P-only mode: use relays only for signaling, get events from peers
+   */
+  public p2pOnlyMode: boolean = false
+
+  /**
+   * Enable negentropy sync (NIP-77) for efficient event reconciliation
+   */
+  public negentropyEnabled: boolean = false
+
+  /**
    * Default relay-auth policy that will be used when a relay requests authentication,
    * if no other policy is specified for that relay.
    *
@@ -443,6 +459,7 @@ export class NDK extends EventEmitter<{
     })
 
     this.autoConnectUserRelays = opts.autoConnectUserRelays ?? true
+    this.negentropyEnabled = opts.negentropyEnabled ?? false
 
     this.clientName = opts.clientName
     this.clientNip89 = opts.clientNip89
@@ -1078,6 +1095,23 @@ export class NDK extends EventEmitter<{
     let filters: NDKFilter[]
     let relaySet: NDKRelaySet | undefined
 
+    // Check seenEvents cache first if we have an event ID
+    if (typeof idOrFilter === "string") {
+      filters = [filterFromId(idOrFilter)]
+      // Extract event ID from filter
+      const eventId = filters[0]?.ids?.[0]
+      if (eventId) {
+        const seenData = this.subManager.seenEvents.get(eventId)
+        if (seenData?.processedEvent) {
+          return seenData.processedEvent
+        }
+      }
+    } else if (Array.isArray(idOrFilter)) {
+      filters = idOrFilter
+    } else {
+      filters = [idOrFilter]
+    }
+
     // Check if this relaySetOrRelay is an NDKRelay, if it is, make it a relaySet
     if (relaySetOrRelay instanceof NDKRelay) {
       relaySet = new NDKRelaySet(new Set([relaySetOrRelay]), this)
@@ -1100,14 +1134,6 @@ export class NDK extends EventEmitter<{
       }
     }
 
-    if (typeof idOrFilter === "string") {
-      filters = [filterFromId(idOrFilter)]
-    } else if (Array.isArray(idOrFilter)) {
-      filters = idOrFilter
-    } else {
-      filters = [idOrFilter]
-    }
-
     // Run guardrails check on the filter when it's passed as an object (not a string)
     if (typeof idOrFilter !== "string") {
       this.aiGuardrails?.ndk?.fetchingEvents(filters)
@@ -1123,13 +1149,15 @@ export class NDK extends EventEmitter<{
       // Prepare options, including the relaySet if available
       const subscribeOpts: NDKSubscriptionOptions = {
         ...(opts || {}),
-        closeOnEose: true,
+        closeOnEose: false, // Keep sub open until we get event or timeout
+        // Give cache 100ms to respond before querying relays
+        groupable: true,
+        groupableDelay: 100,
+        groupableDelayType: "at-least",
       }
       if (relaySet) subscribeOpts.relaySet = relaySet
 
-      /** This is a workaround, for some reason we're leaking subscriptions that should EOSE and fetchEvent is not
-       * seeing them; this is a temporary fix until we find the bug.
-       */
+      // 10s timeout - keep sub open to allow network relays to respond after cache EOSE
       const t2 = setTimeout(() => {
         s.stop()
         this.aiGuardrails["_nextCallDisabled"] = null
@@ -1143,6 +1171,7 @@ export class NDK extends EventEmitter<{
           // We only emit immediately when the event is not replaceable
           if (!event.isReplaceable()) {
             clearTimeout(t2)
+            s.stop()
             this.aiGuardrails["_nextCallDisabled"] = null
             resolve(event)
           } else if (!fetchedEvent || fetchedEvent.created_at! < event.created_at!) {
@@ -1150,9 +1179,8 @@ export class NDK extends EventEmitter<{
           }
         },
         onEose: () => {
-          clearTimeout(t2)
-          this.aiGuardrails["_nextCallDisabled"] = null
-          resolve(fetchedEvent)
+          // Don't close on EOSE - let timeout handle it
+          // This allows network relays to respond even if cache EOSEs first
         },
       })
     })

@@ -1,7 +1,6 @@
 import MarketListing from "../../market/MarketListing"
 import ChannelCreation from "../ChannelCreation.tsx"
 import {NDKEvent} from "@/lib/ndk"
-import ZapReceipt from "../ZapReceipt.tsx"
 import {
   KIND_ZAP_RECEIPT,
   KIND_REACTION,
@@ -30,13 +29,9 @@ const FeedItemContent = ({event, referredEvent, standalone, truncate}: ContentPr
   if (!event) {
     return ""
   } else if (event.kind === KIND_ZAP_RECEIPT) {
-    // For zap receipts, if there's a referred event, show that instead
-    // If no referred event, it's a direct zap to user, show ZapReceipt
-    return referredEvent ? (
-      <TextNote event={referredEvent} truncate={truncate} />
-    ) : (
-      <ZapReceipt event={event} />
-    )
+    // For zap receipts, zap info is shown in FeedItemHeader
+    // Only show the referred event if it exists
+    return referredEvent ? <TextNote event={referredEvent} truncate={truncate} /> : null
   } else if (event.kind === KIND_REACTION) {
     // For reactions, show both the reaction info and the referred event if available
     return referredEvent ? (

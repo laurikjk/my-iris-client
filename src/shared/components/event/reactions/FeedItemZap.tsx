@@ -9,7 +9,7 @@ import {formatAmount} from "@/utils/utils.ts"
 import {usePublicKey, useUserStore} from "@/stores/user"
 import {useScrollAwareLongPress} from "@/shared/hooks/useScrollAwareLongPress"
 import Icon from "../../Icons/Icon.tsx"
-import ZapModal from "../ZapModal.tsx"
+import ZapModal from "../ZapModal"
 import debounce from "lodash/debounce"
 import {ndk} from "@/utils/ndk"
 import {KIND_ZAP_RECEIPT} from "@/utils/constants"
@@ -26,7 +26,13 @@ interface FeedItemZapProps {
 
 function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZapProps) {
   const myPubKey = usePublicKey()
-  const {defaultZapAmount, defaultZapComment} = useUserStore()
+  const {
+    defaultZapAmount,
+    defaultZapComment,
+    zapDonationEnabled,
+    zapDonationRecipients,
+    zapDonationMinAmount,
+  } = useUserStore()
   const {activeProviderType, sendPayment: walletProviderSendPayment} =
     useWalletProviderStore()
   const {
@@ -196,6 +202,24 @@ function FeedItemZap({event, feedItemRef, showReactionCounts = true}: FeedItemZa
         // Try to pay with wallet
         await walletProviderSendPayment(invoice)
         // Payment succeeded - optimistic zap stays
+
+        // Send donation zaps if enabled
+        if (zapDonationEnabled && zapDonationRecipients.length > 0) {
+          try {
+            const {calculateMultiRecipientDonations, sendDonationZaps} = await import(
+              "@/utils/nostr"
+            )
+            const donations = calculateMultiRecipientDonations(
+              amount / 1000,
+              zapDonationRecipients,
+              zapDonationMinAmount
+            )
+
+            await sendDonationZaps(donations, signer, event, walletProviderSendPayment)
+          } catch (donationError) {
+            console.warn("Donation zaps failed (non-fatal):", donationError)
+          }
+        }
       } catch (error) {
         console.warn("Quick zap payment failed:", error)
 

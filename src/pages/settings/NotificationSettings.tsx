@@ -17,6 +17,10 @@ import Icon from "@/shared/components/Icons/Icon"
 import {RiArrowRightSLine, RiArrowDownSLine} from "@remixicon/react"
 import debounce from "lodash/debounce"
 import {confirm, alert, isTauri, isMobileTauri} from "@/utils/utils"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface StatusIndicatorProps {
   status: boolean
@@ -88,7 +92,7 @@ const NotificationSettings = () => {
         setSubscribedToPush(true)
       }
     } catch (e) {
-      console.error(e)
+      error(e)
     }
   }
 
@@ -102,10 +106,10 @@ const NotificationSettings = () => {
         try {
           const {isPermissionGranted} = await import("@tauri-apps/plugin-notification")
           const granted = await isPermissionGranted()
-          console.log("[NotificationSettings] Tauri permission check:", granted)
+          log("[NotificationSettings] Tauri permission check:", granted)
           setTauriPermissionGranted(granted)
         } catch (e) {
-          console.error("Failed to check Tauri notification permission:", e)
+          error("Failed to check Tauri notification permission:", e)
         }
       }
     }
@@ -130,8 +134,8 @@ const NotificationSettings = () => {
           if (subscription) {
             setCurrentEndpoint(subscription.endpoint)
           }
-        } catch (error) {
-          console.error("Failed to get current subscription endpoint:", error)
+        } catch (err) {
+          error("Failed to get current subscription endpoint:", err)
         }
       }
     }
@@ -150,10 +154,10 @@ const NotificationSettings = () => {
   }
 
   const fireTestNotification = async () => {
-    console.log("[Test Notification] isTauri:", isTauriApp)
+    log("[Test Notification] isTauri:", isTauriApp)
     if (isTauriApp) {
       // Tauri notifications (desktop or mobile)
-      console.log("[Test Notification] Sending Tauri notification")
+      log("[Test Notification] Sending Tauri notification")
       try {
         const {sendNotification, isPermissionGranted, requestPermission} = await import(
           "@tauri-apps/plugin-notification"
@@ -161,34 +165,34 @@ const NotificationSettings = () => {
 
         // Check permission first
         let granted = await isPermissionGranted()
-        console.log("[Test Notification] Initial permission:", granted)
+        log("[Test Notification] Initial permission:", granted)
 
         if (!granted) {
-          console.log("[Test Notification] Requesting permission...")
+          log("[Test Notification] Requesting permission...")
           const permission = await requestPermission()
           granted = permission === "granted"
-          console.log("[Test Notification] Permission result:", permission)
+          log("[Test Notification] Permission result:", permission)
         }
 
         if (granted) {
           // Send notification
-          console.log("[Test Notification] Sending notification...")
+          log("[Test Notification] Sending notification...")
           await sendNotification({
             title: "Test Notification",
             body: "Notifications are working!",
           })
-          console.log("[Test Notification] Sent successfully")
+          log("[Test Notification] Sent successfully")
         } else {
-          console.log("[Test Notification] Permission denied")
+          log("[Test Notification] Permission denied")
           await alert(
             "Permission denied. Please enable notifications in system settings."
           )
         }
 
         setTauriPermissionGranted(granted)
-      } catch (error) {
-        console.error("[Test Notification] Error:", error)
-        await alert(`Error: ${error}`)
+      } catch (err) {
+        error("[Test Notification] Error:", err)
+        await alert(`Error: ${err}`)
       }
       return
     }
@@ -233,8 +237,8 @@ const NotificationSettings = () => {
         const api = new IrisAPI(notifications.server)
         const data = await api.getNotificationSubscriptions()
         setSubscriptionsData(data)
-      } catch (error) {
-        console.error("Failed to fetch subscriptions:", error)
+      } catch (err) {
+        error("Failed to fetch subscriptions:", err)
       }
     }
 
@@ -245,7 +249,7 @@ const NotificationSettings = () => {
     try {
       const api = new IrisAPI(notifications.server)
       await api.deleteNotificationSubscription(subscriptionId)
-      console.log(`Deleted subscription with ID: ${subscriptionId}`)
+      log(`Deleted subscription with ID: ${subscriptionId}`)
       // Optionally, update the local state to reflect the deletion
       setSubscriptionsData((prevData) => {
         const newData = {...prevData}
@@ -257,8 +261,8 @@ const NotificationSettings = () => {
         newSet.delete(subscriptionId)
         return newSet
       })
-    } catch (error) {
-      console.error(`Failed to delete subscription with ID: ${subscriptionId}`, error)
+    } catch (err) {
+      error(`Failed to delete subscription with ID: ${subscriptionId}`, err)
     }
   }
 

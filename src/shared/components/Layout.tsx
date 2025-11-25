@@ -20,7 +20,6 @@ import HomeFeed from "@/pages/home/feed/components/HomeFeed"
 import UnifiedSearchContent from "@/shared/components/search/UnifiedSearchContent"
 import {ScrollProvider} from "@/contexts/ScrollContext"
 import Header from "@/shared/components/header/Header"
-import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import useFollows from "@/shared/hooks/useFollows"
 import {usePublicKey} from "@/stores/user"
 import {
@@ -47,7 +46,7 @@ const Layout = ({children}: {children: ReactNode}) => {
   const newPostOpen = useUIStore((state) => state.newPostOpen)
   const setNewPostOpen = useUIStore((state) => state.setNewPostOpen)
   const navItemClicked = useUIStore((state) => state.navItemClicked)
-  const {appearance, updateAppearance} = useSettingsStore()
+  const {appearance} = useSettingsStore()
   const goToNotifications = useUIStore((state) => state.goToNotifications)
   const showLoginDialog = useUIStore((state) => state.showLoginDialog)
   const setShowLoginDialog = useUIStore((state) => state.setShowLoginDialog)
@@ -264,26 +263,7 @@ const Layout = ({children}: {children: ReactNode}) => {
             }`}
           >
             <Header showBack={false} showNotifications={true}>
-              <div className="flex items-center justify-between w-full">
-                <span className="md:px-3 md:py-2">{middleColumnTitle}</span>
-                <button
-                  className="p-2 bg-base-100 hover:bg-base-200 rounded-full transition-colors mt-1"
-                  onClick={() =>
-                    updateAppearance({singleColumnLayout: !appearance.singleColumnLayout})
-                  }
-                  title={
-                    appearance.singleColumnLayout
-                      ? "Expand to two columns"
-                      : "Collapse to single column"
-                  }
-                >
-                  {appearance.singleColumnLayout ? (
-                    <RiArrowLeftSLine className="w-5 h-5" />
-                  ) : (
-                    <RiArrowRightSLine className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
+              <span className="md:px-3 md:py-2">{middleColumnTitle}</span>
             </Header>
             <div
               ref={middleColumnRef}

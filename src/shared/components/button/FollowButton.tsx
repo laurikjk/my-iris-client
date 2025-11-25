@@ -3,10 +3,11 @@ import {PublicKey} from "@/shared/utils/PublicKey"
 import {useMemo, useState, useEffect} from "react"
 
 import {unmuteUser} from "@/shared/services/Mute"
-import socialGraph from "@/utils/socialGraph.ts"
+import socialGraph, {handleSocialGraphEvent} from "@/utils/socialGraph.ts"
 import {useUserStore} from "@/stores/user"
 import {ndk} from "@/utils/ndk"
 import {getUnmuteLabel} from "@/utils/muteLabels"
+import {NostrEvent} from "nostr-social-graph"
 
 export function FollowButton({pubKey, small = true}: {pubKey: string; small?: boolean}) {
   const myPubKey = useUserStore((state) => state.publicKey)
@@ -79,6 +80,12 @@ export function FollowButton({pubKey, small = true}: {pubKey: string; small?: bo
     }
 
     event.tags = Array.from(followedUsers).map((pubKey) => ["p", pubKey]) as NDKTag[]
+    event.created_at = Math.floor(Date.now() / 1000)
+    event.pubkey = myPubKey
+
+    // Feed to social graph immediately for instant UI update
+    handleSocialGraphEvent(event as unknown as NostrEvent)
+
     event.publish().catch((e) => console.warn("Error publishing follow event:", e))
 
     setTimeout(() => {

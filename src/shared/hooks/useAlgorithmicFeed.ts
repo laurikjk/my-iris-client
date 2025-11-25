@@ -31,10 +31,16 @@ interface FeedConfig {
   filterSeen?: boolean
   showReplies?: boolean
   popularRatio?: number
+  excludeOwnPosts?: boolean
 }
 
 export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig = {}) {
-  const {showReplies = false, filterSeen = false, popularRatio = 0.5} = config
+  const {
+    showReplies = false,
+    filterSeen = false,
+    popularRatio = 0.5,
+    excludeOwnPosts = false,
+  } = config
 
   const {currentFilters, expandFilters} = usePopularityFilters(filterSeen)
 
@@ -49,7 +55,8 @@ export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig 
     useChronologicalSubscription(
       cache.chronologicalSubscription || {},
       filterSeen,
-      showReplies
+      showReplies,
+      excludeOwnPosts
     )
 
   const result = useCombinedPostFetcher({
@@ -59,6 +66,7 @@ export default function useAlgorithmicFeed(cache: FeedCache, config: FeedConfig 
     hasChronologicalData,
     cache: cache.combinedPostFetcher || {},
     popularRatio,
+    excludeOwnPosts,
   })
 
   return result

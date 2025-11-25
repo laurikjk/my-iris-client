@@ -6,19 +6,25 @@ import NDK, {
   NDKRelayAuthPolicies,
   NDKUser,
 } from "@/lib/ndk"
-import NDKCacheAdapterDexie from "@/lib/ndk-cache"
+import {NDKWorkerTransport} from "@/lib/ndk-transport-worker"
+import {NDKTauriTransport} from "@/lib/ndk-transport-tauri"
 import {useUserStore} from "@/stores/user"
+import {useSettingsStore} from "@/stores/settings"
 import {DEFAULT_RELAYS} from "@/shared/constants/relays"
 import {isTouchDevice} from "@/shared/utils/isTouchDevice"
-import {relayLogger} from "@/utils/relay/RelayLogger"
 import {WebRTCTransportPlugin} from "@/utils/chat/webrtc/WebRTCTransportPlugin"
 import {setWebRTCPlugin} from "@/utils/chat/webrtc/p2pMessages"
-import {shouldHideEvent} from "@/utils/visibility"
-import socialGraph from "@/utils/socialGraph"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+import {isTauri} from "@/utils/utils"
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.NDK_RELAY)
 
 let ndkInstance: NDK | null = null
 let privateKeySigner: NDKPrivateKeySigner | undefined
 let nip07Signer: NDKNip07Signer | undefined
+let initPromise: Promise<void> | null = null
+let workerTransport: NDKWorkerTransport | undefined
+let tauriTransport: NDKTauriTransport | undefined
 
 function normalizeRelayUrl(url: string): string {
   // Ensure URL ends with / to match NDK's internal normalization
@@ -28,179 +34,167 @@ function normalizeRelayUrl(url: string): string {
 export {DEFAULT_RELAYS}
 
 /**
+ * Get worker transport instance (only available when worker transport enabled)
+ */
+export function getWorkerTransport(): NDKWorkerTransport | undefined {
+  return workerTransport
+}
+
+/**
+ * Get Tauri transport instance (only available in Tauri mode)
+ */
+export function getTauriTransport(): NDKTauriTransport | undefined {
+  return tauriTransport
+}
+
+/**
  * Get a singleton "default" NDK instance to get started quickly. If you want to init NDK with e.g. your own relays, pass them on the first call.
  *
  * This needs to be called to make nip07 login features work.
- * @throws Error if NDK init options are passed after the first call
+ * @throws Error if NDK init options are passed after the first call or if called before initNDKAsync
  */
 export const ndk = (opts?: NDKConstructorParams): NDK => {
   if (!ndkInstance) {
-    const store = useUserStore.getState()
-
-    // Only include enabled relays
-    const enabledRelays =
-      store.relayConfigs?.filter((c) => !c.disabled).map((c) => c.url) || []
-    const relays = opts?.explicitRelayUrls || enabledRelays
-
-    console.log("Initializing NDK with enabled relays:", relays)
-
-    // Log when using test relay
-    if (import.meta.env.VITE_USE_TEST_RELAY) {
-      console.log("🧪 Using test relay only: wss://temp.iris.to/")
-    }
-
-    const enableOutbox = import.meta.env.VITE_USE_LOCAL_RELAY
-      ? false
-      : store.ndkOutboxModel
-
-    const autoConnectUserRelays = import.meta.env.VITE_USE_LOCAL_RELAY
-      ? false
-      : store.autoConnectUserRelays
-
-    console.log(
-      "Initializing NDK with outbox model:",
-      enableOutbox,
-      "autoConnectUserRelays:",
-      autoConnectUserRelays
+    throw new Error(
+      "NDK not initialized - call await initNDKAsync() before using ndk() or rendering app"
     )
-
-    // Check relay connection filter - always check current state from store
-    const relayConnectionFilter = (relayUrl: string) => {
-      const currentStore = useUserStore.getState()
-      const normalizedUrl = normalizeRelayUrl(relayUrl)
-
-      // Check if relay is in current config
-      const relayConfig = currentStore.relayConfigs?.find(
-        (c) => normalizeRelayUrl(c.url) === normalizedUrl
-      )
-
-      // If relay is in config and disabled, block it
-      if (relayConfig?.disabled) {
-        console.log("Blocking disabled relay:", relayUrl)
-        return false
-      }
-
-      // If relay is in config and enabled, allow it
-      if (relayConfig && !relayConfig.disabled) {
-        return true
-      }
-
-      // If relay not in config, check outbox/autoConnect settings
-      const currentEnableOutbox = import.meta.env.VITE_USE_LOCAL_RELAY
-        ? false
-        : currentStore.ndkOutboxModel
-      const currentAutoConnect = import.meta.env.VITE_USE_LOCAL_RELAY
-        ? false
-        : currentStore.autoConnectUserRelays
-
-      if (!currentEnableOutbox && !currentAutoConnect) {
-        console.log("Blocking discovered relay:", relayUrl)
-        return false
-      }
-
-      // Otherwise allow (outbox/autoConnect will handle discovery)
-      return true
-    }
-
-    const options = opts || {
-      explicitRelayUrls: relays,
-      enableOutboxModel: enableOutbox,
-      autoConnectUserRelays,
-      relayConnectionFilter,
-
-      cacheAdapter: new NDKCacheAdapterDexie({
-        dbName: "treelike-nostr",
-        saveSig: true,
-        cachePriority: (event) => {
-          // Don't cache muted events
-          if (shouldHideEvent(event)) {
-            return 0
-          }
-
-          const myPubKey = store.publicKey
-          if (!myPubKey) return 0
-
-          // Own events = priority 1.0
-          if (event.pubkey === myPubKey) {
-            return 1.0
-          }
-
-          // Priority based on follow distance: 1 / (distance + 1)
-          const distance = socialGraph().getFollowDistance(event.pubkey)
-          if (distance === Infinity) {
-            return 0 // Unknown author
-          }
-
-          return 1 / (distance + 1)
-        },
-      }) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-    }
-    ndkInstance = new NDK(options)
-
-    // Set up initial signer if we have a private key
-    if (store.privateKey && typeof store.privateKey === "string") {
-      try {
-        privateKeySigner = new NDKPrivateKeySigner(store.privateKey)
-        if (!store.nip07Login) {
-          ndkInstance.signer = privateKeySigner
-        }
-      } catch (e) {
-        console.error("Error setting initial private key signer:", e)
-      }
-    }
-
-    // Set up NIP-07 signer if enabled
-    if (store.nip07Login) {
-      nip07Signer = new NDKNip07Signer()
-      ndkInstance.signer = nip07Signer
-    }
-
-    watchLocalSettings(ndkInstance)
-    ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
-    setupVisibilityReconnection(ndkInstance)
-    attachRelayLogger(ndkInstance)
-    setupWebRTCTransport(ndkInstance)
-    ndkInstance.connect()
-
-    console.log("NDK instance initialized", ndkInstance)
   } else if (opts) {
     throw new Error("NDK instance already initialized, cannot pass options")
   }
-  return ndkInstance
+  return ndkInstance!
+}
+
+/**
+ * Initialize NDK asynchronously (required due to async cache adapter)
+ * Must be called before ndk() or before mounting React app
+ */
+export async function initNDKAsync(opts?: NDKConstructorParams): Promise<NDK> {
+  if (initPromise) {
+    await initPromise
+    return ndkInstance!
+  }
+
+  initPromise = initNDK(opts)
+  await initPromise
+  return ndkInstance!
+}
+
+async function initNDK(opts?: NDKConstructorParams) {
+  const store = useUserStore.getState()
+
+  // Only include enabled relays
+  const enabledRelays =
+    store.relayConfigs?.filter((c) => !c.disabled).map((c) => c.url) || []
+  const relays = opts?.explicitRelayUrls || enabledRelays
+
+  log("Initializing NDK with enabled relays:", relays)
+
+  // Log when using test relay
+  if (import.meta.env.VITE_USE_TEST_RELAY) {
+    log("🧪 Using test relay only: wss://temp.iris.to/")
+  }
+
+  const enableOutbox = import.meta.env.VITE_USE_LOCAL_RELAY ? false : store.ndkOutboxModel
+
+  const autoConnectUserRelays = import.meta.env.VITE_USE_LOCAL_RELAY
+    ? false
+    : store.autoConnectUserRelays
+
+  log(
+    "Initializing NDK with outbox model:",
+    enableOutbox,
+    "autoConnectUserRelays:",
+    autoConnectUserRelays
+  )
+
+  // Initialize transport based on environment
+  if (isTauri()) {
+    log("🔧 Using Tauri Transport - relay connections via Rust backend")
+    tauriTransport = new NDKTauriTransport()
+  } else {
+    log("🔧 Using Worker Transport - relay connections + cache + WASM sig verification")
+    // Vite bundles worker when it sees: new Worker(new URL(..., import.meta.url))
+    const worker = new Worker(new URL("../workers/relay-worker.ts", import.meta.url), {
+      type: "module",
+    })
+    workerTransport = new NDKWorkerTransport(worker)
+  }
+
+  const options = opts || {
+    explicitRelayUrls: [], // Worker handles relays
+    enableOutboxModel: false, // Worker handles outbox
+    autoConnectUserRelays: false,
+    relayConnectionFilter: undefined,
+    cacheAdapter: undefined, // Worker handles cache
+  }
+
+  // Replace placeholder or create new instance
+  const newInstance = new NDK(options)
+
+  // Connect transport
+  const transport = isTauri() ? tauriTransport : workerTransport
+  await transport!.connect(newInstance, relays)
+
+  // If placeholder exists, copy its properties to the new instance
+  if (ndkInstance) {
+    // Transfer any subscriptions or state from placeholder to real instance
+    Object.assign(ndkInstance, newInstance)
+  } else {
+    ndkInstance = newInstance
+  }
+
+  // Set up initial signer if we have a private key
+  if (store.privateKey && typeof store.privateKey === "string") {
+    try {
+      privateKeySigner = new NDKPrivateKeySigner(store.privateKey)
+      if (!store.nip07Login) {
+        ndkInstance.signer = privateKeySigner
+      }
+    } catch (e) {
+      error("Error setting initial private key signer:", e)
+    }
+  }
+
+  // Set up NIP-07 signer if enabled
+  if (store.nip07Login) {
+    nip07Signer = new NDKNip07Signer()
+    ndkInstance.signer = nip07Signer
+  }
+
+  // Set initial P2P mode
+  ndkInstance.p2pOnlyMode = useSettingsStore.getState().network.p2pOnlyMode
+
+  // Set initial activeUser from store (important for cache queries after refresh)
+  if (store.publicKey) {
+    ndkInstance.activeUser = new NDKUser({hexpubkey: store.publicKey})
+    log("Set initial activeUser:", store.publicKey.slice(0, 16) + "...")
+  }
+
+  watchLocalSettings(ndkInstance)
+  ndkInstance.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ndk: ndkInstance})
+
+  // Setup visibility reconnection (forwards to worker)
+  setupVisibilityReconnection()
+
+  setupWebRTCTransport(ndkInstance)
+
+  log("NDK instance initialized", ndkInstance)
 }
 
 /**
  * Setup listeners for visibility changes and network status to force immediate reconnection
  */
-function setupVisibilityReconnection(instance: NDK) {
+function setupVisibilityReconnection() {
   let wasHidden = false
-  let wasOffline = false
 
   const reconnectDisconnectedRelays = (reason: string) => {
-    console.log(`${reason}, checking relay connections...`)
-
-    // Force immediate reconnection for disconnected relays
-    // NDKRelayStatus: DISCONNECTED=1, RECONNECTING=2, FLAPPING=3, CONNECTING=4, CONNECTED=5+
-    for (const relay of instance.pool.relays.values()) {
-      if (relay.status < 5) {
-        // Check if this relay is explicitly disabled in config before reconnecting
-        const store = useUserStore.getState()
-        const relayConfig = store.relayConfigs?.find(
-          (c) => normalizeRelayUrl(c.url) === normalizeRelayUrl(relay.url)
-        )
-        if (relayConfig?.disabled) {
-          console.log(`Skipping reconnection to disabled relay: ${relay.url}`)
-          continue
-        }
-
-        // Not connected
-        console.log(`Forcing reconnection to ${relay.url} (status: ${relay.status})`)
-        relay.connect()
-      }
-    }
+    // Forward to transport
+    const transport = isTauri() ? tauriTransport : workerTransport
+    transport?.reconnectDisconnected?.(reason)
   }
 
   // Handle visibility changes (PWA/mobile only - desktop keeps WS open)
+  // Network events handled in worker directly
   if (isTouchDevice) {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -232,25 +226,6 @@ function setupVisibilityReconnection(instance: NDK) {
       }
     })
   }
-
-  // Handle network status changes
-  const handleOnline = () => {
-    if (wasOffline) {
-      wasOffline = false
-      reconnectDisconnectedRelays("Network connection restored")
-    }
-  }
-
-  const handleOffline = () => {
-    wasOffline = true
-    console.log("Network connection lost")
-  }
-
-  window.addEventListener("online", handleOnline)
-  window.addEventListener("offline", handleOffline)
-
-  // Initialize offline state
-  wasOffline = !navigator.onLine
 }
 
 /**
@@ -264,24 +239,18 @@ function setupWebRTCTransport(instance: NDK) {
   // Register plugin with NDK (native hook support)
   instance.transportPlugins.push(plugin)
 
-  console.log("WebRTC transport plugin initialized")
-}
-
-function attachRelayLogger(instance: NDK) {
-  // Attach to existing relays
-  for (const relay of instance.pool.relays.values()) {
-    relayLogger.attachToRelay(relay)
-  }
-
-  // Attach to new relays as they're added
-  const originalAddRelay = instance.pool.addRelay.bind(instance.pool)
-  instance.pool.addRelay = (relay: NDKRelay) => {
-    relayLogger.attachToRelay(relay)
-    return originalAddRelay(relay)
-  }
+  log("WebRTC transport plugin initialized")
 }
 
 function watchLocalSettings(instance: NDK) {
+  // Watch P2P-only mode setting
+  useSettingsStore.subscribe((state, prevState) => {
+    if (state.network.p2pOnlyMode !== prevState.network.p2pOnlyMode) {
+      instance.p2pOnlyMode = state.network.p2pOnlyMode
+      log("P2P-only mode:", state.network.p2pOnlyMode ? "enabled" : "disabled")
+    }
+  })
+
   useUserStore.subscribe((state, prevState) => {
     // Outbox model changes are handled by page reload in Network.tsx
     // No need to recreate NDK instance here
@@ -294,7 +263,7 @@ function watchLocalSettings(instance: NDK) {
             instance.signer = privateKeySigner
           }
         } catch (e) {
-          console.error("Error setting private key signer:", e)
+          error("Error setting private key signer:", e)
         }
       } else {
         privateKeySigner = undefined
@@ -314,7 +283,7 @@ function watchLocalSettings(instance: NDK) {
             useUserStore.getState().setPublicKey(user.pubkey)
           })
           .catch((e) => {
-            console.error("Error getting NIP-07 user:", e)
+            error("Error getting NIP-07 user:", e)
             useUserStore.getState().setNip07Login(false)
           })
       }
@@ -359,7 +328,7 @@ function watchLocalSettings(instance: NDK) {
               instance.pool.removeRelay(relayConfig.url) ||
               instance.pool.removeRelay(normalizedUrl)
             if (removed) {
-              console.log("Removed disabled relay from pool:", relayConfig.url)
+              log("Removed disabled relay from pool:", relayConfig.url)
             }
           } else if (isEnabled && existsInPool) {
             // Ensure enabled relay is connected
@@ -373,12 +342,6 @@ function watchLocalSettings(instance: NDK) {
           }
         })
       }
-    }
-
-    if (state.publicKey !== prevState.publicKey) {
-      instance.activeUser = state.publicKey
-        ? new NDKUser({hexpubkey: state.publicKey})
-        : undefined
     }
   })
 }

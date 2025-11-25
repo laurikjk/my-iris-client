@@ -126,6 +126,33 @@ export class NDKRelay extends EventEmitter<{
   private _relayInfo?: NDKRelayInformation
 
   /**
+   * NIPs that have been tested and found to be unsupported by this relay.
+   * Set of NIP numbers (e.g., 77 for Negentropy).
+   */
+  public unsupportedNips: Set<number> = new Set()
+
+  /**
+   * NIPs that have been confirmed to be supported by this relay.
+   * Once a NIP is marked as supported, it will never be marked as unsupported.
+   * Set of NIP numbers (e.g., 77 for Negentropy).
+   */
+  public supportedNips: Set<number> = new Set()
+
+  /**
+   * Negentropy (NIP-77) support status for this relay.
+   * - undefined: not tested yet
+   * - true: confirmed working (received NEG-MSG or NEG-ERR)
+   * - false: confirmed disabled (received NOTICE "negentropy disabled")
+   * Once set to true, never changes. In-memory only.
+   */
+  public negentropySupport?: boolean
+
+  /**
+   * Whether unsupported NIPs have been loaded from cache.
+   */
+  private unsupportedNipsLoaded = false
+
+  /**
    * The lowest validation ratio this relay can reach.
    */
   public lowestValidationRatio?: number
@@ -428,6 +455,28 @@ export class NDKRelay extends EventEmitter<{
    */
   public get info(): NDKRelayInformation | undefined {
     return this._relayInfo
+  }
+
+  /**
+   * Checks if the relay supports a specific NIP.
+   * Returns true if the relay explicitly lists support in NIP-11 metadata.
+   * Returns undefined if relay info hasn't been fetched yet.
+   * Use fetchInfo() first to populate relay information.
+   *
+   * @param nip The NIP number to check (e.g., 77 for Negentropy)
+   * @returns true if supported, false if not supported, undefined if unknown
+   *
+   * @example
+   * ```typescript
+   * await relay.fetchInfo();
+   * if (relay.supportsNip(77)) {
+   *   // Use Negentropy sync
+   * }
+   * ```
+   */
+  public supportsNip(nip: number): boolean | undefined {
+    if (!this._relayInfo) return undefined
+    return this._relayInfo.supported_nips?.includes(nip) ?? false
   }
 }
 

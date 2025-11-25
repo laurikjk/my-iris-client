@@ -10,8 +10,8 @@ import Dropdown from "@/shared/components/ui/Dropdown.tsx"
 import {UserRow} from "@/shared/components/user/UserRow.tsx"
 import {EVENT_AVATAR_WIDTH} from "../../user/const.ts"
 import {NDKEvent} from "@/lib/ndk"
-import {getZappingUser} from "@/utils/nostr"
-import {KIND_ZAP_RECEIPT} from "@/utils/constants"
+import {isRepost} from "@/utils/nostr"
+import {KIND_ZAP_RECEIPT, KIND_REACTION} from "@/utils/constants"
 
 type FeedItemHeaderProps = {
   event: NDKEvent
@@ -49,12 +49,37 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
 
   const onClose = useCallback(() => setShowDropdown(false), [setShowDropdown])
 
-  // For zap receipts without referred event, show the zapping user as author
+  // Determine which user to display based on event type
   const getDisplayUser = () => {
-    if (event.kind === KIND_ZAP_RECEIPT && !referredEvent) {
-      return getZappingUser(event, false) || event.pubkey
+    // For reposts, wait for referredEvent to avoid showing reposter's avatar
+    if (isRepost(event) && !referredEvent) {
+      return null
     }
+    // For reactions, wait for referredEvent to avoid showing liker's avatar
+    if (event.kind === KIND_REACTION && !referredEvent) {
+      return null
+    }
+    // For zap receipts, show zap recipient if there's a referred post (post zap)
+    // Otherwise don't show header (profile zap - handled by ZapReceiptHeader)
+    if (event.kind === KIND_ZAP_RECEIPT) {
+      if (!referredEvent) {
+        // Profile zap - no large avatar
+        return null
+      }
+      // Post zap - show the zap recipient (p tag), not the post author
+      const zapRecipient = event.tags.find((tag) => tag[0] === "p")?.[1]
+      return zapRecipient || null
+    }
+    // For events with referredEvent (reactions), show referred author
+    // Otherwise show event author
     return referredEvent?.pubkey || event.pubkey
+  }
+
+  const displayUser = getDisplayUser()
+
+  // Don't render if we're waiting for the referredEvent to load or zap receipt
+  if (!displayUser) {
+    return null
   }
 
   return (
@@ -65,7 +90,7 @@ function FeedItemHeader({event, referredEvent, tight}: FeedItemHeaderProps) {
         <UserRow
           avatarWidth={EVENT_AVATAR_WIDTH}
           showHoverCard={true}
-          pubKey={getDisplayUser()}
+          pubKey={displayUser}
         />
       </div>
       <div className="select-none flex justify-end items-center">

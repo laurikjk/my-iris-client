@@ -1,6 +1,6 @@
 import {updateChannelSearchIndex, getCachedChannel} from "./channelSearch"
 import {shouldHideUser} from "@/utils/visibility"
-import {ndk} from "@/utils/ndk"
+import {fetchEventsReliable, fetchEventReliable} from "@/utils/fetchEventsReliable"
 
 // NIP-28 event kinds
 export const CHANNEL_CREATE = 40
@@ -30,10 +30,12 @@ export const getChannelsByFollowed = async (): Promise<ChannelMetadata[]> => {
 
   try {
     // Fetch latest 100 channel creation events
-    const events = await ndk().fetchEvents({
-      kinds: [CHANNEL_CREATE],
-      limit: 100,
-    })
+    const {promise} = fetchEventsReliable(
+      {kinds: [CHANNEL_CREATE], limit: 100},
+      {timeout: 5000}
+    )
+    const eventsArray = await promise
+    const events = new Set(eventsArray)
 
     // Process and filter events
     const channels: ChannelMetadata[] = []
@@ -84,10 +86,11 @@ export const fetchChannelMetadata = async (
 
   try {
     // First try to fetch the channel creation event
-    const channelEvent = await ndk().fetchEvent({
-      kinds: [CHANNEL_CREATE],
-      ids: [channelId],
-    })
+    const {promise} = fetchEventReliable(
+      {kinds: [CHANNEL_CREATE], ids: [channelId]},
+      {timeout: 5000}
+    )
+    const channelEvent = await promise
 
     if (channelEvent) {
       try {
@@ -107,10 +110,11 @@ export const fetchChannelMetadata = async (
     } else {
       // If no channel creation event found, try to fetch the channel message event
       // This is a fallback approach since some channels might not have a creation event
-      const channelMessageEvent = await ndk().fetchEvent({
-        kinds: [42], // CHANNEL_MESSAGE
-        ids: [channelId],
-      })
+      const {promise: msgPromise} = fetchEventReliable(
+        {kinds: [42], ids: [channelId]},
+        {timeout: 5000}
+      )
+      const channelMessageEvent = await msgPromise
 
       if (channelMessageEvent) {
         // Create a basic metadata object from the message event

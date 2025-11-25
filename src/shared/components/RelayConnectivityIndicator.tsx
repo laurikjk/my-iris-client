@@ -1,9 +1,10 @@
 import {useState, useEffect} from "react"
 import {RiWebhookLine} from "@remixicon/react"
-import {ndk as getNdk} from "@/utils/ndk"
 import {useUIStore} from "@/stores/ui"
 import {Link} from "@/navigation"
 import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
+import {useWorkerRelayStatus} from "@/shared/hooks/useWorkerRelayStatus"
+import {useOnlineStatus} from "@/shared/hooks/useOnlineStatus"
 
 interface RelayConnectivityIndicatorProps {
   className?: string
@@ -15,19 +16,8 @@ export const RelayConnectivityIndicator = ({
   showCount = true,
 }: RelayConnectivityIndicatorProps) => {
   const {showRelayIndicator} = useUIStore()
-  const [ndkRelays, setNdkRelays] = useState(new Map())
+  const workerRelays = useWorkerRelayStatus()
   const [peerCount, setPeerCount] = useState(0)
-
-  useEffect(() => {
-    const updateStats = () => {
-      const ndk = getNdk()
-      setNdkRelays(new Map(ndk.pool.relays))
-    }
-
-    updateStats()
-    const interval = setInterval(updateStats, 2000)
-    return () => clearInterval(interval)
-  }, [])
 
   useEffect(() => {
     const updatePeerCount = () => {
@@ -42,10 +32,8 @@ export const RelayConnectivityIndicator = ({
     }
   }, [])
 
-  // Count all connected relays (both configured and discovered)
-  const relayCount = Array.from(ndkRelays.values()).filter(
-    (relay) => relay.connected
-  ).length
+  // Count connected relays from worker
+  const relayCount = workerRelays.relays.filter((r) => r.status >= 5).length // NDKRelayStatus.CONNECTED = 5
 
   const totalCount = relayCount + peerCount
 
@@ -68,4 +56,11 @@ export const RelayConnectivityIndicator = ({
       {showCount && <span className="text-sm font-bold">{totalCount}</span>}
     </Link>
   )
+}
+
+// Separate component for use in sidebar with offline label
+export const OfflineIndicator = ({className = ""}: {className?: string}) => {
+  const isOnline = useOnlineStatus()
+  if (isOnline) return null
+  return <span className={`badge badge-error badge-sm ${className}`}>offline</span>
 }

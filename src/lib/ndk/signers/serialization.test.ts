@@ -30,7 +30,11 @@ describe("Signer Serialization/Deserialization", () => {
   beforeEach(() => {
     ndk = new NDK()
     // Assign the mock to the global window object before each test
-    vi.stubGlobal("window", {nostr: mockNostr})
+    vi.stubGlobal("window", {
+      nostr: mockNostr,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })
   })
 
   afterEach(() => {

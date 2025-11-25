@@ -2,6 +2,7 @@ import {useState, useEffect, ChangeEvent} from "react"
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import CopyButton from "@/shared/components/button/CopyButton"
+import {LogViewer} from "@/shared/components/settings/LogViewer"
 import Debug from "@/utils/DebugManager"
 import {useSettingsStore} from "@/stores/settings"
 import {isTauri, isMobileTauri} from "@/utils/utils"
@@ -255,10 +256,10 @@ export default function SystemSettings() {
             )}
           </SettingsGroup>
 
-          <SettingsGroup title="Debug Mode">
+          <SettingsGroup title="Remote Debug">
             <SettingsGroupItem>
               <div className="flex justify-between items-center">
-                <span>Enable Debug Mode</span>
+                <span>Enable Remote Debug</span>
                 <input
                   type="checkbox"
                   className="toggle toggle-primary"
@@ -324,6 +325,12 @@ export default function SystemSettings() {
                 </SettingsGroupItem>
               </>
             )}
+          </SettingsGroup>
+
+          <SettingsGroup title="Local Debug">
+            <SettingsGroupItem isLast>
+              <LogViewer />
+            </SettingsGroupItem>
           </SettingsGroup>
         </div>
       </div>

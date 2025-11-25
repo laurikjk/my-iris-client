@@ -9,10 +9,8 @@ test.describe("User muting functionality", () => {
     // Use a hardcoded npub to test mute functionality
     const testNpub = "npub1g53mukxnjkcmr94fhryzkqutdz2ukq4ks0gvy5af25rgmwsl4ngq43drvk"
 
-    // Navigate to the user's profile
-    const searchInput = page.getByPlaceholder("Search")
-    await searchInput.fill(testNpub)
-    await searchInput.press("Enter")
+    // Navigate directly to the user's profile
+    await page.goto(`/${testNpub}`)
 
     // Wait for profile page to load
     await expect(page.url()).not.toMatch(/localhost:5173\/?$/)

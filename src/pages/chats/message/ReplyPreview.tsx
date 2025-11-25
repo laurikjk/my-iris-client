@@ -4,8 +4,8 @@ import {usePrivateMessagesStore} from "@/stores/privateMessages"
 import {useState, useEffect} from "react"
 import {MessageType} from "./Message"
 import classNames from "classnames"
-import {ndk} from "@/utils/ndk"
 import {useUserStore} from "@/stores/user"
+import {fetchEventReliable} from "@/utils/fetchEventsReliable"
 
 type ReplyPreviewProps = {
   isUser: boolean
@@ -56,9 +56,8 @@ const ReplyPreview = ({isUser, sessionId, replyToId}: ReplyPreviewProps) => {
         }
 
         // For public chats (sessionId is just the channel ID)
-        const event = await ndk().fetchEvent({
-          ids: [replyToId],
-        })
+        const {promise} = fetchEventReliable({ids: [replyToId]}, {timeout: 5000})
+        const event = await promise
 
         if (event) {
           const message: MessageType = {

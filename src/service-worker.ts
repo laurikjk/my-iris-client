@@ -18,6 +18,10 @@ import {clientsClaim} from "workbox-core"
 import {VerifiedEvent} from "nostr-tools"
 import localforage from "localforage"
 import {KIND_CHANNEL_CREATE} from "./utils/constants"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 // eslint-disable-next-line no-undef
 declare const self: ServiceWorkerGlobalScope & {
@@ -139,7 +143,7 @@ self.addEventListener("install", (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          console.debug("Deleting cache: ", cacheName)
+          log("Deleting cache: ", cacheName)
           return caches.delete(cacheName)
         })
       )
@@ -166,27 +170,27 @@ interface PushData {
 self.addEventListener("notificationclick", (event) => {
   const notificationData = event.notification.data
   event.notification.close()
-  console.debug("Notification clicked:", notificationData)
+  log("Notification clicked:", notificationData)
 
   event.waitUntil(
     (async function () {
       // Handle both direct URL and nested event data structure
       const path = notificationData?.url || notificationData?.event?.url
       if (!path) {
-        console.debug("No URL in notification data")
+        log("No URL in notification data")
         return
       }
 
       // If it's already a full URL, use URL constructor, otherwise just use the path
       const pathname = path.startsWith("http") ? new URL(path).pathname : path
       const fullUrl = `${self.location.origin}${pathname}`
-      console.debug("Navigating to:", fullUrl)
+      log("Navigating to:", fullUrl)
 
       const allClients = await self.clients.matchAll({
         type: "window",
         includeUncontrolled: true,
       })
-      console.debug("Found clients:", allClients.length)
+      log("Found clients:", allClients.length)
 
       if (allClients.length > 0) {
         // Try to find a visible client first, otherwise use the first one
@@ -197,32 +201,32 @@ self.addEventListener("notificationclick", (event) => {
 
         try {
           await client.focus()
-          console.debug("Client focused, sending navigation message")
+          log("Client focused, sending navigation message")
           // Add a small delay to ensure focus completes before navigation
           await new Promise((resolve) => setTimeout(resolve, 100))
           await client.postMessage({
             type: "NAVIGATE_REACT_ROUTER",
             url: fullUrl,
           })
-          console.debug("Navigation message sent successfully")
+          log("Navigation message sent successfully")
           return
-        } catch (error) {
-          console.error("Failed to focus client or send navigation message:", error)
+        } catch (err) {
+          error("Failed to focus client or send navigation message:", err)
           // Fall through to opening new window
         }
       }
 
-      console.debug("No clients found or client communication failed, opening new window")
+      log("No clients found or client communication failed, opening new window")
       if (self.clients.openWindow) {
         try {
           const newClient = await self.clients.openWindow(fullUrl)
-          console.debug("New window opened successfully")
+          log("New window opened successfully")
           return newClient
-        } catch (error) {
-          console.error("Failed to open new window:", error)
+        } catch (err) {
+          error("Failed to open new window:", err)
         }
       } else {
-        console.error("openWindow not available")
+        error("openWindow not available")
       }
     })()
   )
@@ -247,7 +251,7 @@ const NOTIFICATION_CONFIGS: Record<
     icon: "/favicon.png",
   },
   [INVITE_RESPONSE_KIND]: {
-    title: "New messages",
+    title: "New private message",
     url: "/chats",
     icon: "/favicon.png",
   },
@@ -264,52 +268,139 @@ type DecryptResult =
       sessionId: string
     }
 
+const SESSION_STORAGE = localforage.createInstance({
+  name: "iris-session-manager",
+  storeName: "session-private",
+})
+
+const SESSION_STORAGE_PREFIX = "private"
+const USER_RECORD_PREFIX = "v1/user/"
+
+type StoredSessionEntry = string
+
+interface StoredDeviceRecord {
+  deviceId: string
+  activeSession: StoredSessionEntry | null
+  inactiveSessions: StoredSessionEntry[]
+  staleAt?: number
+}
+
+interface StoredUserRecord {
+  publicKey: string
+  devices: StoredDeviceRecord[]
+}
+
+interface StoredSessionState {
+  sessionId: string
+  serializedState: StoredSessionEntry
+}
+
+const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
+  try {
+    const keys = await SESSION_STORAGE.keys()
+    const userRecordKeys = keys.filter((key) =>
+      key.startsWith(`${SESSION_STORAGE_PREFIX}${USER_RECORD_PREFIX}`)
+    )
+
+    const userRecords = await Promise.all(
+      userRecordKeys.map((key) => SESSION_STORAGE.getItem<StoredUserRecord>(key))
+    ).then((userRecords) =>
+      userRecords.filter((ur): ur is StoredUserRecord => ur !== null)
+    )
+
+    const sessions: StoredSessionState[] = userRecords.flatMap((record) =>
+      record.devices
+        .filter((device) => device.staleAt === undefined)
+        .flatMap((device) => {
+          const sessions = device.activeSession
+            ? [device.activeSession, ...device.inactiveSessions]
+            : device.inactiveSessions
+
+          return sessions.map((serialized) => ({
+            sessionId: record.publicKey,
+            serializedState: serialized,
+          }))
+        })
+    )
+
+    return sessions
+  } catch (error) {
+    return []
+  }
+}
+
 const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
   try {
-    const wrapper = await localforage.getItem("sessions")
-    if (wrapper) {
-      const parsed = typeof wrapper === "string" ? JSON.parse(wrapper) : wrapper
-      const sessionEntries: [string, string][] =
-        parsed?.state?.sessions ?? parsed?.sessions ?? []
+    const sessionEntries = await fetchStoredSessions()
 
-      for (const [sessionId, serState] of sessionEntries) {
-        const state = deserializeSessionState(serState)
-        const foundMatchingPubKey =
+    const matchingSession = sessionEntries.find(({serializedState}) => {
+      try {
+        const state = deserializeSessionState(serializedState)
+        return (
           state.theirCurrentNostrPublicKey === data.event.pubkey ||
           state.theirNextNostrPublicKey === data.event.pubkey
+        )
+      } catch (error) {
+        return false
+      }
+    })
 
-        if (!foundMatchingPubKey) {
-          continue
-        }
-
-        const session = new Session((_, onEvent) => {
-          onEvent(data.event as unknown as VerifiedEvent)
-          return () => {}
-        }, state)
-
-        let unsubscribe: (() => void) | undefined
-        const innerEvent = await new Promise<Rumor | null>((resolve) => {
-          unsubscribe = session.onEvent((event) => {
-            resolve(event)
-          })
-        })
-
-        unsubscribe?.()
-
-        return innerEvent === null
-          ? {
-              success: false,
-            }
-          : {
-              success: true,
-              kind: innerEvent.kind,
-              content: innerEvent.content,
-              sessionId,
-            }
+    if (!matchingSession) {
+      return {
+        success: false,
       }
     }
+
+    const state = deserializeSessionState(matchingSession.serializedState)
+    const {sessionId} = matchingSession
+
+    const eventForSession: VerifiedEvent = {
+      ...(data.event as unknown as VerifiedEvent),
+      tags: data.event.tags.filter(([key]) => key === "header"),
+    }
+
+    let deliverToSession: ((event: VerifiedEvent) => void) | undefined
+    const session = new Session((_, onEvent) => {
+      deliverToSession = onEvent
+      return () => {
+        deliverToSession = undefined
+      }
+    }, state)
+
+    let unsubscribe: (() => void) | undefined
+    const innerEvent = await new Promise<Rumor | null>((resolve) => {
+      const timeout = setTimeout(() => {
+        resolve(null)
+      }, 1500)
+      unsubscribe = session.onEvent((event) => {
+        clearTimeout(timeout)
+        resolve(event)
+      })
+      if (deliverToSession) {
+        // Deliver encrypted event after subscription wiring to avoid race
+        deliverToSession(eventForSession)
+      } else {
+        error("DM decrypt: session transport not ready to receive event", {
+          sessionId,
+          eventId: data.event.id,
+        })
+      }
+    })
+
+    unsubscribe?.()
+
+    return innerEvent === null
+      ? {
+          success: false,
+        }
+      : {
+          success: true,
+          kind: innerEvent.kind,
+          content: innerEvent.content,
+          sessionId,
+        }
   } catch (err) {
-    console.error("DM decryption failed:", err)
+    error("DM decrypt: failed", err)
   }
   return {
     success: false,
@@ -326,8 +417,8 @@ self.addEventListener("push", (event) => {
       })
       const isPageVisible = clients.some((client) => client.visibilityState === "visible")
       if (isPageVisible) {
-        //console.debug("Page is visible, ignoring web push")
-        //return
+        log("Page is visible, ignoring web push")
+        return
       }
 
       const data = event.data?.json() as PushData | undefined

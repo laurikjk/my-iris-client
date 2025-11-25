@@ -104,7 +104,7 @@ export class NDKEvent extends EventEmitter {
     if (!this.ndk) {
       if (this.relay) res.push(this.relay)
     } else {
-      res = this.ndk.subManager.seenEvents.get(this.id) || []
+      res = this.ndk.subManager.seenEvents.get(this.id)?.relays || []
     }
     return res
   }
@@ -562,7 +562,7 @@ export class NDKEvent extends EventEmitter {
     // add to cache for optimistic updates
     if (this.ndk.cacheAdapter?.addUnpublishedEvent && shouldTrackUnpublishedEvent(this)) {
       try {
-        this.ndk.cacheAdapter.addUnpublishedEvent(this, relaySet.relayUrls)
+        await this.ndk.cacheAdapter.addUnpublishedEvent(this, relaySet.relayUrls)
       } catch (e) {
         console.error("Error adding unpublished event to cache", e)
       }
@@ -573,22 +573,29 @@ export class NDKEvent extends EventEmitter {
       this.ndk.cacheAdapter.deleteEventIds(this.getMatchingTags("e").map((tag) => tag[1]))
     }
 
-    // send to active subscriptions that want this event
-    this.ndk.subManager.dispatchEvent(rawEvent, undefined, true)
+    // send to active subscriptions that want this event (pass NDKEvent, not raw)
+    this.ndk.subManager.dispatchEvent(this, undefined, true)
 
-    const relays = await relaySet.publish(this, timeoutMs, requiredRelayCount)
-    relays.forEach((relay) => this.ndk?.subManager.seenEvent(this.id, relay))
-
-    // Notify transport plugins after successful publish
+    // Notify transport plugins - let them handle publishing if registered
+    let pluginHandled = false
     for (const plugin of this.ndk.transportPlugins) {
       if (plugin.onPublish) {
         try {
           await plugin.onPublish(this)
+          pluginHandled = true
         } catch (error) {
           console.error("[NDK] Transport plugin onPublish error:", error)
         }
       }
     }
+
+    // If plugin handled publish, skip relay pool (worker transport case)
+    if (pluginHandled && this.ndk.pool.relays.size === 0) {
+      return new Set() // No relays in main thread, worker handled it
+    }
+
+    const relays = await relaySet.publish(this, timeoutMs, requiredRelayCount)
+    relays.forEach((relay) => this.ndk?.subManager.seenEvent(this.id, relay))
 
     return relays
   }

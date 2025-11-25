@@ -1,19 +1,100 @@
-import type {NDKCacheAdapter} from "@/lib/ndk/cache"
-import {db} from "@/lib/ndk-cache/db"
+import Dexie from "dexie"
+import throttle from "lodash/throttle"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {error} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_PEER)
 
 /**
- * Simple blob storage using NDK cache's generic cache data
- * Avoids Dexie schema conflicts
+ * Dedicated Dexie database for blob storage
+ * Independent of NDK cache adapter
+ */
+class BlobDatabase extends Dexie {
+  blobs!: Dexie.Table<
+    {
+      hash: string
+      data: ArrayBuffer
+      size: number
+      mimeType?: string
+      first_author?: string
+      stored_at: number
+      times_requested_locally: number
+      times_requested_by_peers: number
+      last_requested: number
+    },
+    string
+  >
+
+  constructor() {
+    super("iris-blob-storage")
+    this.version(1).stores({
+      blobs: "hash, stored_at",
+    })
+    this.version(2).stores({
+      blobs: "hash, stored_at",
+    })
+    this.version(3)
+      .stores({
+        blobs: "hash, stored_at, last_requested",
+      })
+      .upgrade((tx) => {
+        // Backfill last_requested to stored_at for existing blobs
+        return tx
+          .table("blobs")
+          .toCollection()
+          .modify((blob) => {
+            blob.last_requested = blob.stored_at
+          })
+      })
+  }
+}
+
+const blobDb = new BlobDatabase()
+
+// In-memory cache for request stats (write to IDB throttled)
+const requestStatsCache = new Map<
+  string,
+  {local: number; peer: number; lastRequested: number}
+>()
+const dirtyHashes = new Set<string>()
+
+// Flush to IDB every 5 seconds
+const flushRequestStatsToIDB = throttle(
+  async () => {
+    if (dirtyHashes.size === 0) return
+    const updates = Array.from(dirtyHashes).map(async (hash) => {
+      const stats = requestStatsCache.get(hash)
+      if (stats) {
+        await blobDb.blobs.update(hash, {
+          times_requested_locally: stats.local,
+          times_requested_by_peers: stats.peer,
+          last_requested: stats.lastRequested,
+        })
+      }
+    })
+    dirtyHashes.clear()
+    await Promise.all(updates)
+  },
+  5000,
+  {leading: false, trailing: true}
+)
+
+/**
+ * Simple blob storage using dedicated Dexie database
+ * No dependency on NDK cache adapter
  */
 export class SimpleBlobStorage {
-  private cache: NDKCacheAdapter
-
-  constructor(cache: NDKCacheAdapter) {
-    this.cache = cache
-  }
-
   async initialize() {
-    // No initialization needed for generic cache data
+    // Database auto-initializes
+    // Load existing stats into cache
+    const all = await blobDb.blobs.toArray()
+    all.forEach((entry) => {
+      requestStatsCache.set(entry.hash, {
+        local: entry.times_requested_locally || 0,
+        peer: entry.times_requested_by_peers || 0,
+        lastRequested: entry.last_requested || entry.stored_at,
+      })
+    })
   }
 
   async get(hash: string): Promise<{
@@ -22,19 +103,13 @@ export class SimpleBlobStorage {
     size: number
     mimeType?: string
     first_author?: string
+    stored_at: number
+    times_requested_locally: number
+    times_requested_by_peers: number
+    last_requested: number
   } | null> {
-    if (!this.cache.getCacheData) return null
-
     try {
-      const entry = await this.cache.getCacheData<{
-        hash: string
-        data: ArrayBuffer
-        size: number
-        mimeType?: string
-        first_author?: string
-        stored_at: number
-      }>("binary_blobs", hash)
-
+      const entry = await blobDb.blobs.get(hash)
       if (!entry) return null
 
       return {
@@ -43,9 +118,13 @@ export class SimpleBlobStorage {
         size: entry.size,
         mimeType: entry.mimeType,
         first_author: entry.first_author,
+        stored_at: entry.stored_at,
+        times_requested_locally: entry.times_requested_locally || 0,
+        times_requested_by_peers: entry.times_requested_by_peers || 0,
+        last_requested: entry.last_requested || entry.stored_at,
       }
-    } catch (error) {
-      console.error("Error getting blob from cache:", error)
+    } catch (err) {
+      error("Error getting blob:", err)
       return null
     }
   }
@@ -56,91 +135,113 @@ export class SimpleBlobStorage {
     mimeType?: string,
     firstAuthor?: string
   ): Promise<void> {
-    if (!this.cache.setCacheData) return
-
     try {
-      // Check if already exists - don't overwrite first_author
+      // Check if already exists - don't overwrite first_author or stats
       const existing = await this.get(hash)
-
       const author = existing?.first_author || firstAuthor
+      const now = Date.now()
 
-      await this.cache.setCacheData("binary_blobs", hash, {
+      await blobDb.blobs.put({
         hash,
         data,
         size: data.byteLength,
         mimeType,
         first_author: author,
-        stored_at: Date.now(),
+        stored_at: existing?.stored_at || now,
+        times_requested_locally: existing?.times_requested_locally || 0,
+        times_requested_by_peers: existing?.times_requested_by_peers || 0,
+        last_requested: now,
       })
-    } catch (error) {
-      console.error("Error saving blob to cache:", error)
+    } catch (err) {
+      console.error("Error saving blob to cache:", err)
     }
   }
 
   async list(
     offset = 0,
     limit = 20
-  ): Promise<{hash: string; size: number; mimeType?: string; stored_at: number; first_author?: string}[]> {
+  ): Promise<
+    {
+      hash: string
+      size: number
+      mimeType?: string
+      stored_at: number
+      first_author?: string
+      times_requested_locally: number
+      times_requested_by_peers: number
+      last_requested: number
+    }[]
+  > {
     try {
-      const results = await db.cacheData
-        .where("key")
-        .startsWith("binary_blobs:")
+      const results = await blobDb.blobs
+        .orderBy("stored_at")
+        .reverse()
+        .offset(offset)
+        .limit(limit)
         .toArray()
 
-      // Sort by stored_at descending (most recent first)
-      results.sort((a, b) => {
-        const aData = a.data as {stored_at: number}
-        const bData = b.data as {stored_at: number}
-        return bData.stored_at - aData.stored_at
-      })
-
-      // Apply offset and limit
-      const paginated = results.slice(offset, offset + limit)
-
-      return paginated.map((entry) => {
-        const data = entry.data as {
-          hash: string
-          size: number
-          mimeType?: string
-          stored_at: number
-          first_author?: string
-        }
-        return {
-          hash: data.hash,
-          size: data.size,
-          mimeType: data.mimeType,
-          stored_at: data.stored_at,
-          first_author: data.first_author,
-        }
-      })
-    } catch (error) {
-      console.error("Error listing blobs:", error)
+      return results.map((entry) => ({
+        hash: entry.hash,
+        size: entry.size,
+        mimeType: entry.mimeType,
+        stored_at: entry.stored_at,
+        first_author: entry.first_author,
+        times_requested_locally: entry.times_requested_locally || 0,
+        times_requested_by_peers: entry.times_requested_by_peers || 0,
+        last_requested: entry.last_requested || entry.stored_at,
+      }))
+    } catch (err) {
+      error("Error listing blobs:", err)
       return []
     }
   }
 
   async count(): Promise<number> {
     try {
-      return await db.cacheData.where("key").startsWith("binary_blobs:").count()
-    } catch (error) {
-      console.error("Error counting blobs:", error)
+      return await blobDb.blobs.count()
+    } catch (err) {
+      error("Error counting blobs:", err)
       return 0
     }
   }
 
   async delete(hash: string): Promise<void> {
     try {
-      await db.cacheData.delete(`binary_blobs:${hash}`)
-    } catch (error) {
-      console.error("Error deleting blob:", error)
+      await blobDb.blobs.delete(hash)
+    } catch (err) {
+      error("Error deleting blob:", err)
     }
   }
 
   async clear(): Promise<void> {
     try {
-      await db.cacheData.where("key").startsWith("binary_blobs:").delete()
-    } catch (error) {
-      console.error("Error clearing blobs:", error)
+      await blobDb.blobs.clear()
+    } catch (err) {
+      error("Error clearing blobs:", err)
     }
+  }
+
+  incrementLocalRequests(hash: string): void {
+    const existing = requestStatsCache.get(hash) || {local: 0, peer: 0, lastRequested: 0}
+    const now = Date.now()
+    requestStatsCache.set(hash, {
+      local: existing.local + 1,
+      peer: existing.peer,
+      lastRequested: now,
+    })
+    dirtyHashes.add(hash)
+    flushRequestStatsToIDB()
+  }
+
+  incrementPeerRequests(hash: string): void {
+    const existing = requestStatsCache.get(hash) || {local: 0, peer: 0, lastRequested: 0}
+    const now = Date.now()
+    requestStatsCache.set(hash, {
+      local: existing.local,
+      peer: existing.peer + 1,
+      lastRequested: now,
+    })
+    dirtyHashes.add(hash)
+    flushRequestStatsToIDB()
   }
 }

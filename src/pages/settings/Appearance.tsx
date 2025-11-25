@@ -2,16 +2,13 @@ import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {useSettingsStore} from "@/stores/settings"
 import {ChangeEvent} from "react"
+import {ColumnLayoutToggle} from "@/shared/components/nav/ColumnLayoutToggle"
 
 function AppearanceSettings() {
   const {appearance, updateAppearance} = useSettingsStore()
 
   function handleThemeChange(e: ChangeEvent<HTMLSelectElement>) {
     updateAppearance({theme: e.target.value})
-  }
-
-  function handleSingleColumnLayoutChange(e: ChangeEvent<HTMLInputElement>) {
-    updateAppearance({singleColumnLayout: e.target.checked})
   }
 
   function handleLimitedMaxWidthChange(e: ChangeEvent<HTMLInputElement>) {
@@ -44,17 +41,12 @@ function AppearanceSettings() {
             <SettingsGroupItem>
               <div className="flex justify-between items-center">
                 <div className="flex flex-col">
-                  <span>Single column layout</span>
+                  <span>Column layout</span>
                   <span className="text-sm text-base-content/60">
-                    Show content in one column on large screens
+                    Choose single or two-column layout
                   </span>
                 </div>
-                <input
-                  type="checkbox"
-                  className="toggle toggle-primary"
-                  checked={appearance.singleColumnLayout}
-                  onChange={handleSingleColumnLayoutChange}
-                />
+                <ColumnLayoutToggle />
               </div>
             </SettingsGroupItem>
 

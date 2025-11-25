@@ -7,9 +7,7 @@ import {RelayList} from "@/shared/components/RelayList"
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {PeerConnectionList} from "@/shared/components/connection/PeerConnectionList"
-import {WebRTCLogViewer} from "@/shared/components/connection/WebRTCLogViewer"
 import {RelayLogViewer} from "@/shared/components/connection/RelayLogViewer"
-import {OnlinePresence} from "@/shared/components/connection/OnlinePresence"
 import {peerConnectionManager} from "@/utils/chat/webrtc/PeerConnectionManager"
 import {getP2PStats, resetP2PStats} from "@/utils/chat/webrtc/p2pNostr"
 
@@ -29,6 +27,12 @@ export function Network() {
     eventsSent: 0,
     eventsReceived: 0,
     subscriptionsServed: 0,
+    blobsSent: 0,
+    blobsReceived: 0,
+    blobBytesSent: 0,
+    blobBytesReceived: 0,
+    eventBytesSent: 0,
+    eventBytesReceived: 0,
   })
 
   useEffect(() => {
@@ -45,7 +49,17 @@ export function Network() {
 
   const handleResetP2PStats = async () => {
     await resetP2PStats()
-    setP2pStats({eventsSent: 0, eventsReceived: 0, subscriptionsServed: 0})
+    setP2pStats({
+      eventsSent: 0,
+      eventsReceived: 0,
+      subscriptionsServed: 0,
+      blobsSent: 0,
+      blobsReceived: 0,
+      blobBytesSent: 0,
+      blobBytesReceived: 0,
+      eventBytesSent: 0,
+      eventBytesReceived: 0,
+    })
   }
 
   const appVersion = import.meta.env.VITE_APP_VERSION || "dev"
@@ -79,25 +93,17 @@ export function Network() {
   }
 
   const handleOutboxModelToggle = async (enabled: boolean) => {
-    try {
-      setNdkOutboxModel(enabled)
-      // Reload app to reinitialize NDK with new setting
-      await new Promise((resolve) => setTimeout(resolve, 100))
-      window.location.reload()
-    } catch (error) {
-      console.error("Error toggling outbox model:", error)
-    }
+    setNdkOutboxModel(enabled)
+    // Outbox model requires pool reinitialization - reload required
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    window.location.reload()
   }
 
   const handleAutoConnectUserRelaysToggle = async (enabled: boolean) => {
-    try {
-      setAutoConnectUserRelays(enabled)
-      // Reload app to reinitialize NDK with new setting
-      await new Promise((resolve) => setTimeout(resolve, 100))
-      window.location.reload()
-    } catch (error) {
-      console.error("Error toggling auto-connect user relays:", error)
-    }
+    setAutoConnectUserRelays(enabled)
+    // Auto-connect changes require pool reinitialization - reload required
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    window.location.reload()
   }
 
   const hasDefaultRelays = useMemo(() => {
@@ -142,7 +148,7 @@ export function Network() {
               </div>
             </SettingsGroupItem>
 
-            <SettingsGroupItem isLast>
+            <SettingsGroupItem>
               <div className="flex justify-between items-center">
                 <div className="flex flex-col">
                   <span>Auto-connect to Your Relays</span>
@@ -154,6 +160,23 @@ export function Network() {
                   type="checkbox"
                   checked={autoConnectUserRelays}
                   onChange={(e) => handleAutoConnectUserRelaysToggle(e.target.checked)}
+                  className="toggle toggle-primary"
+                />
+              </div>
+            </SettingsGroupItem>
+
+            <SettingsGroupItem isLast>
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span>Enable Negentropy Sync</span>
+                  <span className="text-sm text-base-content/60">
+                    Efficient event reconciliation protocol (NIP-77)
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={network.negentropyEnabled}
+                  onChange={(e) => updateNetwork({negentropyEnabled: e.target.checked})}
                   className="toggle toggle-primary"
                 />
               </div>
@@ -312,41 +335,7 @@ export function Network() {
               </div>
             </SettingsGroupItem>
             <SettingsGroupItem>
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                  <span>Log Level</span>
-                  <select
-                    value={network.webrtcLogLevel}
-                    onChange={(e) =>
-                      updateNetwork({
-                        webrtcLogLevel: e.target.value as
-                          | "debug"
-                          | "info"
-                          | "warn"
-                          | "error",
-                      })
-                    }
-                    className="select select-sm select-bordered"
-                  >
-                    <option value="debug">Debug</option>
-                    <option value="info">Info</option>
-                    <option value="warn">Warn</option>
-                    <option value="error">Error</option>
-                  </select>
-                </div>
-                <span className="text-sm text-base-content/60">
-                  Info: connection events, Warn/Error: problems only, Debug: all activity
-                </span>
-              </div>
-            </SettingsGroupItem>
-            <SettingsGroupItem>
               <PeerConnectionList />
-            </SettingsGroupItem>
-            <SettingsGroupItem>
-              <div className="flex flex-col gap-2">
-                <span className="text-sm font-semibold">Mutual Follows</span>
-                <OnlinePresence />
-              </div>
             </SettingsGroupItem>
             <SettingsGroupItem>
               <div className="flex flex-col gap-2">
@@ -358,10 +347,22 @@ export function Network() {
                 </div>
                 <div className="flex gap-4 text-sm flex-wrap">
                   <span>
-                    Sent: <span className="font-mono">{p2pStats.eventsSent}</span>
+                    Events sent: <span className="font-mono">{p2pStats.eventsSent}</span>{" "}
+                    ({(p2pStats.eventBytesSent / 1024).toFixed(1)} KB)
                   </span>
                   <span>
-                    Received: <span className="font-mono">{p2pStats.eventsReceived}</span>
+                    Events received:{" "}
+                    <span className="font-mono">{p2pStats.eventsReceived}</span> (
+                    {(p2pStats.eventBytesReceived / 1024).toFixed(1)} KB)
+                  </span>
+                  <span>
+                    Blobs sent: <span className="font-mono">{p2pStats.blobsSent}</span> (
+                    {(p2pStats.blobBytesSent / 1024 / 1024).toFixed(1)} MB)
+                  </span>
+                  <span>
+                    Blobs received:{" "}
+                    <span className="font-mono">{p2pStats.blobsReceived}</span> (
+                    {(p2pStats.blobBytesReceived / 1024 / 1024).toFixed(1)} MB)
                   </span>
                   <span>
                     Subs served:{" "}
@@ -369,9 +370,6 @@ export function Network() {
                   </span>
                 </div>
               </div>
-            </SettingsGroupItem>
-            <SettingsGroupItem isLast>
-              <WebRTCLogViewer />
             </SettingsGroupItem>
           </SettingsGroup>
 

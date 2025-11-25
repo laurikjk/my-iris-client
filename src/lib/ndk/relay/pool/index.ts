@@ -3,7 +3,7 @@ import {EventEmitter} from "tseep"
 
 import type {NDK} from "../../ndk/index.js"
 import type {NDKFilter} from "../../subscription/index.js"
-import {normalizeRelayUrl} from "../../utils/normalize-url.js"
+import {normalizeRelayUrl, tryNormalizeRelayUrl} from "../../utils/normalize-url.js"
 import {NDKRelay, NDKRelayStatus} from "../index.js"
 
 export type NDKPoolStats = {
@@ -286,8 +286,14 @@ export class NDKPool extends EventEmitter<{
     connect = true,
     temporary = false,
     filters?: NDKFilter[]
-  ): NDKRelay {
-    let relay = this.relays.get(normalizeRelayUrl(url))
+  ): NDKRelay | undefined {
+    const normalizedUrl = tryNormalizeRelayUrl(url)
+    if (!normalizedUrl) {
+      console.warn("Invalid relay URL, skipping:", url)
+      return undefined
+    }
+
+    let relay = this.relays.get(normalizedUrl)
 
     if (!relay) {
       relay = new NDKRelay(url, undefined, this.ndk)

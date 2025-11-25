@@ -1,4 +1,4 @@
-import {ReactNode} from "react"
+import {ReactNode, MouseEvent} from "react"
 import {useLocation} from "@/navigation"
 import NavLink from "@/shared/components/nav/NavLink"
 import {getUserRoute, isSameUserRoute} from "@/utils/usernameCache"
@@ -8,7 +8,7 @@ interface ProfileLinkProps {
   pubKey: string
   children: ReactNode | ((props: {isActive: boolean}) => ReactNode)
   className?: string | ((props: {isActive: boolean}) => string)
-  onClick?: () => void
+  onClick?: (e: MouseEvent) => void
 }
 
 /**
@@ -19,6 +19,9 @@ export const ProfileLink = ({pubKey, children, className, onClick}: ProfileLinkP
   const location = useLocation()
 
   // Convert hex pubkey to the best route (username if available, otherwise npub)
+  const hexPubkey = pubKey.startsWith("npub")
+    ? (nip19.decode(pubKey).data as string)
+    : pubKey
   const npubRoute = `/${pubKey.startsWith("npub") ? pubKey : nip19.npubEncode(pubKey)}`
   const userRoute = getUserRoute(
     pubKey.startsWith("npub") ? pubKey : nip19.npubEncode(pubKey)
@@ -34,7 +37,12 @@ export const ProfileLink = ({pubKey, children, className, onClick}: ProfileLinkP
     typeof children === "function" ? children({isActive}) : children
 
   return (
-    <NavLink to={userRoute} className={computedClassName} onClick={onClick}>
+    <NavLink
+      to={userRoute}
+      className={computedClassName}
+      onClick={onClick}
+      state={{pubkey: hexPubkey}}
+    >
       {typeof children === "function"
         ? // Pass through render prop to NavLink
           children

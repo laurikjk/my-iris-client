@@ -62,33 +62,29 @@ test.describe("Session persistence", () => {
       .fill(postContent)
     await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
-    // Wait for the dialog to close after posting
-    await expect(page.getByRole("dialog")).not.toBeVisible({timeout: 5000})
+    // After posting, we're navigated to the post detail page
+    await page.waitForURL(/\/note/, {timeout: 10000})
+    await page.waitForLoadState("networkidle")
 
-    // Wait for the post to appear in the feed before refreshing
-    await expect(
-      page.locator('[data-testid="feed-item"]').filter({hasText: postContent}).first()
-    ).toBeVisible({
-      timeout: 5000,
-    })
+    // Post should be visible on detail page with feed-item
+    const detailPost = page.getByTestId("feed-item").filter({hasText: postContent}).first()
+    await expect(detailPost).toBeVisible({timeout: 10000})
 
-    // Refresh the page
+    // Refresh the page to test session persistence
     await page.reload()
     await page.waitForLoadState("networkidle")
 
-    // Wait for the feed to load and find our post
-    const postElement = page
-      .locator('[data-testid="feed-item"]')
-      .filter({hasText: postContent})
-      .first()
-    await expect(postElement).toBeVisible({timeout: 10000})
+    // Post should still be visible after refresh
+    const postAfterRefresh = page.getByTestId("feed-item").filter({hasText: postContent}).first()
+    await expect(postAfterRefresh).toBeVisible({timeout: 10000})
 
     // Find and click the like button
-    const likeButton = postElement.getByTestId("like-button")
+    const likeButton = postAfterRefresh.getByTestId("like-button")
+    await expect(likeButton).toBeVisible({timeout: 5000})
     await likeButton.click()
 
-    // Verify like count increased
-    const likeCount = postElement.getByTestId("like-count")
-    await expect(likeCount).toHaveText("1")
+    // Verify like registered
+    await expect(postAfterRefresh.getByTestId("like-count")).toHaveText("1")
+    await expect(likeButton).toHaveClass(/text-error/)
   })
 })

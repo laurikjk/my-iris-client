@@ -6,13 +6,18 @@ import {VerifiedEvent} from "nostr-tools"
 import debounce from "lodash/debounce"
 import throttle from "lodash/throttle"
 import localForage from "localforage"
-import {ndk} from "@/utils/ndk"
+// Removed static import to avoid race condition - use dynamic import in setupSubscription
 import {useEffect, useState} from "react"
-import {KIND_CONTACTS, KIND_MUTE_LIST} from "@/utils/constants"
+import {KIND_CONTACTS, KIND_MUTE_LIST, DEBUG_NAMESPACES} from "@/utils/constants"
 import {EventEmitter} from "tseep"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 export const DEFAULT_SOCIAL_GRAPH_ROOT =
   "4523be58d395b1b196a9b8c82b038b6895cb02b683d0c253a955068dba1facd0"
+
+export const DEFAULT_CRAWL_DEGREE = 3
 
 let instance = new SocialGraph(DEFAULT_SOCIAL_GRAPH_ROOT)
 let isInitialized = false
@@ -26,13 +31,13 @@ async function loadPreCrawledGraph(publicKey: string): Promise<SocialGraph> {
   const response = await fetch(binaryUrl)
   const binaryData = new Uint8Array(await response.arrayBuffer())
   const graph = await SocialGraph.fromBinary(publicKey, binaryData)
-  console.log("loaded default binary social graph of size", graph.size())
+  log("loaded default binary social graph of size", graph.size())
   return graph
 }
 
 async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
   if (isInitialized) {
-    console.log("setting root", publicKey)
+    log("setting root", publicKey)
     instance.setRoot(publicKey)
     return
   }
@@ -41,14 +46,14 @@ async function initializeInstance(publicKey = DEFAULT_SOCIAL_GRAPH_ROOT) {
   if (data) {
     try {
       instance = await SocialGraph.fromBinary(publicKey, data as Uint8Array)
-      console.log("loaded local social graph of size", instance.size())
-    } catch (e) {
-      console.error("error deserializing", e)
+      log("loaded local social graph of size", instance.size())
+    } catch (err) {
+      error("error deserializing", err)
       await localForage.removeItem("socialGraph")
       instance = await loadPreCrawledGraph(publicKey)
     }
   } else {
-    console.log("no social graph found")
+    log("no social graph found")
     await localForage.removeItem("socialGraph")
     instance = await loadPreCrawledGraph(publicKey)
   }
@@ -62,10 +67,10 @@ const saveToLocalForage = async () => {
   try {
     const serialized = await instance.toBinary()
     await localForage.setItem("socialGraph", serialized)
-    console.log("Saved social graph of size", instance.size())
-  } catch (e) {
-    console.error("failed to serialize SocialGraph or UniqueIds", e)
-    console.log("social graph size", instance.size())
+    log("Saved social graph of size", instance.size())
+  } catch (err) {
+    error("failed to serialize SocialGraph or UniqueIds", err)
+    log("social graph size", instance.size())
   }
 }
 
@@ -125,12 +130,14 @@ function getFollowListsInternal(
   const myFollows = instance.getFollowedByUser(myPubKey)
   addUsersToFetch(myFollows, 1)
 
-  console.log("fetching", toFetch.size, missingOnly ? "missing" : "total", "follow lists")
+  log("fetching", toFetch.size, missingOnly ? "missing" : "total", "follow lists")
 
-  const fetchBatch = (authors: string[]) => {
+  const fetchBatch = async (authors: string[]) => {
     if (isManual && !isManualRecrawling) return
 
-    const sub = ndk().subscribe(
+    const {ndk: getNdk, initNDKAsync} = await import("@/utils/ndk")
+    await initNDKAsync() // Ensure NDK is initialized
+    const sub = getNdk().subscribe(
       {
         kinds: [KIND_CONTACTS, KIND_MUTE_LIST],
         authors: authors,
@@ -138,7 +145,7 @@ function getFollowListsInternal(
       {closeOnEose: true}
     )
 
-    sub.on("event", (e) => {
+    sub.on("event", (e: unknown) => {
       handleSocialGraphEvent(e as unknown as VerifiedEvent)
       debouncedRemoveNonFollowed()
     })
@@ -156,7 +163,7 @@ function getFollowListsInternal(
       if (toFetch.size > 0) {
         setTimeout(() => {
           processBatch()
-        }, 5000)
+        }, 1000)
       } else if (isManual) {
         isManualRecrawling = false
         useSocialGraphStore.getState().setIsRecrawling(false)
@@ -181,18 +188,31 @@ function getMissingFollowLists(myPubKey: string) {
 }
 
 let isLoaded = false
+let resolveLoaded: ((value: boolean) => void) | null = null
 
-export const socialGraphLoaded = new Promise((resolve) => {
+export const socialGraphLoaded = new Promise<boolean>((resolve) => {
+  resolveLoaded = resolve
+})
+
+// Initialize social graph (separate from subscription setup)
+export const initializeSocialGraph = async () => {
   const currentPublicKey = useUserStore.getState().publicKey
-  initializeInstance(currentPublicKey || undefined).then(() => {
-    if (currentPublicKey) {
-      setupSubscription(currentPublicKey)
-    } else {
-      instance.setRoot(DEFAULT_SOCIAL_GRAPH_ROOT)
-    }
-    isLoaded = true
-    resolve(true)
-  })
+  await initializeInstance(currentPublicKey || undefined)
+
+  if (!currentPublicKey) {
+    instance.setRoot(DEFAULT_SOCIAL_GRAPH_ROOT)
+  }
+
+  isLoaded = true
+  resolveLoaded?.(true)
+}
+
+// Setup subscription (called after NDK is ready)
+export const setupSocialGraphSubscriptions = async () => {
+  const currentPublicKey = useUserStore.getState().publicKey
+  if (currentPublicKey) {
+    await setupSubscription(currentPublicKey)
+  }
 
   useUserStore.subscribe((state, prevState) => {
     if (state.publicKey !== prevState.publicKey) {
@@ -203,7 +223,10 @@ export const socialGraphLoaded = new Promise((resolve) => {
       }
     }
   })
-})
+}
+
+// Auto-initialize on module load
+initializeSocialGraph()
 
 export const useSocialGraphLoaded = () => {
   const [isSocialGraphLoaded, setIsSocialGraphLoaded] = useState(isLoaded)
@@ -219,7 +242,11 @@ async function setupSubscription(publicKey: string) {
   instance.setRoot(publicKey)
   await instance.recalculateFollowDistances()
   sub?.stop()
-  sub = ndk().subscribe({
+
+  // Import ndk lazily to avoid initialization race
+  const {ndk: getNdk, initNDKAsync} = await import("@/utils/ndk")
+  await initNDKAsync() // Ensure NDK is initialized
+  sub = getNdk().subscribe({
     kinds: [KIND_CONTACTS, KIND_MUTE_LIST],
     authors: [publicKey],
     limit: 1,
@@ -272,8 +299,8 @@ export const loadFromFile = (merge = false) => {
             }
             await saveToLocalForage()
           })
-        } catch (e) {
-          console.error("failed to load social graph from file:", e)
+        } catch (err) {
+          error("failed to load social graph from file:", err)
         }
       })
     }
@@ -366,8 +393,8 @@ export const downloadLargeGraph = (options: DownloadGraphOptions = {}) => {
         getFollowListsInternal(root, false, 1)
       }
     })
-    .catch((error) => {
-      console.error("failed to load large social graph:", error)
+    .catch((err) => {
+      error("failed to load large social graph:", err)
     })
 }
 
@@ -376,14 +403,14 @@ export const loadAndMerge = () => loadFromFile(true)
 export const clearGraph = async () => {
   instance = new SocialGraph(instance.getRoot())
   await saveToLocalForage()
-  console.log("Cleared social graph")
+  log("Cleared social graph")
 }
 
 export const resetGraph = async () => {
   const root = instance.getRoot()
   instance = await loadPreCrawledGraph(root)
   await saveToLocalForage()
-  console.log("Reset social graph to default")
+  log("Reset social graph to default")
 }
 
 export const stopRecrawl = () => {

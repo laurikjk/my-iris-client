@@ -14,6 +14,14 @@
     "plugin:prettier/recommended"
   ],
   "ignorePatterns": ["dist", "node_modules"],
+  "overrides": [
+    {
+      "files": ["scripts/**/*.ts", "tests/**/*.spec.ts", "**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 2020,
@@ -50,7 +58,8 @@
     "no-var": "warn",
     "@typescript-eslint/no-var-requires": "error",
     "react-refresh/only-export-components": ["warn", {"allowConstantExport": true}],
-    "react/react-in-jsx-scope": "off"
+    "react/react-in-jsx-scope": "off",
+    "no-console": ["error", {"allow": ["warn", "error"]}]
   },
   "settings": {
     "react": {

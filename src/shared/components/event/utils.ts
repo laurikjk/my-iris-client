@@ -28,11 +28,12 @@ export const handleEventContent = (
       } else {
         const eTag = getTag("e", event.tags)
         if (eTag) {
-          const sub = ndk().subscribe({ids: [eTag]}, {closeOnEose: true})
+          const sub = ndk().subscribe({ids: [eTag]})
 
           sub.on("event", (fetchedEvent: NDKEvent) => {
             if (fetchedEvent && fetchedEvent.id) {
               setReferredEvent(fetchedEvent)
+              sub.stop()
             }
           })
 

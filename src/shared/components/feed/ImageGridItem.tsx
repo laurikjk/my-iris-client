@@ -4,7 +4,6 @@ import {NDKEvent, NDKSubscription} from "@/lib/ndk"
 import {decode} from "blurhash"
 import {nip19} from "nostr-tools"
 
-import {eventsByIdCache} from "@/utils/memcache.ts"
 import {IMAGE_REGEX, VIDEO_REGEX} from "@/shared/components/embed/media/MediaEmbed.tsx"
 import {hasImageOrVideo} from "@/shared/utils/mediaUtils"
 import {useSettingsStore} from "@/stores/settings"
@@ -121,22 +120,15 @@ const ImageGridItem = memo(function ImageGridItem({
     }
 
     if (eventIdHex) {
-      const cached = eventsByIdCache.get(eventIdHex)
-      if (cached) {
-        setEvent(cached)
-        onEventFetched?.(cached)
-      } else {
-        const sub = ndk().subscribe({ids: [eventIdHex]}, {closeOnEose: true})
-        subscriptionRef.current = sub
-
-        sub.on("event", (fetchedEvent: NDKEvent) => {
-          if (fetchedEvent && fetchedEvent.id) {
+      ndk()
+        .fetchEvent(eventIdHex)
+        .then((fetchedEvent) => {
+          if (fetchedEvent) {
             setEvent(fetchedEvent)
-            eventsByIdCache.set(eventIdHex, fetchedEvent)
             onEventFetched?.(fetchedEvent)
           }
         })
-      }
+        .catch((err) => console.error("Error fetching event:", err))
     }
 
     return () => {

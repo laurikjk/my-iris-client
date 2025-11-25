@@ -26,6 +26,7 @@ import {
   KIND_REACTION,
   KIND_CLASSIFIED,
   KIND_PICTURE_FIRST,
+  KIND_ZAP_RECEIPT,
 } from "@/utils/constants"
 
 type Tab = {
@@ -111,6 +112,20 @@ const tabs: Tab[] = [
         "#p": [myPubKey],
       },
       showRepliedTo: true,
+    }),
+  },
+  {
+    name: "Zaps",
+    path: "zaps",
+    getFeedConfig: (pubKey) => ({
+      name: "Zaps",
+      id: `profile-zaps`,
+      showEventsByUnknownUsers: true,
+      showAuthorInZapReceipts: false,
+      filter: {
+        kinds: [KIND_ZAP_RECEIPT],
+        "#P": [pubKey],
+      },
     }),
   },
 ]

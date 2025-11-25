@@ -3,6 +3,10 @@ import type {Manager} from "@/lib/cashu/core/index"
 import {getEncodedToken, decodePaymentRequest, type Token} from "@cashu/cashu-ts"
 import SendEcashForm from "./SendEcashForm"
 import SendEcashShare from "./SendEcashShare"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.CASHU_WALLET)
 
 interface SendEcashModeProps {
   manager: Manager | null
@@ -63,8 +67,8 @@ export default function SendEcashMode({
         if (decodedRequest.mints && decodedRequest.mints.length > 0) {
           setRequestedMint(decodedRequest.mints[0])
         }
-      } catch (error) {
-        console.error("Failed to decode payment request:", error)
+      } catch (err) {
+        error("Failed to decode payment request:", err)
       }
     }
 
@@ -83,10 +87,10 @@ export default function SendEcashMode({
         const {getPaymentMetadata} = await import("@/stores/paymentMetadata")
         const metadata = await getPaymentMetadata(encoded)
         if (metadata?.message) {
-          console.log("Token has metadata message:", metadata.message)
+          log("Token has metadata message:", metadata.message)
         }
-      } catch (error) {
-        console.error("Failed to encode initial token:", error)
+      } catch (err) {
+        error("Failed to encode initial token:", err)
       }
     }
     loadInitialToken()
@@ -98,10 +102,7 @@ export default function SendEcashMode({
 
     // If payment request with NIP-117 recipient, auto-send via DM
     if (selectedUserPubkey) {
-      console.log(
-        "🚀 Auto-sending token to payment request recipient:",
-        selectedUserPubkey
-      )
+      log("🚀 Auto-sending token to payment request recipient:", selectedUserPubkey)
       // SendEcashShare will handle the auto-send on mount
     }
   }

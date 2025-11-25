@@ -1,7 +1,10 @@
-import {KIND_CHANNEL_MESSAGE} from "@/utils/constants"
+import {KIND_CHANNEL_MESSAGE, DEBUG_NAMESPACES} from "@/utils/constants"
 import {usePublicChatsStore} from "@/stores/publicChats"
 import {useUserStore} from "../stores/user"
 import {ndk} from "@/utils/ndk"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 export const migrateUserState = () => {
   const migrateFromLocalStorage = <T>(key: string, defaultValue: T): T => {
@@ -15,15 +18,15 @@ export const migrateUserState = () => {
               ? parsedValue.value
               : parsedValue
 
-          console.log(`Migrated ${key} from localStorage:`, extractedValue)
+          log(`Migrated ${key} from localStorage:`, extractedValue)
           localStorage.removeItem(`localState/${key}`)
           return extractedValue
-        } catch (error) {
-          console.error(`Error parsing ${key} from localStorage:`, error)
+        } catch (err) {
+          error(`Error parsing ${key} from localStorage:`, err)
         }
       }
-    } catch (error) {
-      console.error(`Error migrating ${key} from localStorage:`, error)
+    } catch (err) {
+      error(`Error migrating ${key} from localStorage:`, err)
     }
     return defaultValue
   }
@@ -41,6 +44,9 @@ export const migratePublicChats = async () => {
   const migrationKey = "publicChats:migrated"
 
   if (localStorage.getItem(migrationKey)) return
+
+  // Wait for store to hydrate before adding chats
+  await usePublicChatsStore.getState().awaitHydration()
 
   const store = usePublicChatsStore.getState()
   const myPubKey = useUserStore.getState().publicKey

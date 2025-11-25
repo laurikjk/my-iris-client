@@ -26,7 +26,8 @@ interface ChronologicalSubscriptionCache {
 export default function useChronologicalSubscription(
   cache: ChronologicalSubscriptionCache,
   filterSeen?: boolean,
-  showReplies?: boolean
+  showReplies?: boolean,
+  excludeOwnPosts?: boolean
 ) {
   const myPubKey = useUserStore((state) => state.publicKey)
   const follows = useFollows(myPubKey, true)
@@ -61,7 +62,6 @@ export default function useChronologicalSubscription(
     if (!isSocialGraphLoaded || !follows.length) {
       return
     }
-
     const now = Math.floor(Date.now() / 1000)
     const chronologicalFilter: NDKFilter = {
       kinds: [KIND_TEXT_NOTE, KIND_LONG_FORM_CONTENT],
@@ -78,6 +78,7 @@ export default function useChronologicalSubscription(
     sub.on("event", (event) => {
       if (!event.created_at || !event.id) return
       if (filterSeen && seenEventIds.has(event.id)) return
+      if (excludeOwnPosts && event.pubkey === myPubKey) return
       if (!showReplies && getEventReplyingTo(event)) {
         return
       }

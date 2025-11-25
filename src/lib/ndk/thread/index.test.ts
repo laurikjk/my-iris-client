@@ -1,3 +1,4 @@
+import {describe, expect, it, vi, beforeEach, afterEach, beforeAll, afterAll} from "vitest"
 import type {NDKEventId, NostrEvent} from "../events"
 import {NDKEvent} from "../events"
 import {NDK} from "../ndk"

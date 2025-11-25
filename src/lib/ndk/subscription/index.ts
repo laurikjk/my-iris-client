@@ -263,6 +263,48 @@ export interface NDKSubscriptionOptions {
    * );
    */
   exclusiveRelay?: boolean
+
+  /**
+   * Use Negentropy (NIP-77) sync protocol instead of standard REQ.
+   * When enabled, the subscription will:
+   * 1. Check if relay supports NIP-77 via NIP-11 metadata
+   * 2. Build a local storage vector from cached events matching the filter
+   * 3. Use set reconciliation to efficiently sync only missing events
+   *
+   * This is significantly more bandwidth-efficient for syncing large event sets,
+   * especially useful for:
+   * - Initial sync of event collections
+   * - Periodic updates with minimal data transfer
+   * - Syncing from multiple relays efficiently
+   *
+   * Requires relay to support NIP-77. If relay doesn't support it, falls back
+   * to standard subscription behavior.
+   *
+   * @default false
+   * @example
+   * // Use Negentropy to sync reactions efficiently
+   * ndk.subscribe(
+   *   { kinds: [7], "#e": ["note_id"] },
+   *   { useNegentropy: true }
+   * );
+   */
+  useNegentropy?: boolean
+
+  /**
+   * Frame size limit for Negentropy sync (in bytes).
+   * Limits the size of Negentropy protocol messages to prevent timeouts
+   * and manage bandwidth on constrained connections.
+   *
+   * Only used when useNegentropy is true.
+   *
+   * @default undefined (no limit)
+   * @example
+   * ndk.subscribe(
+   *   { kinds: [1], authors: ["pubkey"] },
+   *   { useNegentropy: true, negentropyFrameSizeLimit: 60000 }
+   * );
+   */
+  negentropyFrameSizeLimit?: number
 }
 
 /**
@@ -495,9 +537,10 @@ export class NDKSubscription extends EventEmitter<{
   public relaysMissingEose(): WebSocket["url"][] {
     if (!this.relayFilters) return []
 
-    const relaysMissingEose = Array.from(this.relayFilters?.keys()).filter(
-      (url) => !this.eosesSeen.has(this.pool.getRelay(url, false, false))
-    )
+    const relaysMissingEose = Array.from(this.relayFilters?.keys()).filter((url) => {
+      const relay = this.pool.getRelay(url, false, false)
+      return relay && !this.eosesSeen.has(relay)
+    })
 
     return relaysMissingEose
   }
@@ -737,7 +780,9 @@ export class NDKSubscription extends EventEmitter<{
     // iterate through the this.relayFilters
     for (const [relayUrl, filters] of this.relayFilters) {
       const relay = this.pool.getRelay(relayUrl, true, true, filters)
-      relay.subscribe(this, filters)
+      if (relay) {
+        relay.subscribe(this, filters)
+      }
     }
   }
 
@@ -768,7 +813,9 @@ export class NDKSubscription extends EventEmitter<{
 
         // Connect to the relay and subscribe
         const relay = this.pool.getRelay(relayUrl, true, true, filters)
-        relay.subscribe(this, filters)
+        if (relay) {
+          relay.subscribe(this, filters)
+        }
       }
     }
   }
@@ -789,97 +836,46 @@ export class NDKSubscription extends EventEmitter<{
     optimisticPublish = false
   ) {
     const eventId = event.id! as NDKEventId
-
     const eventAlreadySeen = this.eventFirstSeen.has(eventId)
-    let ndkEvent: NDKEvent
 
-    if (event instanceof NDKEvent) ndkEvent = event
+    // Event should already be processed as NDKEvent by manager
+    const ndkEvent = event instanceof NDKEvent ? event : new NDKEvent(this.ndk, event)
 
     if (!eventAlreadySeen) {
-      // generate the ndkEvent
-      ndkEvent ??= new NDKEvent(this.ndk, event)
-      ndkEvent.ndk = this.ndk
-      ndkEvent.relay = relay
-
-      // Check expiration (NIP-40)
-      const expirationTag = ndkEvent.getMatchingTags("expiration")[0]
-      if (expirationTag && expirationTag[1]) {
-        const expirationTime = parseInt(expirationTag[1])
-        const now = Math.floor(Date.now() / 1000)
-        if (now >= expirationTime) {
-          // Event has expired, skip it and queue for cache deletion
-          this.debug("Event expired %s (expiration: %d, now: %d)", eventId, expirationTime, now)
-
-          // Queue for batched deletion from cache
-          if (this.ndk?.cacheAdapter && 'queueExpiredEvent' in this.ndk.cacheAdapter) {
-            (this.ndk.cacheAdapter as any).queueExpiredEvent(eventId)
+      // Track cache stats (only in browser)
+      if (typeof window !== "undefined") {
+        try {
+          const {cacheStats} = require("@/utils/cacheStats")
+          if (fromCache) {
+            cacheStats.trackCacheEvent(eventId)
+          } else if (!optimisticPublish) {
+            cacheStats.trackRelayEvent(eventId)
           }
-
-          return
+        } catch (e) {
+          // Ignore if stats module not available
         }
       }
 
-      // we don't want to validate/verify events that are either
-      // coming from the cache or have been published by us from within
-      // the client
-      if (!fromCache && !optimisticPublish) {
-        // validate it
-        if (!this.skipValidation) {
-          if (!ndkEvent.isValid) {
-            this.debug("Event failed validation %s from relay %s", eventId, relay?.url)
-            return
-          }
-        }
-
-        // verify it
-        if (relay) {
-          // Check if we need to verify this event based on sampling
-          const shouldVerify = relay.shouldValidateEvent()
-
-          if (shouldVerify && !this.skipVerification) {
-            // Set the relay on the event for async verification
-            ndkEvent.relay = relay
-
-            // Attempt verification
-            if (this.ndk.asyncSigVerification) {
-              // Async verification - call verifySignature but don't wait for result
-              // The validation stats will be tracked in the async callback
-              ndkEvent.verifySignature(true)
-            } else {
-              // Sync verification - check result immediately
-              if (!ndkEvent.verifySignature(true)) {
-                this.debug("Event failed signature validation", event)
-                // Report the invalid signature with relay information through the centralized method
-                this.ndk.reportInvalidSignature(ndkEvent, relay)
-                return
-              }
-
-              // Track successful validation
-              relay.addValidatedEvent()
-            }
-          } else {
-            // We skipped verification for this event
-            relay.addNonValidatedEvent()
-          }
-        }
-
-        if (this.ndk.cacheAdapter && !this.opts.dontSaveToCache) {
+      // Save to cache if needed (only for events from relays, not cache/optimistic)
+      if (!fromCache && !optimisticPublish && this.ndk.cacheAdapter && !this.opts.dontSaveToCache) {
+        try {
           this.ndk.cacheAdapter.setEvent(ndkEvent, this.filters, relay)
+        } catch (error) {
+          // Cache might not be available (worker transport mode)
+          console.warn("[NDK Subscription] Failed to cache event:", error)
         }
       }
 
-      // emit it
-      if (!optimisticPublish || this.skipOptimisticPublishEvent !== true) {
-        this.emitEvent(
-          this.opts?.wrap ?? false,
-          ndkEvent,
-          relay,
-          fromCache,
-          optimisticPublish
-        )
-        // mark the eventId as seen
-        this.eventFirstSeen.set(eventId, Date.now())
-      }
+      // emit it (always emit, including optimistic publishes)
+      this.emitEvent(
+        this.opts?.wrap ?? false,
+        ndkEvent,
+        relay,
+        fromCache,
+        optimisticPublish,
+      )
+      // mark the eventId as seen
+      this.eventFirstSeen.set(eventId, Date.now())
     } else {
       const timeSinceFirstSeen = Date.now() - (this.eventFirstSeen.get(eventId) || 0)
       this.emit(
@@ -913,9 +909,9 @@ export class NDKSubscription extends EventEmitter<{
         this.ndk.cacheAdapter?.setEventDup &&
         !this.opts.dontSaveToCache
       ) {
-        // Get or create the NDKEvent instance
-        ndkEvent ??= event instanceof NDKEvent ? event : new NDKEvent(this.ndk, event)
-        this.ndk.cacheAdapter.setEventDup(ndkEvent, relay)
+        // Event should already be NDKEvent at this point
+        const evt = event instanceof NDKEvent ? event : new NDKEvent(this.ndk, event)
+        this.ndk.cacheAdapter.setEventDup(evt, relay)
       }
 
       if (relay) {
@@ -974,9 +970,13 @@ export class NDKSubscription extends EventEmitter<{
   private eoseTimeout: ReturnType<typeof setTimeout> | undefined
   private eosed = false
 
-  public eoseReceived(relay: NDKRelay): void {
-    this.debug("EOSE received from %s", relay.url)
-    this.eosesSeen.add(relay)
+  public eoseReceived(relay: NDKRelay | null): void {
+    if (relay) {
+      this.debug("EOSE received from %s", relay.url)
+      this.eosesSeen.add(relay)
+    } else {
+      this.debug("EOSE received from worker transport")
+    }
 
     let lastEventSeen = this.lastEventReceivedAt
       ? Date.now() - this.lastEventReceivedAt

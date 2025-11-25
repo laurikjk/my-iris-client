@@ -5,6 +5,7 @@ import {getPaymentMetadata, type PaymentMetadata} from "@/stores/paymentMetadata
 
 export type EnrichedHistoryEntry = HistoryEntry & {
   paymentMetadata?: PaymentMetadata
+  fee?: number // Fee paid for melt (lightning send) transactions
 }
 
 const meltQuoteRepos = new IndexedDbRepositories({name: "iris-cashu-db"})
@@ -25,6 +26,7 @@ export function useHistoryEnrichment() {
         entries.map(async (entry) => {
           let invoice: string | undefined
           let memoFromToken: string | undefined
+          let fee: number | undefined
 
           if (entry.type === "mint") {
             invoice = entry.paymentRequest
@@ -34,6 +36,10 @@ export function useHistoryEnrichment() {
               entry.quoteId
             )
             invoice = quote?.request
+            // Retrieve fee from the quote - use fee_reserve or calculated fee
+            if (quote) {
+              fee = quote.fee_reserve
+            }
           } else if (entry.type === "send") {
             // For send entries, encode the token and extract memo
             if (entry.token) {
@@ -93,6 +99,7 @@ export function useHistoryEnrichment() {
           return {
             ...entry,
             paymentMetadata: metadata,
+            fee,
           }
         })
       )

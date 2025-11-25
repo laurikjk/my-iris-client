@@ -13,6 +13,10 @@ import socialGraph from "./utils/socialGraph"
 import DebugManager from "./utils/DebugManager"
 import Layout from "@/shared/components/Layout"
 import {isTauri, isMobileTauri} from "./utils/utils"
+import {initializeDebugLogging, createDebugLogger} from "./utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 import {onOpenUrl} from "@tauri-apps/plugin-deep-link"
 import {
   enable as enableAutostart,
@@ -59,7 +63,7 @@ const checkDeletedAccount = async (publicKey: string) => {
     const user = ndk().getUser({pubkey: publicKey})
     await user.fetchProfile()
     if (user.profile?.deleted) {
-      console.log("Detected deleted account, logging out")
+      log("Detected deleted account, logging out")
       // Clear user state
       useUserStore.getState().reset()
       // Clear storage
@@ -68,16 +72,31 @@ const checkDeletedAccount = async (publicKey: string) => {
       location.reload()
     }
   } catch (e) {
-    console.error("Error checking deleted account:", e)
+    error("Error checking deleted account:", e)
   }
 }
 
 // Move initialization to a function to avoid side effects
 const initializeApp = async () => {
+  // Initialize debug logging first
+  initializeDebugLogging()
+
   // Wait for settings to hydrate from localStorage before initializing NDK
   await useUserStore.getState().awaitHydration()
 
-  ndk()
+  // Initialize NDK (now async due to cache adapter)
+  const {initNDKAsync} = await import("@/utils/ndk")
+  await initNDKAsync()
+
+  // Load social graph in background (non-blocking)
+  import("@/utils/socialGraph").then(
+    async ({socialGraphLoaded, setupSocialGraphSubscriptions}) => {
+      await socialGraphLoaded
+      log("✅ Social graph initialized")
+      await setupSocialGraphSubscriptions()
+      log("✅ Social graph subscriptions ready")
+    }
+  )
 
   // Initialize debug system
   DebugManager
@@ -92,39 +111,42 @@ const initializeApp = async () => {
       if (desktop.startOnBoot && !autostartCurrentlyEnabled) {
         await enableAutostart()
       }
-    } catch (error) {
-      console.error("Failed to initialize autostart:", error)
+    } catch (err) {
+      error("Failed to initialize autostart:", err)
     }
   }
 
   // Initialize chat modules if we have a public key
   const state = useUserStore.getState()
   if (state.publicKey) {
-    console.log("Initializing chat modules with existing user data")
+    log("Initializing chat modules with existing user data")
 
     // Check for deleted account first
     void checkDeletedAccount(state.publicKey)
 
     subscribeToNotifications()
     subscribeToDMNotifications()
-    migratePublicChats()
-    socialGraph().recalculateFollowDistances()
+    void migratePublicChats()
+    // Delay social graph to avoid race with NDK init
+    setTimeout(() => {
+      socialGraph().recalculateFollowDistances()
+    }, 100)
 
     // Initialize platform-specific notifications (non-blocking, parallel to web push)
-    console.log("[Init] isTauri():", isTauri())
+    log("[Init] isTauri():", isTauri())
     if (isTauri()) {
       ;(async () => {
         const isMobile = await isMobileTauri()
-        console.log("[Init] isMobileTauri:", isMobile)
+        log("[Init] isMobileTauri:", isMobile)
         if (isMobile) {
-          console.log("[Init] Initializing mobile push notifications")
-          pushNotifications.init().catch(console.error)
+          log("[Init] Initializing mobile push notifications")
+          pushNotifications.init().catch(error)
         } else {
-          console.log("[Init] Initializing desktop notifications")
+          log("[Init] Initializing desktop notifications")
           const {initDesktopNotifications} = await import("./utils/desktopNotifications")
-          initDesktopNotifications().catch(console.error)
+          initDesktopNotifications().catch(error)
         }
-      })().catch(console.error)
+      })().catch(error)
     }
 
     // Only initialize DM sessions if not in readonly mode
@@ -145,33 +167,40 @@ const initializeApp = async () => {
 
   // Perform migration before rendering the app
   migrateUserState()
+
+  // Return true when complete
+  return true
 }
 
-// Initialize app
-void initializeApp()
-
+// Initialize app and render when ready
 const root = ReactDOM.createRoot(document.getElementById("root")!)
 
-root.render(
-  <NavigationProvider>
-    <Layout>
-      <Router />
-    </Layout>
-  </NavigationProvider>
-)
+initializeApp()
+  .then(() => {
+    root.render(
+      <NavigationProvider>
+        <Layout>
+          <Router />
+        </Layout>
+      </NavigationProvider>
+    )
+  })
+  .catch((err) => {
+    error("[Init] Initialization failed:", err)
+  })
 
 // Store subscriptions
 const unsubscribeUser = useUserStore.subscribe((state, prevState) => {
   // Only proceed if public key actually changed
   if (state.publicKey && state.publicKey !== prevState.publicKey) {
-    console.log("Public key changed, initializing chat modules")
+    log("Public key changed, initializing chat modules")
 
     // Check for deleted account when user logs in
     checkDeletedAccount(state.publicKey)
 
     subscribeToNotifications()
     subscribeToDMNotifications()
-    migratePublicChats()
+    void migratePublicChats()
 
     // Only initialize DM sessions if not in readonly mode
     if (hasWriteAccess()) {

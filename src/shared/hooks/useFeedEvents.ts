@@ -72,21 +72,36 @@ export default function useFeedEvents({
   const hasReceivedEventsRef = useRef<boolean>(eventsRef.current.size > 0)
   const [eventsVersion, setEventsVersion] = useState(0) // Version counter for filtered events
 
+  // Memoize normalized relay URLs to avoid recreating on every event
+  const normalizedTargetRelays = useMemo(() => {
+    if (!feedConfig.relayUrls?.length) return null
+    const normalizeRelay = (url: string) =>
+      url.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
+    return feedConfig.relayUrls.map(normalizeRelay)
+  }, [JSON.stringify(feedConfig.relayUrls)])
+
   const shouldAcceptEventRef = useRef<(event: NDKEvent) => boolean>(() => false)
 
   shouldAcceptEventRef.current = (event: NDKEvent) => {
     if (!event.created_at) return false
 
-    // Feed-specific filtering (from fetchFilterFn)
-    if (feedConfig.excludeSeen && seenEventIds.has(event.id)) return false
-    if (feedConfig.hideReplies && getEventReplyingTo(event)) return false
-
-    // Feed-specific display filtering (from displayFilterFn)
-    // Kind 20 events always contain media (picture-first posts)
-    if (feedConfig.requiresMedia && event.kind !== KIND_PICTURE_FIRST && !hasMedia(event))
+    // Early exit: excludeSeen check (combined duplicate checks)
+    if (feedConfig.excludeSeen && seenEventIds.has(event.id)) {
       return false
-    if (feedConfig.requiresReplies && !getEventReplyingTo(event)) return false
-    if (feedConfig.repliesTo && getEventReplyingTo(event) !== feedConfig.repliesTo)
+    }
+
+    // Cache expensive calls
+    const replyingTo =
+      feedConfig.hideReplies || feedConfig.requiresReplies || feedConfig.repliesTo
+        ? getEventReplyingTo(event)
+        : null
+
+    if (feedConfig.hideReplies && replyingTo) return false
+    if (feedConfig.requiresReplies && !replyingTo) return false
+    if (feedConfig.repliesTo && replyingTo !== feedConfig.repliesTo) return false
+
+    // Feed-specific display filtering
+    if (feedConfig.requiresMedia && event.kind !== KIND_PICTURE_FIRST && !hasMedia(event))
       return false
 
     // Display mode filtering - in grid mode, only accept events with images/videos
@@ -100,10 +115,6 @@ export default function useFeedEvents({
       }
     }
 
-    if (feedConfig.excludeSeen && seenEventIds.has(event.id)) {
-      return false
-    }
-
     // Location tag filtering for map feeds
     if (feedConfig.requiresLocationTag) {
       const hasGeohashTag = event.tags?.some((tag) => tag[0] === "g" && tag[1])
@@ -113,22 +124,21 @@ export default function useFeedEvents({
       }
     }
 
-    // Relay filtering (from combinedDisplayFilterFn)
-    if (feedConfig.relayUrls?.length) {
+    // Relay filtering - use pre-normalized relays
+    if (normalizedTargetRelays) {
       if (!event.onRelays?.length) return false
       const normalizeRelay = (url: string) =>
         url.replace(/^(https?:\/\/)?(wss?:\/\/)?/, "").replace(/\/$/, "")
-      const normalizedTargetRelays = feedConfig.relayUrls.map(normalizeRelay)
       const eventIsOnTargetRelay = event.onRelays.some((relay) =>
         normalizedTargetRelays.includes(normalizeRelay(relay.url))
       )
       if (!eventIsOnTargetRelay) return false
     }
 
-    // Check if this is a custom author (explicitly selected by user)
-    const customAuthors = feedConfig.filter?.authors || []
-    const hasCustomAuthors = customAuthors.length > 0
-    const isCustomAuthor = customAuthors.includes(event.pubkey)
+    // Custom author check
+    const customAuthors = feedConfig.filter?.authors
+    const hasCustomAuthors = customAuthors && customAuthors.length > 0
+    const isCustomAuthor = hasCustomAuthors && customAuthors.includes(event.pubkey)
 
     // Follow distance filtering
     // Skip followDistance entirely when custom authors are defined
@@ -254,21 +264,10 @@ export default function useFeedEvents({
   }
 
   const filteredEvents = useMemo((): NDKEvent[] => {
-    const events = Array.from(eventsRef.current.values())
-
-    // Re-filter events when feedConfig changes
-    return events.filter((event) => shouldAcceptEventRef.current!(event))
-  }, [
-    eventsVersion,
-    feedConfig.followDistance,
-    feedConfig.hideReplies,
-    feedConfig.requiresMedia,
-    feedConfig.requiresReplies,
-    feedConfig.repliesTo,
-    feedConfig.excludeSeen,
-    feedConfig.relayUrls,
-    displayAs,
-  ])
+    // Events are already filtered on insertion via shouldAcceptEventRef
+    // No need to re-filter the entire cache - just return as array
+    return Array.from(eventsRef.current.values())
+  }, [eventsVersion])
 
   const eventsByUnknownUsers = useMemo(() => {
     // Don't show unknown user events when custom authors are defined
@@ -439,7 +438,9 @@ export default function useFeedEvents({
     sub.on("event", (event) => {
       if (!event?.id || !event.created_at) return
       if (eventsRef.current.has(event.id)) return
-      if (!shouldAcceptEventRef.current!(event)) return
+      if (!shouldAcceptEventRef.current!(event)) {
+        return
+      }
 
       const now = Math.floor(Date.now() / 1000)
       const isFutureEvent = event.created_at > now

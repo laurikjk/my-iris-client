@@ -1,3 +1,4 @@
+import {describe, expect, it, vi, beforeEach, afterEach} from "vitest"
 import {NDK} from "../../../ndk"
 import {NDKUser} from "../../../user"
 import NDKList from "."

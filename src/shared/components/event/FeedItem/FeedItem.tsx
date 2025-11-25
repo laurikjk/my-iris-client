@@ -1,4 +1,3 @@
-import {eventsByIdCache} from "@/utils/memcache.ts"
 import {useEffect, useMemo, useState, useRef, memo} from "react"
 import {NDKEvent, NDKSubscription} from "@/lib/ndk"
 import classNames from "classnames"
@@ -29,7 +28,7 @@ import LikeHeader from "../LikeHeader"
 import ZapReceiptHeader from "../ZapReceiptHeader"
 import ReplyHeader from "../ReplyHeader"
 import {nip19} from "nostr-tools"
-import {ndk} from "@/utils/ndk"
+import {fetchEventReliable} from "@/utils/fetchEventsReliable"
 import {KIND_TEXT_NOTE, KIND_REACTION, KIND_ZAP_RECEIPT} from "@/utils/constants"
 import InlineNoteCreator from "@/shared/components/create/InlineNoteCreator"
 import {usePublicKey} from "@/stores/user"
@@ -49,6 +48,7 @@ type FeedItemProps = {
   onEvent?: (event: NDKEvent) => void
   borderTop?: boolean
   highlightAsNew?: boolean
+  showAuthorInZapReceipts?: boolean
 }
 
 function FeedItem({
@@ -66,6 +66,7 @@ function FeedItem({
   onEvent,
   borderTop,
   highlightAsNew = false,
+  showAuthorInZapReceipts,
 }: FeedItemProps) {
   const [expanded, setExpanded] = useState(false)
   const [hasActualReplies, setHasActualReplies] = useState(false)
@@ -138,31 +139,32 @@ function FeedItem({
       subscriptionRef.current = null
     }
 
-    if (!event && eventIdHex) {
-      const cached = eventsByIdCache.get(eventIdHex)
-      if (cached) {
-        setEvent(cached)
-        setLoadingEvent(false)
-      } else {
-        const sub = ndk().subscribe(
-          {ids: [eventIdHex], authors: authorHints},
-          {closeOnEose: true}
-        )
-        subscriptionRef.current = sub
+    let unsubscribe: (() => void) | undefined
 
-        sub.on("event", (fetchedEvent: NDKEvent) => {
-          if (fetchedEvent && fetchedEvent.id) {
+    if (!event && eventIdHex) {
+      const {promise, unsubscribe: unsub} = fetchEventReliable(
+        {ids: [eventIdHex], authors: authorHints},
+        {timeout: 5000}
+      )
+      unsubscribe = unsub
+
+      promise
+        .then((fetchedEvent) => {
+          if (fetchedEvent) {
             setEvent(fetchedEvent)
             setLoadingEvent(false)
-            eventsByIdCache.set(eventIdHex, fetchedEvent)
           }
         })
-      }
+        .catch((err) => {
+          console.error("Error fetching event:", err)
+          setLoadingEvent(false)
+        })
     } else {
       setLoadingEvent(false)
     }
 
     return () => {
+      if (unsubscribe) unsubscribe()
       if (subscriptionRef.current) {
         subscriptionRef.current.stop()
         subscriptionRef.current = null
@@ -174,14 +176,13 @@ function FeedItem({
     if (event) {
       const cleanup = handleEventContent(event, (referred) => {
         setReferredEvent(referred)
-        if (eventIdHex) eventsByIdCache.set(eventIdHex, referred)
       })
 
       return cleanup
     }
   }, [event, eventIdHex])
 
-  const wrapperClasses = classNames("relative max-w-[100vw]", {
+  const wrapperClasses = classNames("relative max-w-[100vw] overflow-x-clip", {
     "h-[200px] overflow-hidden": asEmbed && !expanded,
   })
 
@@ -289,9 +290,13 @@ function FeedItem({
               <LikeHeader event={event} />
             </div>
           )}
-          {event.kind === KIND_ZAP_RECEIPT && referredEvent && (
+          {event.kind === KIND_ZAP_RECEIPT && (
             <div className="flex flex-row select-none mb-2 px-4">
-              <ZapReceiptHeader event={event} />
+              <ZapReceiptHeader
+                event={event}
+                referredEvent={referredEvent}
+                showAuthor={showAuthorInZapReceipts}
+              />
             </div>
           )}
           {event.kind === KIND_TEXT_NOTE &&

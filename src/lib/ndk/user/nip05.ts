@@ -38,6 +38,15 @@ export async function getNip05For(
 
       const [_, name = "_", domain] = match
 
+      // Validate domain has at least one dot (e.g., example.com, not just "example")
+      if (!domain.includes(".")) {
+        console.warn("Invalid NIP-05 domain (missing TLD):", fullname)
+        if (ndk?.cacheAdapter?.saveNip05) {
+          ndk?.cacheAdapter.saveNip05(fullname, null)
+        }
+        return null
+      }
+
       try {
         const res = await _fetch(
           `https://${domain}/.well-known/nostr.json?name=${name}`,

@@ -1,22 +1,18 @@
-import React, {useState, useEffect, useRef, useCallback} from "react"
+import {useState, useEffect, useRef, useCallback, type ReactNode} from "react"
 import {NavigationContextType, StackItem, NavigateOptions} from "./types"
 import {getRouteParams} from "./routeMatcher"
 import {routes} from "./routes"
 import {matchPath} from "./utils"
 import {NavigationContext} from "./contexts"
 
-const MAX_STACK_SIZE = 10 // Increase stack size to keep more items
-const SKIP_CACHE_PATTERNS = [
-  /^\/\w+\/replies\//, // Reply feeds
-  /^\/notifications/, // Notifications should always refresh
-]
+const MAX_STACK_SIZE = 5
 
 type NavigationState = {
   stack: StackItem[]
   currentIndex: number
 }
 
-export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
+export const NavigationProvider = ({children}: {children: ReactNode}) => {
   const [navState, setNavState] = useState<NavigationState>({
     stack: [],
     currentIndex: -1,
@@ -132,7 +128,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
           }
         }
 
-        // Not found - create new entry
+        // Not found - recreate evicted entry
         const newItem: StackItem = {
           index: state.index,
           url: newUrl,
@@ -141,10 +137,40 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
         }
 
         // Add to stack maintaining order
-        const newStack = [...prevState.stack, newItem]
+        let newStack = [...prevState.stack, newItem]
         newStack.sort((a, b) => a.index - b.index)
 
         const newPosition = newStack.findIndex((item) => item.index === state.index)
+
+        // Evict if needed (navigating back to old item may cause overflow)
+        if (newStack.length > MAX_STACK_SIZE) {
+          const itemsToRemove = newStack.length - MAX_STACK_SIZE
+          let removed = 0
+
+          newStack = newStack.filter((item, index) => {
+            // Keep current item
+            if (index === newPosition) return true
+
+            // Keep alwaysKeep routes
+            if (shouldAlwaysKeep(item.url)) return true
+
+            // Remove oldest items first
+            if (removed < itemsToRemove && index < newPosition) {
+              removed++
+              return false
+            }
+
+            return true
+          })
+
+          // Recalculate position after filtering
+          const finalPosition = newStack.findIndex((item) => item.index === state.index)
+
+          return {
+            stack: newStack,
+            currentIndex: finalPosition,
+          }
+        }
 
         return {
           stack: newStack,
@@ -159,10 +185,6 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
       window.removeEventListener("popstate", handlePopState)
     }
   }, [])
-
-  const shouldCachePage = (url: string): boolean => {
-    return !SKIP_CACHE_PATTERNS.some((pattern) => pattern.test(url))
-  }
 
   const shouldAlwaysKeep = (url: string): boolean => {
     // Check if this URL matches any route with alwaysKeep flag
@@ -258,7 +280,7 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
       const newIndex = ++stackIndexRef.current
 
       // Remove forward history for non-stateful navigation
-      const newStack = updatedStack.slice(0, prevState.currentIndex + 1)
+      let newStack = updatedStack.slice(0, prevState.currentIndex + 1)
 
       // Add new item with URL as implicit cache key
       const newItem: StackItem = {
@@ -268,19 +290,27 @@ export const NavigationProvider = ({children}: {children: React.ReactNode}) => {
       }
       newStack.push(newItem)
 
-      // Memory management: remove old cached components
+      // Memory management: evict old items from stack while keeping alwaysKeep routes
       if (newStack.length > MAX_STACK_SIZE) {
-        const itemsToKeep = MAX_STACK_SIZE
-        for (let i = 0; i < newStack.length - itemsToKeep; i++) {
-          // Skip routes marked with alwaysKeep
-          if (shouldAlwaysKeep(newStack[i].url)) {
-            continue
+        const itemsToRemove = newStack.length - MAX_STACK_SIZE
+        let removed = 0
+
+        // Remove oldest non-alwaysKeep items (from beginning of stack)
+        newStack = newStack.filter((item, index) => {
+          // Keep current item (last in stack)
+          if (index === newStack.length - 1) return true
+
+          // Keep alwaysKeep routes
+          if (shouldAlwaysKeep(item.url)) return true
+
+          // Remove oldest items first
+          if (removed < itemsToRemove) {
+            removed++
+            return false
           }
-          // Clear components that should not be cached
-          if (newStack[i].component && !shouldCachePage(newStack[i].url)) {
-            newStack[i].component = null
-          }
-        }
+
+          return true
+        })
       }
 
       window.history.pushState({index: newIndex, url: path}, "", path)

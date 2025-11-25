@@ -4,6 +4,7 @@ import {NDKEvent} from "../events/index.js"
 import {NDKKind} from "../events/kinds"
 import type {NDK, NDKNetDebug} from "../ndk/index.js"
 import type {NDKFilter} from "../subscription"
+import {Queue, yieldThread} from "../utils/queue.js"
 import type {NDKRelay, NDKRelayConnectionStats} from "."
 import {NDKRelayStatus} from "."
 import {NDKRelayKeepalive, probeRelayConnection} from "./keepalive"
@@ -53,12 +54,34 @@ export class NDKRelayConnectivity {
   private lastMessageSent = Date.now()
   private wasIdle = false
 
+  // Message queues for async processing (actor pattern: inbox/outbox)
+  private inbox!: Queue<string> // Initialized in constructor after handleMessage is bound
+  private outbox!: Queue<string>
+  private outboxProcessing = false
+
   constructor(ndkRelay: NDKRelay, ndk?: NDK) {
     this.ndkRelay = ndkRelay
     this._status = NDKRelayStatus.DISCONNECTED
     const rand = Math.floor(Math.random() * 1000)
     this.debug = this.ndkRelay.debug.extend(`connectivity${rand}`)
     this.ndk = ndk
+
+    // Initialize queues with processors
+    // Inbox: 200 messages (receiving is cheap, allow burst capacity)
+    // Outbox: 50 messages (~50KB per relay, 1.5MB for 30 relays)
+    this.inbox = new Queue<string>(200, (msg) => this.handleMessage(msg))
+    this.outbox = new Queue<string>(50, (msg) => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        try {
+          this.ws.send(msg)
+          this.netDebug?.(msg, this.ndkRelay, "send")
+        } catch (e) {
+          this.debug("WebSocket send failed:", e)
+          this.handleStaleConnection()
+        }
+      }
+    })
+
     this.setupMonitoring()
   }
 
@@ -66,6 +89,12 @@ export class NDKRelayConnectivity {
    * Sets up keepalive, WebSocket state monitoring, and sleep detection
    */
   private setupMonitoring(): void {
+    // Listen for browser online/offline events for immediate detection
+    if (typeof window !== "undefined") {
+      window.addEventListener("offline", this.handleBrowserOffline)
+      window.addEventListener("online", this.handleBrowserOnline)
+    }
+
     // Setup keepalive to detect silent relays
     this.keepalive = new NDKRelayKeepalive(120000, async () => {
       this.debug("Relay silence detected, probing connection")
@@ -91,7 +120,7 @@ export class NDKRelayConnectivity {
       }
     })
 
-    // Monitor WebSocket readyState every 5 seconds
+    // Monitor WebSocket readyState every 2 seconds (faster detection)
     this.wsStateMonitor = setInterval(() => {
       if (this._status === NDKRelayStatus.CONNECTED) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
@@ -99,7 +128,7 @@ export class NDKRelayConnectivity {
           this.handleStaleConnection()
         }
       }
-    }, 5000)
+    }, 2000)
 
     // Detect system sleep by monitoring time gaps
     this.sleepDetector = setInterval(() => {
@@ -275,12 +304,79 @@ export class NDKRelayConnectivity {
       this.sleepDetector = undefined
     }
 
+    // Remove browser event listeners
+    if (typeof window !== "undefined") {
+      window.removeEventListener("offline", this.handleBrowserOffline)
+      window.removeEventListener("online", this.handleBrowserOnline)
+    }
+
     try {
       this.ws?.close()
     } catch (e) {
       this.debug("Failed to disconnect", e)
       this._status = NDKRelayStatus.DISCONNECTED
     }
+  }
+
+  /**
+   * Process and validate an event received from the relay.
+   * @returns NDKEvent if valid, undefined if invalid
+   */
+  private processEvent(rawEvent: NostrEvent): NDKEvent | undefined {
+    // Create NDKEvent
+    const ndkEvent = new NDKEvent(this.ndk, rawEvent)
+    ndkEvent.ndk = this.ndk
+    ndkEvent.relay = this.ndkRelay
+
+    // Check expiration (NIP-40)
+    const expirationTag = ndkEvent.getMatchingTags("expiration")[0]
+    if (expirationTag && expirationTag[1]) {
+      const expirationTime = parseInt(expirationTag[1])
+      const now = Math.floor(Date.now() / 1000)
+      if (now >= expirationTime) {
+        this.debug(
+          "Event expired %s (expiration: %d, now: %d)",
+          rawEvent.id,
+          expirationTime,
+          now
+        )
+        // Queue for batched deletion from cache
+        if (this.ndk?.cacheAdapter && "queueExpiredEvent" in this.ndk.cacheAdapter) {
+          ;(this.ndk.cacheAdapter as any).queueExpiredEvent(rawEvent.id)
+        }
+        return undefined
+      }
+    }
+
+    // Validate event
+    if (!ndkEvent.isValid) {
+      this.debug("Event failed validation %s from relay %s", rawEvent.id, this.ndkRelay.url)
+      return undefined
+    }
+
+    // Verify signature
+    const shouldVerify = this.ndkRelay.shouldValidateEvent()
+    if (shouldVerify) {
+      if (this.ndk?.asyncSigVerification) {
+        // Async verification
+        ndkEvent.verifySignature(true)
+      } else {
+        // Sync verification
+        if (!ndkEvent.verifySignature(true)) {
+          this.debug("Event failed signature validation", rawEvent)
+          this.ndk?.reportInvalidSignature(ndkEvent, this.ndkRelay)
+          return undefined
+        }
+        this.ndkRelay.addValidatedEvent()
+      }
+    } else {
+      this.ndkRelay.addNonValidatedEvent()
+    }
+
+    // Store processed event in manager
+    this.ndk?.subManager.seenEvent(rawEvent.id!, this.ndkRelay, ndkEvent)
+
+    return ndkEvent
   }
 
   /**
@@ -356,14 +452,72 @@ export class NDKRelayConnectivity {
    *
    * @param event - The MessageEvent containing the received message data.
    */
+  /**
+   * Fast extraction of event ID from JSON string without parsing.
+   * Returns event ID if message is EVENT type, null otherwise.
+   */
+  private getEventIdFromMessage(msg: string): string | null {
+    // Fast check: msg[2] === 'E' && msg[3] === 'V' (EVENT message)
+    if (msg.charCodeAt(2) !== 69 || msg.charCodeAt(3) !== 86) {
+      return null
+    }
+    const idPos = msg.indexOf('"id":"')
+    if (idPos === -1) {
+      return null
+    }
+    // Extract 64 chars after "id":"
+    // Event IDs are always 64 hex chars. If not valid, LRU lookup will fail
+    // and we'll parse normally - no harm done.
+    return msg.substring(idPos + 6, idPos + 70)
+  }
+
   private onMessage(event: MessageEvent): void {
     this.netDebug?.(event.data, this.ndkRelay, "recv")
 
     // Record any activity from relay
     this.keepalive?.recordActivity()
 
+    // Enqueue message - queue auto-processes with yielding
+    this.inbox.enqueue(event.data as string)
+  }
+
+  /**
+   * Process outbox queue - send all queued messages
+   */
+  private processOutbox(): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
+
+    let message = this.outbox.dequeue()
+    while (message) {
+      try {
+        this.ws.send(message)
+        this.netDebug?.(message, this.ndkRelay, "send")
+      } catch (e) {
+        this.debug("WebSocket send failed during outbox processing:", e)
+        this.handleStaleConnection()
+        return // Stop processing outbox
+      }
+      message = this.outbox.dequeue()
+    }
+  }
+
+  /**
+   * Handle individual message from inbox (called by Queue processor)
+   */
+  private handleMessage(msg: string): void {
+    // Early exit for duplicate events before JSON.parse
+    const eventId = this.getEventIdFromMessage(msg)
+    if (eventId && this.ndk) {
+      const seenData = this.ndk.subManager.seenEvents.get(eventId)
+      if (seenData && seenData.relays.length > 0) {
+        // Already processed from any relay, just track this relay saw it
+        this.ndk.subManager.seenEvent(eventId, this.ndkRelay)
+        return
+      }
+    }
+
     try {
-      const data = JSON.parse(event.data)
+      const data = JSON.parse(msg)
       const [cmd, id, ..._rest] = data
 
       // Check for registered protocol handlers first
@@ -376,12 +530,17 @@ export class NDKRelayConnectivity {
       switch (cmd) {
         case "EVENT": {
           const so = this.openSubs.get(id)
-          const event = data[2] as NostrEvent
+          const rawEvent = data[2] as NostrEvent
           if (!so) {
             this.debug(`Received event for unknown subscription ${id}`)
             return
           }
-          so.onevent(event)
+
+          const ndkEvent = this.processEvent(rawEvent)
+          if (!ndkEvent) return // Failed validation/verification
+
+          // Pass processed NDKEvent to subscription
+          so.onevent(ndkEvent)
           return
         }
         case "COUNT": {
@@ -414,6 +573,7 @@ export class NDKRelayConnectivity {
             firstEp.resolve(reason)
             // Clean up the pending auth publish since it succeeded
             this.pendingAuthPublishes.delete(id)
+            // Continue processing remaining resolvers
           } else {
             // Check if this is an auth-required error
             // Different relays use different error messages for auth requirements
@@ -482,7 +642,6 @@ export class NDKRelayConnectivity {
         `Error parsing message from ${this.ndkRelay.url}: ${error.message}`,
         error?.stack
       )
-      return
     }
   }
 
@@ -715,14 +874,27 @@ export class NDKRelayConnectivity {
       this._status >= NDKRelayStatus.CONNECTED &&
       this.ws?.readyState === WebSocket.OPEN
     ) {
-      this.ws?.send(message)
-      this.netDebug?.(message, this.ndkRelay, "send")
-      this.lastMessageSent = Date.now()
+      // Process outbox if messages queued
+      this.processOutbox()
+
+      // Send immediately
+      try {
+        this.ws?.send(message)
+        this.netDebug?.(message, this.ndkRelay, "send")
+        this.lastMessageSent = Date.now()
+      } catch (e) {
+        this.debug("WebSocket send failed:", e)
+        this.handleStaleConnection()
+        // Re-queue the message
+        this.outbox.enqueue(message)
+      }
     } else {
+      // Queue message for when relay connects
       this.debug(
-        `Not connected to ${this.ndkRelay.url} (%d), not sending message ${message}`,
+        `Not connected to ${this.ndkRelay.url} (%d), queueing message`,
         this._status
       )
+      this.outbox.enqueue(message)
 
       // If we think we're connected but WebSocket is not open, we have a stale connection
       if (
@@ -731,6 +903,15 @@ export class NDKRelayConnectivity {
       ) {
         this.debug(`Stale connection detected, WebSocket state: ${this.ws?.readyState}`)
         // Force disconnect and reconnect
+        this.handleStaleConnection()
+      }
+
+      // Detect saturated outbox - if queue is near full and we think we're connected, connection is dead
+      // Threshold at 80% of capacity (40/50)
+      if (this._status >= NDKRelayStatus.CONNECTED && this.outbox.size > 40) {
+        this.debug(
+          `Outbox saturated (${this.outbox.size}/50 messages), connection likely dead`
+        )
         this.handleStaleConnection()
       }
     }
@@ -928,5 +1109,25 @@ export class NDKRelayConnectivity {
     return (
       this._status >= NDKRelayStatus.CONNECTED && this.ws?.readyState === WebSocket.OPEN
     )
+  }
+
+  /**
+   * Handle browser offline event - immediately disconnect all relays
+   */
+  private handleBrowserOffline = () => {
+    if (this._status >= NDKRelayStatus.CONNECTED) {
+      this.debug("Browser offline event, disconnecting")
+      this.handleStaleConnection()
+    }
+  }
+
+  /**
+   * Handle browser online event - reconnect if disconnected
+   */
+  private handleBrowserOnline = () => {
+    if (this._status === NDKRelayStatus.DISCONNECTED) {
+      this.debug("Browser online event, reconnecting")
+      this.connect()
+    }
   }
 }

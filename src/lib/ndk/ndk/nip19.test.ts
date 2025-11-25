@@ -1,3 +1,4 @@
+import {describe, expect, it, vi, beforeEach, afterEach} from "vitest"
 import {nip19} from "nostr-tools"
 import {NDKUser} from "../user/index.js"
 import {NDK} from "./index.js"

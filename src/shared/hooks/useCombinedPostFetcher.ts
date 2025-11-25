@@ -1,9 +1,9 @@
 import {useState, useEffect, useRef, useCallback} from "react"
 import {NDKEvent, NDKFilter} from "@/lib/ndk"
-import {ndk} from "@/utils/ndk"
 import {addSeenEventId} from "@/utils/memcache"
 import shuffle from "lodash/shuffle"
 import {useUserStore} from "@/stores/user"
+import {fetchEventsReliable} from "@/utils/fetchEventsReliable"
 
 interface CombinedPostFetcherCache {
   events?: NDKEvent[]
@@ -17,6 +17,7 @@ interface CombinedPostFetcherProps {
   hasChronologicalData: boolean
   cache: CombinedPostFetcherCache
   popularRatio?: number
+  excludeOwnPosts?: boolean
 }
 
 export default function useCombinedPostFetcher({
@@ -26,6 +27,7 @@ export default function useCombinedPostFetcher({
   hasChronologicalData,
   cache,
   popularRatio = 0.5,
+  excludeOwnPosts = false,
 }: CombinedPostFetcherProps) {
   const [events, setEvents] = useState<NDKEvent[]>(cache.events || [])
   const [loading, setLoading] = useState<boolean>(false)
@@ -46,7 +48,9 @@ export default function useCombinedPostFetcher({
       const popularCount = Math.floor(batchSize * popularRatio)
       const chronologicalCount = batchSize - popularCount
 
-      const popularIds = hasPopularData ? getNextPopular(popularCount) : []
+      // Always try to get popular posts - let the function return empty if there's no data
+      const popularIds = getNextPopular(popularCount)
+      // Only get chronological if we're configured for it
       const chronologicalIds = hasChronologicalData
         ? getNextChronological(chronologicalCount)
         : []
@@ -67,16 +71,18 @@ export default function useCombinedPostFetcher({
       if (allIds.length === 0) {
         return []
       }
-
       const postFilter: NDKFilter = {
         ids: allIds,
       }
 
-      const fetchedEvents = await ndk().fetchEvents(postFilter)
-      const eventsArray = Array.from(fetchedEvents)
+      const {promise} = fetchEventsReliable(postFilter, {timeout: 2000})
+      let eventsArray = await promise
+
+      if (excludeOwnPosts && myPubKey) {
+        eventsArray = eventsArray.filter((event) => event.pubkey !== myPubKey)
+      }
 
       const shuffledEvents = shuffle(eventsArray)
-
       return shuffledEvents
     },
     [
@@ -86,6 +92,7 @@ export default function useCombinedPostFetcher({
       hasChronologicalData,
       popularRatio,
       myPubKey,
+      excludeOwnPosts,
     ]
   )
 
@@ -93,12 +100,10 @@ export default function useCombinedPostFetcher({
     setLoading(true)
     const newEvents = await loadBatch(10)
 
-    newEvents.forEach((event) => addSeenEventId(event.id))
-
-    setEvents(newEvents)
-    hasLoadedInitial.current = true
-    // Only set loading to false if we actually got events or tried multiple times
+    // If we got events, use them
     if (newEvents.length > 0) {
+      newEvents.forEach((event) => addSeenEventId(event.id))
+      setEvents(newEvents)
       setLoading(false)
     } else {
       // Try one more batch before giving up
@@ -107,6 +112,7 @@ export default function useCombinedPostFetcher({
       setEvents(secondBatch)
       setLoading(false)
     }
+    hasLoadedInitial.current = true
   }, [loadBatch])
 
   const loadMore = useCallback(async () => {

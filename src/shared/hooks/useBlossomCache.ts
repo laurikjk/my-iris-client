@@ -65,6 +65,7 @@ async function fetchBlobP2P(
     const storage = getBlobStorage()
     const cached = await storage.get(hash)
     if (cached) {
+      storage.incrementLocalRequests(hash)
       return new Blob([cached.data], {type: cached.mimeType})
     }
 
@@ -142,7 +143,9 @@ export function useBlossomCache(url: string, authorPubkey?: string): string {
     }
 
     // Check trust - only fetch blobs from trusted authors (distance <= 2)
-    const followDistance = authorPubkey ? socialGraph().getFollowDistance(authorPubkey) : 999
+    const followDistance = authorPubkey
+      ? socialGraph().getFollowDistance(authorPubkey)
+      : 999
     const isTrusted = followDistance <= 2
 
     if (!isTrusted) {

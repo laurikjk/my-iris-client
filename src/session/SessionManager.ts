@@ -60,6 +60,7 @@ export default class SessionManager {
   // Data
   private userRecords: Map<string, UserRecord> = new Map()
   private messageHistory: Map<string, Rumor[]> = new Map()
+  private currentDeviceInvite: Invite | null = null
 
   // Subscriptions
   private ourDeviceInviteSubscription: Unsubscribe | null = null
@@ -117,6 +118,8 @@ export default class SessionManager {
 
     const invite =
       ourInviteFromStorage || Invite.createNew(this.ourPublicKey, this.deviceId)
+
+    this.currentDeviceInvite = invite
 
     await this.storage.put(this.deviceInviteKey(this.deviceId), invite.serialize())
 
@@ -377,6 +380,10 @@ export default class SessionManager {
     return this.deviceId
   }
 
+  getDeviceInviteEphemeralKey(): string | null {
+    return this.currentDeviceInvite?.inviterEphemeralPublicKey || null
+  }
+
   getUserRecords(): Map<string, UserRecord> {
     return this.userRecords
   }
@@ -508,10 +515,11 @@ export default class SessionManager {
 
     // Add to message history queue (will be sent when session is established)
     const completeEvent = event as Rumor
-    this.messageHistory.set(recipientIdentityKey, [
-      ...(this.messageHistory.get(recipientIdentityKey) || []),
-      completeEvent,
-    ])
+    const historyTargets = new Set([recipientIdentityKey, this.ourPublicKey])
+    for (const key of historyTargets) {
+      const existing = this.messageHistory.get(key) || []
+      this.messageHistory.set(key, [...existing, completeEvent])
+    }
 
     const userRecord = this.getOrCreateUserRecord(recipientIdentityKey)
     const ourUserRecord = this.getOrCreateUserRecord(this.ourPublicKey)

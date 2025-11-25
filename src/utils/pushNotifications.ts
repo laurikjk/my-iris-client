@@ -2,6 +2,10 @@ import {isPermissionGranted, requestPermission} from "@tauri-apps/plugin-notific
 import {platform} from "@tauri-apps/plugin-os"
 import IrisAPI from "./IrisAPI"
 import {useSettingsStore} from "@/stores/settings"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 // Platform-specific push token registration
 declare global {
@@ -10,6 +14,11 @@ declare global {
     iosRegisterPushToken?: (token: string) => void
     // Android - will be injected by native code
     androidRegisterPushToken?: (token: string) => void
+    androidHandlePushNotification?: (payload: {
+      title?: string
+      body?: string
+      data?: Record<string, string>
+    }) => void
   }
 }
 
@@ -21,7 +30,7 @@ export async function initPushNotifications() {
 
   try {
     const currentPlatform = await platform()
-    console.log("Initializing push notifications for platform:", currentPlatform)
+    log("Initializing push notifications for platform:", currentPlatform)
 
     // Request notification permission
     let permissionGranted = await isPermissionGranted()
@@ -31,7 +40,7 @@ export async function initPushNotifications() {
     }
 
     if (!permissionGranted) {
-      console.log("Notification permission not granted")
+      log("Notification permission not granted")
       return
     }
 
@@ -41,15 +50,15 @@ export async function initPushNotifications() {
     } else if (currentPlatform === "android") {
       setupAndroidPushNotifications()
     }
-  } catch (error) {
-    console.error("Failed to initialize push notifications:", error)
+  } catch (err) {
+    error("Failed to initialize push notifications:", err)
   }
 }
 
 function setupIOSPushNotifications() {
   // This will be called by iOS native code when token is received
   window.iosRegisterPushToken = async (token: string) => {
-    console.log("Received iOS push token")
+    log("Received iOS push token")
     await registerTokenWithServer(token, "ios")
   }
 
@@ -63,8 +72,14 @@ function setupIOSPushNotifications() {
 function setupAndroidPushNotifications() {
   // This will be called by Android native code when token is received
   window.androidRegisterPushToken = async (token: string) => {
-    console.log("Received Android FCM token")
+    log("Received Android FCM token")
     await registerTokenWithServer(token, "android")
+  }
+
+  // This will be called by Android native code when notification is received
+  window.androidHandlePushNotification = (payload) => {
+    log("Received Android push notification:", payload)
+    handlePushNotification(payload)
   }
 
   // Request Android to register for FCM
@@ -86,7 +101,7 @@ async function registerTokenWithServer(token: string, platformType: "ios" | "and
     // Find subscription for current user
     const myPubKey = localStorage.getItem("userPublicKey") // Adjust based on your app
     if (!myPubKey) {
-      console.error("No user public key found")
+      error("No user public key found")
       return
     }
 
@@ -138,18 +153,18 @@ async function registerTokenWithServer(token: string, platformType: "ios" | "and
       })
     }
 
-    console.log(`Successfully registered ${platformType} push token with server`)
+    log(`Successfully registered ${platformType} push token with server`)
 
     // Store token locally for reference
     localStorage.setItem(`push_token_${platformType}`, token)
-  } catch (error) {
-    console.error("Failed to register push token with server:", error)
+  } catch (err) {
+    error("Failed to register push token with server:", err)
   }
 }
 
 // Handle incoming push notifications
 export function handlePushNotification(data: unknown) {
-  console.log("Received push notification:", data)
+  log("Received push notification:", data)
 
   // Parse the notification data based on your server format
   if (typeof data === "object" && data && "event" in data) {

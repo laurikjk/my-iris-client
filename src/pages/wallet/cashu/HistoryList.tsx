@@ -187,6 +187,11 @@ export default function HistoryList({
               <div className="text-xs text-base-content/60 whitespace-nowrap">
                 {formatUsd(Math.abs(amount), usdRate)}
               </div>
+              {entry.fee !== undefined && entry.fee > 0 && (
+                <div className="text-xs text-base-content/50 whitespace-nowrap">
+                  Fee: {entry.fee} bit
+                </div>
+              )}
             </div>
           </div>
         )

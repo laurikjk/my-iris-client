@@ -15,14 +15,19 @@ test.describe("Post liking", () => {
       .fill(postContent)
     await page.getByRole("dialog").getByRole("button", {name: "Post"}).click()
 
-    // Verify post is visible
-    await expect(page.getByText(postContent).first()).toBeVisible({timeout: 10000})
+    // Wait for navigation to post detail page
+    await page.waitForURL(/\/note[a-z0-9]+/, {timeout: 10000})
 
-    // Find the feed item containing our post text
+    // Wait for React to render the FeedItem
+    await page.waitForLoadState("networkidle")
+
+    // Wait specifically for feed-item to appear (the post container)
     const postElement = page
       .getByTestId("feed-item")
       .filter({hasText: postContent})
       .first()
+
+    await expect(postElement).toBeVisible({timeout: 10000})
 
     // Wait for the like button within this specific post
     const likeButton = postElement.getByTestId("like-button")

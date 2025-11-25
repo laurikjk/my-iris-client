@@ -1,11 +1,15 @@
 import {useEffect, useRef, useState} from "react"
 import {NDKFilter} from "@/lib/ndk"
 import {ndk} from "@/utils/ndk"
-import {KIND_REACTION, KIND_REPOST} from "@/utils/constants"
+import {KIND_REACTION, KIND_REPOST, DEBUG_NAMESPACES} from "@/utils/constants"
 import {getTag} from "@/utils/nostr"
 import {PopularityFilters} from "./usePopularityFilters"
 import {useSocialGraphLoaded} from "@/utils/socialGraph"
 import {seenEventIds} from "@/utils/memcache"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {fetchEventsReliable} from "@/utils/fetchEventsReliable"
+
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 const LOW_THRESHOLD = 20
 const INITIAL_DATA_THRESHOLD = 5
@@ -40,11 +44,17 @@ export default function useReactionSubscription(
   }, [])
 
   useEffect(() => {
-    if (!isSocialGraphLoaded) {
-      return
-    }
+    cache.hasInitialData = hasInitialData
+  }, [hasInitialData, cache])
 
+  useEffect(() => {
     const {since, limit, authors: filterAuthors} = currentFilters
+
+    log(
+      "[ReactionSubscription] Starting subscription, authors:",
+      filterAuthors?.length || "undefined (match all)"
+    )
+
     const now = Math.floor(Date.now() / 1000)
 
     const reactionFilter: NDKFilter = {
@@ -59,6 +69,7 @@ export default function useReactionSubscription(
 
     const sub = ndk().subscribe(reactionFilter)
 
+    let reactionCount = 0
     sub.on("event", (event) => {
       if (!event.created_at || !event.id) return
       if (event.kind !== KIND_REACTION) return
@@ -66,6 +77,14 @@ export default function useReactionSubscription(
       if (!originalPostId) return
 
       if (filterSeen && seenEventIds.has(originalPostId)) return
+
+      reactionCount++
+      if (reactionCount <= 5) {
+        log(
+          `[ReactionSubscription] Reaction ${reactionCount} to post:`,
+          originalPostId.slice(0, 8)
+        )
+      }
 
       unfilteredEventsReceivedAfterFilterChange.current += 1
 
@@ -76,6 +95,10 @@ export default function useReactionSubscription(
       } else {
         pendingReactionCounts.current.set(originalPostId, new Set([event.id]))
       }
+
+      // Fetch the actual post to ensure it's cached (no timeout - will complete when found)
+      // Fire and forget - don't need to track unsubscribe since it auto-completes
+      fetchEventsReliable({ids: [originalPostId]})
 
       if (
         !hasInitialData &&
@@ -103,13 +126,11 @@ export default function useReactionSubscription(
       clearTimeout(timeout)
       sub.stop()
     }
-  }, [currentFilters, hasInitialData, isSocialGraphLoaded])
+  }, [currentFilters, isSocialGraphLoaded])
 
   const getNextMostPopular = (n: number): string[] => {
-    const currentPendingCount = pendingReactionCounts.current.size
-    if (currentPendingCount <= LOW_THRESHOLD) {
-      expandFilters()
-    }
+    // Note: We don't call expandFilters() here to avoid triggering re-renders during data fetching
+    // It will be called by the timeout in the subscription effect if needed
 
     const top = Array.from(pendingReactionCounts.current.entries())
       .sort((a, b) => b[1].size - a[1].size)

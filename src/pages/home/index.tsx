@@ -15,13 +15,12 @@ import {
   type FeedConfig,
 } from "@/stores/feed"
 import Header from "@/shared/components/header/Header"
-import {RiArrowLeftSLine, RiArrowRightSLine} from "@remixicon/react"
 import {useMemo} from "react"
 import useFollows from "@/shared/hooks/useFollows"
 import {usePublicKey} from "@/stores/user"
 
 function Index() {
-  const {appearance, updateAppearance} = useSettingsStore()
+  const {appearance} = useSettingsStore()
   const isLargeScreen = useIsLargeScreen()
   const triggerFeedRefresh = useFeedStore((state) => state.triggerFeedRefresh)
   const myPubKey = usePublicKey()
@@ -108,35 +107,14 @@ function Index() {
 
   // When single column layout is enabled on desktop, show the normal home layout
   return (
-    <>
-      <Header showBack={false} showNotifications={true}>
-        <div className="flex items-center justify-between w-full">
+    <section
+      className="flex w-full justify-center h-full overflow-hidden"
+      data-main-scroll-container="single-column"
+    >
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header showBack={false} showNotifications={true}>
           <span className="px-3 py-2">{feedName}</span>
-          {isLargeScreen && (
-            <button
-              className="p-2 bg-base-100 hover:bg-base-200 rounded-full transition-colors mt-1"
-              onClick={() =>
-                updateAppearance({singleColumnLayout: !appearance.singleColumnLayout})
-              }
-              title={
-                appearance.singleColumnLayout
-                  ? "Expand to two columns"
-                  : "Collapse to single column"
-              }
-            >
-              {appearance.singleColumnLayout ? (
-                <RiArrowLeftSLine className="w-5 h-5" />
-              ) : (
-                <RiArrowRightSLine className="w-5 h-5" />
-              )}
-            </button>
-          )}
-        </div>
-      </Header>
-      <section
-        className="flex w-full justify-center h-full overflow-hidden"
-        data-main-scroll-container="single-column"
-      >
+        </Header>
         <div
           data-scrollable
           data-header-scroll-target
@@ -144,25 +122,25 @@ function Index() {
         >
           <HomeFeed />
         </div>
-        <RightColumn>
-          {() => (
-            <>
-              <SocialGraphWidget />
-              <RelayStats />
-              <Widget title="Popular" className="h-96">
-                <AlgorithmicFeed
-                  type="popular"
-                  displayOptions={{
-                    small: true,
-                    showDisplaySelector: false,
-                  }}
-                />
-              </Widget>
-            </>
-          )}
-        </RightColumn>
-      </section>
-    </>
+      </div>
+      <RightColumn>
+        {() => (
+          <>
+            <SocialGraphWidget />
+            <RelayStats />
+            <Widget title="Popular" className="h-96">
+              <AlgorithmicFeed
+                type="popular"
+                displayOptions={{
+                  small: true,
+                  showDisplaySelector: false,
+                }}
+              />
+            </Widget>
+          </>
+        )}
+      </RightColumn>
+    </section>
   )
 }
 

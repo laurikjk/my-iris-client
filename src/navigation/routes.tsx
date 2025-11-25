@@ -15,7 +15,6 @@ import NewNote from "@/pages/new"
 // Lazy load components
 const ChatsPage = lazy(() => import("@/pages/chats"))
 const SettingsPage = lazy(() => import("@/pages/settings"))
-const SubscriptionPage = lazy(() => import("@/pages/subscription"))
 const RelayPage = lazy(() => import("@/pages/relay"))
 const MapPage = lazy(() => import("@/pages/map"))
 const MarketPage = lazy(() => import("@/pages/market"))
@@ -31,7 +30,6 @@ export const routes: RouteDefinition[] = [
   {path: "/old-wallet", component: OldWallet},
   {path: "/chats/*", component: ChatsPage},
   {path: "/settings/*", component: SettingsPage},
-  {path: "/subscribe", component: SubscriptionPage},
   {path: "/search", component: SearchPage},
   {path: "/search/:query", component: SearchPage},
   {path: "/m", component: MarketPage},

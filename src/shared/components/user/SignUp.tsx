@@ -4,7 +4,6 @@ import {NDKEvent, NDKPrivateKeySigner} from "@/lib/ndk"
 import {bytesToHex} from "@noble/hashes/utils"
 import {useUserStore} from "@/stores/user"
 import {useUIStore} from "@/stores/ui"
-import {useSettingsStore} from "@/stores/settings"
 import {ndk} from "@/utils/ndk"
 import {NSEC_NPUB_REGEX} from "@/utils/validation"
 
@@ -15,7 +14,6 @@ interface SignUpProps {
 export default function SignUp({onClose}: SignUpProps) {
   const [newUserName, setNewUserName] = useState("")
   const {setShowLoginDialog} = useUIStore()
-  const updateAppearance = useSettingsStore((state) => state.updateAppearance)
   const inputRef = useRef<HTMLInputElement>(null)
   const setState = useUserStore.setState
 
@@ -40,7 +38,6 @@ export default function SignUp({onClose}: SignUpProps) {
             publicKey,
             privateKey: "", // No private key for view-only mode
           })
-          updateAppearance({singleColumnLayout: false})
           setShowLoginDialog(false)
           onClose()
         } catch (error) {
@@ -65,7 +62,6 @@ export default function SignUp({onClose}: SignUpProps) {
           const privateKeySigner = new NDKPrivateKeySigner(privateKeyHex)
           ndk().signer = privateKeySigner
 
-          updateAppearance({singleColumnLayout: false})
           setShowLoginDialog(false)
           onClose()
         } catch (error) {
@@ -115,7 +111,6 @@ export default function SignUp({onClose}: SignUpProps) {
       profileEvent.publish()
     }
 
-    updateAppearance({singleColumnLayout: false})
     setShowLoginDialog(false)
   }
 

@@ -4,11 +4,26 @@ import {LRUCache} from "typescript-lru-cache"
 
 import {getCachedName} from "@/utils/nostr"
 import socialGraph from "@/utils/socialGraph"
-import {webrtcLogger} from "./Logger"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
 import {sendSignalingMessage} from "./signaling"
+
+const {
+  log: logLifecycle,
+  warn,
+  error,
+} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_PEER_LIFECYCLE)
+const {log: logMessages} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_PEER_MESSAGES)
+const {log: logData} = createDebugLogger(DEBUG_NAMESPACES.WEBRTC_PEER_DATA)
 import type {SignalingMessage} from "./types"
 import {handleIncomingEvent} from "./p2pNostr"
 import {useSettingsStore} from "@/stores/settings"
+import {incrementBlobSent, incrementBlobReceived} from "./p2pStats"
+import {
+  updatePeerLastSeen,
+  trackPeerBlobSent,
+  trackPeerBlobReceived,
+} from "./peerBandwidthStats"
 
 const connections = new Map<string, PeerConnection>()
 
@@ -33,7 +48,7 @@ export async function getPeerConnection(
     socialGraph().getFollowDistance(pubKey) > 1 &&
     socialGraph().getRoot() !== pubKey
   ) {
-    webrtcLogger.warn(sessionId, "Rejected connection from untrusted user")
+    warn("Rejected connection from untrusted user")
     return
   }
 
@@ -44,7 +59,7 @@ export async function getPeerConnection(
 
     // If connection is failed or closed, clean it up first
     if (state === "failed" || state === "closed") {
-      webrtcLogger.info(sessionId, `Cleaning up ${state} connection before recreating`)
+      logLifecycle(`Cleaning up ${state} connection before recreating`)
       existing.close()
       // Connection is now removed from map by close()
     } else {
@@ -146,8 +161,8 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     this.setupPeerConnectionEvents()
   }
 
-  log(message: string, direction?: "up" | "down") {
-    webrtcLogger.info(this.peerId, message, direction)
+  log(message: string) {
+    logLifecycle(message)
   }
 
   connect() {
@@ -158,27 +173,27 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   }
 
   handleSignalingMessage(message: SignalingMessage) {
-    webrtcLogger.debug(this.peerId, `Processing ${message.type} message`)
+    logMessages(`Processing ${message.type} message`)
 
     try {
       switch (message.type) {
         case "offer":
-          webrtcLogger.debug(this.peerId, "Offer", "down")
+          logMessages("Offer")
           this.handleOffer(message.offer as unknown as RTCSessionDescriptionInit)
           break
         case "answer":
-          webrtcLogger.debug(this.peerId, "Answer", "down")
+          logMessages("Answer")
           this.handleAnswer(message.answer as unknown as RTCSessionDescriptionInit)
           break
         case "candidate":
-          webrtcLogger.debug(this.peerId, "ICE candidate", "down")
+          logMessages("ICE candidate")
           this.handleCandidate(message.candidate as unknown as RTCIceCandidateInit)
           break
         default:
-          webrtcLogger.error(this.peerId, `Unknown message type`)
+          error(`Unknown message type`)
       }
     } catch (e) {
-      webrtcLogger.error(this.peerId, "Error processing WebRTC message")
+      error("Error processing WebRTC message")
     }
   }
 
@@ -204,7 +219,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   async handleCandidate(candidate: RTCIceCandidateInit | null) {
     if (!candidate) return
     if (this.peerConnection.remoteDescription === null) {
-      webrtcLogger.debug(this.peerId, "Remote description not set, queuing candidate")
+      logMessages("Remote description not set, queuing candidate")
       setTimeout(() => this.handleCandidate(candidate), 500)
       return
     }
@@ -240,7 +255,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     }
 
     this.peerConnection.ontrack = (event) => {
-      this.log(
+      logLifecycle(
         `Remote ${event.track.kind} track received (enabled: ${event.track.enabled}, muted: ${event.track.muted})`
       )
       if (event.streams && event.streams[0]) {
@@ -249,14 +264,14 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
         // Monitor when all tracks end (call ended by remote)
         event.track.onended = () => {
-          this.log(`Remote ${event.track.kind} track ended`)
+          logLifecycle(`Remote ${event.track.kind} track ended`)
           // Check if all tracks have ended
           if (this.remoteStream) {
             const allEnded = this.remoteStream
               .getTracks()
               .every((track) => track.readyState === "ended")
             if (allEnded) {
-              this.log("All remote tracks ended, call ended by remote")
+              logLifecycle("All remote tracks ended, call ended by remote")
               this.stopCall()
               this.emit("close")
             }
@@ -266,12 +281,16 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     }
 
     this.peerConnection.onconnectionstatechange = () => {
-      this.log(`Connection state: ${this.peerConnection.connectionState}`)
-      if (
-        this.peerConnection.connectionState === "closed" ||
-        this.peerConnection.connectionState === "failed"
-      ) {
-        this.log(`Connection ${this.peerConnection.connectionState}`)
+      logLifecycle(`Connection state: ${this.peerConnection.connectionState}`)
+      const state = this.peerConnection.connectionState
+
+      if (state === "connected") {
+        const peerPubkey = this.peerId.split(":")[0]
+        updatePeerLastSeen(peerPubkey)
+      }
+
+      if (state === "closed" || state === "failed") {
+        logLifecycle(`Connection ${state}`)
         this.close()
       }
     }
@@ -285,30 +304,30 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
         if (data.type === "call-request") {
           const {webrtcCallsEnabled} = useSettingsStore.getState().network
           if (!webrtcCallsEnabled) {
-            this.log("Calls disabled, ignoring call request")
+            logLifecycle("Calls disabled, ignoring call request")
             return
           }
-          this.log(`Call request (video: ${data.hasVideo})`, "down")
+          logLifecycle(`Call request (video: ${data.hasVideo})`, "down")
           this.emit("call-incoming", data.hasVideo)
         } else if (data.type === "call-ended") {
-          this.log("Call ended by remote peer", "down")
+          logLifecycle("Call ended by remote peer", "down")
           this.stopCall()
           this.emit("close")
         }
-      } catch (error) {
-        webrtcLogger.error(this.peerId, "Failed to parse call signaling")
+      } catch (err) {
+        error("Failed to parse call signaling")
       }
     }
   }
 
   async startCall(hasVideo = false) {
     if (this.peerConnection.connectionState !== "connected") {
-      webrtcLogger.error(this.peerId, "Cannot start call: not connected")
+      error("Cannot start call: not connected")
       return
     }
 
     try {
-      this.log(`Requesting ${hasVideo ? "video" : "audio"} call permissions`)
+      logLifecycle(`Requesting ${hasVideo ? "video" : "audio"} call permissions`)
 
       // Get user media
       this.localStream = await navigator.mediaDevices.getUserMedia({
@@ -316,7 +335,9 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
         video: hasVideo,
       })
 
-      this.log(`Media stream acquired (${this.localStream.getTracks().length} tracks)`)
+      logLifecycle(
+        `Media stream acquired (${this.localStream.getTracks().length} tracks)`
+      )
 
       // Add tracks to peer connection
       for (const track of this.localStream.getTracks()) {
@@ -342,16 +363,16 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       this.setupCallSignalingChannel(signalingChannel)
       signalingChannel.onopen = () => {
         signalingChannel.send(JSON.stringify({type: "call-request", hasVideo}))
-        this.log(`Call request (video: ${hasVideo})`, "up")
+        logLifecycle(`Call request (video: ${hasVideo})`, "up")
       }
 
-      this.log(`Call started (video: ${hasVideo})`)
+      logLifecycle(`Call started (video: ${hasVideo})`)
 
       // Emit event so UI can show active call view for caller
       this.emit("call-started", hasVideo, this.localStream)
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error)
-      webrtcLogger.error(this.peerId, `Failed to start call: ${errorMsg}`)
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      error(`Failed to start call: ${errorMsg}`)
 
       // Show user-friendly error message
       const {useToastStore} = await import("@/stores/toast")
@@ -377,9 +398,9 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     if (notifyRemote && this.callSignalingChannel?.readyState === "open") {
       try {
         this.callSignalingChannel.send(JSON.stringify({type: "call-ended"}))
-        this.log("Call ended notification sent", "up")
-      } catch (error) {
-        webrtcLogger.error(this.peerId, "Failed to send call-ended")
+        logLifecycle("Call ended notification sent", "up")
+      } catch (err) {
+        error("Failed to send call-ended")
       }
     }
 
@@ -387,7 +408,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => {
         track.stop()
-        this.log(`Stopped ${track.kind} track`)
+        logLifecycle(`Stopped ${track.kind} track`)
       })
       this.localStream = null
     }
@@ -395,7 +416,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     this.remoteStream = null
 
     if (hadCall) {
-      this.log("Call stopped")
+      logLifecycle("Call stopped")
     }
   }
 
@@ -417,22 +438,21 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       },
       this.recipientPubkey
     )
-    webrtcLogger.debug(this.peerId, "Offer", "up")
+    logMessages("Offer")
   }
 
   setDataChannel(dataChannel: RTCDataChannel) {
     this.dataChannel = dataChannel
-    this.dataChannel.onopen = () => webrtcLogger.debug(this.peerId, "Data channel open")
+    this.dataChannel.onopen = () => logData("Data channel open")
     this.dataChannel.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data)
-        handleIncomingEvent(this.peerId, data)
-      } catch (error) {
-        webrtcLogger.error(this.peerId, "Failed to parse data channel message")
+        handleIncomingEvent(this.peerId, event.data)
+      } catch (err) {
+        error("Error handling data channel message")
       }
     }
     this.dataChannel.onclose = () => {
-      webrtcLogger.debug(this.peerId, "Data channel closed")
+      logData("Data channel closed")
       this.close()
     }
   }
@@ -446,25 +466,25 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
     this.fileChannel = fileChannel
     this.fileChannel.binaryType = "arraybuffer"
-    this.fileChannel.onopen = () => webrtcLogger.debug(this.peerId, "File channel open")
+    this.fileChannel.onopen = () => logData("File channel open")
     this.fileChannel.onmessage = (event) => {
       if (typeof event.data === "string") {
         const metadata = JSON.parse(event.data)
         if (metadata.type === "file-metadata" && metadata.metadata) {
           const {webrtcFileReceivingEnabled} = useSettingsStore.getState().network
           if (!webrtcFileReceivingEnabled) {
-            this.log("File receiving disabled, rejecting transfer")
+            logData("File receiving disabled, rejecting transfer")
             fileChannel.send(JSON.stringify({type: "file-rejected"}))
             return
           }
           this.incomingFileMetadata = metadata.metadata
-          this.log(`File incoming: ${metadata.metadata.name}`, "down")
+          logData(`File incoming: ${metadata.metadata.name}`, "down")
           // Emit event for UI to show modal
           this.emit("file-incoming", metadata.metadata)
         } else if (metadata.type === "file-accepted") {
-          this.log("File acceptance confirmed, ready to receive", "down")
+          logData("File acceptance confirmed, ready to receive", "down")
         } else if (metadata.type === "file-rejected") {
-          this.log("File rejected by remote peer", "down")
+          logData("File rejected by remote peer", "down")
           this.incomingFileMetadata = null
           this.receivedFileData = []
           this.receivedFileSize = 0
@@ -472,12 +492,12 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       } else if (event.data instanceof ArrayBuffer) {
         // Only buffer if we have metadata and user accepted
         if (!this.incomingFileMetadata) {
-          this.log("Received file data without metadata, ignoring")
+          logData("Received file data without metadata, ignoring")
           return
         }
 
         if (!this.fileTransferAccepted) {
-          this.log("Received file data before acceptance, ignoring")
+          logData("Received file data before acceptance, ignoring")
           return
         }
 
@@ -491,7 +511,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
         this.emit("file-progress", progress, "receive")
 
         if (this.receivedFileSize === this.incomingFileMetadata.size) {
-          this.log("File fully received")
+          logData("File fully received")
           const blob = new Blob(this.receivedFileData, {
             type: this.incomingFileMetadata.type,
           })
@@ -501,24 +521,24 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       }
     }
     this.fileChannel.onclose = () => {
-      webrtcLogger.debug(this.peerId, "File channel closed")
+      logData("File channel closed")
     }
   }
 
   acceptFileTransfer() {
     this.fileTransferAccepted = true
-    this.log("File transfer accepted, sending confirmation")
+    logData("File transfer accepted, sending confirmation")
 
     // Send acceptance confirmation to sender (sender will start streaming)
     if (this.fileChannel?.readyState === "open") {
       this.fileChannel.send(JSON.stringify({type: "file-accepted"}))
     }
 
-    this.log("Waiting for file data...")
+    logData("Waiting for file data...")
   }
 
   rejectFileTransfer() {
-    this.log("File transfer rejected")
+    logData("File transfer rejected")
 
     // Send rejection to sender
     if (this.fileChannel?.readyState === "open") {
@@ -533,11 +553,11 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
   private saveReceivedFile(blob: Blob) {
     if (!this.incomingFileMetadata) {
-      webrtcLogger.error(this.peerId, "No file metadata available")
+      error("No file metadata available")
       return
     }
 
-    this.log(`Saving file: ${this.incomingFileMetadata.name}`)
+    logData(`Saving file: ${this.incomingFileMetadata.name}`)
 
     const url = URL.createObjectURL(blob)
 
@@ -554,7 +574,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     this.receivedFileData = []
     this.receivedFileSize = 0
     this.fileTransferAccepted = false
-    this.log("File saved")
+    logData("File saved")
   }
 
   sendJsonData(jsonData: unknown) {
@@ -566,7 +586,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
   sendFile(file: File) {
     if (this.peerConnection.connectionState !== "connected") {
-      webrtcLogger.error(this.peerId, "Peer connection not connected")
+      error("Peer connection not connected")
       return
     }
 
@@ -590,10 +610,10 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       if (typeof event.data === "string") {
         const data = JSON.parse(event.data)
         if (data.type === "file-accepted") {
-          this.log("File accepted by receiver, starting transfer", "down")
+          logData("File accepted by receiver, starting transfer", "down")
           startSending()
         } else if (data.type === "file-rejected") {
-          this.log("File rejected by receiver", "down")
+          logData("File rejected by receiver", "down")
           fileChannel.close()
           this.fileChannel = null
         }
@@ -604,9 +624,9 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     }
 
     fileChannel.onopen = () => {
-      this.log(`File: ${file.name} (${file.size} bytes)`, "up")
+      logData(`File: ${file.name} (${file.size} bytes)`, "up")
       fileChannel.send(JSON.stringify(metadata))
-      this.log("Waiting for receiver acceptance...")
+      logData("Waiting for receiver acceptance...")
     }
 
     const startSending = () => {
@@ -634,13 +654,13 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
             this.emit("file-progress", progress, "send")
 
             if (offset % (CHUNK_SIZE * 10) === 0 || offset >= file.size) {
-              this.log(`File send progress: ${progress}%`)
+              logData(`File send progress: ${progress}%`)
             }
 
             if (offset < file.size) {
               sendChunk()
             } else {
-              this.log("File sent")
+              logData("File sent")
               setTimeout(() => {
                 fileChannel.close()
                 this.fileChannel = null
@@ -659,7 +679,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   setupBlobChannel(blobChannel: RTCDataChannel) {
     this.blobChannel = blobChannel
     this.blobChannel.binaryType = "arraybuffer"
-    this.blobChannel.onopen = () => webrtcLogger.debug(this.peerId, "Blob channel open")
+    this.blobChannel.onopen = () => logData("Blob channel open")
 
     this.blobChannel.onmessage = async (event) => {
       if (typeof event.data === "string") {
@@ -667,8 +687,8 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
         try {
           const msg = JSON.parse(event.data)
           await this.handleBlobMessage(msg)
-        } catch (error) {
-          webrtcLogger.error(this.peerId, "Failed to parse blob message")
+        } catch (err) {
+          error("Failed to parse blob message")
         }
       } else if (event.data instanceof ArrayBuffer) {
         // Binary chunk
@@ -677,7 +697,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     }
 
     this.blobChannel.onclose = () => {
-      webrtcLogger.debug(this.peerId, "Blob channel closed")
+      logData("Blob channel closed")
     }
   }
 
@@ -697,7 +717,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
   private async handleBlobRequest(requestId: number, req: Record<string, unknown>) {
     const {hash, size} = req
-    this.log(
+    logData(
       `BLOB_REQ ${(hash as string).slice(0, 8)}... (${size || "unknown"} bytes)`,
       "down"
     )
@@ -708,10 +728,13 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     const entry = await storage.get(hash as string)
 
     if (!entry) {
-      this.log(`Blob not found: ${(hash as string).slice(0, 8)}...`)
+      logData(`Blob not found: ${(hash as string).slice(0, 8)}...`)
       // Timeout - requester will handle
       return
     }
+
+    // Track peer request stat
+    storage.incrementPeerRequests(hash as string)
 
     // Track this send
     this.pendingBlobSends.set(requestId, {hash: hash as string, entry})
@@ -726,17 +749,17 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     }
 
     this.sendBlobMessage("BLOB_RES", requestId, response)
-    this.log(`BLOB_RES ${chunks} chunks`, "up")
+    logData(`BLOB_RES ${chunks} chunks`, "up")
   }
 
   private async handleBlobResponse(requestId: number, res: Record<string, unknown>) {
     const {size, chunks} = res
-    this.log(`BLOB_RES ${chunks} chunks (${size} bytes)`, "down")
+    logData(`BLOB_RES ${chunks} chunks (${size} bytes)`, "down")
 
     // Get existing request (has the hash)
     const existing = this.blobRequests.get(requestId)
     if (!existing) {
-      webrtcLogger.warn(this.peerId, `Received BLOB_RES for unknown request ${requestId}`)
+      warn(`Received BLOB_RES for unknown request ${requestId}`)
       return
     }
 
@@ -751,16 +774,16 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
     // Send ACK to start transfer
     this.sendBlobMessage("BLOB_ACK", requestId, {accept: true})
-    this.log(`BLOB_ACK accepted`, "up")
+    logData(`BLOB_ACK accepted`, "up")
   }
 
   private async handleBlobAck(requestId: number, ack: Record<string, unknown>) {
     if (!ack.accept) {
-      this.log(`BLOB_ACK rejected`, "down")
+      logData(`BLOB_ACK rejected`, "down")
       return
     }
 
-    this.log(`BLOB_ACK accepted, starting transfer`, "down")
+    logData(`BLOB_ACK accepted, starting transfer`, "down")
     await this.sendBlobChunks(requestId)
   }
 
@@ -768,7 +791,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     // This is called on sender side after receiving ACK
     const pendingSend = this.pendingBlobSends.get(requestId)
     if (!pendingSend) {
-      webrtcLogger.warn(this.peerId, `No pending send for request ${requestId}`)
+      warn(`No pending send for request ${requestId}`)
       return
     }
 
@@ -795,26 +818,31 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       if (this.blobChannel?.readyState === "open") {
         this.blobChannel.send(packet.buffer)
       } else {
-        webrtcLogger.error(this.peerId, "Blob channel closed during send")
+        error("Blob channel closed during send")
         break
       }
 
       if (i % 10 === 0 || i === chunks - 1) {
         const progress = Math.round(((i + 1) / chunks) * 100)
-        this.log(`Blob send progress: ${progress}%`)
+        logData(`Blob send progress: ${progress}%`)
       }
     }
 
-    this.log(`Blob transfer complete: ${hash.slice(0, 8)}...`)
+    logData(`Blob transfer complete: ${hash.slice(0, 8)}...`)
     this.pendingBlobSends.delete(requestId)
+
+    // Track blob sent
+    const peerPubkey = this.peerId.split(":")[0]
+    incrementBlobSent(entry.size)
+    trackPeerBlobSent(peerPubkey, entry.size)
   }
 
   private async handleBlobOk(requestId: number, ok: Record<string, unknown>) {
     const {verified, hash} = ok
     if (verified) {
-      this.log(`BLOB_OK verified ${(hash as string).slice(0, 8)}...`, "down")
+      logData(`BLOB_OK verified ${(hash as string).slice(0, 8)}...`, "down")
     } else {
-      this.log(`BLOB_OK verification failed ${(hash as string).slice(0, 8)}...`, "down")
+      logData(`BLOB_OK verification failed ${(hash as string).slice(0, 8)}...`, "down")
     }
     this.blobRequests.delete(requestId)
   }
@@ -826,10 +854,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
     const request = this.blobRequests.get(header.requestId)
     if (!request) {
-      webrtcLogger.warn(
-        this.peerId,
-        `Received chunk for unknown request ${header.requestId}`
-      )
+      warn(`Received chunk for unknown request ${header.requestId}`)
       return
     }
 
@@ -844,7 +869,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       const progress = Math.round(
         (request.receivedChunks.size / request.totalChunks) * 100
       )
-      this.log(`Blob progress: ${progress}%`)
+      logData(`Blob progress: ${progress}%`)
     }
 
     // Check if complete
@@ -863,7 +888,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       resolve?: (data: ArrayBuffer | null) => void
     }
   ) {
-    this.log("Blob transfer complete, verifying...")
+    logData("Blob transfer complete, verifying...")
 
     // Reassemble blob
     const blob = new Uint8Array(
@@ -884,7 +909,14 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     const hash = bytesToHex(sha256(blob))
 
     const verified = hash === request.hash
-    this.log(`Hash verification: ${verified ? "OK" : "FAILED"}`)
+    logData(`Hash verification: ${verified ? "OK" : "FAILED"}`)
+
+    // Track blob received
+    if (verified) {
+      const peerPubkey = this.peerId.split(":")[0]
+      incrementBlobReceived(blob.byteLength)
+      trackPeerBlobReceived(peerPubkey, blob.byteLength)
+    }
 
     let result: ArrayBuffer | null = null
 
@@ -893,7 +925,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       const {getBlobStorage} = await import("./blobManager")
       const storage = getBlobStorage()
       await storage.save(hash, blob.buffer)
-      this.log(`Blob saved: ${hash.slice(0, 8)}...`)
+      logData(`Blob saved: ${hash.slice(0, 8)}...`)
       result = blob.buffer
     }
 
@@ -920,11 +952,16 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
 
   async requestBlob(hash: string, size?: number): Promise<ArrayBuffer | null> {
     if (!this.blobChannel || this.blobChannel.readyState !== "open") {
-      webrtcLogger.error(this.peerId, "Blob channel not open")
+      error("Blob channel not open")
       return null
     }
 
     const requestId = this.nextBlobRequestId++
+
+    // Track local request stat
+    const {getBlobStorage} = await import("./blobManager")
+    const storage = getBlobStorage()
+    storage.incrementLocalRequests(hash)
 
     // Create promise that will be resolved by completeBlobTransfer
     return new Promise((resolve) => {
@@ -940,7 +977,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
       // Send request
       const req = {hash, size}
       this.sendBlobMessage("BLOB_REQ", requestId, req)
-      this.log(`BLOB_REQ ${hash.slice(0, 8)}...`, "up")
+      logData(`BLOB_REQ ${hash.slice(0, 8)}...`, "up")
 
       // Timeout after 60s
       setTimeout(() => {
@@ -954,7 +991,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
   }
 
   close() {
-    this.log("Closing connection")
+    logLifecycle("Closing connection")
 
     // Stop any active call
     this.stopCall()

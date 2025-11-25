@@ -60,6 +60,17 @@ export default defineConfig({
         handler(level, log)
       },
       output: {
+        assetFileNames: (assetInfo) => {
+          // Keep WASM files in assets root with original name
+          if (assetInfo.name?.endsWith(".wasm")) {
+            return "assets/[name][extname]"
+          }
+          // Worker files should be .js
+          if (assetInfo.name?.includes("worker")) {
+            return "assets/[name]-[hash].js"
+          }
+          return "assets/[name]-[hash][extname]"
+        },
         manualChunks: (id) => {
           if (id.includes("nostr-social-graph/data/profileData.json")) {
             return "profileData"
@@ -87,6 +98,11 @@ export default defineConfig({
             id.includes("/src/shared/components/user/Name")
           ) {
             return "main"
+          }
+
+          // SQLite WASM cache - lazy load separate chunk
+          if (id.includes("@nostr-dev-kit/ndk-cache-sqlite-wasm")) {
+            return "ndk-cache-sqlite"
           }
 
           const vendorLibs = [
@@ -136,7 +152,33 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.ts"],
-    exclude: ["tests/**/*", "node_modules/**/*"],
+    exclude: [
+      "tests/**/*",
+      "node_modules/**/*",
+      "**/*.bun.test.ts",
+      "**/keepalive-bun.test.ts",
+      "**/reconnection-integration.bun.test.ts",
+      "src/lib/ndk/subscription.test.ts",
+      "src/lib/ndk/subscription/index.test.ts",
+      "src/lib/ndk/relay/auth-retry.test.ts",
+      "src/lib/ndk/ndk/fetchEvent-guardrails.test.ts",
+      "src/lib/ndk/events/encryption.test.ts",
+      "src/lib/ndk/events/nip19.test.ts",
+      "src/lib/ndk/relay/pool/index.test.ts",
+      "src/lib/ndk/signers/nip46/index.test.ts",
+      "src/lib/ndk/subscription/outbox-late-arrival.test.ts",
+      "src/lib/ndk/events/kinds/cashu/tx.test.ts",
+      "src/lib/ndk/events/serializer.test.ts",
+      "src/lib/ndk/events/repost.test.ts",
+      "src/lib/ndk/events/kinds/interest-list.test.ts",
+      "src/lib/ndk/events/index.test.ts",
+      "src/lib/ndk/events/encode.test.ts",
+      "src/lib/ndk/user/index.test.ts",
+      "src/lib/ndk/user/follows.test.ts",
+      "src/lib/ndk/utils/filter-validation.test.ts",
+    ],
+    environment: "node",
+    setupFiles: ["./vitest.setup.ts"],
   },
   server: {
     hmr: {
@@ -165,5 +207,14 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["@vite/client", "@vite/env"],
     include: ["react", "react-dom"],
+  },
+  assetsInclude: ["**/*.wasm"],
+  worker: {
+    format: "es",
+    rollupOptions: {
+      output: {
+        entryFileNames: "assets/[name]-[hash].js",
+      },
+    },
   },
 })

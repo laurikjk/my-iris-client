@@ -6,6 +6,10 @@ import {
   extractMintFromToken,
 } from "@/lib/npubcash"
 import {ndk} from "@/utils/ndk"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.CASHU_WALLET)
 
 export function useNPubCashClaim(
   myPubKey: string | null,
@@ -31,9 +35,9 @@ export function useNPubCashClaim(
             if (mintUrl) {
               try {
                 await manager.mint.addMint(mintUrl)
-                console.log(`✅ Auto-added mint from npub.cash token: ${mintUrl}`)
-              } catch (error) {
-                console.log(`Mint already exists or failed to add: ${mintUrl}`)
+                log(`✅ Auto-added mint from npub.cash token: ${mintUrl}`)
+              } catch (err) {
+                log(`Mint already exists or failed to add: ${mintUrl}`)
               }
             }
 
@@ -41,8 +45,8 @@ export function useNPubCashClaim(
             onRefresh()
           }
         }
-      } catch (error) {
-        console.error("Failed to check/claim npub.cash:", error)
+      } catch (err) {
+        error("Failed to check/claim npub.cash:", err)
       }
     }
 

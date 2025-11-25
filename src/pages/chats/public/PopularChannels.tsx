@@ -1,8 +1,11 @@
 import PopularChannelItem from "./PopularChannelItem"
-import {KIND_CHANNEL_MESSAGE} from "@/utils/constants"
+import {KIND_CHANNEL_MESSAGE, DEBUG_NAMESPACES} from "@/utils/constants"
 import socialGraph from "@/utils/socialGraph"
 import {useState, useEffect} from "react"
-import {ndk} from "@/utils/ndk"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {fetchEventsReliable} from "@/utils/fetchEventsReliable"
+
+const {log} = createDebugLogger(DEBUG_NAMESPACES.UI_CHAT)
 
 type PopularChannel = {
   id: string
@@ -27,23 +30,24 @@ const PopularChannels = ({publicKey}: PopularChannelsProps) => {
 
     const fetchPopularChannels = async () => {
       // Remove setError(null)
-      console.log("Fetching popular channels for publicKey:", publicKey)
+      log("Fetching popular channels for publicKey:", publicKey)
       // Get followed users using social graph
       const followedUsers = await socialGraph().getUsersByFollowDistance(1)
-      console.log("Followed users count:", followedUsers.size)
+      log("Followed users count:", followedUsers.size)
       if (followedUsers.size === 0) {
-        console.log("No followed users found")
+        log("No followed users found")
         return
       }
 
       // Fetch channel messages from followed users
-      console.log("Fetching channel messages from followed users")
-      const channelMessages = await ndk().fetchEvents({
-        kinds: [KIND_CHANNEL_MESSAGE],
-        authors: Array.from(followedUsers),
-        limit: 200,
-      })
-      console.log("Channel messages count:", channelMessages.size)
+      log("Fetching channel messages from followed users")
+      const {promise} = fetchEventsReliable(
+        {kinds: [KIND_CHANNEL_MESSAGE], authors: Array.from(followedUsers), limit: 200},
+        {timeout: 5000}
+      )
+      const messagesArray = await promise
+      const channelMessages = new Set(messagesArray)
+      log("Channel messages count:", channelMessages.size)
 
       // Process messages to identify channels and count unique authors
       const channelMap = new Map<string, {authors: Set<string>}>()
@@ -63,7 +67,7 @@ const PopularChannels = ({publicKey}: PopularChannelsProps) => {
         channelData.authors.add(event.pubkey)
       }
 
-      console.log("Unique channels found:", channelMap.size)
+      log("Unique channels found:", channelMap.size)
 
       // Convert to array and sort by author count
       const channels: PopularChannel[] = []
@@ -81,7 +85,7 @@ const PopularChannels = ({publicKey}: PopularChannelsProps) => {
       // Sort by author count (descending)
       channels.sort((a, b) => b.authorCount - a.authorCount)
 
-      console.log("Channels to display:", channels.length)
+      log("Channels to display:", channels.length)
       // Create a new array to ensure React detects the state change
       setPopularChannels([...channels])
     }

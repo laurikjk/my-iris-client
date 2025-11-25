@@ -8,6 +8,7 @@ import {useLocation} from "@/navigation/hooks"
 import runningOstrich from "@/assets/running-ostrich.gif"
 import {useUserStore} from "@/stores/user"
 import {startNotificationsSubscription} from "./notificationsSubscription"
+import {useIsTopOfStack} from "@/navigation/useIsTopOfStack"
 
 const INITIAL_DISPLAY_COUNT = 10
 const DISPLAY_INCREMENT = 10
@@ -17,6 +18,7 @@ function NotificationsFeed() {
   const publicKey = useUserStore((state) => state.publicKey)
   const [animationSeenAt, setAnimationSeenAt] = useState(notificationsSeenAt) // Initialize with current seen time
   const location = useLocation()
+  const isTopOfStack = useIsTopOfStack()
 
   useEffect(() => {
     if (publicKey) {
@@ -40,8 +42,12 @@ function NotificationsFeed() {
   const {latestNotification: latestNotificationTime} = useNotificationsStore()
 
   const updateSeenAt = useCallback(() => {
-    // Only update seen time if we're actually on the notifications page
-    if (document.hasFocus() && location.pathname === "/notifications") {
+    // Only update seen time if document visible AND view is top of stack
+    if (
+      document.visibilityState === "visible" &&
+      isTopOfStack &&
+      location.pathname === "/notifications"
+    ) {
       // Set seen time immediately
       const newSeenTime = Math.round(Date.now() / 1000)
       useNotificationsStore.getState().setNotificationsSeenAt(newSeenTime)
@@ -51,7 +57,7 @@ function NotificationsFeed() {
         setAnimationSeenAt(newSeenTime)
       }, 10000)
     }
-  }, [latestNotificationTime, notificationsSeenAt, location.pathname])
+  }, [latestNotificationTime, notificationsSeenAt, location.pathname, isTopOfStack])
 
   useEffect(() => {
     updateSeenAt()
@@ -59,7 +65,7 @@ function NotificationsFeed() {
 
   // When navigating to notifications page, set seen time immediately but delay animation
   useEffect(() => {
-    if (location.pathname === "/notifications") {
+    if (isTopOfStack && location.pathname === "/notifications") {
       // Set seen time immediately
       const newSeenTime = Math.round(Date.now() / 1000)
       useNotificationsStore.getState().setNotificationsSeenAt(newSeenTime)
@@ -71,7 +77,7 @@ function NotificationsFeed() {
 
       return () => clearTimeout(timer)
     }
-  }, [location.pathname]) // Run when pathname changes
+  }, [location.pathname, isTopOfStack]) // Run when pathname or stack position changes
 
   useEffect(() => {
     const handleUpdate = () => updateSeenAt()

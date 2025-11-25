@@ -36,11 +36,5 @@ export const navItemsConfig = (): Record<string, NavItemConfig> => ({
     requireLogin: true,
   },
   settings: {to: "/settings", icon: "settings", label: "Settings", requireLogin: true},
-  subscription: {
-    to: "/subscribe",
-    icon: "star",
-    label: "Subscription",
-    requireLogin: true,
-  },
   about: {to: "/about", icon: "info", label: "About"},
 })

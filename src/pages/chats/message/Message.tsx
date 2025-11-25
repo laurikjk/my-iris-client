@@ -14,7 +14,7 @@ import {nip19} from "nostr-tools"
 import {ndk} from "@/utils/ndk"
 import {KIND_CHANNEL_CREATE, KIND_REACTION} from "@/utils/constants"
 import {UserRow} from "@/shared/components/user/UserRow"
-import {EMOJI_REGEX} from "@/utils/validation"
+import {isOnlyEmoji} from "@/utils/textFormatting"
 import {useUserStore} from "@/stores/user"
 
 export type MessageType = Rumor & {
@@ -88,7 +88,7 @@ const Message = ({
     propReactions || {}
   )
   const isShortEmoji = useMemo(
-    () => EMOJI_REGEX.test(message.content?.trim() ?? ""),
+    () => isOnlyEmoji(message.content?.trim() ?? ""),
     [message.content]
   )
 

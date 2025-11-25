@@ -10,6 +10,10 @@ import AccountName from "./AccountName"
 import IrisAPI from "@/utils/IrisAPI"
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error: logError} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 // Main component
 function IrisAccount() {
@@ -34,7 +38,7 @@ function IrisAccount() {
 
     if (res.status === 200) {
       const json = await res.json()
-      console.log("User data:", json)
+      log("User data:", json)
 
       // Handle subscription data
       if (json.subscription_plan) {
@@ -77,7 +81,7 @@ function IrisAccount() {
         setExisting({name: username})
       }
     } catch (err) {
-      console.error("Registration error:", err)
+      logError("Registration error:", err)
       setError("Error during registration")
     }
   }
@@ -92,7 +96,7 @@ function IrisAccount() {
         setShowChallenge(false)
       }
     } catch (err) {
-      console.error("Verification error:", err)
+      logError("Verification error:", err)
       setError("Error during verification")
     }
   }

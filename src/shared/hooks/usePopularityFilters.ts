@@ -30,7 +30,14 @@ export default function usePopularityFilters(filterSeen?: boolean) {
 
   const authors = useMemo(() => {
     if (shouldUseFallback) {
-      return Array.from(socialGraph().getFollowedByUser(DEFAULT_SOCIAL_GRAPH_ROOT))
+      // Use root user's follows immediately (pre-crawled graph loads sync from binary)
+      const root = socialGraph().getRoot()
+      const rootFollows = Array.from(socialGraph().getFollowedByUser(root))
+      // If root follows is also empty, use DEFAULT_SOCIAL_GRAPH_ROOT's follows as last resort
+      if (rootFollows.length === 0) {
+        return Array.from(socialGraph().getFollowedByUser(DEFAULT_SOCIAL_GRAPH_ROOT))
+      }
+      return rootFollows
     }
     return myFollows
   }, [shouldUseFallback, myFollows])
@@ -39,6 +46,7 @@ export default function usePopularityFilters(filterSeen?: boolean) {
     const filters = {
       since: oldestTimestamp,
       limit: LIMIT,
+      // Don't set authors to empty array - use undefined to match all
       authors: authors.length > 0 ? authors : undefined,
     }
     return filters

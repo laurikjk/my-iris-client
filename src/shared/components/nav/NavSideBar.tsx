@@ -1,14 +1,13 @@
 import {RiLoginBoxLine, RiLockLine, RiBugLine} from "@remixicon/react"
-import {useRef, useMemo, useEffect, useState} from "react"
+import {useRef, useMemo} from "react"
 import NavLink from "./NavLink"
 
 import {useWalletBalance} from "../../hooks/useWalletBalance"
 import {NotificationNavItem} from "./NotificationNavItem"
-import {SubscriptionNavItem} from "./SubscriptionNavItem"
 import {MessagesNavItem} from "./MessagesNavItem"
 import PublishButton from "../ui/PublishButton"
 import ErrorBoundary from "../ui/ErrorBoundary"
-import {formatAmount, isMobileTauri} from "@/utils/utils"
+import {formatAmount} from "@/utils/utils"
 import {usePublicKey} from "@/stores/user"
 import {useWalletStore} from "@/stores/wallet"
 import {useSettingsStore} from "@/stores/settings"
@@ -17,8 +16,9 @@ import {UserRow} from "../user/UserRow"
 import {useUIStore} from "@/stores/ui"
 import {NavItem} from "./NavItem"
 import {ndk} from "@/utils/ndk"
-import {RelayConnectivityIndicator} from "../RelayConnectivityIndicator"
+import {RelayConnectivityIndicator, OfflineIndicator} from "../RelayConnectivityIndicator"
 import {hasWriteAccess} from "@/utils/auth"
+import {ColumnLayoutToggle} from "./ColumnLayoutToggle"
 
 const NavSideBar = () => {
   const ref = useRef<HTMLDivElement>(null)
@@ -27,13 +27,8 @@ const NavSideBar = () => {
   const {showBalanceInNav} = useWalletStore()
   const myPubKey = usePublicKey()
   const {debug} = useSettingsStore()
-  const [isMobile, setIsMobile] = useState(false)
 
   const hasSigner = hasWriteAccess()
-
-  useEffect(() => {
-    isMobileTauri().then(setIsMobile)
-  }, [])
 
   const navItems = useMemo(() => {
     const configItems = navItemsConfig()
@@ -42,13 +37,9 @@ const NavSideBar = () => {
       if (item.label === "Chats" && !hasSigner) {
         return false
       }
-      // Hide Subscription in mobile Tauri apps
-      if (item.label === "Subscription" && isMobile) {
-        return false
-      }
       return !("requireLogin" in item) || (item.requireLogin && myPubKey)
     })
-  }, [myPubKey, hasSigner, isMobile])
+  }, [myPubKey, hasSigner])
 
   const logoUrl = CONFIG.navLogo
 
@@ -69,10 +60,13 @@ const NavSideBar = () => {
           {myPubKey && !ndk().signer && (
             <div
               title="Read-only mode"
-              className="px-4 py-2 mx-2 md:mx-0 xl:mx-2 flex items-center gap-2 text-error text-xl"
+              className="px-4 py-2 mx-2 md:mx-0 xl:mx-2 flex items-center gap-2"
             >
-              <RiLockLine className="w-6 h-6" />
-              <span className="hidden xl:inline">Read-only mode</span>
+              <RiLockLine className="w-6 h-6 text-error md:hidden xl:inline" />
+              <span className="badge badge-error badge-md md:badge-sm">
+                <span className="hidden xl:inline">Read-only</span>
+                <RiLockLine className="w-4 h-4 xl:hidden" />
+              </span>
             </div>
           )}
           {debug.enabled && (
@@ -94,9 +88,6 @@ const NavSideBar = () => {
               }
               if (label === "Notifications") {
                 return <NotificationNavItem key={to} to={to} onClick={onClick} />
-              }
-              if (label === "Subscription") {
-                return <SubscriptionNavItem key={to} to={to} onClick={onClick} />
               }
               return (
                 <NavItem
@@ -135,9 +126,18 @@ const NavSideBar = () => {
         {myPubKey && (
           <>
             <div className="flex flex-col p-4 gap-2">
-              <div className="flex justify-center md:justify-center xl:justify-start mb-2">
-                <RelayConnectivityIndicator className="md:hidden xl:flex" />
-                <RelayConnectivityIndicator className="hidden md:flex xl:hidden" />
+              <div className="hidden lg:flex xl:hidden justify-center mb-2">
+                <ColumnLayoutToggle compact />
+              </div>
+              <div className="hidden xl:flex justify-start mb-2">
+                <ColumnLayoutToggle />
+              </div>
+              <div className="hidden md:flex md:flex-col xl:flex-row items-center xl:items-center gap-1 mb-2">
+                {/* Offline indicator - md-lg (above), xl (after indicator) */}
+                <OfflineIndicator className="md:flex xl:hidden badge-md" />
+                {/* Relay indicator */}
+                <RelayConnectivityIndicator className="xl:flex-row" />
+                <OfflineIndicator className="hidden xl:flex badge-md" />
               </div>
               <div className="flex-1">
                 <UserRow

@@ -1,3 +1,4 @@
+import {describe, expect, it, vi, beforeEach, afterEach} from "vitest"
 import {filterFingerprint, mergeFilters} from "./grouping.js"
 import type {NDKFilter} from "./index.js"
 

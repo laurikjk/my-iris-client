@@ -1,5 +1,8 @@
 # Iris
 
+Highly performant and normie-friendly offline-first Nostr web client that is not dependent on any single relay or other server. Featuring a Cashu wallet, secure DMs and social graph based content filtering. Can be packaged as a Tauri app for desktop/android/ios.
+
+
 Source code for [iris.to](https://iris.to)
 
 [![Checks](https://github.com/irislib/iris-client/actions/workflows/checks.yml/badge.svg)](https://github.com/irislib/iris-client/actions/workflows/checks.yml)

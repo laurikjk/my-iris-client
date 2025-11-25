@@ -1,6 +1,10 @@
 import type NDK from "./ndk"
 import type {NDKEvent} from "./ndk/events"
 import type {NDKFilter, NDKSubscription, NDKSubscriptionOptions} from "./ndk/subscription"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log} = createDebugLogger(DEBUG_NAMESPACES.NDK_TRANSPORT)
 
 /**
  * Interface for alternative transport plugins (WebRTC, Bluetooth, etc)
@@ -77,7 +81,7 @@ export class NDKTransportManager {
     }
 
     this.plugins.set(plugin.name, plugin)
-    console.log(`[NDK Transport] Registered plugin: ${plugin.name}`)
+    log(`Registered plugin: ${plugin.name}`)
   }
 
   /**
@@ -92,7 +96,7 @@ export class NDKTransportManager {
     }
 
     this.plugins.delete(name)
-    console.log(`[NDK Transport] Unregistered plugin: ${name}`)
+    log(`Unregistered plugin: ${name}`)
   }
 
   /**

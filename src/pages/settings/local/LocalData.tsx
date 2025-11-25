@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {SettingsGroup} from "@/shared/components/settings/SettingsGroup"
 import {SettingsGroupItem} from "@/shared/components/settings/SettingsGroupItem"
 import {SettingsButton} from "@/shared/components/settings/SettingsButton"
@@ -5,6 +6,16 @@ import {useState, useEffect, MouseEvent} from "react"
 import {confirm} from "@/utils/utils"
 import Dexie from "dexie"
 import {BlobList} from "./BlobList"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+import {getTauriTransport, getWorkerTransport} from "@/utils/ndk"
+
+const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+
+interface IDBDatabaseInfo {
+  name: string
+  size?: string
+}
 
 interface EventStats {
   totalEvents: number
@@ -14,60 +25,30 @@ interface EventStats {
   newestEvent?: number
 }
 
-interface NostrEvent {
-  id: string
-  pubkey: string
-  created_at: number
-  kind: number
-  tags: string[][]
-  content: string
-  sig: string
-}
-
 export function LocalData() {
   const [stats, setStats] = useState<EventStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isClearing, setIsClearing] = useState(false)
+  const [idbDatabases, setIdbDatabases] = useState<IDBDatabaseInfo[]>([])
+  const [showAllDatabases, setShowAllDatabases] = useState(false)
 
   const loadStats = async () => {
     try {
       setLoading(true)
-      setError(null)
+      setErrorMessage(null)
 
-      // Open the NDK Dexie database
-      const db = new Dexie("treelike-nostr")
+      // Get stats from transport (worker or tauri backend)
+      const transport = getTauriTransport() || getWorkerTransport()
 
-      // Define schema based on NDK cache adapter
-      db.version(1).stores({
-        events: "id, pubkey, kind, created_at",
-        tags: "[eventId+tag], eventId, tag, value",
-      })
+      if (!transport?.getStats) {
+        throw new Error("No transport with getStats available")
+      }
 
-      const eventsTable = db.table<NostrEvent>("events")
-
-      // Get all events
-      const allEvents = await eventsTable.toArray()
-      const totalEvents = allEvents.length
-
-      // Count by kind
-      const eventsByKind: Record<number, number> = {}
-      let oldestTimestamp = Infinity
-      let newestTimestamp = -Infinity
-
-      allEvents.forEach((event) => {
-        eventsByKind[event.kind] = (eventsByKind[event.kind] || 0) + 1
-
-        if (event.created_at < oldestTimestamp) {
-          oldestTimestamp = event.created_at
-        }
-        if (event.created_at > newestTimestamp) {
-          newestTimestamp = event.created_at
-        }
-      })
+      const stats = await transport.getStats()
 
       // Sort kinds by count
-      const sortedKinds = Object.entries(eventsByKind)
+      const sortedKinds = Object.entries(stats.eventsByKind)
         .sort(([, a], [, b]) => b - a)
         .reduce(
           (acc, [kind, count]) => {
@@ -77,7 +58,7 @@ export function LocalData() {
           {} as Record<number, number>
         )
 
-      // Estimate database size
+      // Total storage estimate
       let dbSize: string | undefined
       if ("estimate" in navigator.storage) {
         const estimate = await navigator.storage.estimate()
@@ -87,15 +68,17 @@ export function LocalData() {
       }
 
       setStats({
-        totalEvents,
+        totalEvents: stats.totalEvents,
         eventsByKind: sortedKinds,
         databaseSize: dbSize,
-        oldestEvent: oldestTimestamp !== Infinity ? oldestTimestamp : undefined,
-        newestEvent: newestTimestamp !== -Infinity ? newestTimestamp : undefined,
+        oldestEvent: undefined,
+        newestEvent: undefined,
       })
-    } catch (err) {
-      console.error("Error loading Nostr stats:", err)
-      setError(err instanceof Error ? err.message : "Failed to load stats")
+    } catch (caughtError) {
+      error("Error loading Nostr stats:", caughtError)
+      setErrorMessage(
+        caughtError instanceof Error ? caughtError.message : "Failed to load stats"
+      )
     } finally {
       setLoading(false)
     }
@@ -162,22 +145,96 @@ export function LocalData() {
     return kindNames[kind] || `Kind ${kind}`
   }
 
+  const loadAllDatabases = async () => {
+    try {
+      if (!("databases" in indexedDB)) {
+        warn("indexedDB.databases() not supported")
+        return
+      }
+
+      const databases = await indexedDB.databases()
+      const dbInfos: IDBDatabaseInfo[] = []
+
+      // Get storage estimate with per-database breakdown
+      let usageDetails: any = null
+      if ("estimate" in navigator.storage) {
+        const estimate = await navigator.storage.estimate()
+        usageDetails = (estimate as any).usageDetails
+      }
+
+      for (const dbInfo of databases) {
+        if (!dbInfo.name) continue
+
+        let sizeStr: string | undefined
+
+        // Try to get actual size from usageDetails
+        if (usageDetails?.indexedDB) {
+          // Some browsers provide per-database breakdown
+          const dbSize = (usageDetails as any)[dbInfo.name]
+          if (dbSize) {
+            sizeStr = formatBytes(dbSize)
+          }
+        }
+
+        // Fallback: estimate by counting records
+        if (!sizeStr) {
+          try {
+            const db = new Dexie(dbInfo.name)
+            await db.open()
+            const tableNames = db.tables.map((t: any) => t.name)
+
+            let totalCount = 0
+            for (const tableName of tableNames) {
+              try {
+                const count = await db.table(tableName).count()
+                totalCount += count
+              } catch {
+                // Skip tables we can't access
+              }
+            }
+
+            db.close()
+
+            if (totalCount > 0) {
+              sizeStr = `~${totalCount} records`
+            }
+          } catch (e) {
+            // Can't open/read this database
+          }
+        }
+
+        dbInfos.push({
+          name: dbInfo.name,
+          size: sizeStr,
+        })
+      }
+
+      setIdbDatabases(dbInfos)
+    } catch (caughtError) {
+      error("Error loading databases:", caughtError)
+    }
+  }
+
   useEffect(() => {
     loadStats()
+    loadAllDatabases()
 
     // Refresh stats every 30 seconds
-    const interval = setInterval(loadStats, 30000)
+    const interval = setInterval(() => {
+      loadStats()
+      loadAllDatabases()
+    }, 30000)
 
     return () => clearInterval(interval)
   }, [])
 
-  const handleClearDatabase = async (e?: MouseEvent) => {
+  const handleClearAll = async (e?: MouseEvent) => {
     e?.preventDefault()
     e?.stopPropagation()
 
     const confirmed = await confirm(
-      "This will delete all locally cached Nostr events. They will be re-downloaded from relays as needed. This action cannot be undone.",
-      "Clear local Nostr data?"
+      "Delete all local Nostr data? Events will be re-downloaded as needed. Page will reload.",
+      "Clear all local data?"
     )
 
     if (!confirmed) return
@@ -185,126 +242,187 @@ export function LocalData() {
     setIsClearing(true)
 
     try {
-      const db = new Dexie("treelike-nostr")
-      await db.delete()
-      console.log("Cleared Nostr database")
+      // Clear all IndexedDB databases
+      if ("databases" in indexedDB) {
+        const databases = await indexedDB.databases()
+        await Promise.all(
+          databases.map(async (dbInfo) => {
+            if (dbInfo.name) {
+              const db = new Dexie(dbInfo.name)
+              await db.delete()
+              log(`Deleted database: ${dbInfo.name}`)
+            }
+          })
+        )
+      } else {
+        // Fallback: just delete the main one
+        const db = new Dexie("treelike-nostr")
+        await db.delete()
+        const db2 = new Dexie("irisdb-nostr")
+        await db2.delete()
+        log("Cleared Dexie database")
+      }
 
-      // Reload stats after clearing
-      await loadStats()
-    } catch (err) {
-      console.error("Error clearing database:", err)
-      setError(err instanceof Error ? err.message : "Failed to clear database")
-    } finally {
+      // Clear OPFS completely
+      if (navigator.storage?.getDirectory) {
+        try {
+          const root = await navigator.storage.getDirectory()
+
+          // Remove all entries in OPFS root
+          for await (const [name] of (root as any).entries()) {
+            try {
+              await root.removeEntry(name, {recursive: true})
+              log(`Removed OPFS entry: ${name}`)
+            } catch (e) {
+              warn(`Failed to remove OPFS entry ${name}:`, e)
+            }
+          }
+        } catch (opfsErr) {
+          warn("Could not clear OPFS:", opfsErr)
+        }
+      }
+
+      // Wait for deletions to complete
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // Reload to ensure clean state
+      window.location.reload()
+    } catch (caughtError) {
+      error("Error clearing all data:", caughtError)
+      setErrorMessage(
+        caughtError instanceof Error ? caughtError.message : "Failed to clear all data"
+      )
       setIsClearing(false)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="p-4">
-        <div className="text-center">Loading Nostr data statistics...</div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="p-4">
-        <div className="text-center text-error">Error: {error}</div>
-      </div>
-    )
-  }
-
-  if (!stats) {
-    return (
-      <div className="p-4">
-        <div className="text-center">No data available</div>
-      </div>
-    )
-  }
-
-  const topKinds = Object.entries(stats.eventsByKind).slice(0, 10)
+  const topKinds = stats ? Object.entries(stats.eventsByKind).slice(0, 10) : []
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <SettingsGroup title="Overview">
-        <SettingsGroupItem>
-          <div className="flex justify-between items-center">
-            <span>Total events</span>
-            <span className="text-base-content/70">
-              {stats.totalEvents.toLocaleString()}
-            </span>
-          </div>
-        </SettingsGroupItem>
-
-        {stats.databaseSize && (
-          <SettingsGroupItem>
-            <div className="flex justify-between items-center">
-              <span>Storage used</span>
-              <span className="text-base-content/70">{stats.databaseSize}</span>
-            </div>
-          </SettingsGroupItem>
-        )}
-
-        {stats.oldestEvent && (
-          <SettingsGroupItem>
-            <div className="flex justify-between items-center">
-              <span>Oldest event</span>
-              <span className="text-base-content/70 text-sm">
-                {formatDate(stats.oldestEvent)}
-              </span>
-            </div>
-          </SettingsGroupItem>
-        )}
-
-        {stats.newestEvent && (
-          <SettingsGroupItem isLast>
-            <div className="flex justify-between items-center">
-              <span>Newest event</span>
-              <span className="text-base-content/70 text-sm">
-                {formatDate(stats.newestEvent)}
-              </span>
-            </div>
-          </SettingsGroupItem>
-        )}
-      </SettingsGroup>
-
-      <SettingsGroup title="Top Event Kinds">
-        {topKinds.map(([kind, count], index) => (
-          <SettingsGroupItem key={kind} isLast={index === topKinds.length - 1}>
-            <div className="flex justify-between items-center">
-              <div className="flex flex-col">
-                <span>{getKindName(parseInt(kind))}</span>
-                <span className="text-xs text-base-content/50">Kind {kind}</span>
-              </div>
-              <span className="text-base-content/70">{count.toLocaleString()}</span>
-            </div>
-          </SettingsGroupItem>
-        ))}
-      </SettingsGroup>
-
-      {Object.keys(stats.eventsByKind).length > 10 && (
-        <div className="text-sm text-base-content/50 text-center">
-          Showing top 10 of {Object.keys(stats.eventsByKind).length} event kinds
+      {loading && (
+        <div className="text-center text-base-content/70 text-sm">
+          Loading statistics...
         </div>
+      )}
+
+      {errorMessage && (
+        <div className="text-center text-error text-sm">
+          Error loading statistics: {errorMessage}
+        </div>
+      )}
+
+      {!loading && !errorMessage && !stats && (
+        <div className="text-center text-base-content/70 text-sm">No data available</div>
+      )}
+      {stats && (
+        <>
+          <SettingsGroup title="Overview">
+            <SettingsGroupItem>
+              <div className="flex justify-between items-center">
+                <span>Total events</span>
+                <span className="text-base-content/70">
+                  {stats.totalEvents.toLocaleString()}
+                </span>
+              </div>
+            </SettingsGroupItem>
+
+            {stats.databaseSize && (
+              <SettingsGroupItem>
+                <div className="flex justify-between items-center">
+                  <span>Storage used</span>
+                  <span className="text-base-content/70">{stats.databaseSize}</span>
+                </div>
+              </SettingsGroupItem>
+            )}
+
+            {stats.oldestEvent && (
+              <SettingsGroupItem>
+                <div className="flex justify-between items-center">
+                  <span>Oldest event</span>
+                  <span className="text-base-content/70 text-sm">
+                    {formatDate(stats.oldestEvent)}
+                  </span>
+                </div>
+              </SettingsGroupItem>
+            )}
+
+            {stats.newestEvent && (
+              <SettingsGroupItem isLast>
+                <div className="flex justify-between items-center">
+                  <span>Newest event</span>
+                  <span className="text-base-content/70 text-sm">
+                    {formatDate(stats.newestEvent)}
+                  </span>
+                </div>
+              </SettingsGroupItem>
+            )}
+          </SettingsGroup>
+
+          <SettingsGroup title="Top Event Kinds">
+            {topKinds.map(([kind, count], index) => (
+              <SettingsGroupItem key={kind} isLast={index === topKinds.length - 1}>
+                <div className="flex justify-between items-center">
+                  <div className="flex flex-col">
+                    <span>{getKindName(parseInt(kind))}</span>
+                    <span className="text-xs text-base-content/50">Kind {kind}</span>
+                  </div>
+                  <span className="text-base-content/70">{count.toLocaleString()}</span>
+                </div>
+              </SettingsGroupItem>
+            ))}
+          </SettingsGroup>
+
+          {Object.keys(stats.eventsByKind).length > 10 && (
+            <div className="text-sm text-base-content/50 text-center">
+              Showing top 10 of {Object.keys(stats.eventsByKind).length} event kinds
+            </div>
+          )}
+        </>
       )}
 
       <BlobList />
 
+      {idbDatabases.length > 0 && (
+        <SettingsGroup title="All IndexedDB Databases">
+          <SettingsGroupItem>
+            <button
+              className="w-full text-left text-sm text-base-content/70"
+              onClick={() => setShowAllDatabases(!showAllDatabases)}
+            >
+              {showAllDatabases ? "▼" : "▶"} {idbDatabases.length} database
+              {idbDatabases.length !== 1 ? "s" : ""} found
+            </button>
+          </SettingsGroupItem>
+
+          {showAllDatabases &&
+            idbDatabases.map((db, index) => (
+              <SettingsGroupItem key={db.name} isLast={index === idbDatabases.length - 1}>
+                <div className="flex justify-between items-center">
+                  <span className="font-mono text-sm">{db.name}</span>
+                  {db.size && (
+                    <span className="text-base-content/70 text-sm">{db.size}</span>
+                  )}
+                </div>
+              </SettingsGroupItem>
+            ))}
+        </SettingsGroup>
+      )}
+
       <SettingsGroup title="Danger Zone">
         <SettingsGroupItem>
           <div className="text-sm text-base-content/70">
-            Clear all locally stored Nostr events. They will be re-downloaded from relays
-            as needed.
+            Clear ALL local Nostr data (IndexedDB + OPFS). Events will be re-downloaded
+            from relays as needed. This action cannot be undone.
           </div>
         </SettingsGroupItem>
 
         <SettingsButton
-          label={isClearing ? "Clearing..." : "Clear local events"}
-          onClick={handleClearDatabase}
+          label={isClearing ? "Clearing..." : "Clear all local data"}
+          onClick={handleClearAll}
           variant="destructive"
           isLast
-          disabled={isClearing || loading}
+          disabled={isClearing}
         />
       </SettingsGroup>
     </div>

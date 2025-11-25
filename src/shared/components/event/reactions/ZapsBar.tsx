@@ -59,26 +59,24 @@ export default function ZapsBar({event}: ZapsBarProps) {
         </div>
       ) : (
         zaps.map((zap) => (
-          <div
+          <Link
             key={zap.id}
-            className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-sm"
+            to={`/${nip19.npubEncode(zap.pubkey)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-sm hover:bg-orange-500/20 transition-colors cursor-pointer"
           >
             <span className="text-orange-500 font-semibold">
               ⚡ {formatAmount(zap.amount)}
             </span>
-            <Link
-              to={`/${nip19.npubEncode(zap.pubkey)}`}
-              onClick={(e) => e.stopPropagation()}
-              className="hover:underline truncate max-w-[120px]"
-            >
+            <span className="truncate max-w-[120px]">
               <Name pubKey={zap.pubkey} />
-            </Link>
+            </span>
             {zap.comment && (
               <span className="text-base-content/50 text-xs max-w-[150px] truncate">
                 &ldquo;{zap.comment}&rdquo;
               </span>
             )}
-          </div>
+          </Link>
         ))
       )}
     </div>

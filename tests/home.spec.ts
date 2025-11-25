@@ -1,7 +1,27 @@
 import {test, expect} from "@playwright/test"
 
 test("home page loads", async ({page}) => {
+  const startTime = Date.now()
+
+  // Capture console logs
+  page.on("console", (msg) => {
+    const text = msg.text()
+    if (text.includes("Negentropy") || text.includes("NIP-77")) {
+      console.log("BROWSER:", text)
+    }
+  })
+
   await page.goto("/")
-  await page.waitForLoadState("load")
-  await expect(page).toHaveTitle(/iris/)
+
+  // Wait for app to render (title gets set)
+  await expect(page).toHaveTitle(/iris/, {timeout: 5000})
+
+  const loadTime = Date.now() - startTime
+  console.log(`✅ App loaded in ${loadTime}ms`)
+
+  // Wait a bit for negentropy syncs to complete
+  await page.waitForTimeout(3000)
+
+  // Verify main UI elements are visible
+  await expect(page.locator("#main-content")).toBeVisible()
 })

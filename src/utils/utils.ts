@@ -1,3 +1,10 @@
+import {createDebugLogger} from "@/utils/createDebugLogger"
+import {DEBUG_NAMESPACES} from "@/utils/constants"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+
+export const MOBILE_BREAKPOINT = 768
+
 export const isTauri = () =>
   typeof window !== "undefined" && !!(window.__TAURI__ || window.__TAURI_INTERNALS__)
 
@@ -12,15 +19,23 @@ export const isMobileTauri = async (): Promise<boolean> => {
   }
 }
 
+export const isMobileUA = (): boolean => {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+}
+
+export const isAboveMobileBreakpoint = (): boolean => {
+  return typeof window !== "undefined" && window.innerWidth >= MOBILE_BREAKPOINT
+}
+
 export const openExternalLink = async (url: string) => {
   if (isTauri()) {
     try {
       const {openUrl} = await import("@tauri-apps/plugin-opener")
-      console.log("Opening external URL in Tauri:", url)
+      log("Opening external URL in Tauri:", url)
       await openUrl(url)
-      console.log("Successfully opened URL")
-    } catch (error) {
-      console.error("Failed to open URL in Tauri:", error)
+      log("Successfully opened URL")
+    } catch (err) {
+      error("Failed to open URL in Tauri:", err)
       // Fallback to window.open
       window.open(url, "_blank")
     }
@@ -34,8 +49,8 @@ export const confirm = async (message: string, title?: string): Promise<boolean>
     try {
       const {confirm: tauriConfirm} = await import("@tauri-apps/plugin-dialog")
       return await tauriConfirm(message, {title, kind: "warning"})
-    } catch (error) {
-      console.error("Failed to show Tauri confirm dialog:", error)
+    } catch (err) {
+      error("Failed to show Tauri confirm dialog:", err)
       return window.confirm(title ? `${title}\n\n${message}` : message)
     }
   }
@@ -47,8 +62,8 @@ export const alert = async (message: string, title?: string): Promise<void> => {
     try {
       const {message: tauriMessage} = await import("@tauri-apps/plugin-dialog")
       await tauriMessage(message, {title, kind: "info"})
-    } catch (error) {
-      console.error("Failed to show Tauri alert dialog:", error)
+    } catch (err) {
+      error("Failed to show Tauri alert dialog:", err)
       window.alert(title ? `${title}\n\n${message}` : message)
     }
   } else {

@@ -4,6 +4,10 @@ import throttle from "lodash/throttle"
 import localforage from "localforage"
 import AnimalName from "./AnimalName"
 import {addUsernameToCache} from "./usernameCache"
+import {createDebugLogger} from "./createDebugLogger"
+import {DEBUG_NAMESPACES} from "./constants"
+
+const {log, warn} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 // Constants for profile data sanitization
 const PROFILE_NAME_MAX_LENGTH = 50
@@ -120,14 +124,14 @@ const throttledSaveProfiles = throttle(() => {
 
   // Don't save if we have too few profiles (likely an error or data loss)
   if (profileData.length < 10) {
-    console.warn(
+    warn(
       `Not saving profile cache with only ${profileData.length} profiles (minimum: 10)`
     )
     return
   }
 
   localforage.setItem("profileCache", profileData)
-  console.log("Saved", profileData.length, "profiles")
+  log("Saved", profileData.length, "profiles")
 }, 5000)
 
 // Load profileCache from localForage
@@ -153,7 +157,7 @@ export const loadProfileCache = (): Promise<void> => {
               loadedCount++
             }
           })
-          console.log(`Loaded ${loadedCount} profiles from localforage cache`)
+          log(`Loaded ${loadedCount} profiles from localforage cache`)
           validData = true
           profilesLoaded = true
         } else if (
@@ -162,14 +166,14 @@ export const loadProfileCache = (): Promise<void> => {
           typeof firstItem[1] === "object"
         ) {
           // Old format: [string, NDKUserProfile][] - delete it
-          console.log("Found old format profile cache, deleting...")
+          log("Found old format profile cache, deleting...")
           await localforage.removeItem("profileCache")
         }
       }
 
       if (!validData) {
         // No valid cached profiles, load from profileData.json
-        console.log("No cached profiles found, loading from profileData.json")
+        log("No cached profiles found, loading from profileData.json")
         const {default: profileJson} = await import(
           "nostr-social-graph/data/profileData.json"
         )
@@ -185,9 +189,9 @@ export const loadProfileCache = (): Promise<void> => {
         profilesLoaded = true
       }
     })
-    .catch((e) => {
-      console.error("failed to load profileCache:", e)
-      throw e
+    .catch((err) => {
+      warn("failed to load profileCache:", err)
+      throw err
     })
 }
 

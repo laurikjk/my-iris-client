@@ -1,8 +1,8 @@
-import {useState, useEffect} from "react"
-import {ndk as getNdk} from "@/utils/ndk"
+import {useState} from "react"
 import {Link} from "@/navigation"
 import {RiAddLine, RiCloseLine, RiDeleteBinLine} from "@remixicon/react"
 import {useUserStore, RelayConfig} from "@/stores/user"
+import {useWorkerRelayStatus} from "@/shared/hooks/useWorkerRelayStatus"
 
 interface RelayListProps {
   compact?: boolean
@@ -28,34 +28,31 @@ export function RelayList({
   const [showDiscoveredRelays, setShowDiscoveredRelays] = useState(false)
   const [showSavedRelays, setShowSavedRelays] = useState(true)
   const {relayConfigs, toggleRelayConnection, addRelay, removeRelay} = useUserStore()
-  const [ndkRelays, setNdkRelays] = useState(new Map())
+  const workerRelays = useWorkerRelayStatus()
 
   const normalizeRelayUrl = (url: string) => {
     // Normalize URL for comparison: remove trailing slash and ensure lowercase
     return url.replace(/\/$/, "").toLowerCase()
   }
 
-  useEffect(() => {
-    const updateStats = () => {
-      const ndk = getNdk()
-      setNdkRelays(new Map(ndk.pool.relays))
-    }
+  // Get relay map from worker
+  const ndkRelayMap = new Map(
+    workerRelays.relays.map((r) => [r.url, {connected: r.status >= 5, url: r.url}])
+  )
 
-    updateStats()
-    const interval = setInterval(updateStats, 2000)
-    return () => clearInterval(interval)
-  }, [])
+  // Separate multicast relay from discovered relays
+  const multicastRelay = Array.from(ndkRelayMap.entries()).find(
+    ([url]) => url === "multicast" || url.startsWith("multicast://")
+  )
 
-  // Get discovered relays (in NDK pool but not in saved configs)
-  const discoveredRelays = Array.from(ndkRelays.entries()).filter(([url]) => {
+  const discoveredRelays = Array.from(ndkRelayMap.entries()).filter(([url]) => {
     const normalizedNdkUrl = normalizeRelayUrl(url)
     const isInConfigs = relayConfigs?.some(
       (c) => normalizeRelayUrl(c.url) === normalizedNdkUrl
     )
 
-    // Show all relays in NDK pool that aren't in saved configs
-    // (regardless of connection status - they can still be connecting)
-    return !isInConfigs
+    // Filter out multicast and saved relays
+    return !isInConfigs && url !== "multicast" && !url.startsWith("multicast://")
   })
 
   // Sort relays alphabetically
@@ -85,12 +82,12 @@ export function RelayList({
   }
 
   const getRelay = (config: RelayConfig) => {
-    let relay = ndkRelays.get(config.url)
+    let relay = ndkRelayMap.get(config.url)
     if (!relay && !config.url.endsWith("/")) {
-      relay = ndkRelays.get(config.url + "/")
+      relay = ndkRelayMap.get(config.url + "/")
     }
     if (!relay && config.url.endsWith("/")) {
-      relay = ndkRelays.get(config.url.slice(0, -1))
+      relay = ndkRelayMap.get(config.url.slice(0, -1))
     }
     return relay
   }
@@ -221,6 +218,39 @@ export function RelayList({
                 )
               })}
           </>
+        )}
+
+        {/* Multicast relay section */}
+        {multicastRelay && (
+          <div className={`${padding} ${itemClassName} opacity-80`}>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className={`${textSize} font-medium text-base-content/80`}>
+                  Local network discovery
+                </div>
+                <div
+                  className={`${compact ? "text-[10px]" : "text-xs"} text-base-content/40`}
+                >
+                  {multicastRelay[0]}
+                </div>
+              </div>
+              <div className={`flex items-center ${compact ? "gap-2" : "gap-4"}`}>
+                {compact ? (
+                  <div
+                    className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                      multicastRelay[1].connected ? "bg-success" : "bg-warning"
+                    }`}
+                  />
+                ) : (
+                  <span
+                    className={`badge ${
+                      multicastRelay[1].connected ? "badge-success" : "badge-warning"
+                    }`}
+                  ></span>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         {showDiscovered && (

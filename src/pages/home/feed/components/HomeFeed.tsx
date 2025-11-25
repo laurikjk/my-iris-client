@@ -33,7 +33,27 @@ const NoFollows = ({myPubKey}: {myPubKey?: string}) =>
 function HomeFeed() {
   const containerRef = useRef<HTMLDivElement>(null)
   const myPubKey = usePublicKey()
-  const follows = useFollows(myPubKey, true) // to update on follows change
+  const follows = useFollows(myPubKey, true)
+  const socialGraphLoaded = useSocialGraphLoaded()
+
+  // Track if follows have been initialized (changes from initial state)
+  const followsRef = useRef<number | null>(null)
+  const [followsInitialized, setFollowsInitialized] = useState(false)
+
+  useEffect(() => {
+    if (!socialGraphLoaded || followsInitialized) return
+    if (followsRef.current === null) {
+      followsRef.current = follows.length
+      return
+    }
+    // Once follows stabilize or change, we've loaded
+    if (followsRef.current !== follows.length || follows.length > 0) {
+      setFollowsInitialized(true)
+    }
+  }, [follows.length, socialGraphLoaded, followsInitialized])
+
+  const showNoFollows = followsInitialized && follows.length <= 1
+
   const navItemClicked = useUIStore((state) => state.navItemClicked)
   const {
     activeFeed,
@@ -48,7 +68,6 @@ function HomeFeed() {
   const feedRefreshSignal = useFeedStore((state) => state.feedRefreshSignal)
   const enabledFeedIds = useEnabledFeedIds()
   const feedConfigs = useFeedConfigs()
-  const socialGraphLoaded = useSocialGraphLoaded()
   const [editMode, setEditMode] = useState(false)
 
   // Handle home nav click - trigger refresh (NavLink already checked if at top)
@@ -197,6 +216,7 @@ function HomeFeed() {
             />
           </div>
         )}
+        {showNoFollows && myPubKey && <NoFollows myPubKey={myPubKey} />}
         {(() => {
           if (!myPubKey) return <AlgorithmicFeed type="popular" />
 
@@ -221,16 +241,8 @@ function HomeFeed() {
             />
           )
         })()}
-        {follows.length <= 1 && myPubKey && (
-          <>
-            <NoFollows myPubKey={myPubKey} />
-            {!activeFeedConfig?.feedStrategy && (
-              <AlgorithmicFeed
-                type="popular"
-                displayOptions={{showDisplaySelector: false}}
-              />
-            )}
-          </>
+        {follows.length <= 1 && myPubKey && !activeFeedConfig?.feedStrategy && (
+          <AlgorithmicFeed type="popular" displayOptions={{showDisplaySelector: false}} />
         )}
       </div>
     </div>

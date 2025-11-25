@@ -5,12 +5,14 @@ import {useState, useEffect, FormEvent} from "react"
 import {useGroupsStore} from "@/stores/groups"
 import {useUserStore} from "@/stores/user"
 import {useNavigate} from "@/navigation"
+import {useIsTopOfStack} from "@/navigation/useIsTopOfStack"
 import {GroupDetails} from "./types"
 import {KIND_CHANNEL_CREATE} from "@/utils/constants"
 import {sendGroupEvent} from "../utils/groupMessaging"
 
 const GroupChatCreation = () => {
   const navigate = useNavigate()
+  const isTopOfStack = useIsTopOfStack()
   const [currentStep, setCurrentStep] = useState<"members" | "details">("members")
   const [groupDetails, setGroupDetails] = useState<GroupDetails>({
     name: "",
@@ -28,6 +30,8 @@ const GroupChatCreation = () => {
 
   // Handle browser back button
   useEffect(() => {
+    if (!isTopOfStack) return
+
     const handlePopState = (event: PopStateEvent) => {
       if (event.state?.step === "details") {
         setCurrentStep("details")
@@ -38,7 +42,7 @@ const GroupChatCreation = () => {
 
     window.addEventListener("popstate", handlePopState)
     return () => window.removeEventListener("popstate", handlePopState)
-  }, [])
+  }, [isTopOfStack])
 
   const handleAddMember = (user: DoubleRatchetUser) => {
     const isAlreadySelected = selectedMembers.includes(user.pubkey)

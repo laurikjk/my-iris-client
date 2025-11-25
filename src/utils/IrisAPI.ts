@@ -9,16 +9,6 @@ export interface PushNotifications {
   auth: string
 }
 
-export interface Invoice {
-  id: string
-  amount: number
-  currency: string
-  status: string
-  created_at: string
-  paid_at?: string
-  btcpayserver_invoice_url?: string
-}
-
 export interface NotificationSubscription {
   id?: string
   webhooks: unknown[]
@@ -38,17 +28,6 @@ export interface NotificationSubscription {
 
 export interface NotificationSubscriptionResponse {
   [key: string]: NotificationSubscription
-}
-
-export interface SubscriptionCreateResponse {
-  id: string
-  invoice: Invoice
-  subscriber: string
-  subscription_plan: number
-  pricing_option: number
-  currency: string
-  end_date?: string
-  canceled_date?: string
 }
 
 /**
@@ -73,29 +52,6 @@ export default class IrisAPI {
 
   getNotificationSubscriptions() {
     return this.getJsonAuthd<NotificationSubscriptionResponse>("subscriptions/")
-  }
-
-  createIrisSubscription(subscriptionData: {
-    subscription_plan: number
-    pricing_option: number
-    currency: string
-  }) {
-    return this.getJsonAuthd<SubscriptionCreateResponse>(
-      "subscriptions/create/",
-      "POST",
-      subscriptionData
-    )
-  }
-
-  getInvoices() {
-    return this.getJsonAuthd<Invoice[]>("invoices/")
-  }
-
-  getPaymentLink(invoiceId: string) {
-    return this.getJsonAuthd<{btcpayserver_invoice_url: string}>(
-      `invoices/${invoiceId}/get-payment-link/`,
-      "POST"
-    )
   }
 
   registerUsername(username: string, cfToken?: string) {

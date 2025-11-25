@@ -1,9 +1,9 @@
 import {INVITE_RESPONSE_KIND, MESSAGE_EVENT_KIND} from "nostr-double-ratchet/src"
+import type SessionManager from "@/session/SessionManager"
 import {useSettingsStore} from "@/stores/settings"
-// import {useUserRecordsStore} from "@/stores/userRecords" // TEMP: Removed
-// import {useSessionsStore} from "@/stores/sessions" // TEMP: Removed
 import {SortedMap} from "./SortedMap/SortedMap"
 import {useUserStore} from "@/stores/user"
+import {getSessionManager} from "@/shared/services/PrivateChats"
 import {NDKTag, NDKEvent} from "@/lib/ndk"
 import debounce from "lodash/debounce"
 import {base64} from "@scure/base"
@@ -13,7 +13,11 @@ import {
   KIND_REPOST,
   KIND_REACTION,
   KIND_ZAP_RECEIPT,
+  DEBUG_NAMESPACES,
 } from "@/utils/constants"
+import {createDebugLogger} from "@/utils/createDebugLogger"
+
+const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
 interface ReactedTime {
   time: number
@@ -133,8 +137,8 @@ async function getOrCreatePushSubscription() {
             userVisibleOnly: true,
             applicationServerKey: vapidKey,
           })
-        } catch (e) {
-          console.error("Failed to subscribe to push notifications:", e)
+        } catch (err) {
+          error("Failed to subscribe to push notifications:", err)
           return null
         }
       }
@@ -151,17 +155,27 @@ export const subscribeToDMNotifications = debounce(async () => {
   if (!pushSubscription) {
     return
   }
-  // TODO: Re-enable message decryption after improving session rehydration
 
-  // const invites = new Map()
-  // const sessions = new Map()
+  const {publicKey} = useUserStore.getState()
+  if (!publicKey) {
+    return
+  }
 
-  const inviteRecipients: string[] = []
-  // Array.from(invites.values())
-  // .map((i) => i.inviterEphemeralPublicKey)
-  // .filter((a) => typeof a === "string") as string[]
+  let inviteRecipients: string[] = []
 
-  const sessionAuthors: string[] = []
+  let sessionAuthors: string[] = []
+  try {
+    const sessionManager = getSessionManager()
+    await sessionManager.init()
+    const userRecords = sessionManager.getUserRecords()
+    sessionAuthors = extractSessionPubkeysFromUserRecords(userRecords, publicKey)
+    const inviteRecipient = sessionManager.getDeviceInviteEphemeralKey()
+    if (inviteRecipient) {
+      inviteRecipients = [inviteRecipient]
+    }
+  } catch (err) {
+    error("Failed to load session data for DM push subscription:", err)
+  }
 
   const webPushData = {
     endpoint: pushSubscription.endpoint,
@@ -246,6 +260,31 @@ function arrayEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((val, idx) => b[idx] === val)
 }
 
+type SessionUserRecords = ReturnType<SessionManager["getUserRecords"]>
+
+function extractSessionPubkeysFromUserRecords(
+  userRecords: SessionUserRecords,
+  ourPublicKey?: string
+): string[] {
+  return Array.from(userRecords.entries())
+    .filter(([publicKey]) => !ourPublicKey || publicKey !== ourPublicKey)
+    .flatMap(([, {devices}]) =>
+      Array.from(devices.values())
+        .filter(({staleAt}) => staleAt === undefined)
+        .flatMap(({activeSession, inactiveSessions = []}) => [
+          activeSession,
+          ...inactiveSessions,
+        ])
+        .filter(Boolean)
+    )
+    .flatMap((session) => {
+      const state = session?.state
+      if (!state) return []
+      return [state.theirCurrentNostrPublicKey, state.theirNextNostrPublicKey]
+    })
+    .filter((key): key is string => typeof key === "string")
+}
+
 export const subscribeToNotifications = debounce(async () => {
   if (!("serviceWorker" in navigator)) {
     return
@@ -291,7 +330,7 @@ export const subscribeToNotifications = debounce(async () => {
     }
 
     if (kinds.length === 0) {
-      console.log("No notification types enabled, skipping subscription")
+      log("No notification types enabled, skipping subscription")
       return
     }
 
@@ -345,7 +384,7 @@ export const subscribeToNotifications = debounce(async () => {
       )
     }
   } catch (e) {
-    console.error(e)
+    error(e)
   }
 }, 5000)
 
