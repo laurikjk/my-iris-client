@@ -104,15 +104,24 @@ export default function useCombinedPostFetcher({
     if (newEvents.length > 0) {
       newEvents.forEach((event) => addSeenEventId(event.id))
       setEvents(newEvents)
+      hasLoadedInitial.current = true
       setLoading(false)
     } else {
       // Try one more batch before giving up
       const secondBatch = await loadBatch(10)
       secondBatch.forEach((event) => addSeenEventId(event.id))
       setEvents(secondBatch)
-      setLoading(false)
+      if (secondBatch.length > 0) {
+        hasLoadedInitial.current = true
+        setLoading(false)
+      } else {
+        // Keep loading state true for a bit longer to allow subscriptions to receive more data
+        setTimeout(() => {
+          hasLoadedInitial.current = true
+          setLoading(false)
+        }, 3000)
+      }
     }
-    hasLoadedInitial.current = true
   }, [loadBatch])
 
   const loadMore = useCallback(async () => {
