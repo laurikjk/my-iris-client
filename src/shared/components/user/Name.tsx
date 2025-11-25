@@ -18,7 +18,7 @@ export function Name({pubKey, className}: {pubKey: string; className?: string}) 
     }
   }, [pubKey])
 
-  const profile = useProfile(pubKey, false)
+  const profile = useProfile(pubKey, true)
 
   const name =
     profile?.display_name ||

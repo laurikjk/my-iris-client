@@ -1,5 +1,5 @@
 import {RiErrorWarningLine, RiGithubFill} from "@remixicon/react"
-import {ElementType, ReactNode, useEffect, useMemo, useState} from "react"
+import {ElementType, ReactNode, useEffect, useMemo, useRef, useState} from "react"
 import {NDKUserProfile} from "@/lib/ndk"
 import {useNavigate} from "@/navigation"
 import {useIsTopOfStack} from "@/navigation/useIsTopOfStack"
@@ -33,6 +33,7 @@ function ProfileDetails({
   const navigate = useNavigate()
   const isTopOfStack = useIsTopOfStack()
   const [isValidPubkey, setIsValidPubkey] = useState(true)
+  const hasRedirectedRef = useRef(false)
 
   const website = useMemo(() => {
     if (!displayProfile?.website) return null
@@ -61,8 +62,14 @@ function ProfileDetails({
   const mutes = useMutes(hexPub)
   const isMuted = useMemo(() => mutes.includes(hexPub), [mutes, hexPub])
 
+  // Reset redirect flag when pubkey changes
+  useEffect(() => {
+    hasRedirectedRef.current = false
+  }, [pubKey])
+
   useEffect(() => {
     if (!isTopOfStack) return
+    if (hasRedirectedRef.current) return
 
     if (
       displayProfile?.nip05?.endsWith("@iris.to") &&
@@ -73,10 +80,11 @@ function ProfileDetails({
       const newPath = currentPath ? `/${basePath}/${currentPath}` : `/${basePath}`
 
       if (window.location.pathname !== newPath) {
+        hasRedirectedRef.current = true
         navigate(newPath, {replace: true})
       }
     }
-  }, [isTopOfStack, displayProfile?.nip05, navigate])
+  }, [isTopOfStack, displayProfile?.nip05, navigate, pubKey])
 
   const renderProfileField = (
     IconComponent: ElementType,
