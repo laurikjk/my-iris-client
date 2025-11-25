@@ -24,7 +24,7 @@ export function validate(this: NDKEvent): boolean {
     const tag = this.tags[i]
     if (!Array.isArray(tag)) return false
     for (let j = 0; j < tag.length; j++) {
-      if (typeof tag[j] === "object") return false
+      if (typeof tag[j] !== "string") return false
     }
   }
 
