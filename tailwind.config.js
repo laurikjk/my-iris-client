@@ -26,7 +26,7 @@ export default {
   daisyui: {
     themes: [
       {
-        dark: {
+        night: {
           primary: "#702ace",
           secondary: "#f87171",
           accent: "#db8216",
@@ -62,7 +62,7 @@ export default {
         },
       },
       {
-        iris: {
+        dark: {
           primary: "#702ace",
           secondary: "#f87171",
           accent: "rgb(255, 113, 10)",

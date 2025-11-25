@@ -5,7 +5,7 @@
   "nip05Domain": "iris.to",
   "icon": "/img/icon128.png",
   "navLogo": "/img/icon128.png",
-  "defaultTheme": "iris",
+  "defaultTheme": "dark",
   "aboutText": "Iris - Connecting People",
   "repository": "https://github.com/irislib/iris-client",
   "features": {

@@ -30,7 +30,7 @@ function AppearanceSettings() {
                 >
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
-                  <option value="iris">Iris</option>
+                  <option value="night">Night</option>
                   <option value="system">System</option>
                 </select>
               </div>
