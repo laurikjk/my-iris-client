@@ -173,6 +173,14 @@ function handleSubscribe(
     return
   }
 
+  // Log subscription stats
+  const activeSubCount = subscriptions.size
+  if (activeSubCount > 10) {
+    warn(
+      `[Relay Worker] HIGH SUB COUNT: ${activeSubCount} active subscriptions. New sub: ${subId}, filters: ${JSON.stringify(filters).slice(0, 200)}`
+    )
+  }
+
   log(
     `[Relay Worker] handleSubscribe subId=${subId}, filters=${JSON.stringify(filters)}, opts=${JSON.stringify(opts)}`
   )
