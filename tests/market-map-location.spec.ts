@@ -14,21 +14,6 @@ test.describe("Market Map Location Tags", () => {
     // Wait for page to load
     await page.waitForSelector(".flex-1", {timeout: 10000})
 
-    // Verify Categories and Map buttons are visible
-    const categoriesBtn = page.locator('button:has-text("Categories")')
-    const mapBtn = page.locator('button:has-text("Map")')
-
-    // At least one of these buttons should be visible
-    const hasCategoriesBtn = await categoriesBtn
-      .first()
-      .isVisible()
-      .catch(() => false)
-    const hasMapBtn = await mapBtn
-      .first()
-      .isVisible()
-      .catch(() => false)
-
-    // If either button exists, test passes (UI varies by state)
     // Just verify the market page loaded
     const pageLoaded = await page.locator(".flex-1").count()
     expect(pageLoaded).toBeGreaterThan(0)
