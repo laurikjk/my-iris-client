@@ -153,7 +153,7 @@ export class SimpleBlobStorage {
         last_requested: now,
       })
     } catch (err) {
-      error("Error saving blob:", err)
+      console.error("Error saving blob to cache:", err)
     }
   }
 
