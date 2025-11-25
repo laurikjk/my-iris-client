@@ -86,8 +86,12 @@ export function fetchEventsReliable(
       return
     }
 
+    // Use groupable subscriptions for ID queries to batch them together
+    const isIdQuery = requestedIds.size > 0
     sub = ndk().subscribe(filterArray, {
       closeOnEose: false, // Keep subscription open
+      groupable: isIdQuery, // Group ID-based queries
+      groupableDelay: isIdQuery ? 200 : undefined, // 200ms delay to collect IDs
     })
 
     sub.on("event", (event: NDKEvent) => {

@@ -6,7 +6,6 @@ import {getTag} from "@/utils/nostr"
 import {PopularityFilters} from "./usePopularityFilters"
 import {seenEventIds} from "@/utils/memcache"
 import {createDebugLogger} from "@/utils/createDebugLogger"
-import {fetchEventsReliable} from "@/utils/fetchEventsReliable"
 
 const {log} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
@@ -94,9 +93,11 @@ export default function useReactionSubscription(
         pendingReactionCounts.current.set(originalPostId, new Set([event.id]))
       }
 
-      // Fetch the actual post to ensure it's cached (no timeout - will complete when found)
-      // Fire and forget - don't need to track unsubscribe since it auto-completes
-      fetchEventsReliable({ids: [originalPostId]})
+      // Fetch post with groupable delay to batch multiple ID requests
+      ndk().subscribe(
+        {ids: [originalPostId]},
+        {groupable: true, groupableDelay: 200, closeOnEose: true}
+      )
 
       if (
         !hasInitialData &&
