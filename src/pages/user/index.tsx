@@ -27,6 +27,7 @@ import {
   KIND_CLASSIFIED,
   KIND_PICTURE_FIRST,
   KIND_ZAP_RECEIPT,
+  KIND_LONG_FORM_CONTENT,
 } from "@/utils/constants"
 
 type Tab = {
@@ -48,6 +49,16 @@ const tabs: Tab[] = [
         kinds: [KIND_TEXT_NOTE, KIND_REPOST, KIND_PICTURE_FIRST],
         authors: [pubKey],
       },
+    }),
+  },
+  {
+    name: "Articles",
+    path: "articles",
+    getFeedConfig: (pubKey) => ({
+      name: "Articles",
+      id: `profile-articles`,
+      showEventsByUnknownUsers: true,
+      filter: {kinds: [KIND_LONG_FORM_CONTENT], authors: [pubKey]},
     }),
   },
   {
@@ -158,6 +169,33 @@ function useHasMarketEvents(pubKey: string) {
   return hasMarketEvents
 }
 
+function useHasArticles(pubKey: string) {
+  const [hasArticles, setHasArticles] = useState(false)
+
+  useEffect(() => {
+    if (!pubKey) return
+
+    setHasArticles(false)
+
+    const sub = ndk().subscribe({
+      kinds: [KIND_LONG_FORM_CONTENT],
+      authors: [pubKey],
+      limit: 1,
+    })
+
+    sub.on("event", () => {
+      setHasArticles(true)
+      sub.stop()
+    })
+
+    return () => {
+      sub.stop()
+    }
+  }, [pubKey])
+
+  return hasArticles
+}
+
 function UserPage({pubKey}: {pubKey: string}) {
   const socialGraph = useSocialGraph()
   if (typeof pubKey !== "string") {
@@ -173,6 +211,7 @@ function UserPage({pubKey}: {pubKey: string}) {
   const {loadFeedConfig} = useFeedStore()
   const follows = useFollows(pubKey)
   const hasMarketEvents = useHasMarketEvents(pubKeyHex)
+  const hasArticles = useHasArticles(pubKeyHex)
   const [activeTab, setActiveTab] = useState("")
 
   // Check if this is the user's own profile
@@ -188,6 +227,7 @@ function UserPage({pubKey}: {pubKey: string}) {
   const visibleTabs = tabs.filter(
     (tab) =>
       (tab.path !== "you" || (myPubKey && !isOwnProfile)) &&
+      (tab.path !== "articles" || hasArticles || activeTab === "articles") &&
       (tab.path !== "market" || hasMarketEvents || activeTab === "market")
   )
 
