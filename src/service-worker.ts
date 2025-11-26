@@ -245,13 +245,14 @@ self.addEventListener("notificationclick", (event) => {
 const NOTIFICATION_CONFIGS: Record<
   number,
   {
-    title: string
+    title: string | ((displayName?: string) => string)
     url: string
     icon: string
   }
 > = {
   [MESSAGE_EVENT_KIND]: {
-    title: "New private message",
+    title: (displayName?: string) =>
+      displayName ? `New private message from ${displayName}` : "New private message",
     url: "/chats",
     icon: "/favicon.png",
   },
@@ -454,26 +455,29 @@ self.addEventListener("push", (event) => {
         const result = await tryDecryptPrivateDM(data)
         if (result.success) {
           if (result.kind === KIND_CHANNEL_CREATE) {
+            const config = NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND]
             await self.registration.showNotification("New group invite", {
-              icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
+              icon: config.icon,
               data: {
-                url: "/chats",
+                url: config.url,
                 event: data.event,
               },
             })
           } else {
             const displayName = await getDisplayName(result.userPublicKey)
-            await self.registration.showNotification(
-              `New private message from ${displayName}`,
-              {
-                body: result.content,
-                icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
-                data: {
-                  url: "/chats",
-                  event: data.event,
-                },
-              }
-            )
+            const config = NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND]
+            const title =
+              typeof config.title === "function"
+                ? config.title(displayName)
+                : config.title
+            await self.registration.showNotification(title, {
+              body: result.content,
+              icon: config.icon,
+              data: {
+                url: config.url,
+                event: data.event,
+              },
+            })
           }
           return
         }
@@ -481,7 +485,8 @@ self.addEventListener("push", (event) => {
 
       if (NOTIFICATION_CONFIGS[data.event.kind]) {
         const config = NOTIFICATION_CONFIGS[data.event.kind]
-        await self.registration.showNotification(config.title, {
+        const title = typeof config.title === "function" ? config.title() : config.title
+        await self.registration.showNotification(title, {
           icon: config.icon,
           data: {url: config.url, event: data.event},
         })
