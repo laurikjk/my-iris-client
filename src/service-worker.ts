@@ -20,8 +20,18 @@ import localforage from "localforage"
 import {KIND_CHANNEL_CREATE} from "./utils/constants"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
+import NDKCacheAdapterDexie from "@/lib/ndk-cache"
 
 const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+
+let cacheAdapter: NDKCacheAdapterDexie | null = null
+
+function getCacheAdapter(): NDKCacheAdapterDexie {
+  if (!cacheAdapter) {
+    cacheAdapter = new NDKCacheAdapterDexie({dbName: "treelike-nostr"})
+  }
+  return cacheAdapter
+}
 
 // eslint-disable-next-line no-undef
 declare const self: ServiceWorkerGlobalScope & {
@@ -266,6 +276,7 @@ type DecryptResult =
       kind: number
       content: string
       sessionId: string
+      userPublicKey: string
     }
 
 const SESSION_STORAGE = localforage.createInstance({
@@ -293,6 +304,7 @@ interface StoredUserRecord {
 interface StoredSessionState {
   sessionId: string
   serializedState: StoredSessionEntry
+  userPublicKey: string
 }
 
 const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
@@ -319,6 +331,7 @@ const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
           return sessions.map((serialized) => ({
             sessionId: record.publicKey,
             serializedState: serialized,
+            userPublicKey: record.publicKey,
           }))
         })
     )
@@ -352,7 +365,7 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
     }
 
     const state = deserializeSessionState(matchingSession.serializedState)
-    const {sessionId} = matchingSession
+    const {sessionId, userPublicKey} = matchingSession
 
     const eventForSession: VerifiedEvent = {
       ...(data.event as unknown as VerifiedEvent),
@@ -398,12 +411,25 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
           kind: innerEvent.kind,
           content: innerEvent.content,
           sessionId,
+          userPublicKey,
         }
   } catch (err) {
     error("DM decrypt: failed", err)
   }
   return {
     success: false,
+  }
+}
+
+async function getDisplayName(pubkey: string): Promise<string> {
+  try {
+    const adapter = getCacheAdapter()
+    const profile = await adapter.fetchProfile(pubkey)
+    if (!profile) return pubkey
+    return profile.name || profile.displayName || pubkey
+  } catch (err) {
+    error("Failed to fetch profile from cache:", err)
+    return pubkey
   }
 }
 
@@ -436,8 +462,9 @@ self.addEventListener("push", (event) => {
               },
             })
           } else {
+            const displayName = await getDisplayName(result.userPublicKey)
             await self.registration.showNotification(
-              NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].title,
+              `New private message from ${displayName}`,
               {
                 body: result.content,
                 icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
