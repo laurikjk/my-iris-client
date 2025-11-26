@@ -20,7 +20,10 @@ test.describe("Post liking", () => {
 
     // Wait for the post content to actually appear
     // The detail page needs time to fetch the event from relay
-    const postElement = page.getByTestId("feed-item").filter({hasText: postContent}).first()
+    const postElement = page
+      .getByTestId("feed-item")
+      .filter({hasText: postContent})
+      .first()
     await expect(postElement).toBeVisible({timeout: 30000})
 
     // Wait for the like button within this specific post

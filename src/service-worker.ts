@@ -20,6 +20,7 @@ import localforage from "localforage"
 import {KIND_CHANNEL_CREATE} from "./utils/constants"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
+import {Database} from "./lib/ndk-cache/db"
 
 const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
 
@@ -276,7 +277,9 @@ const SESSION_STORAGE = localforage.createInstance({
 
 const SESSION_STORAGE_PREFIX = "private"
 const USER_RECORD_PREFIX = "v1/user/"
-const PROFILE_CACHE_KEY = "profileCache"
+
+// NDK Dexie database for profiles
+const ndkDb = new Database("ndk")
 
 type StoredSessionEntry = string
 
@@ -298,33 +301,27 @@ interface StoredSessionState {
   userPublicKey: string
 }
 
-type CachedProfileEntry = [string, string, ...string[]]
-
-let cachedProfileNames: Map<string, string> | null = null
-
-const loadCachedProfileNames = async (): Promise<Map<string, string>> => {
-  if (cachedProfileNames) {
-    return cachedProfileNames
-  }
-
-  const entries = await localforage.getItem<CachedProfileEntry[]>(PROFILE_CACHE_KEY)
-  const profileMap = new Map<string, string>()
-  if (Array.isArray(entries)) {
-    for (const entry of entries) {
-      if (Array.isArray(entry) && typeof entry[0] === "string" && typeof entry[1] === "string") {
-        profileMap.set(entry[0], entry[1])
-      }
-    }
-  }
-
-  cachedProfileNames = profileMap
-  return profileMap
-}
-
+/**
+ * Get profile name from NDK's Dexie cache
+ * Uses the same storage as the main application
+ */
 const getProfileName = async (pubkey: string): Promise<string | undefined> => {
   if (!pubkey) return undefined
-  const map = await loadCachedProfileNames()
-  return map.get(pubkey)
+
+  try {
+    const profile = await ndkDb.profiles.get(pubkey)
+    if (!profile) return undefined
+
+    // Follow same priority as profileName.ts: name → displayName → display_name
+    return (
+      profile.name ||
+      profile.displayName ||
+      (typeof profile.display_name === "string" ? profile.display_name : undefined)
+    )
+  } catch (err) {
+    error("Failed to fetch profile from Dexie:", err)
+    return undefined
+  }
 }
 
 const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
@@ -458,8 +455,19 @@ self.addEventListener("push", (event) => {
       const data = event.data?.json() as PushData | undefined
       if (!data?.event) return
 
+      console.warn("[SW Push] Received push notification:", {
+        kind: data.event.kind,
+        pubkey: data.event.pubkey,
+        eventId: data.event.id,
+      })
+
       if (data.event.kind === MESSAGE_EVENT_KIND) {
         const result = await tryDecryptPrivateDM(data)
+        console.warn("[SW Push] Decryption result:", {
+          success: result.success,
+          kind: result.success ? result.kind : undefined,
+          userPublicKey: result.success ? result.userPublicKey : undefined,
+        })
         if (result.success) {
           if (result.kind === KIND_CHANNEL_CREATE) {
             await self.registration.showNotification("New group invite", {
@@ -471,6 +479,11 @@ self.addEventListener("push", (event) => {
             })
           } else {
             const profileName = await getProfileName(result.userPublicKey)
+            console.warn("[SW Push] Profile name lookup:", {
+              userPublicKey: result.userPublicKey,
+              profileName: profileName || "(not found)",
+              foundInCache: !!profileName,
+            })
             const title = profileName
               ? `New private message from ${profileName}`
               : `New private message from ${result.userPublicKey}`

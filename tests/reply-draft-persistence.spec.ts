@@ -111,7 +111,11 @@ test.describe("Reply draft persistence", () => {
     await page.keyboard.press("Escape")
 
     // Check that reply draft is still there
-    await page.getByTestId("feed-item").filter({hasText: "Post to reply to"}).first().click()
+    await page
+      .getByTestId("feed-item")
+      .filter({hasText: "Post to reply to"})
+      .first()
+      .click()
     await page.waitForURL(/\/note/)
     // Wait for post to load and draft to hydrate
     await expect(
