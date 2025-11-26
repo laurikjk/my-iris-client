@@ -1,5 +1,8 @@
 import {test, expect} from "@playwright/test"
 import {signUp} from "../auth.setup"
+
+// Skip performance tests in test relay mode - they require consistent environment
+const skipPerf = process.env.VITE_USE_TEST_RELAY === "true"
 import {
   measureFeedRenderTime,
   measureFeedRenderTimeForCount,
@@ -82,6 +85,8 @@ function saveResults(testName: string, results: Record<string, number | string>)
 }
 
 test.describe("Feed Performance", () => {
+  test.skip(({}, testInfo) => skipPerf, "Skipping performance tests in test relay mode")
+
   const baselines = loadBaselines()
 
   test.beforeEach(async ({page}) => {
@@ -209,6 +214,8 @@ test.describe("Feed Performance", () => {
 })
 
 test.describe("Navigation Performance", () => {
+  test.skip(({}, testInfo) => skipPerf, "Skipping performance tests in test relay mode")
+
   const baselines = loadBaselines()
 
   test("navigation stack doesn't leak memory", async ({page}) => {
@@ -254,6 +261,8 @@ test.describe("Navigation Performance", () => {
 })
 
 test.describe("React Render Profiling", () => {
+  test.skip(({}, testInfo) => skipPerf, "Skipping performance tests in test relay mode")
+
   const baselines = loadBaselines()
 
   test.beforeEach(async ({page}) => {
@@ -338,6 +347,8 @@ test.describe("React Render Profiling", () => {
 })
 
 test.describe("CPU Profiling", () => {
+  test.skip(({}, testInfo) => skipPerf, "Skipping performance tests in test relay mode")
+
   const baselines = loadBaselines()
 
   test.beforeEach(async ({page}) => {
@@ -406,6 +417,8 @@ test.describe("CPU Profiling", () => {
 })
 
 test.describe("Worker Profiling", () => {
+  test.skip(({}, testInfo) => skipPerf, "Skipping performance tests in test relay mode")
+
   test.beforeEach(async ({page}) => {
     const targetNpub = "npub1g53mukxnjkcmr94fhryzkqutdz2ukq4ks0gvy5af25rgmwsl4ngq43drvk"
     await signUp(page, targetNpub)

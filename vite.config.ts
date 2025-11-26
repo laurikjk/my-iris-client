@@ -171,6 +171,8 @@ export default defineConfig({
       "src/lib/ndk/user/index.test.ts",
       "src/lib/ndk/user/follows.test.ts",
       "src/lib/ndk/utils/filter-validation.test.ts",
+      "src/lib/ndk/signers/serialization.test.ts",
+      "src/lib/ndk/subscription/exclusive-relay.test.ts",
     ],
     environment: "node",
     setupFiles: ["./vitest.setup.ts"],

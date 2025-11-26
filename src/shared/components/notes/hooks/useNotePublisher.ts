@@ -2,6 +2,7 @@ import {useState} from "react"
 import NDK, {NDKEvent, NDKKind} from "@/lib/ndk"
 import {NoteCreatorState} from "./useNoteCreatorState"
 import {buildEventTags} from "../utils/eventTags"
+import {cacheEvent} from "@/utils/eventCache"
 
 interface UseNotePublisherParams {
   ndkInstance: NDK | undefined
@@ -45,6 +46,9 @@ export function useNotePublisher(params: UseNotePublisherParams) {
       )
 
       await event.sign()
+
+      // Add to hot cache immediately for instant detail page loading
+      cacheEvent(event)
 
       // Await publish to ensure cache operations complete before navigation
       // The publish() method now awaits cache writes, which is necessary for

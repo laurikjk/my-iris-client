@@ -24,6 +24,7 @@ test-results/
 
 # Performance test results (baselines are tracked, results are not)
 performance-results/
+lighthouse-report*
 
 # Test fixtures
 src/lib/example/
