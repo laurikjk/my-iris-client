@@ -1,6 +1,7 @@
 import {test, expect} from "@playwright/test"
 
-test("popular feed debug", async ({page}) => {
+// Skip: Debug test that requires actual popular posts on the relay
+test.skip("popular feed debug", async ({page}) => {
   test.setTimeout(40000)
 
   const logs: string[] = []

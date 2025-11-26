@@ -1,6 +1,10 @@
 import {test, expect} from "@playwright/test"
 
+// Skip when using test relay - this test requires external relay.damus.io
+const skipForTestRelay = process.env.VITE_USE_TEST_RELAY === "true"
+
 test("Subscribe with Negentropy to relay.damus.io", async ({page}) => {
+  test.skip(skipForTestRelay, "Requires external relay.damus.io, not test relay")
   test.setTimeout(60000)
 
   const TEST_PUBKEY = "4523be58d395b1b196a9b8c82b038b6895cb02b683d0c253a955068dba1facd0"

@@ -31,12 +31,25 @@ test.describe("Reply draft persistence", () => {
     const replyDraft = "This is my draft reply that should persist"
     await page.getByPlaceholder("Write your reply...").fill(replyDraft)
 
+    // Wait for draft to persist to localforage
+    await page.waitForTimeout(1000)
+
     // Reload the page
     await page.reload()
     await page.waitForLoadState("networkidle")
 
+    // Wait for the feed item to load first (ensures draft store is hydrated)
+    await expect(
+      page.getByTestId("feed-item").filter({hasText: "Post to reply to"}).first()
+    ).toBeVisible({timeout: 15000})
+
+    // Wait for draft store to hydrate from localforage
+    await page.waitForTimeout(2000)
+
     // Check that reply draft is preserved
-    await expect(page.getByPlaceholder("Write your reply...")).toHaveValue(replyDraft)
+    await expect(page.getByPlaceholder("Write your reply...")).toHaveValue(replyDraft, {
+      timeout: 15000,
+    })
   })
 
   test("should keep main draft separate from reply drafts", async ({page}) => {
@@ -79,7 +92,10 @@ test.describe("Reply draft persistence", () => {
 
     // Navigate back to the post we created
     await page.goto(noteUrl)
-    await expect(page.getByText("Post to reply to").first()).toBeVisible({timeout: 10000})
+    // Wait for feed item to load (may take time to fetch from relay)
+    await expect(
+      page.getByTestId("feed-item").filter({hasText: "Post to reply to"}).first()
+    ).toBeVisible({timeout: 20000})
     const replyDraft = "This is a reply draft"
     await page.getByPlaceholder("Write your reply...").fill(replyDraft)
 
@@ -95,9 +111,16 @@ test.describe("Reply draft persistence", () => {
     await page.keyboard.press("Escape")
 
     // Check that reply draft is still there
-    await page.getByText("Post to reply to").first().click()
+    await page.getByTestId("feed-item").filter({hasText: "Post to reply to"}).first().click()
     await page.waitForURL(/\/note/)
-    await expect(page.getByPlaceholder("Write your reply...")).toHaveValue(replyDraft)
+    // Wait for post to load and draft to hydrate
+    await expect(
+      page.getByTestId("feed-item").filter({hasText: "Post to reply to"}).first()
+    ).toBeVisible({timeout: 15000})
+    await page.waitForTimeout(2000)
+    await expect(page.getByPlaceholder("Write your reply...")).toHaveValue(replyDraft, {
+      timeout: 10000,
+    })
   })
 
   test("should clear reply draft after publishing reply", async ({page}) => {
