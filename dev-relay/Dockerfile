@@ -43,6 +43,7 @@ RUN apt-get update && apt-get install -y \
     liblmdb0 \
     libflatbuffers1 \
     libzstd1 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/lib/libsecp256k1* /usr/local/lib/
