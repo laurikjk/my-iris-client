@@ -43,7 +43,6 @@ export interface WorkerMessage {
     | "browserOffline"
     | "browserOnline"
     | "updateSettings"
-    | "searchInit"
     | "search"
   id?: string
   filters?: NDKFilter[]
@@ -54,7 +53,6 @@ export interface WorkerMessage {
   publishOpts?: WorkerPublishOpts
   reason?: string
   settings?: SettingsState
-  searchProfiles?: SearchResult[]
   searchQuery?: string
   searchRequestId?: number
 }

@@ -60,9 +60,30 @@ const subscriptions = new Map<string, any>()
 const connectedRelays = new Set<string>() // Track relays that were connected before offline
 let settings: SettingsState | undefined
 
-function handleSearchInit(profiles: SearchResult[]) {
-  initSearchIndex(profiles)
-  self.postMessage({type: "searchReady"} as WorkerResponse)
+async function initSearchFromDexie() {
+  try {
+    const start = performance.now()
+    const profiles = await db.profiles.toArray()
+    const searchProfiles: SearchResult[] = []
+    for (const p of profiles) {
+      const name = p.name || p.username
+      if (name) {
+        searchProfiles.push({
+          pubKey: p.pubkey,
+          name: String(name),
+          nip05: p.nip05 || undefined,
+        })
+      }
+    }
+    initSearchIndex(searchProfiles)
+    const duration = performance.now() - start
+    log(
+      `[Relay Worker] Search index initialized: ${searchProfiles.length} profiles in ${duration.toFixed(0)}ms`
+    )
+    self.postMessage({type: "searchReady"} as WorkerResponse)
+  } catch (err) {
+    error("[Relay Worker] Failed to init search from Dexie:", err)
+  }
 }
 
 function handleSearch(requestId: number, query: string) {
@@ -149,6 +170,9 @@ async function initialize(relayUrls?: string[], initialSettings?: SettingsState)
 
     // Lazy load wasm in background
     loadWasm()
+
+    // Initialize search index from Dexie in background
+    initSearchFromDexie()
 
     // Forward relay notices to main thread
     ndk.pool?.on("notice", (relay: NDKRelay, notice: string) => {
@@ -649,12 +673,6 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     case "updateSettings":
       if (data.settings) {
         handleUpdateSettings(data.settings)
-      }
-      break
-
-    case "searchInit":
-      if (data.searchProfiles) {
-        handleSearchInit(data.searchProfiles)
       }
       break
 

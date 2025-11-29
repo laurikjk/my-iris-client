@@ -47,8 +47,6 @@ export class NDKWorkerTransport {
     (results: Array<{item: SearchResult; score?: number}>) => void
   >()
   private searchReady = false
-  private searchReadyPromise?: Promise<void>
-  private searchReadyResolve?: () => void
 
   constructor(workerOrUrl: Worker | string = "/relay-worker.js") {
     if (typeof workerOrUrl === "string") {
@@ -519,9 +517,6 @@ export class NDKWorkerTransport {
 
         case "searchReady":
           this.searchReady = true
-          if (this.searchReadyResolve) {
-            this.searchReadyResolve()
-          }
           break
 
         case "searchResult":
@@ -560,17 +555,6 @@ export class NDKWorkerTransport {
         }
       }, 1000)
     })
-  }
-
-  initSearchIndex(profiles: SearchResult[]): Promise<void> {
-    this.searchReadyPromise = new Promise((resolve) => {
-      this.searchReadyResolve = resolve
-    })
-    this.postMessage({
-      type: "searchInit",
-      searchProfiles: profiles,
-    } as WorkerMessage)
-    return this.searchReadyPromise
   }
 
   private searchRequestId = 0
