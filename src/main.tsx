@@ -9,7 +9,6 @@ import {migrateUserState, migratePublicChats} from "./utils/migration"
 import pushNotifications from "./utils/pushNotifications"
 import {useSettingsStore} from "@/stores/settings"
 import {ndk} from "./utils/ndk"
-import {getSocialGraph} from "./utils/socialGraph"
 import DebugManager from "./utils/DebugManager"
 import Layout from "@/shared/components/Layout"
 import {isTauri, isMobileTauri} from "./utils/utils"
@@ -90,14 +89,13 @@ const initializeApp = async () => {
     log("✅ NDK initialized")
   })
 
-  // Load social graph before rendering
-  const {socialGraphLoaded, setupSocialGraphSubscriptions} = await import(
-    "@/utils/socialGraph"
-  )
-  await socialGraphLoaded
-  log("✅ Social graph initialized")
-  await setupSocialGraphSubscriptions()
-  log("✅ Social graph subscriptions ready")
+  // Load social graph in background (non-blocking)
+  import("@/utils/socialGraph").then(async ({socialGraphLoaded, setupSocialGraphSubscriptions}) => {
+    await socialGraphLoaded
+    log("✅ Social graph initialized")
+    await setupSocialGraphSubscriptions()
+    log("✅ Social graph subscriptions ready")
+  })
 
   // Initialize debug system
   DebugManager
@@ -128,10 +126,10 @@ const initializeApp = async () => {
     subscribeToNotifications()
     subscribeToDMNotifications()
     void migratePublicChats()
-    // Delay social graph to avoid race with NDK init
-    setTimeout(() => {
-      getSocialGraph().recalculateFollowDistances()
-    }, 100)
+    // Recalculate follow distances after social graph loads
+    import("@/utils/socialGraph").then(({socialGraphLoaded, getSocialGraph}) => {
+      socialGraphLoaded.then(() => getSocialGraph().recalculateFollowDistances())
+    })
 
     // Initialize platform-specific notifications (non-blocking, parallel to web push)
     log("[Init] isTauri():", isTauri())
