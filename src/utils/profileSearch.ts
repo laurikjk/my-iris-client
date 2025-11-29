@@ -1,6 +1,5 @@
 import {NDKUserProfile} from "@/lib/ndk"
 import {getMainThreadDb} from "@/lib/ndk-cache/db"
-import Fuse from "fuse.js"
 import {createDebugLogger} from "./createDebugLogger"
 import {DEBUG_NAMESPACES} from "./constants"
 
@@ -12,13 +11,64 @@ export type SearchResult = {
   nip05?: string
 }
 
-const latestProfileEvents = new Map<string, number>()
-const indexedPubkeys = new Set<string>()
+type WorkerResponse =
+  | {type: "ready"}
+  | {
+      type: "searchResult"
+      requestId: number
+      results: Array<{item: SearchResult; score?: number}>
+    }
 
-let searchIndex: Fuse<SearchResult> = new Fuse<SearchResult>([], {
-  keys: ["name", "nip05"],
-  includeScore: true,
-})
+const latestProfileEvents = new Map<string, number>()
+let worker: Worker | null = null
+let workerReady = false
+let requestId = 0
+const pendingSearches = new Map<
+  number,
+  {resolve: (results: Array<{item: SearchResult; score?: number}>) => void}
+>()
+
+// Queue for operations before worker is ready
+const pendingOperations: Array<() => void> = []
+
+function getWorker(): Worker {
+  if (!worker) {
+    worker = new Worker(new URL("../workers/search-worker.ts", import.meta.url), {
+      type: "module",
+    })
+    worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+      const msg = event.data
+      if (msg.type === "ready") {
+        workerReady = true
+        log("Search worker ready")
+        // Process any pending operations
+        for (const op of pendingOperations) {
+          op()
+        }
+        pendingOperations.length = 0
+      } else if (msg.type === "searchResult") {
+        const pending = pendingSearches.get(msg.requestId)
+        if (pending) {
+          pending.resolve(msg.results)
+          pendingSearches.delete(msg.requestId)
+        }
+      }
+    }
+    worker.onerror = (e) => {
+      error("Search worker error:", e)
+    }
+  }
+  return worker
+}
+
+function postToWorker(message: unknown) {
+  const w = getWorker()
+  if (workerReady) {
+    w.postMessage(message)
+  } else {
+    pendingOperations.push(() => w.postMessage(message))
+  }
+}
 
 async function initializeSearchIndex() {
   const start = performance.now()
@@ -27,7 +77,7 @@ async function initializeSearchIndex() {
     const db = getMainThreadDb()
     const profiles = await db.profiles.toArray()
 
-    const processedData = [] as SearchResult[]
+    const processedData: SearchResult[] = []
     for (const profile of profiles) {
       const name = profile.name || profile.username
       if (name) {
@@ -36,14 +86,12 @@ async function initializeSearchIndex() {
           name: String(name),
           nip05: profile.nip05 || undefined,
         })
-        indexedPubkeys.add(profile.pubkey)
       }
     }
 
-    searchIndex = new Fuse<SearchResult>(processedData, {
-      keys: ["name", "nip05"],
-      includeScore: true,
-    })
+    const w = getWorker()
+    w.postMessage({type: "init", profiles: processedData})
+
     const duration = performance.now() - start
     log(`fuse init from dexie: ${duration.toFixed(2)} ms, ${profiles.length} profiles`)
 
@@ -76,9 +124,6 @@ async function populateFromSocialGraph() {
       const batch: string[] = []
 
       for (const pubkey of users) {
-        // Skip if already in index
-        if (indexedPubkeys.has(pubkey)) continue
-
         batch.push(pubkey)
 
         // Process batch when full
@@ -121,12 +166,14 @@ async function processBatch(pubkeys: string[], db: ReturnType<typeof getMainThre
       if (profile) {
         const name = profile.name || profile.username
         if (name) {
-          searchIndex.add({
-            pubKey: pubkey,
-            name: String(name),
-            nip05: profile.nip05 || undefined,
+          postToWorker({
+            type: "add",
+            profile: {
+              pubKey: pubkey,
+              name: String(name),
+              nip05: profile.nip05 || undefined,
+            },
           })
-          indexedPubkeys.add(pubkey)
           added++
         }
       }
@@ -140,8 +187,6 @@ async function processBatch(pubkeys: string[], db: ReturnType<typeof getMainThre
 
 initializeSearchIndex().catch(error)
 
-export {searchIndex}
-
 export function handleProfile(pubKey: string, profile: NDKUserProfile) {
   queueMicrotask(() => {
     const lastSeen = latestProfileEvents.get(pubKey) || 0
@@ -150,10 +195,25 @@ export function handleProfile(pubKey: string, profile: NDKUserProfile) {
       const name = String(profile.name || profile.username)
       const nip05 = profile.nip05
       if (name) {
-        searchIndex.remove((profile) => profile.pubKey === pubKey)
-        searchIndex.add({name, pubKey, nip05})
-        indexedPubkeys.add(pubKey)
+        postToWorker({
+          type: "update",
+          pubKey,
+          profile: {name, pubKey, nip05},
+        })
       }
     }
+  })
+}
+
+/**
+ * Search the index. Returns a promise that resolves with the search results.
+ */
+export function search(
+  query: string
+): Promise<Array<{item: SearchResult; score?: number}>> {
+  return new Promise((resolve) => {
+    const id = ++requestId
+    pendingSearches.set(id, {resolve})
+    postToWorker({type: "search", query, requestId: id})
   })
 }

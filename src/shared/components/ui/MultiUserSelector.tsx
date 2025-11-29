@@ -1,6 +1,6 @@
 import {useState, useRef, useEffect} from "react"
 import {RiAddLine, RiCloseLine} from "@remixicon/react"
-import {searchIndex, SearchResult} from "@/utils/profileSearch"
+import {search, SearchResult} from "@/utils/profileSearch"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {nip19} from "nostr-tools"
 
@@ -43,10 +43,9 @@ const MultiUserSelector = ({
 
   useEffect(() => {
     if (searchQuery.trim()) {
-      const results = searchIndex
-        .search(searchQuery, {limit: 10})
-        .map((result) => result.item)
-      setSearchResults(results)
+      search(searchQuery).then((results) => {
+        setSearchResults(results.slice(0, 10).map((result) => result.item))
+      })
     } else {
       setSearchResults([])
     }

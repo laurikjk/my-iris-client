@@ -85,7 +85,7 @@ function saveResults(testName: string, results: Record<string, number | string>)
 }
 
 test.describe("Feed Performance", () => {
-  test.skip(({}, testInfo) => skipPerf, "Skipping performance tests in test relay mode")
+  test.skip(() => skipPerf, "Skipping performance tests in test relay mode")
 
   const baselines = loadBaselines()
 
@@ -214,7 +214,7 @@ test.describe("Feed Performance", () => {
 })
 
 test.describe("Navigation Performance", () => {
-  test.skip(({}, testInfo) => skipPerf, "Skipping performance tests in test relay mode")
+  test.skip(() => skipPerf, "Skipping performance tests in test relay mode")
 
   const baselines = loadBaselines()
 
@@ -261,7 +261,7 @@ test.describe("Navigation Performance", () => {
 })
 
 test.describe("React Render Profiling", () => {
-  test.skip(({}, testInfo) => skipPerf, "Skipping performance tests in test relay mode")
+  test.skip(() => skipPerf, "Skipping performance tests in test relay mode")
 
   const baselines = loadBaselines()
 
@@ -347,7 +347,7 @@ test.describe("React Render Profiling", () => {
 })
 
 test.describe("CPU Profiling", () => {
-  test.skip(({}, testInfo) => skipPerf, "Skipping performance tests in test relay mode")
+  test.skip(() => skipPerf, "Skipping performance tests in test relay mode")
 
   const baselines = loadBaselines()
 
@@ -417,7 +417,7 @@ test.describe("CPU Profiling", () => {
 })
 
 test.describe("Worker Profiling", () => {
-  test.skip(({}, testInfo) => skipPerf, "Skipping performance tests in test relay mode")
+  test.skip(() => skipPerf, "Skipping performance tests in test relay mode")
 
   test.beforeEach(async ({page}) => {
     const targetNpub = "npub1g53mukxnjkcmr94fhryzkqutdz2ukq4ks0gvy5af25rgmwsl4ngq43drvk"
