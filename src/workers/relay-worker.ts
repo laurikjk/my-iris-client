@@ -13,6 +13,12 @@ import {DEBUG_NAMESPACES} from "../utils/constants"
 const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.NDK_RELAY)
 
 import NDK from "../lib/ndk"
+import {
+  initSearchIndex,
+  searchProfiles,
+  updateSearchIndex,
+  type SearchResult,
+} from "./profile-search"
 import {NDKEvent} from "../lib/ndk/events"
 import {NDKSubscriptionCacheUsage, type NDKFilter} from "../lib/ndk/subscription"
 import {NDKRelay} from "../lib/ndk/relay"
@@ -53,6 +59,20 @@ let cache: NDKCacheAdapterDexie
 const subscriptions = new Map<string, any>()
 const connectedRelays = new Set<string>() // Track relays that were connected before offline
 let settings: SettingsState | undefined
+
+function handleSearchInit(profiles: SearchResult[]) {
+  initSearchIndex(profiles)
+  self.postMessage({type: "searchReady"} as WorkerResponse)
+}
+
+function handleSearch(requestId: number, query: string) {
+  const results = searchProfiles(query)
+  self.postMessage({
+    type: "searchResult",
+    searchRequestId: requestId,
+    searchResults: results,
+  } as WorkerResponse)
+}
 
 // Attach status change listeners to a relay
 function attachRelayListeners(relay: NDKRelay) {
@@ -218,11 +238,27 @@ function handleSubscribe(
   })
 
   sub.on("event", (event: NDKEvent) => {
+    const rawEvent = event.rawEvent()
     self.postMessage({
       type: "event",
       subId,
-      event: event.rawEvent(),
+      event: rawEvent,
     } as WorkerResponse)
+
+    // Index profile events (kind 0) for search
+    if (rawEvent.kind === 0) {
+      try {
+        const content = JSON.parse(rawEvent.content)
+        updateSearchIndex(
+          rawEvent.pubkey,
+          content.name || content.username,
+          content.nip05,
+          rawEvent.created_at
+        )
+      } catch {
+        // Invalid profile content, skip
+      }
+    }
   })
 
   sub.on("eose", () => {
@@ -613,6 +649,18 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     case "updateSettings":
       if (data.settings) {
         handleUpdateSettings(data.settings)
+      }
+      break
+
+    case "searchInit":
+      if (data.searchProfiles) {
+        handleSearchInit(data.searchProfiles)
+      }
+      break
+
+    case "search":
+      if (data.searchQuery !== undefined && data.searchRequestId !== undefined) {
+        handleSearch(data.searchRequestId, data.searchQuery)
       }
       break
 
