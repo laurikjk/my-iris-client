@@ -13,11 +13,15 @@ services:
       - strfry-data:/app/strfry-db
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "-s", "http://localhost:7777"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+      test:
+        [
+          "CMD-SHELL",
+          "timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/7777' || exit 1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 volumes:
   strfry-data:
