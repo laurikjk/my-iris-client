@@ -1,6 +1,6 @@
-import {useState, useEffect, useCallback, RefObject} from "react"
+import {useState, useEffect, useCallback, RefObject, useRef} from "react"
 import {nip19} from "nostr-tools"
-import {searchIndex, SearchResult} from "@/utils/profileSearch"
+import {search, SearchResult} from "@/utils/profileSearch"
 
 interface MentionCursorPosition {
   top: number
@@ -17,15 +17,17 @@ export function useMentionAutocomplete(
   const [selectedMentionIndex, setSelectedMentionIndex] = useState<number>(0)
   const [mentionCursorPosition, setMentionCursorPosition] =
     useState<MentionCursorPosition | null>(null)
+  const latestSearchRef = useRef(0)
 
   // Search for profiles
   useEffect(() => {
     if (mentionSearch !== null) {
-      const results = searchIndex
-        .search(mentionSearch, {limit: 10})
-        .map((result) => result.item)
-      setSearchResults(results)
-      setSelectedMentionIndex(0)
+      const searchId = ++latestSearchRef.current
+      search(mentionSearch).then((results) => {
+        if (searchId !== latestSearchRef.current) return
+        setSearchResults(results.slice(0, 10).map((result) => result.item))
+        setSelectedMentionIndex(0)
+      })
     } else {
       setSearchResults([])
       setSelectedMentionIndex(0)

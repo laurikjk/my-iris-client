@@ -151,6 +151,7 @@ export default class PeerConnection extends EventEmitter<PeerConnectionEvents> {
     this.mySessionId = mySessionId || null
     this.peerConnection = new RTCPeerConnection({
       iceServers: [
+        {urls: "stun:stun.iris.to:3478"},
         {urls: "stun:stun.l.google.com:19302"},
         {urls: "stun:stun.cloudflare.com:3478"},
       ],

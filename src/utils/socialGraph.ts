@@ -371,6 +371,7 @@ export const loadFromFile = (merge = false) => {
             } else {
               instance = newInstance
             }
+            notifyGraphChange()
             await saveToLocalForage()
           })
         } catch (err) {
@@ -459,6 +460,7 @@ export const downloadLargeGraph = (options: DownloadGraphOptions = {}) => {
     .then(async (newInstance) => {
       instance = newInstance
       await instance.recalculateFollowDistances()
+      notifyGraphChange()
       throttledSave()
 
       setupSubscription(instance.getRoot())
@@ -476,6 +478,7 @@ export const loadAndMerge = () => loadFromFile(true)
 
 export const clearGraph = async () => {
   instance = new SocialGraph(instance.getRoot())
+  notifyGraphChange()
   await saveToLocalForage()
   log("Cleared social graph")
 }
@@ -483,6 +486,7 @@ export const clearGraph = async () => {
 export const resetGraph = async () => {
   const root = instance.getRoot()
   instance = await loadPreCrawledGraph(root)
+  notifyGraphChange()
   await saveToLocalForage()
   log("Reset social graph to default")
 }

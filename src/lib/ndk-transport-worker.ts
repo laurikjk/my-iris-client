@@ -14,6 +14,7 @@ import type {
   WorkerResponse,
   WorkerSubscribeOpts,
   LocalDataStats,
+  SearchResult,
 } from "./ndk-transport-types"
 import {useSettingsStore} from "@/stores/settings"
 
@@ -41,6 +42,11 @@ export class NDKWorkerTransport {
   private statsCallbacks = new Map<string, (stats: LocalDataStats) => void>()
   private relayStatusCallbacks = new Set<(statuses: any[]) => void>()
   private messageQueue: WorkerMessage[] = []
+  private searchCallbacks = new Map<
+    number,
+    (results: Array<{item: SearchResult; score?: number}>) => void
+  >()
+  private searchReady = false
 
   constructor(workerOrUrl: Worker | string = "/relay-worker.js") {
     if (typeof workerOrUrl === "string") {
@@ -508,6 +514,20 @@ export class NDKWorkerTransport {
             this.relayStatusCallbacks.forEach((cb) => cb(e.data.relayStatuses!))
           }
           break
+
+        case "searchReady":
+          this.searchReady = true
+          break
+
+        case "searchResult":
+          if (e.data.searchRequestId !== undefined) {
+            const callback = this.searchCallbacks.get(e.data.searchRequestId)
+            if (callback) {
+              callback(e.data.searchResults || [])
+              this.searchCallbacks.delete(e.data.searchRequestId)
+            }
+          }
+          break
       }
     }
   }
@@ -536,6 +556,30 @@ export class NDKWorkerTransport {
       }, 1000)
     })
   }
+
+  private searchRequestId = 0
+
+  search(query: string): Promise<Array<{item: SearchResult; score?: number}>> {
+    return new Promise((resolve) => {
+      const id = ++this.searchRequestId
+      this.searchCallbacks.set(id, resolve)
+      this.postMessage({
+        type: "search",
+        searchQuery: query,
+        searchRequestId: id,
+      } as WorkerMessage)
+      setTimeout(() => {
+        if (this.searchCallbacks.has(id)) {
+          this.searchCallbacks.delete(id)
+          resolve([])
+        }
+      }, 1000)
+    })
+  }
+
+  isSearchReady(): boolean {
+    return this.searchReady
+  }
 }
 
-export type {LocalDataStats}
+export type {LocalDataStats, SearchResult}

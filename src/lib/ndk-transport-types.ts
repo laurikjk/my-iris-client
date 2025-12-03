@@ -20,6 +20,12 @@ export interface LocalDataStats {
   databaseSize?: string
 }
 
+export type SearchResult = {
+  name: string
+  pubKey: string
+  nip05?: string
+}
+
 export interface WorkerMessage {
   type:
     | "init"
@@ -37,6 +43,7 @@ export interface WorkerMessage {
     | "browserOffline"
     | "browserOnline"
     | "updateSettings"
+    | "search"
   id?: string
   filters?: NDKFilter[]
   event?: unknown
@@ -46,6 +53,8 @@ export interface WorkerMessage {
   publishOpts?: WorkerPublishOpts
   reason?: string
   settings?: SettingsState
+  searchQuery?: string
+  searchRequestId?: number
 }
 
 export interface WorkerResponse {
@@ -62,6 +71,8 @@ export interface WorkerResponse {
     | "relayAdded"
     | "relayConnected"
     | "relayDisconnected"
+    | "searchReady"
+    | "searchResult"
   subId?: string
   event?: unknown
   relay?: string
@@ -78,4 +89,6 @@ export interface WorkerResponse {
     }
   }>
   stats?: LocalDataStats
+  searchRequestId?: number
+  searchResults?: Array<{item: SearchResult; score?: number}>
 }

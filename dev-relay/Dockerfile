@@ -45,6 +45,7 @@ RUN apt-get update && apt-get install -y \
     libzstd1 \
     bash \
     coreutils \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/lib/libsecp256k1* /usr/local/lib/

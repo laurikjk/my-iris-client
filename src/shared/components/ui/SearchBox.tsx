@@ -10,7 +10,7 @@ import {useSearchStore, CustomSearchResult} from "@/stores/search"
 import {useKeyboardNavigation} from "@/shared/hooks/useKeyboardNavigation"
 import {UserRow} from "@/shared/components/user/UserRow"
 import {isOvermuted} from "@/utils/visibility"
-import {searchIndex} from "@/utils/profileSearch"
+import {search} from "@/utils/profileSearch"
 import {useSocialGraph, useGraphSize} from "@/utils/socialGraph"
 import {useNavigate} from "@/navigation"
 import classNames from "classnames"
@@ -87,6 +87,9 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
         }
       })
 
+    // Track the latest search to avoid race conditions
+    const latestSearchRef = useRef(0)
+
     useEffect(() => {
       const v = value.trim()
       if (!v) {
@@ -138,57 +141,64 @@ const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
       }
 
       const query = v.toLowerCase()
-      const results = searchIndex.search(query)
-      const resultsWithAdjustedScores = results
-        .filter((result) => !isOvermuted(result.item.pubKey))
-        .map((result) => {
-          const fuseScore = 1 - (result.score ?? 1)
-          const followDistance = isSocialGraphLoaded
-            ? (socialGraph.getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE)
-            : DEFAULT_DISTANCE
-          const friendsFollowing = isSocialGraphLoaded
-            ? socialGraph.followedByFriends(result.item.pubKey).size || 0
-            : 0
+      const searchId = ++latestSearchRef.current
 
-          const nameLower = result.item.name.toLowerCase()
-          const nip05Lower = result.item.nip05?.toLowerCase() || ""
-          const prefixMatch = nameLower.startsWith(query) || nip05Lower.startsWith(query)
+      search(query).then((results) => {
+        // Ignore stale results
+        if (searchId !== latestSearchRef.current) return
 
-          if (isSingleChar) {
-            // For single-character queries, exclude non-prefix matches entirely
-            if (!prefixMatch) {
-              return {...result, adjustedScore: Number.NEGATIVE_INFINITY}
+        const resultsWithAdjustedScores = results
+          .filter((result) => !isOvermuted(result.item.pubKey))
+          .map((result) => {
+            const fuseScore = 1 - (result.score ?? 1)
+            const followDistance = isSocialGraphLoaded
+              ? (socialGraph.getFollowDistance(result.item.pubKey) ?? DEFAULT_DISTANCE)
+              : DEFAULT_DISTANCE
+            const friendsFollowing = isSocialGraphLoaded
+              ? socialGraph.followedByFriends(result.item.pubKey).size || 0
+              : 0
+
+            const nameLower = result.item.name.toLowerCase()
+            const nip05Lower = result.item.nip05?.toLowerCase() || ""
+            const prefixMatch =
+              nameLower.startsWith(query) || nip05Lower.startsWith(query)
+
+            if (isSingleChar) {
+              // For single-character queries, exclude non-prefix matches entirely
+              if (!prefixMatch) {
+                return {...result, adjustedScore: Number.NEGATIVE_INFINITY}
+              }
+              // For prefix matches, score by negative follow distance
+              const baseScore = -followDistance
+              const adjustedScore = baseScore + FRIEND_BOOST * friendsFollowing
+              return {...result, adjustedScore}
             }
-            // For prefix matches, score by negative follow distance
-            const baseScore = -followDistance
-            const adjustedScore = baseScore + FRIEND_BOOST * friendsFollowing
+
+            // Original multi-character scoring logic
+            const distancePenalty =
+              followDistance === 0
+                ? DISTANCE_PENALTY * SELF_PENALTY
+                : DISTANCE_PENALTY * (followDistance - 1)
+
+            const adjustedScore =
+              fuseScore * FUSE_MULTIPLIER -
+              distancePenalty +
+              FRIEND_BOOST * friendsFollowing +
+              (prefixMatch ? PREFIX_MATCH_BOOST : 0)
+
             return {...result, adjustedScore}
-          }
+          })
 
-          // Original multi-character scoring logic
-          const distancePenalty =
-            followDistance === 0
-              ? DISTANCE_PENALTY * SELF_PENALTY
-              : DISTANCE_PENALTY * (followDistance - 1)
+        // Sort by adjustedScore in DESCENDING order (higher is better)
+        resultsWithAdjustedScores.sort((a, b) => b.adjustedScore - a.adjustedScore)
 
-          const adjustedScore =
-            fuseScore * FUSE_MULTIPLIER -
-            distancePenalty +
-            FRIEND_BOOST * friendsFollowing +
-            (prefixMatch ? PREFIX_MATCH_BOOST : 0)
-
-          return {...result, adjustedScore}
-        })
-
-      // Sort by adjustedScore in DESCENDING order (higher is better)
-      resultsWithAdjustedScores.sort((a, b) => b.adjustedScore - a.adjustedScore)
-
-      setSearchResults([
-        ...(searchNotes
-          ? [{pubKey: "search-notes", name: `search notes: ${v}`, query: v}]
-          : []),
-        ...resultsWithAdjustedScores.map((result) => result.item),
-      ])
+        setSearchResults([
+          ...(searchNotes
+            ? [{pubKey: "search-notes", name: `search notes: ${v}`, query: v}]
+            : []),
+          ...resultsWithAdjustedScores.map((result) => result.item),
+        ])
+      })
     }, [value, navigate, searchNotes, isSocialGraphLoaded])
 
     // Determine which list is currently being displayed

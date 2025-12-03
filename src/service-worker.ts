@@ -20,8 +20,18 @@ import localforage from "localforage"
 import {KIND_CHANNEL_CREATE} from "./utils/constants"
 import {createDebugLogger} from "@/utils/createDebugLogger"
 import {DEBUG_NAMESPACES} from "@/utils/constants"
+import NDKCacheAdapterDexie from "@/lib/ndk-cache"
 
 const {log, error} = createDebugLogger(DEBUG_NAMESPACES.UTILS)
+
+let cacheAdapter: NDKCacheAdapterDexie | null = null
+
+function getCacheAdapter(): NDKCacheAdapterDexie {
+  if (!cacheAdapter) {
+    cacheAdapter = new NDKCacheAdapterDexie({dbName: "treelike-nostr"})
+  }
+  return cacheAdapter
+}
 
 // eslint-disable-next-line no-undef
 declare const self: ServiceWorkerGlobalScope & {
@@ -235,13 +245,14 @@ self.addEventListener("notificationclick", (event) => {
 const NOTIFICATION_CONFIGS: Record<
   number,
   {
-    title: string
+    title: string | ((displayName?: string) => string)
     url: string
     icon: string
   }
 > = {
   [MESSAGE_EVENT_KIND]: {
-    title: "New private message",
+    title: (displayName?: string) =>
+      displayName ? `New private message from ${displayName}` : "New private message",
     url: "/chats",
     icon: "/favicon.png",
   },
@@ -266,6 +277,7 @@ type DecryptResult =
       kind: number
       content: string
       sessionId: string
+      userPublicKey: string
     }
 
 const SESSION_STORAGE = localforage.createInstance({
@@ -293,6 +305,7 @@ interface StoredUserRecord {
 interface StoredSessionState {
   sessionId: string
   serializedState: StoredSessionEntry
+  userPublicKey: string
 }
 
 const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
@@ -319,6 +332,7 @@ const fetchStoredSessions = async (): Promise<StoredSessionState[]> => {
           return sessions.map((serialized) => ({
             sessionId: record.publicKey,
             serializedState: serialized,
+            userPublicKey: record.publicKey,
           }))
         })
     )
@@ -352,7 +366,7 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
     }
 
     const state = deserializeSessionState(matchingSession.serializedState)
-    const {sessionId} = matchingSession
+    const {sessionId, userPublicKey} = matchingSession
 
     const eventForSession: VerifiedEvent = {
       ...(data.event as unknown as VerifiedEvent),
@@ -398,12 +412,25 @@ const tryDecryptPrivateDM = async (data: PushData): Promise<DecryptResult> => {
           kind: innerEvent.kind,
           content: innerEvent.content,
           sessionId,
+          userPublicKey,
         }
   } catch (err) {
     error("DM decrypt: failed", err)
   }
   return {
     success: false,
+  }
+}
+
+async function getDisplayName(pubkey: string): Promise<string> {
+  try {
+    const adapter = getCacheAdapter()
+    const profile = await adapter.fetchProfile(pubkey)
+    if (!profile) return pubkey
+    return profile.name || profile.displayName || pubkey
+  } catch (err) {
+    error("Failed to fetch profile from cache:", err)
+    return pubkey
   }
 }
 
@@ -428,25 +455,29 @@ self.addEventListener("push", (event) => {
         const result = await tryDecryptPrivateDM(data)
         if (result.success) {
           if (result.kind === KIND_CHANNEL_CREATE) {
+            const config = NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND]
             await self.registration.showNotification("New group invite", {
-              icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
+              icon: config.icon,
               data: {
-                url: "/chats",
+                url: config.url,
                 event: data.event,
               },
             })
           } else {
-            await self.registration.showNotification(
-              NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].title,
-              {
-                body: result.content,
-                icon: NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND].icon,
-                data: {
-                  url: "/chats",
-                  event: data.event,
-                },
-              }
-            )
+            const displayName = await getDisplayName(result.userPublicKey)
+            const config = NOTIFICATION_CONFIGS[MESSAGE_EVENT_KIND]
+            const title =
+              typeof config.title === "function"
+                ? config.title(displayName)
+                : config.title
+            await self.registration.showNotification(title, {
+              body: result.content,
+              icon: config.icon,
+              data: {
+                url: config.url,
+                event: data.event,
+              },
+            })
           }
           return
         }
@@ -454,7 +485,8 @@ self.addEventListener("push", (event) => {
 
       if (NOTIFICATION_CONFIGS[data.event.kind]) {
         const config = NOTIFICATION_CONFIGS[data.event.kind]
-        await self.registration.showNotification(config.title, {
+        const title = typeof config.title === "function" ? config.title() : config.title
+        await self.registration.showNotification(title, {
           icon: config.icon,
           data: {url: config.url, event: data.event},
         })

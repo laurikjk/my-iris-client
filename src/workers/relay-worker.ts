@@ -13,6 +13,12 @@ import {DEBUG_NAMESPACES} from "../utils/constants"
 const {log, warn, error} = createDebugLogger(DEBUG_NAMESPACES.NDK_RELAY)
 
 import NDK from "../lib/ndk"
+import {
+  initSearchIndex,
+  searchProfiles,
+  updateSearchIndex,
+  type SearchResult,
+} from "./profile-search"
 import {NDKEvent} from "../lib/ndk/events"
 import {NDKSubscriptionCacheUsage, type NDKFilter} from "../lib/ndk/subscription"
 import {NDKRelay} from "../lib/ndk/relay"
@@ -53,6 +59,41 @@ let cache: NDKCacheAdapterDexie
 const subscriptions = new Map<string, any>()
 const connectedRelays = new Set<string>() // Track relays that were connected before offline
 let settings: SettingsState | undefined
+
+async function initSearchFromDexie() {
+  try {
+    const start = performance.now()
+    const profiles = await db.profiles.toArray()
+    const searchProfiles: SearchResult[] = []
+    for (const p of profiles) {
+      const name = p.name || p.username
+      if (name) {
+        searchProfiles.push({
+          pubKey: p.pubkey,
+          name: String(name),
+          nip05: p.nip05 || undefined,
+        })
+      }
+    }
+    initSearchIndex(searchProfiles)
+    const duration = performance.now() - start
+    log(
+      `[Relay Worker] Search index initialized: ${searchProfiles.length} profiles in ${duration.toFixed(0)}ms`
+    )
+    self.postMessage({type: "searchReady"} as WorkerResponse)
+  } catch (err) {
+    error("[Relay Worker] Failed to init search from Dexie:", err)
+  }
+}
+
+function handleSearch(requestId: number, query: string) {
+  const results = searchProfiles(query)
+  self.postMessage({
+    type: "searchResult",
+    searchRequestId: requestId,
+    searchResults: results,
+  } as WorkerResponse)
+}
 
 // Attach status change listeners to a relay
 function attachRelayListeners(relay: NDKRelay) {
@@ -129,6 +170,9 @@ async function initialize(relayUrls?: string[], initialSettings?: SettingsState)
 
     // Lazy load wasm in background
     loadWasm()
+
+    // Initialize search index from Dexie in background
+    initSearchFromDexie()
 
     // Forward relay notices to main thread
     ndk.pool?.on("notice", (relay: NDKRelay, notice: string) => {
@@ -218,11 +262,27 @@ function handleSubscribe(
   })
 
   sub.on("event", (event: NDKEvent) => {
+    const rawEvent = event.rawEvent()
     self.postMessage({
       type: "event",
       subId,
-      event: event.rawEvent(),
+      event: rawEvent,
     } as WorkerResponse)
+
+    // Index profile events (kind 0) for search
+    if (rawEvent.kind === 0) {
+      try {
+        const content = JSON.parse(rawEvent.content)
+        updateSearchIndex(
+          rawEvent.pubkey,
+          content.name || content.username,
+          content.nip05,
+          rawEvent.created_at
+        )
+      } catch {
+        // Invalid profile content, skip
+      }
+    }
   })
 
   sub.on("eose", () => {
@@ -613,6 +673,12 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     case "updateSettings":
       if (data.settings) {
         handleUpdateSettings(data.settings)
+      }
+      break
+
+    case "search":
+      if (data.searchQuery !== undefined && data.searchRequestId !== undefined) {
+        handleSearch(data.searchRequestId, data.searchQuery)
       }
       break
 
