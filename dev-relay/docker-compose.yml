@@ -12,12 +12,6 @@ services:
       - ./strfry.conf:/app/strfry.conf:ro
       - strfry-data:/app/strfry-db
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "strfry", "scan", "{}"]
-      interval: 10s
-      timeout: 30s
-      retries: 5
-      start_period: 120s
 
 volumes:
   strfry-data:
