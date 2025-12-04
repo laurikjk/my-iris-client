@@ -51,13 +51,16 @@ jobs:
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Start local relay with Docker
-        run: (cd dev-relay && docker compose up -d)
+        run: (cd dev-relay && docker compose -f docker-compose-ci.yml up -d)
 
       - name: Wait for strfry to be ready
         run: |
           cd dev-relay
           chmod +x wait-for-strfry.sh
           bash wait-for-strfry.sh
+
+      - name: Show strfry startup logs
+        run: docker logs strfry-relay
 
       - name: Seed relay with test data
         run: (cd dev-relay && bash quick-seed.sh 80000)

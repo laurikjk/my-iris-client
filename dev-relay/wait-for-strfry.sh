@@ -9,17 +9,32 @@ echo "Waiting for strfry to be ready..."
 for i in $(seq 1 $MAX_ATTEMPTS); do
   echo "Attempt $i/$MAX_ATTEMPTS..."
 
-  # Check if container is running
-  if ! docker ps --format '{{.Names}}' | grep -q "^strfry-relay$"; then
-    echo "Container not running yet"
+  # Check container status
+  STATUS=$(docker inspect strfry-relay --format='{{.State.Status}}' 2>/dev/null)
+
+  if [ "$STATUS" = "restarting" ]; then
+    echo "✗ Container is in restart loop!"
+    echo "Container logs:"
+    docker logs strfry-relay --tail 100
+    exit 1
+  fi
+
+  if [ "$STATUS" != "running" ]; then
+    echo "Container status: $STATUS, waiting..."
     sleep $SLEEP_TIME
     continue
   fi
 
-  # Check if strfry can scan the database
-  if docker exec strfry-relay strfry scan '{}' 2>&1 | head -1 >/dev/null 2>&1; then
-    echo "✓ Strfry is ready!"
-    exit 0
+  # Container is running, check if it's actually functional
+  if docker exec strfry-relay strfry scan '{}' >/dev/null 2>&1; then
+    # Double check it's still running after the command
+    sleep 1
+    if docker inspect strfry-relay --format='{{.State.Status}}' 2>/dev/null | grep -q "running"; then
+      echo "✓ Strfry is ready and stable!"
+      exit 0
+    else
+      echo "Container crashed after scan command"
+    fi
   fi
 
   echo "Strfry not ready yet, waiting ${SLEEP_TIME}s..."
@@ -28,5 +43,5 @@ done
 
 echo "✗ Timeout waiting for strfry to be ready"
 echo "Container logs:"
-docker logs strfry-relay --tail 50
+docker logs strfry-relay --tail 100
 exit 1

@@ -7,7 +7,7 @@ services:
     ports:
       - "7777:7777"
     volumes:
-      - ./strfry.conf:/app/strfry.conf:ro
+      - ./strfry-ci.conf:/app/strfry.conf:ro
       - strfry-data:/app/strfry-db
     restart: unless-stopped
 
