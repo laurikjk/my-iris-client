@@ -51,7 +51,7 @@ jobs:
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Start local relay with Docker
-        run: (cd dev-relay && docker compose up -d --wait --wait-timeout 120)
+        run: (cd dev-relay && docker compose up -d --wait --wait-timeout 180)
 
       - name: Seed relay with test data
         run: (cd dev-relay && bash quick-seed.sh 80000)
