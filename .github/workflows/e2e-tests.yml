@@ -28,39 +28,8 @@ jobs:
           path: dev-relay/nostr-wellorder-early-500k-v1.jsonl.bz2
           key: wellorder-dataset-v1
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-strfry-${{ hashFiles('dev-relay/Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-strfry-
-
-      - name: Build strfry image
-        run: |
-          cd dev-relay
-          docker buildx build \
-            --cache-from type=local,src=/tmp/.buildx-cache \
-            --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
-            --load -t strfry-relay .
-          # Move cache to avoid growing indefinitely
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
       - name: Start local relay with Docker
-        run: (cd dev-relay && docker compose -f docker-compose-ci.yml up -d)
-
-      - name: Wait for strfry to be ready
-        run: |
-          cd dev-relay
-          chmod +x wait-for-strfry.sh
-          bash wait-for-strfry.sh
-
-      - name: Show strfry startup logs
-        run: docker logs strfry-relay
+        run: (cd dev-relay && docker compose -f docker-compose-ci.yml up -d --wait --wait-timeout 60)
 
       - name: Seed relay with test data
         run: (cd dev-relay && bash quick-seed.sh 80000)
